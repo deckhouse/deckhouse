@@ -13,15 +13,20 @@
 # limitations under the License.
 
 {{- if or (eq .nodeGroup.nodeType "Static") (eq .nodeGroup.nodeType "CloudStatic") }}
-if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
-  exit 0
-fi
+# if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
+#  exit 0
+# fi
+
+echo "FIRST_BASHIBLE_RUN: $FIRST_BASHIBLE_RUN\n"
+echo "BOOTSTRAP_DIR: $BOOTSTRAP_DIR\n"
+echo "HOSTNAME: $HOSTNAME\n"
 
 if [ -f /var/lib/bashible/bootstrap-token ]; then
   token="$(</var/lib/bashible/bootstrap-token)"
   while true; do
     for server in {{ .normal.apiserverEndpoints | join " " }}; do
       url="https://$server/api/v1/nodes/$HOSTNAME"
+      echo "url: $url\n"
       if curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
       then
         bb-log-error "ERROR: A node with the hostname $HOSTNAME already exists in the cluster\nPlease change the hostname, it should be unique in the cluster.\nThen clean up the server by running the script /var/lib/bashible/cleanup_static_node.sh and try again."
