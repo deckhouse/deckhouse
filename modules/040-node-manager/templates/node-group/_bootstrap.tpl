@@ -70,6 +70,35 @@ function get_phase2() {
   done
 }
 
+function prepary_binary() {
+	export PATH="/opt/deckhouse/bin:$PATH"
+	export LANG=C
+	export REPOSITORY=""
+	export BB_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages"
+	export BB_FETCHED_PACKAGES_STORE="/${TMPDIR}/registrypackages"
+	{{- if .proxy }}
+		{{- if .proxy.httpProxy }}
+	export HTTP_PROXY={{ .proxy.httpProxy | quote }}
+	export http_proxy=${HTTP_PROXY}
+		{{- end }}
+		{{- if .proxy.httpsProxy }}
+	export HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
+	export https_proxy=${HTTPS_PROXY}
+		{{- end }}
+		{{- if .proxy.noProxy }}
+	export NO_PROXY={{ .proxy.noProxy | join "," | quote }}
+	export no_proxy=${NO_PROXY}
+		{{- end }}
+	{{- else }}
+		unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
+	{{- end }}
+	{{- if .packagesProxy }}
+	export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
+	export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
+	{{- end }}
+	bb-package-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}" "netcat:{{ .images.registrypackages.netcat110481 }}"
+}
+
   {{- if not (hasKey $ng "staticInstances") }}
 function run_cloud_network_setup() {
   {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
@@ -117,6 +146,7 @@ function run_log_output() {
 }
  {{- end }}
 BUNDLE="$(detect_bundle)"
+prepary_binary
   {{- if not (hasKey $ng "staticInstances") }}
 run_cloud_network_setup
   {{- end }}

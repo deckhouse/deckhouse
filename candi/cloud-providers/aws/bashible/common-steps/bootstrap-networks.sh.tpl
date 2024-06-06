@@ -16,8 +16,6 @@
 */}}
 mkdir -p /opt/deckhouse/bin
 
-export PATH="/opt/deckhouse/bin:$PATH"
-
 if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
   d8-curl -L -o /opt/deckhouse/bin/ec2_describe_tags https://github.com/flant/go-ec2-describe-tags/releases/download/v0.0.1-flant.2/ec2_describe_tags
   chmod +x /opt/deckhouse/bin/ec2_describe_tags
