@@ -3,10 +3,8 @@
 ---
 # Based on https://github.com/cilium/hubble-ui/blob/v0.13.0/Dockerfile
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-from: {{ $.Images.BASE_NODE_20_ALPINE }}
+from: {{ $.Images.BASE_NODE_20_ALPINE_DEV }}
 shell:
-  beforeInstall:
-  - apk add --no-cache git bash
   install:
   - export "TARGETOS=linux"
   - export "TARGETARCH=amd64"
