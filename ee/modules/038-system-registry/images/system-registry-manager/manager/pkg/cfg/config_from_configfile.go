@@ -20,7 +20,10 @@ type FileConfig struct {
 	HostName string `mapstructure:"hostName"`
 	HostIP   string `mapstructure:"hostIP"`
 	PodName  string `mapstructure:"podName"`
-	Manager  struct {
+	Cluster  struct {
+		Size int `mapstructure:"size"`
+	} `mapstructure:"cluster"`
+	Manager struct {
 		Namespace      string `mapstructure:"namespace"`
 		DaemonsetName  string `mapstructure:"daemonsetName"`
 		ServiceName    string `mapstructure:"serviceName"`
@@ -59,6 +62,7 @@ func GetDefaultConfigVars() []ConfigVar {
 		{Key: "hostName", Env: CreateEnv("HOSTNAME"), Default: nil},
 		{Key: "hostIP", Env: CreateEnv("HOST_IP"), Default: nil},
 		{Key: "podName", Env: CreateEnv("POD_NAME"), Default: nil},
+		{Key: "cluster.size", Env: nil, Default: CreateDefaultValue(1)},
 		{Key: "manager.workerPort", Env: nil, Default: CreateDefaultValue(8097)},
 		{Key: "manager.leaderElection.leaseDurationSeconds", Env: nil, Default: CreateDefaultValue(15)},
 		{Key: "manager.leaderElection.renewDeadlineSeconds", Env: nil, Default: CreateDefaultValue(10)},

@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"system-registry-manager/internal/master/workflow"
+	pkg_cfg "system-registry-manager/pkg/cfg"
 	pkg_logs "system-registry-manager/pkg/logs"
 	"time"
 )
@@ -56,13 +57,13 @@ func masterWorkflow(ctx context.Context, m *Master) error {
 		nodeManagers = append(nodeManagers, NewNodeManager(ctx, master, m.k8sHandler))
 	}
 
-	seaweedfsCaCertsWorkflow := workflow.NewSeaweedfsCertsWorkflow(ctx, nodeManagers, len(nodeManagers))
+	seaweedfsCaCertsWorkflow := workflow.NewSeaweedfsCertsWorkflow(ctx, nodeManagers, pkg_cfg.GetConfig().Cluster.Size)
 	err = seaweedfsCaCertsWorkflow.Start()
 	if err != nil {
 		return err
 	}
 
-	seaweedfsScaleWorkflow := workflow.NewSeaweedfsScaleWorkflow(ctx, nodeManagers, len(nodeManagers))
+	seaweedfsScaleWorkflow := workflow.NewSeaweedfsScaleWorkflow(ctx, nodeManagers, pkg_cfg.GetConfig().Cluster.Size)
 	err = seaweedfsScaleWorkflow.Start()
 	if err != nil {
 		return err
