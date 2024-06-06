@@ -121,7 +121,7 @@ func GetMasters(nodes []NodeManager) ([]NodeManager, error) {
 	for _, node := range nodes {
 		nodeInfo, err := node.GetNodeClusterStatus()
 		if err != nil {
-			return nil, err
+			continue
 		}
 
 		nodeIP, err := node.GetNodeIP()
