@@ -16,7 +16,7 @@ Deckhouse Kubernetes Platform (DKP) может работать как со вс
 
 Для разработки модулей DKP вам понадобятся следующие инструменты:
 * [git](https://git-scm.com) — система контроля версий;
-* [sed](https://github.com/mirror/sed) — редактор потоков;1
+* [sed](https://github.com/mirror/sed) — редактор потоков;
 * [yq](https://github.com/mikefarah/yq) — CLI-утилита для обработки данных в форматах JSON, YAML и XML;
 * [jq](https://jqlang.github.io/jq/) — CLI-утилита для обработки данных в форматах JSON, YAML и XML;
 * [werf](https://werf.io/) — (не обязательно) CLI-утилита для сборки образов. Она понадобится, если вы хотите собрать артефакты модуля локально;
