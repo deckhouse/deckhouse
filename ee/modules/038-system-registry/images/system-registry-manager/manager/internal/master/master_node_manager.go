@@ -87,7 +87,12 @@ func (m *NodeManager) GetNodeRunningStatus() (*master_workflow.SeaweedfsNodeRunn
 
 	f := func(client *worker_client.Client) error {
 		var err error
-		resp, err = client.RequestCheckRegistry(&worker_client.CheckRegistryRequest{CheckWithMasterPeers: false})
+		resp, err = client.RequestCheckRegistry(
+			&worker_client.CheckRegistryRequest{
+				CheckWithMasterPeers: false,
+				MasterPeers:          []string{},
+			},
+		)
 		return err
 	}
 	err := m.makeRequestToWorker(f)
@@ -96,9 +101,13 @@ func (m *NodeManager) GetNodeRunningStatus() (*master_workflow.SeaweedfsNodeRunn
 	}
 
 	isRunning := false
-	for _, containerStatuses := range m.nodeInfo.SeaweedfsPod.Status.ContainerStatuses {
-		if containerStatuses.Name == "seaweedfs" {
-			isRunning = containerStatuses.Ready
+	if m.nodeInfo.SeaweedfsPod == nil {
+		isRunning = false
+	} else {
+		for _, containerStatuses := range m.nodeInfo.SeaweedfsPod.Status.ContainerStatuses {
+			if containerStatuses.Name == "seaweedfs" {
+				isRunning = containerStatuses.Ready
+			}
 		}
 	}
 
