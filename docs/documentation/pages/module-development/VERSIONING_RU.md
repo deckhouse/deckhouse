@@ -75,4 +75,4 @@ lang: ru
 
 Рекомендации, которых стоит придерживаться при выходе новой версии *CustomResourceDefinition* (CRD):
 * Предыдущим версиям проставлять параметр `deprecated: true` (читайте подробнее в документации [Kubernetes](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#version-deprecation)).
-* Версию, в которой данные хранятся внутри etcd ([storage-версия](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#upgrade-existing-objects-to-a-new-stored-version)) менять не ранее, чем через два месяца после выхода новой версии.
+* Версию, в которой данные хранятся внутри etcd ([storage-версия](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#upgrade-existing-objects-to-a-new-stored-version)), менять не ранее чем через два месяца после выхода новой версии.
