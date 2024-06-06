@@ -818,6 +818,7 @@ function main() {
   cd /
 
   ls -l /bin/ssh
+  ssh --help
   if ! prepare_environment ; then
     exit 2
   fi
