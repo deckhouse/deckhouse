@@ -29,6 +29,10 @@ function pause-the-test() {
 
 trap pause-the-test EXIT
 
+
+sleep 3600
+
+
 if ! ingress_inlet=$(kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq -re '.items[0] | .spec.inlet // empty'); then
   ingress="ok"
 else
