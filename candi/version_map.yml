@@ -108,7 +108,7 @@ k8s:
     csi:
       openstack: v1.30.0
       provisioner: v5.0.0
-      attacher: 84b7c0c5c561abccfb9dcc0ec0f37cb48b78e802
+      attacher: v4.6.1
       resizer: v1.11.0
       registrar: v2.11.0
       snapshotter: v8.0.0
