@@ -42,7 +42,7 @@ func createServer(workerData *WorkerData) *http.Server {
 	http.HandleFunc("/readyz", readyzHandler)
 	http.HandleFunc(worker_client.MasterInfoUrlPattern, worker_client.CreateMasterInfoHandlerFunc(masterInfo))
 	http.HandleFunc(worker_client.IsBusyUrlPattern, worker_client.CreateIsBusyHandlerFunc(workerData.singleRequestCfg))
-	http.Handle(worker_client.CheckRegistryUrlPattern, worker_client.CreateCheckRegistryHandler(checkRegistry, workerData.singleRequestCfg))
+	http.HandleFunc(worker_client.CheckRegistryUrlPattern, worker_client.CreateCheckRegistryHandlerFunc(checkRegistry))
 	http.Handle(worker_client.CreateRegistryUrlPattern, worker_client.CreateCreateRegistryHandler(createRegistry, workerData.singleRequestCfg))
 	http.Handle(worker_client.UpdateRegistryUrlPattern, worker_client.CreateUpdateRegistryHandler(updateRegistry, workerData.singleRequestCfg))
 	http.Handle(worker_client.DeleteRegistryUrlPattern, worker_client.CreateDeleteRegistryHandler(deleteRegistry, workerData.singleRequestCfg))

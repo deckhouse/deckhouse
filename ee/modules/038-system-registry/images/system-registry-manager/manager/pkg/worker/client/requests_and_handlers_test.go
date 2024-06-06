@@ -97,11 +97,10 @@ func TestCheckRegistryRequests(t *testing.T) {
 	}
 
 	// Create test handler function using the mockCheckRegistryFunc
-	singleRequestCfg := CreateSingleRequestConfig()
-	handler := CreateCheckRegistryHandler(mockCheckRegistryFunc, singleRequestCfg)
+	handlerFunc := CreateCheckRegistryHandlerFunc(mockCheckRegistryFunc)
 
 	// Create a mock HTTP server using the handler
-	mockServer := httptest.NewServer(handler)
+	mockServer := httptest.NewServer(http.HandlerFunc(handlerFunc))
 	defer mockServer.Close()
 
 	// Make a request to the mock server
