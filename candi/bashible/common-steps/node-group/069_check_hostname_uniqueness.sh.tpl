@@ -43,4 +43,3 @@ else
 fi
 
 {{- end }}
-exit 1
