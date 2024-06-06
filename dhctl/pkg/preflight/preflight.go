@@ -82,11 +82,6 @@ func (pc *Checker) Static() error {
 			successMessage: "resolve the localhost domain",
 			skipFlag:       app.RegistryCredentialsCheckArgName,
 		},
-		{
-			fun:            pc.CheckMasterHostname,
-			successMessage: "master hostname unique",
-			skipFlag:       app.MasterHostnameCheckArgName,
-		},
 	})
 }
 
