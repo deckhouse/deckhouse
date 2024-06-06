@@ -19,4 +19,4 @@ package hooks
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_rbacv2"
 
 var _ = ensure_rbacv2.RegisterHook("deckhouse", []string{"deckhouse"}, []string{
-	"/deckhouse/modules/002-deckhouse/crds/*.yaml"})
+	"/deckhouse/deckhouse-controller/crds/*.yaml"})
