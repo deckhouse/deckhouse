@@ -95,7 +95,6 @@ func (w *SeaweedfsScaleWorkflow) scale(currentNodes []NodeManager, newNodes []No
 		newIPs = append(newIPs, nodeIp)
 	}
 
-	w.log.Infof("Creating request with new IPs: %v", newIPs)
 	createRequest := SeaweedfsCreateNodeRequest{
 		MasterPeers: newIPs,
 	}
@@ -116,16 +115,19 @@ func (w *SeaweedfsScaleWorkflow) scale(currentNodes []NodeManager, newNodes []No
 		},
 	}
 
+	w.log.Infof("Get current clusters count")
 	masters, err := GetMasters(currentNodes)
 	if err != nil {
 		return err
 	}
 	if len(masters) != 1 {
+		w.log.Infof("Have more than one cluster")
 		return fmt.Errorf("len(*clusters) != 1")
 	}
-
+	w.log.Infof("Have one cluster")
 	master := masters[0]
 
+	w.log.Infof("Get cluster status from node %s", master.GetNodeName())
 	if masterInfo, err := master.GetNodeClusterStatus(); err != nil {
 		return err
 	} else {
