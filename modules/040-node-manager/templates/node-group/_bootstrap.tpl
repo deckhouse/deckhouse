@@ -158,17 +158,17 @@ function prepary_base_d8_binaries() {
 	export no_proxy=${NO_PROXY}
 		{{- end }}
 	{{- else }}
-		unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
-	{{- end }}
-	{{- if $context.Values.global.internal.packagesProxy }}
-	export PACKAGES_PROXY_ADDRESSES="{{ $context.Values.global.internal.packagesProxy.addresses | join "," }}"
-	export PACKAGES_PROXY_TOKEN="{{ $context.Values.global.internal.packagesProxy.token }}"
+	unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
+{{- end }}
+	{{- if $context.Values.nodeManager.internal.packagesProxy }}
+	export PACKAGES_PROXY_ADDRESSES="{{ $context.Values.nodeManager.internal.packagesProxy.addresses | join "," }}"
+	export PACKAGES_PROXY_TOKEN="{{ $context.Values.nodeManager.internal.packagesProxy.token }}"
 	{{- end }}
 {{- with $context.Values.global.modulesImages.digests.registrypackages }}
 	bb-package-install "jq:{{ .jq16 }}" "curl:{{ .d8Curl821 }}" "netcat:{{ .netcat110481 }}"
 {{- end }}
-}
 {{- end }}
+}
 
   {{- if not (hasKey $ng "staticInstances") }}
 function run_cloud_network_setup() {
