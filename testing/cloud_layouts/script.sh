@@ -144,7 +144,7 @@ function abort_bootstrap() {
   return $?
 }
 
-function destroy_cluster()
+function destroy_cluster() {
   >&2 echo "Run destroy_cluster"
   dhctl --do-not-write-debug-log-file destroy \
     --ssh-agent-private-keys "$ssh_private_key_path" \
