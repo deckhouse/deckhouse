@@ -410,6 +410,8 @@ function run-test() {
 
 function bootstrap_static() {
   >&2 echo "Run terraform to create nodes for Static cluster ..."
+  ls -l /bin/ssh
+  ssh -h
   pushd "$cwd"
   terraform init -input=false -plugin-dir=/plugins || return $?
   terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
@@ -818,11 +820,12 @@ function main() {
   cd /
 
   ls -l /bin/ssh
-  ssh --help
+
   if ! prepare_environment ; then
     exit 2
   fi
 
+  ls -l /bin/ssh
   exitCode=0
   case "${1}" in
     run-test)
