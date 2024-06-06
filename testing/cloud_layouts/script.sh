@@ -570,6 +570,9 @@ ENDSSH
       envsubst '${b64_SSH_KEY} ${WORKER_USER} ${WORKER_IP}' \
       <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
 
+  # Kill previous ssh-agent due to dhctl creates own agent
+  kill $SSH_AGENT_PID
+
   # Bootstrap
   >&2 echo "Run dhctl bootstrap ..."
   dhctl --do-not-write-debug-log-file bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache --ssh-bastion-host "$bastion_ip" --ssh-bastion-user="$ssh_user" --ssh-host "$master_ip" --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
