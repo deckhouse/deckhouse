@@ -204,6 +204,12 @@ func (w *SeaweedfsScaleWorkflow) create(clusterNodes []NodeManager) error {
 func (w *SeaweedfsScaleWorkflow) delete(nodes []NodeManager) error {
 	w.log.Infof("Deleting nodes %s", GetNodeNames(nodes))
 	for _, node := range nodes {
+		status, err := node.GetNodeRunningStatus()
+		if err != nil && status.IsExist {
+			w.log.Infof("Node %s has already been deleted", node.GetNodeName())
+			return nil
+		}
+
 		w.log.Infof("Deleting manifests for node %s", node.GetNodeName())
 		if err := node.DeleteNodeManifests(); err != nil {
 			return err
