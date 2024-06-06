@@ -65,8 +65,8 @@ func CreateMasterInfoHandlerFunc(f func() (*MasterInfoResponse, error)) http.Han
 	}
 }
 
-func CreateCheckRegistryHandler(f func(*CheckRegistryRequest) (*CheckRegistryResponse, error), cfg *SingleRequestConfig) http.Handler {
-	handlerFunc := func(w http.ResponseWriter, r *http.Request) {
+func CreateCheckRegistryHandlerFunc(f func(*CheckRegistryRequest) (*CheckRegistryResponse, error)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		var requestBody CheckRegistryRequest
@@ -91,7 +91,6 @@ func CreateCheckRegistryHandler(f func(*CheckRegistryRequest) (*CheckRegistryRes
 		w.WriteHeader(http.StatusOK)
 		w.Write(jsonResponse)
 	}
-	return SingleRequestMiddlewares(http.HandlerFunc(handlerFunc), cfg)
 }
 
 func CreateCreateRegistryHandler(f func(*CreateRegistryRequest) error, cfg *SingleRequestConfig) http.Handler {
