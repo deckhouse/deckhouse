@@ -236,7 +236,7 @@ lang: ru
    kubectl -n d8-system logs deploy/deckhouse -f | jq -rc '.msg'
    ```
 
-   Или проверьте состояние очереди DKP:
+   или проверьте состояние очереди DKP:
 
    ```shell
    kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue list
