@@ -10,11 +10,11 @@ import (
 	"strings"
 )
 
-func CmpSelectIsNeedUpdateCaCerts(status *SeaweedfsNodeRunningStatus) bool {
+func CmpSelectIsNeedUpdateCerts(status *SeaweedfsNodeRunningStatus) bool {
 	if status == nil {
 		return false
 	}
-	return status.NeedUpdateCaCerts
+	return status.NeedUpdateCerts
 }
 
 func CmpSelectIsNotExist(status *SeaweedfsNodeRunningStatus) bool {
@@ -50,25 +50,29 @@ func SelectByRunningStatus(nodes []NodeManager, cmpFuncs ...func(status *Seaweed
 		return nil, nil, nil
 	}
 
-	selected := []NodeManager{}
-	other := []NodeManager{}
+	var selected, other []NodeManager
 
 	for _, node := range nodes {
 		status, err := node.GetNodeRunningStatus()
-		cmpResult := true
-
 		if err != nil {
 			return nil, nil, err
 		}
-		for _, cmpF := range cmpFuncs {
-			cmpResult = cmpResult && cmpF(status)
+
+		cmpResult := true
+		for _, cmpFunc := range cmpFuncs {
+			if !cmpFunc(status) {
+				cmpResult = false
+				break
+			}
 		}
+
 		if cmpResult {
 			selected = append(selected, node)
 		} else {
 			other = append(other, node)
 		}
 	}
+
 	return selected, other, nil
 }
 
@@ -85,34 +89,32 @@ func SortByStatus(nodes []NodeManager) ([]NodeManager, error) {
 		return nil, nil
 	}
 
-	isRunning := make([]NodeManager, 0, len(nodes))
-	isExist := []NodeManager{}
-	other := []NodeManager{}
+	var isRunning, isExist, other []NodeManager
 
 	for _, node := range nodes {
-		nodeRunningStatus, err := node.GetNodeRunningStatus()
+		status, err := node.GetNodeRunningStatus()
 		if err != nil {
 			return nil, err
 		}
+
 		switch {
-		case nodeRunningStatus.IsRunning:
+		case status.IsRunning:
 			isRunning = append(isRunning, node)
-		case nodeRunningStatus.IsExist:
+		case status.IsExist:
 			isExist = append(isExist, node)
 		default:
 			other = append(other, node)
 		}
 	}
-	isRunning = append(isRunning, isExist...)
-	isRunning = append(isRunning, other...)
-	return isRunning, nil
+
+	sortedNodes := append(isRunning, append(isExist, other...)...)
+	return sortedNodes, nil
 }
 
 func GetMasters(nodes []NodeManager) ([]NodeManager, error) {
 	visited := make(map[string]bool)
 	nodeMap := make(map[string][]string)
 
-	// Заполнение карты связей между узлами
 	for _, node := range nodes {
 		nodeInfo, err := node.GetNodeClusterStatus()
 		if err != nil {
@@ -131,8 +133,6 @@ func GetMasters(nodes []NodeManager) ([]NodeManager, error) {
 	}
 
 	var clusters [][]string
-
-	// Вспомогательная функция для поиска в глубину (DFS)
 	var dfs func(string, []string) []string
 	dfs = func(ip string, cluster []string) []string {
 		if visited[ip] {
@@ -146,7 +146,6 @@ func GetMasters(nodes []NodeManager) ([]NodeManager, error) {
 		return cluster
 	}
 
-	// Поиск всех кластеров
 	for ip := range nodeMap {
 		if !visited[ip] {
 			cluster := dfs(ip, []string{})
@@ -154,7 +153,7 @@ func GetMasters(nodes []NodeManager) ([]NodeManager, error) {
 		}
 	}
 
-	masters := []NodeManager{}
+	var masters []NodeManager
 	for _, cluster := range clusters {
 		master, err := GetFirstNodeByIPs(nodes, cluster)
 		if err != nil {
@@ -182,11 +181,11 @@ func GetFirstNodeByIPs(nodes []NodeManager, ips []string) (NodeManager, error) {
 
 func GetNodeByIP(nodes []NodeManager, ip string) (NodeManager, error) {
 	for _, node := range nodes {
-		nodeIp, err := node.GetNodeIP()
+		nodeIP, err := node.GetNodeIP()
 		if err != nil {
 			return nil, err
 		}
-		if nodeIp == ip {
+		if nodeIP == ip {
 			return node, nil
 		}
 	}
@@ -201,7 +200,6 @@ func GetExpectedNodeCount(expectedNodeCount int) int {
 		return 0
 	}
 	if expectedNodeCount%2 == 0 {
-		// если четное - взять (ExpectedNodeCount - 1), чтобы получилось нечетное
 		return expectedNodeCount - 1
 	}
 	return expectedNodeCount

@@ -57,38 +57,35 @@ func TestCheckRegistryRequests(t *testing.T) {
 	mockResponse := CheckRegistryResponse{
 		Data: struct {
 			RegistryFilesState struct {
-				ManifestsWaitToCreate    bool `json:"manifestsWaitToCreate"`
+				ManifestsIsExist         bool `json:"manifestsIsExist"`
 				ManifestsWaitToUpdate    bool `json:"manifestsWaitToUpdate"`
-				StaticPodsWaitToCreate   bool `json:"staticPodsWaitToCreate"`
+				StaticPodsIsExist        bool `json:"staticPodsIsExist"`
 				StaticPodsWaitToUpdate   bool `json:"staticPodsWaitToUpdate"`
-				CertificatesWaitToCreate bool `json:"certificatesWaitToCreate"`
+				CertificateIsExist       bool `json:"certificateIsExist"`
 				CertificatesWaitToUpdate bool `json:"certificatesWaitToUpdate"`
 			} `json:"registryState"`
 		}{
 			RegistryFilesState: struct {
-				ManifestsWaitToCreate    bool `json:"manifestsWaitToCreate"`
-				ManifestsWaitToUpdate    bool `json:"manifestsWaitToUpdate"`
-				StaticPodsWaitToCreate   bool `json:"staticPodsWaitToCreate"`
-				StaticPodsWaitToUpdate   bool `json:"staticPodsWaitToUpdate"`
-				CertificatesWaitToCreate bool `json:"certificatesWaitToCreate"`
-				CertificatesWaitToUpdate bool `json:"certificatesWaitToUpdate"`
+				ManifestsIsExist         bool "json:\"manifestsIsExist\""
+				ManifestsWaitToUpdate    bool "json:\"manifestsWaitToUpdate\""
+				StaticPodsIsExist        bool "json:\"staticPodsIsExist\""
+				StaticPodsWaitToUpdate   bool "json:\"staticPodsWaitToUpdate\""
+				CertificateIsExist       bool "json:\"certificateIsExist\""
+				CertificatesWaitToUpdate bool "json:\"certificatesWaitToUpdate\""
 			}{
-				ManifestsWaitToCreate:    true,
+				ManifestsIsExist:         true,
 				ManifestsWaitToUpdate:    false,
-				StaticPodsWaitToCreate:   true,
+				StaticPodsIsExist:        true,
 				StaticPodsWaitToUpdate:   false,
-				CertificatesWaitToCreate: true,
+				CertificateIsExist:       true,
 				CertificatesWaitToUpdate: false,
 			},
 		},
 	}
 
 	mockRequest := CheckRegistryRequest{
-		Seaweedfs: struct {
-			MasterPeers []string `json:"masterPeers"`
-		}{
-			MasterPeers: []string{"123", "123", "321"},
-		},
+		MasterPeers:          []string{"123", "123", "321"},
+		CheckWithMasterPeers: true,
 	}
 
 	// Mock function for checking registry
@@ -118,13 +115,46 @@ func TestCheckRegistryRequests(t *testing.T) {
 	}
 }
 
+func TestCreateRegistryRequests(t *testing.T) {
+	mockRequest := CreateRegistryRequest{
+		MasterPeers: []string{"123", "123", "321"},
+	}
+
+	// Mock function for updating registry
+	mockCreateRegistryFunc := func(request *CreateRegistryRequest) error {
+		if !reflect.DeepEqual(&mockRequest, request) {
+			t.Errorf("expected request body %v, got %v", mockRequest, request)
+		}
+		return nil
+	}
+
+	// Create test handler function using the mockUpdateRegistryFunc
+	singleRequestCfg := CreateSingleRequestConfig()
+	handler := CreateCreateRegistryHandler(mockCreateRegistryFunc, singleRequestCfg)
+
+	// Create a mock HTTP server using the handler
+	mockServer := httptest.NewServer(handler)
+	defer mockServer.Close()
+
+	// Make a request to the mock server
+	err := RequestCreateRegistry(logrus.NewEntry(logrus.New()), &http.Client{}, mockServer.URL, map[string]string{}, &mockRequest)
+	assert.NoError(t, err)
+}
+
 func TestUpdateRegistryRequests(t *testing.T) {
-	// Expected update registry request
 	mockRequest := UpdateRegistryRequest{
-		Seaweedfs: struct {
-			MasterPeers []string `json:"masterPeers"`
+		Certs: struct {
+			UpdateOrCreate bool "json:\"updateOrCreate\""
+		}{true},
+		Manifests: struct {
+			UpdateOrCreate bool "json:\"updateOrCreate\""
+		}{false},
+		StaticPods: struct {
+			MasterPeers    []string "json:\"masterPeers\""
+			UpdateOrCreate bool     "json:\"updateOrCreate\""
 		}{
-			MasterPeers: []string{"123", "123", "321"},
+			MasterPeers:    []string{"123", "123", "321"},
+			UpdateOrCreate: true,
 		},
 	}
 

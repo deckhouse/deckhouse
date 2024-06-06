@@ -38,7 +38,7 @@ func NewCommonHandler(ctx context.Context) (*CommonHandler, error) {
 	commonHandler.KubernetesResourcesHandler = NewKubernetesResourcesHandler(
 		ctx,
 		cfg.K8sClient,
-		60*time.Second,
+		10*time.Second,
 		cfg.Manager.Namespace,
 	)
 

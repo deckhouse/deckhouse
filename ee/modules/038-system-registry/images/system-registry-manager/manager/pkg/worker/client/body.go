@@ -7,26 +7,44 @@ package client
 
 // CheckRegistry (Request + Response)
 type CheckRegistryRequest struct {
-	Seaweedfs struct {
-		MasterPeers []string `json:"masterPeers"`
-	} `json:"seaweedfs"`
+	MasterPeers          []string `json:"masterPeers"`
+	CheckWithMasterPeers bool     `json:"checkWithMasterPeers"`
+}
+
+type UpdateRegistryRequest struct {
+	StaticPods struct {
+		MasterPeers    []string `json:"masterPeers"`
+		UpdateOrCreate bool     `json:"updateOrCreate"`
+	} `json:"staticPods"`
+	Certs struct {
+		UpdateOrCreate bool `json:"updateOrCreate"`
+	} `json:"certs"`
+	Manifests struct {
+		UpdateOrCreate bool `json:"updateOrCreate"`
+	} `json:"manifests"`
+}
+
+type CreateRegistryRequest struct {
+	MasterPeers []string `json:"masterPeers"`
+}
+
+// Busy (Request + Response)
+type IsBusyRequest struct {
+	WaitTimeoutSeconds *int `json:"waitTimeoutSeconds"`
 }
 
 type CheckRegistryResponse struct {
 	Data struct {
 		RegistryFilesState struct {
-			ManifestsWaitToCreate    bool `json:"manifestsWaitToCreate"`
+			ManifestsIsExist         bool `json:"manifestsIsExist"`
 			ManifestsWaitToUpdate    bool `json:"manifestsWaitToUpdate"`
-			StaticPodsWaitToCreate   bool `json:"staticPodsWaitToCreate"`
+			StaticPodsIsExist        bool `json:"staticPodsIsExist"`
 			StaticPodsWaitToUpdate   bool `json:"staticPodsWaitToUpdate"`
-			CertificatesWaitToCreate bool `json:"certificatesWaitToCreate"`
+			CertificateIsExist       bool `json:"certificateIsExist"`
 			CertificatesWaitToUpdate bool `json:"certificatesWaitToUpdate"`
 		} `json:"registryState"`
 	} `json:"data,omitempty"`
 }
-
-// UpdateRegistry (Request + Response)
-type UpdateRegistryRequest = CheckRegistryRequest
 
 // MasterInfo (Request + Response)
 type MasterInfoResponse struct {
@@ -35,11 +53,6 @@ type MasterInfoResponse struct {
 		MasterName        string `json:"masterName"`
 		CurrentMasterName string `json:"currentMasterName"`
 	} `json:"data,omitempty"`
-}
-
-// Busy (Request + Response)
-type IsBusyRequest struct {
-	WaitTimeoutSeconds *int `json:"waitTimeoutSeconds"`
 }
 
 type IsBusyResponse struct {

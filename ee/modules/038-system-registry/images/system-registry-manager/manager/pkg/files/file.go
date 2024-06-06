@@ -11,21 +11,63 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 )
 
-func CompareChecksum(lFilePath, rFilePath string) (bool, error) {
-	lSum, err := GetChecksum(lFilePath)
+func CompareChecksumByFileContent(lFilecontent, rFilecontent string) (bool, error) {
+	lSum, err := GetChecksumByFileContent(lFilecontent)
 	if err != nil {
-		return false, fmt.Errorf("error calculating checksum for %s: %v", lFilePath, err)
+		return false, fmt.Errorf("error calculating checksum for file content: %v", err)
 	}
-	rSum, err := GetChecksum(rFilePath)
+	rSum, err := GetChecksumByFileContent(rFilecontent)
+	if err != nil {
+		return false, fmt.Errorf("error calculating checksum for file content: %v", err)
+	}
+	return lSum == rSum, nil
+}
+
+func CompareChecksumByDestFilePath(lFilecontent string, rFilePath string) (bool, error) {
+	lSum, err := GetChecksumByFileContent(lFilecontent)
+	if err != nil {
+		return false, fmt.Errorf("error calculating checksum for file content: %v", err)
+	}
+	rSum, err := GetChecksumByFilePath(rFilePath)
 	if err != nil {
 		return false, fmt.Errorf("error calculating checksum for %s: %v", rFilePath, err)
 	}
 	return lSum == rSum, nil
 }
 
-func GetChecksum(filePath string) (string, error) {
+func CompareChecksumByFilePath(lFilePath, rFilePath string) (bool, error) {
+	lSum, err := GetChecksumByFilePath(lFilePath)
+	if err != nil {
+		return false, fmt.Errorf("error calculating checksum for %s: %v", lFilePath, err)
+	}
+	rSum, err := GetChecksumByFilePath(rFilePath)
+	if err != nil {
+		return false, fmt.Errorf("error calculating checksum for %s: %v", rFilePath, err)
+	}
+	return lSum == rSum, nil
+}
+
+func GetChecksumByFileContent(fileContent string) (string, error) {
+	// Create a new SHA-256 hash
+	hash := sha256.New()
+
+	// Create an io.Reader from the file content string
+	reader := strings.NewReader(fileContent)
+
+	// Copy the content of the string to the hash
+	if _, err := io.Copy(hash, reader); err != nil {
+		return "", fmt.Errorf("error copying content to hash: %v", err)
+	}
+
+	// Get the checksum in bytes and convert it to a string
+	checksum := hex.EncodeToString(hash.Sum(nil))
+	return checksum, nil
+}
+
+func GetChecksumByFilePath(filePath string) (string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return "", err

@@ -26,6 +26,10 @@ func createServer(workerData *WorkerData) *http.Server {
 		return checkRegistryHandlerFunc(workerData, requestBody)
 	}
 
+	createRegistry := func(requestBody *worker_client.CreateRegistryRequest) error {
+		return createRegistryHandlerFunc(workerData, requestBody)
+	}
+
 	updateRegistry := func(requestBody *worker_client.UpdateRegistryRequest) error {
 		return updateRegistryHandlerFunc(workerData, requestBody)
 	}
@@ -39,6 +43,7 @@ func createServer(workerData *WorkerData) *http.Server {
 	http.HandleFunc(worker_client.MasterInfoUrlPattern, worker_client.CreateMasterInfoHandlerFunc(masterInfo))
 	http.HandleFunc(worker_client.IsBusyUrlPattern, worker_client.CreateIsBusyHandlerFunc(workerData.singleRequestCfg))
 	http.Handle(worker_client.CheckRegistryUrlPattern, worker_client.CreateCheckRegistryHandler(checkRegistry, workerData.singleRequestCfg))
+	http.Handle(worker_client.CreateRegistryUrlPattern, worker_client.CreateCreateRegistryHandler(createRegistry, workerData.singleRequestCfg))
 	http.Handle(worker_client.UpdateRegistryUrlPattern, worker_client.CreateUpdateRegistryHandler(updateRegistry, workerData.singleRequestCfg))
 	http.Handle(worker_client.DeleteRegistryUrlPattern, worker_client.CreateDeleteRegistryHandler(deleteRegistry, workerData.singleRequestCfg))
 	return server
@@ -55,9 +60,9 @@ func readyzHandler(w http.ResponseWriter, _ *http.Request) {
 func masterInfoHandlerFunc(workerData *WorkerData) (*worker_client.MasterInfoResponse, error) {
 	masterInfo := worker_client.MasterInfoResponse{
 		Data: struct {
-			IsMaster          bool   "json:\"isMaster\""
-			MasterName        string "json:\"masterName\""
-			CurrentMasterName string "json:\"currentMasterName\""
+			IsMaster          bool   `json:"isMaster"`
+			MasterName        string `json:"masterName"`
+			CurrentMasterName string `json:"currentMasterName"`
 		}{
 			IsMaster:          workerData.commonCfg.IsMaster(),
 			MasterName:        workerData.commonCfg.MasterName(),
@@ -67,76 +72,133 @@ func masterInfoHandlerFunc(workerData *WorkerData) (*worker_client.MasterInfoRes
 	return &masterInfo, nil
 }
 
-func checkRegistryHandlerFunc(workerData *WorkerData, _ *worker_client.CheckRegistryRequest) (*worker_client.CheckRegistryResponse, error) {
+func checkRegistryHandlerFunc(workerData *WorkerData, request *worker_client.CheckRegistryRequest) (*worker_client.CheckRegistryResponse, error) {
 	log := workerData.log
 	manifestsSpec := pkg_cfg.NewManifestsSpec()
 
-	if err := steps.PrepareWorkspace(workerData.rootCtx, manifestsSpec); err != nil {
+	params := steps.InputParams{
+		Certs:     struct{ UpdateOrCreate bool }{UpdateOrCreate: true},
+		Manifests: struct{ UpdateOrCreate bool }{UpdateOrCreate: true},
+		StaticPods: struct {
+			UpdateOrCreate       bool
+			MasterPeers          []string
+			CheckWithMasterPeers bool
+		}{
+			UpdateOrCreate:       true,
+			CheckWithMasterPeers: request.CheckWithMasterPeers,
+			MasterPeers:          request.MasterPeers,
+		},
+	}
+
+	bundle, err := steps.CreateBundle(workerData.rootCtx, manifestsSpec, &params)
+	if err != nil {
 		log.Error(err)
 		return nil, err
 	}
-	if err := steps.GenerateCerts(workerData.rootCtx, manifestsSpec); err != nil {
+	if err := steps.CheckDest(workerData.rootCtx, bundle, &params); err != nil {
 		log.Error(err)
 		return nil, err
-	}
-	if err := steps.CheckDestFiles(workerData.rootCtx, manifestsSpec); err != nil {
-		log.Error(err)
-		return nil, err
-	}
-	if !manifestsSpec.NeedChange() {
-		return &worker_client.CheckRegistryResponse{}, nil
 	}
 	return &worker_client.CheckRegistryResponse{
 		Data: struct {
 			RegistryFilesState struct {
-				ManifestsWaitToCreate    bool "json:\"manifestsWaitToCreate\""
-				ManifestsWaitToUpdate    bool "json:\"manifestsWaitToUpdate\""
-				StaticPodsWaitToCreate   bool "json:\"staticPodsWaitToCreate\""
-				StaticPodsWaitToUpdate   bool "json:\"staticPodsWaitToUpdate\""
-				CertificatesWaitToCreate bool "json:\"certificatesWaitToCreate\""
-				CertificatesWaitToUpdate bool "json:\"certificatesWaitToUpdate\""
-			} "json:\"registryState\""
+				ManifestsIsExist         bool `json:"manifestsIsExist"`
+				ManifestsWaitToUpdate    bool `json:"manifestsWaitToUpdate"`
+				StaticPodsIsExist        bool `json:"staticPodsIsExist"`
+				StaticPodsWaitToUpdate   bool `json:"staticPodsWaitToUpdate"`
+				CertificateIsExist       bool `json:"certificateIsExist"`
+				CertificatesWaitToUpdate bool `json:"certificatesWaitToUpdate"`
+			} `json:"registryState"`
 		}{
 			RegistryFilesState: struct {
-				ManifestsWaitToCreate    bool "json:\"manifestsWaitToCreate\""
-				ManifestsWaitToUpdate    bool "json:\"manifestsWaitToUpdate\""
-				StaticPodsWaitToCreate   bool "json:\"staticPodsWaitToCreate\""
-				StaticPodsWaitToUpdate   bool "json:\"staticPodsWaitToUpdate\""
-				CertificatesWaitToCreate bool "json:\"certificatesWaitToCreate\""
-				CertificatesWaitToUpdate bool "json:\"certificatesWaitToUpdate\""
+				ManifestsIsExist         bool `json:"manifestsIsExist"`
+				ManifestsWaitToUpdate    bool `json:"manifestsWaitToUpdate"`
+				StaticPodsIsExist        bool `json:"staticPodsIsExist"`
+				StaticPodsWaitToUpdate   bool `json:"staticPodsWaitToUpdate"`
+				CertificateIsExist       bool `json:"certificateIsExist"`
+				CertificatesWaitToUpdate bool `json:"certificatesWaitToUpdate"`
 			}{
-				ManifestsWaitToCreate:    manifestsSpec.NeedManifestsCreate(),
-				ManifestsWaitToUpdate:    manifestsSpec.NeedManifestsUpdate(),
-				StaticPodsWaitToCreate:   manifestsSpec.NeedStaticPodsCreate(),
-				StaticPodsWaitToUpdate:   manifestsSpec.NeedStaticPodsUpdate(),
-				CertificatesWaitToCreate: manifestsSpec.NeedStaticCertificatesCreate(),
-				CertificatesWaitToUpdate: manifestsSpec.NeedStaticCertificatesUpdate(),
+				ManifestsIsExist:         bundle.ManifestsIsExist(),
+				ManifestsWaitToUpdate:    bundle.ManifestsWaitToUpdate(),
+				StaticPodsIsExist:        bundle.StaticPodsIsExist(),
+				StaticPodsWaitToUpdate:   bundle.StaticPodsWaitToUpdate(),
+				CertificateIsExist:       bundle.CertificateIsExist(),
+				CertificatesWaitToUpdate: bundle.CertificatesWaitToUpdate(),
 			},
 		},
 	}, nil
 }
 
-func updateRegistryHandlerFunc(workerData *WorkerData, _ *worker_client.CheckRegistryRequest) error {
+func updateRegistryHandlerFunc(workerData *WorkerData, request *worker_client.UpdateRegistryRequest) error {
 	log := workerData.log
 	manifestsSpec := pkg_cfg.NewManifestsSpec()
 
-	if err := steps.PrepareWorkspace(workerData.rootCtx, manifestsSpec); err != nil {
+	params := steps.InputParams{
+		Certs:     struct{ UpdateOrCreate bool }{UpdateOrCreate: request.Certs.UpdateOrCreate},
+		Manifests: struct{ UpdateOrCreate bool }{UpdateOrCreate: request.Manifests.UpdateOrCreate},
+		StaticPods: struct {
+			UpdateOrCreate       bool
+			MasterPeers          []string
+			CheckWithMasterPeers bool
+		}{
+			UpdateOrCreate:       request.StaticPods.UpdateOrCreate,
+			CheckWithMasterPeers: true,
+			MasterPeers:          request.StaticPods.MasterPeers,
+		},
+	}
+
+	bundle, err := steps.CreateBundle(workerData.rootCtx, manifestsSpec, &params)
+	if err != nil {
 		log.Error(err)
 		return err
 	}
-	if err := steps.GenerateCerts(workerData.rootCtx, manifestsSpec); err != nil {
+	if err := steps.CheckDest(workerData.rootCtx, bundle, &params); err != nil {
 		log.Error(err)
 		return err
 	}
-	if err := steps.CheckDestFiles(workerData.rootCtx, manifestsSpec); err != nil {
+	if err := steps.Update(workerData.rootCtx, bundle); err != nil {
 		log.Error(err)
 		return err
 	}
-	if !manifestsSpec.NeedChange() {
-		log.Debug("No changes")
-		return nil
+	if err := steps.PatchStaticPodsDestForRestart(workerData.rootCtx, bundle); err != nil {
+		log.Error(err)
+		return err
 	}
-	if err := steps.UpdateManifests(workerData.rootCtx, manifestsSpec); err != nil {
+	return nil
+}
+
+func createRegistryHandlerFunc(workerData *WorkerData, request *worker_client.CreateRegistryRequest) error {
+	log := workerData.log
+	manifestsSpec := pkg_cfg.NewManifestsSpec()
+
+	params := steps.InputParams{
+		Certs:     struct{ UpdateOrCreate bool }{UpdateOrCreate: true},
+		Manifests: struct{ UpdateOrCreate bool }{UpdateOrCreate: true},
+		StaticPods: struct {
+			UpdateOrCreate       bool
+			MasterPeers          []string
+			CheckWithMasterPeers bool
+		}{
+			UpdateOrCreate:       true,
+			CheckWithMasterPeers: true,
+			MasterPeers:          request.MasterPeers,
+		},
+	}
+
+	bundle, err := steps.CreateBundle(workerData.rootCtx, manifestsSpec, &params)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	if err := steps.CheckDest(workerData.rootCtx, bundle, &params); err != nil {
+		log.Error(err)
+		return err
+	}
+	if err := steps.Update(workerData.rootCtx, bundle); err != nil {
+		log.Error(err)
+		return err
+	}
+	if err := steps.PatchStaticPodsDestForRestart(workerData.rootCtx, bundle); err != nil {
 		log.Error(err)
 		return err
 	}
@@ -147,7 +209,7 @@ func deleteRegistryHandlerFunc(workerData *WorkerData) error {
 	log := workerData.log
 	manifestsSpec := pkg_cfg.NewManifestsSpec()
 
-	if err := steps.DeleteManifests(workerData.rootCtx, manifestsSpec); err != nil {
+	if err := steps.Delete(workerData.rootCtx, manifestsSpec); err != nil {
 		log.Error(err)
 		return err
 	}

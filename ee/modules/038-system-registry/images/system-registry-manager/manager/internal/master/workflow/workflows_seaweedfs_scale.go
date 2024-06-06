@@ -68,7 +68,7 @@ func (w *SeaweedfsScaleWorkflow) needCluster(clusterNodes []NodeManager) error {
 
 	if len(currentNodes) == 0 {
 		w.log.Info("No current running nodes, creating new cluster")
-		return w.create(currentNodes)
+		return w.create(clusterNodes)
 	}
 
 	w.log.Infof("Scaling existing cluster")
@@ -97,14 +97,23 @@ func (w *SeaweedfsScaleWorkflow) scale(currentNodes []NodeManager, newNodes []No
 
 	w.log.Infof("Creating request with new IPs: %v", newIPs)
 	createRequest := SeaweedfsCreateNodeRequest{
-		CreateManifestsData: struct{ MasterPeers []string }{newIPs},
+		MasterPeers: newIPs,
 	}
 
 	updateRequest := SeaweedfsUpdateNodeRequest{
-		UpdateCert:          true,
-		UpdateCaCerts:       false,
-		UpdateManifests:     true,
-		UpdateManifestsData: struct{ MasterPeers []string }{newIPs},
+		Certs: struct {
+			UpdateOrCreate bool `json:"updateOrCreate"`
+		}{true},
+		Manifests: struct {
+			UpdateOrCreate bool `json:"updateOrCreate"`
+		}{true},
+		StaticPods: struct {
+			MasterPeers    []string `json:"masterPeers"`
+			UpdateOrCreate bool     `json:"updateOrCreate"`
+		}{
+			MasterPeers:    newIPs,
+			UpdateOrCreate: true,
+		},
 	}
 
 	masters, err := GetMasters(currentNodes)
@@ -128,9 +137,12 @@ func (w *SeaweedfsScaleWorkflow) scale(currentNodes []NodeManager, newNodes []No
 		if err != nil {
 			return err
 		}
-		master.AddNodeToCluster(nodeIp)
+		w.log.Infof("Creating manifests for node %s", newNode.GetNodeName())
+		if err := newNode.CreateNodeManifests(&createRequest); err != nil {
+			return err
+		}
 		w.log.Infof("Adding node %s to cluster", newNode.GetNodeName())
-		if err := master.CreateNodeManifests(&createRequest); err != nil {
+		if err := master.AddNodeToCluster(nodeIp); err != nil {
 			return err
 		}
 	}
@@ -156,7 +168,7 @@ func (w *SeaweedfsScaleWorkflow) scale(currentNodes []NodeManager, newNodes []No
 func (w *SeaweedfsScaleWorkflow) create(clusterNodes []NodeManager) error {
 	w.log.Infof("Creating new cluster with nodes: %s", GetNodeNames(clusterNodes))
 	createRequest := SeaweedfsCreateNodeRequest{
-		CreateManifestsData: struct{ MasterPeers []string }{make([]string, 0, len(clusterNodes))},
+		MasterPeers: make([]string, 0, len(clusterNodes)),
 	}
 
 	for _, node := range clusterNodes {
@@ -164,7 +176,7 @@ func (w *SeaweedfsScaleWorkflow) create(clusterNodes []NodeManager) error {
 		if err != nil {
 			return err
 		}
-		createRequest.CreateManifestsData.MasterPeers = append(createRequest.CreateManifestsData.MasterPeers, nodeIp)
+		createRequest.MasterPeers = append(createRequest.MasterPeers, nodeIp)
 	}
 
 	for _, node := range clusterNodes {

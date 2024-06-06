@@ -5,6 +5,10 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package workflow
 
+import (
+	worker_client "system-registry-manager/pkg/worker/client"
+)
+
 type NodeManager interface {
 	GetNodeName() string
 
@@ -29,24 +33,12 @@ type SeaweedfsNodeClusterStatus struct {
 }
 
 type SeaweedfsNodeRunningStatus struct {
-	IsExist            bool
-	IsRunning          bool
-	NeedUpdateManifest bool
-	NeedUpdateCerts    bool
-	NeedUpdateCaCerts  bool
+	IsExist             bool
+	IsRunning           bool
+	NeedUpdateStaticPod bool
+	NeedUpdateManifest  bool
+	NeedUpdateCerts     bool
 }
 
-type SeaweedfsCreateNodeRequest struct {
-	CreateManifestsData struct {
-		MasterPeers []string
-	}
-}
-
-type SeaweedfsUpdateNodeRequest struct {
-	UpdateCert          bool
-	UpdateCaCerts       bool
-	UpdateManifests     bool
-	UpdateManifestsData struct {
-		MasterPeers []string
-	}
-}
+type SeaweedfsCreateNodeRequest = worker_client.CreateRegistryRequest
+type SeaweedfsUpdateNodeRequest = worker_client.UpdateRegistryRequest

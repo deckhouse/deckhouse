@@ -18,7 +18,7 @@ type SeaweedfsCertsWorkflow struct {
 	NodeManagers      []NodeManager
 }
 
-func NewSeaweedfsCaCertsWorkflow(ctx context.Context, nodeManagers []NodeManager, expectedNodeCount int) *SeaweedfsCertsWorkflow {
+func NewSeaweedfsCertsWorkflow(ctx context.Context, nodeManagers []NodeManager, expectedNodeCount int) *SeaweedfsCertsWorkflow {
 	log := pkg_logs.GetLoggerFromContext(ctx)
 	return &SeaweedfsCertsWorkflow{
 		log:               log,
@@ -31,21 +31,30 @@ func NewSeaweedfsCaCertsWorkflow(ctx context.Context, nodeManagers []NodeManager
 func (w *SeaweedfsCertsWorkflow) Start() error {
 	w.log.Info("Starting SeaweedfsCertsWorkflow")
 
-	w.log.Info("Selecting nodes that exist and need CA certificates update")
-	existAndNeedUpdateCA, _, err := SelectByRunningStatus(w.NodeManagers, CmpSelectIsExist, CmpSelectIsNeedUpdateCaCerts)
+	w.log.Info("Selecting nodes that exist and need certificate updates")
+	existAndNeedUpdateCert, _, err := SelectByRunningStatus(w.NodeManagers, CmpSelectIsExist, CmpSelectIsNeedUpdateCerts)
 	if err != nil {
 		return err
 	}
 
-	w.log.Infof("Found %s nodes that need CA certificates update", GetNodeNames(existAndNeedUpdateCA))
-
+	w.log.Infof("Found %s nodes that need certificate updates", GetNodeNames(existAndNeedUpdateCert))
 	updateRequest := SeaweedfsUpdateNodeRequest{
-		UpdateCert:      true,
-		UpdateCaCerts:   true,
-		UpdateManifests: false,
+		Certs: struct {
+			UpdateOrCreate bool "json:\"updateOrCreate\""
+		}{true},
+		Manifests: struct {
+			UpdateOrCreate bool "json:\"updateOrCreate\""
+		}{false},
+		StaticPods: struct {
+			MasterPeers    []string "json:\"masterPeers\""
+			UpdateOrCreate bool     "json:\"updateOrCreate\""
+		}{
+			MasterPeers:    []string{},
+			UpdateOrCreate: false,
+		},
 	}
 
-	for _, node := range existAndNeedUpdateCA {
+	for _, node := range existAndNeedUpdateCert {
 		w.log.Infof("Updating CA certificates for node: %s", node.GetNodeName())
 		if err := node.UpdateNodeManifests(&updateRequest); err != nil {
 			return err

@@ -54,7 +54,7 @@ spec:
       - -volume.pprof
       - -filer.maxMB=16
       - -ip={{ .hostIP }}
-      - -master.peers={{ .hostIP }}:9333
+      - -master.peers={{ range $index, $masterPeerAddr := .masterPeers }}{{ if $index }},{{ end }}{{ printf "%s:%s" $masterPeerAddr "9333" }}{{ end }}
     env:
       - name: GOGC
         value: "20"
