@@ -70,13 +70,14 @@ function get_phase2() {
   done
 }
 
-function prepary_binary() {
+function prepary_base_d8_binaries() {
 	export PATH="/opt/deckhouse/bin:$PATH"
 	export LANG=C
 	export REPOSITORY=""
 	export BB_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages"
 	export BB_FETCHED_PACKAGES_STORE="/${TMPDIR}/registrypackages"
-	{{- if .proxy }}
+{{- with $context.Values.global.clusterConfiguration }}
+{{- if .proxy }}
 		{{- if .proxy.httpProxy }}
 	export HTTP_PROXY={{ .proxy.httpProxy | quote }}
 	export http_proxy=${HTTP_PROXY}
@@ -96,8 +97,11 @@ function prepary_binary() {
 	export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
 	export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
 	{{- end }}
-	bb-package-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}" "netcat:{{ .images.registrypackages.netcat110481 }}"
+{{- with $context.Values.global.modulesImages.digests.registrypackages }}
+	bb-package-install "jq:{{ .jq16 }}" "curl:{{ .d8Curl821 }}" "netcat:{{ .netcat110481 }}"
+{{- end }}
 }
+{{- end }}
 
   {{- if not (hasKey $ng "staticInstances") }}
 function run_cloud_network_setup() {
@@ -146,7 +150,7 @@ function run_log_output() {
 }
  {{- end }}
 BUNDLE="$(detect_bundle)"
-prepary_binary
+prepary_base_d8_binaries
   {{- if not (hasKey $ng "staticInstances") }}
 run_cloud_network_setup
   {{- end }}
