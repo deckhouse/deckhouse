@@ -13,9 +13,9 @@
 # limitations under the License.
 
 {{- if or (eq .nodeGroup.nodeType "Static") (eq .nodeGroup.nodeType "CloudStatic") }}
-# if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
-#  exit 0
-# fi
+if [[ "$FIRST_BASHIBLE_RUN" == "yes" ]]; then
+  exit 0
+fi
 
 echo "FIRST_BASHIBLE_RUN: $FIRST_BASHIBLE_RUN\n"
 echo "BOOTSTRAP_DIR: $BOOTSTRAP_DIR\n"
