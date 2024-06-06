@@ -148,7 +148,7 @@ func (w *SeaweedfsScaleWorkflow) scale(currentNodes []NodeManager, newNodes []No
 			return fmt.Errorf("error waitig node %s", newNode.GetNodeName())
 		}
 	}
-	
+
 	for _, newNode := range newNodes {
 		nodeIp, err := newNode.GetNodeIP()
 		if err != nil {
