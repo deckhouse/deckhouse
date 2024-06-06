@@ -128,7 +128,7 @@ func (m *NodeManager) GetNodeIP() (string, error) {
 func (m *NodeManager) AddNodeToCluster(newNodeIP string) error {
 	newID := seaweedfs_client.FromIpToId(newNodeIP)
 	newMasterAddress := seaweedfs_client.FromIpToMasterHost(newNodeIP)
-	serverVoter := false
+	serverVoter := true
 
 	f := func(client *seaweedfs_client.Client) error {
 		_, err := client.ClusterRaftAdd(
