@@ -56,7 +56,7 @@ func masterWorkflow(ctx context.Context, m *Master) error {
 		nodeManagers = append(nodeManagers, NewNodeManager(ctx, master, m.k8sHandler))
 	}
 
-	seaweedfsCaCertsWorkflow := workflow.NewSeaweedfsCaCertsWorkflow(ctx, nodeManagers, len(nodeManagers))
+	seaweedfsCaCertsWorkflow := workflow.NewSeaweedfsCertsWorkflow(ctx, nodeManagers, len(nodeManagers))
 	err = seaweedfsCaCertsWorkflow.Start()
 	if err != nil {
 		return err

@@ -15,6 +15,7 @@ const (
 	MasterInfoUrlPattern     = "/master_info"
 	CheckRegistryUrlPattern  = "/check_registry"
 	UpdateRegistryUrlPattern = "/update_registry"
+	CreateRegistryUrlPattern = "/create_registry"
 	DeleteRegistryUrlPattern = "/delete_registry"
 	IsBusyUrlPattern         = "/is_busy"
 )
@@ -25,6 +26,10 @@ func RequestMasterInfo(logger *logrus.Entry, client *http.Client, url string, he
 
 func RequestCheckRegistry(logger *logrus.Entry, client *http.Client, url string, headers map[string]string, request *CheckRegistryRequest, response *CheckRegistryResponse) error {
 	return makeRequestWithResponse(logger, client, http.MethodPost, url+CheckRegistryUrlPattern, headers, request, response)
+}
+
+func RequestCreateRegistry(logger *logrus.Entry, client *http.Client, url string, headers map[string]string, request *CreateRegistryRequest) error {
+	return makeRequestWithoutResponse(logger, client, http.MethodPost, url+CreateRegistryUrlPattern, headers, request)
 }
 
 func RequestUpdateRegistry(logger *logrus.Entry, client *http.Client, url string, headers map[string]string, request *UpdateRegistryRequest) error {
@@ -85,6 +90,28 @@ func CreateCheckRegistryHandler(f func(*CheckRegistryRequest) (*CheckRegistryRes
 
 		w.WriteHeader(http.StatusOK)
 		w.Write(jsonResponse)
+	}
+	return SingleRequestMiddlewares(http.HandlerFunc(handlerFunc), cfg)
+}
+
+func CreateCreateRegistryHandler(f func(*CreateRegistryRequest) error, cfg *SingleRequestConfig) http.Handler {
+	handlerFunc := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		var requestBody CreateRegistryRequest
+		err := json.NewDecoder(r.Body).Decode(&requestBody)
+		if err != nil {
+			http.Error(w, "Failed to decode request body", http.StatusInternalServerError)
+			return
+		}
+
+		err = f(&requestBody)
+		if err != nil {
+			http.Error(w, "Failed to process create registry request", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 	return SingleRequestMiddlewares(http.HandlerFunc(handlerFunc), cfg)
 }

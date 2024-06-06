@@ -87,7 +87,7 @@ func (m *NodeManager) GetNodeRunningStatus() (*master_workflow.SeaweedfsNodeRunn
 
 	f := func(client *worker_client.Client) error {
 		var err error
-		resp, err = client.RequestCheckRegistry(&worker_client.CheckRegistryRequest{})
+		resp, err = client.RequestCheckRegistry(&worker_client.CheckRegistryRequest{CheckWithMasterPeers: false})
 		return err
 	}
 	err := m.makeRequestToWorker(f)
@@ -103,11 +103,11 @@ func (m *NodeManager) GetNodeRunningStatus() (*master_workflow.SeaweedfsNodeRunn
 	}
 
 	return &master_workflow.SeaweedfsNodeRunningStatus{
-		IsExist:            !resp.Data.RegistryFilesState.ManifestsWaitToCreate,
-		IsRunning:          isRunning,
-		NeedUpdateManifest: resp.Data.RegistryFilesState.ManifestsWaitToUpdate,
-		NeedUpdateCerts:    resp.Data.RegistryFilesState.CertificatesWaitToUpdate,
-		NeedUpdateCaCerts:  resp.Data.RegistryFilesState.CertificatesWaitToUpdate,
+		IsExist:             resp.Data.RegistryFilesState.StaticPodsIsExist,
+		IsRunning:           isRunning,
+		NeedUpdateStaticPod: resp.Data.RegistryFilesState.StaticPodsWaitToUpdate || !resp.Data.RegistryFilesState.StaticPodsIsExist,
+		NeedUpdateManifest:  resp.Data.RegistryFilesState.ManifestsWaitToUpdate || !resp.Data.RegistryFilesState.ManifestsIsExist,
+		NeedUpdateCerts:     resp.Data.RegistryFilesState.CertificatesWaitToUpdate || !resp.Data.RegistryFilesState.CertificateIsExist,
 	}, nil
 }
 
@@ -148,30 +148,16 @@ func (m *NodeManager) RemoveNodeFromCluster(removeNodeIP string) error {
 
 // Runtime actions
 func (m *NodeManager) CreateNodeManifests(request *master_workflow.SeaweedfsCreateNodeRequest) error {
-	// TODO
-	createRequest := worker_client.UpdateRegistryRequest{
-		Seaweedfs: struct {
-			MasterPeers []string "json:\"masterPeers\""
-		}{MasterPeers: request.CreateManifestsData.MasterPeers},
-	}
-
 	f := func(client *worker_client.Client) error {
-		return client.RequestUpdateRegistry(&createRequest)
+		return client.RequestCreateRegistry(request)
 	}
 
 	return m.makeRequestToWorker(f)
 }
 
 func (m *NodeManager) UpdateNodeManifests(request *master_workflow.SeaweedfsUpdateNodeRequest) error {
-	// TODO
-	createRequest := worker_client.UpdateRegistryRequest{
-		Seaweedfs: struct {
-			MasterPeers []string "json:\"masterPeers\""
-		}{MasterPeers: request.UpdateManifestsData.MasterPeers},
-	}
-
 	f := func(client *worker_client.Client) error {
-		return client.RequestUpdateRegistry(&createRequest)
+		return client.RequestUpdateRegistry(request)
 	}
 	return m.makeRequestToWorker(f)
 }

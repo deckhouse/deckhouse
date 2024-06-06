@@ -47,6 +47,10 @@ func (client *Client) RequestCheckRegistry(request *CheckRegistryRequest) (*Chec
 	return &response, err
 }
 
+func (client *Client) RequestCreateRegistry(request *CreateRegistryRequest) error {
+	return RequestCreateRegistry(client.logger, client.client, client.getUrl(), client.getHeaders(), request)
+}
+
 func (client *Client) RequestUpdateRegistry(request *UpdateRegistryRequest) error {
 	return RequestUpdateRegistry(client.logger, client.client, client.getUrl(), client.getHeaders(), request)
 }
