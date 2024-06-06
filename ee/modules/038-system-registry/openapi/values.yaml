@@ -11,17 +11,6 @@ properties:
         oneOf:
           - type: string
           - type: boolean
-      cluster:
-        type: object
-        default: {}
-        properties:
-          size:
-            type: integer
-            description: |
-              The number of nodes.
-            x-examples:
-              - 1
-              - 3
       etcd:
         type: object
         default: {}
