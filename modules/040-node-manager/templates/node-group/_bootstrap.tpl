@@ -160,9 +160,9 @@ function prepary_base_d8_binaries() {
 	{{- else }}
 		unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 	{{- end }}
-	{{- if .packagesProxy }}
-	export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
-	export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
+	{{- if $context.Values.global.internal.packagesProxy }}
+	export PACKAGES_PROXY_ADDRESSES="{{ $context.Values.global.internal.packagesProxy.addresses | join "," }}"
+	export PACKAGES_PROXY_TOKEN="{{ $context.Values.global.internal.packagesProxy.token }}"
 	{{- end }}
 {{- with $context.Values.global.modulesImages.digests.registrypackages }}
 	bb-package-install "jq:{{ .jq16 }}" "curl:{{ .d8Curl821 }}" "netcat:{{ .netcat110481 }}"
