@@ -45,7 +45,7 @@ kubectl annotate mop <name> renew=""
 Вместо этого модуль будет загружаться при каждом изменении параметра `imageDigest` и будет применяться в кластере.
 При этом, в статусе ресурса [ModuleSource](../../cr.html#modulesource) этот модуль получит признак `overridden: true`, который укажет на то, что используется ресурс [ModulePullOverride](../../cr.html#modulepulloverride).
 
-После удаления *ModulePullOverride*, модуль продолжит функционировать, но если для него применена политика [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), то при наличии загрузятся новые релизы, которые заменят текущую "версию разработчика".
+После удаления *ModulePullOverride* модуль продолжит функционировать, но если для него применена политика [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), то при наличии загрузятся новые релизы, которые заменят текущую "версию разработчика".
 
 ### Пример
 
