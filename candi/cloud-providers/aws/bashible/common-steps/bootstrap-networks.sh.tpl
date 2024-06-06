@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 */}}
-
 mkdir -p /opt/deckhouse/bin
 
 export PATH="/opt/deckhouse/bin:$PATH"
