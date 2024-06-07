@@ -67,6 +67,14 @@ properties:
             - agenty-flowcharting-panel
             - vertamedia-clickhouse-datasource
           ```
+
+          Вы также можете устанавливать плагины из других источников передав ссылку на zip-архив плагина в формате `<url to plugin zip>;<plugin name>`:
+
+          ```yaml
+          grafana:
+            customPlugins:
+            - http://10.241.32.16:3000/netsage-bumpchart-panel-1.1.1.zip;netsage-bumpchart-panel
+          ```
   ingressClass:
     description: |
       Класс Ingress-контроллера, который используется для Grafana/Prometheus.
