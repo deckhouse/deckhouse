@@ -114,19 +114,20 @@ func SortByStatus(nodes []NodeManager) ([]NodeManager, error) {
 	return sortedNodes, nil
 }
 
-func GetMasters(nodes []NodeManager) ([]NodeManager, error) {
+func GetLeaders(nodes []NodeManager) ([]NodeManager, error) {
 	visited := make(map[string]bool)
 	nodeMap := make(map[string][]string)
 
 	for _, node := range nodes {
 		nodeInfo, err := node.GetNodeClusterStatus()
 		if err != nil {
+			// raft not workink, maby node not added to cluster, skip node
 			continue
 		}
 
 		nodeIP, err := node.GetNodeIP()
 		if err != nil {
-			return nil, err
+			return []NodeManager{}, err
 		}
 
 		nodeMap[nodeIP] = nodeInfo.ClusterNodesIPs
@@ -160,7 +161,7 @@ func GetMasters(nodes []NodeManager) ([]NodeManager, error) {
 	for _, cluster := range clusters {
 		master, err := GetFirstNodeByIPs(nodes, cluster)
 		if err != nil {
-			return nil, err
+			return []NodeManager{}, err
 		}
 		if master != nil {
 			masters = append(masters, master)
