@@ -190,12 +190,6 @@ function dynamic_memory_sizing {
     echo -n "${recommended_systemreserved_memory}Gi"
 }
 
-# CIS becnhmark purposes
-tls_params=""
-if [ -f /var/lib/kubelet/pki/kubelet-server-current.pem ]; then
-  tls_params="tlsCertFile: /var/lib/kubelet/pki/kubelet-server-current.pem
-tlsPrivateKeyFile: /var/lib/kubelet/pki/kubelet-server-current.pem"
-fi
 
 bb-sync-file /var/lib/kubelet/config.yaml - << EOF
 apiVersion: kubelet.config.k8s.io/v1beta1
