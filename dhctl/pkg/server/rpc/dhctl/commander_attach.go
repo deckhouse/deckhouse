@@ -222,9 +222,17 @@ func (s *Service) CommanderAttachCluster(
 	}
 	defer sshClient.Stop()
 
+	var commanderUUID uuid.UUID
+	if request.Options.CommanderUuid != "" {
+		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
+		if err != nil {
+			return &pb.CommanderAttachResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
+		}
+	}
+
 	attacher := attach.NewAttacher(&attach.Params{
 		CommanderMode:    request.Options.CommanderMode,
-		CommanderUUID:    uuid.MustParse("f013cd23-6ceb-4bc5-a32d-c6f2c8cf41ea"),
+		CommanderUUID:    commanderUUID,
 		SSHClient:        sshClient,
 		OnCheckResult:    onCheckResult,
 		TerraformContext: terraform.NewTerraformContext(),

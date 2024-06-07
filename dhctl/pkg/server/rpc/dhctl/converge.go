@@ -292,7 +292,7 @@ func (s *Service) converge(
 		AutoApprove:            true,
 		AutoDismissDestructive: false,
 		CommanderMode:          true,
-		CommanderUUID:          uuid.MustParse("f013cd23-6ceb-4bc5-a32d-c6f2c8cf41ea"),
+		CommanderUUID:          commanderUUID,
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(request.ClusterConfig),
 			[]byte(request.ProviderSpecificClusterConfig),
