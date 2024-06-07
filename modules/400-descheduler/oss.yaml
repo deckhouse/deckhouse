@@ -1,6 +1,6 @@
 - name: Descheduler
   link: https://github.com/kubernetes-sigs/descheduler
   description: A tool to auto-fix scheduling issues Kubernetes does not cover itself.
-  logo: /images/logos/kubernetes.png
+  logo: /images/logos/kubernetes.svg
   licence: Apache License 2.0
 

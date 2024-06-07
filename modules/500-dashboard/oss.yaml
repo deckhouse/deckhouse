@@ -1,6 +1,6 @@
 - name: Kubernetes Dashboard
   link: https://github.com/kubernetes/dashboard
   description: A general purpose, web-based UI for Kubernetes clusters.
-  logo: /images/logos/kubernetes.png
+  logo: /images/logos/kubernetes.svg
   licence: Apache License 2.0
 
