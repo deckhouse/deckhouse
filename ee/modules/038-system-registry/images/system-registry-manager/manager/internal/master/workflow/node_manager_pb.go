@@ -28,7 +28,7 @@ type NodeManager interface {
 }
 
 type SeaweedfsNodeClusterStatus struct {
-	IsMaster        bool
+	IsLeader        bool
 	ClusterNodesIPs []string
 }
 
