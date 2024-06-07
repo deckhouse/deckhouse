@@ -65,7 +65,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         nodeUserForClearSnapName,
 			WaitForSynchronization:       pointer.Bool(false),
 			ExecuteHookOnSynchronization: pointer.Bool(true),
-			ExecuteHookOnEvents:          pointer.Bool(true),
+			ExecuteHookOnEvents:          pointer.Bool(false),
 			ApiVersion:                   "deckhouse.io/v1",
 			Kind:                         "NodeUser",
 			FilterFunc:                   applyNodeUsersForClearFilter,
@@ -115,7 +115,9 @@ func discoverNodeUsersForClear(input *go_hook.HookInput) error {
 	for _, item := range nodeUserSnap {
 		nuForClear := item.(nodeUsersForClear)
 		input.LogEntry.Debugf("clearErrors--> NodeUsers: %v Nodes: %v", nuForClear, nodes)
-		if incorrectNodes := hasIncorrectNodeUserErrors(nuForClear.StatusErrors, nodes); len(incorrectNodes) > 0 {
+		if incorrectNodes := hasIncorrectNodeUserErrors(nuForClear.StatusErrors, nodes); len(
+			incorrectNodes,
+		) > 0 {
 			input.LogEntry.Debugf("clearErrors--> incorrectNodes: %v", incorrectNodes)
 			err := clearNodeUserIncorrectErrors(nuForClear.Name, incorrectNodes, input)
 			if err != nil {
@@ -140,7 +142,11 @@ func hasIncorrectNodeUserErrors(
 	return result
 }
 
-func clearNodeUserIncorrectErrors(nodeUserName string, incorrectNodes []string, input *go_hook.HookInput) error {
+func clearNodeUserIncorrectErrors(
+	nodeUserName string,
+	incorrectNodes []string,
+	input *go_hook.HookInput,
+) error {
 	patch := map[string]map[string]map[string]interface{}{
 		"status": {
 			"errors": {},
@@ -152,6 +158,13 @@ func clearNodeUserIncorrectErrors(nodeUserName string, incorrectNodes []string, 
 	}
 
 	input.LogEntry.Debugf("clearErrors--> patch: %v", patch)
-	input.PatchCollector.MergePatch(patch, "deckhouse.io/v1", "NodeUser", "", nodeUserName, object_patch.WithSubresource("/status"))
+	input.PatchCollector.MergePatch(
+		patch,
+		"deckhouse.io/v1",
+		"NodeUser",
+		"",
+		nodeUserName,
+		object_patch.WithSubresource("/status"),
+	)
 	return nil
 }
