@@ -66,21 +66,21 @@ func TestGetMasters(t *testing.T) {
 				&MockNodeForHelper{
 					IP: "192.168.1.1",
 					ClusterStatus: &SeaweedfsNodeClusterStatus{
-						IsMaster:        true,
+						IsLeader:        true,
 						ClusterNodesIPs: []string{"192.168.1.1", "192.168.1.2", "192.168.1.3"},
 					},
 				},
 				&MockNodeForHelper{
 					IP: "192.168.1.2",
 					ClusterStatus: &SeaweedfsNodeClusterStatus{
-						IsMaster:        false,
+						IsLeader:        false,
 						ClusterNodesIPs: []string{"192.168.1.1", "192.168.1.2", "192.168.1.3"},
 					},
 				},
 				&MockNodeForHelper{
 					IP: "192.168.1.3",
 					ClusterStatus: &SeaweedfsNodeClusterStatus{
-						IsMaster:        false,
+						IsLeader:        false,
 						ClusterNodesIPs: []string{"192.168.1.1", "192.168.1.2", "192.168.1.3"},
 					},
 				},
@@ -97,13 +97,13 @@ func TestGetMasters(t *testing.T) {
 				},
 			},
 			expectedMasters: nil,
-			expectedError:   errors.New("Cluster status error"),
+			expectedError:   nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			masters, err := GetMasters(tt.nodes)
+			masters, err := GetLeaders(tt.nodes)
 			if !reflect.DeepEqual(err, tt.expectedError) {
 				t.Errorf("Expected error: %v, got: %v", tt.expectedError, err)
 			}

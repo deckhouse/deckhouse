@@ -11,26 +11,38 @@ import (
 )
 
 const (
-	DefaultMasterPort = 9333
-	DefaultFilerPort  = 8888
+	DefaultMasterHttpPort = 9333
+	DefaultMasterGrpcPort = 19333
+	DefaultFilerHttpPort  = 8888
+	DefaultFilerGrpcPort  = 18888
 )
 
-func FromIpToMasterHost(ip string) string {
-	return fmt.Sprintf("%s:%d", ip, DefaultMasterPort)
+func FromIpToMasterHttpHost(ip string) string {
+	return fmt.Sprintf("%s:%d", ip, DefaultMasterHttpPort)
 }
 
-func FromIpToFillerHost(ip string) string {
-	return fmt.Sprintf("%s:%d", ip, DefaultFilerPort)
+func FromIpToMasterGrpcHost(ip string) string {
+	return fmt.Sprintf("%s:%d", ip, DefaultMasterGrpcPort)
 }
 
-func FromIdToIp(id string) (string, error) {
-	parts := strings.Split(id, ":")
-	if len(parts) != 2 {
-		return "", fmt.Errorf("invalid ID format")
+func FromIpToFilerHttpHost(ip string) string {
+	return fmt.Sprintf("%s:%d", ip, DefaultFilerHttpPort)
+}
+
+func FromIpToFilerGrpcHost(ip string) string {
+	return fmt.Sprintf("%s:%d", ip, DefaultFilerGrpcPort)
+}
+
+func GetIpFromAddress(address string) string {
+	parts := strings.Split(address, ":")
+	if len(parts) >= 2 {
+		// If pars -> return first part
+		return parts[0]
 	}
-	return parts[0], nil
+	// Else -> return full address
+	return address
 }
 
-func FromIpToId(ip string) string {
-	return fmt.Sprintf("%s:%d", ip, DefaultMasterPort)
+func CreateIDFromIP(ip string) string {
+	return FromIpToMasterHttpHost(ip)
 }

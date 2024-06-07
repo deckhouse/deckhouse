@@ -115,20 +115,20 @@ func (w *SeaweedfsScaleWorkflow) scale(currentNodes []NodeManager, newNodes []No
 		},
 	}
 
-	w.log.Infof("Get current clusters count")
-	masters, err := GetMasters(currentNodes)
+	w.log.Infof("Get current cluster leaders count")
+	leaders, err := GetLeaders(currentNodes)
 	if err != nil {
 		return err
 	}
-	if len(masters) != 1 {
-		w.log.Infof("Have more than one cluster")
-		return fmt.Errorf("len(*clusters) != 1")
+	if len(leaders) != 1 {
+		w.log.Infof("Have more than one cluster leaders")
+		return fmt.Errorf("len(*leaders) != 1")
 	}
-	w.log.Infof("Have one cluster")
-	master := masters[0]
+	w.log.Infof("Have one cluster leader")
+	leader := leaders[0]
 
-	w.log.Infof("Get cluster status from node %s", master.GetNodeName())
-	if masterInfo, err := master.GetNodeClusterStatus(); err != nil {
+	w.log.Infof("Get cluster status from node %s", leader.GetNodeName())
+	if masterInfo, err := leader.GetNodeClusterStatus(); err != nil {
 		return err
 	} else {
 		oldIPs = append(oldIPs, masterInfo.ClusterNodesIPs...)
@@ -155,7 +155,7 @@ func (w *SeaweedfsScaleWorkflow) scale(currentNodes []NodeManager, newNodes []No
 			return err
 		}
 		w.log.Infof("Adding node %s to cluster", newNode.GetNodeName())
-		if err := master.AddNodeToCluster(nodeIp); err != nil {
+		if err := leader.AddNodeToCluster(nodeIp); err != nil {
 			return err
 		}
 	}
@@ -171,7 +171,7 @@ func (w *SeaweedfsScaleWorkflow) scale(currentNodes []NodeManager, newNodes []No
 	for _, oldIP := range oldIPs {
 		if !pkg_utils.IsStringInSlice(oldIP, &newIPs) {
 			w.log.Infof("Removing old node %s from cluster", oldIP)
-			if err := master.RemoveNodeFromCluster(oldIP); err != nil {
+			if err := leader.RemoveNodeFromCluster(oldIP); err != nil {
 				return err
 			}
 		}

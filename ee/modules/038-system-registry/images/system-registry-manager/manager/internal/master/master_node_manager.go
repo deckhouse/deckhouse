@@ -67,21 +67,27 @@ func (m *NodeManager) GetNodeClusterStatus() (*master_workflow.SeaweedfsNodeClus
 		return nil, fmt.Errorf("resp == nil")
 	}
 
-	isMaster := false
-	address := make([]string, 0, len(resp.ClusterServers))
-	for _, server := range resp.ClusterServers {
-		ip, err := seaweedfs_client.FromIdToIp(server.Id)
-		if err != nil {
-			return nil, err
+	clusterServers := resp.GetClusterServers()
+	if clusterServers == nil {
+		return nil, fmt.Errorf("resp.GetClusterServers() == nil")
+	}
+
+	isLeader := false
+	address := make([]string, 0, len(clusterServers))
+	for _, server := range clusterServers {
+		ip := seaweedfs_client.GetIpFromAddress(server.GetAddress())
+		if len(ip) == 0 {
+			continue
 		}
+
 		address = append(address, ip)
-		if server.Address == nodeInternalIP {
-			isMaster = server.IsLeader
+		if ip == nodeInternalIP {
+			isLeader = server.GetIsLeader()
 		}
 	}
 
 	return &master_workflow.SeaweedfsNodeClusterStatus{
-		IsMaster:        isMaster,
+		IsLeader:        isLeader,
 		ClusterNodesIPs: address,
 	}, nil
 }
@@ -130,15 +136,15 @@ func (m *NodeManager) GetNodeIP() (string, error) {
 
 // Cluster actions
 func (m *NodeManager) AddNodeToCluster(newNodeIP string) error {
-	newID := seaweedfs_client.FromIpToId(newNodeIP)
-	newMasterAddress := seaweedfs_client.FromIpToMasterHost(newNodeIP)
+	newID := seaweedfs_client.CreateIDFromIP(newNodeIP)
+	newMasterGrpcAddress := seaweedfs_client.FromIpToMasterGrpcHost(newNodeIP)
 	serverVoter := true
 
 	f := func(client *seaweedfs_client.Client) error {
 		_, err := client.ClusterRaftAdd(
 			seaweedfs_client.NewClusterRaftAddArgs(
 				&newID,
-				&newMasterAddress,
+				&newMasterGrpcAddress,
 				&serverVoter,
 			),
 		)
@@ -151,7 +157,7 @@ func (m *NodeManager) RemoveNodeFromCluster(removeNodeIP string) error {
 	f := func(client *seaweedfs_client.Client) error {
 		_, err := client.ClusterRaftRemove(
 			seaweedfs_client.NewClusterRaftRemoveArgs(
-				seaweedfs_client.FromIpToId(seaweedfs_client.FromIpToId(removeNodeIP)),
+				seaweedfs_client.CreateIDFromIP(seaweedfs_client.CreateIDFromIP(removeNodeIP)),
 			),
 		)
 		return err
@@ -190,8 +196,8 @@ func (m *NodeManager) makeRequestToSeaweedfs(request func(client *seaweedfs_clie
 		return err
 	}
 
-	masterHost := seaweedfs_client.FromIpToMasterHost(nodeInternalIP)
-	filerHost := seaweedfs_client.FromIpToFillerHost(nodeInternalIP)
+	masterHost := seaweedfs_client.FromIpToMasterHttpHost(nodeInternalIP)
+	filerHost := seaweedfs_client.FromIpToFilerHttpHost(nodeInternalIP)
 
 	client, err := seaweedfs_client.NewClient(&masterHost, &filerHost, nil)
 	if err != nil {
