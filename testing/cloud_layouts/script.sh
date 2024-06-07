@@ -411,8 +411,7 @@ function run-test() {
 function bootstrap_static() {
   >&2 echo "Run terraform to create nodes for Static cluster ..."
   pushd "$cwd"
-  export TF_PLUGIN_CACHE_DIR=/plugins
-  terraform init -input=false || return $?
+  terraform init -input=false -plugin-dir=/plugins || return $?
   terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
   popd
 
@@ -571,9 +570,6 @@ ENDSSH
   env b64_SSH_KEY="$(base64 -w0 "$ssh_private_key_path")" WORKER_USER="$ssh_user_worker" WORKER_IP="$worker_ip" \
       envsubst '${b64_SSH_KEY} ${WORKER_USER} ${WORKER_IP}' \
       <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
-
-  # Kill previous ssh-agent due to dhctl creates own agent
-  kill $SSH_AGENT_PID
 
   # Bootstrap
   >&2 echo "Run dhctl bootstrap ..."
