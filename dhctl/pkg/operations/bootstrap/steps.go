@@ -200,7 +200,9 @@ func newRegistryClientConfigGetter(config config.RegistryData) (*registryClientC
 
 	return &registryClientConfigGetter{
 		ClientConfig: registry.ClientConfig{
-			Repository: strings.Join([]string{config.Address, config.Path}, "/"),
+			// path contains leading /, so we need to truncate them
+			// also we truncate address to prevent / in the end
+			Repository: strings.Join([]string{strings.Trim(config.Address, "/"), strings.Trim(config.Path, "/")}, "/"),
 			Scheme:     config.Scheme,
 			CA:         config.CA,
 			Auth:       auth,

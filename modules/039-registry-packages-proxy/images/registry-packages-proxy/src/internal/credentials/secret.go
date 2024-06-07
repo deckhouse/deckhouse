@@ -65,7 +65,9 @@ func (d registrySecretData) toClientConfig() (*registry.ClientConfig, error) {
 	}
 
 	return &registry.ClientConfig{
-		Repository: strings.Join([]string{d.Address, d.Path}, "/"),
+		// path contains leading /, so we need to truncate them
+		// also we truncate address to prevent / in the end
+		Repository: strings.Join([]string{strings.Trim(d.Address, "/"), strings.Trim(d.Path, "/")}, "/"),
 		Scheme:     d.Scheme,
 		CA:         d.CA,
 		Auth:       auth,
