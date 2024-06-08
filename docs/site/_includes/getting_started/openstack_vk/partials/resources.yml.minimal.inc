@@ -17,7 +17,7 @@ spec:
   # [<ru>] Используемый образ виртуальной машины.
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
-  imageName: Ubuntu-22.04-202208
+  imageName: ubuntu-22-202404160933.gitd6495fe9
 ---
 # [<en>] Section containing the parameters of worker node group.
 # [<en>] https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup
