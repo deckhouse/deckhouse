@@ -147,10 +147,10 @@ index ea7633fe..b8b479da 100644
 +	return obj.(*autoscalingv1.Scale), err
 +}
 diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
-index 3de1446b..0e1f5efb 100644
+index 1934f145..0333961e 100644
 --- a/pkg/controller/daemonset/daemonset_controller.go
 +++ b/pkg/controller/daemonset/daemonset_controller.go
-@@ -496,7 +496,7 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
+@@ -505,7 +505,7 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
  	// newPod.Spec.NodeName = nodeName
  
  	// Added default tolerations for DaemonSet pods.
@@ -159,7 +159,7 @@ index 3de1446b..0e1f5efb 100644
  
  	newPodForDSCache.Store(ds.UID, &newPodForDS{generation: ds.Generation, pod: newPod})
  	return newPod
-@@ -551,6 +551,11 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
+@@ -560,6 +560,11 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
  		return fmt.Errorf("error storing status for DaemonSet %v: %v", ds.Name, err)
  	}
  
@@ -171,7 +171,7 @@ index 3de1446b..0e1f5efb 100644
  	// Resync the DaemonSet after MinReadySeconds as a last line of defense to guard against clock-skew.
  	if ds.Spec.MinReadySeconds >= 0 && numberReady != numberAvailable {
  		durationStore.Push(keyFunc(ds), time.Duration(ds.Spec.MinReadySeconds)*time.Second)
-@@ -558,6 +563,94 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
+@@ -567,6 +572,94 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ds *appsv1alpha1.DaemonSet,
  	return nil
  }
  
@@ -266,6 +266,17 @@ index 3de1446b..0e1f5efb 100644
  func (dsc *ReconcileDaemonSet) storeDaemonSetStatus(ds *appsv1alpha1.DaemonSet, desiredNumberScheduled, currentNumberScheduled, numberMisscheduled, numberReady, updatedNumberScheduled, numberAvailable, numberUnavailable int, updateObservedGen bool, hash string) error {
  	if int(ds.Status.DesiredNumberScheduled) == desiredNumberScheduled &&
  		int(ds.Status.CurrentNumberScheduled) == currentNumberScheduled &&
+@@ -830,7 +923,9 @@ func (dsc *ReconcileDaemonSet) podsShouldBeOnNode(
+ 	hash string,
+ ) (nodesNeedingDaemonPods, podsToDelete []string) {
+ 
+-	shouldRun, shouldContinueRunning := nodeShouldRunDaemonPod(node, ds)
++	// a new for a not-ready pod shouln't be created, but a running one shoult stay on the node
++	shouldRun, _ := nodeShouldRunDaemonPod(node, ds)
++	_, shouldContinueRunning := nodeShouldRunDaemonPod(node, ds, true)
+ 	daemonPods, exists := nodeToDaemonPods[node.Name]
+ 
+ 	switch {
 diff --git a/pkg/controller/daemonset/daemonset_event_handler.go b/pkg/controller/daemonset/daemonset_event_handler.go
 index 26a33f3d..68c5ec35 100644
 --- a/pkg/controller/daemonset/daemonset_event_handler.go
@@ -295,7 +306,7 @@ index 26a33f3d..68c5ec35 100644
  
  func (e *nodeEventHandler) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 diff --git a/pkg/controller/daemonset/daemonset_util.go b/pkg/controller/daemonset/daemonset_util.go
-index 420188f0..91911fbe 100644
+index 420188f0..fb72ddaa 100644
 --- a/pkg/controller/daemonset/daemonset_util.go
 +++ b/pkg/controller/daemonset/daemonset_util.go
 @@ -98,8 +98,16 @@ func nodeInSameCondition(old []corev1.NodeCondition, cur []corev1.NodeCondition)
@@ -304,10 +315,10 @@ index 420188f0..91911fbe 100644
  //     running on that node.
 -func nodeShouldRunDaemonPod(node *corev1.Node, ds *appsv1alpha1.DaemonSet) (bool, bool) {
 -	pod := NewPod(ds, node.Name)
-+func nodeShouldRunDaemonPod(node *corev1.Node, ds *appsv1alpha1.DaemonSet, countReplicasFlag ...bool) (bool, bool) {
++func nodeShouldRunDaemonPod(node *corev1.Node, ds *appsv1alpha1.DaemonSet, addDefaultDSTolerations ...bool) (bool, bool) {
 +	var pod *corev1.Pod
-+	// add standard demonset tolerations if countReplicasFlag isn't empty
-+	if len(countReplicasFlag) > 0 {
++	// add standard demonset tolerations if addDefaultDSTolerations isn't empty
++	if len(addDefaultDSTolerations) > 0 {
 +		pod = &corev1.Pod{Spec: ds.Spec.Template.Spec, ObjectMeta: ds.Spec.Template.ObjectMeta}
 +		pod.Namespace = ds.Namespace
 +		util.AddOrUpdateDaemonPodTolerations(&pod.Spec)
