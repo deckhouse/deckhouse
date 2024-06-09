@@ -55,7 +55,15 @@ index 958397dd5..8b6de93c5 100755
  
      {{ if or $cfg.DisableAccessLog $cfg.DisableHTTPAccessLog }}
      access_log off;
-@@ -910,9 +920,7 @@ stream {
+@@ -905,14 +915,15 @@ stream {
+             proxy_set_header       Host               $best_http_host;
+ 
+             set $proxy_upstream_name {{ $upstreamName | quote }};
++            set $formatted_status $status;
++            set $upstream_retries "0";
++            set $$total_upstream_response_time "0";
+ 
+             rewrite                (.*) / break;
  
              proxy_pass            http://upstream_balancer;
              log_by_lua_block {
@@ -66,7 +74,17 @@ index 958397dd5..8b6de93c5 100755
              }
          }
          {{ end }}
-@@ -1203,6 +1211,8 @@ stream {
+@@ -960,6 +971,9 @@ stream {
+         {{ buildHTTPSListener $all $server.Hostname }}
+ 
+         set $proxy_upstream_name "-";
++        set $formatted_status $status;
++        set $upstream_retries "0";
++        set $$total_upstream_response_time "0";
+ 
+         {{ if not ( empty $server.CertificateAuth.MatchCN ) }}
+         {{ if gt (len $server.CertificateAuth.MatchCN) 0 }}
+@@ -1203,6 +1217,8 @@ stream {
              set $location_path  {{ $ing.Path | escapeLiteralDollar | quote }};
              set $global_rate_limit_exceeding n;
  
@@ -75,7 +93,7 @@ index 958397dd5..8b6de93c5 100755
              {{ buildOpentracingForLocation $all.Cfg.EnableOpentracing $all.Cfg.OpentracingTrustIncomingSpan $location }}
  
              {{ if $location.Mirror.Source }}
-@@ -1233,11 +1243,9 @@ stream {
+@@ -1233,11 +1249,9 @@ stream {
  
              log_by_lua_block {
                  balancer.log()
@@ -88,7 +106,7 @@ index 958397dd5..8b6de93c5 100755
              }
  
              {{ if not $location.Logs.Access }}
-@@ -1515,13 +1523,14 @@ stream {
+@@ -1515,13 +1529,14 @@ stream {
  
          {{ if eq $server.Hostname "_" }}
          # health checks in cloud providers require the use of port {{ $all.ListenPorts.HTTP }}
