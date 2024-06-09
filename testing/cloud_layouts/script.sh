@@ -159,6 +159,9 @@ function destroy_static_infra() {
   >&2 echo "Run destroy_static_infra from ${terraform_state_file}"
 
   pushd "$cwd"
+  ls -la .
+  echo ${terraform_state_file}
+  cat ${terraform_state_file}
   terraform init -input=false -plugin-dir=/plugins || return $?
   terraform destroy -state="${terraform_state_file}" -input=false -auto-approve || exitCode=$?
   popd
