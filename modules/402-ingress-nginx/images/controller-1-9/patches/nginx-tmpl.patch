@@ -78,7 +78,7 @@ index 94dc12412..93b7d2efc 100644
              set $proxy_upstream_name {{ $upstreamName | quote }};
 +            set $formatted_status $status;
 +            set $upstream_retries "0";
-+            set $$total_upstream_response_time "0";
++            set $total_upstream_response_time "0";
  
              rewrite                (.*) / break;
  
@@ -97,7 +97,7 @@ index 94dc12412..93b7d2efc 100644
          set $proxy_upstream_name "-";
 +        set $formatted_status $status;
 +        set $upstream_retries "0";
-+        set $$total_upstream_response_time "0";
++        set $total_upstream_response_time "0";
  
          {{ if not ( empty $server.CertificateAuth.MatchCN ) }}
          {{ if gt (len $server.CertificateAuth.MatchCN) 0 }}
