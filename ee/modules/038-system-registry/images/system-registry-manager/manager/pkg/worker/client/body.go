@@ -46,6 +46,12 @@ type CheckRegistryResponse struct {
 	} `json:"data,omitempty"`
 }
 
+func (resp *CheckRegistryResponse) NeedSomethingCreateOrUpdate() bool {
+	return (resp.Data.RegistryFilesState.StaticPodsWaitToUpdate || !resp.Data.RegistryFilesState.StaticPodsIsExist) ||
+		(resp.Data.RegistryFilesState.ManifestsWaitToUpdate || !resp.Data.RegistryFilesState.ManifestsIsExist) ||
+		(resp.Data.RegistryFilesState.CertificatesWaitToUpdate || !resp.Data.RegistryFilesState.CertificateIsExist)
+}
+
 // MasterInfo (Request + Response)
 type MasterInfoResponse struct {
 	Data struct {

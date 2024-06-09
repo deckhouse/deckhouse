@@ -122,11 +122,10 @@ func (m *NodeManager) GetNodeRunningStatus() (*master_workflow.SeaweedfsNodeRunn
 	}
 
 	return &master_workflow.SeaweedfsNodeRunningStatus{
-		IsExist:             resp.Data.RegistryFilesState.StaticPodsIsExist,
-		IsRunning:           isRunning,
-		NeedUpdateStaticPod: resp.Data.RegistryFilesState.StaticPodsWaitToUpdate || !resp.Data.RegistryFilesState.StaticPodsIsExist,
-		NeedUpdateManifest:  resp.Data.RegistryFilesState.ManifestsWaitToUpdate || !resp.Data.RegistryFilesState.ManifestsIsExist,
-		NeedUpdateCerts:     resp.Data.RegistryFilesState.CertificatesWaitToUpdate || !resp.Data.RegistryFilesState.CertificateIsExist,
+		IsExist:            resp.Data.RegistryFilesState.StaticPodsIsExist,
+		IsRunning:          isRunning,
+		NeedUpdateManifest: resp.Data.RegistryFilesState.ManifestsWaitToUpdate || !resp.Data.RegistryFilesState.ManifestsIsExist,
+		NeedUpdateCerts:    resp.Data.RegistryFilesState.CertificatesWaitToUpdate || !resp.Data.RegistryFilesState.CertificateIsExist,
 	}, nil
 }
 
@@ -166,6 +165,17 @@ func (m *NodeManager) RemoveNodeFromCluster(removeNodeIP string) error {
 }
 
 // Runtime actions
+func (m *NodeManager) CheckNodeManifests(request *master_workflow.SeaweedfsCheckNodeRequest) (*master_workflow.SeaweedfsCheckNodeResponce, error) {
+	var resp *master_workflow.SeaweedfsCheckNodeResponce
+	f := func(client *worker_client.Client) error {
+		var err error
+		resp, err = client.RequestCheckRegistry(request)
+		return err
+	}
+	err := m.makeRequestToWorker(f)
+	return resp, err
+}
+
 func (m *NodeManager) CreateNodeManifests(request *master_workflow.SeaweedfsCreateNodeRequest) error {
 	f := func(client *worker_client.Client) error {
 		return client.RequestCreateRegistry(request)

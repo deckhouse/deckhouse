@@ -11,19 +11,20 @@ import (
 
 type NodeManager interface {
 	GetNodeName() string
+	GetNodeIP() (string, error)
 
 	// Info
 	GetNodeClusterStatus() (*SeaweedfsNodeClusterStatus, error)
 	GetNodeRunningStatus() (*SeaweedfsNodeRunningStatus, error)
-	GetNodeIP() (string, error)
 
-	// Cluster actions
+	// Seaweedfs actions
 	AddNodeToCluster(newNodeIP string) error
 	RemoveNodeFromCluster(removeNodeIP string) error
 
-	// Runtime actions
+	// Manager actions
 	CreateNodeManifests(request *SeaweedfsCreateNodeRequest) error
 	UpdateNodeManifests(request *SeaweedfsUpdateNodeRequest) error
+	CheckNodeManifests(request *SeaweedfsCheckNodeRequest) (*SeaweedfsCheckNodeResponce, error)
 	DeleteNodeManifests() error
 }
 
@@ -33,12 +34,13 @@ type SeaweedfsNodeClusterStatus struct {
 }
 
 type SeaweedfsNodeRunningStatus struct {
-	IsExist             bool
-	IsRunning           bool
-	NeedUpdateStaticPod bool
-	NeedUpdateManifest  bool
-	NeedUpdateCerts     bool
+	IsExist            bool
+	IsRunning          bool
+	NeedUpdateManifest bool
+	NeedUpdateCerts    bool
 }
 
 type SeaweedfsCreateNodeRequest = worker_client.CreateRegistryRequest
 type SeaweedfsUpdateNodeRequest = worker_client.UpdateRegistryRequest
+type SeaweedfsCheckNodeRequest = worker_client.CheckRegistryRequest
+type SeaweedfsCheckNodeResponce = worker_client.CheckRegistryResponse
