@@ -7,8 +7,11 @@ package workflow
 
 import (
 	"context"
-	"github.com/sirupsen/logrus"
+	"fmt"
 	pkg_logs "system-registry-manager/pkg/logs"
+
+	"github.com/cloudflare/cfssl/log"
+	"github.com/sirupsen/logrus"
 )
 
 type SeaweedfsCertsWorkflow struct {
@@ -32,9 +35,13 @@ func (w *SeaweedfsCertsWorkflow) Start() error {
 	w.log.Info("Starting SeaweedfsCertsWorkflow")
 
 	w.log.Info("Selecting nodes that exist and need certificate updates")
-	existAndNeedUpdateCert, _, err := SelectByRunningStatus(w.NodeManagers, CmpSelectIsExist, CmpSelectIsNeedUpdateCerts)
+	existAndNeedUpdateCert, _, err := SelectBy(w.NodeManagers, CmpIsExist, CmpIsNeedUpdateCerts)
 	if err != nil {
 		return err
+	}
+
+	if len(existAndNeedUpdateCert) <= 0 {
+		log.Info("Nothing to do")
 	}
 
 	w.log.Infof("Found %s nodes that need certificate updates", GetNodeNames(existAndNeedUpdateCert))
@@ -61,6 +68,25 @@ func (w *SeaweedfsCertsWorkflow) Start() error {
 		}
 	}
 
+	{
+		w.log.Infof("Waiting nodes and leader election for: %s", GetNodeNames(existAndNeedUpdateCert))
+
+		haveLeader := false
+		var cpmFunc CpmFuncNodeClusterStatus = func(status *SeaweedfsNodeClusterStatus) bool {
+			if status.IsLeader {
+				haveLeader = true
+			}
+			return haveLeader
+		}
+
+		wait, err := WaitBy(w.log, existAndNeedUpdateCert, CmpIsRunning, cpmFunc)
+		if err != nil {
+			return err
+		}
+		if !wait {
+			return fmt.Errorf("error waitig nodes: %s", GetNodeNames(existAndNeedUpdateCert))
+		}
+	}
 	w.log.Info("SeaweedfsCertsWorkflow completed successfully")
 	return nil
 }
