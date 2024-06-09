@@ -1,6 +1,6 @@
 - name: Kube-router
   link: https://github.com/cloudnativelabs/kube-router
   description: A turnkey solution for Kubernetes networking with aim to provide operational simplicity and high performance.
-  logo: https://blog--kube-router.netlify.com/img/avatar-icon.svg
+  logo: /images/logos/kubernetes.svg
   licence: Apache License 2.0
 
