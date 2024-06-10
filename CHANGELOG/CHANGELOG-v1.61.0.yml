@@ -1,0 +1,79 @@
+candi:
+  features:
+    - summary: >-
+        Add support for Ubuntu 24.04. Support for Ubuntu 24.04 ensures compatibility with the latest
+        OS version, providing updated packages and configurations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8540
+    - summary: Added support for Red OS 8.0.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8530
+      impact: >-
+        Support for Red OS 8.0 ensures compatibility with the latest OS version, providing updated
+        packages and configurations.
+  fixes:
+    - summary: Updated local port range to "32768 61000" to avoid conflicts with ports used by other apps.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8470
+    - summary: Set `LC_NUMERIC` in configure kubelet.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8383
+cloud-provider-vcd:
+  fixes:
+    - summary: Support catalog in instance class template
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8539
+cloud-provider-yandex:
+  features:
+    - summary: Add requirements for deprecated zone removal in the next release.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8590
+    - summary: >-
+        Add `diskType` parameter for
+        [masterNodeGroup](https://deckhouse.io/documentation/latest/modules/030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-disktype)
+        and
+        [nodeGroups](https://deckhouse.io/documentation/latest/modules/030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodegroups-instanceclass-disktype)
+        in `YandexClusterConfiguration`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8384
+cni-cilium:
+  features:
+    - summary: Fault-tolerant egress gateway based on a group of nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8093
+common:
+  fixes:
+    - summary: >-
+        Fixed a bug in the scheduler (version 1.27.14) where it would crash when prefilter returns a
+        non-existent node.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8596
+deckhouse-controller:
+  fixes:
+    - summary: Added context to the error message
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8444
+dhctl:
+  features:
+    - summary: Preflight check exist embedded containerd.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8550
+    - summary: Preflight check ssh credentials before start instalations
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8409
+    - summary: Preflight check registry credentials before start instalations
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8361
+  fixes:
+    - summary: Temporary disabled preflight check containerd exist
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8593
+ingress-nginx:
+  features:
+    - summary: Add support of Ingress NGINX version 1.10 (it supports Nginx 1.25).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8327
+node-manager:
+  features:
+    - summary: Export availability metrics for node groups. Metrics have the prefix `d8_node_group_`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8355
+    - summary: Add fencing agent and fencing controller.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6421
+  fixes:
+    - summary: Write the SSH private key to a temporary file and delete the file after use.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8490
+user-authn:
+  features:
+    - summary: Added additional validations for Users and Groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8401
+    - summary: Add OIDC support to basic auth proxy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7407
+  fixes:
+    - summary: Replace the `enable` option with the `enabled` in the `publishAPI` field.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8441
+
