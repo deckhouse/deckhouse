@@ -5,7 +5,7 @@ description: Examples of configuring Cluster Autoscaler in Kubernetes. Annotatio
 
 ## Description
 
-https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-enabledisable-eviction-for-a-specific-daemonset
+<https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-enabledisable-eviction-for-a-specific-daemonset>
 
 Cluster Autoscaler evicts DaemonSets using the annotation:
 

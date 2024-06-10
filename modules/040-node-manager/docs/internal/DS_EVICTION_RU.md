@@ -5,7 +5,7 @@ description: Примеры настройки Cluster Autoscaler в Kubernetes.
 
 ## Описание
 
-https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-enabledisable-eviction-for-a-specific-daemonset
+<https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-enabledisable-eviction-for-a-specific-daemonset>
 
 Cluster Autoscaler выселяет DaemonSets по аннотации:
 
@@ -19,11 +19,9 @@ Cluster Autoscaler выселяет DaemonSets по аннотации:
 
 Чтобы не назначать аннотацию на каждый d8 DaemonSet мы делаем патч, который исключает выселение ds подов из namespace d8-*.
 
-
 ## Почему это важно
 
 Как правило, CNI и CSI запускаются в DaemonSet подах. DaemonSet также используется для агентов мониторинга. Когда Cluster Autoscaler начинает процесс уменьшения количества узлов, он сначала выселяет поды. Если поды с CNI/CSI будут выселены раньше, чем поды с пользовательской нагрузкой, последние не смогут корректно завершиться.
-
 
 ## Как воспроизвести проблему
 
