@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -198,11 +199,13 @@ func newRegistryClientConfigGetter(config config.RegistryData) (*registryClientC
 		return nil, fmt.Errorf("registry auth: %v", err)
 	}
 
+	repo, err := url.JoinPath(config.Address, config.Path)
+	if err != nil {
+		return nil, fmt.Errorf("registry repo: %v", err)
+	}
 	return &registryClientConfigGetter{
 		ClientConfig: registry.ClientConfig{
-			// path contains leading /, so we need to truncate them
-			// also we truncate address to prevent / in the end
-			Repository: strings.Join([]string{strings.Trim(config.Address, "/"), strings.Trim(config.Path, "/")}, "/"),
+			Repository: repo,
 			Scheme:     config.Scheme,
 			CA:         config.CA,
 			Auth:       auth,
