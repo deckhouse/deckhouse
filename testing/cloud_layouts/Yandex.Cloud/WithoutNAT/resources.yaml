@@ -31,7 +31,7 @@ metadata:
   name: system
 spec:
   cores: 2
-  diskSizeGB: 20
+  diskSizeGB: 30
   diskType: network-ssd
   memory: 8192
 ---

@@ -20,6 +20,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 	"time"
 
@@ -43,17 +44,21 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
-var golden bool
+var (
+	golden     bool
+	mDelimiter *regexp.Regexp
+)
 
 func init() {
 	flag.BoolVar(&golden, "golden", false, "generate golden files")
+	mDelimiter = regexp.MustCompile("(?m)^---$")
 }
 
-func TestControllerTestSuite(t *testing.T) {
-	suite.Run(t, new(ControllerTestSuite))
+func TestReleaseControllerTestSuite(t *testing.T) {
+	suite.Run(t, new(ReleaseControllerTestSuite))
 }
 
-type ControllerTestSuite struct {
+type ReleaseControllerTestSuite struct {
 	suite.Suite
 
 	kubeClient client.Client
@@ -65,7 +70,7 @@ type ControllerTestSuite struct {
 	tmpDir string
 }
 
-func (suite *ControllerTestSuite) SetupSuite() {
+func (suite *ReleaseControllerTestSuite) SetupSuite() {
 	flag.Parse()
 	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 	suite.tmpDir = suite.T().TempDir()
@@ -73,22 +78,27 @@ func (suite *ControllerTestSuite) SetupSuite() {
 	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0777)
 }
 
-func (suite *ControllerTestSuite) TearDownSubTest() {
-	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
-	got := suite.fetchResults()
+func (suite *ReleaseControllerTestSuite) TearDownSubTest() {
+	goldenFile := filepath.Join("./testdata/releaseController", "golden", suite.testDataFileName)
+	gotB := suite.fetchResults()
 
 	if golden {
-		err := os.WriteFile(goldenFile, got, 0666)
+		err := os.WriteFile(goldenFile, gotB, 0666)
 		require.NoError(suite.T(), err)
 	} else {
-		exp, err := os.ReadFile(goldenFile)
+		got := singleDocToManifests(gotB)
+		expB, err := os.ReadFile(goldenFile)
 		require.NoError(suite.T(), err)
-		assert.YAMLEq(suite.T(), string(exp), string(got))
+		exp := singleDocToManifests(expB)
+		assert.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
+		for i := range got {
+			assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
+		}
 	}
 }
 
-func (suite *ControllerTestSuite) TestCreateReconcile() {
-	entries, err := os.ReadDir("./testdata")
+func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
+	entries, err := os.ReadDir("./testdata/releaseController")
 	require.NoError(suite.T(), err)
 
 	suite.Run("testdata cases", func() {
@@ -102,7 +112,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}
 
 			suite.Run(en.Name(), func() {
-				suite.setupController(string(suite.fetchTestFileData(en.Name())))
+				suite.setupReleaseController(string(suite.fetchTestFileData(en.Name())))
 				mr := suite.getModuleRelease(suite.testMRName)
 				_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
 				require.NoError(suite.T(), err)
@@ -110,7 +120,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		}
 	})
 }
-func (suite *ControllerTestSuite) setupController(yamlDoc string) {
+
+func (suite *ReleaseControllerTestSuite) setupReleaseController(yamlDoc string) {
 	manifests := releaseutil.SplitManifests(yamlDoc)
 
 	manifests["deckhouse-discovery"] = `
@@ -170,7 +181,7 @@ type: Opaque
 	suite.kubeClient = cl
 }
 
-func (suite *ControllerTestSuite) assembleInitObject(obj string) client.Object {
+func (suite *ReleaseControllerTestSuite) assembleInitObject(obj string) client.Object {
 	var res client.Object
 
 	var typ runtime.TypeMeta
@@ -208,8 +219,8 @@ func (suite *ControllerTestSuite) assembleInitObject(obj string) client.Object {
 	return res
 }
 
-func (suite *ControllerTestSuite) fetchTestFileData(filename string) []byte {
-	dir := "./testdata"
+func (suite *ReleaseControllerTestSuite) fetchTestFileData(filename string) []byte {
+	dir := "./testdata/releaseController"
 	data, err := os.ReadFile(filepath.Join(dir, filename))
 	require.NoError(suite.T(), err)
 
@@ -218,7 +229,7 @@ func (suite *ControllerTestSuite) fetchTestFileData(filename string) []byte {
 	return data
 }
 
-func (suite *ControllerTestSuite) getModuleRelease(name string) *v1alpha1.ModuleRelease {
+func (suite *ReleaseControllerTestSuite) getModuleRelease(name string) *v1alpha1.ModuleRelease {
 	var mr v1alpha1.ModuleRelease
 	err := suite.kubeClient.Get(context.TODO(), types.NamespacedName{Name: name}, &mr)
 	require.NoError(suite.T(), err)
@@ -226,7 +237,7 @@ func (suite *ControllerTestSuite) getModuleRelease(name string) *v1alpha1.Module
 	return &mr
 }
 
-func (suite *ControllerTestSuite) fetchResults() []byte {
+func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 	result := bytes.NewBuffer(nil)
 
 	var mslist v1alpha1.ModuleSourceList
@@ -264,4 +275,15 @@ func (s stubModulesManager) GetModule(_ string) *addonmodules.BasicModule {
 
 func (s stubModulesManager) RunModuleWithNewStaticValues(_, _, _ string) error {
 	return nil
+}
+
+func singleDocToManifests(doc []byte) (result []string) {
+	split := mDelimiter.Split(string(doc), -1)
+
+	for i := range split {
+		if split[i] != "" {
+			result = append(result, split[i])
+		}
+	}
+	return
 }

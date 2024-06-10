@@ -22,7 +22,7 @@ spec:
       masterURI: https://159.89.5.247:6443
       description: "Direct access to kubernetes API"
     publishAPI:
-      enable: true
+      enabled: true
 ```
 
 {% endraw %}
@@ -260,7 +260,7 @@ Create a password and enter its hash in the `password` field.
 Use the command below to calculate the password hash:
 
 ```shell
-echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'
+echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 ```
 
 Alternatively, you can use the [online service](https://bcrypt-generator.com/) to calculate the password hash.
@@ -275,15 +275,10 @@ metadata:
 spec:
   email: admin@yourcompany.com
   password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
-  groups:
-  - Everyone
-  - admins
   ttl: 24h
 ```
 
 {% endraw %}
-
-By default, the user is assigned the [role User](../140-user-authz/#default-access-list-for-each-role).
 
 ## Example of adding a static user to a group
 

@@ -50,7 +50,7 @@ function __main__() {
   mcName=$(context::jq -r '.review.request.object.metadata.name')
   if [[ "$mcName" == "kube-dns" ]]; then
     publicDomainTemplate=$(context::jq -r '.snapshots.["global-module-config"][].filterResult["publicDomainTemplate"]' | sed s/%s.//)
-    clusterDomainAliases=$(context::jq -r '.review.request.object.spec.settings.clusterDomainAliases[]')
+    clusterDomainAliases=$(context::jq -r '.review.request.object.spec.settings.clusterDomainAliases[]?')
 
     for alias in $clusterDomainAliases; do
       if [[ $publicDomainTemplate == $alias ]]; then

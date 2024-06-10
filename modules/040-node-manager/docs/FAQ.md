@@ -986,3 +986,7 @@ When a machine is created/deleted, the Instance object is created/deleted accord
 You cannot create an Instance resource yourself, but you can delete it. In this case, the machine will be removed from the cluster (the removal process depends on implementation details.
 
 {% endraw %}
+
+## When is a node reboot required?
+
+Node reboots may be required after configuration changes. For example, after changing certain sysctl settings, specifically when modifying the `kernel.yama.ptrace_scope` parameter (e.g., using `astra-ptrace-lock enable/disable` in the Astra Linux distribution).

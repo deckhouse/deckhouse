@@ -264,7 +264,7 @@ docs-spellcheck-generate-dictionary: ## Generate a dictionary (run it after addi
 
 .PHONY: docs-spellcheck-get-typos-list
 docs-spellcheck-get-typos-list: ## Print out a list of all the terms in all pages that were considered as a typo.
-	@cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- "/app/spell_check.sh" 2>/dev/null | sed "1,/Spell check the documentation/ d; /^Possible typos/d" | sort -u
+	@cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- "/app/spell_check.sh" 2>/dev/null | sed "1,/Spell-checking the documentation/ d; /^Possible typos/d" | sort -u
 
 ##@ Update kubernetes control-plane patchversions
 

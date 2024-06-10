@@ -50,7 +50,13 @@ func (f *File) Upload(srcPath, remotePath string) error {
 		CaptureStderr(nil)
 	err = scp.Run()
 	if err != nil {
-		return fmt.Errorf("upload file '%s': %v\n%s\nstderr: %s", srcPath, err, string(scp.StdoutBytes()), string(scp.StderrBytes()))
+		return fmt.Errorf(
+			"upload file '%s': %w\n%s\nstderr: %s",
+			srcPath,
+			err,
+			string(scp.StdoutBytes()),
+			string(scp.StderrBytes()),
+		)
 	}
 
 	return nil
@@ -71,7 +77,7 @@ func (f *File) UploadBytes(data []byte, remotePath string) error {
 
 	err = os.WriteFile(srcPath, data, 0o600)
 	if err != nil {
-		return fmt.Errorf("write data to tmp file: %v", err)
+		return fmt.Errorf("write data to tmp file: %w", err)
 	}
 
 	scp := cmd.NewSCP(f.Session).
@@ -82,7 +88,13 @@ func (f *File) UploadBytes(data []byte, remotePath string) error {
 		CaptureStdout(nil)
 	err = scp.Run()
 	if err != nil {
-		return fmt.Errorf("upload file '%s': %v\n%s\nstderr: %s", remotePath, err, string(scp.StdoutBytes()), string(scp.StderrBytes()))
+		return fmt.Errorf(
+			"upload file '%s': %w\n%s\nstderr: %s",
+			remotePath,
+			err,
+			string(scp.StdoutBytes()),
+			string(scp.StderrBytes()),
+		)
 	}
 
 	if len(scp.StdoutBytes()) > 0 {
@@ -99,7 +111,7 @@ func (f *File) Download(remotePath, dstPath string) error {
 
 	stdout, err := scpCmd.Cmd().CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("download file '%s': %v", remotePath, err)
+		return fmt.Errorf("download file '%s': %w", remotePath, err)
 	}
 
 	if len(stdout) > 0 {
@@ -127,7 +139,7 @@ func (f *File) DownloadBytes(remotePath string) ([]byte, error) {
 
 	stdout, err := scpCmd.Cmd().CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("download file '%s': %v", remotePath, err)
+		return nil, fmt.Errorf("download file '%s': %w", remotePath, err)
 	}
 
 	if len(stdout) > 0 {
@@ -136,14 +148,17 @@ func (f *File) DownloadBytes(remotePath string) ([]byte, error) {
 
 	data, err := os.ReadFile(dstPath)
 	if err != nil {
-		return nil, fmt.Errorf("reading tmp file '%s': %v", dstPath, err)
+		return nil, fmt.Errorf("reading tmp file '%s': %w", dstPath, err)
 	}
 
 	return data, nil
 }
 
 func CreateEmptyTmpFile() (string, error) {
-	tmpPath := filepath.Join(os.TempDir(), fmt.Sprintf("dhctl-scp-%d-%s.tmp", os.Getpid(), uuid.NewV4().String()))
+	tmpPath := filepath.Join(
+		os.TempDir(),
+		fmt.Sprintf("dhctl-scp-%d-%s.tmp", os.Getpid(), uuid.NewV4().String()),
+	)
 
 	file, err := os.OpenFile(tmpPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {

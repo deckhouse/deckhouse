@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-export LANG=C
+export LANG=C LC_NUMERIC=C
 set -Eeo pipefail
 
 function kubectl_exec() {
@@ -94,7 +94,7 @@ function get_secret() {
     while true; do
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
         url="https://$server/api/v1/namespaces/d8-cloud-instance-manager/secrets/$secret"
-        if curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+        if d8-curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
           return 0
         else
@@ -131,7 +131,7 @@ function get_bundle() {
     while true; do
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
         url="https://$server/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"
-        if curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+        if d8-curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
          return 0
         else
@@ -188,7 +188,7 @@ function main() {
 {{- else }}
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- end }}
-{{- if or (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
+{{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
   export D8_NODE_HOSTNAME=$(hostname -s)
 {{- else }}
   export D8_NODE_HOSTNAME=$(hostname)

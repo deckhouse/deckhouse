@@ -36,6 +36,8 @@ var (
 			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.zones.items",
 			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.zones.items",
 			"apiVersions[0].openAPISpec.properties.zones.items",
+			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.instanceClass.properties.diskType",
+			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.instanceClass.properties.diskType",
 		},
 		// disk types - gp2.,..
 		"candi/cloud-providers/aws/openapi/cluster_configuration.yaml": {
@@ -133,6 +135,7 @@ var (
 		},
 		"modules/030-cloud-provider-vcd/openapi/values.yaml": {
 			// ignore internal values
+			"properties.internal.properties.discoveryData.properties.apiVersion",
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
 		},

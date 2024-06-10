@@ -36,8 +36,8 @@ const (
 	candiDir          = "/deckhouse/candi"
 	modulesDir        = "/deckhouse/modules"
 	globalHooksModule = "/deckhouse/global-hooks"
-	// don't forget to update the version in release requirements (release.yaml)
-	DefaultKubernetesVersion = "1.25"
+	// don't forget to update the version in release requirements (release.yaml) 'autoK8sVersion' key
+	DefaultKubernetesVersion = "1.27"
 )
 
 const (
@@ -91,6 +91,7 @@ func numerateManifestLines(manifest []byte) string {
 func ParseConfig(paths []string, opts ...ValidateOption) (*MetaConfig, error) {
 	content := ""
 	for _, path := range paths {
+		log.DebugF("Have config file %s\n", path)
 		fileContent, err := os.ReadFile(path)
 		if err != nil {
 			return nil, fmt.Errorf("loading config file: %v", err)
@@ -202,22 +203,24 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 	var index SchemaIndex
 	err := yaml.Unmarshal(docData, &index)
 	if err != nil {
-		return false, fmt.Errorf("document unmarshal: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+		return false, fmt.Errorf("Config document unmarshal failed: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
 
 	if index.Kind == ModuleConfigKind {
 		moduleConfig := ModuleConfig{}
 		err = yaml.Unmarshal(docData, &moduleConfig)
 		if err != nil {
-			return false, fmt.Errorf("module config unmarshal: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+			return false, fmt.Errorf("Module config document unmarshal failed: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
+
+		log.DebugF("Found ModuleConfig in config file %s\n", moduleConfig.Name)
 
 		_, err = schemaStore.Validate(&docData, opts...)
 		if err != nil {
 			if errors.Is(err, ErrSchemaNotFound) {
 				return false, nil
 			}
-			return false, fmt.Errorf("module config validation: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
+			return false, fmt.Errorf("Module config validation failed: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
 
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, &moduleConfig)
@@ -229,26 +232,30 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 		if errors.Is(err, ErrSchemaNotFound) {
 			return false, nil
 		}
-		return false, fmt.Errorf("config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+		return false, fmt.Errorf("Config document validation failed: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
 
 	var data map[string]json.RawMessage
 	if err = yaml.Unmarshal(docData, &data); err != nil {
-		return false, fmt.Errorf("config unmarshal: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+		return false, fmt.Errorf("Config document unmarshal failed: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
 
 	found := false
 	switch {
 	case index.Kind == "InitConfiguration":
+		log.DebugLn("Found InitConfiguration")
 		metaConfig.InitClusterConfig = data
 		found = true
 	case index.Kind == "ClusterConfiguration":
+		log.DebugLn("Found ClusterConfiguration")
 		metaConfig.ClusterConfig = data
 		found = true
 	case index.Kind == "StaticClusterConfiguration":
+		log.DebugLn("Found StaticClusterConfiguration")
 		metaConfig.StaticClusterConfig = data
 		found = true
 	case strings.HasSuffix(index.Kind, "ClusterConfiguration"):
+		log.DebugF("Found %s\n", index.Kind)
 		metaConfig.ProviderClusterConfig = data
 		found = true
 	}
@@ -285,6 +292,7 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse: {}
 `
+		log.DebugF("Init configuration not found use empty: %s", doc)
 		found, err := parseDocument(doc, &metaConfig, schemaStore, opts...)
 		if err != nil {
 			return nil, err

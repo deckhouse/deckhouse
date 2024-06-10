@@ -81,7 +81,7 @@ apiVersions:
             additionalProperties: false
             required: [numCPUs, memory, template, vnicProfileID, storageDomainID]
             description: |
-              Partial contents of the fields of the [ZvirtInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-zvirt/cr.html#zvirtinstanceclass).
+              Partial contents of the fields of the [ZvirtInstanceClass](cr.html#zvirtinstanceclass).
             properties: &instanceClassProperties
               numCPUs:
                 type: integer

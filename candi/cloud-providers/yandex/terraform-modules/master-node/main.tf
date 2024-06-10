@@ -81,7 +81,7 @@ resource "yandex_compute_disk" "kubernetes_data" {
   description = "volume for etcd and kubernetes certs"
   size        = local.etcd_disk_size_gb
   zone        = local.internal_subnet.zone
-  type        = "network-ssd"
+  type        = local.disk_type
 
   labels = local.additional_labels
 }
@@ -104,7 +104,7 @@ resource "yandex_compute_instance" "master" {
 
   boot_disk {
     initialize_params {
-      type     = "network-ssd"
+      type     = local.disk_type
       image_id = local.image_id
       size     = local.disk_size_gb
 

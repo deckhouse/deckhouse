@@ -2154,7 +2154,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.22.2-bullseye@sha256:c49746c1935eb0424f7dbd37887596aaa903238a25a04beffd9c4c649cbcae2e"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.22.3-bullseye@sha256:d51f0325ad7c506fa807bb2fcb67f9c037188ae7fcf1b25e6ac97fca3058265f"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -2269,7 +2269,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.22.2-bullseye@sha256:c49746c1935eb0424f7dbd37887596aaa903238a25a04beffd9c4c649cbcae2e"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.22.3-bullseye@sha256:d51f0325ad7c506fa807bb2fcb67f9c037188ae7fcf1b25e6ac97fca3058265f"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'

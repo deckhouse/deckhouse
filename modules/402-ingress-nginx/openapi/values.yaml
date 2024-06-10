@@ -76,7 +76,7 @@ properties:
                   x-examples: ["HostWithFailover"]
                 controllerVersion:
                   type: string
-                  x-examples: ["1.6", "1.9"]
+                  x-examples: ["1.6", "1.9", "1.10"]
                 enableIstioSidecar:
                   type: boolean
                 waitLoadBalancerOnTerminating:
@@ -142,16 +142,6 @@ properties:
                     annotations:
                       type: object
                       additionalProperties: true
-                l2LoadBalancer:
-                  type: object
-                  default: { }
-                  properties:
-                    addressPool:
-                      type: string
-                    sourceRanges:
-                      type: array
-                      items:
-                        type: string
                 hostPort:
                   type: object
                   default: {}
@@ -203,6 +193,8 @@ properties:
                 legacySSL:
                   type: boolean
                 disableHTTP2:
+                  type: boolean
+                enableHTTP3:
                   type: boolean
                 config:
                   type: object

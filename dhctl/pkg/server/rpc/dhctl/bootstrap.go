@@ -21,201 +21,261 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
+	"sync"
+	"time"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/fsm"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"k8s.io/utils/pointer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
-	ctx, cancel := context.WithCancel(server.Context())
-	defer cancel()
+	ctx := operationCtx(server)
 
-	gr, ctx := errgroup.WithContext(ctx)
+	logger.L(ctx).Info("started")
 
 	f := fsm.New("initial", s.bootstrapServerTransitions())
 
+	doneCh := make(chan struct{})
+	internalErrCh := make(chan error)
+	receiveCh := make(chan *pb.BootstrapRequest)
+	sendCh := make(chan *pb.BootstrapResponse)
 	phaseSwitcher := &bootstrapPhaseSwitcher{
-		server: server,
+		sendCh: sendCh,
 		f:      f,
-		next:   make(chan struct{ err error }),
+		next:   make(chan error),
 	}
-	defer close(phaseSwitcher.next)
 
-	gr.Go(func() error {
-		for {
-			request, err := server.Recv()
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					return nil
-				}
-				return status.Errorf(codes.Internal, "receiving message: %s", err)
-			}
+	s.startBootstrapperReceiver(server, receiveCh, doneCh, internalErrCh)
+	s.startBootstrapperSender(server, sendCh, internalErrCh)
 
+connectionProcessor:
+	for {
+		select {
+		case <-doneCh:
+			logger.L(ctx).Info("finished")
+			return nil
+
+		case err := <-internalErrCh:
+			logger.L(ctx).Error("finished with internal error", logger.Err(err))
+			return status.Errorf(codes.Internal, "%s", err)
+
+		case request := <-receiveCh:
+			logger.L(ctx).Info(
+				"processing BootstrapRequest",
+				slog.String("message", fmt.Sprintf("%T", request.Message)),
+			)
 			switch message := request.Message.(type) {
 			case *pb.BootstrapRequest_Start:
-				err = f.Event("start")
+				err := f.Event("start")
 				if err != nil {
-					s.log.Error("got unprocessable message",
+					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
-					continue
+					continue connectionProcessor
 				}
-				err = s.startBootstrap(ctx, gr, server, phaseSwitcher, message.Start)
-
-			case *pb.BootstrapRequest_Stop:
-				err = f.Event("stop")
-				if err != nil {
-					s.log.Error("got unprocessable message",
-						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
-					continue
-				}
-				err = s.stopBootstrap(cancel, message.Stop)
+				s.startBootstrap(
+					ctx, message.Start, phaseSwitcher, &bootstrapLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
+				)
 
 			case *pb.BootstrapRequest_Continue:
-				if message.Continue.Error != "" {
-					err = f.Event("toStop")
-					if err != nil {
-						s.log.Error("got unprocessable message",
-							logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
-						continue
-					}
-					phaseSwitcher.next <- struct{ err error }{err: errors.New(message.Continue.Error)}
-					continue
-				}
-
-				err = f.Event("toNextPhase")
+				err := f.Event("toNextPhase")
 				if err != nil {
-					s.log.Error("got unprocessable message",
+					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
-					continue
+					continue connectionProcessor
 				}
-				phaseSwitcher.next <- struct{ err error }{err: nil}
+				switch message.Continue.Continue {
+				case pb.Continue_CONTINUE_UNSPECIFIED:
+					phaseSwitcher.next <- errors.New("bad continue message")
+				case pb.Continue_CONTINUE_NEXT_PHASE:
+					phaseSwitcher.next <- nil
+				case pb.Continue_CONTINUE_STOP_OPERATION:
+					phaseSwitcher.next <- phases.StopOperationCondition
+				case pb.Continue_CONTINUE_ERROR:
+					phaseSwitcher.next <- errors.New(message.Continue.Err)
+				}
 
 			default:
-				s.log.Error("got unprocessable message",
+				logger.L(ctx).Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
-				continue
+				continue connectionProcessor
 			}
 		}
-	})
+	}
+}
 
-	return gr.Wait()
+func (s *Service) startBootstrapperReceiver(
+	server pb.DHCTL_BootstrapServer,
+	receiveCh chan *pb.BootstrapRequest,
+	doneCh chan struct{},
+	internalErrCh chan error,
+) {
+	go func() {
+		for {
+			request, err := server.Recv()
+			if errors.Is(err, io.EOF) {
+				close(doneCh)
+				return
+			}
+			if err != nil {
+				internalErrCh <- fmt.Errorf("receiving message: %w", err)
+				return
+			}
+			receiveCh <- request
+		}
+	}()
+}
+
+func (s *Service) startBootstrapperSender(
+	server pb.DHCTL_BootstrapServer,
+	sendCh chan *pb.BootstrapResponse,
+	internalErrCh chan error,
+) {
+	go func() {
+		for response := range sendCh {
+			loop := retry.NewSilentLoop("send message", 10, time.Millisecond*100)
+			err := loop.Run(func() error {
+				return server.Send(response)
+			})
+			if err != nil {
+				internalErrCh <- fmt.Errorf("sending message: %w", err)
+				return
+			}
+		}
+	}()
 }
 
 func (s *Service) startBootstrap(
 	ctx context.Context,
-	gr *errgroup.Group,
-	server pb.DHCTL_BootstrapServer,
-	phaseSwitcher *bootstrapPhaseSwitcher,
 	request *pb.BootstrapStart,
-) error {
-	gr.Go(func() error {
-		result, err := s.boostrap(ctx, request, phaseSwitcher, &bootstrapLogWriter{server: server})
-		if err != nil {
-			return err
-		}
-
-		err = server.Send(&pb.BootstrapResponse{
+	phaseSwitcher *bootstrapPhaseSwitcher,
+	logWriter *bootstrapLogWriter,
+	sendCh chan *pb.BootstrapResponse,
+) {
+	go func() {
+		result := s.bootstrap(ctx, request, phaseSwitcher, logWriter)
+		sendCh <- &pb.BootstrapResponse{
 			Message: &pb.BootstrapResponse_Result{
 				Result: result,
 			},
-		})
-		if err != nil {
-			return status.Errorf(codes.Internal, "sending message: %s", err)
 		}
-		return nil
-	})
-
-	return nil
+	}()
 }
 
-func (s *Service) stopBootstrap(
-	cancel context.CancelFunc,
-	_ *pb.BootstrapStop,
-) error {
-	cancel()
-	return nil
-}
-
-func (s *Service) boostrap(
+func (s *Service) bootstrap(
 	_ context.Context,
 	request *pb.BootstrapStart,
 	phaseSwitcher *bootstrapPhaseSwitcher,
 	logWriter io.Writer,
-) (*pb.BootstrapResult, error) {
-	// set global variables from options
+) *pb.BootstrapResult {
+	var err error
+
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
 		Width:     int(request.Options.LogWidth),
 	})
-	app.SanityCheck = request.Options.SanityCheck
+	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.PreflightSkipDeckhouseVersionCheck = true
 	app.PreflightSkipAll = true
 	app.CacheDir = s.cacheDir
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
+	defer func() {
+		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
+	}()
 
-	// parse connection config
-	connectionConfig, err := config.ParseConnectionConfig(
-		request.ConnectionConfig,
-		config.NewSchemaStore(),
-		config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-		config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-		config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+	var (
+		configPath              string
+		resourcesPath           string
+		postBootstrapScriptPath string
 	)
+	err = log.Process("default", "Preparing configuration", func() error {
+		configPath, err = writeTempFile([]byte(input.CombineYAMLs(
+			request.ClusterConfig, request.InitConfig, request.ProviderSpecificClusterConfig,
+		)))
+		if err != nil {
+			return fmt.Errorf("failed to write init configuration: %w", err)
+		}
+
+		resourcesPath, err = writeTempFile([]byte(input.CombineYAMLs(
+			request.InitResources, request.Resources,
+		)))
+		if err != nil {
+			return fmt.Errorf("failed to write resources: %w", err)
+		}
+
+		postBootstrapScriptPath, err = writeTempFile([]byte(request.PostBootstrapScript))
+		if err != nil {
+			return fmt.Errorf("failed to write post bootstrap script: %w", err)
+		}
+		postBootstrapScript, err := os.Open(postBootstrapScriptPath)
+		if err != nil {
+			return fmt.Errorf("failed to open post bootstrap script: %w", err)
+		}
+		err = postBootstrapScript.Chmod(0555)
+		if err != nil {
+			return fmt.Errorf("failed to chmod post bootstrap script: %w", err)
+		}
+
+		return nil
+	})
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "parsing connection config: %s", err)
+		return &pb.BootstrapResult{Err: err.Error()}
 	}
 
-	// preparse ssh client
-	sshClient, err := prepareSSHClient(connectionConfig)
+	var initialState phases.DhctlState
+	err = log.Process("default", "Preparing DHCTL state", func() error {
+		if request.State != "" {
+			err = json.Unmarshal([]byte(request.State), &initialState)
+			if err != nil {
+				return fmt.Errorf("unmarshalling dhctl state: %w", err)
+			}
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return &pb.BootstrapResult{Err: err.Error()}
+	}
+
+	var sshClient *ssh.Client
+	err = log.Process("default", "Preparing SSH client", func() error {
+		connectionConfig, err := config.ParseConnectionConfig(
+			request.ConnectionConfig,
+			config.NewSchemaStore(),
+			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+		)
+		if err != nil {
+			return fmt.Errorf("parsing connection config: %w", err)
+		}
+
+		sshClient, err = prepareSSHClient(connectionConfig)
+		if err != nil {
+			return fmt.Errorf("preparing ssh client: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return &pb.BootstrapResult{Err: err.Error()}
 	}
 	defer sshClient.Stop()
 
-	// prepare config files
-	configPath, err := writeTempFile([]byte(input.CombineYAMLs(
-		request.ClusterConfig, request.InitConfig, request.ProviderSpecificClusterConfig,
-	)))
-	if err != nil {
-		return nil, fmt.Errorf("failed to write init configuration: %w", err)
-	}
-
-	resourcesPath, err := writeTempFile([]byte(input.CombineYAMLs(
-		request.InitResources, request.Resources,
-	)))
-	if err != nil {
-		return nil, fmt.Errorf("failed to write resources: %w", err)
-	}
-
-	postBootstrapScriptPath, err := writeTempFile([]byte(request.PostBootstrapScript))
-	if err != nil {
-		return nil, fmt.Errorf("failed to write resources: %w", err)
-	}
-
-	// init dhctl state
-	var initialState phases.DhctlState
-	if request.State != "" {
-		err = json.Unmarshal([]byte(request.State), &initialState)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "unmarshalling dhctl state: %s", err)
-		}
-	}
-
-	// boostrap cluster
 	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 		SSHClient:                  sshClient,
 		InitialState:               initialState,
@@ -236,27 +296,10 @@ func (s *Service) boostrap(
 
 	bootstrapErr := bootstrapper.Bootstrap()
 	state := bootstrapper.GetLastState()
-	data, marshalErr := json.Marshal(state)
+	stateData, marshalErr := json.Marshal(state)
+	err = errors.Join(bootstrapErr, marshalErr)
 
-	return &pb.BootstrapResult{State: string(data)}, errors.Join(bootstrapErr, marshalErr)
-}
-
-type bootstrapLogWriter struct {
-	server pb.DHCTL_BootstrapServer
-}
-
-func (w *bootstrapLogWriter) Write(p []byte) (int, error) {
-	err := w.server.Send(&pb.BootstrapResponse{
-		Message: &pb.BootstrapResponse_Logs{
-			Logs: &pb.Logs{
-				Logs: p,
-			},
-		},
-	})
-	if err != nil {
-		return 0, fmt.Errorf("writing check logs: %w", err)
-	}
-	return len(p), nil
+	return &pb.BootstrapResult{State: string(stateData), Err: errToString(err)}
 }
 
 func (s *Service) bootstrapServerTransitions() []fsm.Transition {
@@ -276,23 +319,52 @@ func (s *Service) bootstrapServerTransitions() []fsm.Transition {
 			Sources:     []fsm.State{"waiting"},
 			Destination: "running",
 		},
-		{
-			Event:       "toStop",
-			Sources:     []fsm.State{"waiting"},
-			Destination: "stopped",
-		},
-		{
-			Event:       "stop",
-			Sources:     []fsm.State{"running", "waiting"},
-			Destination: "stopped",
-		},
 	}
 }
 
+type bootstrapLogWriter struct {
+	l      *slog.Logger
+	sendCh chan *pb.BootstrapResponse
+
+	m    sync.Mutex
+	prev []byte
+}
+
+func (w *bootstrapLogWriter) Write(p []byte) (n int, err error) {
+	w.m.Lock()
+	defer w.m.Unlock()
+
+	var r []string
+
+	for _, b := range p {
+		switch b {
+		case '\n', '\r':
+			s := string(w.prev)
+			if s != "" {
+				r = append(r, s)
+			}
+			w.prev = []byte{}
+		default:
+			w.prev = append(w.prev, b)
+		}
+	}
+
+	if len(r) > 0 {
+		for _, line := range r {
+			w.l.Info(line, logTypeDHCTL)
+		}
+		w.sendCh <- &pb.BootstrapResponse{
+			Message: &pb.BootstrapResponse_Logs{Logs: &pb.Logs{Logs: r}},
+		}
+	}
+
+	return len(p), nil
+}
+
 type bootstrapPhaseSwitcher struct {
-	server pb.DHCTL_BootstrapServer
+	sendCh chan *pb.BootstrapResponse
 	f      *fsm.FiniteStateMachine
-	next   chan struct{ err error }
+	next   chan error
 }
 
 func (b *bootstrapPhaseSwitcher) switchPhase(
@@ -307,7 +379,7 @@ func (b *bootstrapPhaseSwitcher) switchPhase(
 		return fmt.Errorf("changing state to waiting: %w", err)
 	}
 
-	err = b.server.Send(&pb.BootstrapResponse{
+	b.sendCh <- &pb.BootstrapResponse{
 		Message: &pb.BootstrapResponse_PhaseEnd{
 			PhaseEnd: &pb.BootstrapPhaseEnd{
 				CompletedPhase:      string(completedPhase),
@@ -316,14 +388,11 @@ func (b *bootstrapPhaseSwitcher) switchPhase(
 				NextPhaseCritical:   nextPhaseCritical,
 			},
 		},
-	})
-	if err != nil {
-		return fmt.Errorf("sending on phase message: %w", err)
 	}
 
-	msg, ok := <-b.next
+	switchErr, ok := <-b.next
 	if !ok {
 		return fmt.Errorf("server stopped, cancel task")
 	}
-	return msg.err
+	return switchErr
 }

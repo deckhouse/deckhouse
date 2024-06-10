@@ -488,7 +488,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 					_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
 						Create(context.TODO(), manifest.(*unstructured.Unstructured), metav1.CreateOptions{})
 					if err != nil {
-						log.InfoF("Do not create mc: %v\n", err)
+						log.DebugF("Do not create mc: %v\n", err)
 					}
 
 					return err

@@ -22,7 +22,7 @@ spec:
       masterURI: https://159.89.5.247:6443
       description: "Direct access to kubernetes API"
     publishAPI:
-      enable: true
+      enabled: true
 ```
 
 {% endraw %}
@@ -263,7 +263,7 @@ data:
 Для вычисления хэш-суммы пароля воспользуйтесь командой:
 
 ```shell
-echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'
+echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 ```
 
 Также можно воспользоваться [онлайн-сервисом](https://bcrypt-generator.com/).
@@ -282,8 +282,6 @@ spec:
 ```
 
 {% endraw %}
-
-По умолчанию пользователь получит роль [`User`](../140-user-authz/#список-доступа-для-каждой-роли-модуля-по-умолчанию).
 
 ## Пример добавления статического пользователя в группу
 

@@ -17,6 +17,8 @@ spec:
     - name: v1alpha1
       served: true
       storage: false
+      deprecated: true
+      deprecationWarning: 'v1alpha1 is deprecated, please use deckhouse.io/v1 instead'
       schema:
         openAPIV3Schema:
           type: object
@@ -65,7 +67,7 @@ spec:
                     One of the supported NGINX Ingress controller versions.
 
                     **By default**: the version in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
-                  enum: ['1.6','1.9']
+                  enum: ['1.6','1.9','1.10']
                 enableIstioSidecar:
                   type: boolean
                   description: |
@@ -618,7 +620,7 @@ spec:
                     One of the supported NGINX Ingress controller versions.
 
                     **By default**: the version in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
-                  enum: ['1.6','1.9']
+                  enum: ['1.6','1.9','1.10']
                 enableIstioSidecar:
                   type: boolean
                   description: |
@@ -906,6 +908,13 @@ spec:
                   description: |
                     Switch off HTTP2 support.
                   default: false
+                enableHTTP3:
+                  type: boolean
+                  description: |
+                    Switch on HTTP3 support.
+
+                    HTTP3 is only available in ingress-nginx version 1.10.
+                  default: false
                 config:
                   type: object
                   x-kubernetes-preserve-unknown-fields: true
@@ -1097,6 +1106,8 @@ spec:
               x-kubernetes-validations:
                 - message: .spec.controllerVersion should be explicitly set to 1.9 for .spec.annotationValidationEnabled to make effect
                   rule: 'self.annotationValidationEnabled == true ? self.controllerVersion == ''1.9'': true'
+                - message: .spec.controllerVersion should be explicitly set to 1.10 for .spec.enableHTTP3 to make effect
+                  rule: 'self.enableHTTP3 == true ? self.controllerVersion == ''1.10'': true'
       additionalPrinterColumns:
         - jsonPath: .spec.ingressClass
           name: Ingress Class

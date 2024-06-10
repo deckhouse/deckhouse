@@ -106,9 +106,13 @@ spec:
 Крайне не рекомендуется отключать автоматическое обновление! Это заблокирует обновления на patch-релизы, которые могут содержать исправления критических уязвимостей и ошибок.
 {% endalert %}
 
-### Как применить обновление минуя окна обновлений?
+### Как применить обновление минуя окна обновлений, canary-release и ручной режим обновлений?
 
-Чтобы применить обновление немедленно, не дожидаясь ближайшего окна обновлений, установите в соответствующем ресурсе [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
+Чтобы применить обновление немедленно, установите в соответствующем ресурсе [DeckhouseRelease](cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
+
+{% alert level="info" %}
+**Обратите внимание!** В этом случае будут проигнорированы окна обновления, настройки [canary-release](modules/002-deckhouse/cr.html#deckhouserelease-v1alpha1-spec-applyafter) и режим [ручного обновления кластера](modules/002-deckhouse/configuration.html#parameters-update-disruptionapprovalmode). Обновление применится сразу после установки аннотации.
+{% endalert %}
 
 Пример команды установки аннотации пропуска окон обновлений для версии `v1.56.2`:
 
@@ -145,7 +149,7 @@ metadata:
 
 Если алерт `DeckhouseUpdating` погас, значит, обновление завершено.
 
-Вы также можете проверить состояние [релизов](modules/002-deckhouse/cr.html#deckhouserelease) Deckhouse.
+Вы также можете проверить состояние [релизов](cr.html#deckhouserelease) Deckhouse.
 
 Пример:
 
@@ -188,7 +192,7 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 
 Как только на установленном в кластере канале обновления появляется новая версия Deckhouse:
 - Загорается алерт `DeckhouseReleaseIsWaitingManualApproval`, если кластер использует ручной режим обновлений (параметр [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) установлен в `Manual`).
-- Появляется новый custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease). Используйте команду `kubectl get deckhousereleases`, чтобы посмотреть список релизов. Если `DeckhouseRelease` новой версии находится в состоянии `Pending`, указанная версия еще не установлена. Возможные причины, при которых `DeckhouseRelease` может находиться в `Pending`:
+- Появляется новый custom resource [DeckhouseRelease](cr.html#deckhouserelease). Используйте команду `kubectl get deckhousereleases`, чтобы посмотреть список релизов. Если `DeckhouseRelease` новой версии находится в состоянии `Pending`, указанная версия еще не установлена. Возможные причины, при которых `DeckhouseRelease` может находиться в `Pending`:
   - Установлен ручной режим обновлений (параметр [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) установлен в `Manual`).
   - Установлен автоматический режим обновлений и настроены [окна обновлений](modules/002-deckhouse/usage.html#конфигурация-окон-обновлений), интервал которых еще не наступил.
   - Установлен автоматический режим обновлений, окна обновлений не настроены, но применение версии отложено на случайный период времени из-за механизма снижения нагрузки на репозиторий образов контейнеров. В поле `status.message` ресурса `DeckhouseRelease` будет соответствующее сообщение.
@@ -197,8 +201,8 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 ### Как заранее получать информацию о предстоящем обновлении?
 
 Получать заранее информацию об обновлении минорных версий Deckhouse на канале обновлений можно следующими способами:
-- Настроить ручной [режим обновлений](modules/002-deckhouse/configuration.html#parameters-update-mode). В этом случае при появлении новой версии на канале обновлений загорится алерт `DeckhouseReleaseIsWaitingManualApproval` и в кластере появится новый custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease).
-- Настроить автоматический [режим обновлений](modules/002-deckhouse/configuration.html#parameters-update-mode) и указать минимальное время в параметре [minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime), на которое будет отложено обновление. В этом случае при появлении новой версии на канале обновлений в кластере появится новый custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease). А если указать URL в параметре [update.notification.webhook](modules/002-deckhouse/configuration.html#parameters-update-notification-webhook), дополнительно произойдет вызов webhook'а.
+- Настроить ручной [режим обновлений](modules/002-deckhouse/configuration.html#parameters-update-mode). В этом случае при появлении новой версии на канале обновлений загорится алерт `DeckhouseReleaseIsWaitingManualApproval` и в кластере появится новый custom resource [DeckhouseRelease](cr.html#deckhouserelease).
+- Настроить автоматический [режим обновлений](modules/002-deckhouse/configuration.html#parameters-update-mode) и указать минимальное время в параметре [minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime), на которое будет отложено обновление. В этом случае при появлении новой версии на канале обновлений в кластере появится новый custom resource [DeckhouseRelease](cr.html#deckhouserelease). А если указать URL в параметре [update.notification.webhook](modules/002-deckhouse/configuration.html#parameters-update-notification-webhook), дополнительно произойдет вызов webhook'а.
 
 ### Как узнать, какая версия Deckhouse находится на каком канале обновлений?
 
@@ -208,7 +212,7 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 
 При указании в конфигурации модуля `deckhouse` параметра `releaseChannel` Deckhouse будет каждую минуту проверять данные о релизе на канале обновлений.
 
-При появлении нового релиза Deckhouse скачивает его в кластер и создает custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease).
+При появлении нового релиза Deckhouse скачивает его в кластер и создает custom resource [DeckhouseRelease](cr.html#deckhouserelease).
 
 После появления custom resource'а `DeckhouseRelease` в кластере Deckhouse выполняет обновление на соответствующую версию согласно установленным [параметрам обновления](modules/002-deckhouse/configuration.html#parameters-update) (по умолчанию — автоматически, в любое время).
 
@@ -558,7 +562,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
   * Пример запуска:
 
     ```shell
-    kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry \
+    kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry \
       --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee
     ```
 
@@ -574,7 +578,37 @@ Deckhouse поддерживает работу только с Bearer token-с�
     -----END CERTIFICATE-----
     EOF
     )
-    $ kubectl exec  -n d8-system deploy/deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
+    $ kubectl exec -n d8-system deploy/deckhouse -c deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
+    ```
+  
+  * Просмотреть список доступных ключей команды `deckhouse-controller helper change-registry` можно, выполнив следующую команду:
+
+    ```shell
+    kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --help
+    ```
+
+    Пример вывода:
+
+    ```shell
+    usage: deckhouse-controller helper change-registry [<flags>] <new-registry>
+    
+    Change registry for deckhouse images.
+    
+    Flags:
+    --help               Show context-sensitive help (also try --help-long and --help-man).
+    --user=USER          User with pull access to registry.
+    --password=PASSWORD  Password/token for registry user.
+    --ca-file=CA-FILE    Path to registry CA.
+    --insecure           Use HTTP while connecting to new registry.
+    --dry-run            Don't change deckhouse resources, only print them.
+    --new-deckhouse-tag=NEW-DECKHOUSE-TAG
+    New tag that will be used for deckhouse deployment image (by default
+    current tag from deckhouse deployment will be used).
+    
+    Args:
+    <new-registry>  Registry that will be used for deckhouse images (example:
+    registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need
+    http - provide '--insecure' flag
     ```
 
 * Дождитесь перехода пода Deckhouse в статус `Ready`. Если под будет находиться в статусе `ImagePullBackoff`, перезапустите его.
@@ -671,7 +705,7 @@ proxy:
 Чтобы изменить общие параметры кластера, выполните команду:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
 ```
 
 После сохранения изменений Deckhouse приведет конфигурацию кластера к измененному состоянию. В зависимости от размеров кластера это может занять какое-то время.
@@ -683,7 +717,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit clus
 Независимо от используемого облачного провайдера его настройки можно изменить с помощью следующей команды:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
 ### Как изменить конфигурацию статического кластера?
@@ -693,7 +727,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit prov
 Чтобы изменить параметры статического кластера, выполните команду:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit static-cluster-configuration
+kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit static-cluster-configuration
 ```
 
 ### Как переключить Deckhouse EE на CE?
@@ -713,7 +747,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit stat
 1. Выполните следующую команду:
 
    ```shell
-   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry registry.deckhouse.ru/deckhouse/ce
+   kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry registry.deckhouse.ru/deckhouse/ce
    ```
 
 1. Дождитесь перехода пода Deckhouse в статус `Ready`:
@@ -731,20 +765,20 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit stat
 1. Дождитесь перезапуска Deckhouse и выполнения всех задач в очереди:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
    ```
 
    Пример вывода, когда в очереди еще есть задания (`length 38`):
 
    ```console
-   # kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
    Queue 'main': length 38, status: 'run first task'
    ```
 
    Пример вывода, когда очередь пуста (`length 0`):
 
    ```console
-   # kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
    Queue 'main': length 0, status: 'waiting for task 0s'
    ```
 
@@ -792,7 +826,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit stat
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
-   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry.deckhouse.ru/deckhouse/ee
+   kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry.deckhouse.ru/deckhouse/ee
    ```
 
 1. Дождитесь перехода пода Deckhouse в статус `Ready`:
@@ -810,20 +844,20 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit stat
 1. Дождитесь перезапуска Deckhouse и выполнения всех задач в очереди:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
    ```
 
    Пример вывода, когда в очереди еще есть задания (`length 38`):
 
    ```console
-   # kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
    Queue 'main': length 38, status: 'run first task'
    ```
 
    Пример вывода, когда очередь пуста (`length 0`):
 
    ```console
-   # kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
    Queue 'main': length 0, status: 'waiting for task 0s'
    ```
 
@@ -863,7 +897,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit stat
 1. Выполните команду:
 
    ```shell
-   kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+   kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
    ```
 
 1. Измените параметр `kubernetesVersion`.

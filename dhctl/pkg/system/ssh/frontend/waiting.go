@@ -57,6 +57,20 @@ func (c *Check) AwaitAvailability() error {
 	})
 }
 
+func (c *Check) CheckAvailability() error {
+	if c.Session.Host() == "" {
+		return fmt.Errorf("empty host for connection received")
+	}
+
+	log.InfoF("Try to connect to %v host\n", c.Session.Host())
+	output, err := c.ExpectAvailable()
+	if err != nil {
+		log.InfoF(string(output))
+		return err
+	}
+	return nil
+}
+
 func (c *Check) ExpectAvailable() ([]byte, error) {
 	cmd := NewCommand(c.Session, "echo SUCCESS").Cmd()
 	output, err := cmd.CombinedOutput()
@@ -68,7 +82,7 @@ func (c *Check) ExpectAvailable() ([]byte, error) {
 		return nil, nil
 	}
 
-	return output, fmt.Errorf("SSH command otput should contain \"SUCCESS\", error: %v", err)
+	return output, fmt.Errorf("SSH command output should contain \"SUCCESS\", error: %w", err)
 }
 
 func (c *Check) String() string {

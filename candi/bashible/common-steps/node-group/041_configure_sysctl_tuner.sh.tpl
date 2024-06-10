@@ -50,7 +50,7 @@ sysctl -w net.ipv4.tcp_max_syn_backlog=8096
 sysctl -w net.ipv4.tcp_no_metrics_save=1 # do not cache TCP metrics for subsequent connections using the same (dst_ip, src_ip, dst_port, src_port) tuple, because it is harmful and unnecessary in modern WAN networks
 sysctl -w net.ipv4.tcp_slow_start_after_idle=0 # not needed in modern networks, because it begins to aggressively reduce TCP cwnd on idle connections
 sysctl -w net.ipv4.tcp_tw_reuse=1 # secure option to reuse TIME-WAIT socket on outgoing connection
-sysctl -w net.ipv4.ip_local_port_range="10500 65535" # we are using ports lower than 10500 for binding deckhouse modules components
+sysctl -w net.ipv4.ip_local_port_range="32768 61000" # the port range recommended parameter that is used by TCP and UDP traffic to choose the local port
 sysctl -w net.ipv4.neigh.default.gc_thresh1=16384 # fix neighbour: arp_cache: neighbor table overflow!
 sysctl -w net.ipv4.neigh.default.gc_thresh2=28672
 sysctl -w net.ipv4.neigh.default.gc_thresh3=32768
@@ -69,10 +69,18 @@ sysctl -w kernel.pid_max=2000000
 {{- if eq .bundle "centos" }}
 sysctl -w fs.may_detach_mounts=1 # For Centos to avoid problems with unmount when container stops # https://bugzilla.redhat.com/show_bug.cgi?id=1441737
 {{- end }}
+
 # kubelet parameters
 sysctl -w vm.overcommit_memory=1
-sysctl -w kernel.panic=10
 sysctl -w kernel.panic_on_oops=1
+
+# Default value for correct kubelet startup
+{{- $fencingTime := 10 }}
+{{- if eq (dig "fencing" "mode" "" .nodeGroup) "Watchdog" }}
+  # For fencing to work correctly, we need to block node restart in case of panic.
+  {{- $fencingTime = 0 }}
+{{- end }}
+sysctl -w kernel.panic={{ $fencingTime }}
 
 # we use tee for work with globs
 echo 256 | tee /sys/block/*/queue/nr_requests >/dev/null # put more in the request queue, increase throughput

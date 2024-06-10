@@ -73,6 +73,8 @@ type moduleReleaseReconciler struct {
 
 	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpec
 
+	preflightCountDown *sync.WaitGroup
+
 	m             sync.Mutex
 	delayTimer    *time.Timer
 	restartReason string
@@ -95,6 +97,7 @@ func NewModuleReleaseController(
 	embeddedPolicy *v1alpha1.ModuleUpdatePolicySpec,
 	mm moduleManager,
 	metricStorage *metric_storage.MetricStorage,
+	preflightCountDown *sync.WaitGroup,
 ) error {
 	lg := log.WithField("component", "ModuleReleaseController")
 
@@ -110,6 +113,8 @@ func NewModuleReleaseController(
 		deckhouseEmbeddedPolicy: embeddedPolicy,
 
 		delayTimer: time.NewTimer(3 * time.Second),
+
+		preflightCountDown: preflightCountDown,
 	}
 
 	// Add Preflight Check
@@ -117,6 +122,7 @@ func NewModuleReleaseController(
 	if err != nil {
 		return err
 	}
+	c.preflightCountDown.Add(1)
 
 	ctr, err := controller.New("module-release", mgr, controller.Options{
 		MaxConcurrentReconciles: 3,
@@ -202,7 +208,7 @@ func (c *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, m
 	switch mr.Status.Phase {
 	case "":
 		mr.Status.Phase = v1alpha1.PhasePending
-		mr.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
+		mr.Status.TransitionTime = metav1.NewTime(c.dc.GetClock().Now().UTC())
 		if e := c.client.Status().Update(ctx, mr); e != nil {
 			return ctrl.Result{Requeue: true}, e
 		}
@@ -294,6 +300,20 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 		}
 	}
 
+	// checks if the modulerelease is overridden by modulepulloverride
+	mpo := new(v1alpha1.ModulePullOverride)
+	err = c.client.Get(ctx, types.NamespacedName{Name: mr.GetModuleName()}, mpo)
+	// mpo has been found and mpo version must be used as the source of the documentation
+	if err == nil {
+		return ctrl.Result{}, nil
+	}
+
+	// some other error apart from IsNotFound
+	if err != nil && !apierrors.IsNotFound(err) {
+		return ctrl.Result{Requeue: true}, err
+	}
+
+	// mpo not found - update the docs from the module release version
 	modulePath := fmt.Sprintf("/%s/v%s", mr.GetModuleName(), mr.Spec.Version.String())
 	moduleVersion := "v" + mr.Spec.Version.String()
 	checksum := mr.Labels["release-checksum"]
@@ -307,6 +327,7 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 		UID:        mr.GetUID(),
 		Controller: pointer.Bool(true),
 	}
+
 	err = createOrUpdateModuleDocumentationCR(ctx, c.client, mr.GetModuleName(), moduleVersion, checksum, modulePath, mr.GetModuleSource(), ownerRef)
 	if err != nil {
 		return ctrl.Result{Requeue: true}, err
@@ -424,7 +445,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 
 			release.Status.Phase = v1alpha1.PhaseSuperseded
 			release.Status.Message = ""
-			release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
+			release.Status.TransitionTime = metav1.NewTime(c.dc.GetClock().Now().UTC())
 			if e := c.client.Status().Update(ctx, &release); e != nil {
 				return ctrl.Result{Requeue: true}, e
 			}
@@ -488,7 +509,7 @@ func (c *moduleReleaseReconciler) suspendModuleVersionForRelease(ctx context.Con
 
 	release.Status.Phase = v1alpha1.PhaseSuspended
 	release.Status.Message = fmt.Sprintf("Desired version of the module met problems: %s", err)
-	release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
+	release.Status.TransitionTime = metav1.NewTime(c.dc.GetClock().Now().UTC())
 
 	return c.client.Status().Update(ctx, release)
 }
@@ -588,7 +609,12 @@ func (c *moduleReleaseReconciler) updateModuleReleaseStatusMessage(ctx context.C
 // PreflightCheck start a few checks and synchronize deckhouse filesystem with ModuleReleases
 //   - Download modules, which have status=deployed on ModuleRelease but have no files on Filesystem
 //   - Delete modules, that don't have ModuleRelease presented in the cluster
-func (c *moduleReleaseReconciler) PreflightCheck(ctx context.Context) error {
+func (c *moduleReleaseReconciler) PreflightCheck(ctx context.Context) (err error) {
+	defer func() {
+		if err == nil {
+			c.preflightCountDown.Done()
+		}
+	}()
 	if c.externalModulesDir == "" {
 		return nil
 	}
@@ -601,7 +627,7 @@ func (c *moduleReleaseReconciler) PreflightCheck(ctx context.Context) error {
 		})
 
 	go c.restartLoop(ctx)
-	err := c.restoreAbsentModulesFromReleases(ctx)
+	err = c.restoreAbsentModulesFromReleases(ctx)
 	if err != nil {
 		return fmt.Errorf("modules restoration from releases failed: %w", err)
 	}
@@ -679,6 +705,11 @@ func (c *moduleReleaseReconciler) restoreAbsentModulesFromReleases(ctx context.C
 	// TODO: add labels to list only Deployed releases
 	for _, item := range releaseList.Items {
 		if item.Status.Phase != "Deployed" {
+			continue
+		}
+
+		// ignore deleted Releases
+		if !item.ObjectMeta.DeletionTimestamp.IsZero() {
 			continue
 		}
 

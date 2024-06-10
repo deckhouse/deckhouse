@@ -66,6 +66,11 @@ groups:
     description:
       en: "*machine-controller-manager* metrics"
       ru: "Метрики компонента *machine-controller-manager*"
+  - ports: "5443"
+    protocol: TCP
+    description:
+      en: "Proxy for registry packages *registry-packages-proxy*"
+      ru: "Прокси для пакетов registry *registry-packages-proxy*"
 - group: NodesToNodes
   description:
     en: Nodes to nodes traffic
@@ -151,6 +156,11 @@ groups:
     description:
       en: "*kube-router* metrics"
       ru: "Метрики *kube-router*"
+  - ports: "9695"
+    protocol: TCP
+    description:
+      en: "*sds-node-configurator* node agent metrics"
+      ru: "Метрики агента *sds-node-configurator*"
   - ports: "3367"
     protocol: TCP
     description:

@@ -105,9 +105,13 @@ In this case, Deckhouse does not check for updates and even doesn't apply patch 
 It is highly not recommended to disable automatic updates! It will block updates to patch releases that may contain critical vulnerabilities and bugs fixes.
 {% endalert %}
 
-### How do I apply an update without having to wait for the update window?
+### How do I apply an update without having to wait for the update window, canary-release and manual update mode?
 
-To apply an update immediately without having to wait for the update window, set the `release.deckhouse.io/apply-now : "true"` annotation on the [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease) resource.
+To apply an update immediately, set the `release.deckhouse.io/apply-now : "true"` annotation on the [DeckhouseRelease](cr.html#deckhouserelease) resource.
+
+{% alert level="info" %}
+**Caution!** In this case, the update windows, settings [canary-release](modules/002-deckhouse/cr.html#deckhouserelease-v1alpha1-spec-applyafter) and [manual cluster update mode](modules/002-deckhouse/configuration.html#parameters-update-disruptionapprovalmode) will be ignored. The update will be applied immediately after the annotation is installed.
+{% endalert %}
 
 An example of a command to set the annotation to skip the update windows for version `v1.56.2`:
 
@@ -144,7 +148,7 @@ During the update:
 
 If the `DeckhouseUpdating` alert is resolved, then the update is complete.
 
-You can also check the status of Deckhouse [releases](modules/002-deckhouse/cr.html#deckhouserelease).
+You can also check the status of Deckhouse [releases](cr.html#deckhouserelease).
 
 An example:
 
@@ -187,7 +191,7 @@ Possible options for action if something went wrong:
 
 As soon as a new version of Deckhouse appears on the release channel installed in the cluster:
 - The alert `DeckhouseReleaseIsWaitingManualApproval` fires, if the cluster uses manual update mode (the [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
-- There is a new custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease). Use the `kubectl get deckhousereleases` command, to view the list of releases. If the `DeckhouseRelease` is in the `Pending` state, the specified version has not yet been installed. Possible reasons why `DeckhouseRelease` may be in `Pending`:
+- There is a new custom resource [DeckhouseRelease](cr.html#deckhouserelease). Use the `kubectl get deckhousereleases` command, to view the list of releases. If the `DeckhouseRelease` is in the `Pending` state, the specified version has not yet been installed. Possible reasons why `DeckhouseRelease` may be in `Pending`:
   - Manual update mode is set (the [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
   - The automatic update mode is set, and the [update windows](modules/002-deckhouse/usage.html#update-windows-configuration) are configured, the interval of which has not yet come.
   - The automatic update mode is set, update windows are not configured, but the installation of the version has been postponed for a random time due to the mechanism of reducing the load on the repository of container images. There will be a corresponding message in the `status.message` field of the `DeckhouseRelease` resource.
@@ -196,8 +200,8 @@ As soon as a new version of Deckhouse appears on the release channel installed i
 ### How do I get information about the upcoming update in advance?
 
 You can get information in advance about updating minor versions of Deckhouse on the release channel in the following ways:
-- Configure manual [update mode](modules/002-deckhouse/configuration.html#parameters-update-mode). In this case, when a new version appears on the release channel, the alert `DeckhouseReleaseIsWaitingManualApproval` will fire and a new custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease) will appear in the cluster.
-- Configure automatic [update mode](modules/002-deckhouse/configuration.html#parameters-update-mode) and specify the minimum time in the [minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter for which the update will be postponed. In this case, when a new version appears on the release channel, a new custom resource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease) will appear in the cluster. And if you specify a URL in the [update.notification.webhook](modules/002-deckhouse/configuration.html#parameters-update-notification-webhook) parameter, then the webhook will be called additionally.
+- Configure manual [update mode](modules/002-deckhouse/configuration.html#parameters-update-mode). In this case, when a new version appears on the release channel, the alert `DeckhouseReleaseIsWaitingManualApproval` will fire and a new custom resource [DeckhouseRelease](cr.html#deckhouserelease) will appear in the cluster.
+- Configure automatic [update mode](modules/002-deckhouse/configuration.html#parameters-update-mode) and specify the minimum time in the [minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter for which the update will be postponed. In this case, when a new version appears on the release channel, a new custom resource [DeckhouseRelease](cr.html#deckhouserelease) will appear in the cluster. And if you specify a URL in the [update.notification.webhook](modules/002-deckhouse/configuration.html#parameters-update-notification-webhook) parameter, then the webhook will be called additionally.
 
 ### How do I find out which version of Deckhouse is on which release channel?
 
@@ -207,7 +211,7 @@ Information about which version of Deckhouse is on which release channel can be 
 
 Every minute Deckhouse checks a new release appeared in the release channel specified by the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter.
 
-When a new release appears on the release channel, Deckhouse downloads it and creates CustomResource [DeckhouseRelease](modules/002-deckhouse/cr.html#deckhouserelease).
+When a new release appears on the release channel, Deckhouse downloads it and creates CustomResource [DeckhouseRelease](cr.html#deckhouserelease).
 
 After creating a `DeckhouseRelease` custom resource in a cluster, Deckhouse updates the `deckhouse` Deployment and sets the image tag to a specified release tag according to [selected](modules/002-deckhouse/configuration.html#parameters-update) update mode and update windows (automatic at any time by default).
 
@@ -557,7 +561,7 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
   * Example:
 
     ```shell
-    kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse
+    kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse
     ```
 
   * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `/tmp/ca.crt` in the Deckhouse Pod and add the `--ca-file /tmp/ca.crt` option to the script or put the content of CA into a variable as follows:
@@ -572,7 +576,37 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
     -----END CERTIFICATE-----
     EOF
     )
-    $ kubectl exec  -n d8-system deploy/deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
+    $ kubectl exec  -n d8-system deploy/deckhouse -c deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
+    ```
+
+  * To view the list of available keys of the `deckhouse-controller helper change-registry` command, run the following command:
+
+    ```shell
+    kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --help
+    ```
+
+    Example output:
+
+    ```shell
+    usage: deckhouse-controller helper change-registry [<flags>] <new-registry>
+    
+    Change registry for deckhouse images.
+    
+    Flags:
+    --help               Show context-sensitive help (also try --help-long and --help-man).
+    --user=USER          User with pull access to registry.
+    --password=PASSWORD  Password/token for registry user.
+    --ca-file=CA-FILE    Path to registry CA.
+    --insecure           Use HTTP while connecting to new registry.
+    --dry-run            Don't change deckhouse resources, only print them.
+    --new-deckhouse-tag=NEW-DECKHOUSE-TAG
+    New tag that will be used for deckhouse deployment image (by default
+    current tag from deckhouse deployment will be used).
+    
+    Args:
+    <new-registry>  Registry that will be used for deckhouse images (example:
+    registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need
+    http - provide '--insecure' flag
     ```
 
 * Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
@@ -669,7 +703,7 @@ The general cluster parameters are stored in the [ClusterConfiguration](installi
 To change the general cluster parameters, run the command:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
 ```
 
 After saving the changes, Deckhouse will bring the cluster configuration to the state according to the changed configuration. Depending on the size of the cluster, this may take some time.
@@ -681,7 +715,7 @@ Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER
 Regardless of the cloud provider used, its settings can be changed using the following command:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
 ### How do I change the configuration of a static cluster?
@@ -691,7 +725,7 @@ Settings of a static cluster are stored in the [StaticClusterConfiguration](inst
 To change the settings of a static cluster, run the command:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit static-cluster-configuration
+kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit static-cluster-configuration
 ```
 
 ### How to switch Deckhouse EE to CE?
@@ -711,7 +745,7 @@ To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
 1. Run the following command:
 
    ```shell
-   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry registry.deckhouse.io/deckhouse/ce
+   kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry registry.deckhouse.io/deckhouse/ce
    ```
 
 1. Wait for the Deckhouse Pod to become `Ready`:
@@ -729,20 +763,20 @@ To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
 1. Wait for Deckhouse to restart and to complete all tasks in the queue:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
    ```
 
    Example of output when there are still jobs in the queue (`length 38`):
 
    ```console
-   # kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
    Queue 'main': length 38, status: 'run first task'
    ```
 
    Example of output when the queue is empty (`length 0`):
 
    ```console
-   # kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
    Queue 'main': length 0, status: 'waiting for task 0s'
    ```
 
@@ -790,7 +824,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
-   kubectl exec -ti -n d8-system deploy/deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry.deckhouse.io/deckhouse/ee
+   kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry.deckhouse.io/deckhouse/ee
    ```
 
 1. Wait for the Deckhouse Pod to become `Ready`:
@@ -808,20 +842,20 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 1. Wait for Deckhouse to restart and to complete all tasks in the queue:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
    ```
 
    Example of output when there are still jobs in the queue (`length 38`):
 
    ```console
-   # kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
    Queue 'main': length 38, status: 'run first task'
    ```
 
    Example of output when the queue is empty (`length 0`):
 
    ```console
-   # kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main | grep status:
+   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
    Queue 'main': length 0, status: 'waiting for task 0s'
    ```
 
@@ -861,7 +895,7 @@ To upgrade the Kubernetes version in a cluster change the [kubernetesVersion](in
 1. Run the command:
 
    ```shell
-   kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+   kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
    ```
 
 1. Change the `kubernetesVersion` field.

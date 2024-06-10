@@ -16,12 +16,14 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net"
 	"os"
-	"sync"
+	"path/filepath"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"google.golang.org/grpc"
@@ -30,9 +32,9 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/interceptors"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/logger"
 	pbdhctl "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/interceptors"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -42,26 +44,33 @@ func Serve(network, address string) error {
 	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{})
 	lvl := &slog.LevelVar{}
 	lvl.Set(slog.LevelDebug)
-	log := logger.NewLogger(lvl)
+	log := logger.NewLogger(lvl).With(slog.String("component", "server"))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	defer close(done)
-	globalLock := &sync.Mutex{}
+	sem := make(chan struct{}, 1)
 
 	podName := os.Getenv("HOSTNAME")
 
-	log.Info(
-		"starting grpc server",
-		slog.String("network", network),
-		slog.String("address", address),
-	)
 	tomb.RegisterOnShutdown("server", func() {
 		log.Info("stopping grpc server")
 		cancel()
 		<-done
 		log.Info("grpc server stopped")
 	})
+
+	cacheDir, err := cacheDirectory()
+	if err != nil {
+		return fmt.Errorf("failed to init grpc server: %w", err)
+	}
+
+	log.Info(
+		"starting grpc server",
+		slog.String("network", network),
+		slog.String("address", address),
+		slog.String("cache directory", cacheDir),
+	)
 
 	listener, err := net.Listen(network, address)
 	if err != nil {
@@ -70,14 +79,16 @@ func Serve(network, address string) error {
 	}
 	s := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			logging.UnaryServerInterceptor(interceptors.Logger(log)),
-			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(interceptors.PanicRecoveryHandler(log))),
-			interceptors.UnaryServerSinglefligt(globalLock, log),
+			interceptors.UnaryLogger(log),
+			logging.UnaryServerInterceptor(interceptors.Logger()),
+			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
+			interceptors.UnaryParallelTasksLimiter(sem),
 		),
 		grpc.ChainStreamInterceptor(
-			logging.StreamServerInterceptor(interceptors.Logger(log)),
-			recovery.StreamServerInterceptor(recovery.WithRecoveryHandler(interceptors.PanicRecoveryHandler(log))),
-			interceptors.StreamServerSinglefligt(globalLock, log),
+			interceptors.StreamLogger(log),
+			logging.StreamServerInterceptor(interceptors.Logger()),
+			recovery.StreamServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
+			interceptors.StreamParallelTasksLimiter(sem),
 		),
 	)
 
@@ -89,7 +100,7 @@ func Serve(network, address string) error {
 	reflection.Register(s)
 
 	// services
-	dhctlService := dhctl.New(podName, address, log)
+	dhctlService := dhctl.New(podName, cacheDir)
 
 	// register services
 	pbdhctl.RegisterDHCTLServer(s, dhctlService)
@@ -121,4 +132,15 @@ func gracefulStop(s *grpc.Server, timeout time.Duration) {
 	case <-stopped:
 		t.Stop()
 	}
+}
+
+func cacheDirectory() (string, error) {
+	id, err := uuid.NewUUID()
+	if err != nil {
+		return "", fmt.Errorf("creating uuid for cache directory")
+	}
+
+	path := filepath.Join(os.TempDir(), "dhctl", "cache_"+id.String())
+
+	return path, nil
 }

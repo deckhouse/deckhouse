@@ -1,0 +1,71 @@
+// Copyright 2024 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+option go_package = "pb/dhctl";
+
+package dhctl;
+
+import "google/protobuf/duration.proto";
+import "common.proto";
+
+message ConvergeRequest {
+  oneof message {
+    ConvergeStart start = 1;
+    ConvergeContinue continue = 2;
+  }
+}
+
+message ConvergeResponse {
+  oneof message {
+    ConvergeResult result = 1;
+    ConvergePhaseEnd phase_end = 2;
+    Logs logs = 3;
+  }
+}
+
+message ConvergeStart {
+  string connection_config = 1;
+  string cluster_config = 2;
+  string provider_specific_cluster_config = 3;
+  string state = 4;
+  string approve_destruction_change_id = 5;
+  ConvergeStartOptions options = 6;
+}
+
+message ConvergePhaseEnd {
+  string completed_phase = 1;
+  map<string, bytes> completed_phase_state = 2;
+  string next_phase = 3;
+  bool next_phase_critical = 4;
+}
+
+message ConvergeContinue {
+  Continue continue = 1;
+  string err = 2;
+}
+
+message ConvergeStartOptions {
+  bool commander_mode = 1;
+  int32 log_width = 2;
+  google.protobuf.Duration resources_timeout = 3;
+  google.protobuf.Duration deckhouse_timeout = 4;
+}
+
+message ConvergeResult {
+  string state = 1;
+  string result = 2;
+  string err = 3;
+}

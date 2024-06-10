@@ -29,11 +29,6 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/se/modules/010-metallb-crd
-  to: /deckhouse/modules/010-metallb-crd
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/se/modules/380-metallb
   to: /deckhouse/modules/380-metallb
   stageDependencies:
@@ -46,6 +41,56 @@
         - '**/*.go'
 - add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
   to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/crds/doc-ru-egressgateways.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgateways.yaml
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/crds/egressgatewaypolicies.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/egressgatewaypolicies.yaml
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/crds/egressgateways.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/egressgateways.yaml
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/crds/internal
+  to: /deckhouse/modules/021-cni-cilium/crds/internal
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/hooks/ee
+  to: /deckhouse/modules/021-cni-cilium/hooks/ee
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/images/egress-gateway-agent
+  to: /deckhouse/modules/021-cni-cilium/images/egress-gateway-agent
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/templates/egress-gateway-agent
+  to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-agent
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/templates/egress-gateway-instance
+  to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-instance
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/templates/egress-policy
+  to: /deckhouse/modules/021-cni-cilium/templates/egress-policy
   stageDependencies:
     setup:
         - '**/*.go'
@@ -181,31 +226,6 @@
         - '**/*.go'
 - add: /ee/modules/300-prometheus/hooks/custom_logo_test.go
   to: /deckhouse/modules/300-prometheus/hooks/custom_logo_test.go
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/381-l2-load-balancer
-  to: /deckhouse/modules/381-l2-load-balancer
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/402-ingress-nginx/crds/doc-ru-ingress-nginx.yaml
-  to: /deckhouse/modules/402-ingress-nginx/crds/doc-ru-ingress-nginx.yaml
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/402-ingress-nginx/crds/ingress-nginx.yaml
-  to: /deckhouse/modules/402-ingress-nginx/crds/ingress-nginx.yaml
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/402-ingress-nginx/templates/controller-l2
-  to: /deckhouse/modules/402-ingress-nginx/templates/controller-l2
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/402-ingress-nginx/template_tests/l2lb_test.go
-  to: /deckhouse/modules/402-ingress-nginx/template_tests/l2lb_test.go
   stageDependencies:
     setup:
         - '**/*.go'

@@ -472,6 +472,11 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		cri.Type = newCRIType
 		ngForValues["cri"] = cri
 
+		fencing, ok := ngForValues["fencing"].(ngv1.Fencing)
+		if ok {
+			ngForValues["fencing"] = fencing
+		}
+
 		// Calculate update epoch
 		// updateEpoch is a value that changes every 4 hour for a particular NodeGroup in the cluster.
 		// Values are spread over 4 hour window to update nodes at different times.
@@ -528,7 +533,9 @@ func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{
 	if !nodeGroupSpec.Kubelet.IsEmpty() {
 		res["kubelet"] = nodeGroupSpec.Kubelet
 	}
-
+	if !nodeGroupSpec.Fencing.IsEmpty() {
+		res["fencing"] = nodeGroupSpec.Fencing
+	}
 	return res
 }
 

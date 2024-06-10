@@ -28,8 +28,13 @@ var (
 	agentInstance          *frontend.Agent
 )
 
+type SSHLoopHandler func(s *Client) error
+
 // initializeNewInstance disables singleton logic
-func initAgentInstance(privateKeys []session.AgentPrivateKey, initializeNewInstance bool) (*frontend.Agent, error) {
+func initAgentInstance(
+	privateKeys []session.AgentPrivateKey,
+	initializeNewInstance bool,
+) (*frontend.Agent, error) {
 	var err error
 
 	if initializeNewInstance {
@@ -156,4 +161,26 @@ func (s *Client) Stop() {
 		p.StopAll()
 	}
 	s.kubeProxies = nil
+}
+
+// Loop Looping all available hosts
+func (s *Client) Loop(fn SSHLoopHandler) error {
+	var err error
+
+	resetSession := func() {
+		s.Settings = s.Settings.Copy()
+		s.Settings.ChoiceNewHost()
+	}
+	defer resetSession()
+	resetSession()
+
+	for range s.Settings.AvailableHosts() {
+		err = fn(s)
+		if err != nil {
+			return err
+		}
+		s.Settings.ChoiceNewHost()
+	}
+
+	return nil
 }

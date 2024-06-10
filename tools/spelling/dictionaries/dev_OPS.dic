@@ -1,4 +1,4 @@
-1925
+1930
 1GB
 2GB
 5XX
@@ -147,6 +147,7 @@ CI
 CIDR
 CIDRs
 CiliumClusterwideNetworkPolicies
+CiliumEgressGatewayPolicy
 CIOps
 CIS
 Citrix
@@ -344,6 +345,8 @@ ee
 EE
 eg
 egressgateway
+EgressGateway
+EgressGatewayPolicy
 EKS
 EL7
 ElasticIP
@@ -867,6 +870,7 @@ preemptible
 preffered
 preload
 preStop
+PrimaryIPFromEgressGatewayNodeInterface
 printf
 PriorityClass
 priorityClassName
@@ -1163,6 +1167,7 @@ VictorOps
 VictorOpsConfig
 virt
 VirtualDataCenter
+VirtualIPAddress
 virtualization
 Virtualization
 VirtualMachine

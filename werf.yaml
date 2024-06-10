@@ -287,6 +287,9 @@ fromImage: common-base
 git:
 - add: /
   to: /deckhouse
+  stageDependencies:
+    setup:
+      - '**/*'
   includePaths:
   - candi
   - modules
@@ -493,6 +496,9 @@ git:
     - global-hooks/**/*.go
     - go_lib/**/*.go
     - modules/**/*.go
+    - ee/modules/021-cni-cilium/images/egress-gateway-agent/**/*.go
+    - ee/modules/021-cni-cilium/images/egress-gateway-agent/go.mod
+    - ee/modules/021-cni-cilium/images/egress-gateway-agent/go.sum
     - go_lib/**/go.mod
     - go_lib/**/go.sum
     - go.mod

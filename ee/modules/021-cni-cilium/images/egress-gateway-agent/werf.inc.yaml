@@ -1,0 +1,41 @@
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /egress-gateway-agent
+    to: /egress-gateway-agent
+    before: setup
+docker:
+  ENTRYPOINT: ["/egress-gateway-agent"]
+---
+{{ $discovererAbsPath := "/deckhouse/ee/modules/021-cni-cilium/images/egress-gateway-agent" }}
+  {{ $discovererRelPath := printf "%s/modules/021-cni-cilium/images/egress-gateway-agent" .ModulePath }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_22_ALPINE }}
+shell:
+  install:
+    - cd {{ $discovererAbsPath }}
+    - export GOPROXY={{ $.GOPROXY }}
+    - go mod download
+  setup:
+    - cd {{ $discovererAbsPath }}
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /egress-gateway-agent cmd/main.go
+    - chown 64535:64535 /egress-gateway-agent
+    - chmod 0755 /egress-gateway-agent
+
+git:
+  - add: /{{ $discovererRelPath }}
+    to:  {{ $discovererAbsPath }}
+    excludePaths:
+      - "**/*.md"
+      - "**/*.yaml"
+      - hack
+    stageDependencies:
+      install:
+        - go.mod
+        - go.sum
+      setup:
+        - "**/*.go"
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg

@@ -1,3 +1,4 @@
+x-config-version: 2
 type: object
 properties:
   publishAPI:
@@ -5,7 +6,7 @@ properties:
     default: {}
     description: 'Settings for exposing the API server using Ingress.'
     properties:
-      enable:
+      enabled:
         type: boolean
         default: false
         description: 'Setting it to `true` will create an Ingress resource in the `d8-user-authn` namespace in the cluster (it exposes the Kubernetes API).'

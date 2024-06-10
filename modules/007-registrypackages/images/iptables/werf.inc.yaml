@@ -1,0 +1,50 @@
+{{- $version := "1.8.10" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    iptables: {{ $version }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_ALPINE_DEV }}
+git:
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  setup:
+    - export PKG_CONFIG_PATH=/opt/deckhouse/bin/.libs/pkgconfig
+    - git clone -b libmnl-1.0.5 --depth 1 {{ $.SOURCE_REPO }}/netfilter/libmnl /src-libmnl
+    - cd /src-libmnl
+    - ./autogen.sh
+    - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs
+    - make && make install
+    - git clone -b libnftnl-1.2.6 --depth 1  {{ $.SOURCE_REPO }}/netfilter/libnftnl /src-libnftnl
+    - cd /src-libnftnl
+    - ./autogen.sh
+    - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs
+    - make && make install
+    - git clone -b v{{ $version }} --depth 1  {{ $.SOURCE_REPO }}/netfilter/iptables /src
+    - cd /src
+    - ./autogen.sh
+    - ./configure --enable-static --disable-shared --libdir=/opt/deckhouse/bin/.libs
+    - make LDFLAGS='-all-static'
+    - strip ./iptables/xtables-legacy-multi && strip ./iptables/xtables-nft-multi
+    - mv ./iptables/xtables-legacy-multi /xtables-legacy-multi && mv ./iptables/xtables-nft-multi /xtables-nft-multi 
+    - chmod +x /xtables-legacy-multi /xtables-nft-multi /install /uninstall

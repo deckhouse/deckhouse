@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
@@ -142,7 +143,11 @@ func (dml *DeckhouseController) searchAndLoadDeckhouseModules() error {
 					log.Warnf("Module %q is already exists. Skipping module from %q", def.Name, def.Path)
 					continue
 				}
-				return err
+				return fmt.Errorf("process module %s: %w", def.Name, err)
+			}
+
+			if !strings.HasPrefix(def.Path, os.Getenv("EXTERNAL_MODULES_DIR")) {
+				dml.sourceModules[def.Name] = "Embedded"
 			}
 
 			dml.deckhouseModules[def.Name] = dm

@@ -1,0 +1,72 @@
+// Copyright 2024 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+option go_package = "pb/dhctl";
+
+package dhctl;
+
+import "google/protobuf/duration.proto";
+import "common.proto";
+
+message AbortRequest {
+  oneof message {
+    AbortStart start = 1;
+    AbortContinue continue = 2;
+  }
+}
+
+message AbortResponse {
+  oneof message {
+    AbortResult result = 1;
+    AbortPhaseEnd phase_end = 2;
+    Logs logs = 3;
+  }
+}
+
+message AbortStart {
+  string connection_config = 1;
+  string init_config = 2;
+  string cluster_config = 3;
+  string provider_specific_cluster_config = 4;
+  string init_resources = 5;
+  string resources = 6;
+  string state = 7;
+  AbortStartOptions options = 8;
+}
+
+message AbortPhaseEnd {
+  string completed_phase = 1;
+  map<string, bytes> completed_phase_state = 2;
+  string next_phase = 3;
+  bool next_phase_critical = 4;
+}
+
+message AbortContinue {
+  Continue continue = 1;
+  string err = 2;
+}
+
+message AbortStartOptions {
+  bool commander_mode = 1;
+  int32 log_width = 2;
+  google.protobuf.Duration resources_timeout = 3;
+  google.protobuf.Duration deckhouse_timeout = 4;
+}
+
+message AbortResult {
+  string state = 1;
+  string err = 2;
+}

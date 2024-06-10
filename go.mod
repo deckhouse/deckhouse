@@ -11,7 +11,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.13.0
-	github.com/flant/addon-operator v1.3.13-0.20240425092622-dae21fbd4c18
+	github.com/flant/addon-operator v1.3.13-0.20240527095525-c2870b9f03b0
 	github.com/flant/kube-client v1.1.0
 	github.com/flant/shell-operator v1.4.8-0.20240424114903-db3cef905a70
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
@@ -57,6 +57,7 @@ require (
 )
 
 require (
+	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
 	github.com/docker/distribution v2.8.3+incompatible
 	github.com/fatih/structs v1.1.0
@@ -83,6 +84,7 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/squirrel v1.5.4 // indirect
 	github.com/Microsoft/hcsshim v0.11.4 // indirect
+	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
 	github.com/alessio/shellescape v1.4.1 // indirect
@@ -240,6 +242,8 @@ require (
 replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
 
 replace github.com/deckhouse/deckhouse/go_lib/cloud-data => ./go_lib/cloud-data
+
+replace github.com/deckhouse/deckhouse/egress-gateway-agent => ./ee/modules/021-cni-cilium/images/egress-gateway-agent
 
 // Remove 'in body' from errors, fix for Go 1.16 (https://github.com/go-openapi/validate/pull/138).
 replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.1

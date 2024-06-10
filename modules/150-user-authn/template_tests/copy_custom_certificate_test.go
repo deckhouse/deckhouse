@@ -70,7 +70,7 @@ discovery:
 			f.ValuesSetFromYaml("userAuthn.internal.dexTLS", `{"crt":"plainstring","key":"plainstring"}`)
 			f.ValuesSetFromYaml("userAuthn.internal.customCertificateData", `{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`)
 			f.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
-			f.ValuesSet("userAuthn.publishAPI.enable", true)
+			f.ValuesSet("userAuthn.publishAPI.enabled", true)
 			f.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
 			f.HelmRender()
 		})

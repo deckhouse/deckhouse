@@ -3,6 +3,7 @@ bashible: &bashible
     '18.04':
     '20.04':
     '22.04':
+    '24.04':
   debian:
     '10':
     '11':
@@ -54,7 +55,7 @@ k8s:
       livenessprobe: v2.11.0
   '1.27':
     status: available
-    patch: 13
+    patch: 14
     bashible: *bashible
     clusterAutoscalerPatch: '0'
     ccm:
@@ -74,7 +75,7 @@ k8s:
       livenessprobe: v2.11.0
   '1.28':
     status: available
-    patch: 9
+    patch: 10
     bashible: *bashible
     clusterAutoscalerPatch: '0'
     ccm:
@@ -94,7 +95,7 @@ k8s:
       livenessprobe: v2.11.0
   '1.29':
     status: preview
-    patch: 4
+    patch: 5
     bashible: *bashible
     clusterAutoscalerPatch: '0'
     ccm:

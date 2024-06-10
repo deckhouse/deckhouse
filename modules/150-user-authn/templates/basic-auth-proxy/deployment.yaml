@@ -1,0 +1,188 @@
+{{- define "proxy_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- if include "is_basic_auth_enabled" . }}
+
+  {{- $type := "" }}
+  {{- $config := false }}
+
+  {{- range $provider := .Values.userAuthn.internal.providers }}
+    {{- if eq $provider.type "Crowd" }}
+      {{- if $provider.crowd.enableBasicAuth }}
+        {{- if $config }}
+          {{- fail "enableBasicAuth option must be enabled ONLY in one provider" }}
+        {{- end }}
+        {{- $config = $provider.crowd }}
+        {{- $type = "Crowd" }}
+      {{- end }}
+    {{- end }}
+
+    {{- if eq $provider.type "OIDC" }}
+      {{- if $provider.oidc.enableBasicAuth }}
+        {{- if $config }}
+          {{- fail "enableBasicAuth option must be enabled ONLY in one provider" }}
+        {{- end }}
+        {{- $config = $provider.oidc }}
+        {{- $type = "OIDC" }}
+      {{- end }}
+    {{- end }}
+
+  {{- end }}
+
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: basic-auth-proxy
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: basic-auth-proxy
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "proxy"
+      minAllowed:
+        {{- include "proxy_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+  {{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: basic-auth-proxy
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: basic-auth-proxy
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: basic-auth-proxy
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  selector:
+    matchLabels:
+      app: basic-auth-proxy
+  template:
+    metadata:
+      labels:
+        app: basic-auth-proxy
+      annotations:
+        checksum/certs: {{ include (print $.Template.BasePath "/basic-auth-proxy/secret.yaml") . | sha256sum }}
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "basic-auth-proxy")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: proxy
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "basicAuthProxy") }}
+        args:
+        - --listen=$(POD_IP):7332
+        - --cert-path=/etc/certs
+        - --api-server-url=https://kubernetes.default
+        {{- if eq $type "Crowd" }}
+        - --crowd-application-login={{ $config.clientID }}
+        - --crowd-application-password={{ $config.clientSecret }}
+        - --crowd-base-url={{ $config.baseURL }}
+        {{- if $config.groups }}
+          {{- range $group := $config.groups }}
+        - --crowd-allowed-group={{ $group }}
+          {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if eq $type "OIDC" }}
+        - --oidc-base-url={{ $config.issuer }}
+        - --oidc-client-id={{ $config.clientID }}
+        - --oidc-client-secret={{ $config.clientSecret }}
+        - --oidc-get-user-info={{ $config.getUserInfo }}
+        - --oidc-basic-auth-unsupported={{ $config.basicAuthUnsupported }}
+        {{- if $config.scopes }}
+          {{- range $scope := $config.scopes }}
+        - --oidc-scope={{ $scope }}
+          {{- end }}
+        {{- else }}
+        - --oidc-scope=openid
+        - --oidc-scope=profile
+        - --oidc-scope=email
+        - --oidc-scope=groups
+        - --oidc-scope=offline_access
+        {{- end }}
+        {{- end }}
+        ports:
+        - containerPort: 7332
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 7332
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: 7332
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        volumeMounts:
+        - name: client-certs
+          mountPath: /etc/certs
+          readOnly: true
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "proxy_resources" . | nindent 12 }}
+  {{- end }}
+      volumes:
+      - name: client-certs
+        secret:
+          secretName: basic-auth-cert
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: basic-auth-proxy
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
+spec:
+  selector:
+    app: basic-auth-proxy
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: http
+    port: 7332
+    targetPort: 7332
+{{- end }}

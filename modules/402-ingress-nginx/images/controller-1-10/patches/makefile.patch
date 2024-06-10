@@ -1,0 +1,41 @@
+diff --git a/Makefile b/Makefile
+index 8ff0f0ca0..bbed9acee 100644
+--- a/Makefile
++++ b/Makefile
+@@ -27,7 +27,7 @@ endif
+ SHELL=/bin/bash -o pipefail -o errexit
+ 
+ # Use the 0.0 tag for testing, it shouldn't clobber any release builds
+-TAG ?= $(shell cat TAG)
++TAG ?= $(shell git describe --tags HEAD | cut -d- -f2)
+ 
+ # The env below is called GO_VERSION and not GOLANG_VERSION because
+ # the gcb image we use to build already defines GOLANG_VERSION and is a
+@@ -42,7 +42,7 @@ E2E_NODES ?= 7
+ # run e2e test suite with tests that check for memory leaks? (default is false)
+ E2E_CHECK_LEAKS ?=
+ 
+-REPO_INFO ?= $(shell git config --get remote.origin.url)
++REPO_INFO ?= "UNKNOWN"
+ COMMIT_SHA ?= git-$(shell git rev-parse --short HEAD)
+ BUILD_ID ?= "UNSET"
+ 
+@@ -110,6 +110,7 @@ clean-chroot-image: ## Removes local image
+ 
+ .PHONY: build
+ build:  ## Build ingress controller, debug tool and pre-stop hook.
++ifeq ($(USE_DOCKER), true)
+ 	E2E_IMAGE=golang:$(GO_VERSION)-alpine3.19 USE_SHELL=/bin/sh build/run-in-docker.sh \
+ 		MAC_OS=$(MAC_OS) \
+ 		PKG=$(PKG) \
+@@ -118,7 +119,9 @@ build:  ## Build ingress controller, debug tool and pre-stop hook.
+ 		REPO_INFO=$(REPO_INFO) \
+ 		TAG=$(TAG) \
+ 		build/build.sh
+-
++else
++	bash build/build.sh
++endif
+ 
+ .PHONY: clean
+ clean: ## Remove .gocache directory.

@@ -137,29 +137,6 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/se/modules/010-metallb-crd
-  to: /deckhouse/modules/010-metallb-crd
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/se/modules/380-metallb
   to: /deckhouse/modules/380-metallb
   excludePaths:
@@ -208,6 +185,236 @@
         - '**/*.go'
 - add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
   to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/crds/doc-ru-egressgateways.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgateways.yaml
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/crds/egressgatewaypolicies.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/egressgatewaypolicies.yaml
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/crds/egressgateways.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/egressgateways.yaml
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/crds/internal
+  to: /deckhouse/modules/021-cni-cilium/crds/internal
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/hooks/ee
+  to: /deckhouse/modules/021-cni-cilium/hooks/ee
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/images/egress-gateway-agent
+  to: /deckhouse/modules/021-cni-cilium/images/egress-gateway-agent
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/templates/egress-gateway-agent
+  to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-agent
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/templates/egress-gateway-instance
+  to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-instance
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/templates/egress-policy
+  to: /deckhouse/modules/021-cni-cilium/templates/egress-policy
   excludePaths:
     - images
     - templates
@@ -829,121 +1036,6 @@
         - '**/*.go'
 - add: /ee/modules/300-prometheus/hooks/custom_logo_test.go
   to: /deckhouse/modules/300-prometheus/hooks/custom_logo_test.go
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/381-l2-load-balancer
-  to: /deckhouse/modules/381-l2-load-balancer
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/402-ingress-nginx/crds/doc-ru-ingress-nginx.yaml
-  to: /deckhouse/modules/402-ingress-nginx/crds/doc-ru-ingress-nginx.yaml
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/402-ingress-nginx/crds/ingress-nginx.yaml
-  to: /deckhouse/modules/402-ingress-nginx/crds/ingress-nginx.yaml
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/402-ingress-nginx/templates/controller-l2
-  to: /deckhouse/modules/402-ingress-nginx/templates/controller-l2
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/402-ingress-nginx/template_tests/l2lb_test.go
-  to: /deckhouse/modules/402-ingress-nginx/template_tests/l2lb_test.go
   excludePaths:
     - images
     - templates

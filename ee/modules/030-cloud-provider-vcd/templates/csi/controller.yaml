@@ -60,13 +60,22 @@
   readOnly: true
 {{- end }}
 
-{{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . "vcdCsiPlugin") }}
+{{- define "csi_node_image_name" -}}
+{{- if semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion -}}
+vcdCsiPlugin
+{{- else -}}
+vcdCsiPluginLegacy
+{{- end }}
+{{- end }}
+
+{{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . (include "csi_node_image_name" .)) }}
+
 {{- if $csiControllerImage }}
 
   {{- $csiControllerConfig := dict }}
   {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
   {{- $_ := set $csiControllerConfig "snapshotterEnabled" false }}
-  {{- $_ := set $csiControllerConfig "resizerEnabled" true }}
+  {{- $_ := set $csiControllerConfig "resizerEnabled" (semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion) }}
   {{- $_ := set $csiControllerConfig "topologyEnabled" false }}
   {{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
