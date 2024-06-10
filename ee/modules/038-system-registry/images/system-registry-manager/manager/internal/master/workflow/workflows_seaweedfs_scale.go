@@ -135,7 +135,7 @@ func (w *SeaweedfsScaleWorkflow) scaleCluster(allClusterNodes []NodeManager) ([]
 			MasterPeers    []string `json:"masterPeers"`
 			UpdateOrCreate bool     `json:"updateOrCreate"`
 		}{
-			MasterPeers:    unUsedIPs,
+			MasterPeers:    newIPs,
 			UpdateOrCreate: true,
 		},
 	}
