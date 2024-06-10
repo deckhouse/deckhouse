@@ -12,12 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if or (eq .nodeGroup.nodeType "Static") (eq .nodeGroup.nodeType "CloudStatic") }}
-if [[ "$FIRST_BASHIBLE_RUN" == "yes" ]]; then
-  exit 0
-fi
+{{- if and ( or (eq .nodeGroup.nodeType "Static") (eq .nodeGroup.nodeType "CloudStatic")) (eq .runType "Normal") }}
 
-echo "FIRST_BASHIBLE_RUN: $FIRST_BASHIBLE_RUN\n"
 echo "BOOTSTRAP_DIR: $BOOTSTRAP_DIR\n"
 echo "HOSTNAME: $HOSTNAME\n"
 
