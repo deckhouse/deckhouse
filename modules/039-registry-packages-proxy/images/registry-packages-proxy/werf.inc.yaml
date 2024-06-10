@@ -17,6 +17,7 @@ shell:
     - go mod download
   setup:
     - cd /src
+    - go test ./... -v
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /registry-packages-proxy cmd/registry-packages-proxy/*.go
     - chown 64535:64535 /registry-packages-proxy
     - chmod 0755 /registry-packages-proxy
