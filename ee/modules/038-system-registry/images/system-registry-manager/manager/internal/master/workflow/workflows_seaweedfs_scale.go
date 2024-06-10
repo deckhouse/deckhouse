@@ -50,7 +50,7 @@ func (w *SeaweedfsScaleWorkflow) Start() error {
 		return err
 	}
 
-	realClusterNodes, err := w.needCluster(sortedNodes[:expectedNodeCount])
+	realClusterNodes, err := w.needCluster(sortedNodes[expectedNodeCount:])
 	if err != nil {
 		return err
 	}
