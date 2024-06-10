@@ -1,30 +1,84 @@
-diff --git a/cluster-autoscaler/utils/drain/drain.go b/cluster-autoscaler/utils/drain/drain.go
---- a/cluster-autoscaler/utils/drain/drain.go	(revision 92aa9a8d967a0883db7c87d354521059af7160ba)
-+++ b/cluster-autoscaler/utils/drain/drain.go	(date 1665766332986)
-@@ -18,6 +18,7 @@
-
+diff --git a/cluster-autoscaler/utils/daemonset/daemonset.go b/cluster-autoscaler/utils/daemonset/daemonset.go
+index cf7e60582..9537ddd81 100644
+--- a/cluster-autoscaler/utils/daemonset/daemonset.go
++++ b/cluster-autoscaler/utils/daemonset/daemonset.go
+@@ -19,11 +19,11 @@ package daemonset
  import (
  	"fmt"
+ 	"math/rand"
+-
+-	"k8s.io/autoscaler/cluster-autoscaler/simulator"
 +	"strings"
- 	"time"
-
+ 
+ 	appsv1 "k8s.io/api/apps/v1"
  	apiv1 "k8s.io/api/core/v1"
-@@ -140,6 +141,18 @@
- 				replicated = true
- 			}
- 		} else if pod_util.IsDaemonSetPod(pod) {
-+			if strings.HasPrefix(pod.Namespace, "d8-") {
-+				evictionEnabled := func(pod *apiv1.Pod) bool {
-+					if val, ok := pod.Annotations["cluster-autoscaler.kubernetes.io/enable-ds-eviction"]; ok && val == "true" {
-+						return true
-+					}
++	"k8s.io/klog/v2"
+ 	"k8s.io/kubernetes/pkg/controller/daemon"
+ 	schedulerframework "k8s.io/kubernetes/pkg/scheduler/framework"
+ )
+@@ -35,22 +35,8 @@ const (
+ )
+ 
+ // GetDaemonSetPodsForNode returns daemonset nodes for the given pod.
+-func GetDaemonSetPodsForNode(nodeInfo *schedulerframework.NodeInfo, daemonsets []*appsv1.DaemonSet, predicateChecker simulator.PredicateChecker) ([]*apiv1.Pod, error) {
++func GetDaemonSetPodsForNode(nodeInfo *schedulerframework.NodeInfo, daemonsets []*appsv1.DaemonSet) ([]*apiv1.Pod, error) {
+ 	result := make([]*apiv1.Pod, 0)
+-
+-	// here we can use empty snapshot
+-	clusterSnapshot := simulator.NewBasicClusterSnapshot()
+-
+-	// add a node with pods - node info is created by cloud provider,
+-	// we don't know whether it'll have pods or not.
+-	var pods []*apiv1.Pod
+-	for _, podInfo := range nodeInfo.Pods {
+-		pods = append(pods, podInfo.Pod)
+-	}
+-	if err := clusterSnapshot.AddNodeWithPods(nodeInfo.Node(), pods); err != nil {
+-		return nil, err
+-	}
+-
+ 	for _, ds := range daemonsets {
+ 		shouldRun, _ := daemon.NodeShouldRunDaemonPod(nodeInfo.Node(), ds)
+ 		if shouldRun {
+@@ -62,14 +48,36 @@ func GetDaemonSetPodsForNode(nodeInfo *schedulerframework.NodeInfo, daemonsets [
+ 	return result, nil
+ }
+ 
++func shouldEvictDsPod(pod *apiv1.Pod, evictByDefault bool) bool {
++	if strings.HasPrefix(pod.Namespace, "d8-") {
++		if val, ok := pod.Annotations[EnableDsEvictionKey]; !ok || val != "true" {
++			klog.Infof("DaemonSet Pod %s/%s not eligible for eviction: namespace starts with 'd8-' and eviction not enabled", pod.Namespace, pod.Name)
++			return false
++		}
++	}
 +
-+					return false
-+				}(pod)
-+				if !evictionEnabled {
-+					continue
-+				}
-+			}
- 			isDaemonSetPod = true
- 			// don't have listener for other DaemonSet kind
- 			// TODO: we should use a generic client for checking the reference.
++	if a, ok := pod.Annotations[EnableDsEvictionKey]; ok {
++		if a == "true" {
++			klog.Infof("DaemonSet Pod %s/%s eligible for eviction: annotation %s=true", pod.Namespace, pod.Name, EnableDsEvictionKey)
++			return true
++		}
++		klog.Infof("DaemonSet Pod %s/%s not eligible for eviction: annotation %s=false", pod.Namespace, pod.Name, EnableDsEvictionKey)
++		return false
++	}
++
++	if evictByDefault {
++		klog.Infof("DaemonSet Pod %s/%s eligible for eviction: no annotation %s but evictByDefault is true", pod.Namespace, pod.Name, EnableDsEvictionKey)
++		return true
++	}
++
++	klog.Infof("DaemonSet Pod %s/%s not eligible for eviction: no annotation %s and evictByDefault is false", pod.Namespace, pod.Name, EnableDsEvictionKey)
++	return false
++}
++
+ // PodsToEvict returns a list of DaemonSet pods that should be evicted during scale down.
+ func PodsToEvict(pods []*apiv1.Pod, evictByDefault bool) (evictable []*apiv1.Pod) {
+ 	for _, pod := range pods {
+-		if a, ok := pod.Annotations[EnableDsEvictionKey]; ok {
+-			if a == "true" {
+-				evictable = append(evictable, pod)
+-			}
+-		} else if evictByDefault {
++		if shouldEvictDsPod(pod, evictByDefault) {
+ 			evictable = append(evictable, pod)
+ 		}
+ 	}
