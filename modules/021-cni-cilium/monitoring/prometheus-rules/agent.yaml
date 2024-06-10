@@ -13,7 +13,7 @@
       plk_markup_format: "markdown"
       plk_grouped_by__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
       plk_create_group_if_not_exists__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
-      summary: Some nodes' health endpoints are not reachable by agent {{ $labels.namespace }}/{{ $labels.pod }}.
+      summary: Some nodes health endpoints are not reachable by agent {{ $labels.namespace }}/{{ $labels.pod }}.
       description: |
         Check what's going on: `kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}`
 
