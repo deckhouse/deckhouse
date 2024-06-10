@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
@@ -261,20 +262,18 @@ func DeleteResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 			namespace = metav1.NamespaceDefault
 		}
 
+		var resourceClient dynamic.ResourceInterface
 		if namespaced {
-			log.InfoF("Deleting %s %s in ns/%s\n", gvr, name, namespace)
-			if err := kubeCl.Dynamic().Resource(gvr).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
-				if !apierrors.IsNotFound(err) {
-					return fmt.Errorf("unable to remove %s %s: %w", gvr.String(), name, err)
-				}
-			}
+			resourceClient = kubeCl.Dynamic().Resource(gvr).Namespace(namespace)
 		} else {
-			log.InfoF("Deleting %s %s\n", gvr, name)
-			if err := kubeCl.Dynamic().Resource(gvr).Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
-				if !apierrors.IsNotFound(err) {
-					return fmt.Errorf("unable to remove %s %s: %w", gvr.String(), name, err)
-				}
+			resourceClient = kubeCl.Dynamic().Resource(gvr)
+		}
+
+		if err := resourceClient.Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf("unable to delete %s %s: %w", gvr.String(), name, err)
 			}
+			log.DebugF("Unable to delete resource: %s %s: %s\n", gvr.String(), name, err)
 		}
 	}
 
@@ -288,17 +287,15 @@ func isNamespaced(kubeCl *client.KubernetesClient, gvk schema.GroupVersionKind, 
 		return false, err
 	}
 
-	namespaced := false
 	for _, list := range lists {
 		for _, resource := range list.APIResources {
 			if len(resource.Verbs) == 0 {
 				continue
 			}
 			if resource.Name == name {
-				namespaced = resource.Namespaced
-				break
+				return true, nil
 			}
 		}
 	}
-	return namespaced, nil
+	return false, nil
 }
