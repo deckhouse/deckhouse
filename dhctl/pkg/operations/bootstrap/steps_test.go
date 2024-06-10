@@ -32,6 +32,29 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
+func TestNewRegistryClientConfigGetter(t *testing.T) {
+	t.Run("Path with leading slash", func(t *testing.T) {
+		config := config.RegistryData{
+			Address:   "registry.deckhouse.io",
+			Path:      "/deckhouse/ee",
+			DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=", // {"auths": { "registry.deckhouse.io": {}}}
+		}
+		getter, err := newRegistryClientConfigGetter(config)
+		require.NoError(t, err)
+		require.Equal(t, getter.Repository, "registry.deckhouse.io/deckhouse/ee")
+	})
+	t.Run("Path without leading slash", func(t *testing.T) {
+		config := config.RegistryData{
+			Address:   "registry.deckhouse.io",
+			Path:      "deckhouse/ee",
+			DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=", // {"auths": { "registry.deckhouse.io": {}}}
+		}
+		getter, err := newRegistryClientConfigGetter(config)
+		require.NoError(t, err)
+		require.Equal(t, getter.Repository, "registry.deckhouse.io/deckhouse/ee")
+	})
+}
+
 func TestBootstrapGetNodesFromCache(t *testing.T) {
 	log.InitLogger("simple")
 	dir, err := os.MkdirTemp(os.TempDir(), "dhctl-test-bootstrap-*")
