@@ -107,11 +107,13 @@ func (m *NodeManager) GetNodeRunningStatus() (*master_workflow.SeaweedfsNodeRunn
 	}
 
 	isRunning := false
+	isExist := false
 	seaweedfsPodInfo, err := m.seaweedfsPodInfo()
 	if err != nil {
 		return nil, err
 	}
 	if seaweedfsPodInfo != nil {
+		isExist = true
 		for _, containerStatuses := range seaweedfsPodInfo.Status.ContainerStatuses {
 			if containerStatuses.Name == "seaweedfs" {
 				isRunning = containerStatuses.Ready
@@ -120,7 +122,7 @@ func (m *NodeManager) GetNodeRunningStatus() (*master_workflow.SeaweedfsNodeRunn
 	}
 
 	return &master_workflow.SeaweedfsNodeRunningStatus{
-		IsExist:            resp.Data.RegistryFilesState.StaticPodsIsExist,
+		IsExist:            isExist,
 		IsRunning:          isRunning,
 		NeedUpdateManifest: resp.Data.RegistryFilesState.ManifestsWaitToUpdate || !resp.Data.RegistryFilesState.ManifestsIsExist,
 		NeedUpdateCerts:    resp.Data.RegistryFilesState.CertificatesWaitToUpdate || !resp.Data.RegistryFilesState.CertificateIsExist,
