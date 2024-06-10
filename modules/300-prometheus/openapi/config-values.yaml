@@ -104,6 +104,14 @@ properties:
             - agenty-flowcharting-panel
             - vertamedia-clickhouse-datasource
           ```
+
+          You can also install plugins from other sources by passing a link to the plugin zip archive in the format `<url to plugin zip>;<plugin name>`:
+
+          ```yaml
+          grafana:
+            customPlugins:
+            - http://10.241.32.16:3000/netsage-bumpchart-panel-1.1.1.zip;netsage-bumpchart-panel
+          ```
   ingressClass:
     type: string
     pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
