@@ -22,7 +22,7 @@ spec:
 
 ### Аннотации объекта Service
 
-Поддерживаются следующие параметры в дополнение к существующим в upstream:
+Поддерживаются следующие параметры в дополнение к существующим в [upstream](https://cloud-provider-aws.sigs.k8s.io/service_controller/):
 
 1. `service.beta.kubernetes.io/aws-load-balancer-type` — может иметь значение `none`, что приведет к созданию **только** Target Group, без какого-либо LoadBalanacer'а.
 2. `service.beta.kubernetes.io/aws-load-balancer-backend-protocol` — используется в связке с `service.beta.kubernetes.io/aws-load-balancer-type: none`:
