@@ -277,6 +277,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
+            -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
@@ -551,6 +552,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
+            -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
@@ -825,6 +827,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
+            -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
@@ -1099,6 +1102,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
+            -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
@@ -1373,6 +1377,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
+            -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
@@ -1647,6 +1652,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
+            -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
@@ -1921,6 +1927,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
+            -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
