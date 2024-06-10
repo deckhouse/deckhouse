@@ -150,7 +150,7 @@ func (w *SeaweedfsScaleWorkflow) scaleCluster(allClusterNodes []NodeManager) ([]
 
 	{
 		w.log.Infof("Waiting new nodes: %s", GetNodeNames(notRunningNodes))
-		wait, err := WaitBy(w.log, notRunningNodes, CmpIsRunning)
+		wait, err := WaitBy(w.ctx, w.log, notRunningNodes, CmpIsRunning)
 		if err != nil {
 			return nil, err
 		}
@@ -180,7 +180,7 @@ func (w *SeaweedfsScaleWorkflow) scaleCluster(allClusterNodes []NodeManager) ([]
 			return newIPsInCluster
 		}
 
-		wait, err := WaitBy(w.log, []NodeManager{leader}, cpmFunc)
+		wait, err := WaitBy(w.ctx, w.log, []NodeManager{leader}, cpmFunc)
 		if err != nil {
 			return nil, err
 		}
@@ -214,7 +214,7 @@ func (w *SeaweedfsScaleWorkflow) scaleCluster(allClusterNodes []NodeManager) ([]
 		var cpmFunc CpmFuncNodeClusterStatus = func(status *SeaweedfsNodeClusterStatus) bool {
 			return pkg_utils.IsStringInSlice(nodeIP, &status.ClusterNodesIPs)
 		}
-		wait, err := WaitBy(w.log, []NodeManager{runningNode}, CmpIsRunning, cpmFunc)
+		wait, err := WaitBy(w.ctx, w.log, []NodeManager{runningNode}, CmpIsRunning, cpmFunc)
 		if err != nil {
 			return nil, err
 		}
@@ -263,7 +263,7 @@ func (w *SeaweedfsScaleWorkflow) createCluster(clusterNodes []NodeManager) error
 
 	{
 		w.log.Infof("Waiting new nodes: %s", GetNodeNames(clusterNodes))
-		wait, err := WaitBy(w.log, clusterNodes, CmpIsRunning)
+		wait, err := WaitBy(w.ctx, w.log, clusterNodes, CmpIsRunning)
 		if err != nil {
 			return err
 		}
@@ -281,7 +281,7 @@ func (w *SeaweedfsScaleWorkflow) createCluster(clusterNodes []NodeManager) error
 			}
 			return haveLeader
 		}
-		wait, err := WaitBy(w.log, clusterNodes, cpmFunc)
+		wait, err := WaitBy(w.ctx, w.log, clusterNodes, cpmFunc)
 		if err != nil {
 			return err
 		}
