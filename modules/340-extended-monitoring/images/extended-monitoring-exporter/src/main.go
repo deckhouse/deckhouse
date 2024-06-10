@@ -147,7 +147,7 @@ func ListNamespaces(client metadata.Interface) *metav1.PartialObjectMetadataList
 	return rows
 }
 
-func enabledLable(labels map[string]string) float64 {
+func enabledLabel(labels map[string]string) float64 {
 	var i float64 = 1
 	for key, value := range labels {
 		if key == namespaces_enabled_label {
@@ -159,12 +159,12 @@ func enabledLable(labels map[string]string) float64 {
 	return i
 }
 
-func thresholdLable(labels map[string]string, threshold string, i float64) float64 {
+func thresholdLabel(labels map[string]string, threshold string, i float64) float64 {
 	for key, value := range labels {
 		if key == (label_theshold_prefix + threshold) {
 			tmp, err := strconv.ParseFloat(value, 64)
 			if err != nil {
-				log.Printf("[thresholdLable] failed ParseFloat: %v\n", err)
+				log.Printf("[thresholdLabel] failed ParseFloat: %v\n", err)
 			} else {
 				i = tmp
 			}
@@ -236,73 +236,73 @@ func recordMetrics() {
 			)
 			//node
 			for _, node := range ListNodes(kubeMetadata).Items {
-				enabled := enabledLable(node.Labels)
+				enabled := enabledLabel(node.Labels)
 				node_enabled.WithLabelValues(node.Name).Add(enabled)
 				if enabled == 1 {
 					for key, value := range node_threshold_map {
-						node_threshold.WithLabelValues(node.Name, key).Add(thresholdLable(node.Labels, key, value))
+						node_threshold.WithLabelValues(node.Name, key).Add(thresholdLabel(node.Labels, key, value))
 					}
 				}
 			}
 			//namespace
 			for _, namespasce := range ListNamespaces(kubeMetadata).Items {
-				enabled_namespace := enabledLable(namespasce.Labels)
+				enabled_namespace := enabledLabel(namespasce.Labels)
 				namespaces_enabled.WithLabelValues(namespasce.Name).Add(enabled_namespace)
 
 				if enabled_namespace == 1 {
 					//pod
 					for _, pod := range ListPods(kubeMetadata, namespasce.Name).Items {
-						enabled := enabledLable(pod.Labels)
+						enabled := enabledLabel(pod.Labels)
 						pod_enabled.WithLabelValues(namespasce.Name, pod.Name).Add(enabled)
 						if enabled == 1 {
 							for key, value := range pod_threshold_map {
-								pod_threshold.WithLabelValues(namespasce.Name, pod.Name, key).Add(thresholdLable(pod.Labels, key, value))
+								pod_threshold.WithLabelValues(namespasce.Name, pod.Name, key).Add(thresholdLabel(pod.Labels, key, value))
 							}
 						}
 					}
 					//ingress
 					for _, ingress := range ListIngress(kubeMetadata, namespasce.Name).Items {
-						enabled := enabledLable(ingress.Labels)
+						enabled := enabledLabel(ingress.Labels)
 						ingress_enabled.WithLabelValues(namespasce.Name, ingress.Name).Add(enabled)
 						if enabled == 1 {
 							for key, value := range ingress_threshold_map {
-								ingress_threshold.WithLabelValues(namespasce.Name, ingress.Name, key).Add(thresholdLable(ingress.Labels, key, value))
+								ingress_threshold.WithLabelValues(namespasce.Name, ingress.Name, key).Add(thresholdLabel(ingress.Labels, key, value))
 							}
 						}
 					}
 					//deployment
 					for _, deployment := range ListDeployment(kubeMetadata, namespasce.Name).Items {
-						enabled := enabledLable(deployment.Labels)
+						enabled := enabledLabel(deployment.Labels)
 						deployment_enabled.WithLabelValues(namespasce.Name, deployment.Name).Add(enabled)
 						if enabled == 1 {
 							for key, value := range deployment_threshold_map {
-								deployment_threshold.WithLabelValues(namespasce.Name, deployment.Name, key).Add(thresholdLable(deployment.Labels, key, value))
+								deployment_threshold.WithLabelValues(namespasce.Name, deployment.Name, key).Add(thresholdLabel(deployment.Labels, key, value))
 							}
 						}
 					}
 					//daemonset
 					for _, daemonset := range ListDaemonSet(kubeMetadata, namespasce.Name).Items {
-						enabled := enabledLable(daemonset.Labels)
+						enabled := enabledLabel(daemonset.Labels)
 						daemonset_enabled.WithLabelValues(namespasce.Name, daemonset.Name).Add(enabled)
 						if enabled == 1 {
 							for key, value := range daemonset_threshold_map {
-								daemonset_threshold.WithLabelValues(namespasce.Name, daemonset.Name, key).Add(thresholdLable(daemonset.Labels, key, value))
+								daemonset_threshold.WithLabelValues(namespasce.Name, daemonset.Name, key).Add(thresholdLabel(daemonset.Labels, key, value))
 							}
 						}
 					}
 					//statefulset
 					for _, statefulset := range ListStatefulSet(kubeMetadata, namespasce.Name).Items {
-						enabled := enabledLable(statefulset.Labels)
+						enabled := enabledLabel(statefulset.Labels)
 						statefulset_enabled.WithLabelValues(namespasce.Name, statefulset.Name).Add(enabled)
 						if enabled == 1 {
 							for key, value := range daemonset_threshold_map {
-								statefulset_threshold.WithLabelValues(namespasce.Name, statefulset.Name, key).Add(thresholdLable(statefulset.Labels, key, value))
+								statefulset_threshold.WithLabelValues(namespasce.Name, statefulset.Name, key).Add(thresholdLabel(statefulset.Labels, key, value))
 							}
 						}
 					}
 					//cronjob
 					for _, cronjob := range ListCronJob(kubeMetadata, namespasce.Name).Items {
-						cronjob_enabled.WithLabelValues(namespasce.Name, cronjob.Name).Add(enabledLable(cronjob.Labels))
+						cronjob_enabled.WithLabelValues(namespasce.Name, cronjob.Name).Add(enabledLabel(cronjob.Labels))
 					}
 				}
 			}
