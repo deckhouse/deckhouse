@@ -7,7 +7,7 @@ package master
 
 import (
 	"context"
-	"fmt"
+	k8s_info "system-registry-manager/internal/master/k8s_info"
 	"system-registry-manager/internal/master/workflow"
 	pkg_cfg "system-registry-manager/pkg/cfg"
 	pkg_logs "system-registry-manager/pkg/logs"
@@ -20,8 +20,6 @@ const (
 
 func startMasterWorkflow(ctx context.Context, m *Master) {
 	log := pkg_logs.GetLoggerFromContext(ctx)
-	m.k8sHandler.Start()
-	defer m.k8sHandler.Stop()
 
 	for {
 		select {
@@ -39,22 +37,15 @@ func startMasterWorkflow(ctx context.Context, m *Master) {
 }
 
 func masterWorkflow(ctx context.Context, m *Master) error {
-	// log := pkg_logs.GetLoggerFromContext(ctx)
-
-	workerCount, err := m.k8sHandler.WaitAllWorkers()
+	workersInfo, err := k8s_info.WaitAllWorkers()
 	if err != nil {
 		return err
 	}
 
-	masters := m.k8sHandler.GetMasterNodeNameList()
-	if len(masters) != workerCount {
-		return fmt.Errorf("len(masters) != workerCount")
-	}
+	nodeManagers := make([]workflow.NodeManager, 0, len(workersInfo))
 
-	nodeManagers := make([]workflow.NodeManager, 0, len(masters))
-
-	for _, master := range masters {
-		nodeManagers = append(nodeManagers, NewNodeManager(ctx, master, m.k8sHandler))
+	for _, workerInfo := range workersInfo {
+		nodeManagers = append(nodeManagers, NewNodeManager(ctx, workerInfo))
 	}
 
 	seaweedfsCaCertsWorkflow := workflow.NewSeaweedfsCertsWorkflow(ctx, nodeManagers, pkg_cfg.GetConfig().Cluster.Size)

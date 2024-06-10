@@ -84,7 +84,7 @@ func (w *SeaweedfsScaleWorkflow) needCluster(clusterNodes []NodeManager) ([]Node
 	}
 
 	if len(clusterNodes) == len(existNodes) {
-		w.log.Infof("Check existing cluster with nodes %s", GetNodeNames(clusterNodes))
+		w.log.Infof("Synchronizing cluster with nodes %s", GetNodeNames(clusterNodes))
 		return clusterNodes, w.checkAndSyncCluster(clusterNodes)
 	}
 
