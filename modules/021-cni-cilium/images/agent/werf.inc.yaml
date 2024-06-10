@@ -1,4 +1,4 @@
-{{- $fromCacheVersion := "18" }}
+{{- $fromCacheVersion := "19" }}
 # #####################################################################
 # Final image of cilium-agent (used in helm-templates)
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
@@ -22,10 +22,32 @@
 {{ $binaries := cat $binaries "/usr/lib/x86_64-linux-gnu/xtables/*" }}
 # for debug
 {{ $binaries := cat $binaries "/usr/bin/strace" }}
+#
+### binary files that can be copied from BASE_ALT_DEV
+#
+# from base install script
+{{ $binaries := cat $binaries "/etc/localtime /usr/bin/jq" }}
+# shell-scripts dependencies
+{{ $binaries := cat $binaries "/bin/bash /bin/sh /bin/echo /bin/printf /bin/sed /bin/awk /bin/nsenter /bin/mount /bin/mkdir /bin/basename" }}
+{{ $binaries := cat $binaries "/bin/cat /bin/head /bin/cut /bin/od /bin/grep /bin/cp /bin/mv /bin/rm /bin/ln /bin/wc /bin/find" }}
+# kmod and dependencies
+{{ $binaries := cat $binaries "/bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }}
+# iproute2 and dependencies
+{{ $binaries := cat $binaries "/bin/ip /bin/ss /sbin/ip /sbin/bridge /sbin/dcb /sbin/devlink /sbin/rtacct /sbin/rtmon /sbin/tc /sbin/tipc /sbin/vdpa /usr/bin/lnstat" }}
+{{ $binaries := cat $binaries "/usr/bin/nstat /usr/bin/rdma /usr/bin/routef /usr/bin/routel /usr/bin/ctstat /usr/bin/rtstat /usr/sbin/genl" }}
+# bash-completion
+{{ $binaries := cat $binaries "/usr/share/bash-completion/bash_completion" }}
+# groups
+{{ $binaries := cat $binaries "/usr/bin/groups" }}
+# for prepull
+{{ $binaries := cat $binaries "/usr/bin/true" }}
+# for debug
+{{ $binaries := cat $binaries "/usr/bin/sleep /bin/ls /usr/bin/curl /usr/bin/ldd" }}
+
 #####################################################################
 # from base install script
 ## ln -snf /usr/share/zoneinfo/Etc/UTC /etc/localtime
-{{ $binariesFromALT := "/usr/bin/jq /etc/localtime" }}
+{{ $binariesFromALT := "/etc/localtime /usr/bin/jq" }}
 # shell-scripts dependencies
 {{ $binariesFromALT := cat $binariesFromALT "/bin/bash /bin/sh /bin/echo /usr/bin/printf /bin/sed /bin/awk /usr/bin/nsenter /bin/mount /bin/mkdir /bin/basename" }}
 {{ $binariesFromALT := cat $binariesFromALT "/bin/cat /bin/head /bin/cut /usr/bin/od /bin/grep /bin/cp /bin/mv /bin/rm /bin/ln /bin/wc /bin/find" }}
@@ -177,9 +199,11 @@ shell:
   # common relocate
   - chmod +x /binary_replace.sh
   - mkdir -p /relocate
-  # base binaries from ALT
-  - cp -a /relocateFromALT/* /relocate
+  # copy base binaries and deps from ALT
+  # - cp -a /relocateFromALT/* /relocate
+  # copy base binaries and deps
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+  # copy self builded binaries and deps
   - /binary_replace.sh -i "{{ $selfBuildedBinaries }}" -o /relocate
   # additional relocate from runtime
   - |
@@ -212,7 +236,7 @@ shell:
   - cp -a /relocate/libx32/* /relocate/usr/libx32/ && rm -rf /relocate/libx32
   - ln -f -s usr/libx32 "/relocate/libx32"
   # alt workaround
-  - for filename in relocate/lib64/*; do ln -snf /lib64/$(basename "$filename") relocate/lib/x86_64-linux-gnu/$(basename "$filename") || true; done
+  # - for filename in relocate/lib64/*; do ln -snf /lib64/$(basename "$filename") relocate/lib/x86_64-linux-gnu/$(basename "$filename") || true; done
   #
   - mkdir -p /relocate/var /relocate/run /relocate/run/lock
   - ln -f -s /run "/relocate/var/run"
