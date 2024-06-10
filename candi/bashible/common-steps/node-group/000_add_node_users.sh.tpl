@@ -69,7 +69,7 @@ function nodeuser_patch() {
           -H "Content-Type: application/json-patch+json" \
           --cacert "$BOOTSTRAP_DIR/ca.crt" \
           --data "${data}" \
-          "https://$server/apis/deckhouse.io/v1/nodeusers/${username}/status" ; then
+          "https://$server/apis/deckhouse.io/v1/nodeusers/${username}/status" > /dev/null; then
 
           bb-log-info "Successfully patched NodeUser."
           patch_pending=false

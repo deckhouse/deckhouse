@@ -168,6 +168,9 @@ roleRef:
   name: d8:node-manager:bashible:nodeuser-bootstrapped-nodes
 subjects:
   - kind: Group
+    name: system:bootstrappers:d8-node-manager
+    apiGroup: rbac.authorization.k8s.io
+  - kind: Group
     name: system:nodes
     apiGroup: rbac.authorization.k8s.io
 
