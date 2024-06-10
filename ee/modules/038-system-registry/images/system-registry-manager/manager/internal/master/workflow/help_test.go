@@ -158,12 +158,12 @@ func TestGetClustersMembers(t *testing.T) {
 
 			assert.Len(t, clusterMembers, len(tt.expClustersMembers))
 
-			assert.ElementsMatch(t, tt.expClustersMembers, clusterMembers)
-
 			for _, expCluster := range tt.expClustersMembers {
 				foundCluster := false
 				for _, cluster := range clusterMembers {
 					if expCluster.Leader.GetNodeName() == cluster.Leader.GetNodeName() {
+						assert.Len(t, cluster.Members, len(expCluster.Members))
+
 						foundCluster = true
 						expMembers := make([]string, 0, len(expCluster.Members))
 						members := make([]string, 0, len(cluster.Members))
@@ -390,7 +390,7 @@ func TestSortBy(t *testing.T) {
 		"node4": СreateMockNode(
 			"192.168.1.2",
 			&SeaweedfsNodeClusterStatus{
-				IsLeader: false,
+				IsLeader: true,
 			},
 			&SeaweedfsNodeRunningStatus{
 				IsRunning: true,

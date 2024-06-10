@@ -247,6 +247,9 @@ func SortBy(nodeManagers []NodeManager, cmpFuncs ...interface{}) ([]NodeManager,
 
 		addedToSorted := false
 		for cmpFuncPriority, cmpFunc := range cmpFuncs {
+			if addedToSorted {
+				break
+			}
 			switch f := cmpFunc.(type) {
 			case CpmFuncNodeClusterStatus:
 				status, err := nodeManagersStatusCache.GetNodeManagerClusterStatus(nodeManager)

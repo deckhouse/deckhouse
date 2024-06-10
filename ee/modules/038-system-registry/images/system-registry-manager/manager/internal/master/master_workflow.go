@@ -37,14 +37,14 @@ func startMasterWorkflow(ctx context.Context, m *Master) {
 }
 
 func masterWorkflow(ctx context.Context, m *Master) error {
-	workersInfo, err := k8s_info.WaitAllWorkers()
+	workersInfos, err := k8s_info.WaitAllWorkers()
 	if err != nil {
 		return err
 	}
 
-	nodeManagers := make([]workflow.NodeManager, 0, len(workersInfo))
+	nodeManagers := make([]workflow.NodeManager, 0, len(workersInfos))
 
-	for _, workerInfo := range workersInfo {
+	for _, workerInfo := range workersInfos {
 		nodeManagers = append(nodeManagers, NewNodeManager(ctx, workerInfo))
 	}
 
