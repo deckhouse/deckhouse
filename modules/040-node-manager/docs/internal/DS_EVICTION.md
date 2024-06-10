@@ -25,9 +25,9 @@ Reproducing the Issue
 
 The issue arises if the patch is not working or DaemonSet pods lack the cluster-autoscaler.kubernetes.io/enable-ds-eviction annotation.
 
-1. Launch pods that will cause Cluster Autoscaler to add new nodes and wait until the nodes are ready.
+### Launch pods that will cause Cluster Autoscaler to add new nodes and wait until the nodes are ready
 
-```
+```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -64,9 +64,9 @@ spec:
         args: ["-c", "while true; do echo 'Consuming resources'; sleep 3600; done"]
 ```
 
-2. Launch pods that take a long time to terminate.
+### Launch pods that take a long time to terminate
 
-```
+```yaml
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -135,9 +135,9 @@ spec:
           name: long-terminating-script
 ```
 
-3. Launch dummy pods to simulate user workloads.
+### Launch dummy pods to simulate user workloads
 
-```
+```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -176,12 +176,12 @@ spec:
         args: ["-c", "while true; do echo 'Dummy pod'; sleep 3600; done"]
 ```
 
-4. Scale down the resource-consumer deployment.
+### Scale down the resource-consumer deployment
 
-```
+```bash
 kubectl scale deployment resource-consumer --replicas 0
 ```
 
-5. Outcome
+### Outcome
 
 You will observe that the dummy-pod and DaemonSet resources (including CNI/CSI, Prometheus exporter, and log-shipper) are evicted while the long-terminating pods are still trying to finish.

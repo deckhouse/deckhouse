@@ -27,9 +27,9 @@ Cluster Autoscaler выселяет DaemonSets по аннотации:
 
 Проблема возникает, если патч не работает или DaemonSet поды не имеют аннотации cluster-autoscaler.kubernetes.io/enable-ds-eviction.
 
-1. Запустите поды, которые заставят Cluster Autoscaler добавить новые узлы, и дождитесь готовности узлов.
+### Запустите поды, которые заставят Cluster Autoscaler добавить новые узлы, и дождитесь готовности узлов
 
-```
+```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -66,9 +66,9 @@ spec:
         args: ["-c", "while true; do echo 'Consuming resources'; sleep 3600; done"]
 ```
 
-2. Запустите поды, которые долго завершаются.
+### Запустите поды, которые долго завершаются
 
-```
+```yaml
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -137,9 +137,9 @@ spec:
           name: long-terminating-script
 ```
 
-3. Запустите пустые поды для симуляции пользовательской нагрузки.
+### Запустите пустые поды для симуляции пользовательской нагрузки
 
-```
+```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -178,12 +178,12 @@ spec:
         args: ["-c", "while true; do echo 'Dummy pod'; sleep 3600; done"]
 ```
 
-4. Уменьшите количество реплик для resource-consumer.
+### Уменьшите количество реплик для resource-consumer
 
-```
+```bash
 kubectl scale deployment resource-consumer --replicas 0
 ```
 
-5. Итог
+### Итог
 
 В результате вы увидите, что поды dummy-pod и ресурсы DaemonSet (включая CNI/CSI, Prometheus exporter и log-shipper) удалены с ноды, в то время как long-terminating поды всё ещё пытаются завершить работу.
