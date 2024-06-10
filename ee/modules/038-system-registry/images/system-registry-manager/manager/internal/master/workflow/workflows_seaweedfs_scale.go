@@ -50,59 +50,68 @@ func (w *SeaweedfsScaleWorkflow) Start() error {
 		return err
 	}
 
-	clusterNodes := sortedNodes[:expectedNodeCount]
-	deleteNodes := sortedNodes[expectedNodeCount:]
-	if err := w.needCluster(clusterNodes); err != nil {
+	realClusterNodes, err := w.needCluster(sortedNodes[:expectedNodeCount])
+	if err != nil {
 		return err
+	}
+
+	realNodesNames := make([]string, 0, len(realClusterNodes))
+	deleteNodes := []NodeManager{}
+
+	for _, realNode := range realClusterNodes {
+		realNodesNames = append(realNodesNames, realNode.GetNodeName())
+	}
+	for _, node := range w.NodeManagers {
+		if !pkg_utils.IsStringInSlice(node.GetNodeName(), &realNodesNames) {
+			deleteNodes = append(deleteNodes, node)
+		}
 	}
 
 	w.log.Infof("Deleting nodes: %s", GetNodeNames(deleteNodes))
 	return w.deleteNodes(deleteNodes)
 }
 
-func (w *SeaweedfsScaleWorkflow) needCluster(clusterNodes []NodeManager) error {
+func (w *SeaweedfsScaleWorkflow) needCluster(clusterNodes []NodeManager) ([]NodeManager, error) {
 	w.log.Infof("Ensuring cluster for nodes: %s", GetNodeNames(clusterNodes))
 	existNodes, _, err := SelectBy(clusterNodes, CmpIsExist)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if len(existNodes) == 0 {
 		w.log.Infof("Creating new cluster with nodes %s", GetNodeNames(clusterNodes))
-		return w.createCluster(clusterNodes)
+		return clusterNodes, w.createCluster(clusterNodes)
 	}
 
 	if len(clusterNodes) == len(existNodes) {
 		w.log.Infof("Check existing cluster with nodes %s", GetNodeNames(clusterNodes))
-		if err := w.checkAndSyncCluster(clusterNodes); err != nil {
-			return err
-		}
+		return clusterNodes, w.checkAndSyncCluster(clusterNodes)
 	}
 
 	w.log.Infof("Scaling existing cluster with nodes %s", GetNodeNames(clusterNodes))
 	return w.scaleCluster(clusterNodes)
 }
 
-func (w *SeaweedfsScaleWorkflow) scaleCluster(allClusterNodes []NodeManager) error {
+func (w *SeaweedfsScaleWorkflow) scaleCluster(allClusterNodes []NodeManager) ([]NodeManager, error) {
 	runningNodes, notRunningNodes, err := SelectBy(allClusterNodes, CmpIsRunning)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	w.log.Infof("Scaling cluster with running nodes: %s and not running nodes: %s", GetNodeNames(runningNodes), GetNodeNames(notRunningNodes))
 	newIPs, unUsedIPs, err := w.getNewAndUnusedClusterIP(allClusterNodes)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	w.log.Infof("Get cluster's leaders count")
 	leaders, err := w.getClustersLeaders(allClusterNodes)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(leaders) != 1 {
 		w.log.Infof("The number of leaders is not equal to 1")
-		return fmt.Errorf("len(leaders) != 1")
+		return nil, fmt.Errorf("len(leaders) != 1")
 	}
 	leader := leaders[0]
 
@@ -135,7 +144,7 @@ func (w *SeaweedfsScaleWorkflow) scaleCluster(allClusterNodes []NodeManager) err
 	for _, notRunningNode := range notRunningNodes {
 		w.log.Infof("Creating manifests for new node %s", notRunningNode.GetNodeName())
 		if err := notRunningNode.CreateNodeManifests(&createRequest); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -143,21 +152,21 @@ func (w *SeaweedfsScaleWorkflow) scaleCluster(allClusterNodes []NodeManager) err
 		w.log.Infof("Waiting new nodes: %s", GetNodeNames(notRunningNodes))
 		wait, err := WaitBy(w.log, notRunningNodes, CmpIsRunning)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !wait {
-			return fmt.Errorf("error waitig new nodes: %s", GetNodeNames(notRunningNodes))
+			return nil, fmt.Errorf("error waitig new nodes: %s", GetNodeNames(notRunningNodes))
 		}
 	}
 
 	for _, notRunningNode := range notRunningNodes {
 		nodeIp, err := notRunningNode.GetNodeIP()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		w.log.Infof("Adding new node %s to cluster", notRunningNode.GetNodeName())
 		if err := leader.AddNodeToCluster(nodeIp); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -173,10 +182,10 @@ func (w *SeaweedfsScaleWorkflow) scaleCluster(allClusterNodes []NodeManager) err
 
 		wait, err := WaitBy(w.log, []NodeManager{leader}, cpmFunc)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !wait {
-			return fmt.Errorf("error waitig cluster status for new nodes: %s", GetNodeNames(notRunningNodes))
+			return nil, fmt.Errorf("error waitig cluster status for new nodes: %s", GetNodeNames(notRunningNodes))
 		}
 	}
 
@@ -184,12 +193,12 @@ func (w *SeaweedfsScaleWorkflow) scaleCluster(allClusterNodes []NodeManager) err
 	for _, runningNode := range runningNodes {
 		nodeIP, err := runningNode.GetNodeIP()
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		w.log.Infof("Check manifests for current node %s", runningNode.GetNodeName())
 		if checkResp, err := runningNode.CheckNodeManifests(&checkRequest); err != nil {
-			return err
+			return nil, err
 		} else {
 			if !checkResp.NeedSomethingCreateOrUpdate() {
 				continue
@@ -198,7 +207,7 @@ func (w *SeaweedfsScaleWorkflow) scaleCluster(allClusterNodes []NodeManager) err
 
 		w.log.Infof("Updating manifests for current node %s", runningNode.GetNodeName())
 		if err := runningNode.UpdateNodeManifests(&updateRequest); err != nil {
-			return err
+			return nil, err
 		}
 
 		w.log.Infof("Waiting current node %s", runningNode.GetNodeName())
@@ -207,27 +216,27 @@ func (w *SeaweedfsScaleWorkflow) scaleCluster(allClusterNodes []NodeManager) err
 		}
 		wait, err := WaitBy(w.log, []NodeManager{runningNode}, CmpIsRunning, cpmFunc)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !wait {
-			return fmt.Errorf("error waitig current node %s", runningNode.GetNodeName())
+			return nil, fmt.Errorf("error waitig current node %s", runningNode.GetNodeName())
 		}
 	}
 
 	w.log.Infof("Check and try sync cluster after scaling")
 	if err := w.checkAndSyncCluster(allClusterNodes); err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, oldIP := range unUsedIPs {
 		if !pkg_utils.IsStringInSlice(oldIP, &newIPs) {
 			w.log.Infof("Removing unused ip `%s` from cluster", oldIP)
 			if err := leader.RemoveNodeFromCluster(oldIP); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
-	return nil
+	return append(runningNodes, notRunningNodes...), nil
 }
 
 func (w *SeaweedfsScaleWorkflow) createCluster(clusterNodes []NodeManager) error {
