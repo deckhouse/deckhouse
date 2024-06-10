@@ -166,13 +166,13 @@ func (m *NodeManager) RemoveNodeFromCluster(removeNodeIP string) error {
 
 // Runtime actions
 func (m *NodeManager) CheckNodeManifests(request *master_workflow.SeaweedfsCheckNodeRequest) (*master_workflow.SeaweedfsCheckNodeResponce, error) {
+	var err error
 	var resp *master_workflow.SeaweedfsCheckNodeResponce
 	f := func(client *worker_client.Client) error {
-		var err error
 		resp, err = client.RequestCheckRegistry(request)
-		return err
+		return nil
 	}
-	err := m.makeRequestToWorker(f)
+	m.makeRequestToWorker(f)
 	return resp, err
 }
 
