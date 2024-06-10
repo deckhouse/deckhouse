@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package workflow
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"testing"
@@ -241,7 +242,7 @@ func TestWaitBy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := WaitBy(logrus.NewEntry(logrus.New()), tt.nodeManagers, tt.cmpFuncs...)
+			result, err := WaitBy(context.Background(), logrus.NewEntry(logrus.New()), tt.nodeManagers, tt.cmpFuncs...)
 
 			assert.Equal(t, tt.expError, err)
 			assert.Equal(t, tt.expResult, result)
@@ -256,13 +257,17 @@ func TestSelectBy(t *testing.T) {
 			&SeaweedfsNodeClusterStatus{
 				IsLeader: true,
 			},
-			nil,
+			&SeaweedfsNodeRunningStatus{
+				IsRunning: false,
+			},
 			nil,
 			nil,
 		),
 		"node2": СreateMockNode(
 			"192.168.1.2",
-			nil,
+			&SeaweedfsNodeClusterStatus{
+				IsLeader: false,
+			},
 			&SeaweedfsNodeRunningStatus{
 				IsRunning: false,
 			},
@@ -352,7 +357,9 @@ func TestSortBy(t *testing.T) {
 			&SeaweedfsNodeClusterStatus{
 				IsLeader: false,
 			},
-			nil,
+			&SeaweedfsNodeRunningStatus{
+				IsRunning: false,
+			},
 			nil,
 			nil,
 		),
@@ -361,7 +368,9 @@ func TestSortBy(t *testing.T) {
 			&SeaweedfsNodeClusterStatus{
 				IsLeader: true,
 			},
-			nil,
+			&SeaweedfsNodeRunningStatus{
+				IsRunning: false,
+			},
 			nil,
 			nil,
 		),
@@ -370,7 +379,9 @@ func TestSortBy(t *testing.T) {
 			&SeaweedfsNodeClusterStatus{
 				IsLeader: false,
 			},
-			nil,
+			&SeaweedfsNodeRunningStatus{
+				IsRunning: false,
+			},
 			nil,
 			nil,
 		),

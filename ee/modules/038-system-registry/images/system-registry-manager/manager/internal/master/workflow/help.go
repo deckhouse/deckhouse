@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package workflow
 
 import (
+	"context"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"sort"
@@ -23,26 +24,39 @@ type ClusterMembers struct {
 }
 
 type NodeManagerCache struct {
-	data map[NodeManager]struct {
-		RunningStatus *SeaweedfsNodeRunningStatus
-		ClusterStatus *SeaweedfsNodeClusterStatus
-		NodeIP        *string
-	}
+	data map[string]NodeStatus
+}
+
+type NodeStatus struct {
+	RunningStatus *SeaweedfsNodeRunningStatus
+	ClusterStatus *SeaweedfsNodeClusterStatus
+	NodeIP        string
 }
 
 func NewNodeManagerCache() *NodeManagerCache {
 	return &NodeManagerCache{
-		data: map[NodeManager]struct {
-			RunningStatus *SeaweedfsNodeRunningStatus
-			ClusterStatus *SeaweedfsNodeClusterStatus
-			NodeIP        *string
-		}{},
+		data: make(map[string]NodeStatus),
 	}
 }
 
+func (cache *NodeManagerCache) getNodeStatus(nodeName string) NodeStatus {
+	status, ok := cache.data[nodeName]
+	if !ok {
+		status = NodeStatus{}
+		cache.data[nodeName] = status
+	}
+	return status
+}
+
+func (cache *NodeManagerCache) loadNodeStatus(nodeName string, nodeStatus NodeStatus) {
+	cache.data[nodeName] = nodeStatus
+}
+
 func (cache *NodeManagerCache) GetNodeManagerRunningStatus(nodeManager NodeManager) (*SeaweedfsNodeRunningStatus, error) {
-	status, ok := cache.data[nodeManager]
-	if ok && status.RunningStatus != nil {
+	nodeName := nodeManager.GetNodeName()
+	status := cache.getNodeStatus(nodeName)
+
+	if status.RunningStatus != nil {
 		return status.RunningStatus, nil
 	}
 	runningStatus, err := nodeManager.GetNodeRunningStatus()
@@ -50,13 +64,15 @@ func (cache *NodeManagerCache) GetNodeManagerRunningStatus(nodeManager NodeManag
 		return nil, err
 	}
 	status.RunningStatus = runningStatus
-	cache.data[nodeManager] = status
+	cache.loadNodeStatus(nodeName, status)
 	return runningStatus, nil
 }
 
 func (cache *NodeManagerCache) GetNodeManagerClusterStatus(nodeManager NodeManager) (*SeaweedfsNodeClusterStatus, error) {
-	status, ok := cache.data[nodeManager]
-	if ok && status.ClusterStatus != nil {
+	nodeName := nodeManager.GetNodeName()
+	status := cache.getNodeStatus(nodeName)
+
+	if status.ClusterStatus != nil {
 		return status.ClusterStatus, nil
 	}
 	clusterStatus, err := nodeManager.GetNodeClusterStatus()
@@ -64,21 +80,23 @@ func (cache *NodeManagerCache) GetNodeManagerClusterStatus(nodeManager NodeManag
 		return nil, err
 	}
 	status.ClusterStatus = clusterStatus
-	cache.data[nodeManager] = status
+	cache.loadNodeStatus(nodeName, status)
 	return clusterStatus, nil
 }
 
 func (cache *NodeManagerCache) GetNodeManagerIP(nodeManager NodeManager) (*string, error) {
-	status, ok := cache.data[nodeManager]
-	if ok && status.NodeIP != nil {
-		return status.NodeIP, nil
+	nodeName := nodeManager.GetNodeName()
+	status := cache.getNodeStatus(nodeName)
+
+	if status.NodeIP != "" {
+		return &status.NodeIP, nil
 	}
 	nodeIP, err := nodeManager.GetNodeIP()
 	if err != nil {
 		return nil, err
 	}
-	status.NodeIP = &nodeIP
-	cache.data[nodeManager] = status
+	status.NodeIP = nodeIP
+	cache.loadNodeStatus(nodeName, status)
 	return &nodeIP, nil
 }
 
@@ -110,49 +128,54 @@ func CpmIsNotLeader(nodeClusterStatus *SeaweedfsNodeClusterStatus) bool {
 	return !nodeClusterStatus.IsLeader
 }
 
-func WaitBy(log *logrus.Entry, nodeManagers []NodeManager, cmpFuncs ...interface{}) (bool, error) {
+func WaitBy(ctx context.Context, log *logrus.Entry, nodeManagers []NodeManager, cmpFuncs ...interface{}) (bool, error) {
 	if len(nodeManagers) == 0 {
 		return true, nil
 	}
 
 	for i := 0; i < pkg_cfg.MaxRetries; i++ {
-		log.Infof("wait by retry count %d/%d", i, pkg_cfg.MaxRetries)
-		defer time.Sleep(5 * time.Second)
+		select {
+		case <-ctx.Done():
+			return false, ctx.Err()
+		default:
+			log.Infof("wait by retry count %d/%d", i, pkg_cfg.MaxRetries)
+			time.Sleep(5 * time.Second)
 
-		isWaited := true
-		nodeManagersCache := NewNodeManagerCache()
+			isWaited := true
+			nodeManagersCache := NewNodeManagerCache()
 
-		for _, nodeManager := range nodeManagers {
-			if !isWaited {
-				break
-			}
-			for _, cmpFunc := range cmpFuncs {
+			for _, nodeManager := range nodeManagers {
 				if !isWaited {
 					break
 				}
+				for _, cmpFunc := range cmpFuncs {
+					if !isWaited {
+						break
+					}
 
-				switch f := cmpFunc.(type) {
-				case CpmFuncNodeClusterStatus:
-					status, err := nodeManagersCache.GetNodeManagerClusterStatus(nodeManager)
-					if err != nil || status == nil {
-						isWaited = false
-						break
+					switch f := cmpFunc.(type) {
+					case CpmFuncNodeClusterStatus:
+						status, err := nodeManagersCache.GetNodeManagerClusterStatus(nodeManager)
+						if err != nil || status == nil {
+							isWaited = false
+							break
+						}
+						isWaited = isWaited && f(status)
+					case CpmFuncNodeRunningStatus:
+						status, err := nodeManagersCache.GetNodeManagerRunningStatus(nodeManager)
+						if err != nil || status == nil {
+							isWaited = false
+							break
+						}
+						isWaited = isWaited && f(status)
+					default:
+						return false, fmt.Errorf("error, unknown function format: %v", cmpFunc)
 					}
-					isWaited = isWaited && f(status)
-				case CpmFuncNodeRunningStatus:
-					status, err := nodeManagersCache.GetNodeManagerRunningStatus(nodeManager)
-					if err != nil || status == nil {
-						isWaited = false
-						break
-					}
-					isWaited = isWaited && f(status)
-				default:
-					return false, fmt.Errorf("error, unknown function format: %v", cmpFunc)
 				}
 			}
-		}
-		if isWaited {
-			return true, nil
+			if isWaited {
+				return true, nil
+			}
 		}
 	}
 	return false, nil
@@ -178,7 +201,7 @@ func SelectBy(nodeManagers []NodeManager, cmpFuncs ...interface{}) ([]NodeManage
 					return nil, nil, err
 				}
 				if status == nil {
-					return nil, nil, fmt.Errorf("Empty status")
+					return nil, nil, fmt.Errorf("empty status")
 				}
 				isSelected = isSelected && f(status)
 			case CpmFuncNodeRunningStatus:
@@ -187,11 +210,11 @@ func SelectBy(nodeManagers []NodeManager, cmpFuncs ...interface{}) ([]NodeManage
 					return nil, nil, err
 				}
 				if status == nil {
-					return nil, nil, fmt.Errorf("Empty status")
+					return nil, nil, fmt.Errorf("empty status")
 				}
 				isSelected = isSelected && f(status)
 			default:
-				return nil, nil, fmt.Errorf("error, unknown function format: %v", cmpFunc)
+				return nil, nil, fmt.Errorf("error, unknown function format: %T", cmpFunc)
 			}
 
 			if !isSelected {
@@ -217,12 +240,10 @@ func SortBy(nodeManagers []NodeManager, cmpFuncs ...interface{}) ([]NodeManager,
 
 	sortedNodesMap := map[int][]NodeManager{}
 	other := []NodeManager{}
-	nodeManagersCopy := make([]NodeManager, len(nodeManagers))
-	copy(nodeManagersCopy, nodeManagers)
 
-	for len(nodeManagersCopy) > 0 {
+	for len(nodeManagers) > 0 {
 		var nodeManager NodeManager
-		nodeManager, nodeManagersCopy = nodeManagersCopy[0], nodeManagersCopy[1:]
+		nodeManager, nodeManagers = nodeManagers[0], nodeManagers[1:]
 
 		addedToSorted := false
 		for cmpFuncPriority, cmpFunc := range cmpFuncs {
