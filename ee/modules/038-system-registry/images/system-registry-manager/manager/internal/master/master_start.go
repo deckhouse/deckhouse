@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/leaderelection"
 	common "system-registry-manager/internal/common"
-	k8s_handler "system-registry-manager/internal/master/k8s_handler"
+	// k8s_handler "system-registry-manager/internal/master/k8s_handler"
 	kube_actions "system-registry-manager/pkg/kubernetes/actions"
 	pkg_logs "system-registry-manager/pkg/logs"
 )
@@ -20,10 +20,9 @@ const (
 )
 
 type Master struct {
-	k8sHandler *k8s_handler.CommonHandler
-	commonCfg  *common.RuntimeConfig
-	rootCtx    context.Context
-	log        *logrus.Entry
+	commonCfg *common.RuntimeConfig
+	rootCtx   context.Context
+	log       *logrus.Entry
 }
 
 func New(rootCtx context.Context, rCfg *common.RuntimeConfig) (*Master, error) {
@@ -37,7 +36,6 @@ func New(rootCtx context.Context, rCfg *common.RuntimeConfig) (*Master, error) {
 	}
 
 	var err error
-	master.k8sHandler, err = k8s_handler.NewCommonHandler(rootCtx)
 	return master, err
 }
 

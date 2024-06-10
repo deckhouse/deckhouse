@@ -9,7 +9,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/seaweedfs/seaweedfs/weed/pb/master_pb"
-	k8s_handler "system-registry-manager/internal/master/k8s_handler"
+	k8s_info "system-registry-manager/internal/master/k8s_info"
 	master_workflow "system-registry-manager/internal/master/workflow"
 	pkg_cfg "system-registry-manager/pkg/cfg"
 	pkg_logs "system-registry-manager/pkg/logs"
@@ -24,20 +24,17 @@ type NodeManager struct {
 	ctx        context.Context
 	log        *logrus.Entry
 	nodeName   string
-	nodeInfo   *k8s_handler.MergeInfo
-	k8sHandler *k8s_handler.CommonHandler
+	workerInfo k8s_info.WorkerInfo
 }
 
-func NewNodeManager(ctx context.Context, nodeName string, k8sHandler *k8s_handler.CommonHandler) *NodeManager {
+func NewNodeManager(ctx context.Context, workerInfo k8s_info.WorkerInfo) *NodeManager {
 	log := pkg_logs.GetLoggerFromContext(ctx)
 
 	nodeManager := &NodeManager{
 		ctx:        ctx,
 		log:        log,
-		nodeName:   nodeName,
-		k8sHandler: k8sHandler,
+		workerInfo: workerInfo,
 	}
-	nodeManager.updateData()
 	return nodeManager
 }
 
@@ -111,10 +108,12 @@ func (m *NodeManager) GetNodeRunningStatus() (*master_workflow.SeaweedfsNodeRunn
 	}
 
 	isRunning := false
-	if m.nodeInfo.SeaweedfsPod == nil {
-		isRunning = false
-	} else {
-		for _, containerStatuses := range m.nodeInfo.SeaweedfsPod.Status.ContainerStatuses {
+	seaweedfsPodInfo, err := m.seaweedfsPodInfo()
+	if err != nil {
+		return nil, err
+	}
+	if seaweedfsPodInfo != nil {
+		for _, containerStatuses := range seaweedfsPodInfo.Status.ContainerStatuses {
 			if containerStatuses.Name == "seaweedfs" {
 				isRunning = containerStatuses.Ready
 			}
@@ -229,17 +228,8 @@ func (m *NodeManager) makeRequestToWorker(request func(client *worker_client.Cli
 	return request(client)
 }
 
-func (m *NodeManager) updateData() {
-	m.nodeInfo = m.k8sHandler.GetAllDataByNodeName(m.nodeName)
-}
-
 func (m *NodeManager) getNodeInternalIP() (string, error) {
-	m.updateData()
-
-	if m.nodeInfo == nil {
-		return "", fmt.Errorf("m.nodeInfo == nil")
-	}
-	for _, address := range m.nodeInfo.MasterNode.Status.Addresses {
+	for _, address := range m.workerInfo.MasterNode.Status.Addresses {
 		if address.Type == corev1.NodeInternalIP {
 			return address.Address, nil
 		}
@@ -248,10 +238,9 @@ func (m *NodeManager) getNodeInternalIP() (string, error) {
 }
 
 func (m *NodeManager) getWorkerIP() (string, error) {
-	m.updateData()
+	return m.workerInfo.Worker.IP, nil
+}
 
-	if m.nodeInfo == nil {
-		return "", fmt.Errorf("m.nodeInfo == nil")
-	}
-	return m.nodeInfo.Worker.IP, nil
+func (m *NodeManager) seaweedfsPodInfo() (*corev1.Pod, error) {
+	return k8s_info.GetSeaweedfsPodByNodeName(m.workerInfo.MasterNode.Name)
 }
