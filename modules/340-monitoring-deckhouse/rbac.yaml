@@ -1,0 +1,3 @@
+module: monitoring-deckhouse
+scopes:
+  - observability

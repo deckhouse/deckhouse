@@ -1,0 +1,3 @@
+module: control-plane-manager
+scopes:
+  - kubernetes

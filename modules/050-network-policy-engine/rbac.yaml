@@ -1,0 +1,4 @@
+module: network-policy-engine
+scopes:
+  - networking
+  - infrastructure

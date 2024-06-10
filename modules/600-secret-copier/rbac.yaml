@@ -1,0 +1,3 @@
+module: secret-copier
+scopes:
+  - security

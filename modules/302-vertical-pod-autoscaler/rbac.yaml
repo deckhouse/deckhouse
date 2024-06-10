@@ -1,0 +1,3 @@
+module: vertical-pod-autoscaler
+scopes:
+  - infrastructure

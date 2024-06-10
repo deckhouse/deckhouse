@@ -1,0 +1,6 @@
+module: prometheus
+scopes:
+  - observability
+crds:
+  - modules/010-prometheus-crd/crds/*.yaml
+  - modules/300-prometheus/crds/*.yaml

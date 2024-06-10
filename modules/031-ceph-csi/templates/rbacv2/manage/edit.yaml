@@ -1,0 +1,34 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: ceph-csi
+    rbac.deckhouse.io/aggregate-to-infrastructure: "true"
+    rbac.deckhouse.io/aggregate-to-role: manager
+    rbac.deckhouse.io/aggregate-to-storage: "true"
+    rbac.deckhouse.io/kind: manage
+  name: d8:manage:capability:module:ceph-csi:edit
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - cephcsidriver
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - ceph-csi
+  resources:
+  - moduleconfigs
+  verbs:
+  - create
+  - update
+  - patch
+  - delete

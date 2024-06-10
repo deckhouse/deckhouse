@@ -1,0 +1,3 @@
+module: terraform-manager
+scopes:
+  - infrastructure

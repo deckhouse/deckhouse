@@ -1,0 +1,3 @@
+module: extended-monitoring
+scopes:
+  - observability

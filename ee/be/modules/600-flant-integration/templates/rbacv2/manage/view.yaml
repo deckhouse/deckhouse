@@ -1,0 +1,22 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: flant-integration
+    rbac.deckhouse.io/aggregate-to-deckouse: "true"
+    rbac.deckhouse.io/aggregate-to-role: viewer
+    rbac.deckhouse.io/kind: manage
+  name: d8:manage:capability:module:flant-integration:view
+rules:
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - flant-integration
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

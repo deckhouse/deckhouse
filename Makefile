@@ -190,12 +190,15 @@ lint-markdown-fix: ## Run markdown linter and fix problems automatically.
 
 ##@ Generate
 
-.PHONY: generate render-workflow
+.PHONY: generate render-workflow render-rbacv2
 generate: bin/werf ## Run all generate-* jobs in bulk.
 	cd tools; go generate
 
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh
+
+render-rbacv2: ## Generate RBAC roles
+	cd tools && go run tools/rbacgen
 
 ##@ Security
 bin:

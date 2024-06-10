@@ -1,0 +1,3 @@
+module: loki
+scopes:
+  - others

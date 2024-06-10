@@ -1,0 +1,5 @@
+module: prometheus-metrics-adapter
+scopes:
+  - observability
+crds:
+  - modules/301-prometheus-metrics-adapter/crds/*.yaml

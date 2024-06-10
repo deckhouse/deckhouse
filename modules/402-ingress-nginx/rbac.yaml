@@ -1,0 +1,6 @@
+module: ingress-nginx
+scopes:
+  - networking
+  - infrastructure
+crds:
+  - modules/402-ingress-nginx/crds/*.yaml

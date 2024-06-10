@@ -1,0 +1,3 @@
+module: monitoring-applications
+scopes:
+  - observability

@@ -1,0 +1,3 @@
+module: monitoring-kubernetes-control-plane
+scopes:
+  - observability

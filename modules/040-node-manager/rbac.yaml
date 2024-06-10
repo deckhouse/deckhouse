@@ -1,0 +1,6 @@
+module: node-manager
+scopes:
+  - infrastructure
+crds:
+  - modules/040-node-manager/crds/*.yaml
+  - candi/openapi/node_group.yaml

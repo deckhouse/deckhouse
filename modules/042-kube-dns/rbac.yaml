@@ -1,0 +1,4 @@
+module: kube-dns
+scopes:
+  - kubernetes
+  - networking

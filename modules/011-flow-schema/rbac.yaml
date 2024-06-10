@@ -1,0 +1,4 @@
+module: flow-schema
+scopes:
+  - kubernetes
+  - networking

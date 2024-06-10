@@ -1,0 +1,5 @@
+module: admission-policy-engine
+scopes:
+  - security
+crds:
+  - modules/015-admission-policy-engine/crds/*.yaml

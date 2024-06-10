@@ -1,0 +1,5 @@
+module: deckhouse
+scopes:
+  - deckhouse
+crds:
+  - deckhouse-controller/crds/*.yaml

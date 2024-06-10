@@ -1,0 +1,4 @@
+module: cni-simple-bridge
+scopes:
+  - infrastructure
+  - networking

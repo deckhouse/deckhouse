@@ -1,0 +1,3 @@
+module: monitoring-kubernetes
+scopes:
+  - observability

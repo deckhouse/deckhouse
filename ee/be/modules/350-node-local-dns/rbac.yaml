@@ -1,0 +1,4 @@
+module: node-local-dns
+scopes:
+  - networking
+  - infrastructure
