@@ -1,0 +1,26 @@
+dhctl:
+  fixes:
+    - summary: Fix registry path calculation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8646
+      impact: Registry packages proxy should be restarted.
+ingress-nginx:
+  fixes:
+    - summary: Fix pod descheduling from a not-ready node.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8647
+      impact: Kruise controller's pods will be recreadted.
+    - summary: Fix usage custom logs formats without our fields.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8621
+monitoring-kubernetes:
+  features:
+    - summary: Add ConfigMap labels assembly.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8630
+node-manager:
+  fixes:
+    - summary: Fix RBAC permissions and startup schedule cleanup of NodeUser creation errors.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8639
+registry-packages-proxy:
+  fixes:
+    - summary: Fix registry path calculation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8646
+      impact: Registry packages proxy should be restarted.
+
