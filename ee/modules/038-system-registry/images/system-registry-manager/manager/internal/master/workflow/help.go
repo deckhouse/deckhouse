@@ -134,14 +134,14 @@ func WaitBy(log *logrus.Entry, nodeManagers []NodeManager, cmpFuncs ...interface
 				switch f := cmpFunc.(type) {
 				case CpmFuncNodeClusterStatus:
 					status, err := nodeManagersCache.GetNodeManagerClusterStatus(nodeManager)
-					if err != nil {
+					if err != nil || status == nil {
 						isWaited = false
 						break
 					}
 					isWaited = isWaited && f(status)
 				case CpmFuncNodeRunningStatus:
 					status, err := nodeManagersCache.GetNodeManagerRunningStatus(nodeManager)
-					if err != nil {
+					if err != nil || status == nil {
 						isWaited = false
 						break
 					}
@@ -178,8 +178,7 @@ func SelectBy(nodeManagers []NodeManager, cmpFuncs ...interface{}) ([]NodeManage
 					return nil, nil, err
 				}
 				if status == nil {
-					isSelected = false
-					break
+					return nil, nil, fmt.Errorf("Empty status")
 				}
 				isSelected = isSelected && f(status)
 			case CpmFuncNodeRunningStatus:
@@ -188,8 +187,7 @@ func SelectBy(nodeManagers []NodeManager, cmpFuncs ...interface{}) ([]NodeManage
 					return nil, nil, err
 				}
 				if status == nil {
-					isSelected = false
-					break
+					return nil, nil, fmt.Errorf("Empty status")
 				}
 				isSelected = isSelected && f(status)
 			default:
@@ -234,6 +232,9 @@ func SortBy(nodeManagers []NodeManager, cmpFuncs ...interface{}) ([]NodeManager,
 				if err != nil {
 					return nil, err
 				}
+				if status == nil {
+					return nil, fmt.Errorf("Empty status")
+				}
 				if f(status) {
 					addedToSorted = true
 					sortedNodesMap[cmpFuncPriority] = append(sortedNodesMap[cmpFuncPriority], nodeManager)
@@ -242,6 +243,9 @@ func SortBy(nodeManagers []NodeManager, cmpFuncs ...interface{}) ([]NodeManager,
 				status, err := nodeManagersStatusCache.GetNodeManagerRunningStatus(nodeManager)
 				if err != nil {
 					return nil, err
+				}
+				if status == nil {
+					return nil, fmt.Errorf("Empty status")
 				}
 				if f(status) {
 					addedToSorted = true
@@ -345,7 +349,7 @@ func GetClustersMembers(nodeManagers []NodeManager) ([]ClusterMembers, error) {
 			members = append(members, node)
 			if !leaderFound {
 				clusterStatus, err := cache.GetNodeManagerClusterStatus(node)
-				if err == nil && clusterStatus.IsLeader {
+				if err == nil && clusterStatus != nil && clusterStatus.IsLeader {
 					leader = node
 					leaderFound = true
 				}

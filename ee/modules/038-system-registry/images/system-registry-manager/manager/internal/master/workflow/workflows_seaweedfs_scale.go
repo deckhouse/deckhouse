@@ -72,16 +72,18 @@ func (w *SeaweedfsScaleWorkflow) needCluster(clusterNodes []NodeManager) error {
 		return w.createCluster(clusterNodes)
 	}
 
+	if len(clusterNodes) == len(existNodes) {
+		w.log.Infof("Check existing cluster with nodes %s", GetNodeNames(clusterNodes))
+		if err := w.checkAndSyncCluster(clusterNodes); err != nil {
+			return err
+		}
+	}
+
 	w.log.Infof("Scaling existing cluster with nodes %s", GetNodeNames(clusterNodes))
 	return w.scaleCluster(clusterNodes)
 }
 
 func (w *SeaweedfsScaleWorkflow) scaleCluster(allClusterNodes []NodeManager) error {
-	w.log.Infof("Check and try sync cluster before scaling")
-	if err := w.checkAndSyncCluster(allClusterNodes); err != nil {
-		return err
-	}
-
 	runningNodes, notRunningNodes, err := SelectBy(allClusterNodes, CmpIsRunning)
 	if err != nil {
 		return err
