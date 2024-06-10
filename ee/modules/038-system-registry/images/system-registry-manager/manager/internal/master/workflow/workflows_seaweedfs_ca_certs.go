@@ -79,7 +79,7 @@ func (w *SeaweedfsCertsWorkflow) Start() error {
 			return haveLeader
 		}
 
-		wait, err := WaitBy(w.log, existAndNeedUpdateCert, CmpIsRunning, cpmFunc)
+		wait, err := WaitBy(w.ctx, w.log, existAndNeedUpdateCert, CmpIsRunning, cpmFunc)
 		if err != nil {
 			return err
 		}
