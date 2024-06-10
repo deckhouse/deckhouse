@@ -18,9 +18,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
 	"os"
 
+	"github.com/google/uuid"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"

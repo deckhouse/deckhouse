@@ -18,11 +18,11 @@ package config
 
 import (
 	"fmt"
-	"github.com/google/uuid"
 	"os"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"

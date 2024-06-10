@@ -17,9 +17,8 @@ package deckhouse
 import (
 	"context"
 	"encoding/json"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
-	"github.com/google/uuid"
 
+	"github.com/google/uuid"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 )
 
 // ConvergeDeckhouseConfiguration – reconciles deckhouse in-cluster configmaps and secrets.

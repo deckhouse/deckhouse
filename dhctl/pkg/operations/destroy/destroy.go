@@ -18,9 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"os/exec"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	infra "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"

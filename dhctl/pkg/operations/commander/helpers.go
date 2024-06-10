@@ -17,15 +17,17 @@ package commander
 import (
 	"context"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	"time"
+
 	"github.com/google/uuid"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func NewErrClusterManagedByAnotherCommander(managedByCommanderUUID, requiredCommanderUUID uuid.UUID) error {
