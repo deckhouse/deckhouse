@@ -23,7 +23,6 @@ import (
 type NodeManager struct {
 	ctx        context.Context
 	log        *logrus.Entry
-	nodeName   string
 	workerInfo k8s_info.WorkerInfo
 }
 
@@ -39,7 +38,7 @@ func NewNodeManager(ctx context.Context, workerInfo k8s_info.WorkerInfo) *NodeMa
 }
 
 func (m *NodeManager) GetNodeName() string {
-	return m.nodeName
+	return m.workerInfo.MasterNode.Name
 }
 
 // Info
