@@ -27,31 +27,6 @@ function pause-the-test() {
   done
 }
 
-function check_deckhouse_user() {
-  if id -u deckhouse &>/dev/null && id -g deckhouse &>/dev/null; then
-    uid=$(id -u deckhouse)
-    gid=$(id -g deckhouse)
-    if [[ "$uid" -eq 64535 && "$gid" -eq 64535 ]]; then
-      echo "User deckhouse with UID 64535 and GID 64535 exists."
-      return 0
-    else
-      echo "User deckhouse exists but with different UID/GID."
-      return 1
-    fi
-  else
-    echo "User deckhouse does not exist."
-    return 1
-  fi
-}
-
-function check_deckhouse_user() {
-  if id -u deckhouse &>/dev/null && id -g deckhouse &>/dev/null; then
-    [[ "$(id -u deckhouse)" -eq 64535 && "$(id -g deckhouse)" -eq 64535 ]]
-  else
-    return 1
-  fi
-}
-
 trap pause-the-test EXIT
 
 if ! ingress_inlet=$(kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq -re '.items[0] | .spec.inlet // empty'); then
@@ -77,7 +52,7 @@ for i in $(seq $attempts); do
       # -e flag does not work as expected. See
       # https://github.com/stedolan/jq/pull/1697#issuecomment-1242588319
       #
-      if avail_json="$(curl -k -s -S -m5 -H "Authorization: Bearer $upmeter_auth_token" "https://${upmeter_addr}:8443/public/api/status?peek=1" || echo null | jq -ce)" 2>/dev/null; then
+      if avail_json="$(d8-curl -k -s -S -m5 -H "Authorization: Bearer $upmeter_auth_token" "https://${upmeter_addr}:8443/public/api/status?peek=1" || echo null | jq -ce)" 2>/dev/null; then
         # Transforming the data to a flat array of the following structure  [{ "probe": "{group}/{probe}", "status": "ok/pending" }]
         avail_report="$(jq -re '
           [
@@ -127,16 +102,12 @@ for i in $(seq $attempts); do
 Availability check: $([ "$availability" == "ok" ] && echo "success" || echo "pending")
 EOF
 
-deckhouse_user_status=$([ $(check_deckhouse_user; echo $?) -eq 0 ] && echo "success" || echo "failure")
-echo "Deckhouse user check: $deckhouse_user_status"
-
-
   if [[ -n "$ingress_inlet" ]]; then
     case "$ingress_inlet" in
       LoadBalancer)
         if ingress_service="$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -ojson 2>/dev/null)"; then
           if ingress_lb_addr="$(jq -re '.status.loadBalancer.ingress | if .[0].hostname then .[0].hostname else .[0].ip end' <<< "$ingress_service")"; then
-            if ingress_lb_code="$(curl -o /dev/null -s -w "%{http_code}" "$ingress_lb_addr")"; then
+            if ingress_lb_code="$(d8-curl -o /dev/null -s -w "%{http_code}" "$ingress_lb_addr")"; then
               if [[ "$ingress_lb_code" == "404" ]]; then
                 ingress="ok"
               else
@@ -154,7 +125,7 @@ echo "Deckhouse user check: $deckhouse_user_status"
         ;;
       HostPort|HostWithFailover)
         if master_ip="$(kubectl get node -o json | jq -r '[ .items[] | select(.metadata.labels."node-role.kubernetes.io/master"!=null) | .status.addresses[] | select(.type=="ExternalIP") | .address ] | .[0]')"; then
-          if ingress_hp_code="$(curl -o /dev/null -s -w "%{http_code}" "$master_ip")"; then
+          if ingress_hp_code="$(d8-curl -o /dev/null -s -w "%{http_code}" "$master_ip")"; then
             if [[ "$ingress_hp_code" == "404" ]]; then
               ingress="ok"
             else
@@ -182,8 +153,6 @@ EOF
     exit 0
   fi
 done
-
-
 
 >&2 echo 'Timeout waiting for checks to succeed'
 exit 1

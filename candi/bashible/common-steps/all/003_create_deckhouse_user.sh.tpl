@@ -12,4 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-create_user_and_group deckhouse 64535 deckhouse 64535
+
+create_user_and_group() {
+
+    local username="$1"
+    local userid="$2"
+    local groupname="$3"
+    local groupid="$4"
+
+    uid="$(id -u "${username}" 2>/dev/null)"
+    gid="$(getent group "${groupname}" | cut -d: -f3)"
+
+    if [ "$uid" == "$userid" ] && [ "$gid" == "$groupid" ]; then
+        return
+    fi
+
+    if [ -n "$uid" ] || [ -n "$gid" ]; then
+        bb-log-warning "user or group already exists with different id: uid=${uid}, gid=${gid}"
+        return
+    fi
+
+    groupadd -g "$groupid" "$groupname"
+    useradd -u "$userid" -g "$groupname" "$username"
+}
+
+create_user_and_group deckhouse 64535 deckhouse 64535
