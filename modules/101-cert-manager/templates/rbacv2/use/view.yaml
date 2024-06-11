@@ -6,24 +6,15 @@ metadata:
     heritage: deckhouse
     module: cert-manager
     rbac.deckhouse.io/aggregate-to-role: viewer
-    rbac.deckhouse.io/aggregate-to-security: "true"
-    rbac.deckhouse.io/kind: manage
-  name: d8:manage:capability:module:cert-manager:view
+    rbac.deckhouse.io/kind: use
+  name: d8:use:capability:module:cert-manager:view
 rules:
 - apiGroups:
   - cert-manager.io
   resources:
-  - clusterissuers
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - deckhouse.io
-  resourceNames:
-  - cert-manager
-  resources:
-  - moduleconfigs
+  - certificaterequests
+  - certificates
+  - issuers
   verbs:
   - get
   - list

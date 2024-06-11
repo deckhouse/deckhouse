@@ -22,6 +22,16 @@ rules:
   - delete
   - deletecollection
 - apiGroups:
+  - templates.gatekeeper.sh
+  resources:
+  - constrainttemplates
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
   - deckhouse.io
   resourceNames:
   - admission-policy-engine

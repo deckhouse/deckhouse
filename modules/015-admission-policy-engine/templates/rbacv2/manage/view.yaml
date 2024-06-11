@@ -20,6 +20,14 @@ rules:
   - list
   - watch
 - apiGroups:
+  - templates.gatekeeper.sh
+  resources:
+  - constrainttemplates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - deckhouse.io
   resourceNames:
   - admission-policy-engine
