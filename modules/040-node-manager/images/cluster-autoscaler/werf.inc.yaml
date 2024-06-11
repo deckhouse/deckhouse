@@ -1,5 +1,6 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
+  {{- if $value.clusterAutoscalerPatch }}
 ---
 artifact: {{ $.ModuleName }}/distroless-{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     {{- if semverCompare ">=1.29" $version }}
@@ -37,4 +38,5 @@ docker:
   ENV:
     container: docker
   ENTRYPOINT: ["/cluster-autoscaler"]
+  {{- end }}
 {{- end }}

@@ -17,6 +17,7 @@ k8s:
     status: available
     patch: 16
     bashible: *bashible
+    clusterAutoscalerPatch: 3
     ccm:
       openstack: v1.25.3
       yandex: v0.25.2
@@ -36,6 +37,7 @@ k8s:
     status: available
     patch: 15
     bashible: *bashible
+    clusterAutoscalerPatch: 2
     ccm:
       openstack: v1.26.1
       yandex: v0.26.1
@@ -55,6 +57,7 @@ k8s:
     status: available
     patch: 14
     bashible: *bashible
+    clusterAutoscalerPatch: '0'
     ccm:
       openstack: v1.27.1
       yandex: v0.27.0
@@ -74,6 +77,7 @@ k8s:
     status: available
     patch: 10
     bashible: *bashible
+    clusterAutoscalerPatch: '0'
     ccm:
       openstack: v1.28.0
       yandex: v0.27.0
@@ -93,6 +97,7 @@ k8s:
     status: preview
     patch: 5
     bashible: *bashible
+    clusterAutoscalerPatch: '0'
     ccm:
       openstack: v1.29.0
       yandex: v0.29.0
