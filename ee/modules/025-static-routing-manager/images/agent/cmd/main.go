@@ -21,13 +21,12 @@ import (
 	"fmt"
 	"os"
 	goruntime "runtime"
-	"static-routing-manager-agent/api/v1alpha1"
-	"static-routing-manager-agent/pkg/config"
-	"static-routing-manager-agent/pkg/controller"
-	"static-routing-manager-agent/pkg/kubutils"
-	"static-routing-manager-agent/pkg/logger"
 
-	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/api/v1alpha1"
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/config"
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/controller"
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/kubutils"
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/logger"
 
 	v1 "k8s.io/api/core/v1"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -36,6 +35,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 var (

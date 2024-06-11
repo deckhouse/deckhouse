@@ -1,4 +1,4 @@
-module static-routing-manager-agent
+module github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent
 
 go 1.22.0
 

@@ -21,22 +21,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"static-routing-manager-agent/api/v1alpha1"
-	"static-routing-manager-agent/pkg/config"
-	"static-routing-manager-agent/pkg/logger"
-	"static-routing-manager-agent/pkg/utils"
 	"strconv"
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"k8s.io/apimachinery/pkg/labels"
-
 	"github.com/vishvananda/netlink"
 
-	errors2 "k8s.io/apimachinery/pkg/api/errors"
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/api/v1alpha1"
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/config"
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/logger"
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/utils"
+
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -64,7 +63,7 @@ func RunRoutesReconcilerAgentController(
 
 			nrt := &v1alpha1.SDNInternalNodeRoutingTable{}
 			err := cl.Get(ctx, request.NamespacedName, nrt)
-			if err != nil && !errors2.IsNotFound(err) {
+			if err != nil && !k8serrors.IsNotFound(err) {
 				log.Error(err, fmt.Sprintf("[NRTReconciler] Unable to get SDNInternalNodeRoutingTable, name: %s", request.Name))
 				return reconcile.Result{}, err
 			}
@@ -152,7 +151,7 @@ func runEventRouteReconcile(
 	// Getting all the SDNInternalNodeRoutingTable associated with our node
 	nrtList := &v1alpha1.SDNInternalNodeRoutingTableList{}
 	err = cl.List(ctx, nrtList, client.MatchingLabels{v1alpha1.NodeNameLabel: nodeName})
-	if err != nil && !errors2.IsNotFound(err) {
+	if err != nil && !k8serrors.IsNotFound(err) {
 		log.Error(err, fmt.Sprintf("[NRTReconciler] unable to list SDNInternalNodeRoutingTable for node %s", nodeName))
 		return true, err
 	}

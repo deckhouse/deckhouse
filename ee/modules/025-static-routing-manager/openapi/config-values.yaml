@@ -1,11 +1,11 @@
 type: object
 properties:
   logLevel:
-    type: integer
-    minimum: 0
-    maximum: 4
-    default: 2
-    description: logLevel
+    type: string
+    enum: ["Debug", "Info"]
+    description: |
+      The logging level of the module `static-routing-manager`.
+    default: "Info"
   routingTableIDMin:
     type: integer
     minimum: 256

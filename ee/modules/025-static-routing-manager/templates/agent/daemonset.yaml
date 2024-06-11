@@ -1,6 +1,6 @@
 {{- define "agent" }}
 cpu: 10m
-memory: 50Mi
+memory: 25Mi
 {{- end }}
 ---
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
@@ -17,7 +17,7 @@ spec:
     kind: DaemonSet
     name: agent
   updatePolicy:
-    updateMode: "Initial"
+    updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
     - containerName: agent
@@ -25,7 +25,7 @@ spec:
         {{- include "agent" . | nindent 8 }}
       maxAllowed:
         cpu: 50m
-        memory: 50Mi
+        memory: 100Mi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -60,7 +60,7 @@ spec:
         - name: LOG_LEVEL
           value: {{ .Values.staticRoutingManager.logLevel | quote }}
         - name: PROBE_ADDRESS_PORT
-          value: ":9239"
+          value: "127.0.0.1:9239"
         - name: NODE_NAME
           valueFrom:
             fieldRef:
@@ -69,6 +69,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
+            host: 127.0.0.1
             port: 9239
             scheme: HTTP
           initialDelaySeconds: 60

@@ -16,9 +16,10 @@ package config
 import (
 	"fmt"
 	"os"
-	"static-routing-manager-agent/pkg/logger"
 	"strconv"
 	"time"
+
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/logger"
 )
 
 const (
@@ -48,10 +49,19 @@ func NewConfig() (*Options, error) {
 	var opts Options
 
 	loglevel := os.Getenv(LogLevelENV)
-	if loglevel == "" {
+	switch loglevel {
+	case "Error":
+		opts.Loglevel = logger.ErrorLevel
+	case "Warning":
+		opts.Loglevel = logger.WarningLevel
+	case "Info":
+		opts.Loglevel = logger.InfoLevel
+	case "Debug":
 		opts.Loglevel = logger.DebugLevel
-	} else {
-		opts.Loglevel = logger.Verbosity(loglevel)
+	case "Trace":
+		opts.Loglevel = logger.TraceLevel
+	default:
+		opts.Loglevel = logger.DebugLevel
 	}
 
 	probeAddressPort := os.Getenv(ProbeAddressPortENV)

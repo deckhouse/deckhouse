@@ -27,10 +27,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib/v1alpha1"
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/hooks/lib/v1alpha1"
 )
-
-// NodeInfo
 
 type NodeInfo struct {
 	Name   string
@@ -52,8 +50,6 @@ func ApplyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 
 	return result, nil
 }
-
-// Common func
 
 func GenerateShortHash(input string) string {
 	fullHash := fmt.Sprintf("%x", sha256.Sum256([]byte(input)))

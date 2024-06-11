@@ -30,8 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib"
-	"github.com/deckhouse/deckhouse/modules/025-static-routing-manager/hooks/lib/v1alpha1"
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/hooks/lib"
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/hooks/lib/v1alpha1"
 )
 
 const (
@@ -76,7 +76,8 @@ type irsStatusPlus struct {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/static-routing-manager",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Queue:        "/modules/static-routing-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "iprulesets",
