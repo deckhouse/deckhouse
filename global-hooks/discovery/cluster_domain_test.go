@@ -17,12 +17,15 @@
 User-stories:
 1. There is coredns CM in cluster. It has `kubernetes my-cluster.xxx in-addr.arpa ip6.arpa` string with cluster domain. Hook must parse and store domain to `global.discovery.clusterDomain`.
 2. There is kube-dns Pod in cluster. It has `--domain=my-cluster.xxx` arg with cluster domain. Hook must parse and store domain to `global.discovery.clusterDomain`.
+3. The global cluster Configuration variables have a value for clusterDomain, which we use to define `global.discovery.clusterDomain`
 
 */
 
 package hooks
 
 import (
+	"encoding/base64"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -161,4 +164,44 @@ spec:
 			Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("mycluster.cm"))
 		})
 	})
+
+	Context("Cluster with clusterDomain in clusterConfiguration", func() {
+		f := HookExecutionConfigInit(`{"global": {"discovery": {"clusterDomain": "test.local"}}}`, initConfigValuesString)
+
+		BeforeEach(func() {
+			var (
+				stateAClusterConfiguration = `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+cloud:
+  provider: OpenStack
+  prefix: kube
+podSubnetCIDR: 10.111.0.0/16
+podSubnetNodeCIDRPrefix: "24"
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: "1.29"
+clusterDomain: "test.local"
+`
+				stateA = `
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cluster-configuration
+  namespace: kube-system
+data:
+  "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration))
+			)
+
+			f.BindingContexts.Set(f.KubeStateSet(stateA + statePod))
+			f.RunHook()
+		})
+
+		It("`global.discovery.clusterDomain` must be not set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.clusterDomain").String()).
+				To(Equal("test.local"))
+		})
+	})
+
 })

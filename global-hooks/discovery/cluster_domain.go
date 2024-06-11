@@ -102,8 +102,16 @@ func discoveryClusterDomain(input *go_hook.HookInput) error {
 	clusterDomainCoreCMSnap := input.Snapshots[clusterDomainCoreCMSnapName]
 	clusterDomainDNSPodsSnap := input.Snapshots[clusterDomainDNSPodsSnapName]
 
-	const clusterDomainPath = "global.discovery.clusterDomain"
+	// We have a hook for handling clusterConfiguration.
+	// During the operation of this hook, there is a blocking check for filling in the clusterDomain field.
+	// So now we just need to check that the `clusterConfiguration` is present in the secrets.
+	// And if this is the case, then the `global.discovery.clusterDomain` will be filled.
+	currentConfig, ok := input.Snapshots["clusterConfiguration"]
+	if ok && len(currentConfig) > 0 {
+		return nil
+	}
 
+	const clusterDomainPath = "global.discovery.clusterDomain"
 	if input.Values.Exists(clusterDomainPath) {
 		return nil
 	}
