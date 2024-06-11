@@ -22,7 +22,7 @@ function ip_in_subnet(){
 }
 
 function metadata_request(){
-  cat - <<EOF | python3
+  cat - <<EOFILE | python3
 try:
   from urllib.request import urlopen, Request
 except ImportError as e:
@@ -32,7 +32,7 @@ request = Request('http://169.254.169.254/computeMetadata/v1/instance/?recursive
 response = urlopen(request, timeout=10).read()
 
 print(response.decode('utf-8'))
-EOF
+EOFILE
 }
 
 if [ -f "/etc/netplan/50-cloud-init.yaml" ]; then
