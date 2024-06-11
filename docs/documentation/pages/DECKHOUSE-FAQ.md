@@ -419,7 +419,7 @@ This feature is only available in Standard Edition (SE), Enterprise Edition (EE)
 1. Pull Deckhouse images using the `d8 mirror pull` command.
 
    By default, `d8 mirror` pulls only the latest available patch versions for every actual Deckhouse release and the current set of officially supplied modules.
-   For example, for Deckhouse 1.52, only one version, `1.52.10`, will be pulled, as it is sufficient to update Deckhouse from version 1.51.
+   For example, for Deckhouse 1.60, only one version, `1.60.4`, will be pulled, as it is sufficient to update Deckhouse from version `1.59`.
 
    The command below will pull Deckhouse tarballs for versions that are on the release channels (check [flow.deckhouse.io](https://flow.deckhouse.io) for the current status of the release channels):
 
