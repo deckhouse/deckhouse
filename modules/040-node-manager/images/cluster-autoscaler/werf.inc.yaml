@@ -18,6 +18,11 @@ shell:
   install:
   - mkdir /src
   - cd /src
+{{- if semverCompare ">=1.28" $version }}
+  - git clone --depth 1 --branch v1.27.{{ $value.clusterAutoscalerPatch }} {{ $.SOURCE_REPO }}/gardener/autoscaler.git .
+{{- else }}
+  - git clone --depth 1 --branch v{{ $version }}.{{ $value.clusterAutoscalerPatch }} {{ $.SOURCE_REPO }}/gardener/autoscaler.git .
+{{- end }}
   - cd cluster-autoscaler
   - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o cluster-autoscaler
 ---
@@ -32,5 +37,4 @@ docker:
   ENV:
     container: docker
   ENTRYPOINT: ["/cluster-autoscaler"]
-  {{- end }}
 {{- end }}
