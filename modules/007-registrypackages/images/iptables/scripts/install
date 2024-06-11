@@ -19,9 +19,13 @@ cp -f xtables-nft-multi /opt/deckhouse/bin
 
 kubeletChainsRegex='^:(KUBE-IPTABLES-HINT|KUBE-KUBELET-CANARY)'
 
+NFT_KERNEL_LIMIT=3.14 #   nf_tables_ipv6, nf_tables_bridge, nf_tables_arp allow since Linux kernel >= 3.14.
+CURRENT_KERNEL_VERSION=$(uname -r | cut -c1-4)
 IPTABLES_LEGACY_RULE=$( (/opt/deckhouse/bin/xtables-legacy-multi iptables-save || true ) 2>/dev/null | grep  -E ${kubeletChainsRegex} | wc -l )
 
 if [[ ${IPTABLES_LEGACY_RULE} -ne 0 ]]; then
+  iptablesModeBin="xtables-legacy-multi"
+elif (( $(echo "$CURRENT_KERNEL_VERSION < $NFT_KERNEL_LIMIT" |bc -l) )); then
   iptablesModeBin="xtables-legacy-multi"
 else
   # use iptables-nft as default
