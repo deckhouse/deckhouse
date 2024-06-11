@@ -1,10 +1,75 @@
 positive:
   configValues:
   - {}
+  - logLevel: Debug
+    routingTableIDMin: 1000
+    routingTableIDMax: 1100
   values:
   - { internal: {} }
+  - internal:
+      nodeIPRuleSets:
+        - name: myiprule-69028a3136
+          nodeName: sandbox-worker-02334ee2-7694f-mt9rm
+          ownerIRSName: myiprule
+          ownerIRSUID: 641bfb93-a25a-483a-a433-a8e6dab7dd50
+          rules:
+            - actions:
+                lookup:
+                  ipRoutingTableID: 100500
+                  routingTableName: external
+              priority: 50
+              selectors:
+                dportRange:
+                  end: 400
+                  start: 300
+                from:
+                  - 192.168.111.0/24
+                  - 192.168.222.0/24
+                fwMark: "0x42/0xff"
+                ipProto: 6
+                iif: "eth1"
+                not: false
+                oif: "cilium_net"
+                sportRange:
+                  end: 200
+                  start: 100
+                to:
+                  - 8.8.8.8/32
+                  - 172.16.8.0/21
+                tos: "0x10"
+                uidRange:
+                  end: 1000
+                  start: 1000
+      nodeRoutingTables:
+        - ipRoutingTableID: 100500
+          name: external-952302c494
+          nodeName: sandbox-worker-02334ee2-7694f-mt9rm
+          ownerRTName: external
+          ownerRTUID: 4d734e48-21aa-4cb3-ac95-138d30246bd6
+          routes:
+            - destination: 0.0.0.0/0
+              gateway: 192.168.199.1
+            - destination: 192.168.0.0/24
+              gateway: 192.168.199.1
 negative:
   configValues:
   - { somethingInConfig: yes }
+  - logLevel: FooBar
+  - routingTableIDMin: Ten
+  - routingTableIDMax: 4294967296
   values:
   - { somethingInConfig: yes }
+  - internal:
+      nodeRoutingTables:
+        - ipRoutingTableID: 100500
+          routes:
+            - destination: 192.168.199.0/33
+              gateway: 192.168.199.1
+  - internal:
+      nodeIPRuleSets:
+        - rules:
+            - actions:
+                lookup:
+                  ipRoutingTableID: 100500
+              selectors:
+                fwMark: "0x42/0yff"
