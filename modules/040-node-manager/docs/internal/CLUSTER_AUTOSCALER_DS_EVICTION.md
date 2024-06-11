@@ -1,33 +1,28 @@
 ---
-title: "Cluster Autoscaler: примеры"
-description: Примеры настройки Cluster Autoscaler в Kubernetes. Аннотации для DaemonSet.
+title: "Cluster Autoscaler: Examples"
+description: Examples of configuring Cluster Autoscaler in Kubernetes. Annotations for DaemonSet.
 ---
 
-## Описание
+## Description
 
 <https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-enabledisable-eviction-for-a-specific-daemonset>
 
-Cluster Autoscaler выселяет DaemonSets по аннотации:
+Cluster Autoscaler evicts DaemonSets using the annotation:
 
 `"cluster-autoscaler.kubernetes.io/enable-ds-eviction": "true"`
 
-Можно отключить выселение:
+You can disable eviction with:
 
 `"cluster-autoscaler.kubernetes.io/enable-ds-eviction": "false"`
 
-Аннотацию нужно указать на подах DaemonSet.
+This annotation should be specified on DaemonSet pods.
 
-Чтобы не назначать аннотацию на каждый d8 DaemonSet мы делаем патч, который исключает выселение ds подов из namespace d8-*.
+## Why This Matters
 
-## Почему это важно
+CNI and CSI usually run in DaemonSet pods, as do monitoring agents. When Cluster Autoscaler reduces the number of nodes, it starts by evicting pods. If CNI/CSI pods are evicted before the pods with user workloads, the user pods cannot shut down properly.
+Reproducing the Issue
 
-Как правило, CNI и CSI запускаются в DaemonSet подах. DaemonSet также используется для агентов мониторинга. Когда Cluster Autoscaler начинает процесс уменьшения количества узлов, он сначала выселяет поды. Если поды с CNI/CSI будут выселены раньше, чем поды с пользовательской нагрузкой, последние не смогут корректно завершиться.
-
-## Как воспроизвести проблему
-
-Проблема возникает, если патч не работает или DaemonSet поды не имеют аннотации cluster-autoscaler.kubernetes.io/enable-ds-eviction.
-
-### Запустите поды, которые заставят Cluster Autoscaler добавить новые узлы, и дождитесь готовности узлов
+### Launch pods that will cause Cluster Autoscaler to add new nodes and wait until the nodes are ready
 
 ```yaml
 apiVersion: apps/v1
@@ -66,7 +61,7 @@ spec:
         args: ["-c", "while true; do echo 'Consuming resources'; sleep 3600; done"]
 ```
 
-### Запустите поды, которые долго завершаются
+### Launch pods that take a long time to terminate
 
 ```yaml
 ---
@@ -137,7 +132,7 @@ spec:
           name: long-terminating-script
 ```
 
-### Запустите пустые поды для симуляции пользовательской нагрузки
+### Launch dummy pods to simulate user workloads
 
 ```yaml
 apiVersion: apps/v1
@@ -178,12 +173,12 @@ spec:
         args: ["-c", "while true; do echo 'Dummy pod'; sleep 3600; done"]
 ```
 
-### Уменьшите количество реплик для resource-consumer
+### Scale down the resource-consumer deployment
 
 ```bash
 kubectl scale deployment resource-consumer --replicas 0
 ```
 
-### Итог
+### Outcome
 
-В результате вы увидите, что поды dummy-pod и ресурсы DaemonSet (включая CNI/CSI, Prometheus exporter и log-shipper) удалены с ноды, в то время как long-terminating поды всё ещё пытаются завершить работу.
+You will observe that the dummy-pod and DaemonSet resources (including CNI/CSI, Prometheus exporter, and log-shipper) are evicted while the long-terminating pods are still trying to finish.
