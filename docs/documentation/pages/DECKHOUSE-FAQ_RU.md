@@ -891,9 +891,9 @@ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-control
 
    Вывод команды должен быть пуст.
 
-### Как получить доступ к контроллеру Deckhouse в мультимастер кластере?
+### Как получить доступ к контроллеру Deckhouse в multi-master кластере?
 
-В кластерах с несколькими мастер-нодами Deckhouse запускается в режиме высокой доступности. Поэтому для привычного доступна к контроллеру Deckhouse нужно использовать команду:
+В кластерах с несколькими master-узлами Deckhouse запускается в режиме высокой доступности. Поэтому для привычного доступна к контроллеру Deckhouse нужно использовать команду:
 
 ```shell
 kubectl -n d8-system exec -it $(kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath='{.spec.holderIdentity}' | awk -F'.' '{ print $1 }') -c deckhouse -- deckhouse-controller queue list
