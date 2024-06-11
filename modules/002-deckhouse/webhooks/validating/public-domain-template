@@ -53,8 +53,8 @@ EOF
 function __main__() {
   mcName=$(context::jq -r '.review.request.object.metadata.name')
   if [[ "$mcName" == "global" ]]; then
-    kubeDNSConf=$(context::jq -r '.snapshots.["d8-kube-dns-cm-wh"][].filterResult.["kube-dns-conf"]')
-    dnsDomains=$(echo $kubeDNSConf | grep -oP  'kubernetes .*? ip6.arpa')
+    kubeDNSConf=$(context::jq -r '.snapshots.["d8-kube-dns-cm-wh"][]?.filterResult.["kube-dns-conf"] // empty')
+    dnsDomains=$(echo $kubeDNSConf | grep -oP 'kubernetes .*? ip6.arpa')
     publicDomainTemplate=$(context::jq -r '.review.request.object.spec.settings.modules.publicDomainTemplate' | sed s/%s.//)
 
     for domain in $dnsDomains; do
