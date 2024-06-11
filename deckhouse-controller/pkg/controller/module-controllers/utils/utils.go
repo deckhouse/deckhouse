@@ -29,6 +29,7 @@ const (
 func GenerateRegistryOptions(ms *v1alpha1.ModuleSource) []cr.Option {
 	opts := []cr.Option{
 		cr.WithAuth(ms.Spec.Registry.DockerCFG),
+		cr.WithUserAgent("deckhouse-controller/ModuleControllers"),
 	}
 
 	if ms.Spec.Registry.CA != "" {

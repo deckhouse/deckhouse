@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 	"path"
@@ -149,7 +150,8 @@ func DefineTestUploadExecCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		var stdout []byte
 		stdout, err = cmd.Execute()
 		if err != nil {
-			if ee, ok := err.(*exec.ExitError); ok {
+			var ee *exec.ExitError
+			if errors.As(err, &ee) {
 				return fmt.Errorf("script '%s' error: %w stderr: %s", ScriptPath, err, string(ee.Stderr))
 			}
 			return fmt.Errorf("script '%s' error: %w", ScriptPath, err)
@@ -187,7 +189,8 @@ func DefineTestBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		bundleDir := path.Base(BundleDir)
 		stdout, err := cmd.ExecuteBundle(parentDir, bundleDir)
 		if err != nil {
-			if ee, ok := err.(*exec.ExitError); ok {
+			var ee *exec.ExitError
+			if errors.As(err, &ee) {
 				return fmt.Errorf("bundle '%s' error: %w\nstderr: %s\n", bundleDir, err, string(ee.Stderr))
 			}
 			return fmt.Errorf("bundle '%s' error: %w", bundleDir, err)

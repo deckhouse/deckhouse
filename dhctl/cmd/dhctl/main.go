@@ -165,7 +165,12 @@ func runApplication(kpApp *kingpin.Application) {
 			logPath = path.Join(app.TmpDirName, logFile)
 		}
 
-		err := log.WrapWithTeeLogger(logPath, 1024)
+		outFile, err := os.Create(logPath)
+		if err != nil {
+			return err
+		}
+
+		err = log.WrapWithTeeLogger(outFile, 1024)
 		if err != nil {
 			return err
 		}

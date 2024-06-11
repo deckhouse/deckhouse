@@ -1,0 +1,39 @@
+{{- $version := "1.47.0" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - mke2fs
+  - fsck
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    mke2fs: {{ $version }}
+    fsck: {{ $version }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_ALPINE_DEV }}
+git:
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  setup:
+    - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/ext2/e2fsprogs.git src
+    - cd /src
+    - CFLAGS='-static' LDFLAGS="-static" ./configure
+    - make
+    - strip ./misc/mke2fs && strip ./misc/fsck
+    - mv ./misc/mke2fs /mke2fs && mv ./misc/fsck /fsck
+    - chmod +x /mke2fs /fsck  /install /uninstall

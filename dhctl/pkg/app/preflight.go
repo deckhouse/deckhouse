@@ -66,7 +66,7 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(SSHCredentialsCheckArgName, "Skip verifying PublicDomainTemplate check").
 		Envar(configEnvName("PREFLIGHT_SKIP_SSH_CREDENTIAL_CHECK")).
 		BoolVar(&PreflightSkipSSHCredentialsCheck)
-	cmd.Flag(RegistryCredentialsCheckArgName, "Skip verifying regestry credentials").
+	cmd.Flag(RegistryCredentialsCheckArgName, "Skip verifying registry credentials").
 		Envar(configEnvName("PREFLIGHT_SKIP_REGISTRY_CREDENTIALS")).
 		BoolVar(&PreflightSkipRegistryCredentials)
 	cmd.Flag(ContainerdExistCheckArgName, "Skip verifying contanerd exist").

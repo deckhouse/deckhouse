@@ -15,11 +15,9 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -81,20 +79,9 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		var data []byte
-		switch app.OutputFormat {
-		case "yaml":
-			data, err = yaml.Marshal(statistic)
-			if err != nil {
-				return err
-			}
-		case "json":
-			data, err = json.Marshal(statistic)
-			if err != nil {
-				return err
-			}
-		default:
-			return fmt.Errorf("Unknown output format %s", app.OutputFormat)
+		data, err := statistic.Format(app.OutputFormat)
+		if err != nil {
+			return fmt.Errorf("Failed to format check result: %w", err)
 		}
 
 		fmt.Print(string(data))

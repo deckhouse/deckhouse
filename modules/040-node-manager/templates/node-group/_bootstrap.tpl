@@ -111,7 +111,7 @@ function run_log_output() {
   # Start output bootstrap logs
   */}}
   if type nc >/dev/null 2>&1; then
-    tail -n 100 -f ${TMPDIR}/bootstrap.log | nc -l 8000 &
+    tail -n 100 -f ${TMPDIR}/bootstrap.log | nc -l -p 8000 &
     bootstrap_job_log_pid=$!
   fi
 }
