@@ -42,6 +42,8 @@ spec:
       maxUnavailable: 1
   template:
     metadata:
+      annotation:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: egress-gateway-agent
     spec:

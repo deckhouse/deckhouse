@@ -49,6 +49,7 @@ spec:
         app: fencing-agent
         node-group-name: {{ $ng.name }}
       annotations:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
         container.apparmor.security.beta.kubernetes.io/fencing-agent: "unconfined"
     spec:
       {{- include "helm_lib_priority_class" (tuple $ctx "system-cluster-critical") | nindent 6 }}

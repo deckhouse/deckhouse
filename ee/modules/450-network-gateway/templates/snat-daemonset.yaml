@@ -42,6 +42,8 @@ spec:
     metadata:
       labels:
         app: snat
+      annotations:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet

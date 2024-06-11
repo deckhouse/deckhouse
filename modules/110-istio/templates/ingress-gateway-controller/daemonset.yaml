@@ -54,6 +54,8 @@ spec:
       istio.deckhouse.io/ingress-gateway-class: "{{ $ingressGatewayClass }}"
   template:
     metadata:
+      annotation:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: ingress-gateway-controller
         instance: {{ $controller.name }}

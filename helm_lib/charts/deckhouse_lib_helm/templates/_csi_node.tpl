@@ -74,6 +74,8 @@ spec:
       app: {{ $fullname }}
   template:
     metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: {{ $fullname }}
     spec:

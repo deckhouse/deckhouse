@@ -41,6 +41,8 @@ spec:
       app: user-authz-webhook
   template:
     metadata:
+      annotation:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: user-authz-webhook
     spec:

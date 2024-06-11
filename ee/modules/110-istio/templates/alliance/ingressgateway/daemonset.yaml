@@ -44,6 +44,8 @@ spec:
       app: ingressgateway
   template:
     metadata:
+      annotation:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: ingressgateway
         sidecar.istio.io/inject: "false"

@@ -41,6 +41,8 @@ spec:
       app: speaker
   template:
     metadata:
+      annotation:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: speaker
     spec:

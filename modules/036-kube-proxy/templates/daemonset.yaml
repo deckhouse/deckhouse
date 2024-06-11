@@ -44,6 +44,8 @@ spec:
     type: RollingUpdate
   template:
     metadata:
+      annotation:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         k8s-app: kube-proxy
     spec:

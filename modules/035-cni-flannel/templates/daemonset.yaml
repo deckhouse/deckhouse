@@ -42,6 +42,8 @@ spec:
       app: flannel
   template:
     metadata:
+      annotation:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         tier: node
         app: flannel

@@ -37,6 +37,7 @@ spec:
   template:
     metadata:
       annotations:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
         safe-agent-updater-daemonset-generation: {{ include "agent_daemonset_template" (list . "undefined") | sha256sum | quote }}
       labels:
         app: safe-agent-updater

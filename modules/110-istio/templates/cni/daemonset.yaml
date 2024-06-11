@@ -53,6 +53,8 @@ spec:
     type: RollingUpdate
   template:
     metadata:
+      annotation:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: istio-cni-node
         sidecar.istio.io/inject: "false"
