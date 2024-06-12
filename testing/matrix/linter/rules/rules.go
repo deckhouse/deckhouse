@@ -580,9 +580,6 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 			fmt.Sprintf("IsHostNetwork failed: %v", err),
 		)
 	}
-	if !hostNetworkUsed {
-		return errors.EmptyRuleError
-	}
 
 	containers, err := object.GetContainers()
 	if err != nil {
@@ -593,23 +590,33 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 			fmt.Sprintf("GetContainers failed: %v", err),
 		)
 	}
+	initContainers, err := object.GetInitContainers()
+	if err != nil {
+		return errors.NewLintRuleError(
+			"MANIFEST003",
+			object.Identity(),
+			nil,
+			fmt.Sprintf("GetInitContainers failed: %v", err),
+		)
+	}
+	containers = append(containers, initContainers...)
 
 	for _, c := range containers {
 		for _, p := range c.Ports {
-			if hostNetworkUsed && p.ContainerPort >= 10500 {
+			if hostNetworkUsed && (p.ContainerPort < 4200 || p.ContainerPort >= 4300) {
 				return errors.NewLintRuleError(
 					"CONTAINER007",
 					object.Identity()+"; container = "+c.Name,
 					p.ContainerPort,
-					"Pod running in hostNetwork and it's container uses port >= 10500",
+					"Pod running in hostNetwork and it's container port doesn't fit the range [4200,4299]",
 				)
 			}
-			if p.HostPort >= 10500 {
+			if p.HostPort < 4200 || p.HostPort >= 4300 {
 				return errors.NewLintRuleError(
 					"CONTAINER007",
 					object.Identity()+"; container = "+c.Name,
 					p.HostPort,
-					"Container uses hostPort >= 10500",
+					"Container uses hostPort that doesn't fit the range [4200,4299]",
 				)
 			}
 		}
