@@ -611,7 +611,7 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 					"Pod running in hostNetwork and it's container port doesn't fit the range [4200,4299]",
 				)
 			}
-			if p.HostPort < 4200 || p.HostPort >= 4300 {
+			if p.HostPort != 0 && (p.HostPort < 4200 || p.HostPort >= 4300) {
 				return errors.NewLintRuleError(
 					"CONTAINER007",
 					object.Identity()+"; container = "+c.Name,
