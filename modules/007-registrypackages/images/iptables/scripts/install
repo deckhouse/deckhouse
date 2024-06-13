@@ -19,7 +19,7 @@ cp -f xtables-nft-multi /opt/deckhouse/bin
 
 kubeletChainsRegex='^:(KUBE-IPTABLES-HINT|KUBE-KUBELET-CANARY)'
 NFT_KERNEL_LIMIT=3.14 # nf_tables_ipv6, nf_tables_bridge, nf_tables_arp allow since Linux kernel >= 3.14.
-CURRENT_KERNEL_VERSION=$(uname -r | awk -F"-" '{print $1}') #version kernel view: a.b.c-generic to a.b.c.
+CURRENT_KERNEL_VERSION=$(uname -r | awk -F"-" '{print $1}') #version kernel view format: a.b.c-generic to a.b.c.
 IPTABLES_LEGACY_RULE=$( (/opt/deckhouse/bin/xtables-legacy-multi iptables-save || true ) 2>/dev/null | grep  -E ${kubeletChainsRegex} | wc -l )
 
 function check_python() {
