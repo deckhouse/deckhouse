@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -43,6 +44,8 @@ func DefineMirrorCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	app.DefineMirrorFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		printMirrorDeprecationNotice()
+
 		if app.MirrorRegistry != "" {
 			return log.Process("mirror", "Push mirrored Deckhouse images from local filesystem to private registry", func() error {
 				return mirrorPushDeckhouseToPrivateRegistry()
@@ -55,6 +58,16 @@ func DefineMirrorCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	})
 
 	return cmd
+}
+
+func printMirrorDeprecationNotice() {
+	log.ErrorF(
+		"%sWARNING: dhctl mirror is deprecated and will be removed in Deckhouse Kubernetes Platform v1.64.\n"+
+			"All of it's functions are now moved into the Deckhouse CLI\n"+
+			"https://deckhouse.io/documentation/v1/deckhouse-cli/%s\n",
+		strings.Repeat("=", 80)+strings.Repeat("\n", 6),
+		strings.Repeat("\n", 6)+strings.Repeat("=", 80),
+	)
 }
 
 func mirrorPushDeckhouseToPrivateRegistry() error {
