@@ -92,7 +92,6 @@
 {{- $csiNodeConfig := dict }}
 {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
 {{- $_ := set $csiNodeConfig "driverFQDN" "disk.csi.azure.com" }}
-{{- $_ := set $csiNodeConfig "serviceAccount" "csi" }}
 {{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "csi_node_args" . | fromYamlArray) }}
 {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
 {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
