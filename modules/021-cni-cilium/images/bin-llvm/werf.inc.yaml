@@ -44,6 +44,8 @@ shell:
       -DCMAKE_BUILD_TYPE="Release" \
       -DLLVM_BUILD_RUNTIME="OFF" \
       -DCMAKE_INSTALL_PREFIX="/usr/local" \
+      -DLLVM_BUILD_STATIC="ON" \
+      -DLLVM_STATIC_LINK_CXX_STDLIB="ON" \
       -DLLVM_CCACHE_BUILD="ON" \
       -DLLVM_CCACHE_DIR="/tmp/ccache-dir" \
       -DLLVM_CCACHE_MAXSIZE="0"
