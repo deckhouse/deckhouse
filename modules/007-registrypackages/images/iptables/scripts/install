@@ -35,16 +35,8 @@ function check_python() {
 
 function isLegacyKernel() {
   check_python
-  cat - <<EOF | $python_binary
-try:
-    from pkg_resources import parse_version as V
-except ImportError as e:
-    from distutils.version import StrictVersion as V 
-# The distutils package is deprecated and slated for removal in Python 3.12.
-exit(0) if V('$CURRENT_KERNEL_VERSION') < V('$NFT_KERNEL_LIMIT') else exit(1)
-EOF
+  $python_binary -c "exit(0) if tuple(map(int, \"$CURRENT_KERNEL_VERSION\".split('.'))) < tuple(map(int, \"$NFT_KERNEL_LIMIT\".split('.')))  else exit(1)"
 }
-
 
 if [[ ${IPTABLES_LEGACY_RULE} -ne 0 ]]; then
   iptablesModeBin="xtables-legacy-multi"
