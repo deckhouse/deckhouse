@@ -18,6 +18,9 @@ cp -f xtables-legacy-multi /opt/deckhouse/bin
 cp -f xtables-nft-multi /opt/deckhouse/bin
 
 kubeletChainsRegex='^:(KUBE-IPTABLES-HINT|KUBE-KUBELET-CANARY)'
+NFT_KERNEL_LIMIT=3.14 # nf_tables_ipv6, nf_tables_bridge, nf_tables_arp allow since Linux kernel >= 3.14.
+CURRENT_KERNEL_VERSION=$(uname -r | awk -F"-" '{print $1}') #version kernel view: a.b.c-generic to a.b.c.
+IPTABLES_LEGACY_RULE=$( (/opt/deckhouse/bin/xtables-legacy-multi iptables-save || true ) 2>/dev/null | grep  -E ${kubeletChainsRegex} | wc -l )
 
 function check_python() {
   for pybin in python3 python2 python; do
@@ -30,15 +33,22 @@ function check_python() {
   return 1
 }
 
-check_python
+function isLegacyKernel() {
+  check_python
+  cat - <<EOF | $python_binary
+try:
+    from pkg_resources import parse_version as V
+except ImportError as e:
+    from distutils.version import StrictVersion as V 
+# The distutils package is deprecated and slated for removal in Python 3.12.
+exit(0) if V('$CURRENT_KERNEL_VERSION') < V('$NFT_KERNEL_LIMIT') else exit(1)
+EOF
+}
 
-NFT_KERNEL_LIMIT=3.14 #   nf_tables_ipv6, nf_tables_bridge, nf_tables_arp allow since Linux kernel >= 3.14.
-CURRENT_KERNEL_VERSION=$(uname -r | cut -c1-4)
-IPTABLES_LEGACY_RULE=$( (/opt/deckhouse/bin/xtables-legacy-multi iptables-save || true ) 2>/dev/null | grep  -E ${kubeletChainsRegex} | wc -l )
 
 if [[ ${IPTABLES_LEGACY_RULE} -ne 0 ]]; then
   iptablesModeBin="xtables-legacy-multi"
-elif ( $python_binary -c "exit(0) if $CURRENT_KERNEL_VERSION < 3.14 else exit(1)" ); then
+elif (isLegacyKernel); then
   iptablesModeBin="xtables-legacy-multi"
 else
   # use iptables-nft as default
