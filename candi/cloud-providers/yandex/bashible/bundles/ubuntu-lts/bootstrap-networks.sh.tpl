@@ -23,10 +23,7 @@ function ip_in_subnet(){
 
 function metadata_request(){
   cat - <<EOFILE | python3
-try:
-  from urllib.request import urlopen, Request
-except ImportError as e:
-  from urllib2 import urlopen, Request
+from urllib.request import urlopen, Request
 
 request = Request('http://169.254.169.254/computeMetadata/v1/instance/?recursive=true', headers={'Metadata-Flavor': 'Google'})
 response = urlopen(request, timeout=10).read()
