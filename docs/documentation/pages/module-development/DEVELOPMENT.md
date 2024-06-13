@@ -5,7 +5,7 @@ permalink: en/module-development/development/
 
 {% raw %}
 
-When developing modules, you may want to load and deploy a module bypassing the release channels. The [ModulePullOverride](../../cr.html#modulepulloverride) resource is used for this purpose.
+When developing modules, you may want to pull and deploy a module bypassing the release channels. The [ModulePullOverride](../../cr.html#modulepulloverride) resource is used for this purpose.
 
 An example:
 
@@ -39,16 +39,16 @@ kubectl annotate mop <name> renew=""
 
 ## How it works
 
-При разработке этого ресурса указанный модуль не будет учитывать *ModuleUpdatePolicy*, а также не будет загружать и создавать объекты *ModuleRelease*.
+When developing this resource, the specified module will not consider *ModuleUpdatePolicy*, nor will it load or create *ModuleRelease* objects.
 
-Вместо этого модуль будет загружаться при каждом изменении параметра `imageDigest` и будет применяться в кластере.
-При этом в статусе ресурса [ModuleSource](../../cr.html#modulesource) этот модуль получит признак `overridden: true`, который укажет на то, что используется ресурс [ModulePullOverride](../../cr.html#modulepulloverride).
+Instead, the module will be pulled every time the `imageDigest` parameter is changed and it will be applied in the cluster.
+At the same time, that module will get the `overridden: true` attribute in the status of the [ModuleSource](../../cr.html#modulesource) resource, indicating that the [ModulePullOverride](../../cr.html#modulepulloverride) resource is being used.
 
-После удаления *ModulePullOverride* модуль продолжит функционировать, но если для него применена политика [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), то при наличии загрузятся новые релизы, которые заменят текущую "версию разработчика".
+The module will keep running after *ModulePullOverride* is removed. However, if the [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy) policy is applied to the module, new releases (if available) will be pulled to replace the current "developer version".
 
-### Пример
+### An example
 
-1. В [ModuleSource](../../cr.html#modulesource) присутствуют два модуля `echo` и `hello-world`. Для них определена политика обновления, они загружаются и устанавливаются в DKP:
+1. Suppose there are two modules, `echo` and `hello-world`, defined in [ModuleSource](../../cr.html#modulesource). The update policy is set for them, and they are pulled in and installed in DKP:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -70,7 +70,7 @@ kubectl annotate mop <name> renew=""
      modulesCount: 2
    ```
 
-1. Создайте ресурс [ModulePullOverride](../../cr.html#modulepulloverride) для модуля `echo`:
+1. Create a [ModulePullOverride](../../cr.html#modulepulloverride) resource for the `echo` module:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -82,10 +82,10 @@ kubectl annotate mop <name> renew=""
      source: test
    ```
 
-   Этот ресурс будет проверять тег образа `registry.example.com/deckhouse/modules/echo:main-patch-03354` (`ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag`).
+   This resource will be validating the `registry.example.com/deckhouse/modules/echo:main-patch-03354` image tag (`ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag`).
 
-1. При каждом обновлении статус этого ресурса будет меняться:
-
+1. The status of this resource will change with each update:
+   
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
    kind: ModulePullOverride
@@ -101,12 +101,12 @@ kubectl annotate mop <name> renew=""
      updatedAt: "2023-12-07T08:41:21Z"
    ```
 
-   где:
-   - **imageDigest** — уникальный идентификатор образа контейнера, который был загружен.
-   - **lastUpdated** — время последней загрузки образа.
+   where:
+   - **imageDigest** is the unique identifier of the container image that was pulled.
+   - **lastUpdated** is the time when the image was last pulled.
 
-1. При этом *ModuleSource* приобретет вид:
-
+1. In this case, *ModuleSource* would look as follows:
+   
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleSource
@@ -129,11 +129,11 @@ kubectl annotate mop <name> renew=""
 
 {% endraw %}
 
-## Артефакты модуля в container registry
+## Module artifacts in the container registry
 
-После сборки модуля его артефакты должны быть загружены в container registry по пути, который является *источником* для загрузки и запуска модулей в DKP. Путь, по которому загружаются артефакты модулей в registry, указывается в ресурсе [ModuleSource](../../cr.html#modulesource).
+After a module has been built, its artifacts must be pushed to the container registry at a path that is the *source* path for pulling and running modules in DKP. The path where module artifacts are pushed to the registry is specified in the [ModuleSource](../../cr.html#modulesource) resource.
 
-Пример иерархии образов контейнеров после загрузки артефактов модулей `module-1` и `modules-2` в registry:
+Below is an example of the container image hierarchy after pushing the `module-1` and `modules-2` module artifacts into the registry:
 
 ```tree
 registry.example.io
@@ -161,18 +161,18 @@ registry.example.io
 ```
 
 {% alert level="warning" %}
-Container registry должен поддерживать вложенную структуру репозиториев. Подробнее об этом [в разделе требований](module-development/#требования).  
+The container registry must support a nested repository structure. See [the requirements section](module-development/#requirements) for more details.  
 {% endalert %}
 
-Далее приведен список команд для работы с источником модулей. В примерах используется утилита [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane). Установите ее [по инструкции](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation). Для macOS воспользуйтесь `brew`.
+Below is a list of commands for working with the module source. The examples use the [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane) tool. Follow the [instructions](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation) to install it. For macOS, use `brew`.
 
-### Вывод списка модулей в источнике модулей
+### Print the list of modules in the module source
 
 ```shell
 crane ls <REGISTRY_URL>/<MODULE_SOURCE>
 ```
 
-Пример:
+An example:
 
 ```shell
 $ crane ls registry.example.io/modules-source
@@ -180,13 +180,13 @@ module-1
 module-2
 ```
 
-### Вывод списка образов модуля
+### Print the list of module images
 
 ```shell
 crane ls <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>
 ```
 
-Пример:
+An example:
 
 ```shell
 $ crane ls registry.example.io/modules-source/module-1
@@ -196,29 +196,29 @@ e6073b8f03231e122fa3b7d3294ff69a5060c332c4395e7d0b3231e3-1589714362300
 v1.23.2
 ```
 
-В примере в модуле `module-1` присутствуют два образа модуля и два образа контейнеров приложений.
+In the example above, there are two module images and two application container images in `module-1`.
 
-### Вывод файлов в образе модуля
+### Print the list of files in the module image
 
 ```shell
 crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>:<MODULE_TAG> - | tar -tf -
 ```
 
-Пример:
+An example:
 
 ```shell
 crane export registry.example.io/modules-source/module-1:v1.23.1 - | tar -tf -
 ```
 
-Ответ будет достаточно большим.
+The output will be quite large.
 
-### Вывод списка образов контейнеров приложений модуля  @TODO <-- переформулировать
+### Print the list of images of the module's application containers @TODO <-- переформулировать
 
 ```shell
 crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>:<MODULE_TAG> - | tar -Oxf - images_digests.json
 ```
 
-Пример:
+An example:
 
 ```shell
 $ crane export registry.example.io/modules-source/module-1:v1.23.1 -  | tar -Oxf - images_digests.json
@@ -228,13 +228,13 @@ $ crane export registry.example.io/modules-source/module-1:v1.23.1 -  | tar -Oxf
 }
 ```
 
-### Просмотр списка релизов
+### Print the list of releases
 
 ```shell
 crane ls <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>/release
 ```
 
-Пример:
+An example:
 
 ```shell
 $ crane ls <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>/release
@@ -244,15 +244,15 @@ alpha
 beta
 ```
 
-В примере в container registry два релиза и используются два канала обновлений: `alpha` и `beta`.
+In the example above, there are two releases in the container registry; two release channels, `alpha` and `beta`, are also used:
 
-### Вывод версии, используемой на канале обновлений `alpha`
+### Print the version in use on the `alpha` release channel
 
 ```shell
 crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>/release:alpha - | tar -Oxf - version.json
 ```
 
-Пример:
+An example:
 
 ```shell
 $ crane export registry.example.io/modules-source/module-1/release:alpha - | tar -Oxf - version.json
