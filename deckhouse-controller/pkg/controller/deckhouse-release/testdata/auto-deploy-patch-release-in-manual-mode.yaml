@@ -1,0 +1,67 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deckhouse-discovery
+  namespace: d8-system
+type: Opaque
+data:
+  bundle: {{ b64enc .Values.deckhouse.bundle }}
+  releaseChannel: {{ .Values.deckhouse.releaseChannel | default "Unknown" | b64enc }}
+  {{- if .Values.deckhouse.update }}
+updateSettings.json: {{ .Values.deckhouse.update | toJson | b64enc }}
+  {{- end }}
+clusterIsBootstrapped: {{ .Values.global.clusterIsBootstrapped | quote | b64enc }}
+imagesRegistry: {{ b64enc .Values.global.modulesImages.registry.base }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deckhouse
+  namespace: d8-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: deckhouse
+          image: my.registry.com/deckhouse:v1.25.0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: deckhouse-6f46df5bd7-nk4j7
+  namespace: d8-system
+  labels:
+    app: deckhouse
+spec:
+  containers:
+    - name: deckhouse
+      image: dev-registry.deckhouse.io/sys/deckhouse-oss:v1.2.3
+status:
+  containerStatuses:
+    - containerID: containerd://9990d3eccb8657d0bfe755672308831b6d0fab7f3aac553487c60bf0f076b2e3
+      imageID: dev-registry.deckhouse.io/sys/deckhouse-oss/dev@sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1
+      ready: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.25.0
+spec:
+  version: "v1.25.0"
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.26.0
+spec:
+  version: "v1.26.0"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.25.1
+spec:
+  version: "v1.25.1"

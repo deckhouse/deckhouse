@@ -71,7 +71,7 @@ type moduleReleaseReconciler struct {
 	externalModulesDir string
 	symlinksDir        string
 
-	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpec
+	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpecContainer
 
 	preflightCountDown *sync.WaitGroup
 
@@ -94,7 +94,7 @@ const (
 func NewModuleReleaseController(
 	mgr manager.Manager,
 	dc dependency.Container,
-	embeddedPolicy *v1alpha1.ModuleUpdatePolicySpec,
+	embeddedPolicyContainer *v1alpha1.ModuleUpdatePolicySpecContainer,
 	mm moduleManager,
 	metricStorage *metric_storage.MetricStorage,
 	preflightCountDown *sync.WaitGroup,
@@ -110,7 +110,7 @@ func NewModuleReleaseController(
 		metricStorage:           metricStorage,
 		moduleManager:           mm,
 		symlinksDir:             filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
-		deckhouseEmbeddedPolicy: embeddedPolicy,
+		deckhouseEmbeddedPolicy: embeddedPolicyContainer,
 
 		delayTimer: time.NewTimer(3 * time.Second),
 
@@ -377,7 +377,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "",
 				},
-				Spec: *c.deckhouseEmbeddedPolicy,
+				Spec: *c.deckhouseEmbeddedPolicy.Get(),
 			}
 		} else {
 			// get policy spec

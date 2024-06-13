@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"sync"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -76,4 +78,29 @@ type ModuleUpdatePolicyList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []ModuleUpdatePolicy `json:"items"`
+}
+
+func NewModuleUpdatePolicySpecContainer(spec *ModuleUpdatePolicySpec) *ModuleUpdatePolicySpecContainer {
+	return &ModuleUpdatePolicySpecContainer{spec: spec}
+}
+
+type ModuleUpdatePolicySpecContainer struct {
+	spec *ModuleUpdatePolicySpec
+	lock sync.Mutex
+}
+
+func (c *ModuleUpdatePolicySpecContainer) Set(spec *ModuleUpdatePolicySpec) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.spec.ReleaseChannel = spec.ReleaseChannel
+	c.spec.Update.Mode = spec.Update.Mode
+	c.spec.Update.Windows = spec.Update.Windows
+}
+
+func (c *ModuleUpdatePolicySpecContainer) Get() *ModuleUpdatePolicySpec {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	return c.spec.DeepCopy()
 }
