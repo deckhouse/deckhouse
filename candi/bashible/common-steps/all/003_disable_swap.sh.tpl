@@ -17,6 +17,12 @@ for swapunit in $(systemctl list-units --no-legend --plain --no-pager --type swa
   systemctl mask "$swapunit"
 done
 
+# systemd-gpt-auto-generator automatically detects swap partition in GPT and activates it     
+if [ -f /lib/systemd/system-generators/systemd-gpt-auto-generator ]; then 
+  mkdir /etc/systemd/system-generators
+  ln -s /dev/null /etc/systemd/system-generators/systemd-gpt-auto-generator
+fi
+
 swapoff -a
 
 if grep -q "swap" /etc/fstab; then
