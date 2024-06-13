@@ -35,7 +35,7 @@ function check_python() {
 
 function isLegacyKernel() {
   check_python
-  $python_binary -c "exit(0) if tuple(map(int, \"$CURRENT_KERNEL_VERSION\".split('.'))) < tuple(map(int, \"$NFT_KERNEL_LIMIT\".split('.')))  else exit(1)"
+  $python_binary -c "exit(0) if tuple(map(int, '$CURRENT_KERNEL_VERSION'.split('.'))) < tuple(map(int, '$NFT_KERNEL_LIMIT'.split('.')))  else exit(1)"
 }
 
 if [[ ${IPTABLES_LEGACY_RULE} -ne 0 ]]; then
