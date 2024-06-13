@@ -17,6 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"time"
+
+	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -39,6 +42,85 @@ type DeckhouseRelease struct {
 	Spec DeckhouseReleaseSpec `json:"spec"`
 
 	Status DeckhouseReleaseStatus `json:"status,omitempty"`
+}
+
+func (in *DeckhouseRelease) GetApplyAfter() *time.Time {
+	if in.Spec.ApplyAfter == nil {
+		return nil
+	}
+	return &in.Spec.ApplyAfter.Time
+}
+
+func (in *DeckhouseRelease) GetVersion() *semver.Version {
+	return semver.MustParse(in.Spec.Version)
+}
+
+func (in *DeckhouseRelease) GetRequirements() map[string]string {
+	return in.Spec.Requirements
+}
+
+func (in *DeckhouseRelease) GetChangelogLink() string {
+	return in.Spec.ChangelogLink
+}
+
+func (in *DeckhouseRelease) GetCooldownUntil() (cooldown *time.Time) {
+	if v, ok := in.Annotations["release.deckhouse.io/cooldown"]; ok {
+		cd, err := time.Parse(time.RFC3339, v)
+		if err == nil {
+			cooldown = &cd
+		}
+	}
+
+	return cooldown
+}
+
+func (in *DeckhouseRelease) GetDisruptions() []string {
+	return in.Spec.Disruptions
+}
+
+func (in *DeckhouseRelease) GetDisruptionApproved() bool {
+	v, ok := in.Annotations["release.deckhouse.io/disruption-approved"]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetPhase() string {
+	return in.Status.Phase
+}
+
+func (in *DeckhouseRelease) GetForce() bool {
+	v, ok := in.Annotations["release.deckhouse.io/force"]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetApplyNow() bool {
+	v, ok := in.Annotations["release.deckhouse.io/apply-now"]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetApprovedStatus() bool {
+	return in.Status.Approved
+}
+
+func (in *DeckhouseRelease) SetApprovedStatus(val bool) {
+	in.Status.Approved = val
+}
+
+func (in *DeckhouseRelease) GetSuspend() bool {
+	v, ok := in.Annotations["release.deckhouse.io/suspended"]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetManuallyApproved() bool {
+	v, ok := in.Annotations["release.deckhouse.io/approved"]
+	if ok {
+		return v == "true"
+	}
+
+	return in.Approved
+}
+
+func (in *DeckhouseRelease) GetMessage() string {
+	return in.Status.Message
 }
 
 type DeckhouseReleaseSpec struct {
