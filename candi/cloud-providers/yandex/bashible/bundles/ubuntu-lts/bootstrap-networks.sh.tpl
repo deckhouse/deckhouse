@@ -25,10 +25,12 @@ function metadata_request(){
   cat - <<EOFILE | python3 2>/dev/null
 from urllib.request import urlopen, Request
 
-request = Request('http://169.254.169.254/computeMetadata/v1/instance/?recursive=true', headers={'Metadata-Flavor': 'Google'})
-response = urlopen(request, timeout=10).read()
-
-print(response.decode('utf-8'))
+request = Request(
+  "http://169.254.169.254/computeMetadata/v1/instance/?recursive=true",
+  headers={"Metadata-Flavor": "Google"},
+)
+with urlopen(request, timeout=10) as response:
+  print(response.read().decode())
 EOFILE
 }
 
