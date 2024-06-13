@@ -27,7 +27,7 @@ status:
   approved: true
   message: 'Release is waiting for the update window: 02 Jan 21 08:00 UTC'
   phase: Pending
-  transitionTime: "2024-06-13T04:04:37Z"
+  transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: v1
 kind: Pod

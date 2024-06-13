@@ -28,7 +28,7 @@ status:
   approved: false
   message: Waiting for manual approval
   phase: Pending
-  transitionTime: "2024-06-13T05:49:58Z"
+  transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: v1
 kind: Pod

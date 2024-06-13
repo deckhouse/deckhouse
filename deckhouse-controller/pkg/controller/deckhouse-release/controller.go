@@ -136,7 +136,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 	}
 
 	podReady := r.isDeckhousePodReady()
-	deckhouseUpdater, err := d8updater.NewDeckhouseUpdater(r.logger, r.client, discoveryData, r.updatePolicy.Get().Update.Mode, releaseData, podReady)
+	deckhouseUpdater, err := d8updater.NewDeckhouseUpdater(r.logger, r.client, r.dc, discoveryData, r.updatePolicy.Get().Update.Mode, releaseData, podReady)
 
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("initializing deckhouse updater: %w", err)

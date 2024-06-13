@@ -32,12 +32,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
-func NewDeckhouseUpdater(logger logger.Logger, client client.Client, discoveryData updater.DeckhouseDiscoveryData, mode string, releaseData updater.DeckhouseReleaseData, podIsReady bool) (*updater.Updater[*v1alpha1.DeckhouseRelease], error) {
+func NewDeckhouseUpdater(logger logger.Logger, client client.Client, dc dependency.Container, discoveryData updater.DeckhouseDiscoveryData, mode string, releaseData updater.DeckhouseReleaseData, podIsReady bool) (*updater.Updater[*v1alpha1.DeckhouseRelease], error) {
 	return updater.NewUpdater[*v1alpha1.DeckhouseRelease](logger, discoveryData.NotificationConfig, mode, releaseData,
-		podIsReady, discoveryData.ClusterBootstrapping, newKubeAPI(client, discoveryData.ImagesRegistry),
+		podIsReady, discoveryData.ClusterBootstrapping, newKubeAPI(client, dc, discoveryData.ImagesRegistry),
 		newMetricsUpdater(), newValueSettings(discoveryData.DisruptionApprovalMode), newWebhookDataGetter()), nil
 }
 
@@ -53,12 +54,13 @@ func (w *webhookDataGetter) GetMessage(release *v1alpha1.DeckhouseRelease, relea
 	return fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", version, releaseApplyTime.Format(time.RFC850))
 }
 
-func newKubeAPI(client client.Client, imagesRegistry string) *kubeAPI {
-	return &kubeAPI{client: client, imagesRegistry: imagesRegistry}
+func newKubeAPI(client client.Client, dc dependency.Container, imagesRegistry string) *kubeAPI {
+	return &kubeAPI{client: client, dc: dc, imagesRegistry: imagesRegistry}
 }
 
 type kubeAPI struct {
 	client         client.Client
+	dc             dependency.Container
 	imagesRegistry string
 }
 
@@ -66,7 +68,7 @@ func (api *kubeAPI) UpdateReleaseStatus(release *v1alpha1.DeckhouseRelease, msg,
 	ctx := context.Background()
 	release.Status.Phase = phase
 	release.Status.Message = msg
-	release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
+	release.Status.TransitionTime = metav1.NewTime(api.dc.GetClock().Now().UTC())
 
 	return api.client.Status().Update(ctx, release)
 }
