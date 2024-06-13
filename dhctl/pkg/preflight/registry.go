@@ -245,7 +245,15 @@ func (pc *Checker) CheckRegistryCredentials() error {
 	ctx, cancel := context.WithTimeout(context.Background(), httpClientTimeoutSec*time.Second)
 	defer cancel()
 
-	authData, err := pc.metaConfig.Registry.Auth()
+	var authData string
+	var err error
+
+	if pc.metaConfig.Registry.RegistryMode != "Direct" {
+		authData, err = pc.metaConfig.UpstreamRegistry.Auth()
+	} else {
+		authData, err = pc.metaConfig.Registry.Auth()
+	}
+
 	if err != nil {
 		return err
 	}
@@ -258,10 +266,20 @@ func prepareRegistryRequest(
 	metaConfig *config.MetaConfig,
 	authData string,
 ) (*http.Request, error) {
-	registryURL := &url.URL{
-		Scheme: metaConfig.Registry.Scheme,
-		Host:   metaConfig.Registry.Address,
-		Path:   registryPath,
+	var registryURL *url.URL
+
+	if metaConfig.Registry.RegistryMode != "Direct" {
+		registryURL = &url.URL{
+			Scheme: metaConfig.UpstreamRegistry.Scheme,
+			Host:   metaConfig.UpstreamRegistry.Address,
+			Path:   registryPath,
+		}
+	} else {
+		registryURL = &url.URL{
+			Scheme: metaConfig.Registry.Scheme,
+			Host:   metaConfig.Registry.Address,
+			Path:   registryPath,
+		}
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, registryURL.String(), nil)
