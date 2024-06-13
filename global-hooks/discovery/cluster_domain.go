@@ -70,6 +70,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: applyClusterDomainFromDNSPodFilter,
 		},
+		{
+			Name:       "clusterConfiguration",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"kube-system"},
+				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"d8-cluster-configuration"},
+			},
+			FilterFunc: applyClusterConfigurationYamlFilter,
+		},
 	},
 }, discoveryClusterDomain)
 
@@ -99,9 +113,6 @@ func applyClusterDomainFromDNSPodFilter(obj *unstructured.Unstructured) (go_hook
 }
 
 func discoveryClusterDomain(input *go_hook.HookInput) error {
-	clusterDomainCoreCMSnap := input.Snapshots[clusterDomainCoreCMSnapName]
-	clusterDomainDNSPodsSnap := input.Snapshots[clusterDomainDNSPodsSnapName]
-
 	// We have a hook for handling clusterConfiguration.
 	// During the operation of this hook, there is a blocking check for filling in the clusterDomain field.
 	// So now we just need to check that the `clusterConfiguration` is present in the secrets.
@@ -117,6 +128,9 @@ func discoveryClusterDomain(input *go_hook.HookInput) error {
 	}
 
 	clusterDomain := "cluster.local"
+
+	clusterDomainCoreCMSnap := input.Snapshots[clusterDomainCoreCMSnapName]
+	clusterDomainDNSPodsSnap := input.Snapshots[clusterDomainDNSPodsSnapName]
 
 	if len(clusterDomainCoreCMSnap) > 0 {
 		domain := clusterDomainCoreCMSnap[0].(string)

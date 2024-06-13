@@ -166,8 +166,6 @@ spec:
 	})
 
 	Context("Cluster with clusterDomain in clusterConfiguration", func() {
-		f := HookExecutionConfigInit(`{"global": {"discovery": {"clusterDomain": "test.local"}}}`, initConfigValuesString)
-
 		BeforeEach(func() {
 			var (
 				stateAClusterConfiguration = `
@@ -197,10 +195,10 @@ data:
 			f.RunHook()
 		})
 
-		It("`global.discovery.clusterDomain` must be not set", func() {
+		It("`global.discovery.clusterDomain` must not be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.clusterDomain").String()).
-				To(Equal("test.local"))
+				To(BeEmpty())
 		})
 	})
 
