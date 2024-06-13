@@ -194,7 +194,7 @@ index 3fe610945..760faafe7 100755
 -
 -get_src d74f86ada2329016068bc5a243268f1f555edd620b6a7d6ce89295e7d6cf18da \
 -        "https://github.com/microsoft/mimalloc/archive/${MIMALOC_VERSION}.tar.gz" "mimalloc"
-+git clone -b "bump-nginx-to-1.25.5" "${SOURCE_REPO}/kubernetes/ingress-nginx-deps.git" .
++git clone -b "controller-v1.10.1-nginx-1.25.5" "${SOURCE_REPO}/kubernetes/ingress-nginx-deps.git" .
  
  # improve compilation times
  CORES=$(($(grep -c ^processor /proc/cpuinfo) - 1))
