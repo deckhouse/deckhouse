@@ -22,7 +22,7 @@ function ip_in_subnet(){
 }
 
 function metadata_request(){
-  cat - <<EOFILE | python3
+  cat - <<EOFILE | python3 2>/dev/null
 from urllib.request import urlopen, Request
 
 request = Request('http://169.254.169.254/computeMetadata/v1/instance/?recursive=true', headers={'Metadata-Flavor': 'Google'})
@@ -38,7 +38,7 @@ if [ -f "/etc/netplan/50-cloud-init.yaml" ]; then
   fi
 fi
 
-if ! metadata="$(metadata_request 2>/dev/null)"; then
+if ! metadata="$(metadata_request)"; then
   echo "Can't get network cidr from metadata"
   exit 1
 fi

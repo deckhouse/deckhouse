@@ -19,13 +19,26 @@ cp -f xtables-nft-multi /opt/deckhouse/bin
 
 kubeletChainsRegex='^:(KUBE-IPTABLES-HINT|KUBE-KUBELET-CANARY)'
 
+function check_python() {
+  for pybin in python3 python2 python; do
+    if command -v "$pybin" >/dev/null 2>&1; then
+      python_binary="$pybin"
+      return 0
+    fi
+  done
+  echo "Python not found, exiting..."
+  return 1
+}
+
+check_python
+
 NFT_KERNEL_LIMIT=3.14 #   nf_tables_ipv6, nf_tables_bridge, nf_tables_arp allow since Linux kernel >= 3.14.
 CURRENT_KERNEL_VERSION=$(uname -r | cut -c1-4)
 IPTABLES_LEGACY_RULE=$( (/opt/deckhouse/bin/xtables-legacy-multi iptables-save || true ) 2>/dev/null | grep  -E ${kubeletChainsRegex} | wc -l )
 
 if [[ ${IPTABLES_LEGACY_RULE} -ne 0 ]]; then
   iptablesModeBin="xtables-legacy-multi"
-elif (( $(echo "$CURRENT_KERNEL_VERSION < $NFT_KERNEL_LIMIT" |bc -l) )); then
+elif ( $python_binary -c "exit(0) if $CURRENT_KERNEL_VERSION < 3.14 else exit(1)" ); then
   iptablesModeBin="xtables-legacy-multi"
 else
   # use iptables-nft as default
