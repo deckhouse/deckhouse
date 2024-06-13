@@ -12,7 +12,7 @@ status:
   approved: false
   message: ""
   phase: Superseded
-  transitionTime: "2024-06-13T05:02:49Z"
+  transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 approved: false
@@ -27,7 +27,7 @@ status:
   approved: true
   message: ""
   phase: Deployed
-  transitionTime: "2024-06-13T05:02:49Z"
+  transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 approved: false
@@ -42,7 +42,7 @@ status:
   approved: true
   message: ""
   phase: Pending
-  transitionTime: "2024-06-13T05:02:49Z"
+  transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: v1
 kind: Pod
