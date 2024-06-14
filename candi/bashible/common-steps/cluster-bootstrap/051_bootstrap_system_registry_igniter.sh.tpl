@@ -111,9 +111,9 @@ storage:
     blobdescriptor: inmemory
 
 http:
-  #addr: ${discovered_node_ip}:5000
-  #addr: 0.0.0.0:5000
-  addr: localhost:5000
+  #addr: ${discovered_node_ip}:5001
+  #addr: 0.0.0.0:5001
+  addr: localhost:5001
   prefix: /
   secret: asecretforlocaldevelopment
   #tls:
@@ -211,7 +211,7 @@ check_and_run "auth_server" "/opt/deckhouse/bin/auth_server -logtostderr $IGNITE
 check_and_run "registry" "/opt/deckhouse/bin/registry serve $IGNITER_DIR/distribution_config.yaml" "$IGNITER_DIR/logs/distribution.log"
 
 for (( attempt=1; attempt <= \$max_attempts; attempt++ )); do
-    response=\$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000)
+    response=\$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5001)
     if [[ "\$response" == "200" ]]; then
         docker_registry_started=true
         break

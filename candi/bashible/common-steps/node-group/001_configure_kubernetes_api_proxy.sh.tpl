@@ -61,7 +61,7 @@ stream {
     {{- range $key, $value := .normal.apiserverEndpoints }}
     {{ $parts := splitList ":" $value -}}
     {{ $ip := index $parts 0 -}}
-    server {{ $ip }}:5000;
+    server {{ $ip }}:5001;
   }
    {{- end -}}
    {{- end }}
@@ -69,7 +69,7 @@ stream {
   {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
   upstream system-registry {
     least_conn;
-    server ${discovered_node_ip}:5000;
+    server ${discovered_node_ip}:5001;
   }
   {{- end }}
 {{- end }}
@@ -83,7 +83,7 @@ stream {
   }
  {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
   server {
-    listen 127.0.0.1:5000;
+    listen 127.0.0.1:5001;
     proxy_pass system-registry;
     # 1h timeout for very log pull/push operations
     proxy_timeout 1h;
