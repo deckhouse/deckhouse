@@ -4,6 +4,7 @@
 
 
  - Cluster will upgrade Kubernetes version to `1.27` if the [kubernetesVersion](https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion) parameter is set to `Automatic`.
+ - `dhctl mirror` is deprecated. All mirroring-related functionality has been moved into the Deckhouse CLI and will be completely removed from dhctl in Deckhouse Kubernetes Platform v1.64.
 
 ## Features
 
@@ -28,6 +29,8 @@
  - **[candi]** Updated local port range to "32768 61000" to avoid conflicts with ports used by other apps. [#8470](https://github.com/deckhouse/deckhouse/pull/8470)
  - **[candi]** Set `LC_NUMERIC` in configure kubelet. [#8383](https://github.com/deckhouse/deckhouse/pull/8383)
  - **[cloud-provider-vcd]** Support catalog in instance class template [#8539](https://github.com/deckhouse/deckhouse/pull/8539)
+ - **[ingress-nginx]** Add missing `severity_level` for NginxIngressConfigTestFailed rule. [#8661](https://github.com/deckhouse/deckhouse/pull/8661)
+ - **[istio]** Fixed Istio module release requirements checker. [#8678](https://github.com/deckhouse/deckhouse/pull/8678)
  - **[node-manager]** Write the SSH private key to a temporary file and delete the file after use. [#8490](https://github.com/deckhouse/deckhouse/pull/8490)
  - **[user-authn]** Replace the `enable` option with the `enabled` in the `publishAPI` field. [#8441](https://github.com/deckhouse/deckhouse/pull/8441)
 
@@ -39,6 +42,8 @@
     Cluster will upgrade Kubernetes version to `1.27` if the [kubernetesVersion](https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion) parameter is set to `Automatic`.
  - **[deckhouse-controller]** Fix documentation updates for deployed yet overridden module releases. [#8504](https://github.com/deckhouse/deckhouse/pull/8504)
  - **[deckhouse-controller]** Add tests to MPO controller. [#8467](https://github.com/deckhouse/deckhouse/pull/8467)
+ - **[dhctl]** `dhctl mirror` is deprecated in favour of Deckhouse CLI. [#8682](https://github.com/deckhouse/deckhouse/pull/8682)
+    `dhctl mirror` is deprecated. All mirroring-related functionality has been moved into the Deckhouse CLI and will be completely removed from dhctl in Deckhouse Kubernetes Platform v1.64.
  - **[istio]** Remove deprecated Istio versions (1.12 and 1.13). [#8452](https://github.com/deckhouse/deckhouse/pull/8452)
  - **[istio]** Added the globalVersion and additionalVersions ModuleConfig options validations. [#8404](https://github.com/deckhouse/deckhouse/pull/8404)
  - **[kube-dns]** Removed deprecated coredns patch and alert (`KubeDnsServiceWithDeprecatedAnnotation`). [#8492](https://github.com/deckhouse/deckhouse/pull/8492)
