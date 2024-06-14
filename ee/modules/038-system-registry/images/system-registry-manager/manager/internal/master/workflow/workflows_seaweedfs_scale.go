@@ -88,7 +88,7 @@ func (w *SeaweedfsScaleWorkflow) checkCluster(clusterNodes []NodeManager) error 
 	leader := leaders[0]
 
 	if pkg_utils.IsEvenNumber(len(clusterNodes)) {
-		newClusterIPs = utils.InsertString(IpForEvenNodesNumber, unUsedIPs)
+		newClusterIPs = utils.InsertString(IpForEvenNodesNumber, newClusterIPs)
 		unUsedIPs = utils.RemoveStringFromSlice(IpForEvenNodesNumber, unUsedIPs)
 	}
 
@@ -202,7 +202,7 @@ func (w *SeaweedfsScaleWorkflow) scaleUpCluster(oldClusterNodes, newClusterNodes
 	leader := leaders[0]
 
 	if pkg_utils.IsEvenNumber(len(oldClusterNodes) + len(newClusterNodes)) {
-		newClusterIPs = utils.InsertString(IpForEvenNodesNumber, unUsedIPs)
+		newClusterIPs = utils.InsertString(IpForEvenNodesNumber, newClusterIPs)
 		unUsedIPs = utils.RemoveStringFromSlice(IpForEvenNodesNumber, unUsedIPs)
 	}
 
@@ -307,7 +307,7 @@ func (w *SeaweedfsScaleWorkflow) scaleDownClusterPerNode(futureClusterNodes []No
 	leader := leaders[0]
 
 	if pkg_utils.IsEvenNumber(len(futureClusterNodes)) {
-		newClusterIPs = utils.InsertString(IpForEvenNodesNumber, unUsedIPs)
+		newClusterIPs = utils.InsertString(IpForEvenNodesNumber, newClusterIPs)
 		unUsedIPs = utils.RemoveStringFromSlice(IpForEvenNodesNumber, unUsedIPs)
 	}
 
