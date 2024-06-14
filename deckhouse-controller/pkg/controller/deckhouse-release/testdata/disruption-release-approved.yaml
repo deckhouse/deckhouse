@@ -42,19 +42,17 @@ spec:
       containers:
         - name: deckhouse
           image: my.registry.com/deckhouse:v1.25.0
+
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1.25.0
+  name: v1.36.0
+  annotations:
+    release.deckhouse.io/disruption-approved: "true"
 spec:
-  version: "v1.25.0"
+  version: "v1.36.0"
+  disruptions:
+    - testme
 status:
-  phase: Deployed
----
-apiVersion: deckhouse.io/v1alpha1
-kind: DeckhouseRelease
-metadata:
-  name: v1.26.0
-spec:
-  version: "v1.26.0"
+  phase: Pending

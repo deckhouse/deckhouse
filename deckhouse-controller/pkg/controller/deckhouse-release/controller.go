@@ -255,7 +255,7 @@ func (r *deckhouseReleaseReconciler) getDeckhouseDiscoveryData(ctx context.Conte
 
 	clusterBootstrapped, ok := secret.Data["clusterIsBootstrapped"]
 	if ok {
-		data.ClusterBootstrapping = string(clusterBootstrapped) != "true"
+		data.ClusterBootstrapping = string(clusterBootstrapped) != `"true"`
 	}
 
 	imagesRegistry, ok := secret.Data["imagesRegistry"]

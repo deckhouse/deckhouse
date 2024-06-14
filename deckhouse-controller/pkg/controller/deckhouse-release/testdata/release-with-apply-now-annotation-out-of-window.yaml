@@ -42,6 +42,7 @@ spec:
       containers:
         - name: deckhouse
           image: my.registry.com/deckhouse:v1.25.0
+
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
@@ -56,5 +57,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
   name: v1.26.0
+  annotations:
+    release.deckhouse.io/apply-now: "true"
 spec:
   version: "v1.26.0"

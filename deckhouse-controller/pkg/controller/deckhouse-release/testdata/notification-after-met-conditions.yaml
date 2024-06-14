@@ -57,4 +57,16 @@ kind: DeckhouseRelease
 metadata:
   name: v1.26.0
 spec:
-  version: "v1.26.0"
+  applyAfter: "2019-01-01T01:01:00Z"
+  version: v1.26.0
+status:
+  phase: Pending
+---
+apiVersion: v1
+data:
+  isUpdating: "false"
+  notified: "true"
+kind: ConfigMap
+metadata:
+  name: d8-release-data
+  namespace: d8-system

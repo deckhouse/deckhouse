@@ -1,0 +1,75 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.25.0
+  resourceVersion: "1000"
+spec:
+  version: v1.25.0
+status:
+  approved: false
+  message: ""
+  phase: Superseded
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.26.0
+  resourceVersion: "1002"
+spec:
+  version: v1.26.0
+status:
+  approved: false
+  message: ""
+  phase: Deployed
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    app: deckhouse
+  name: deckhouse-6f46df5bd7-nk4j7
+  namespace: d8-system
+  resourceVersion: "999"
+spec:
+  containers:
+  - image: dev-registry.deckhouse.io/sys/deckhouse-oss:v1.2.3
+    name: deckhouse
+    resources: {}
+status:
+  containerStatuses:
+  - containerID: containerd://9990d3eccb8657d0bfe755672308831b6d0fab7f3aac553487c60bf0f076b2e3
+    image: ""
+    imageID: dev-registry.deckhouse.io/sys/deckhouse-oss/dev@sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1
+    lastState: {}
+    name: ""
+    ready: true
+    restartCount: 0
+    state: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: deckhouse
+  namespace: d8-system
+  resourceVersion: "1000"
+spec:
+  selector: null
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+    spec:
+      containers:
+      - image: my.registry.com/deckhouse:v1.26.0
+        name: deckhouse
+        resources: {}
+status: {}

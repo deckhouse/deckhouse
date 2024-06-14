@@ -46,15 +46,19 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1.25.0
-spec:
-  version: "v1.25.0"
-status:
-  phase: Deployed
----
-apiVersion: deckhouse.io/v1alpha1
-kind: DeckhouseRelease
-metadata:
   name: v1.26.0
 spec:
   version: "v1.26.0"
+status:
+  phase: Deployed
+---
+apiVersion: v1
+data:
+  isUpdating: "true"
+  notified: "false"
+kind: ConfigMap
+metadata:
+  name: d8-release-data
+  namespace: d8-system
+
+

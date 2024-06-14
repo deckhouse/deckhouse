@@ -46,15 +46,6 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1.25.0
+  name: v1.25.1
 spec:
-  version: "v1.25.0"
-status:
-  phase: Deployed
----
-apiVersion: deckhouse.io/v1alpha1
-kind: DeckhouseRelease
-metadata:
-  name: v1.26.0
-spec:
-  version: "v1.26.0"
+  version: "v1.25.1"
