@@ -69,6 +69,8 @@ spec:
           env:
           - name: VECTOR_CONFIG
             value: "/etc/vector/**/*.json"
+          - name: VECTOR_WATCH_CONFIG
+            value: "true"
           {{- include "vectorEnv" . | nindent 10 }}
           readinessProbe:
             failureThreshold: 3
