@@ -7,10 +7,8 @@ package workflow
 
 import (
 	"context"
-	pkg_logs "system-registry-manager/pkg/logs"
-
-	"github.com/cloudflare/cfssl/log"
 	"github.com/sirupsen/logrus"
+	pkg_logs "system-registry-manager/pkg/logs"
 )
 
 type SeaweedfsCertsWorkflow struct {
@@ -40,7 +38,7 @@ func (w *SeaweedfsCertsWorkflow) Start() error {
 	}
 
 	if len(existAndNeedUpdateCert) <= 0 {
-		log.Info("Nothing to do")
+		w.log.Info("Nothing to do")
 	}
 
 	w.log.Infof("Found %s nodes that need certificate updates", GetNodeNames(existAndNeedUpdateCert))

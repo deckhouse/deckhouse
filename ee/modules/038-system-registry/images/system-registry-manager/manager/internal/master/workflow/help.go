@@ -460,15 +460,18 @@ func RemoveLeaderStatusForNode(ctx context.Context, log *logrus.Entry, clusterNo
 		return err
 	}
 
-	// Remove nodes from cluster
+	// Remove IpForEvenNodesNumber from cluster
 	if err := clusterNode.RemoveNodeFromCluster(IpForEvenNodesNumber); err != nil {
 		return err
 	}
-	if err := clusterNode.RemoveNodeFromCluster(removedLeaderNodeIp); err != nil {
+	if err := WaitLeaderElectionForNodes(ctx, log, clusterNodes); err != nil {
 		return err
 	}
 
-	// Wait new leader
+	// Remove node from cluster
+	if err := clusterNode.RemoveNodeFromCluster(removedLeaderNodeIp); err != nil {
+		return err
+	}
 	if err := WaitLeaderElectionForNodes(ctx, log, clusterNodes); err != nil {
 		return err
 	}

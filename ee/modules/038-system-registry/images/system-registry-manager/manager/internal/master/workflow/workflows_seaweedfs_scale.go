@@ -257,6 +257,9 @@ func (w *SeaweedfsScaleWorkflow) scaleDownClusterPerNode(futureClusterNodes []No
 		if err := leader.RemoveNodeFromCluster(ip); err != nil {
 			return err
 		}
+		if err := WaitLeaderElectionForNodes(w.ctx, w.log, futureClusterNodes); err != nil {
+			return err
+		}
 	}
 
 	// RollingUpgrade old nodes
