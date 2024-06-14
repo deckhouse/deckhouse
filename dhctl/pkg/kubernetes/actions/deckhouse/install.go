@@ -430,24 +430,25 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 	}
 
 	if cfg.KubeDNSAddress != "" {
-		tasks = append(tasks, actions.ManifestTask{
-			Name: `Service "kube-dns"`,
-			Manifest: func() interface{} {
-				return manifests.KubeDNSService(cfg.KubeDNSAddress)
-			},
-			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Services("kube-system").Create(context.TODO(), manifest.(*apiv1.Service), metav1.CreateOptions{})
-				if err != nil && strings.Contains(err.Error(), "provided IP is already allocated") {
-					log.InfoLn("Service for DNS already exists. Skip!")
-					return nil
-				}
-				return err
-			},
-			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Services("kube-system").Update(context.TODO(), manifest.(*apiv1.Service), metav1.UpdateOptions{})
-				return err
-			},
-		})
+		log.InfoF("KubeDNSAddress: %s", cfg.KubeDNSAddress)
+		// tasks = append(tasks, actions.ManifestTask{
+		// 	Name: `Service "kube-dns"`,
+		// 	Manifest: func() interface{} {
+		// 		return manifests.KubeDNSService(cfg.KubeDNSAddress)
+		// 	},
+		// 	CreateFunc: func(manifest interface{}) error {
+		// 		_, err := kubeCl.CoreV1().Services("kube-system").Create(context.TODO(), manifest.(*apiv1.Service), metav1.CreateOptions{})
+		// 		if err != nil && strings.Contains(err.Error(), "provided IP is already allocated") {
+		// 			log.InfoLn("Service for DNS already exists. Skip!")
+		// 			return nil
+		// 		}
+		// 		return err
+		// 	},
+		// 	UpdateFunc: func(manifest interface{}) error {
+		// 		_, err := kubeCl.CoreV1().Services("kube-system").Update(context.TODO(), manifest.(*apiv1.Service), metav1.UpdateOptions{})
+		// 		return err
+		// 	},
+		// })
 	}
 
 	lockCmTask, err := LockDeckhouseQueueBeforeCreatingModuleConfigs(kubeCl)
