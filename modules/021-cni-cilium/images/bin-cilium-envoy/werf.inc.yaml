@@ -47,7 +47,7 @@ shell:
   - sed -i "s,https://github.com,{{ $.SOURCE_REPO }}," WORKSPACE
   - mkdir -p /tmp/bazel-cache
   - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache
-  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
+  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --linkopt='-static'"
   - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
   - make bazel-bin/cilium-envoy
   - ./bazel/get_workspace_status
