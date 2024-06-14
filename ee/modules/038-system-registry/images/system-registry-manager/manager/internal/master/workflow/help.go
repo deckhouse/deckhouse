@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	IpForEvenNodesNumber = "127.0.0.0"
+	IpForEvenNodesNumber = "192.0.2.1"
 )
 
 type CpmFuncNodeClusterStatus = func(*SeaweedfsNodeClusterStatus) bool
