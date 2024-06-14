@@ -73,6 +73,88 @@ func (w *SeaweedfsScaleWorkflow) Start() error {
 }
 
 func (w *SeaweedfsScaleWorkflow) checkCluster(clusterNodes []NodeManager) error {
+	w.log.Infof("Check cluster with nodes: %s", GetNodeNames(clusterNodes))
+
+	// Prepare leader and ips
+	w.log.Infof("Prepare IPs for new cluster")
+	leaders, newClusterIPs, unUsedIPs, err := GetNewAndUnusedClusterIP(w.ctx, w.log, clusterNodes, []NodeManager{})
+	if err != nil {
+		return err
+	}
+	if len(leaders) != 1 {
+		w.log.Infof("The number of leaders is not equal to 1")
+		return fmt.Errorf("len(leaders) != 1")
+	}
+	leader := leaders[0]
+
+	if pkg_utils.IsEvenNumber(len(clusterNodes)) {
+		newClusterIPs = utils.InsertString(IpForEvenNodesNumber, unUsedIPs)
+		unUsedIPs = utils.RemoveStringFromSlice(IpForEvenNodesNumber, unUsedIPs)
+	}
+
+	// Prepare requests
+	checkRequest := SeaweedfsCheckNodeRequest{
+		MasterPeers:          newClusterIPs,
+		CheckWithMasterPeers: true,
+	}
+
+	updateRequest := SeaweedfsUpdateNodeRequest{
+		Certs: struct {
+			UpdateOrCreate bool `json:"updateOrCreate"`
+		}{true},
+		Manifests: struct {
+			UpdateOrCreate bool `json:"updateOrCreate"`
+		}{true},
+		StaticPods: struct {
+			MasterPeers    []string `json:"masterPeers"`
+			UpdateOrCreate bool     `json:"updateOrCreate"`
+		}{
+			MasterPeers:    newClusterIPs,
+			UpdateOrCreate: true,
+		},
+	}
+
+	// RollingUpgrade all nodes if need
+	needUpgrade := []NodeManager{}
+	for _, node := range clusterNodes {
+		request, err := node.CheckNodeManifests(&checkRequest)
+		if err != nil {
+			return err
+		}
+		if request.NeedSomethingCreateOrUpdate() {
+			needUpgrade = append(needUpgrade, node)
+		}
+	}
+	err = RollingUpgradeNodes(w.ctx, w.log, needUpgrade, &updateRequest)
+	if err != nil {
+		return err
+	}
+
+	err = WaitNodesConnection(w.ctx, w.log, leader, newClusterIPs)
+	if err != nil {
+		return err
+	}
+
+	// Add used and remove unused nodes from cluster
+	clusterStatus, err := leader.GetNodeClusterStatus()
+	if err != nil {
+		return err
+	}
+	for _, ip := range newClusterIPs {
+		if !utils.IsStringInSlice(ip, &clusterStatus.ClusterNodesIPs) {
+			w.log.Infof("Adding IP %s to cluster", ip)
+			if err := leader.AddNodeToCluster(ip); err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, ip := range unUsedIPs {
+		w.log.Infof("Remove unused IP %s from cluster", ip)
+		if err := leader.RemoveNodeFromCluster(ip); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
