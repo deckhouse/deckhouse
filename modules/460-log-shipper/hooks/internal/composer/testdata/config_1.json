@@ -76,12 +76,12 @@
         "image": "{{ image }}",
         "namespace": "{{ namespace }}",
         "node": "{{ node }}",
+        "node_group": "{{ node_group }}",
         "pod": "{{ pod }}",
         "pod_ip": "{{ pod_ip }}",
         "pod_labels_*": "{{ pod_labels }}",
         "pod_owner": "{{ pod_owner }}",
-        "stream": "{{ stream }}",
-        "node_group": "{{ node_group }}"
+        "stream": "{{ stream }}"
       },
       "remove_label_fields": true,
       "out_of_order_action": "rewrite_timestamp"
