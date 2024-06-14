@@ -146,6 +146,14 @@ spec:
 
 ### OIDC (OpenID Connect)
 
+Аутентификация через OIDC-провайдера требует регистрации клиента (или создания приложения). Сделайте это по документации вашего провайдера (например, [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration), [Blitz](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html)).
+
+Полученные в ходе выполнения инструкции `clientID` и `clientSecret` укажите в кастомном ресурсе [DexProvider](cr.html#dexprovider).
+
+Ниже можно ознакомиться с некоторыми примерами.
+
+#### Okta
+
 В примере представлены настройки провайдера для интеграции с Okta.
 
 ```yaml
@@ -164,9 +172,61 @@ spec:
     getUserInfo: true
 ```
 
-Аутентификация через OIDC-провайдера требует регистрации клиента (или создания приложения). Сделайте это по документации вашего провайдера (например, [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration)).
+#### Blitz Identity Provider
 
-Полученные в ходе выполнения инструкции `clientID` и `clientSecret` укажите в кастомном ресурсе [DexProvider](cr.html#dexprovider).
+На стороне провайдера Blitz Identity Provider, при [настройке провайдера](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html), необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`. `publicDomainTemplate` [указывается](https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) в модуле `global`.
+
+В примере представлены настройки провайдера для интеграции с Blitz Identity Provider.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: blitz
+spec:
+  displayName: Blitz Identity Provider
+  oidc:
+    basicAuthUnsupported: false
+    claimMapping:
+      email: email
+      groups: your_claim # Claim для получения групп пользователя, группы пользователя настраиваются на стороне провайдера Blitz Identity Provider
+    clientID: clientID
+    clientSecret: clientSecret
+    getUserInfo: true
+    insecureSkipEmailVerified: true # Установить true, если нет необходимости в проверке email пользователя
+    insecureSkipVerify: false
+    issuer: https://yourdomain.idblitz.ru/blitz
+    promptType: consent 
+    scopes:
+    - profile
+    - openid
+    userIDKey: sub
+    userNameKey: email
+  type: OIDC
+```
+
+Для того, чтобы корректно отрабатывал логаут из приложений (происходил отзыв токена и требовалась повторная авторизация), нужно установить `login` в значении параметра `promptType`.
+
+Для обеспечения гранулированного доступа пользователя к приложениям, необходимо:
+ 
+* Добавить параметр `allowedUserGroups` в `ModuleConfig` нужного приложения.
+* Добавить группы к пользователю (наименования групп должны совпадать как на стороне Blitz, так и на стороне Deckhouse).
+
+Пример для prometheus.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  version: 2
+  settings:
+    auth:
+      allowedUserGroups:
+        - adm-grafana-access
+        - grafana-access
+```
 
 ### LDAP
 

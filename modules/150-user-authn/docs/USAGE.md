@@ -143,6 +143,12 @@ Paste the generated `Key` and `Secret` into the [DexProvider](cr.html#dexprovide
 
 ### OIDC (OpenID Connect)
 
+Authentication through the OIDC provider requires registering a client (or "creating an application"). Please refer to the provider's documentation on how to do it (e.g., [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration)).
+
+Paste the generated `clientID` and `clientSecret` into the [DexProvider](cr.html#dexprovider) custom resource.
+
+#### Okta
+
 The example shows the provider's settings for integration with Okta.
 
 ```yaml
@@ -161,9 +167,61 @@ spec:
     getUserInfo: true
 ```
 
-Authentication through the OIDC provider requires registering a client (or "creating an application"). Please refer to the provider's documentation on how to do it (e.g., [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration)).
+#### Blitz Identity Provider
 
-Paste the generated `clientID` and `clientSecret` into the [DexProvider](cr.html#dexprovider) custom resource.
+On the Blitz Identity Provider side, when [configuring the provider](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html ), you must specify the URL to redirect the user after authorization. When using `DexProvider`, you must specify `https://dex .<publicDomainTemplate>/`. `publicDomainTemplate` [is specified](https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate ) in the `global` module.
+
+The example shows the provider's settings for integration with Blitz Identity Provider.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: blitz
+spec:
+  displayName: Blitz Identity Provider
+  oidc:
+    basicAuthUnsupported: false
+    claimMapping:
+      email: email
+      groups: your_claim # Claim for getting user groups, configured on the Blitz
+    clientID: clientID
+    clientSecret: clientSecret
+    getUserInfo: true
+    insecureSkipEmailVerified: true # Set to true if there is no need to verify the user's email
+    insecureSkipVerify: false
+    issuer: https://yourdomain.idblitz.ru/blitz
+    promptType: consent 
+    scopes:
+    - profile
+    - openid
+    userIDKey: sub
+    userNameKey: email
+  type: OIDC
+```
+
+In order for the application logout to work correctly (the token was revoked and reauthorization was required), you need to set `login` in the value of the 'promptType` parameter.
+
+To ensure granular user access to applications, it is necessary:
+ 
+* Add the `allowedUserGroups` parameter to the `ModuleConfig` of the desired application.
+* Add groups to the user (the names of the groups must match on both the Blitz and Deckhouse sides).
+
+An example for prometheus.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  version: 2
+  settings:
+    auth:
+      allowedUserGroups:
+        - adm-grafana-access
+        - grafana-access
+```
 
 ### LDAP
 
