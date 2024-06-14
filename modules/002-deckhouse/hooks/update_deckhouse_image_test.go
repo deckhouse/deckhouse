@@ -56,6 +56,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 }`, `{}`)
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "yes")
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "DeckhouseRelease", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "Module", false)
 
 	dependency.TestDC.CRClient = cr.NewClientMock(GinkgoT())
 
@@ -526,52 +527,6 @@ status:
 			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.2"))
 		})
-	})
-
-	Context("Release with not met requirements", func() {
-		BeforeEach(func() {
-			requirements.RegisterCheck("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-				v, _ := getter.Get("global.discovery.kubernetesVersion")
-				if v != requirementValue {
-					return false, errors.New("min k8s version failed")
-				}
-
-				return true, nil
-			})
-			requirements.SaveValue("global.discovery.kubernetesVersion", "1.16.0")
-			f.KubeStateSet(deckhousePodYaml + releaseWithRequirements)
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
-			f.RunHook()
-		})
-
-		It("Should not update deckhouse deployment", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			r130 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.30.0")
-			Expect(r130.Field("status.phase").String()).To(Equal("Pending"))
-			Expect(r130.Field("status.message").String()).To(Equal(`"k8s" requirement for DeckhouseRelease "1.30.0" not met: min k8s version failed`))
-			Expect(f.MetricsCollector.CollectedMetrics()[2].Name).To(Equal("d8_release_blocked"))
-			Expect(*f.MetricsCollector.CollectedMetrics()[2].Value).To(Equal(float64(1)))
-			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
-			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.0"))
-		})
-
-		Context("Release requirements passed", func() {
-			BeforeEach(func() {
-				requirements.SaveValue("global.discovery.kubernetesVersion", "1.19.0")
-				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
-				f.RunHook()
-			})
-
-			It("Should update deckhouse deployment", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				r130 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.30.0")
-				Expect(r130.Field("status.phase").String()).To(Equal("Deployed"))
-				Expect(r130.Field("status.message").String()).To(Equal(``))
-				dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
-				Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.30.0"))
-			})
-		})
-
 	})
 
 	Context("Release with not met requirements and module is enabled", func() {
