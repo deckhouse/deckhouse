@@ -7,7 +7,6 @@ package workflow
 
 import (
 	"context"
-	"fmt"
 	pkg_logs "system-registry-manager/pkg/logs"
 
 	"github.com/cloudflare/cfssl/log"
@@ -68,24 +67,8 @@ func (w *SeaweedfsCertsWorkflow) Start() error {
 		}
 	}
 
-	{
-		w.log.Infof("Waiting nodes and leader election for: %s", GetNodeNames(existAndNeedUpdateCert))
-
-		haveLeader := false
-		var cpmFunc CpmFuncNodeClusterStatus = func(status *SeaweedfsNodeClusterStatus) bool {
-			if status.IsLeader {
-				haveLeader = true
-			}
-			return haveLeader
-		}
-
-		wait, err := WaitBy(w.ctx, w.log, existAndNeedUpdateCert, CmpIsRunning, cpmFunc)
-		if err != nil {
-			return err
-		}
-		if !wait {
-			return fmt.Errorf("error waitig nodes: %s", GetNodeNames(existAndNeedUpdateCert))
-		}
+	if err := WaitLeaderElectionForNodes(w.ctx, w.log, existAndNeedUpdateCert); err != nil {
+		return err
 	}
 	w.log.Info("SeaweedfsCertsWorkflow completed successfully")
 	return nil
