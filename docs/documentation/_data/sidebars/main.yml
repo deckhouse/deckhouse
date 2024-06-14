@@ -928,6 +928,7 @@ entries:
             ru: Другие модули
           folders:
             - title: descheduler
+              featureStatus: experimental
               folders:
                 - title:
                     en: Description
