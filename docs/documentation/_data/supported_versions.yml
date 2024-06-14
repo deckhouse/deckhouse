@@ -31,6 +31,7 @@ osDistributions:
     url: https://rosa.ru/cobalt-server/
     ru_support: 'true'
     en_support: 'false'
+    additional_notes: 'true'
 
 k8s_statuses:
   end-of-life:
