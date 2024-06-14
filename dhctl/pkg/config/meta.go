@@ -652,6 +652,7 @@ func (r *RegistryData) Auth() (string, error) {
 }
 
 func getDNSAddress(serviceCIDR string) string {
+	log.InfoF("serviceCIDR: %s", serviceCIDR)
 	ip, ipnet, err := net.ParseCIDR(serviceCIDR)
 	if err != nil {
 		log.DebugLn("serviceSubnetCIDR is not valid CIDR (should be validated with openapi scheme)")
@@ -677,6 +678,8 @@ func getDNSAddress(serviceCIDR string) string {
 		}
 		counter++
 	}
+
+	log.InfoF("clusterDNS: %s", clusterDNS)
 
 	return clusterDNS
 }
