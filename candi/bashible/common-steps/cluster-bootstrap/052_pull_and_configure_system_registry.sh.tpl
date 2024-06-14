@@ -116,12 +116,12 @@ storage:
     blobdescriptor: inmemory
 
 http:
-  addr: ${discovered_node_ip}:5000
-  #addr: 0.0.0.0:5000
+  addr: ${discovered_node_ip}:5001
+  #addr: 0.0.0.0:5001
   prefix: /
   secret: asecretforlocaldevelopment
   debug:
-    addr: localhost:5001
+    addr: localhost:5002
     prometheus:
       enabled: true
       path: /metrics

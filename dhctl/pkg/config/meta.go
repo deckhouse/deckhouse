@@ -108,10 +108,10 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 
 		if m.DeckhouseConfig.RegistryMode != "Direct" {
 			internalRegistryData := RegistryData{
-				Address:      "localhost:5000",
-				Path:         "/sys/deckhouse-oss",
+				Address:      "localhost:5001",
+				Path:         m.Registry.Path,
 				Scheme:       "http",
-				DockerCfg:    "ewogICJhdXRocyI6IHsKICAgICJsb2NhbGhvc3Q6NTAwMCI6IHsKICAgICAgImF1dGgiOiAiY0hWemFHVnlPbkIxYzJobGNnPT0iCiAgICB9CiAgfQp9Cg==",
+				DockerCfg:    "ewogICJhdXRocyI6IHsKICAgICJsb2NhbGhvc3Q6NTAwMSI6IHsKICAgICAgImF1dGgiOiAiY0hWemFHVnlPbkIxYzJobGNnPT0iCiAgICB9CiAgfQp9Cg==",
 				CA:           "",
 				RegistryMode: m.DeckhouseConfig.RegistryMode,
 			}
