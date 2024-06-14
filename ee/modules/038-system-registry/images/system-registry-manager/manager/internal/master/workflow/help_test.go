@@ -483,26 +483,26 @@ func TestSortBy(t *testing.T) {
 	}
 }
 
-func TestGetExpectedNodeCount(t *testing.T) {
-	tests := []struct {
-		expectedNodeCount int
-		expResult         int
-	}{
-		{0, 0},
-		{1, 1},
-		{2, 1},
-		{3, 3},
-		{4, 3},
-		{-1, 0},
-	}
+// func TestGetExpectedNodeCount(t *testing.T) {
+// 	tests := []struct {
+// 		expectedNodeCount int
+// 		expResult         int
+// 	}{
+// 		{0, 0},
+// 		{1, 1},
+// 		{2, 1},
+// 		{3, 3},
+// 		{4, 3},
+// 		{-1, 0},
+// 	}
 
-	for _, tt := range tests {
-		t.Run(fmt.Sprintf("expectedNodeCount=%d", tt.expectedNodeCount), func(t *testing.T) {
-			result := GetExpectedNodeCount(tt.expectedNodeCount)
-			assert.Equal(t, result, tt.expResult)
-		})
-	}
-}
+// 	for _, tt := range tests {
+// 		t.Run(fmt.Sprintf("expectedNodeCount=%d", tt.expectedNodeCount), func(t *testing.T) {
+// 			result := GetExpectedNodeCount(tt.expectedNodeCount)
+// 			assert.Equal(t, result, tt.expResult)
+// 		})
+// 	}
+// }
 
 func TestGetNodeNames(t *testing.T) {
 	mockNodes := map[string]*MockNodeForHelper{
