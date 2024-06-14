@@ -54,7 +54,7 @@ var mreg = regexp.MustCompile(`/modules/([0-9]+-)?(\S+)/requirements`)
 // CheckRequirement run check functions for `key` requirement. Returns true if all checks is passed, false otherwise
 // enabledModules is optional and will filter check-functions if module is disabled
 func CheckRequirement(key, value string, enabledModules ...set.Set) (bool, error) {
-	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") == "yes" {
+	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		mreg = regexp.MustCompile(`/modules/([0-9]+-)?(\S+)/hooks`)
 	}
 	if defaultRegistry == nil {

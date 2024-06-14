@@ -612,8 +612,6 @@ properties:
   source: Embedded
   state: Disabled
   weight: 2
-status:
-  status: Ready
 `)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()

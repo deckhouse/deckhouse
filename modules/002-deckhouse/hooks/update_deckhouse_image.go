@@ -170,8 +170,8 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	var enabledModules []string
 	for _, m := range input.Snapshots["modules"] {
 		module := m.(moduleState)
-		if module.state == "Enabled" {
-			enabledModules = append(enabledModules, module.name)
+		if module.State == "Enabled" {
+			enabledModules = append(enabledModules, module.Name)
 		}
 	}
 
@@ -326,8 +326,8 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 }
 
 type moduleState struct {
-	name  string
-	state string
+	Name  string
+	State string
 }
 
 func filterModules(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -339,8 +339,8 @@ func filterModules(unstructured *unstructured.Unstructured) (go_hook.FilterResul
 	}
 
 	return moduleState{
-		name:  module.Name,
-		state: module.Properties.State,
+		Name:  module.Name,
+		State: module.Properties.State,
 	}, nil
 }
 
