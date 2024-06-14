@@ -1463,7 +1463,6 @@
               "custom": {
                 "axisLabel": "",
                 "axisPlacement": "auto",
-                "axisWidth": 1,
                 "barAlignment": 0,
                 "drawStyle": "line",
                 "fillOpacity": 10,
@@ -1474,8 +1473,11 @@
                   "viz": false
                 },
                 "lineInterpolation": "linear",
+                "lineStyle": {
+                  "fill": "solid"
+                },
                 "lineWidth": 2,
-                "pointSize": 5,
+                "pointSize": 4,
                 "scaleDistribution": {
                   "type": "linear"
                 },
@@ -1504,7 +1506,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "cps"
             },
             "overrides": []
           },
@@ -1515,7 +1517,7 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 33
+            "y": 25
           },
           "hiddenSeries": false,
           "id": 16,
