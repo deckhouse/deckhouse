@@ -405,7 +405,7 @@ jobs:
             # Build using dev-registry as primary repo and prod registry as secondary (ro) repo.
             # This build will put stages to "dev" registry. If "dev" registry is empty, existing stages are copied from prod registry.
 
-            SECONDARY_REPO="--secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+            SECONDARY_REPO="--cache-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
 
             if [[ -n "${CI_COMMIT_BRANCH}" && ! "${CI_COMMIT_BRANCH}" =~ ^(main|release-.+)$ ]]; then
               SECONDARY_REPO=
