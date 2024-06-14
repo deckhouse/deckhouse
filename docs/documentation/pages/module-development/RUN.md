@@ -9,7 +9,7 @@ Follow these steps to run the module in a cluster:
 
 - [Define ModuleSource](#module-source) (the [ModuleSource](../../cr.html#modulesource) resource).
 - _(optional)_ Define the [module update policy](#module-update-policy) (the [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy) resource).
-- [Enable the module in the cluster](#enable-the-module-in-cluster) (the [ModuleConfig](../../cr.html#moduleconfig) resource).
+- [Enable the module in the cluster](#enabling-the-module) (the [ModuleConfig](../../cr.html#moduleconfig) resource).
   
 ## Module source
 
@@ -111,51 +111,51 @@ kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 
 {% endalert %}
 
-### Переключение модуля на другой источник модулей
+### Switching the module to a different module source
 
-Если необходимо развернуть модуль из другого источника модулей, выполните следующие шаги:
-1. Определите, под какую [политику обновлений](#политика-обновления-модуля) подпадает модуль:
+Follow these steps to deploy a module from a different module source:
+1. Find out what [update policy](#module-update-policy) is used for the module:
 
    ```shell
    kubectl get mr
    ```
 
-   Проверьте `UPDATE POLICY` для релизов модуля.
+   Look up the `UPDATE POLICY` for the module releases.
 
-2. Прежде чем удалить эту политику обновления, убедитесь, что нет ожидающих развертывания (в состоянии Pending) релизов, которые подпадают под удаляемую или изменяемую политику (или _labelSelector_, используемый политикой, больше не соответствует вашему модулю):
+2. Before dropping this update policy, make sure there are no releases awaiting to be deployed (in Pending state) that fall under the policy being dropped or modified (or the _labelSelector_ used by the policy no longer matches your module):
 
    ```shell
    kubectl delete mup <POLICY_NAME>
    ```
 
-3. Создайте новый [ресурс ModuleSource](#источник-модулей).
+3. Create a new [ModuleSource](#module-source) resource.
 
-4. Создайте новый [ресурс ModuleUpdatePolicy](#политика-обновления-модуля) с указанием правильных меток (source) для нового _ModuleSource_.
+4. Create a new [ModuleUpdatePolicy](#module-update-policy) resource with the correct labels (source) for the new _ModuleSource_.
 
-5. Проверьте, что новые _ModuleRelease_ для модуля создаются из нового _ModuleSource_ в соответствии с политикой обновления.
+5. Confirm that new _ModuleReleases_ for a module are created from a new _ModuleSource_ according to the update policy.
 
    ```shell
    kubectl get mr
    ```
 
-## Политика обновления модуля
+## Module update policy
 
-Политика обновления модуля — это правила, по которым DKP обновляет модули в кластере. Она определяется ресурсом [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), в котором можно настроить:
-- режим обновления модуля (автоматический, ручной, обновления отключены);
-- канал стабильности, используемый при обновлении;
-- окна автоматического обновления, в пределах которых разрешено обновление модуля.
+The module update policy refers to the rules that DKP uses to update modules in the cluster. It is set by the [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy) resource with the following settings:
+- module update mode (automatic, manual, updates are disabled);
+- the release channel to use for updates;
+- time windows for automatic updates during which the module update is permitted.
 
-Создавать ресурс `ModuleUpdatePolicy` не обязательно. Если политика обновления для модуля не определена (отсутствует соответствующий ресурс `ModuleUpdatePolicy`), то настройки обновления соответствуют настройкам обновления самого DKP (параметр [update](../../modules/002-deckhouse/configuration.html#parameters-update) модуля `deckhouse`).
+You do not have to create the `ModuleUpdatePolicy` resource. If the update policy for a module is not defined (there is no corresponding `ModuleUpdatePolicy` resource), the update settings match the update settings of DKP (the [update](../../modules/002-deckhouse/configuration.html#parameters-update) parameter of the `deckhouse` module).
 
 {% alert level="info" %}
-Чтобы не скачивать модули, определенные в `ModuleUpdatePolicy`, установите параметр [spec.update.mode](../../cr.html#moduleupdatepolicy-v1alpha1-spec-update-mode) в `Ignore`.
+To avoid downloading modules defined in `ModuleUpdatePolicy`, set the [spec.update.mode](../../cr.html#moduleupdatepolicy-v1alpha1-spec-update-mode) parameter to `Ignore`.
 {% endalert %}
 
 {% alert level="warning" %}
-Если какой-либо модуль попадает под несколько политик обновления (условие в параметре `labelSelector`), то новые модуль не будет обновляться до тех пор, пока модуль не будет подпадать под единственную политику обновления.
+If a module is subject to more than one update policy (condition in the `labelSelector` parameter), the modules will not be updated until the module becomes subject to a single update policy.
 {% endalert %}
 
-Пример ресурса `ModuleUpdatePolicy`, который определяет политику обновления модуля `module-1` источника модулей `example` (ModuleSource `example`). Политика обновления разрешает автоматическое обновление модуля по понедельникам и средам с 13:30 до 14:00 UTC:
+The following is an example of the `ModuleUpdatePolicy` resource that defines the update policy for the `module-1` module of the `example` module source (the `example` ModuleSource). The update policy enables automatic module updates on Mondays and Wednesdays between 13:30 and 14:00 UTC:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -179,9 +179,9 @@ spec:
       to: "14:00"
 ```
 
-### Примеры moduleReleaseSelector
+### moduleReleaseSelector — usage examples
 
-- Применить политику ко всем модулям _ModuleSource_ `deckhouse`:
+- Apply the policy to all _ModuleSource_ `deckhouse` modules:
 
   ```yaml
   moduleReleaseSelector:
@@ -190,7 +190,7 @@ spec:
         source: deckhouse
   ```
 
-- Применить политику к модулю `deckhouse-admin` независимо от _ModuleSource_:
+- Apply the policy to the `deckhouse-admin` module independently of _ModuleSource_:
 
   ```yaml
   moduleReleaseSelector:
@@ -199,8 +199,8 @@ spec:
         module: deckhouse-admin
   ```
 
-- Применить политику к модулю `deckhouse-admin` из _ModuleSource_ `deckhouse`:
-
+- Apply the policy to the `deckhouse-admin` module from the `deckhouse` _ModuleSource_:
+  
   ```yaml
   moduleReleaseSelector:
     labelSelector:
@@ -209,8 +209,8 @@ spec:
         source: deckhouse
   ```
 
-- Применить политику только к модулям `deckhouse-admin` и `secrets-store-integration` в _ModuleSource_ `deckhouse`:
-
+- Apply the policy only to the `deckhouse-admin` and `secrets-store-integration` modules in the `deckhouse` _ModuleSource_:
+  
   ```yaml
   moduleReleaseSelector:
     labelSelector:
@@ -224,7 +224,7 @@ spec:
         source: deckhouse
   ```
 
-- Применить политику ко всем модулям _ModuleSource_ `deckhouse`, кроме `deckhouse-admin`:
+- Apply the policy to all `deckhouse` _ModuleSource_ modules except for `deckhouse-admin`:
 
   ```yaml
   moduleReleaseSelector:
@@ -238,7 +238,7 @@ spec:
         source: deckhouse
   ```
 
-## Включение модуля в кластере
+## Enabling the module
 
 Прежде чем включить модуль, проверьте что он доступен для включения. Выполните следующую команду, чтобы вывести список всех доступных модулей DKP:
 
@@ -285,7 +285,7 @@ module-test                           900      Disabled   example
     version: 1
   ```
 
-### Если что-то пошло не так
+### Troubleshooting
 
 Если при включении модуля в кластере возникли ошибки, то получить информацию о них можно следующими способами:
 - Посмотреть журнал DKP:
