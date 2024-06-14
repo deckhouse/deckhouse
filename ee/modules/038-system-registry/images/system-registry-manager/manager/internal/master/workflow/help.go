@@ -8,11 +8,18 @@ package workflow
 import (
 	"context"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"sort"
 	"strings"
 	pkg_cfg "system-registry-manager/pkg/cfg"
+	"system-registry-manager/pkg/utils"
+	pkg_utils "system-registry-manager/pkg/utils"
 	"time"
+
+	"github.com/sirupsen/logrus"
+)
+
+const (
+	IpForEvenNodesNumber = "127.0.0.0"
 )
 
 type CpmFuncNodeClusterStatus = func(*SeaweedfsNodeClusterStatus) bool
@@ -298,6 +305,184 @@ func SortBy(nodeManagers []NodeManager, cmpFuncs ...interface{}) ([]NodeManager,
 	return sortedNodes, nil
 }
 
+func GetExpectedNodeCount(nodeCount, expectedNodeCount int) int {
+	if nodeCount < expectedNodeCount {
+		return nodeCount
+	}
+	return expectedNodeCount
+}
+
+func GetNodesByCount(nodes []NodeManager, count int) ([]NodeManager, []NodeManager) {
+	if len(nodes) < count {
+		return nodes, []NodeManager{}
+	}
+	return nodes[:count], nodes[count:]
+}
+
+func GetNodeNames(nodes []NodeManager) string {
+	names := make([]string, 0, len(nodes))
+	for _, node := range nodes {
+		names = append(names, node.GetNodeName())
+	}
+	return fmt.Sprintf("[%s]", strings.Join(names, ","))
+}
+
+func DeleteNodes(ctx context.Context, log *logrus.Entry, nodes []NodeManager) error {
+	log.Infof("Deleting nodes %s", GetNodeNames(nodes))
+	for _, node := range nodes {
+		status, err := node.GetNodeRunningStatus()
+		if err == nil && !status.IsExist {
+			log.Infof("Node %s has already been deleted", node.GetNodeName())
+			return nil
+		}
+
+		log.Infof("Deleting manifests for node %s", node.GetNodeName())
+		if err := node.DeleteNodeManifests(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func CreateNodes(ctx context.Context, log *logrus.Entry, nodes []NodeManager, createRequest *SeaweedfsCreateNodeRequest) error {
+	for _, node := range nodes {
+		log.Infof("Creating manifests for node %s", node.GetNodeName())
+		if err := node.CreateNodeManifests(createRequest); err != nil {
+			return err
+		}
+	}
+	{
+		log.Infof("Waiting nodes: %s", GetNodeNames(nodes))
+		wait, err := WaitBy(ctx, log, nodes, CmpIsRunning)
+		if err != nil {
+			return err
+		}
+		if !wait {
+			return fmt.Errorf("error waitig nodes: %s", GetNodeNames(nodes))
+		}
+	}
+	return nil
+}
+
+func RollingUpgradeNodes(ctx context.Context, log *logrus.Entry, nodes []NodeManager, updateRequest *SeaweedfsUpdateNodeRequest) error {
+	for _, node := range nodes {
+		nodeIP, err := node.GetNodeIP()
+		if err != nil {
+			return err
+		}
+
+		log.Infof("Updating manifests for node %s", node.GetNodeName())
+		if err := node.UpdateNodeManifests(updateRequest); err != nil {
+			return err
+		}
+
+		log.Infof("Waiting node %s", node.GetNodeName())
+
+		haveLeader := false
+		var cpmFuncLeaderElection CpmFuncNodeClusterStatus = func(status *SeaweedfsNodeClusterStatus) bool {
+			if status.IsLeader {
+				haveLeader = true
+			}
+			return haveLeader
+		}
+
+		var cpmFuncNodeConnectToCluster CpmFuncNodeClusterStatus = func(status *SeaweedfsNodeClusterStatus) bool {
+			return pkg_utils.IsStringInSlice(nodeIP, &status.ClusterNodesIPs)
+		}
+
+		wait, err := WaitBy(ctx, log, []NodeManager{node}, CmpIsRunning, cpmFuncLeaderElection, cpmFuncNodeConnectToCluster)
+		if err != nil {
+			return err
+		}
+		if !wait {
+			return fmt.Errorf("error waitig node %s", node.GetNodeName())
+		}
+	}
+	return nil
+}
+
+func WaitLeaderElectionForNodes(ctx context.Context, log *logrus.Entry, nodes []NodeManager) error {
+	log.Infof("Waiting leader election for nodes: %s", GetNodeNames(nodes))
+	haveLeader := false
+	var cpmFunc CpmFuncNodeClusterStatus = func(status *SeaweedfsNodeClusterStatus) bool {
+		if status.IsLeader {
+			haveLeader = true
+		}
+		return haveLeader
+	}
+	wait, err := WaitBy(ctx, log, nodes, CmpIsRunning, cpmFunc)
+	if err != nil {
+		return err
+	}
+	if !wait {
+		return fmt.Errorf("error waitig cluster status for nodes: %s", GetNodeNames(nodes))
+	}
+	return nil
+}
+
+func WaitNodesConnection(ctx context.Context, log *logrus.Entry, leader NodeManager, nodesIps []string) error {
+	log.Infof("Waiting connection for nodes: [%s]", strings.Join(nodesIps, ","))
+	var cpmFunc CpmFuncNodeClusterStatus = func(status *SeaweedfsNodeClusterStatus) bool {
+		newIPsInCluster := true
+		for _, ip := range nodesIps {
+			newIPsInCluster = newIPsInCluster && pkg_utils.IsStringInSlice(ip, &status.ClusterNodesIPs)
+		}
+		return newIPsInCluster
+	}
+
+	wait, err := WaitBy(ctx, log, []NodeManager{leader}, cpmFunc)
+	if err != nil {
+		return err
+	}
+	if !wait {
+		return fmt.Errorf("error waitig connection for nodes: [%s]", strings.Join(nodesIps, ","))
+	}
+	return nil
+}
+
+func RemoveLeaderStatusForNode(ctx context.Context, log *logrus.Entry, clusterNodes []NodeManager, removeLeaderNode NodeManager) error {
+	// Check if leader
+	if nodeStatus, err := removeLeaderNode.GetNodeClusterStatus(); err != nil {
+		return err
+	} else if !nodeStatus.IsLeader {
+		return nil
+	}
+
+	// Else - change leader
+	// Get cluster node for run remote commands
+	if len(clusterNodes) == 0 {
+		return fmt.Errorf("len(clusterNodes) == 0")
+	}
+	clusterNode := clusterNodes[0]
+
+	removedLeaderNodeIp, err := removeLeaderNode.GetNodeIP()
+	if err != nil {
+		return err
+	}
+
+	// Remove nodes from cluster
+	if err := clusterNode.RemoveNodeFromCluster(IpForEvenNodesNumber); err != nil {
+		return err
+	}
+	if err := clusterNode.RemoveNodeFromCluster(removedLeaderNodeIp); err != nil {
+		return err
+	}
+
+	// Wait new leader
+	if err := WaitLeaderElectionForNodes(ctx, log, clusterNodes); err != nil {
+		return err
+	}
+
+	// Add nodes to cluster
+	if utils.IsEvenNumber(len(clusterNodes) + 1) {
+		clusterNode.AddNodeToCluster(IpForEvenNodesNumber)
+	}
+	if err := clusterNode.AddNodeToCluster(removedLeaderNodeIp); err != nil {
+		return err
+	}
+	return nil
+}
+
 func GetClustersMembers(nodeManagers []NodeManager) ([]ClusterMembers, error) {
 	cache := NewNodeManagerCache()
 	visited := make(map[string]bool)
@@ -391,23 +576,79 @@ func GetClustersMembers(nodeManagers []NodeManager) ([]ClusterMembers, error) {
 	return clusterMembersList, nil
 }
 
-func GetExpectedNodeCount(expectedNodeCount int) int {
-	if expectedNodeCount == 0 || expectedNodeCount == 1 {
-		return expectedNodeCount
+func GetCurrentClustersMembers(ctx context.Context, log *logrus.Entry, clusterNodes []NodeManager) ([]ClusterMembers, error) {
+	log.Infof("Get clusters members")
+	clustersMembers, err := GetClustersMembers(clusterNodes)
+	if clustersMembers != nil {
+		log.Infof("Clusters count %d", len(clustersMembers))
 	}
-	if expectedNodeCount < 0 {
-		return 0
-	}
-	if expectedNodeCount%2 == 0 {
-		return expectedNodeCount - 1
-	}
-	return expectedNodeCount
+	return clustersMembers, err
 }
 
-func GetNodeNames(nodes []NodeManager) string {
-	names := make([]string, 0, len(nodes))
-	for _, node := range nodes {
-		names = append(names, node.GetNodeName())
+func GetClustersLeaders(ctx context.Context, log *logrus.Entry, clusterNodes []NodeManager) ([]NodeManager, error) {
+	log.Infof("Get clusters leaders")
+	clustersMembers, err := GetCurrentClustersMembers(ctx, log, clusterNodes)
+	if err != nil {
+		return nil, err
 	}
-	return fmt.Sprintf("[%s]", strings.Join(names, ","))
+	leaders := []NodeManager{}
+
+	if clustersMembers == nil {
+		return leaders, nil
+	}
+
+	for _, clusterMembers := range clustersMembers {
+		if clusterMembers.Leader != nil {
+			leaders = append(leaders, clusterMembers.Leader)
+		}
+	}
+	return leaders, nil
+}
+
+func GetNewAndUnusedClusterIP(ctx context.Context, log *logrus.Entry, clusterNodes []NodeManager, removedNodes []NodeManager) ([]NodeManager, []string, []string, error) {
+	leaders, err := GetClustersLeaders(ctx, log, clusterNodes)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	if len(leaders) > 1 {
+		log.Infof("Have more than one cluster leaders")
+		return nil, nil, nil, fmt.Errorf("len(*leaders) > 1")
+	}
+
+	ipsForCreate := []string{}
+	ipsForDelete := []string{}
+	for _, node := range clusterNodes {
+		nodeIp, err := node.GetNodeIP()
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		ipsForCreate = append(ipsForCreate, nodeIp)
+	}
+	for _, node := range removedNodes {
+		nodeIp, err := node.GetNodeIP()
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		ipsForDelete = append(ipsForDelete, nodeIp)
+	}
+
+	if len(leaders) < 1 {
+		return leaders, ipsForCreate, ipsForDelete, nil
+	}
+
+	ipsFromCluster := []string{}
+	if leaderInfo, err := leaders[0].GetNodeClusterStatus(); err != nil {
+		return leaders, nil, nil, err
+	} else {
+		ipsFromCluster = leaderInfo.ClusterNodesIPs
+	}
+
+	for _, ipFromCluster := range ipsFromCluster {
+		if !pkg_utils.IsStringInSlice(ipFromCluster, &ipsForCreate) {
+			ipsForDelete = pkg_utils.InsertString(ipFromCluster, ipsForDelete)
+		}
+	}
+
+	return leaders, ipsForCreate, ipsForDelete, nil
 }
