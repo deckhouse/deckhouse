@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// TODO: rm
 package hooks
 
 import (
@@ -26,6 +27,8 @@ import (
 	"regexp"
 	"sort"
 	"time"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -624,4 +627,80 @@ func buildSuspendAnnotation(suspend bool) map[string]interface{} {
 	}
 
 	return p
+}
+
+func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var release v1alpha1.DeckhouseRelease
+
+	err := sdk.FromUnstructured(unstructured, &release)
+	if err != nil {
+		return nil, err
+	}
+
+	var annotationFlags d8updater.DeckhouseReleaseAnnotationsFlags
+
+	if v, ok := release.Annotations["release.deckhouse.io/suspended"]; ok {
+		if v == "true" {
+			annotationFlags.Suspend = true
+		}
+	}
+
+	if v, ok := release.Annotations["release.deckhouse.io/force"]; ok {
+		if v == "true" {
+			annotationFlags.Force = true
+		}
+	}
+
+	if v, ok := release.Annotations["release.deckhouse.io/apply-now"]; ok {
+		if v == "true" {
+			annotationFlags.ApplyNow = true
+		}
+	}
+
+	if v, ok := release.Annotations["release.deckhouse.io/disruption-approved"]; ok {
+		if v == "true" {
+			annotationFlags.DisruptionApproved = true
+		}
+	}
+
+	if v, ok := release.Annotations["release.deckhouse.io/notification-time-shift"]; ok {
+		if v == "true" {
+			annotationFlags.NotificationShift = true
+		}
+	}
+
+	var releaseApproved bool
+	if v, ok := release.Annotations["release.deckhouse.io/approved"]; ok {
+		if v == "true" {
+			releaseApproved = true
+		}
+	} else {
+		releaseApproved = release.Approved
+	}
+
+	var cooldown *metav1.Time
+	if v, ok := release.Annotations["release.deckhouse.io/cooldown"]; ok {
+		cd, err := time.Parse(time.RFC3339, v)
+		if err == nil {
+			cdv := metav1.NewTime(cd)
+			cooldown = &cdv
+		}
+	}
+
+	return &d8updater.DeckhouseRelease{
+		Name:          release.Name,
+		Version:       semver.MustParse(release.Spec.Version),
+		ApplyAfter:    release.Spec.ApplyAfter,
+		CooldownUntil: cooldown,
+		Requirements:  release.Spec.Requirements,
+		ChangelogLink: release.Spec.ChangelogLink,
+		Disruptions:   release.Spec.Disruptions,
+		Status: v1alpha1.DeckhouseReleaseStatus{
+			Phase:    release.Status.Phase,
+			Approved: release.Status.Approved,
+			Message:  release.Status.Message,
+		},
+		ManuallyApproved: releaseApproved,
+		AnnotationFlags:  annotationFlags,
+	}, nil
 }
