@@ -14,23 +14,6 @@ data:
   clusterIsBootstrapped: {{ .Values.global.clusterIsBootstrapped | quote | b64enc }}
   imagesRegistry: {{ b64enc .Values.global.modulesImages.registry.base }}
 ---
-apiVersion: v1
-kind: Pod
-metadata:
-  name: deckhouse-6f46df5bd7-nk4j7
-  namespace: d8-system
-  labels:
-    app: deckhouse
-spec:
-  containers:
-    - name: deckhouse
-      image: dev-registry.deckhouse.io/sys/deckhouse-oss:v1.2.3
-status:
-  containerStatuses:
-    - containerID: containerd://9990d3eccb8657d0bfe755672308831b6d0fab7f3aac553487c60bf0f076b2e3
-      imageID: dev-registry.deckhouse.io/sys/deckhouse-oss/dev@sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1
-      ready: true
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -42,6 +25,23 @@ spec:
       containers:
         - name: deckhouse
           image: my.registry.com/deckhouse:v1.25.0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: deckhouse-6f46df5bd7-nk4j7
+  namespace: d8-system
+  labels:
+    app: deckhouse
+spec:
+  containers:
+    - name: deckhouse
+      image: dev-registry.deckhouse.io/sys/deckhouse-oss:test-me
+status:
+  containerStatuses:
+    - containerID: containerd://9990d3eccb8657d0bfe755672308831b6d0fab7f3aac553487c60bf0f076b2e3
+      imageID: dev-registry.deckhouse.io/sys/deckhouse-oss/dev@sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1
+      ready: false
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
@@ -56,5 +56,8 @@ apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
   name: v1.26.0
+  annotations:
+    release.deckhouse.io/apply-now: "true"
 spec:
   version: "v1.26.0"
+

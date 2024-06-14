@@ -46,15 +46,23 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1.25.0
+  name: v1.45.0
 spec:
-  version: "v1.25.0"
+  version: "v1.45.0"
 status:
+  approved: true
+  message: ""
   phase: Deployed
+  transitionTime: "2023-04-20T10:10:30Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1.26.0
+  name: v1.46.0
 spec:
-  version: "v1.26.0"
+  version: "v1.46.0"
+status:
+  approved: false
+  message: "Waiting for manual approval"
+  phase: Pending
+  transitionTime: "2023-05-20T10:10:10Z"

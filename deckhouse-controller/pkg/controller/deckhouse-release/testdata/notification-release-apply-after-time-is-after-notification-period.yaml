@@ -42,19 +42,23 @@ spec:
       containers:
         - name: deckhouse
           image: my.registry.com/deckhouse:v1.25.0
+
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1.25.0
+  name: v1.35.0
 spec:
-  version: "v1.25.0"
+  version: "v1.35.0"
 status:
   phase: Deployed
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1.26.0
+  name: v1.36.0
 spec:
-  version: "v1.26.0"
+  version: "v1.36.0"
+  applyAfter: "2222-11-11T23:23:23Z"
+status:
+  phase: Pending
