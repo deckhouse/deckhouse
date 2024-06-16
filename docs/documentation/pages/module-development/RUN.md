@@ -240,15 +240,15 @@ spec:
 
 ## Enabling the module
 
-Прежде чем включить модуль, проверьте что он доступен для включения. Выполните следующую команду, чтобы вывести список всех доступных модулей DKP:
+Before enabling the module, make sure that it can be enabled. Run the following command to list all the available DKP modules:
 
 ```shell
 kubectl get modules
 ```
 
-Модуль должен быть в списке.
+The module must be in the list.
 
-Пример вывода:
+Below is an example of the output:
 
 ```console
 $ kubectl get modules
@@ -258,20 +258,21 @@ module-test                           900      Disabled   example
 ...
 ```
 
-Вывод показывает, что модуль `module-test` доступен для включения.
+It shows that the `module-test` module can be enabled.
 
-Если модуля нет в списке, то проверьте что определен [источник модулей](#источник-модулей) и модуль есть в списке в источнике модулей. Также проверьте [политику обновления](#политика-обновления-модуля) модуля (если она определена). Если политика обновления модуля не определена, то она соответствует политике обновления DKP (параметр [releaseChannel](../../modules/002-deckhouse/configuration.html#parameters-releasechannel) и секция [update](../../modules/002-deckhouse/configuration.html#parameters-update) параметров модуля `deckhouse`).
+If the module is not in the list, check that [module source](#module-source) is defined and the module is listed in the module source. Also check the [update policy](#module-update-policy) of the module (if defined). If the module update policy is not defined, it matches the DKP update policy (the [releaseChannel](../../modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter and the [update](../../modules/002-deckhouse/configuration.html#parameters-update) section of the `deckhouse` module parameters).
 
-Включить модуль можно аналогично встроенному модулю DKP любым из следующих способов:
-- Выполнить следующую команду (укажите имя модуля):
+
+You can enable the module similarly to built-in DKP modules using any of the following methods:
+- Run the command below (specify the name of the module):
 
   ```shell
   kubectl -ti -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable <MODULE_NAME>
   ```
 
-- Создать ресурс `ModuleConfig` с параметром `enabled: true` и настройками модуля.
+- Create a `ModuleConfig` resource containing the `enabled: true` parameter and module settings..
 
-  Пример [ModuleConfig](../../cr.html#moduleconfig), для включения и настройки модуля `module-1` в кластере:
+ Below is an example of a [ModuleConfig](../../cr.html#moduleconfig) that enables and configures the `module-1` module in the cluster:
 
   ```yaml
   apiVersion: deckhouse.io/v1alpha1
@@ -287,16 +288,16 @@ module-test                           900      Disabled   example
 
 ### Troubleshooting
 
-Если при включении модуля в кластере возникли ошибки, то получить информацию о них можно следующими способами:
-- Посмотреть журнал DKP:
+If there were errors while enabling a module in the cluster, you can learn about them as follows:
+- View the DKP log:
 
   ```shell
   kubectl -n d8-system logs -l app=deckhouse
   ```
 
-- Посмотреть ресурс `ModuleConfig` модуля:
+- View the `ModuleConfig` resource of the module:
 
-  Пример вывода информации об ошибке модуля `module-1`:
+  Here is an example of the error message for `module-1`:
 
   ```shell
   $ kubectl get moduleconfig module-1
@@ -304,13 +305,13 @@ module-test                           900      Disabled   example
   module-1    true                7s    Ignored: unknown module name
   ```
 
-По аналогии [с _DeckhouseRelease_](../../cr.html#deckhouserelease) (ресурсом релиза DKP) у модулей есть аналогичный ресурс — [_ModuleRelease_](../../cr.html#modulerelease). DKP создает ресурсы _ModuleRelease_ исходя из того, что хранится в container registry. При поиске проблем с модулем проверьте также доступные в кластере релизы модуля:
+Similar to [_DeckhouseRelease_](../../cr.html#deckhouserelease) (a DKP release resource), modules have a [_ModuleRelease_](../../cr.html#modulerelease) resource. DKP creates _ModuleRelease_ resources based on what is stored in the container registry. When troubleshooting module issues, check the module releases available in the cluster as well:
 
 ```shell
 kubectl get mr
 ```
 
-Пример вывода:
+Output example:
 
 ```shell
 $ kubectl get mr
@@ -318,7 +319,7 @@ NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAG
 module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for manual approval
 ```
 
-В примере вывода показан _ModuleRelease_, когда режим обновления (параметр [update.mode](../../cr.html#moduleupdatepolicy-v1alpha1-spec-update-mode) ресурса _ModuleUpdatePolicy_ установлен в `Manual`. В этом случае необходимо вручную подтвердить установку новой версии модуля, установив на релиз аннотацию `modules.deckhouse.io/approved="true"`:
+The example output above illustrates _ModuleRelease_ message when the update mode ([update.mode](../../cr.html#moduleupdatepolicy-v1alpha1-spec-update-mode) of the _ModuleUpdatePolicy_ resource is set to `Manual`. In this case, you must manually confirm the installation of the new module version by adding the `modules.deckhouse.io/approved="true"` annotation to the release:
 
 ```shell
 kubectl annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
