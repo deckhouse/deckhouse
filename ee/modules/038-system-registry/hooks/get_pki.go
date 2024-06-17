@@ -10,10 +10,11 @@ import (
 	"fmt"
 	"sort"
 
+	resources_common "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/internal/resources/common"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	v1 "k8s.io/api/core/v1"
+	v1_core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -38,22 +39,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handlePKIData)
 
-type secretData map[string][]byte
-
-type secretDataKV struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
 func filterPkiSecret(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var sec v1.Secret
+	var sec v1_core.Secret
 
 	err := sdk.FromUnstructured(unstructured, &sec)
 	if err != nil {
 		return nil, err
 	}
 
-	return secretData(sec.Data), nil
+	return resources_common.SecretData(sec.Data), nil
 }
 
 func handlePKIData(input *go_hook.HookInput) error {
@@ -63,10 +57,10 @@ func handlePKIData(input *go_hook.HookInput) error {
 		return fmt.Errorf(`there is no Secret named "d8-pki" in NS "kube-system"`)
 	}
 
-	sData := snap[0].(secretData)
+	sData := snap[0].(resources_common.SecretData)
 
 	keys := make([]string, 0, len(sData))
-	kvSData := make([]secretDataKV, 0, len(sData))
+	kvSData := make([]resources_common.SecretDataKV, 0, len(sData))
 
 	// sort map values by key
 	for k := range sData {
@@ -76,7 +70,7 @@ func handlePKIData(input *go_hook.HookInput) error {
 
 	// create kv sData
 	for _, key := range keys {
-		kvSData = append(kvSData, secretDataKV{Key: key, Value: base64.StdEncoding.EncodeToString(sData[key])})
+		kvSData = append(kvSData, resources_common.SecretDataKV{Key: key, Value: base64.StdEncoding.EncodeToString(sData[key])})
 	}
 
 	input.Values.Set("systemRegistry.internal.pki.data", kvSData)
