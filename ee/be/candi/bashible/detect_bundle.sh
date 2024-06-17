@@ -28,13 +28,13 @@ case "$ID" in
     name_is_not_supported
   ;;
   redos)
-    case "$VERSION_ID" in 7|7.*)
+    case "$VERSION_ID" in 7|7.*|8|8.*)
       echo "redos" && exit 0 ;;
     esac
     name_is_not_supported
   ;;
   rels)
-    case "$VERSION_ID" in 7|7.*|8|8.*)
+    case "$VERSION_ID" in 7|7.*)
       echo "rels" && exit 0 ;;
     esac
     name_is_not_supported
