@@ -36,6 +36,8 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /cilium/proxy
+  - sed -i 's/EXTRA_GO_BUILD_LDFLAGS = -extldflags -Wl,-soname,libcilium.so/EXTRA_GO_BUILD_LDFLAGS = -s -w -extldflags "-Wl,-soname,libcilium.so -static"/' proxylib/Makefile
+  - sed -i "s/\$(QUIET)\$(GO_BUILD_WITH_CGO) -ldflags '\$(EXTRA_GO_BUILD_LDFLAGS)' -o \$@ -buildmode=c-shared/\$(QUIET)\$(GO_BUILD_WITH_CGO) -tags netgo,osusergo -ldflags '\$(EXTRA_GO_BUILD_LDFLAGS)' -o \$@/" proxylib/Makefile
   - make -C proxylib all
   - mkdir -p /tmp/install/usr/lib
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
