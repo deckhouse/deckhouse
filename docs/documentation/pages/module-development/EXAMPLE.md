@@ -95,7 +95,7 @@ This section provides an example of creating a `hello-world-module` module based
    Do the following in the properties of your project on GitHub to make the module workflow run smoothly:
    - Open the *Settings -> Actions -> General* page.
    - Enable *Read and write permissions* in the *Workflow permissions* section.
- 
+
 1. Commit the changes to the repository (specify the address of the module's Git repository).
 
    ```shell
