@@ -77,8 +77,15 @@ func (pc *Checker) CheckSSHCredential() error {
 }
 
 func (pc *Checker) CheckSingleSSHHostForStatic() error {
+	if app.PreflightSkipOneSSHHost {
+		log.InfoLn("Only one --ssh-host parameter used preflight check was skipped")
+		return nil
+	}
+
 	if len(pc.sshClient.Settings.AvailableHosts()) > 1 {
-		return fmt.Errorf("")
+		return fmt.Errorf(
+			"for the bootstrap first master, only one --ssh-host parameter should be used for a static cluster",
+		)
 	}
 	return nil
 }

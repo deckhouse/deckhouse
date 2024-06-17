@@ -30,6 +30,7 @@ var (
 	PreflightSkipMasterHostname            = false
 	PreflightSkipPythonChecks              = false
 	PreflightSkipSudoIsAllowedForUserCheck = false
+	PreflightSkipOneSSHHost                = false
 )
 
 const (
@@ -44,6 +45,7 @@ const (
 	ContainerdExistCheckArgName      = "preflight-skip-containerd-exist"
 	PythonChecksArgName              = "preflight-skip-python-checks"
 	SudoAllowedCheckArgName          = "preflight-skip-sudo-allowed"
+	OneSSHHostCheckArgName           = "preflight-skip-one-ssh-host"
 )
 
 func DefinePreflight(cmd *kingpin.CmdClause) {
@@ -83,4 +85,7 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(SudoAllowedCheckArgName, "Skip verifying sudo is allowed for user").
 		Envar(configEnvName("PREFLIGHT_SKIP_SUDO_ALLOWED_CHECK")).
 		BoolVar(&PreflightSkipSudoIsAllowedForUserCheck)
+	cmd.Flag(OneSSHHostCheckArgName, "Skip verifying one ssh-host parametr").
+		Envar(configEnvName("PREFLIGHT_SKIP_ONE_SSH_HOST")).
+		BoolVar(&PreflightSkipOneSSHHost)
 }
