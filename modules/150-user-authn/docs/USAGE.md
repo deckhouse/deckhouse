@@ -169,7 +169,7 @@ spec:
 
 #### Blitz Identity Provider
 
-On the Blitz Identity Provider side, when [configuring the provider](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html ), you must specify the URL to redirect the user after authorization. When using `DexProvider`, you must specify `https://dex .<publicDomainTemplate>/`. `publicDomainTemplate` [is specified](https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate ) in the `global` module.
+On the Blitz Identity Provider side, when [registering the application](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html ), you must specify the URL to redirect the user after authorization. When using `DexProvider`, you must specify `https://dex .<publicDomainTemplate>/`. `publicDomainTemplate` [is specified](https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate ) in the `global` module.
 
 The example shows the provider's settings for integration with Blitz Identity Provider.
 
