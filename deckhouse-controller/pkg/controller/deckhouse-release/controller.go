@@ -73,6 +73,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 	}
 
 	go r.checkDeckhouseReleaseLoop(ctx)
+	go r.cleanupDeckhouseReleaseLoop(ctx)
 
 	ctr, err := controller.New("module-documentation", mgr, controller.Options{
 		MaxConcurrentReconciles: 1,
