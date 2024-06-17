@@ -372,7 +372,7 @@ You can find an example of an OpenAPI schema in [module template](https://github
 
 ### config-values.yaml
 
-This file is required to validate the module parameters that the user can configure via [_ModuleConfig_](deckhouse.ru.md#the-moduleconfig-resource).
+This file is required to validate the module parameters that the user can configure via [_ModuleConfig_](../../cr.html#moduleconfig).
 
 To render the schema in the documentation on the site or in the documentation module in the cluster, create:
 - the `doc-ru-config-values.yaml` file with a structure similar to that of the `config-values.yaml` file. Keep only the translated description parameters in the `doc-ru-config-values.yaml` file;
@@ -417,7 +417,7 @@ type: object
 properties:
   internal:
     type: object
-    default: {}</code>
+    default: {}
 ```
 
 ## .helmignore

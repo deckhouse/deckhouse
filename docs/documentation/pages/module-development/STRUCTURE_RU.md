@@ -373,7 +373,7 @@ conversions:
 
 ### config-values.yaml
 
-Необходим для проверки параметров модуля, которые пользователь может настроить через [_ModuleConfig_](deckhouse.ru.md#ресурс-moduleconfig).
+Необходим для проверки параметров модуля, которые пользователь может настроить через [_ModuleConfig_](../../cr.html#moduleconfig).
 
 Чтобы схема была представлена в документации на сайте или в модуле documentation в кластере, создайте:
 - файл `doc-ru-config-values.yaml` со структурой, аналогичной структуре файла `config-values.yaml`. В файле `doc-ru-config-values.yaml` оставьте только переведенные параметры description;
@@ -418,12 +418,12 @@ type: object
 properties:
   internal:
     type: object
-    default: {}</code>
+    default: {}
 ```
 
 ## .helmignore
 
-Исключите файлы из секрета Helm-релиза с помощью `.helmignore`. В случае модулей DKP директории `/crds`, `/images`, `/hooks`, `/openapi` обязательно добавляйте в `.helmignore`, чтобы избежать превышения лимита размера Helm-релиза в 1 Мб.
+Исключите файлы из Helm-релиза с помощью `.helmignore`. В случае модулей DKP директории `/crds`, `/images`, `/hooks`, `/openapi` обязательно добавляйте в `.helmignore`, чтобы избежать превышения лимита размера Helm-релиза в 1 Мб.
 
 ## Chart.yaml
 
