@@ -6,7 +6,7 @@ ENV GOPROXY=${GOPROXY}
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 WORKDIR /dex
-COPY patches/client-groups.patch patches/static-user-groups.patch patches/gitlab-refresh-context.patch patches/connector-data.patch patches/oidc-ca-insecure.patch patches/robots-txt.patch patches/401-password-auth.patch /
+COPY patches/client-groups.patch patches/static-user-groups.patch patches/gitlab-refresh-context.patch /
 RUN git clone --branch v2.40.0 --depth 1 ${SOURCE_REPO}/dexidp/dex.git . \
   && git apply /client-groups.patch \
   && git apply /static-user-groups.patch \
