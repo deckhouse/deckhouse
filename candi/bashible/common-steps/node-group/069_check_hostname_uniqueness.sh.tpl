@@ -19,7 +19,7 @@ if [ -f /var/lib/bashible/bootstrap-token ]; then
   while true; do
     for server in {{ .normal.apiserverEndpoints | join " " }}; do
       url="https://$server/api/v1/nodes/$HOSTNAME"
-      if curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt" > /dev/null
+      if d8-curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt" > /dev/null
       then
         bb-log-error "ERROR: A node with the hostname $HOSTNAME already exists in the cluster\nPlease change the hostname, it should be unique in the cluster.\nThen clean up the server by running the script /var/lib/bashible/cleanup_static_node.sh and try again."
         exit 1
