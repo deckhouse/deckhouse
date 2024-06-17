@@ -262,9 +262,13 @@ func (s *Service) CommanderDetachCluster(
 	})
 
 	detacher := detach.NewDetacher(checker, sshClient, detach.DetacherOptions{
-		DetachResources: detach.DetachResources{
-			Template: request.ResourcesTemplate,
-			Values:   request.ResourcesValues.AsMap(),
+		CreateDetachResources: detach.DetachResources{
+			Template: request.CreateResourcesTemplate,
+			Values:   request.CreateResourcesValues.AsMap(),
+		},
+		DeleteDetachResources: detach.DetachResources{
+			Template: request.DeleteResourcesTemplate,
+			Values:   request.DeleteResourcesValues.AsMap(),
 		},
 		OnCheckResult: onCheckResult,
 	})

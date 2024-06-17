@@ -1,8 +1,23 @@
+// Copyright 2024 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package detach
 
 import (
 	"context"
 	"fmt"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
@@ -12,8 +27,9 @@ import (
 )
 
 type DetacherOptions struct {
-	DetachResources
-	OnCheckResult func(*check.CheckResult) error
+	DeleteDetachResources DetachResources
+	CreateDetachResources DetachResources
+	OnCheckResult         func(*check.CheckResult) error
 }
 
 type Detacher struct {
@@ -54,24 +70,55 @@ func (op *Detacher) Detach(ctx context.Context) error {
 		return err
 	}
 
-	if err := log.Process("commander/detach", "Remove commander resources", func() error {
+	if err := log.Process("commander/detach", "Create resources", func() error {
 		detachResources, err := template.ParseResourcesContent(
-			op.DetachResources.Template,
-			op.DetachResources.Values,
+			op.CreateDetachResources.Template,
+			op.CreateDetachResources.Values,
 		)
 		if err != nil {
-			return fmt.Errorf("unable to parse resources to detach: %w", err)
+			return fmt.Errorf("unable to parse resources to create: %w", err)
 		}
 
-		kubeCl, err := op.Checker.GetKubeClient()
+		kubeClient, err := op.Checker.GetKubeClient()
 		if err != nil {
 			return fmt.Errorf("unable to get kube client: %w", err)
 		}
 
-		if err := resources.DeleteResourcesLoop(ctx, kubeCl, detachResources); err != nil {
-			return fmt.Errorf("unable to detach resources: %w", err)
+		checkers, err := resources.GetCheckers(kubeClient, detachResources, nil)
+		if err != nil {
+			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
-		if err := commander.DeleteManagedByCommanderConfigMap(ctx, kubeCl); err != nil {
+
+		err = resources.CreateResourcesLoop(kubeClient, detachResources, checkers)
+		if err != nil {
+			return fmt.Errorf("unable to create resources: %w", err)
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	if err := log.Process("commander/detach", "Remove commander resources", func() error {
+		detachResources, err := template.ParseResourcesContent(
+			op.DeleteDetachResources.Template,
+			op.DeleteDetachResources.Values,
+		)
+		if err != nil {
+			return fmt.Errorf("unable to parse resources to delete: %w", err)
+		}
+
+		kubeClient, err := op.Checker.GetKubeClient()
+		if err != nil {
+			return fmt.Errorf("unable to get kube client: %w", err)
+		}
+
+		err = resources.DeleteResourcesLoop(ctx, kubeClient, detachResources)
+		if err != nil {
+			return fmt.Errorf("unable to delete resources: %w", err)
+		}
+
+		if err := commander.DeleteManagedByCommanderConfigMap(ctx, kubeClient); err != nil {
 			return fmt.Errorf("unable to remove commander ConfigMap: %w", err)
 		}
 		return nil

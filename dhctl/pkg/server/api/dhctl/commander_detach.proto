@@ -40,9 +40,11 @@ message CommanderDetachStart {
   string cluster_config = 2;
   string provider_specific_cluster_config = 3;
   string state = 4;
-  string resources_template = 5;
-  google.protobuf.Struct resources_values = 6;
-  CommanderDetachStartOptions options = 7;
+  string create_resources_template = 5;
+  string delete_resources_template = 6;
+  google.protobuf.Struct create_resources_values = 7;
+  google.protobuf.Struct delete_resources_values = 8;
+  CommanderDetachStartOptions options = 9;
 }
 
 message CommanderDetachStartOptions {
