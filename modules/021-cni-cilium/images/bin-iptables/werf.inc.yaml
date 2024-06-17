@@ -19,4 +19,18 @@ shell:
   - cd /iptables/iptables-{{ $iptablesVersion }}
   - git checkout debian/{{ $iptablesVersion }}
   - dpkg-checkbuilddeps /iptables/iptables-{{ $iptablesVersion }}/debian/control
+  # enable static build
+  - sed -i "s/dh_auto_configure -- --disable-libipq --enable-devel/dh_auto_configure -- --disable-libipq --enable-static --disable-shared/" debian/rules
+  # remode unnessosory libs
+  - sed -i "\,usr/lib/\*/xtables/,d" debian/*.install
+  - sed -i "\,usr/lib/\*/libxtables\*.so.\*,d" debian/*.install
+  - sed -i "\,usr/lib/\*/libx\*.so,d" debian/*.install
+  - sed -i "\,usr/lib/\*/libip4tc.so,d" debian/*.install
+  - sed -i "\,usr/lib/\*/libip6tc.so,d" debian/*.install
+  #
+  - echo "usr/lib/x86_64-linux-gnu/libip4tc.a" >> debian/not-installed
+  - echo "usr/lib/x86_64-linux-gnu/libip6tc.a" >> debian/not-installed
+  - echo "usr/lib/x86_64-linux-gnu/libxtables.a" >> debian/not-installed
+  - echo "usr/lib/x86_64-linux-gnu/pkgconfig/libip4tc.pc" >> debian/not-installed
+  # run build pkg
   - gbp buildpackage --git-ignore-branch --git-ignore-new --git-no-pristine-tar -b -us -uc
