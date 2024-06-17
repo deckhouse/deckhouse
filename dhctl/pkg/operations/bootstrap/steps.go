@@ -132,28 +132,22 @@ func PrepareBashibleBundle(bundleName, nodeIP, devicePath string, metaConfig *co
 var ErrBashibleTimeout = errors.New("Timeout bashible step running")
 
 func ExecuteBashibleBundle(sshClient *ssh.Client, tmpDir string) error {
-	return retry.NewLoop("Execute Bashible Bundle", 30, 10*time.Second).
-		BreakIf(func(err error) bool {
-			return errors.Is(err, ErrBashibleTimeout)
-		}).
-		Run(func() error {
-			bundleCmd := sshClient.UploadScript("bashible.sh", "--local").Sudo()
-			parentDir := tmpDir + "/var/lib"
-			bundleDir := "bashible"
+	bundleCmd := sshClient.UploadScript("bashible.sh", "--local").Sudo()
+	parentDir := tmpDir + "/var/lib"
+	bundleDir := "bashible"
 
-			_, err, isBashibleTimeout := bundleCmd.ExecuteBundle(parentDir, bundleDir)
-			if isBashibleTimeout {
-				return ErrBashibleTimeout
-			}
-			if err != nil {
-				var ee *exec.ExitError
-				if errors.As(err, &ee) {
-					return fmt.Errorf("bundle '%s' error: %v\nstderr: %s", bundleDir, err, string(ee.Stderr))
-				}
-				return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
-			}
-			return nil
-		})
+	_, err, isBashibleTimeout := bundleCmd.ExecuteBundle(parentDir, bundleDir)
+	if isBashibleTimeout {
+		return ErrBashibleTimeout
+	}
+	if err != nil {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) {
+			return fmt.Errorf("bundle '%s' error: %v\nstderr: %s", bundleDir, err, string(ee.Stderr))
+		}
+		return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
+	}
+	return nil
 }
 
 const (
@@ -180,7 +174,7 @@ func CheckBashibleBundle(sshClient *ssh.Client) bool {
 			}
 			switch {
 			case strings.Contains(output, "Can't acquire lockfile /var/lock/bashible."):
-				fallthrough
+				break
 			case strings.Contains(output, "Configuration is in sync, nothing to do."):
 				log.InfoF(bashibleInstalledMessage, output)
 				bashibleUpToDate = true
@@ -352,12 +346,53 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 		}
 	})
 
-	return retry.NewSilentLoop("exec bundle", 30, 10*time.Second).Run(func() error {
-		if ok := CheckBashibleBundle(sshClient); ok {
+	return retry.NewLoop("exec bundle", 30, 10*time.Second).
+		BreakIf(func(err error) bool { return errors.Is(err, ErrBashibleTimeout) }).
+		Run(func() error {
+			if ok := CheckBashibleBundle(sshClient); ok {
+				return nil
+			}
+
+			if err := killBashible(sshClient); err != nil {
+				return err
+			}
+
+			// we need reup tunnel every step because we can lost connection
+			tun, err := SetupSSHTunnelToRegistryPackagesProxy(sshClient)
+			if err != nil {
+				return fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
+			}
+			defer func() {
+				err := tun.Stop()
+				if err != nil {
+					log.DebugF("Cannot stop SSH tunnel to registry packages proxy: %v\n", err)
+				}
+			}()
+
+			return ExecuteBashibleBundle(sshClient, templateController.TmpDir)
+		})
+}
+
+func killBashible(sshClient *ssh.Client) error {
+	return retry.NewSilentLoop("Kill bashible", 30, 10*time.Second).Run(func() error {
+		cmd := sshClient.Command("killall", "bashible").Sudo().WithTimeout(10 * time.Second)
+		killed := false
+		cmd.WithStderrHandler(func(l string) {
+			if strings.Contains(l, "bashible: ") {
+				killed = true
+			}
+		})
+
+		err := cmd.Run()
+		if err != nil {
+			if killed {
+				return nil
+			}
+
 			return nil
 		}
 
-		return ExecuteBashibleBundle(sshClient, templateController.TmpDir)
+		return nil
 	})
 }
 

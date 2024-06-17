@@ -378,33 +378,13 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
 	}
 
-	// need closure for registry packages tunnel
-	runBashible := func() error {
-		tun, err := SetupSSHTunnelToRegistryPackagesProxy(b.SSHClient)
-		if err != nil {
-			return fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
-		}
-		defer func() {
-			err := tun.Stop()
-			if err != nil {
-				log.DebugF("Cannot stop SSH tunnel to registry packages proxy: %v\n", err)
-			}
-		}()
-
-		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecuteBashibleBundlePhase, false, stateCache, nil); err != nil {
-			return err
-		} else if shouldStop {
-			return nil
-		}
-
-		if err := RunBashiblePipeline(b.SSHClient, metaConfig, nodeIP, devicePath); err != nil {
-			return err
-		}
-
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecuteBashibleBundlePhase, false, stateCache, nil); err != nil {
+		return err
+	} else if shouldStop {
 		return nil
 	}
 
-	if err := runBashible(); err != nil {
+	if err := RunBashiblePipeline(b.SSHClient, metaConfig, nodeIP, devicePath); err != nil {
 		return err
 	}
 
