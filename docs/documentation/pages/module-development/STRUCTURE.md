@@ -104,70 +104,71 @@ To render CRDs from the `/crds` directory in the site documentation or documenta
 
 The `/docs` directory contains the module documentation:
 
-* `README.md` — описание, для чего нужен модуль, какую проблему он решает и общие архитектурные принципы.
+* `README.md` — this file describes what the module is for, what problem it solves and outlines the general architectural principles.
 
-  Метаданные файла ([front matter](https://gohugo.io/content-management/front-matter/)) в виде YAML-структуры должны быть во всех языковых версиях файла. Параметры, доступные для использования в метаданных:
-  - `title` — **(рекомендуется)** Заголовок страницы описания модуля. Пример — "Веб-консоль администратора Deckhouse". Он же используется в навигации, если не указан параметр `linkTitle`.
-  - `menuTitle` — **(желательно)** Название модуля в меню слева на странице (sidebar). Пример — "Deckhouse Admin". Если отсутствует, то используется название директории или репозитория, например `deckhouse-admin`.
-  - `linkTitle` — **(опционально)** Отдельный заголовок для навигации, если, например, `title` очень длинный. Если отсутствует, то используется параметр `title`.
-  - `description` — **(желательно)** Краткое уникальное описание содержимого страницы (до 150 символов). Не повторяет `title`. Служит продолжением названия и раскрывает его детальнее. Используется при генерации превью-ссылок и индексации поисковыми системами. Пример — «Модуль позволяет полностью управлять кластером Kubernetes через веб-интерфейс, имея только навыки работы мышью.»
-  - `d8Edition` — **(опционально)** `ce/be/se/ee`. Минимальная редакция в которой доступен модуль. По умолчанию  — `ce`.
-  - `moduleStatus` — **(опционально)** `experimental`. Статус модуля. Если модуль помечен как `experimental`, то на его страницах отображается предупреждение о том, что код нестабилен, а также отображается специальная плашка в меню.  
+  The ([front matter](https://gohugo.io/content-management/front-matter/)) file metadata as a YAML structure must present in all language versions of the file. You can use the following parameters in the metadata:
+  - `title` — **(recommended)** The title of the module description page, for example, "Deckhouse web admin console". It is also used in navigation if `linkTitle` parameter is not specified.
+  - `menuTitle` — **(recommended)** The name of the module to show in the menu on the left sidebar of the page, e.g., "Deckhouse Admin". 
+If not set, the name of the directory or repository is used, e.g. `deckhouse-admin`.
+  - `linkTitle` — **(optional)** Alternative title for navigation if, for example, the `title` is very long. If not set, the `title` parameter is used.
+  - `description` — **(recommended)** A short unique description of the page content (up to 150 characters). It should not repeat the `title'. Goes on with the meaning of the title and reveals it in more detail. It is used during generation of preview links and indexing by search engines, e.g., "The module allows you to fully manage your Kubernetes cluster through a web interface with only mouse skills."
+  - `d8Edition` — **(optional)** `ce/be/se/ee`. The minimum edition in which the module is available. The default is `ce`.
+  - `moduleStatus` — **(optional)** `experimental`. The status of the module. If a module is labeled as `experimental`, a warning that the code is unstable is displayed on its pages. Also, a special bar in the menu is displayed.
 
   <div markdown="0">
   <details><summary>Metadata example</summary>
   <pre class="highlight">
   <code>---
-  title: "Веб-консоль администратора Deckhouse"
+  title: "Deckhouse administrator web console"
   menuTitle: "Deckhouse Admin"
-  description: "Модуль позволяет полностью управлять кластером Kubernetes через веб-интерфейс, имея только навыки работы мышью."
+  description: "The module allows you to fully manage your Kubernetes cluster through a web interface with only mouse skills."
   ---</code>
   </pre>
   </details>
   </div>
 
-* `EXAMPLES.md` – примеры конфигурации модуля с описанием.
+* The `EXAMPLES.md` file contains examples of module configuration with description.
   
-  Метаданные файла ([front matter](https://gohugo.io/content-management/front-matter/)) в виде YAML-структуры должны быть во всех языковых версиях файла. Параметры, доступные для использования в метаданных:
-  - `title` – **(рекомендуется)** Заголовок страницы. Пример: "Примеры". Он же используется в навигации, если нет `linkTitle`.
-  - `description` – **(желательно)** Краткое уникальное описание содержимого страницы (до 150 символов). Не повторяет `title`. Служит продолжением названия и раскрывает его детальнее. Используется при генерации превью-ссылок, индексации поисковиками. Пример: "Примеры хранения секретов в нейронной сети с автоматической подстановкой в мысли при общении."
-  - `linkTitle` – **(опционально)** Отдельный заголовок для навигации, если, например, `title` очень длинный. Если отсутствует, то используется `title`.  
+  The ([front matter](https://gohugo.io/content-management/front-matter/)) file metadata as a YAML structure must present in all language versions of the file. You can use the following parameters in the metadata:
+  - `title` – **(recommended)** The title of the page, e.g., `Examples`. It is also used in navigation if there is no `linkTitle`.
+  - `description` – **(recommended)** A short unique description of the page content (up to 150 characters). It should not repeat the `title'. Goes on with the meaning of the title and reveals it in more detail. It is used during generation of preview links and indexing by search engines, e.g., "Примеры хранения секретов в нейронной сети с автоматической подстановкой в мысли при общении."
+  - `linkTitle` – **(optional)** Alternative title for navigation if, for example, the `title` is very long. If not set, the `title` parameter is used.  
 
   <div markdown="0">
   <details><summary>Metadata example</summary>
   <pre class="highlight">
   <code>---
-  title: "Примеры"
-  description: "Примеры хранения секретов в нейронной сети с автоматической подстановкой в мысли при общении."
+  title: "Examples"
+  description: "Examples of storing secrets in a neural network with automatic substitution into thoughts when communicating."
   ---</code>
   </pre>
   </details>
   </div>
 
-* `FAQ.md` – часто задаваемые вопросы, касающиеся эксплуатации модуля ("Какой сценарий выбрать: А или Б?").
+* `FAQ.md` – the file contains frequently asked questions related to module operation, e.g., "What scenario should I choose: A or B?".
   
-  Метаданные файла ([front matter](https://gohugo.io/content-management/front-matter/)) в виде YAML-структуры должны быть во всех языковых версиях файла. Параметры, доступные для использования в метаданных:
-  - `title` – **(рекомендуется)** Заголовок страницы.
-  - `description` – **(желательно)** Краткое уникальное описание содержимого страницы (до 150 символов).
-  - `linkTitle` – **(опционально)** Отдельный заголовок для навигации, если, например, `title` очень длинный. Если отсутствует, то используется `title`.  
+  The ([front matter](https://gohugo.io/content-management/front-matter/)) file metadata as a YAML structure must present in all language versions of the file. You can use the following parameters in the metadata:
+  - `title` – **(recommended)** The title of the page.
+  - `description` – **(recommended)** A short unique description of the page content (up to 150 characters).
+  - `linkTitle` – **(optional)** Alternative title for navigation if, for example, the `title` is very long. If not set, the `title` parameter is used.  
 
   <div markdown="0">
   <details><summary>Metadata example</summary>
   <pre class="highlight">
   <code>---
-  title: "Часто задаваемые вопросы"
-  description: "Часто задаваемые вопросы и ответы на них."
+  title: "FAQs"
+  description: "Frequently asked questions."
   ---</code>
   </pre>
   </details>
   </div>
   
-* `ADVANCED_USAGE.md` -- инструкция по отладке модуля.
+* `ADVANCED_USAGE.md` — this file contains instructions for debugging the module.
   
-  Метаданные файла ([front matter](https://gohugo.io/content-management/front-matter/)) в виде YAML-структуры должны быть во всех языковых версиях файла. Параметры, доступные для использования в метаданных:
-  - `title` – **(рекомендуется)** Заголовок страницы.
-  - `description` – **(желательно)** Краткое уникальное описание содержимого страницы (до 150 символов).
-  - `linkTitle` – **(опционально)** Отдельный заголовок для навигации, если, например, `title` очень длинный. Если отсутствует, то используется `title`.  
+  The ([front matter](https://gohugo.io/content-management/front-matter/)) file metadata as a YAML structure must present in all language versions of the file. You can use the following parameters in the metadata:
+  - `title` – **(recommended)** The title of the page.
+  - `description` – **(recommended)** A short unique description of the page content (up to 150 characters).
+  - `linkTitle` – **(optional)** Alternative title for navigation if, for example, the `title` is very long. If not set, the `title` parameter is used.  
 
   <div markdown="0">
   <details><summary>Metadata example</summary>
@@ -293,41 +294,41 @@ if **name** == "**main**":
 
 ## images
 
-В директории `/images` находятся инструкции по сборке образов контейнеров модуля. На первом уровне находятся директории для файлов, используемых при создании образа контейнера, на втором — контекст для сборки.
+The `/images` directory contains instructions for building module container images. The first level contains directories for files used to create the container image, the second level contains the building context.
 
-Существует два способа описания образа контейнера:
+There are two ways to define a container image:
 
-1. [Dockerfile](https://docs.docker.com/engine/reference/builder/) — файл, который содержит команды для быстрой сборки образов. Если необходимо собрать приложение из исходного кода, поместите его рядом с Dockerfile и включите его в образ с помощью команды `COPY`.
-2. Файл `werf.inc.yaml`, который является аналогом [секции описания образа из `werf.yaml`](https://werf.io/documentation/v1.2/reference/werf_yaml.html#L33).
+1. [Dockerfile](https://docs.docker.com/engine/reference/builder/) — this file contains commands for building images. To build an application from source code, copy it next to the Dockerfile and include it in the image using the `COPY` command.
+2. The `werf.inc.yaml` file, which is the same as the [image definition section in `werf.yaml`](https://werf.io/documentation/v1.2/reference/werf_yaml.html#L33).
 
-Имя образа совпадает с именем директории для этого модуля, записанным в нотации _camelCase_ с маленькой буквы. Например, директории `/images/echo-server` соответствует имя образа `echoServer`.
+The image name matches the directory name for this module, written in _camelCase_ notation starting with a small letter. For example, the directory `/images/echo-server` corresponds to the image name `echoServer`.
 
-Собранные образы имеют content-based теги, которые можно использовать в сборке других образов. Чтобы использовать content-based теги образов, [подключите библиотеку lib-helm](#charts). Вы также можете воспользоваться другими функциями [библиотеки helm_lib](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib) Deckhouse Kubernetes Platform.
+The built images have content-based tags that can be used when building other images. To use content-based image tags, [enable the lib-helm](#charts) library. You can also use other features of the [helm_lib library](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib) of Deckhouse Kubernetes Platform.
 
-Пример использования content-based тега образа в Helm-чарте:
+Below is an example of using a content-based image tag in a Helm chart:
 
 ```yaml
-image: {{ include "helm_lib_module_image" (list . "<имя образа>") }}
+image: {{ include "helm_lib_module_image" (list . "<image name>") }}
 ```
 
 ## openapi
 
 ### conversions
 
-В директории `/openapi/conversions` находятся файлы конверсий параметров модуля и их тесты.
+The `/openapi/conversions` directory contains module parameter conversion files and their tests.
 
-Конверсии параметров модуля позволяют конвертировать OpenAPI-спецификацию параметров модуля одной версии в другую. Конверсии могут быть необходимы в случаях, когда в новой версии OpenAPI-спецификации параметр переименовывается или переносится в другое место.
+Module parameter conversions allow you to convert the OpenAPI specification of module parameters from one version to another. Conversions may be necessary when a parameter is renamed or moved to a different location in a new version of the OpenAPI specification.
 
-Каждая конверсия возможна только между двумя смежными версиями (например с первой версии на вторую). Конверсий может быть несколько, и цепочка конверсий должна покрывать все версии спецификации параметров, без "пропусков".
+Each conversion can only be performed between two consecutive versions (e.g., from the first to the second one). There can be several conversions, and the chain of conversions must cover all versions of the parameter specification with no "gaps".
 
-Файл конверсии, это YAML-файл произвольного имени следующего формата:
+The conversion file is an arbitrarily named YAML file of the following format:
 
 ```yaml
-version: N # Номер версии, в которую нужно выполнить конверсию. 
-conversions: []  # Набор выражений jq, для преобразования данных из предыдущей версии.
+version: N # The version number to convert to. 
+conversions: []  # A set of jq expressions to transform data from the previous version.
 ```
 
-Пример файла конверсии параметров модуля, когда в версии 2 удаляется параметр `.auth.password`:
+Below is an example of a module parameter conversion file where in version 2, the `.auth.password` parameter has been removed:
 
 ```yaml
 version: 2
@@ -335,25 +336,25 @@ conversions:
   - del(.auth.password) | if .auth == {} then del(.auth) end
 ```
 
-#### Тесты конверсий
+#### Conversion tests
 
-Для написания тестов конверсий можно использовать функцию `conversion.TestConvert`, которой нужно передать:
-- путь до исходного файла конфигурации (версия до конвертации);
-- путь до ожидаемого файла конфигурации (версия после конвертации).
+You can use the `conversion.TestConvert` function to write conversion tests. It receives the following parameters:
+- path to the source configuration file (i.e., the version before the conversion);
+- path to the resulting configuration file (i.e., the version after the conversion).
 
-[Пример](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/openapi/conversions/conversions_test.go) теста конверсии.
+An [example](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/openapi/conversions/conversions_test.go) of a conversion test.
 
 ## templates
 
-В директории `/templates` находятся [шаблоны Helm](https://helm.sh/docs/chart_template_guide/getting_started/).
+The `/templates` directory contains [Helm templates](https://helm.sh/docs/chart_template_guide/getting_started/).
 
-* Для доступа к настройкам модуля в шаблонах используйте путь `.Values.<имяМодуля>`, а для глобальных настроек `.Values.global`. Имя модуля конвертируется в нотации _camelCase_.
+* Use the path `.Values.<moduleName>` to access module settings in templates, and `.Values.global` for global settings. The module name is converted to _camelCase_ notation.
 
-* Для упрощения работы с шаблонами используйте [lib-helm](https://github.com/deckhouse/lib-helm) – это набор дополнительных функций, которые облегчают работу с глобальными и модульными значениями.
+* To facilitate working with templates, use [lib-helm](https://github.com/deckhouse/lib-helm), which is a set of extra functions that make it easier to work with global and module values.
 
-* Доступы в registry из ресурса _ModuleSource_ доступны по пути `.Values.<имяМодуля>.registry.dockercfg`.
+* Accesses to the registry from the _ModuleSource_ resource are available at the `.Values.<moduleName>.registry.dockercfg` path.
 
-* Чтобы использовать эти функции для пула образов в контроллерах, создайте секрет и добавьте его в соответствующий параметр: `"imagePullSecrets": [{"name":"registry-creds"}]`.
+* To use these functions to pull image pools in controllers, create a secret and add it to the corresponding parameter: `"imagePullSecrets": [{"name":"registry-creds"}]`.
 
   ```yaml
   apiVersion: v1
@@ -362,24 +363,24 @@ conversions:
     name: registry-creds
   type: kubernetes.io/dockerconfigjson
   data:
-    .dockerconfigjson: {{ .Values.<имяМодуля>.registry.dockercfg }}
+    .dockerconfigjson: {{ .Values.<moduleName>.registry.dockercfg }}
   ```
 
-Модуль может иметь параметры, с помощью которых может менять свое поведение. Параметры модуля и схема их валидации описываются в OpenAPI-схемах в директории `/openapi`.
+A module can have parameters with which it can alter its behavior. Module parameters and their validation scheme are described in OpenAPI-schemes in `/openapi` directory.
 
-Настройки лежат в двух файлах: [`config-values.yaml`](#config-valuesyaml) и [`values.yaml`](#valuesyaml).
+The settings are stored in two files: [`config-values.yaml`](#config-valuesyaml) and [`values.yaml`](#valuesyaml).
 
-Пример OpenAPI-схемы можно найти в [шаблоне модуля](https://github.com/deckhouse/modules-template/blob/main/openapi/config-values.yaml).
+You can find an example of an OpenAPI schema in [module template](https://github.com/deckhouse/modules-template/blob/main/openapi/config-values.yaml).
 
 ### config-values.yaml
 
-Необходим для проверки параметров модуля, которые пользователь может настроить через [_ModuleConfig_](deckhouse.ru.md#ресурс-moduleconfig).
+This file is required to validate the module parameters that the user can configure via [_ModuleConfig_](deckhouse.ru.md#the-moduleconfig-resource).
 
-Чтобы схема была представлена в документации на сайте или в модуле documentation в кластере, создайте:
-- файл `doc-ru-config-values.yaml` со структурой, аналогичной структуре файла `config-values.yaml`. В файле `doc-ru-config-values.yaml` оставьте только переведенные параметры description;
-- файлы `/docs/CONFIGURATION.md` и `/docs/CONFIGURATION.ru.md` — это включит показ данных из файлов `/openapi/config-values.yaml` и `/openapi/doc-ru-config-values.yaml`.
+To render the schema in the documentation on the site or in the documentation module in the cluster, create:
+- the `doc-ru-config-values.yaml` file with a structure similar to that of the `config-values.yaml` file. Keep only the translated description parameters in the `doc-ru-config-values.yaml` file;
+- the `/docs/CONFIGURATION.md` and `/docs/CONFIGURATION.ru.md` files to enable rendering of data from the `/openapi/config-values.yaml` and `/openapi/doc-ru-config-values.yaml` files.
 
-Пример схемы `/openapi/config-values.yaml` с одним настраиваемым параметром `nodeSelector`:
+An example of a `/openapi/config-values.yaml` schema with a single configurable `nodeSelector` parameter:
 
 ```yaml
 type: object
@@ -395,21 +396,21 @@ properties:
       [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).</code>
 ```
 
-Пример файла `/openapi/doc-ru-config-values.yaml` для русскоязычного перевода схемы:
+An example of the `/openapi/doc-ru-config-values.yaml` file for the Russian translation of the schema:
 
 ```yaml
 properties:
   nodeSelector:
     description: |
-      Описание на русском языке. Разметка Markdown.</code>
+      Russian description. Markdown markup.</code>
 ```
 
 ### values.yaml
 
-Необходим для проверки исходных данных при рендере шаблонов без использования дополнительных функций Helm chart.
-Ближайший аналог — [schema-файлы](https://helm.sh/docs/topics/charts/#schema-files) из Helm.
+This file is required for validating the source data when rendering templates without using extra Helm chart functions.
+Its closest analogs are Helm's [schema files](https://helm.sh/docs/topics/charts/#schema-files).
 
-В `values.yaml` можно автоматически добавить валидацию параметров из `config-values.yaml`. В этом случае, минимальный `values.yaml` выглядит следующим образом:
+You can automatically add parameter validation from `config-values.yaml` to `values.yaml`. In this case, the basic `values.yaml` looks as follows:
 
 ```yaml
 x-extend:
@@ -423,13 +424,13 @@ properties:
 
 ## .helmignore
 
-Исключите файлы из секрета Helm-релиза с помощью `.helmignore`. В случае модулей DKP директории `/crds`, `/images`, `/hooks`, `/openapi` обязательно добавляйте в `.helmignore`, чтобы избежать превышения лимита размера Helm-релиза в 1 Мб.
+`.helmignore` allows you to exclude files from the Helm release. In case of DKP modules, directories `/crds`, `/images`, `/hooks`, `/openapi` must be added to `.helmignore` to avoid exceeding 1 Mb limit of Helm release size.
 
 ## Chart.yaml
 
-Обязательный файл для чарта, аналогичный [`Chart.yaml`](https://helm.sh/docs/topics/charts/#the-chartyaml-file) из Helm. Должен содержать, как минимум, параметр `name` с именем модуля и параметр `version` с версией.
+This is a mandatory file for a chart, similar to [`Chart.yaml`](https://helm.sh/docs/topics/charts/#the-chartyaml-file) in Helm. It must contain at least a `name` parameter with the module name and a `version` parameter with the version.
 
-Пример:
+An example:
 
 ```yaml
 name: echoserver
@@ -442,14 +443,14 @@ dependencies:
 
 ## module.yaml
 
-В данном файле настройте следующие опции модуля:
+This file stores the following module settings:
 
-- `tags: string` — дополнительные теги для модуля, которые преобразуются в лейблы модуля: `module.deckhouse.io/$tag=""`.
-- `weight: integer` — вес модуля. Вес по-умолчанию: 900, можно задать собственный вес в диапазоне 900 – 999.
-- `stage: string` — [cтадия жизненного цикла модуля](versioning/#стадия-жизненного-цикла-модуля). Может быть `Sandbox`, `Incubating`, `Graduated` или `Deprecated`.
-- `description: string` — описание модуля.
+- `tags: string` — the additional module tags, which are converted to module labels: `module.deckhouse.io/$tag=""`.
+- `weight: integer` — the module weight. The default weight is 900, you can set your own weight between 900 and 999.
+- `stage: string` — [module lifecycle stage](versioning/#module-lifecycle). Can be `Sandbox`, `Incubating`, `Graduated`, or `Deprecated`.
+- `description: string` — the module description.
 
-Например:
+An example:
 
 ```yaml
 tags: ["test", "myTag"]
@@ -458,7 +459,7 @@ stage: "Sandbox"
 description: "my awesome module"
 ```
 
-Будет создан модуль (`deckhouse.io/v1alpha/Module`) с лейблами: `module.deckhouse.io/test=""` и `module.deckhouse.io/myTag=""`, весом `960` и описанием `my awesome module`.
+Applying this file will create a module (`deckhouse.io/v1alpha/Module`) with the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`, weight `960`, and the description `my awesome module`.
 
-Таким образом можно управлять очередностью модулей, а также задавать дополнительную метаинформацию для них.
+This way you can control the module sequence as well as specify additional meta-information for the modules.
 {% endraw %}
