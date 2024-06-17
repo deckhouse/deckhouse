@@ -51,6 +51,7 @@ var (
 	IsDebug     = false
 
 	DoNotWriteDebugLogFile = false
+	DebugLogFilePath       = ""
 )
 
 func init() {
@@ -83,6 +84,10 @@ func GlobalFlags(cmd *kingpin.Application) {
 		Envar(configEnvName("DO_NOT_WRITE_DEBUG_LOG")).
 		Default("false").
 		BoolVar(&DoNotWriteDebugLogFile)
+	cmd.Flag("debug-log-file-path", `Write debug log into passed file instead of standard file path ${DHCTL_TMP_DIR}/state-dir/operation-data.log`).
+		Envar(configEnvName("DEBUG_LOG_FILE_PATH")).
+		Default("").
+		StringVar(&DebugLogFilePath)
 }
 
 func DefineConfigFlags(cmd *kingpin.CmdClause) {

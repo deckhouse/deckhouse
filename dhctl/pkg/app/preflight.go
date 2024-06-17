@@ -25,7 +25,8 @@ var (
 	PreflightSkipRegistryThroughProxy      = false
 	PreflightSkipPublicDomainTemplateCheck = false
 	PreflightSkipSSHCredentialsCheck       = false
-	PreflightSkipRegistryCredentials   = false
+	PreflightSkipRegistryCredentials       = false
+	PreflightSkipContainerdExistCheck      = false
 )
 
 const (
@@ -37,6 +38,7 @@ const (
 	PublicDomainTemplateCheckArgName = "preflight-skip-public-domain-template-check"
 	SSHCredentialsCheckArgName       = "preflight-skip-ssh-credentials-check"
 	RegistryCredentialsCheckArgName  = "preflight-skip-registry-credential"
+	ContainerdExistCheckArgName      = "preflight-skip-containerd-exist"
 )
 
 func DefinePreflight(cmd *kingpin.CmdClause) {
@@ -64,7 +66,10 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(SSHCredentialsCheckArgName, "Skip verifying PublicDomainTemplate check").
 		Envar(configEnvName("PREFLIGHT_SKIP_SSH_CREDENTIAL_CHECK")).
 		BoolVar(&PreflightSkipSSHCredentialsCheck)
-	cmd.Flag(RegistryCredentialsCheckArgName, "Skip verifying regestry credentials").
+	cmd.Flag(RegistryCredentialsCheckArgName, "Skip verifying registry credentials").
 		Envar(configEnvName("PREFLIGHT_SKIP_REGISTRY_CREDENTIALS")).
 		BoolVar(&PreflightSkipRegistryCredentials)
+	cmd.Flag(ContainerdExistCheckArgName, "Skip verifying contanerd exist").
+		Envar(configEnvName("PREFLIGHT_SKIP_CONTAINERD_EXIST")).
+		BoolVar(&PreflightSkipContainerdExistCheck)
 }

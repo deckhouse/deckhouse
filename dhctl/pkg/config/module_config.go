@@ -85,7 +85,7 @@ func ConvertInitConfigurationToModuleConfigs(metaConfig *MetaConfig, schemasStor
 			var settingsIsDict bool
 			settings, settingsIsDict = configOverride.(map[string]any)
 			if !settingsIsDict {
-				return nil, fmt.Errorf("invalid configOverride, expected a dictionary, got %T", configOverride)
+				return nil, fmt.Errorf("Invalid configOverride, expected a dictionary, got %T", configOverride)
 			}
 		}
 

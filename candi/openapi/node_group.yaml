@@ -164,6 +164,7 @@ spec:
               required:
                 - nodeType
               properties:
+
                 nodeType:
                   description: |
                     The type of nodes this group provides.
@@ -2091,6 +2092,27 @@ spec:
                         Maximum number of concurrently updating nodes.
 
                         Can be set as absolute count or as a percent of total nodes.
+                fencing:
+                  type: object
+                  description: |
+                    Enable fencing controller for this group.
+                  required: [mode]
+                  properties:
+                    mode:
+                      type: string
+                      enum:
+                        - "Watchdog"
+                      description: |
+                        Supported fencing modes:
+                        * Watchdog - use watchdog kernel module for fencing.
+
+                        The Watchdog implementation includes two main components:
+
+                        1. Fencing-agent is a DaemonSet that is deployed on a specific group of nodes (nodegroup). Once started, the agent activates Watchdog and sets a special label `node-manager.deckhouse.io/fencing-enabled` on the node where it is functioning. The agent regularly checks if the Kubernetes API is available. If the API is available, the agent sends a signal to Watchdog, which resets the watchdog timer. The agent also monitors special service labels on the node and, depending on their presence, enables or disables the Watchdog. A softdog kernel module with certain parameters (`soft_margin=60` and `soft_panic=1`) is used as Watchdog. This means that the watchdog timeout time is 60 seconds. After this time expires, kernel-panic occurs and the node remains in this state until the user reboots it.
+
+                        2. Fencing-controller - A controller that monitors all nodes with the `node-manager.deckhouse.io/fencing-enabled` label set. If any node becomes unavailable for more than 60 seconds, the controller removes all pods from that node and then removes the node itself.
+
+
               oneOf:
                 - properties:
                     nodeType:

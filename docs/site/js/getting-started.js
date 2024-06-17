@@ -172,7 +172,7 @@ function triggerBlockOnItemContent(itemSelector, targetSelector, turnCommonEleme
   const input = $(itemSelector);
   const wrapper = $(targetSelector);
   if (input.val() !== '') {
-    update_license_parameters(input.val());
+    update_license_parameters(input.val().trim());
     wrapper.removeClass('disabled');
   } else if(input.val() === '' && !turnCommonElement) {
     getLicenseToken(input.val());
@@ -189,7 +189,7 @@ function toggleDisabled(tab, inputDataAttr) {
   if (tab === 'tab_layout_ce' ) {
     $('.dimmer-block-content.common').removeClass('disabled');
   } else if (tab === 'tab_layout_ee' ) {
-    const licenseToken = $(inputDataAttr).val();
+    const licenseToken = $(inputDataAttr).val().trim();
     getLicenseToken(licenseToken)
   }
 }

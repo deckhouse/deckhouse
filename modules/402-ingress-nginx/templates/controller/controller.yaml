@@ -259,6 +259,14 @@ spec:
     {{- end }}
   {{- end }}
         - containerPort: 443
+          protocol: TCP
+  {{- if eq $crd.spec.inlet "HostPort"}}
+    {{- if $hostPort.httpsPort }}
+          hostPort: {{ $hostPort.httpsPort }}
+    {{- end }}
+  {{- end }}
+        - containerPort: 443
+          protocol: UDP
   {{- if eq $crd.spec.inlet "HostPort"}}
     {{- if $hostPort.httpsPort }}
           hostPort: {{ $hostPort.httpsPort }}

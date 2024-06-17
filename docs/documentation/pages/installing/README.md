@@ -277,7 +277,7 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
 ```
 
 , where:
-- `<DECKHOUSE_REVISION>` — edition of Deckhouse: `ee` for Enterprise Edition and `ce` for Community Edition;
+- `<DECKHOUSE_REVISION>` — [edition](../revision-comparison.html) of Deckhouse (e.g., `ee` for Enterprise Edition, `ce` for Community Edition, etc.);
 - `<MOUNT_OPTIONS>` — options for mounting files in the installer container, such as:
   - SSH authentication keys;
   - config file;

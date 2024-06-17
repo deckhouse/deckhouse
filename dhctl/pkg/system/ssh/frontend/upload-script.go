@@ -15,6 +15,7 @@
 package frontend
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -95,7 +96,7 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 		cmd = NewCommand(u.Session, scriptFullPath, u.Args...).Cmd()
 	}
 
-	scriptCmd := cmd.CaptureStdout(nil)
+	scriptCmd := cmd.CaptureStdout(nil).CaptureStderr(nil)
 	if u.stdoutHandler != nil {
 		scriptCmd = scriptCmd.WithStdoutHandler(u.stdoutHandler)
 	}
@@ -106,7 +107,15 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 
 	err = scriptCmd.Run()
 	if err != nil {
-		err = fmt.Errorf("execute on remote: %v", err)
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			// exitErr.Stderr is set in the "os/exec".Cmd.Output method from the Golang standard library.
+			// But we call the "os/exec".Cmd.Wait method, which does not set the Stderr field.
+			// We can reuse the exec.ExitError type when handling errors.
+			exitErr.Stderr = cmd.StderrBytes()
+		}
+
+		err = fmt.Errorf("execute on remote: %w", err)
 	}
 	return cmd.StdoutBytes(), err
 }
@@ -140,7 +149,10 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 		return nil, fmt.Errorf("tar bundle: %v", err)
 	}
 
-	tomb.RegisterOnShutdown("Delete bashible bundle folder", func() { _ = os.Remove(bundleLocalFilepath) })
+	tomb.RegisterOnShutdown(
+		"Delete bashible bundle folder",
+		func() { _ = os.Remove(bundleLocalFilepath) },
+	)
 
 	// upload to node's deckhouse tmp directory
 	err = NewFile(u.Session).Upload(bundleLocalFilepath, app.DeckhouseNodeTmpPath)
@@ -150,7 +162,14 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 
 	// sudo:
 	// tar xpof ${app.DeckhouseNodeTmpPath}/bundle.tar -C /var/lib && /var/lib/bashible/bashible.sh args...
-	tarCmdline := fmt.Sprintf("tar xpof %s/%s -C /var/lib && /var/lib/%s/%s %s", app.DeckhouseNodeTmpPath, bundleName, bundleDir, u.ScriptPath, strings.Join(u.Args, " "))
+	tarCmdline := fmt.Sprintf(
+		"tar xpof %s/%s -C /var/lib && /var/lib/%s/%s %s",
+		app.DeckhouseNodeTmpPath,
+		bundleName,
+		bundleDir,
+		u.ScriptPath,
+		strings.Join(u.Args, " "),
+	)
 	bundleCmd := NewCommand(u.Session, tarCmdline).Sudo()
 
 	// Buffers to implement output handler logic
@@ -160,12 +179,21 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 	processLogger := log.GetProcessLogger()
 
 	handler := bundleOutputHandler(bundleCmd, processLogger, &lastStep, &failsCounter)
-	err = bundleCmd.WithStdoutHandler(handler).CaptureStdout(nil).Run()
+	err = bundleCmd.WithStdoutHandler(handler).CaptureStdout(nil).CaptureStderr(nil).Run()
 	if err != nil {
 		if lastStep != "" {
 			processLogger.LogProcessFail()
 		}
-		err = fmt.Errorf("execute bundle: %v", err)
+
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			// exitErr.Stderr is set in the "os/exec".Cmd.Output method from the Golang standard library.
+			// But we call the "os/exec".Cmd.Wait method, which does not set the Stderr field.
+			// We can reuse the exec.ExitError type when handling errors.
+			exitErr.Stderr = bundleCmd.StderrBytes()
+		}
+
+		err = fmt.Errorf("execute bundle: %w", err)
 	} else {
 		processLogger.LogProcessEnd()
 	}
@@ -174,7 +202,12 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 
 var stepHeaderRegexp = regexp.MustCompile("^=== Step: /var/lib/bashible/bundle_steps/(.*)$")
 
-func bundleOutputHandler(cmd *Command, processLogger log.ProcessLogger, lastStep *string, failsCounter *int) func(string) {
+func bundleOutputHandler(
+	cmd *Command,
+	processLogger log.ProcessLogger,
+	lastStep *string,
+	failsCounter *int,
+) func(string) {
 	stepLogs := make([]string, 0)
 	return func(l string) {
 		if l == "===" {

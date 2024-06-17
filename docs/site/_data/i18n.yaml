@@ -184,11 +184,14 @@ comparison:
 
 features:
   experimental:
-    en: This feature is actively developed. It might significantly change in the future.
-    ru: Находится в процессе активного развития. Функциональность может существенно измениться.
+    en: The functionality of the module might significantly change. Compatibility with future versions is not guaranteed.
+    ru: Функциональность модуля может сильно измениться. Совместимость с будущими версиями не гарантируется
+  preview:
+    en: The functionality of the module might change, but the main features will remain. Compatibility with future versions is guaranteed, but might require additional migration steps.
+    ru: Функциональность модуля может измениться, но основные возможности сохранятся. Совместимость с будущими версиями обеспечивается, но может потребовать дополнительных действий по миграции.
   deprecated:
-    en: The current version of the module is deprecated.
-    ru: Текущая версия модуля устарела.
+    en: The module is deprecated.
+    ru: Модуль выведен из употребления.
   temporaryDeprecated:
     en: The current version of the module is deprecated, a new version will be published soon.
     ru: Текущая версия модуля устарела, скоро будет опубликована новая версия.

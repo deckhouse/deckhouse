@@ -15,11 +15,11 @@
 - name: kube-rbac-proxy
   description: A small HTTP proxy for a single upstream, that can perform RBAC authorization against the Kubernetes API using SubjectAccessReview.
   link: https://github.com/brancz/kube-rbac-proxy
-  logo: https://avatars.githubusercontent.com/u/13629408?s=200&v=4
+  logo: /images/logos/kubernetes.svg
   licence: Apache License 2.0
 
 - name: Nginx
   description: A HTTP and reverse proxy server, a mail proxy server, and a generic TCP/UDP proxy server and load balancer.
   link: http://nginx.org
-  logo: https://www.nginx.com/wp-content/uploads/2020/05/NGINX-product-icon.svg
+  logo: /images/logos/nginx.svg
   licence: 2-clause BSD-like license (http://nginx.org/LICENSE)

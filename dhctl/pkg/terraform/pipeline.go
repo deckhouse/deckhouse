@@ -99,7 +99,7 @@ func CheckPipeline(r RunnerInterface, name string, opts PlanOptions) (int, Terra
 		rawPlan, err := r.GetTerraformExecutor().Output("show", "-json", r.GetPlanPath())
 		if err != nil {
 			var ee *exec.ExitError
-			if ok := errors.As(err, &ee); ok {
+			if errors.As(err, &ee) {
 				err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 			}
 			return fmt.Errorf("can't get terraform plan for %q\n%v", r.GetPlanPath(), err)
@@ -182,7 +182,7 @@ func CheckBaseInfrastructurePipeline(r RunnerInterface, name string) (int, Terra
 		rawPlan, err := r.GetTerraformExecutor().Output("show", "-json", r.GetPlanPath())
 		if err != nil {
 			var ee *exec.ExitError
-			if ok := errors.As(err, &ee); ok {
+			if errors.As(err, &ee) {
 				err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 			}
 			return fmt.Errorf("can't get terraform plan for %q\n%v", r.GetPlanPath(), err)

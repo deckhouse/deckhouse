@@ -17,7 +17,7 @@
 shutdown_grace_period="0s"
 shutdown_grace_period_critical_pods="0s"
 
-if curl -sS -H Metadata:true --noproxy "*" "http://169.254.169.254/metadata/instance?api-version=2021-12-13" | grep -q  '"priority":"Regular"'; then
+if d8-curl -sS -H Metadata:true --noproxy "*" "http://169.254.169.254/metadata/instance?api-version=2021-12-13" | grep -q  '"priority":"Regular"'; then
   shutdown_grace_period="5m"
   shutdown_grace_period_critical_pods="5s"
 fi

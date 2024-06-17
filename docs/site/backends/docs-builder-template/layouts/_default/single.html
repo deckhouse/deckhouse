@@ -25,8 +25,8 @@
         {{- if eq $d8Edition "ee" }}
           {{- partial "alert" ( dict "level" "warn" "content" (T "module_is_available_in_ee_only") ) }}
         {{- end }}
-        {{- if eq $moduleStatus "experimental" }}
-          {{- partial "alert" ( dict "level" "warn" "content" (T "module_alert_experimental") ) }}
+        {{- if $moduleStatus }}
+          {{- partial "alert" ( dict "level" "warn" "content" (T (printf "module_alert_%s" (lower $moduleStatus))) ) }}
         {{- end }}
 
         {{.Content}}

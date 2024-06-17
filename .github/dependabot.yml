@@ -367,6 +367,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/040-node-manager/images/fencing-agent"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/042-kube-dns/images/resolv-watcher"
   labels:
   - "type/dependencies"
@@ -412,7 +421,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/150-user-authn/images/crowd-basic-auth-proxy/app"
+  directory: "/modules/150-user-authn/images/basic-auth-proxy/app"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

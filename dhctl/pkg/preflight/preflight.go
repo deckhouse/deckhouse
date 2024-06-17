@@ -39,13 +39,19 @@ type checkStep struct {
 	fun            func() error
 }
 
-func NewChecker(sshClient *ssh.Client, config *config.DeckhouseInstaller, metaConfig *config.MetaConfig) Checker {
+func NewChecker(
+	sshClient *ssh.Client,
+	config *config.DeckhouseInstaller,
+	metaConfig *config.MetaConfig,
+) Checker {
 	return Checker{
 		sshClient:               sshClient,
 		metaConfig:              metaConfig,
 		installConfig:           config,
 		imageDescriptorProvider: remoteDescriptorProvider{},
-		buildDigestProvider:     &dhctlBuildDigestProvider{DigestFilePath: app.DeckhouseImageDigestFile},
+		buildDigestProvider: &dhctlBuildDigestProvider{
+			DigestFilePath: app.DeckhouseImageDigestFile,
+		},
 	}
 }
 
@@ -92,7 +98,7 @@ func (pc *Checker) Global() error {
 		},
 		{
 			fun:            pc.CheckRegistryCredentials,
-			successMessage: "regestry credentials are correct",
+			successMessage: "registry credentials are correct",
 			skipFlag:       app.RegistryCredentialsCheckArgName,
 		},
 	})
@@ -106,7 +112,11 @@ func (pc *Checker) do(title string, checks []checkStep) error {
 		}
 
 		for _, check := range checks {
-			loop := retry.NewLoop(fmt.Sprintf("Checking %s", check.successMessage), 1, 10*time.Second)
+			loop := retry.NewLoop(
+				fmt.Sprintf("Checking %s", check.successMessage),
+				1,
+				10*time.Second,
+			)
 			if err := loop.Run(check.fun); err != nil {
 				return fmt.Errorf("Installation aborted: %w\n"+
 					`Please fix this problem or skip it if you're sure with %s flag`, err, check.skipFlag)

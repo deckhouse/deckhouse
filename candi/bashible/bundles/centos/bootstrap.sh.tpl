@@ -144,15 +144,9 @@ unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
 export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
 {{- end }}
-yum updateinfo
-until yum install nc curl wget -y; do
-  echo "Error installing packages"
-  yum updateinfo
-  sleep 10
-done
 {{- /*
 # Install jq from deckhouse registry.
 # When we will move to Centos 8, we should install jq from main repo.
 */}}
-yum install jq -y || bb-package-install "jq:{{ .images.registrypackages.jq16 }}"
+bb-package-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}" "netcat:{{ .images.registrypackages.netcat110481 }}"
 mkdir -p /var/lib/bashible/
