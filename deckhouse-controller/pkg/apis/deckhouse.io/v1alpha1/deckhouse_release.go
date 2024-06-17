@@ -123,6 +123,11 @@ func (in *DeckhouseRelease) GetMessage() string {
 	return in.Status.Message
 }
 
+func (in *DeckhouseRelease) GetNotificationShift() bool {
+	v, ok := in.Annotations["release.deckhouse.io/notification-time-shift"]
+	return ok && v == "true"
+}
+
 type DeckhouseReleaseSpec struct {
 	Version       string            `json:"version,omitempty"`
 	ApplyAfter    *metav1.Time      `json:"applyAfter,omitempty"`

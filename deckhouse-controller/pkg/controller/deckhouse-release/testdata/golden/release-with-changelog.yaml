@@ -1,0 +1,35 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.31.0
+  resourceVersion: "1"
+spec:
+  changelog:
+    cert-manager:
+      fixes:
+      - pull_request: https://github.com/deckhouse/deckhouse/pull/999
+        summary: Remove D8CertmanagerOrphanSecretsWithoutCorrespondingCertificateResources
+    global:
+      features:
+      - description: All master nodes will have `control-plane` role in new exist
+          clusters.
+        note: Add migration for adding role. Bashible steps will be rerunned on master
+          nodes.
+        pull_request: https://github.com/deckhouse/deckhouse/pull/562
+      - description: Update Kubernetes patch versions.
+        pull_request: https://github.com/deckhouse/deckhouse/pull/558
+      fixes:
+      - description: Fix parsing deckhouse images repo if there is the sha256 sum
+          in the image name
+        pull_request: https://github.com/deckhouse/deckhouse/pull/527
+      - description: Fix serialization of empty strings in secrets
+        pull_request: https://github.com/deckhouse/deckhouse/pull/523
+  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.31.0
+  version: v1.31.0
+status:
+  approved: false
+  message: ""
+  transitionTime: null

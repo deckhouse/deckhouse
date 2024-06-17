@@ -1,0 +1,30 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.31.0
+  resourceVersion: "999"
+spec:
+  version: v1.31.0
+status:
+  approved: false
+  message: ""
+  phase: Deployed
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.32.3
+  resourceVersion: "1"
+spec:
+  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.32.3
+  version: v1.32.3
+status:
+  approved: false
+  message: ""
+  transitionTime: null
