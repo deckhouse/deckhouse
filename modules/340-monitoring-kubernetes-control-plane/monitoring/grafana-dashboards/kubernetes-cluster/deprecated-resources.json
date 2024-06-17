@@ -609,7 +609,7 @@
         "regex": "",
         "skipUrlSync": false,
         "type": "datasource"
-      },
+      }
     ]
   },
   "time": {
