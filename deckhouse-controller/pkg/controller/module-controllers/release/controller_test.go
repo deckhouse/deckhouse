@@ -169,12 +169,12 @@ type: Opaque
 		moduleManager:      stubModulesManager{},
 		delayTimer:         time.NewTimer(3 * time.Second),
 
-		deckhouseEmbeddedPolicy: &v1alpha1.ModuleUpdatePolicySpec{
+		deckhouseEmbeddedPolicy: v1alpha1.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
 			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
 				Mode: "Auto",
 			},
 			ReleaseChannel: "Stable",
-		},
+		}),
 	}
 
 	suite.ctr = rec

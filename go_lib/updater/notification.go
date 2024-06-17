@@ -36,6 +36,7 @@ type DeckhouseDiscoveryData struct {
 	NotificationConfig     *NotificationConfig
 	DisruptionApprovalMode string
 	ImagesRegistry         string
+	ClusterUUID            string
 }
 
 type NotificationConfig struct {

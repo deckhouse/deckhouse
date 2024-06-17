@@ -603,10 +603,12 @@ func (suite *ControllerTestSuite) setupController(filename, values string, mup *
 		Build()
 	dc := dependency.NewDependencyContainer()
 	rec := &deckhouseReleaseReconciler{
-		client:       cl,
-		dc:           dc,
-		logger:       log.New(),
-		updatePolicy: v1alpha1.NewModuleUpdatePolicySpecContainer(mup),
+		cl,
+		dc,
+		log.New(),
+		stubModulesManager{},
+		v1alpha1.NewModuleUpdatePolicySpecContainer(mup),
+		new(container[string]),
 	}
 
 	suite.ctr = rec
@@ -680,9 +682,29 @@ func (suite *ControllerTestSuite) fetchTestFileData(filename, valuesJSON string)
 	data, err := os.ReadFile(filepath.Join(dir, filename))
 	require.NoError(suite.T(), err)
 
+	deckhouseDiscovery := `---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deckhouse-discovery
+  namespace: d8-system
+type: Opaque
+data:
+  bundle: {{ b64enc .Values.deckhouse.bundle }}
+  releaseChannel: {{ .Values.deckhouse.releaseChannel | default "Unknown" | b64enc }}
+{{- if .Values.deckhouse.update }}
+  updateSettings.json: {{ .Values.deckhouse.update | toJson | b64enc }}
+{{- end }}
+  clusterIsBootstrapped: {{ .Values.global.clusterIsBootstrapped | quote | b64enc }}
+  imagesRegistry: {{ b64enc .Values.global.modulesImages.registry.base }}
+{{- if $.Values.global.discovery.clusterUUID }}
+  clusterUUID: {{ $.Values.global.discovery.clusterUUID | b64enc }}
+{{- end }}
+`
+
 	tmpl, err := template.New("manifest").
 		Funcs(sprig.TxtFuncMap()).
-		Parse(string(data))
+		Parse(string(data) + deckhouseDiscovery)
 	require.NoError(suite.T(), err)
 
 	var values any
@@ -711,4 +733,14 @@ func unmarshal[T any](manifest string, suite *ControllerTestSuite) *T {
 	err := yaml.Unmarshal([]byte(manifest), &obj)
 	require.NoError(suite.T(), err)
 	return &obj
+}
+
+type stubModulesManager struct{}
+
+func (s stubModulesManager) GetEnabledModuleNames() []string {
+	return []string{"cert-manager", "prometheus"}
+}
+
+func (s stubModulesManager) AreModulesInited() bool {
+	return true
 }

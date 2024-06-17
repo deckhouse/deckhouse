@@ -51,25 +51,28 @@ import (
 const defaultCheckInterval = 15 * time.Second
 
 type deckhouseReleaseReconciler struct {
-	client       client.Client
-	dc           dependency.Container
-	logger       logger.Logger
-	updatePolicy *v1alpha1.ModuleUpdatePolicySpecContainer
+	client        client.Client
+	dc            dependency.Container
+	logger        logger.Logger
+	moduleManager moduleManager
+
+	updatePolicy            *v1alpha1.ModuleUpdatePolicySpecContainer
+	releaseVersionImageHash *container[string]
 }
 
-func NewDeckhouseReleaseController(
-	mgr manager.Manager,
-	dc dependency.Container,
-	updatePolicy *v1alpha1.ModuleUpdatePolicySpecContainer,
-) error {
+func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container, moduleManager moduleManager, updatePolicy *v1alpha1.ModuleUpdatePolicySpecContainer) error {
 	lg := log.WithField("component", "DeckhouseRelease")
 
 	r := &deckhouseReleaseReconciler{
 		mgr.GetClient(),
 		dc,
 		lg,
+		moduleManager,
 		updatePolicy,
+		new(container[string]),
 	}
+
+	go r.checkDeckhouseReleaseLoop(ctx)
 
 	ctr, err := controller.New("module-documentation", mgr, controller.Options{
 		MaxConcurrentReconciles: 1,
@@ -281,6 +284,10 @@ func (r *deckhouseReleaseReconciler) getDeckhouseDiscoveryData(ctx context.Conte
 		if settings.DisruptionApprovalMode != nil {
 			data.DisruptionApprovalMode = *settings.DisruptionApprovalMode
 		}
+	}
+
+	if clusterUUID, ok := secret.Data["clusterUUID"]; ok {
+		data.ClusterUUID = string(clusterUUID)
 	}
 
 	return data, nil

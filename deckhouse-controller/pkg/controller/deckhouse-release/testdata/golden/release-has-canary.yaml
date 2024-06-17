@@ -1,0 +1,16 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.31.0
+  resourceVersion: "1"
+spec:
+  applyAfter: "2019-10-17T17:03:00Z"
+  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.31.0
+  version: v1.31.0
+status:
+  approved: false
+  message: ""
+  transitionTime: null

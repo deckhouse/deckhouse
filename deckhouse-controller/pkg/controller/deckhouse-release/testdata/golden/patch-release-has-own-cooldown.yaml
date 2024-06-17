@@ -1,0 +1,17 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  annotations:
+    release.deckhouse.io/cooldown: "2030-05-05T15:15:15Z"
+  creationTimestamp: null
+  name: v1.31.2
+  resourceVersion: "1"
+spec:
+  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.31.2
+  version: v1.31.2
+status:
+  approved: false
+  message: ""
+  transitionTime: null
