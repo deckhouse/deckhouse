@@ -108,8 +108,7 @@ The `/docs` directory contains the module documentation:
 
   The ([front matter](https://gohugo.io/content-management/front-matter/)) file metadata as a YAML structure must present in all language versions of the file. You can use the following parameters in the metadata:
   - `title` — **(recommended)** The title of the module description page, for example, "Deckhouse web admin console". It is also used in navigation if `linkTitle` parameter is not specified.
-  - `menuTitle` — **(recommended)** The name of the module to show in the menu on the left sidebar of the page, e.g., "Deckhouse Admin". 
-If not set, the name of the directory or repository is used, e.g. `deckhouse-admin`.
+  - `menuTitle` — **(recommended)** The name of the module to show in the menu on the left sidebar of the page, e.g., "Deckhouse Admin". If not set, the name of the directory or repository is used, e.g. `deckhouse-admin`.
   - `linkTitle` — **(optional)** Alternative title for navigation if, for example, the `title` is very long. If not set, the `title` parameter is used.
   - `description` — **(recommended)** A short unique description of the page content (up to 150 characters). It should not repeat the `title'. Goes on with the meaning of the title and reveals it in more detail. It is used during generation of preview links and indexing by search engines, e.g., "The module allows you to fully manage your Kubernetes cluster through a web interface with only mouse skills."
   - `d8Edition` — **(optional)** `ce/be/se/ee`. The minimum edition in which the module is available. The default is `ce`.
@@ -193,7 +192,7 @@ If not set, the name of the directory or repository is used, e.g. `deckhouse-adm
   </details>
   </div>
 
-* Manually add `CONFIGURATION.md`, the file to create resources from `/openapi/config-values.yaml` and `/openapi/doc-<LANG>-config-values.yaml`.   
+* Manually add `CONFIGURATION.md`, the file to create resources from `/openapi/config-values.yaml` and `/openapi/doc-<LANG>-config-values.yaml`.
 
   <div markdown="0">
   <details><summary>Metadata example</summary>
@@ -207,8 +206,7 @@ If not set, the name of the directory or repository is used, e.g. `deckhouse-adm
   
 All images, PDF files and other media files should be stored in the `/docs` directory or its subdirectories (e.g, `/docs/images/`). All links to files should be relative.
 
-You need a file with the appropriate suffix for each language, e.g. `image1.jpg` and `image1.ru.jpg`. 
-Here's how you can include images in your document:
+You need a file with the appropriate suffix for each language, e.g. `image1.jpg` and `image1.ru.jpg`. Here's how you can include images in your document:
 - `[image1](image1.jpg)` in an English-language document;
 - `[image1](image1.ru.jpg)` in a Russian-language document.
 
@@ -217,7 +215,7 @@ Here's how you can include images in your document:
 The `/hooks` directory contains the module's hooks. A hook is an executable file executed in response to an event. Hooks are also used by the module for dynamic interaction with Kubernetes API. For example, they can be used to handle events related to the creation or deletion of objects in a cluster.
 {% endraw %}
 
-[Get to know](./#before-you-start) the concept of hooks before you start developing your own hook. You can use the [Python library](https://github.com/deckhouse/lib-python) by the Deckhouse team to speed up the development of hooks. 
+[Get to know](./#before-you-start) the concept of hooks before you start developing your own hook. You can use the [Python library](https://github.com/deckhouse/lib-python) by the Deckhouse team to speed up the development of hooks.
 
 {% raw %}
 Hook requirements:
