@@ -27,8 +27,9 @@ import (
 )
 
 type DetacherOptions struct {
-	DetachResources
-	OnCheckResult func(*check.CheckResult) error
+	DeleteDetachResources DetachResources
+	CreateDetachResources DetachResources
+	OnCheckResult         func(*check.CheckResult) error
 }
 
 type Detacher struct {
@@ -69,24 +70,55 @@ func (op *Detacher) Detach(ctx context.Context) error {
 		return err
 	}
 
-	if err := log.Process("commander/detach", "Remove commander resources", func() error {
+	if err := log.Process("commander/detach", "Create resources", func() error {
 		detachResources, err := template.ParseResourcesContent(
-			op.DetachResources.Template,
-			op.DetachResources.Values,
+			op.CreateDetachResources.Template,
+			op.CreateDetachResources.Values,
 		)
 		if err != nil {
-			return fmt.Errorf("unable to parse resources to detach: %w", err)
+			return fmt.Errorf("unable to parse resources to create: %w", err)
 		}
 
-		kubeCl, err := op.Checker.GetKubeClient()
+		kubeClient, err := op.Checker.GetKubeClient()
 		if err != nil {
 			return fmt.Errorf("unable to get kube client: %w", err)
 		}
 
-		if err := resources.DeleteResourcesLoop(ctx, kubeCl, detachResources); err != nil {
-			return fmt.Errorf("unable to detach resources: %w", err)
+		checkers, err := resources.GetCheckers(kubeClient, detachResources, nil)
+		if err != nil {
+			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
-		if err := commander.DeleteManagedByCommanderConfigMap(ctx, kubeCl); err != nil {
+
+		err = resources.CreateResourcesLoop(kubeClient, detachResources, checkers)
+		if err != nil {
+			return fmt.Errorf("unable to create resources: %w", err)
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	if err := log.Process("commander/detach", "Remove commander resources", func() error {
+		detachResources, err := template.ParseResourcesContent(
+			op.DeleteDetachResources.Template,
+			op.DeleteDetachResources.Values,
+		)
+		if err != nil {
+			return fmt.Errorf("unable to parse resources to delete: %w", err)
+		}
+
+		kubeClient, err := op.Checker.GetKubeClient()
+		if err != nil {
+			return fmt.Errorf("unable to get kube client: %w", err)
+		}
+
+		err = resources.DeleteResourcesLoop(ctx, kubeClient, detachResources)
+		if err != nil {
+			return fmt.Errorf("unable to delete resources: %w", err)
+		}
+
+		if err := commander.DeleteManagedByCommanderConfigMap(ctx, kubeClient); err != nil {
 			return fmt.Errorf("unable to remove commander ConfigMap: %w", err)
 		}
 		return nil
