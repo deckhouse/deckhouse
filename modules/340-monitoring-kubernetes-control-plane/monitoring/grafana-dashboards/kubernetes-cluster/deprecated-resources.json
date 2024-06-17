@@ -575,7 +575,7 @@
           "uid": "$ds_prometheus"
         },
         "definition": "label_values(apiserver_requested_deprecated_apis, removed_release)",
-        "hide": 2,
+        "hide": 0,
         "includeAll": false,
         "label": "Desired K8s version",
         "multi": false,
@@ -597,7 +597,7 @@
           "text": "default",
           "value": "default"
         },
-        "hide": 0,
+        "hide": 2,
         "includeAll": false,
         "label": "Prometheus",
         "multi": false,
