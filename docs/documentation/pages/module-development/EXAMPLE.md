@@ -22,7 +22,7 @@ This section provides an example of creating a `hello-world-module` module based
    ```
 
 1. Enter the name of the module in the `Chart.yaml` file.
-   
+
    We will use the `hello-world-module` module name in this example, but you can use any name you like.
 
    > Note that the module name may differ depending on the command. In may be written in *kebab-case* as well as *camelCase*. If you use a custom module name, make sure to modify it accordingly.
@@ -63,7 +63,7 @@ This section provides an example of creating a `hello-world-module` module based
    ```
 
 1. Define a rule for building an application container image.
-   
+
    The rules for building application container images must reside in a subdirectory of the [images](structure/#images) directory of the module. Run the following commands to create an application image directory and a Dockerfile with the image build rules:
 
    ```shell
@@ -89,13 +89,13 @@ This section provides an example of creating a `hello-world-module` module based
    ```
 
 1. Set up CI/CD.
-   
+
    The project template in the `.github` directory contains pre-built GitHub Actions workflow files that implement a simple scheme for building and publishing a module using the [GitHub Packages](https://github.com/features/packages) registry (ghcr.io). Module artifacts will be pushed to `ghcr.io/<OWNER>/modules/`, which will be the [module source](../../cr.html#modulesource). Make changes to the workflow files if the suggested option does not work for you.
 
    Do the following in the properties of your project on GitHub to make the module workflow run smoothly:
    - Open the *Settings -> Actions -> General* page.
    - Enable *Read and write permissions* in the *Workflow permissions* section.
-     
+ 
 1. Commit the changes to the repository (specify the address of the module's Git repository).
 
    ```shell
@@ -167,13 +167,13 @@ The following is the sequence of steps to enable the `hello-world-module` in a c
    Note that it may take a few seconds to synchronize data after a resource has been created.
 
 1. Check the list of available modules
-   
+
    ```shell
    kubectl  get ms ghcr -o jsonpath='{.status.modules[*].name}'
    ```
 
    The list should only contain the `hello-world-module` module.
-   
+
 1. Create a [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy) resource that defines the module update policy.
 
    Run the following command to create an update policy for the `hello-world-module` module with the *Alpha* release channel and *Auto* update mode:
