@@ -98,6 +98,7 @@ Granted, in some cases, the level of detail makes it difficult to track global t
 2. **use `$__rate_interval` as the range for the range vectors**;
 3. **use Resolution 1/1 in al cases**;
 4. **never set the Min step**;
+<<<<<<< HEAD
 
 ![Data accuracy and granularity](/docs/documentation/images/300-prometheus/grafana_accuracy.jpg)
 

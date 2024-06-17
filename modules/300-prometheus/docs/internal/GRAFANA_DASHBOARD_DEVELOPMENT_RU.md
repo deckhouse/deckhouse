@@ -98,6 +98,7 @@ search: grafana разработка графиков
 2. **в качестве диапазона для range-векторов используйте `$__rate_interval`**;
 3. **всегда используйте Resolution 1/1**;
 4. **никогда не устанавливайте Min step**.
+<<<<<<< HEAD
 
 ![Точность данных и детализация](/docs/documentation/images/300-prometheus/grafana_accuracy.jpg)
 
