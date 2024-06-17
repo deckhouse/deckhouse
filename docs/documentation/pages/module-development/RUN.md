@@ -262,7 +262,6 @@ It shows that the `module-test` module can be enabled.
 
 If the module is not in the list, check that [module source](#module-source) is defined and the module is listed in the module source. Also check the [update policy](#module-update-policy) of the module (if defined). If the module update policy is not defined, it matches the DKP update policy (the [releaseChannel](../../modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter and the [update](../../modules/002-deckhouse/configuration.html#parameters-update) section of the `deckhouse` module parameters).
 
-
 You can enable the module similarly to built-in DKP modules using any of the following methods:
 - Run the command below (specify the name of the module):
 
