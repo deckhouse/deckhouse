@@ -346,16 +346,23 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 		}
 	})
 
-	return retry.NewLoop("exec bundle", 30, 10*time.Second).
+	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
 		BreakIf(func(err error) bool { return errors.Is(err, ErrBashibleTimeout) }).
 		Run(func() error {
+			log.DebugLn("Check bundle routine start")
+			defer log.DebugLn("Execute bundle end")
+
 			if ok := CheckBashibleBundle(sshClient); ok {
 				return nil
 			}
 
+			log.DebugLn("Kill bashible routine start")
+
 			if err := killBashible(sshClient); err != nil {
 				return err
 			}
+
+			log.DebugLn("Starting reverse tunnel routine")
 
 			// we need reup tunnel every step because we can lost connection
 			tun, err := SetupSSHTunnelToRegistryPackagesProxy(sshClient)
@@ -369,29 +376,25 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 				}
 			}()
 
+			log.DebugLn("Start execute bashible bundle routine")
+
 			return ExecuteBashibleBundle(sshClient, templateController.TmpDir)
 		})
 }
 
 func killBashible(sshClient *ssh.Client) error {
 	return retry.NewSilentLoop("Kill bashible", 30, 10*time.Second).Run(func() error {
-		cmd := sshClient.Command("killall", "bashible").Sudo().WithTimeout(10 * time.Second)
-		killed := false
-		cmd.WithStderrHandler(func(l string) {
-			if strings.Contains(l, "bashible: ") {
-				killed = true
-			}
-		})
+		cmd := sshClient.Command("killall", "bash").Sudo().WithTimeout(10 * time.Second)
 
 		err := cmd.Run()
 		if err != nil {
-			if killed {
+			var ee *exec.ExitError
+			if errors.As(err, &ee) && ee.ExitCode() == 1 {
 				return nil
 			}
 
-			return nil
+			return err
 		}
-
 		return nil
 	})
 }
@@ -401,7 +404,7 @@ const dependencyCmd = "type"
 func CheckDHCTLDependencies(sshClient *ssh.Client) error {
 	return log.Process("bootstrap", "Check DHCTL Dependencies", func() error {
 		dependencyArgs := []string{"sudo", "rm", "tar", "mount", "awk", "grep", "cut", "sed", "shopt",
-			"mkdir", "cp", "join"}
+			"mkdir", "cp", "join", "killall"}
 
 		for _, args := range dependencyArgs {
 			err := retry.NewLoop(fmt.Sprintf("Check dependency %s", args), 30, 10*time.Second).Run(func() error {

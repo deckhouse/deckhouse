@@ -38,6 +38,9 @@ func NewReverseTunnel(sess *session.Session, address string) *ReverseTunnel {
 }
 
 func (t *ReverseTunnel) Up() error {
+	log.DebugLn("Start reverse tunnel")
+	defer log.DebugLn("End start reverse tunnel")
+
 	if t.Session == nil {
 		return fmt.Errorf("up tunnel '%s': SSH client is undefined", t.String())
 	}
@@ -56,6 +59,7 @@ func (t *ReverseTunnel) Up() error {
 	}
 
 	go func() {
+		log.DebugLn("Reverse tunnel started. Wait stop tunnel...")
 		err = t.sshCmd.Wait()
 		if err != nil {
 			f := log.InfoF
@@ -65,6 +69,7 @@ func (t *ReverseTunnel) Up() error {
 				f = log.DebugF
 			}
 			f("cannot gracefully stop tunnel '%s': %v\n", t.String(), err)
+			log.DebugLn("Reverse tunnel was stopped")
 		}
 	}()
 
@@ -72,6 +77,9 @@ func (t *ReverseTunnel) Up() error {
 }
 
 func (t *ReverseTunnel) Stop() error {
+	log.DebugLn("Stop reverse tunnel")
+	defer log.DebugLn("End stop reverse tunnel")
+
 	err := t.sshCmd.Process.Kill()
 	if err != nil {
 		return fmt.Errorf("stop tunnel '%s': %w", t.String(), err)
