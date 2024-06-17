@@ -85,7 +85,7 @@ The module will keep running after *ModulePullOverride* is removed. However, if 
    This resource will be validating the `registry.example.com/deckhouse/modules/echo:main-patch-03354` image tag (`ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag`).
 
 1. The status of this resource will change with each update:
-   
+
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
    kind: ModulePullOverride
@@ -106,7 +106,7 @@ The module will keep running after *ModulePullOverride* is removed. However, if 
    - **lastUpdated** is the time when the image was last pulled.
 
 1. In this case, *ModuleSource* would look as follows:
-   
+
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleSource
