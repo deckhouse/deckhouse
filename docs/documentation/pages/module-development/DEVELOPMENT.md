@@ -212,7 +212,7 @@ crane export registry.example.io/modules-source/module-1:v1.23.1 - | tar -tf -
 
 The output will be quite large.
 
-### Print the list of images of the module's application containers @TODO <-- переформулировать
+### Print the list of images of the module's application containers
 
 ```shell
 crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>:<MODULE_TAG> - | tar -Oxf - images_digests.json

@@ -213,7 +213,7 @@ crane export registry.example.io/modules-source/module-1:v1.23.1 - | tar -tf -
 
 Ответ будет достаточно большим.
 
-### Вывод списка образов контейнеров приложений модуля  @TODO <-- переформулировать
+### Вывод списка образов контейнеров приложений модуля
 
 ```shell
 crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>:<MODULE_TAG> - | tar -Oxf - images_digests.json
