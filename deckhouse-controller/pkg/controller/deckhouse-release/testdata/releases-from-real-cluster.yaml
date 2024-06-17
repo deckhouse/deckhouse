@@ -1,0 +1,72 @@
+
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1.30.16
+spec:
+  requirements:
+    k8s: 1.19.0
+  version: v1.30.16
+status:
+  approved: true
+  message: ""
+  phase: Superseded
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1.30.17
+spec:
+  applyAfter: "2022-03-22T16:39:01.017873947Z"
+  requirements:
+    k8s: 1.19.0
+  version: v1.30.17
+status:
+  approved: false
+  message: ""
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1.30.18
+spec:
+  requirements:
+    k8s: 1.19.0
+  version: v1.30.18
+status:
+  approved: true
+  message: ""
+  phase: Deployed
+
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1.30.19
+spec:
+  applyAfter: "2022-03-24T12:20:02.146704455Z"
+  requirements:
+    k8s: 1.19.0
+  version: v1.30.19
+status:
+  approved: true
+  message: ""
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1.30.9
+spec:
+  version: v1.30.9
+status:
+  approved: true
+  message: ""
+  phase: Superseded
