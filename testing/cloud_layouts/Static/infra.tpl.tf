@@ -123,7 +123,7 @@ data "openstack_images_image_v2" "alt_image" {
 data "openstack_images_image_v2" "redos_image" {
   most_recent = true
   visibility  = "shared"
-  name        = "redos-STD-MINIMAL-8.0.0"
+  name        = "redos-STD-MINIMAL-8.0.0-20240617"
 }
 
 resource "openstack_blockstorage_volume_v3" "master" {

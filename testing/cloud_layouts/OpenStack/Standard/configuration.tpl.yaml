@@ -49,6 +49,6 @@ masterNodeGroup:
   instanceClass:
     rootDiskSize: 30
     flavorName: m1.large
-    imageName: "redos-STD-MINIMAL-8.0.0"
+    imageName: "redos-STD-MINIMAL-8.0.0-20240617"
   volumeTypeMap:
     ru-3a: "fast.ru-3a"
