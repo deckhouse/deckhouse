@@ -37,6 +37,6 @@ To get an idea of how DKP modules work, check out [addon-operator](https://githu
 
 ## Got a question?
 
-The [Development and debugging](development/) section contains information about what tools can be used in module development and approaches to troubleshooting module errors. <!-- не факт -->
+The [Development and debugging](development/) section contains information about what tools can be used in module development and approaches to troubleshooting module errors.
 
 Join [the community](/community/), where you'll be sure to have your questions answered.
