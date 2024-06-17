@@ -75,7 +75,7 @@ spec:
   template:
     metadata:
       annotations:
-        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
+        {{ include "helm_lib_ds_eviction_annotation" (list .) | nindent 8 }}
       labels:
         app: {{ $fullname }}
     spec:

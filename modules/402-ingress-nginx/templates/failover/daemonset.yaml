@@ -53,7 +53,7 @@ spec:
   template:
     metadata:
       annotation:
-        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
+        {{ include "helm_lib_ds_eviction_annotation" (list .) | nindent 8 }}
       labels:
         app: proxy-failover
         name: {{ $crd.name }}

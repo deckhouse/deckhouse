@@ -46,8 +46,6 @@ spec:
       app: early-oom
   template:
     metadata:
-      annotation:
-        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: early-oom
       name: early-oom

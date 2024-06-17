@@ -46,8 +46,6 @@ spec:
       app: ebpf-exporter
   template:
     metadata:
-      annotation:
-        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: ebpf-exporter
       name: ebpf-exporter

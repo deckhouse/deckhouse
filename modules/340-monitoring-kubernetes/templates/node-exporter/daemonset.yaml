@@ -61,7 +61,6 @@ spec:
       annotations:
         container.apparmor.security.beta.kubernetes.io/node-exporter: "unconfined"
         container.apparmor.security.beta.kubernetes.io/kubelet-eviction-thresholds-exporter: "unconfined"
-        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
