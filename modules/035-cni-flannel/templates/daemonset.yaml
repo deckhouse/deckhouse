@@ -42,7 +42,7 @@ spec:
       app: flannel
   template:
     metadata:
-      annotation:
+      annotations:
         {{ include "helm_lib_ds_eviction_annotation" (list . "false" ) | nindent 8 }}
       labels:
         tier: node
