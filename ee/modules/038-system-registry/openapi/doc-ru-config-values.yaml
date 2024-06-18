@@ -7,9 +7,6 @@ properties:
       size:
         description: |
           Кол-во нод
-  environment:
-    description: |
-      Название окружения
   registryMode:
     description: |
       Тип регистри

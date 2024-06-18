@@ -13,16 +13,6 @@ properties:
         x-examples:
           - 1
           - 3
-  environment:
-    type: string
-    enum:
-      - Vadim
-      - Nikita
-    description: |
-      Environment name
-    x-example:
-      - environment: Vadim
-      - environment: Nikita
   registryMode:
     type: string
     enum:
