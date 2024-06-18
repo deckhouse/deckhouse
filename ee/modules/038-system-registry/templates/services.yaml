@@ -1,5 +1,6 @@
-##### For specific env
-{{- if (eq $.Values.systemRegistry.environment "Vadim")  }}
+##### For specific registryMode
+{{- if $.Values.systemRegistry.registryMode }}
+{{- if not (eq $.Values.systemRegistry.registryMode "Direct")  }}
 #####
 
 ---
@@ -19,6 +20,7 @@ spec:
   selector:
     app: system-registry-manager
 
-##### For specific env
+##### For specific registryMode
+{{- end }}
 {{- end }}
 #####
