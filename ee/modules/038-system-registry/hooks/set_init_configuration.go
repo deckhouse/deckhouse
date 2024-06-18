@@ -16,7 +16,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"reflect"
-	// "k8s.io/utils/pointer"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -54,8 +54,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{registryModuleConfigName},
 			},
-			// ExecuteHookOnEvents:          pointer.Bool(false),
-			// ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          pointer.Bool(false),
 			FilterFunc: applyMCSettingsFilter,
 		},
 	},
