@@ -1,5 +1,6 @@
-##### For specific env
-{{- if (eq $.Values.systemRegistry.environment "Vadim")  }}
+##### For specific registryMode
+{{- if $.Values.systemRegistry.registryMode }}
+{{- if not (eq $.Values.systemRegistry.registryMode "Direct")  }}
 #####
 
 ---
@@ -69,6 +70,7 @@ roleRef:
   name: d8:{{ .Chart.Name }}
   apiGroup: rbac.authorization.k8s.io
 
-##### For specific env
+##### For specific registryMode
+{{- end }}
 {{- end }}
 #####
