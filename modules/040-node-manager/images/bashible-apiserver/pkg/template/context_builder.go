@@ -164,7 +164,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 				checksumCollector = sha256.New()
 				hashMap[ng.Name()] = checksumCollector
 			}
-			bundleContextName := fmt.Sprintf("bundle-%s-%s", bundle, ng.Name())
+			bundleContextName := fmt.Sprintf("bundle-%s", ng.Name())
 			bashibleContextName := fmt.Sprintf("bashible-%s-%s", bundle, ng.Name())
 			bundleNgContext := cb.newBundleNGContext(ng, cb.clusterInputData.Freq, bundle, cb.clusterInputData.CloudProvider, commonContext)
 			bb.bashibleContexts[bundleContextName] = bundleNgContext
@@ -178,10 +178,9 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		}
 
 		for _, k8sVersion := range cb.clusterInputData.AllowedKubernetesVersions {
-			k8sContextName := fmt.Sprintf("bundle-%s-%s", bundle, k8sVersion)
+			k8sContextName := fmt.Sprintf("bundle-%s", k8sVersion)
 			bb.bashibleContexts[k8sContextName] = bundleK8sVersionContext{
 				tplContextCommon:  commonContext,
-				Bundle:            bundle,
 				KubernetesVersion: k8sVersion,
 				CloudProvider:     cb.clusterInputData.CloudProvider,
 			}
@@ -313,7 +312,6 @@ func (cb *ContextBuilder) generateBashibleChecksum(checksumCollector hash.Hash, 
 func (cb *ContextBuilder) newBundleNGContext(ng nodeGroup, freq interface{}, bundle string, cloudProvider interface{}, contextCommon *tplContextCommon) bundleNGContext {
 	return bundleNGContext{
 		tplContextCommon:          contextCommon,
-		Bundle:                    bundle,
 		KubernetesVersion:         ng.KubernetesVersion(),
 		CRI:                       ng.CRIType(),
 		NodeGroup:                 ng,
@@ -498,7 +496,6 @@ type tplContextCommon struct {
 type bundleNGContext struct {
 	*tplContextCommon
 
-	Bundle            string      `json:"bundle" yaml:"bundle"`
 	KubernetesVersion string      `json:"kubernetesVersion" yaml:"kubernetesVersion"`
 	CRI               string      `json:"cri" yaml:"cri"`
 	NodeGroup         nodeGroup   `json:"nodeGroup" yaml:"nodeGroup"`
@@ -512,7 +509,6 @@ type bundleNGContext struct {
 type bundleK8sVersionContext struct {
 	*tplContextCommon
 
-	Bundle            string `json:"bundle" yaml:"bundle"`
 	KubernetesVersion string `json:"kubernetesVersion" yaml:"kubernetesVersion"`
 
 	CloudProvider interface{} `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
