@@ -151,6 +151,7 @@ func createMCWithInitSecretData(input *go_hook.HookInput, initSecretData *resour
 	if err != nil {
 		return err
 	}
+	newModuleConfig.SetResourceVersion("")
 	input.PatchCollector.Create(newModuleConfig, object_patch.UpdateIfExists())
 	return nil
 }
@@ -160,6 +161,7 @@ func updateMCWithInitSecretData(input *go_hook.HookInput, initSecretData *resour
 	if err != nil {
 		return err
 	}
+	moduleConfig.SetResourceVersion("")
 	input.PatchCollector.Create(moduleConfig, object_patch.UpdateIfExists())
 	return nil
 }
