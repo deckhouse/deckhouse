@@ -257,7 +257,7 @@ jobs:
     env:
       WERF_ENV: "FE"
     # <template: build_template>
-    runs-on: [self-hosted, regular]
+    runs-on: [self-hosted, regular, selectel]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
