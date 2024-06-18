@@ -55,7 +55,7 @@ func (s StepsRenderer) Render(name string, ng ...string) (map[string]string, err
 
 	bundle, ok := templateContext["bundle"].(string)
 	if !ok {
-		return nil, errors.New("expected string in templateContext[\"bundle\"]")
+		return s.stepsStorage.Render(s.target, "ubuntu-lts", providerType, templateContext, ng...)
 	}
 	return s.stepsStorage.Render(s.target, bundle, providerType, templateContext, ng...)
 }
