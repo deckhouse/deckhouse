@@ -1,0 +1,26 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: grafana-v10-module
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+spec:
+  jobLabel: app
+  sampleLimit: 5000
+  endpoints:
+  - port: https
+    scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      insecureSkipVerify: true
+    honorLabels: true
+    relabelings:
+    - targetLabel: tier
+      replacement: cluster
+  selector:
+    matchLabels:
+      app: grafana-v10
+  namespaceSelector:
+    matchNames:
+    - d8-monitoring
