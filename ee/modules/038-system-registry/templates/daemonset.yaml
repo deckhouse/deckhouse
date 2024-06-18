@@ -8,8 +8,9 @@ cpu: 10m
 memory: 10Mi
 {{- end }}
 
-##### For specific env
-{{- if (eq $.Values.systemRegistry.environment "Vadim")  }}
+##### For specific registryMode
+{{- if $.Values.systemRegistry.registryMode }}
+{{- if not (eq $.Values.systemRegistry.registryMode "Direct")  }}
 #####
 
 {{- $configFilesInfo := (include "config-files-info" $ ) | fromYaml }}
@@ -175,6 +176,7 @@ spec:
       - name: tmp
         emptyDir: {}
 
-##### For specific env
+##### For specific registryMode
+{{- end }}
 {{- end }}
 #####
