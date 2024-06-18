@@ -25,12 +25,12 @@ storage:
   cache:
     blobdescriptor: inmemory
 http:
-  addr: "{{ .hostIP }}:5000"
+  addr: "{{ .hostIP }}:5001"
   #addr: 0.0.0.0:5000
   prefix: /
   secret: asecretforlocaldevelopment
   debug:
-    addr: localhost:5001
+    addr: localhost:5002
     prometheus:
       enabled: true
       path: /metrics
