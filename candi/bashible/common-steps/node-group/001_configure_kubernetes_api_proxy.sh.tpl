@@ -62,9 +62,9 @@ stream {
     {{ $parts := splitList ":" $value -}}
     {{ $ip := index $parts 0 -}}
     server {{ $ip }}:5001;
+    {{- end -}}
   }
-   {{- end -}}
-   {{- end }}
+  {{- end }}
  {{- else if eq .runType "ClusterBootstrap" }}
   {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
   upstream system-registry {
