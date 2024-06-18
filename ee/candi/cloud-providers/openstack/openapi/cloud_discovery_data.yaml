@@ -145,7 +145,6 @@ apiVersions:
               minLength: 1
           loadBalancer:
             type: object
-            required: []
             additionalProperties: false
             properties:
               subnetID:
