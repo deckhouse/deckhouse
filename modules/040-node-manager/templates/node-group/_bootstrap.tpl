@@ -137,7 +137,7 @@ function get_phase2() {
   done
 }
 
-function prepary_base_d8_binaries() {
+function prepare_base_d8_binaries() {
   export PATH="/opt/deckhouse/bin:$PATH"
   export LANG=C
   export REPOSITORY=""
