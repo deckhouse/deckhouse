@@ -161,4 +161,71 @@ status:
 			})
 		})
 	})
+
+	Context("Empty settings in module config", func() {
+
+		const (
+			initModuleConfig = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: system-registry
+  creationTimestamp: null
+spec:
+  version: 1
+  enabled: true
+	`
+		)
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("Empty secret", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		Context("Someone added system-registry-init-configuration", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(initSecret + "\n" + initModuleConfig))
+				f.RunHook()
+			})
+
+			It("ModuleConfig/system-registry must be filled with data from secret", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				// Expected module config
+				moduleConfig := f.KubernetesResource("ModuleConfig", "", "system-registry")
+				Expect(moduleConfig.Exists()).To(BeTrue())
+				Expect(moduleConfig.ToYaml()).To(MatchYAML(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: system-registry
+  creationTimestamp: null
+spec:
+  version: 1
+  enabled: true
+  settings:
+    registryMode: Proxy
+    upstreamRegistry:
+      upstreamRegistryHost: registry.example.io
+      upstreamRegistryScheme: http
+      upstreamRegistryCa: ""
+      upstreamRegistryPath: /test/path
+      upstreamRegistryUser: user
+      upstreamRegistryPassword: password
+status:
+  message: ""
+  version: ""
+`))
+				// Unexpected secret
+				unexpInitSecret := f.KubernetesResource("Secret", "d8-system", "system-registry-init-configuration")
+				Expect(unexpInitSecret.Exists()).To(BeFalse())
+			})
+		})
+	})
 })
