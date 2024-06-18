@@ -19,7 +19,6 @@ mkdir -p "${BOOTSTRAP_DIR}" "${TMPDIR}"
 exec >"${TMPDIR}/bootstrap.log" 2>&1
   {{- end }}
 
-
 function check_python() {
   for pybin in python3 python2 python; do
     if command -v "$pybin" >/dev/null 2>&1; then
