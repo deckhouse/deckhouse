@@ -142,3 +142,21 @@ apiVersions:
             mainNetwork:
               type: string
               minLength: 1
+          loadBalancer:
+            type: object
+            required: []
+            additionalProperties: false
+            properties:
+              subnetID:
+                type: string
+                minLength: 1
+              floatingNetworkID:
+                type: string
+                minLength: 1
+          externalNetworkNames:
+            type: array
+            items:
+              type: string
+              minLength: 0
+            minItems: 0
+            uniqueItems: true
