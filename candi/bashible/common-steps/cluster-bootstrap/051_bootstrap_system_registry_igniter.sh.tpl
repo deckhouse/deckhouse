@@ -205,7 +205,7 @@ fi
 
 # Create a bucket for the registry storage
 # TODO add check for bucket creation
-echo -n "s3.bucket.create -name registry" | /opt/deckhouse/bin/weed shell >/dev/null 2>&1
+echo -n "s3.bucket.create -name registry" | /opt/deckhouse/bin/weed shell > "$IGNITER_DIR/logs/weed-shell.log" 2>&1
 
 check_and_run "auth_server" "/opt/deckhouse/bin/auth_server -logtostderr $IGNITER_DIR/auth_config.yaml" "$IGNITER_DIR/logs/auth.log"
 check_and_run "registry" "/opt/deckhouse/bin/registry serve $IGNITER_DIR/distribution_config.yaml" "$IGNITER_DIR/logs/distribution.log"
