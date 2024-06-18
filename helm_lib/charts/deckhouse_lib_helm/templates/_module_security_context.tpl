@@ -62,6 +62,15 @@ securityContext:
   runAsGroup: 0
 {{- end }}
 
+{{- /* Usage: {{ include "helm_lib_module_pod_security_context_runtime_default" . }} */ -}}
+{{- /* returns PodSecurityContext parameters for Pod with seccomp profile RuntimeDefault */ -}}
+{{- define "helm_lib_module_pod_security_context_runtime_default" -}}
+{{- /* Template context with .Values, .Chart, etc */ -}}
+securityContext:
+  seccompProfile:
+    type: RuntimeDefault
+{{- end }}
+
 {{- /* Usage: {{ include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . }} */ -}}
 {{- /* returns SecurityContext parameters for Container with allowPrivilegeEscalation false */ -}}
 {{- define "helm_lib_module_container_security_context_not_allow_privilege_escalation" -}}
@@ -94,6 +103,17 @@ securityContext:
 {{- /* returns SecurityContext parameters for Container running privileged */ -}}
 {{- define "helm_lib_module_container_security_context_privileged" -}}
 securityContext:
+  privileged: true
+{{- end }}
+
+{{- /* Usage: {{ include "helm_lib_module_container_security_context_escalated_sys_admin_privileged" . }} */ -}}
+{{- /* returns SecurityContext parameters for Container running privileged with escalation and sys_admin */ -}}
+{{- define "helm_lib_module_container_security_context_escalated_sys_admin_privileged" -}}
+securityContext:
+  allowPrivilegeEscalation: true
+  capabilities:
+    add:
+    - SYS_ADMIN
   privileged: true
 {{- end }}
 
