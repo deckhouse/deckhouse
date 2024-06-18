@@ -10,6 +10,7 @@
     expr: nginx_ingress_controller_config_last_reload_successful == 0
     for: 10m
     labels:
+      severity_level: "4"
       impact: marginal
       likelihood: certain
     annotations:

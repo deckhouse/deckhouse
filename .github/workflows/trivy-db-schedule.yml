@@ -90,6 +90,8 @@ jobs:
           ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-bdu:1 >/dev/null 2>&1
           ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-bdu:1 >/dev/null 2>&1
           ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1 >/dev/null 2>&1
-          ./oras cp ghcr.io/aquasecurity/trivy-java-db:1 ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-java-db:1
-          ./oras cp ghcr.io/aquasecurity/trivy-java-db:1 ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-java-db:1
-          ./oras cp ghcr.io/aquasecurity/trivy-java-db:1 ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1
+          ./oras pull ghcr.io/aquasecurity/trivy-java-db:1
+          ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
+          ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
+          ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
+          rm -f javadb.tar.gz
