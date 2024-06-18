@@ -12,7 +12,6 @@ description: Примеры настройки Cluster Autoscaler в Kubernetes.
 
 {{ include "helm_lib_ds_eviction_annotation" (list . "false" ) | nindent 8 }}
 
-
 ## Почему это важно
 
 CNI и CSI обычно работают в подах DaemonSet, как и агенты мониторинга. Когда Cluster Autoscaler уменьшает количество узлов, он начинает с выселения подов. Если поды CNI/CSI выселяются до подов с пользовательскими рабочими нагрузками, то пользовательские поды не могут корректно завершить работу.
