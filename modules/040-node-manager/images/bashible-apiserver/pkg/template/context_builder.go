@@ -157,7 +157,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		PackagesProxy: cb.clusterInputData.PackagesProxy,
 	}
 
-	cb.clusterInputData.AllowedBundles = append(cb.clusterInputData.AllowedBundles, "common") // temporary hack for using single boostrap for all bundle
+	cb.clusterInputData.AllowedBundles = append(cb.clusterInputData.AllowedBundles, "common") // temporary hack for using single bundle boostrap for all bundles
 	for _, bundle := range cb.clusterInputData.AllowedBundles {
 		for _, ng := range cb.clusterInputData.NodeGroups {
 			checksumCollector, ok := hashMap[ng.Name()]

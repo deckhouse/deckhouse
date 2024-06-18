@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 function detect_bundle() {
-  {{- .Files.Get "candi/bashible/detect_bundle.sh" | nindent 2 }}
+  {{- .Files.Get "/deckhouse/candi/bashible/detect_bundle.sh" | nindent 2 }}
 }
 
 
