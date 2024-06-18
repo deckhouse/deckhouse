@@ -27,7 +27,6 @@ apiVersions:
         items:
           type: string
           minLength: 1
-        minItems: 1
         uniqueItems: true
       podNetworkMode:
         type: string
@@ -58,6 +57,8 @@ apiVersions:
         layout:
           enum: [Standard]
           type: string
+        externalNetworkNames:
+          minItems: 1
         instances:
           type: object
           required: [sshKeyPairName, imageName, mainNetwork, securityGroups]
@@ -157,6 +158,5 @@ apiVersions:
             type: array
             items:
               type: string
-              minLength: 0
-            minItems: 0
+              minLength: 1
             uniqueItems: true
