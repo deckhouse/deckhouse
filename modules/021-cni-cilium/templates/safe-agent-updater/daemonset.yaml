@@ -37,7 +37,7 @@ spec:
   template:
     metadata:
       annotations:
-        {{ include "helm_lib_ds_eviction_annotation" (list .) | nindent 8 }}
+        {{ include "helm_lib_ds_eviction_annotation" (list . "false" ) | nindent 8 }}
         safe-agent-updater-daemonset-generation: {{ include "agent_daemonset_template" (list . "undefined") | sha256sum | quote }}
       labels:
         app: safe-agent-updater
