@@ -1,22 +1,23 @@
 ---
-title: "Cluster Autoscaler: Examples"
-description: Examples of configuring Cluster Autoscaler in Kubernetes. Annotations for DaemonSet.
+title: "Cluster Autoscaler: Примеры"
+description: Примеры настройки Cluster Autoscaler в Kubernetes. Аннотации для DaemonSet.
+
 ---
 
-## Description
+## Описание
 
 <https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-enabledisable-eviction-for-a-specific-daemonset>
 
-You can disable eviction of DaemonSet pods by specifying this annotation:
+Вы можете отключить выселение daemonset подов указав аннотацию:
 
 {{ include "helm_lib_ds_eviction_annotation" (list . "false" ) | nindent 8 }}
 
-## Why This Matters
 
-CNI and CSI usually run in DaemonSet pods, as do monitoring agents. When Cluster Autoscaler reduces the number of nodes, it starts by evicting pods. If CNI/CSI pods are evicted before the pods with user workloads, the user pods cannot shut down properly.
-Reproducing the Issue
+## Почему это важно
 
-### Launch pods that will cause Cluster Autoscaler to add new nodes and wait until the nodes are ready
+CNI и CSI обычно работают в подах DaemonSet, как и агенты мониторинга. Когда Cluster Autoscaler уменьшает количество узлов, он начинает с выселения подов. Если поды CNI/CSI выселяются до подов с пользовательскими рабочими нагрузками, то пользовательские поды не могут корректно завершить работу.
+
+### Запуск подов, которые вызовут добавление новых узлов Cluster Autoscaler и ожидание готовности узлов
 
 ```yaml
 apiVersion: apps/v1
@@ -55,7 +56,7 @@ spec:
         args: ["-c", "while true; do echo 'Consuming resources'; sleep 3600; done"]
 ```
 
-### Launch pods that take a long time to terminate
+### Запуск подов, которые требуют много времени для завершения
 
 ```yaml
 ---
@@ -126,7 +127,7 @@ spec:
           name: long-terminating-script
 ```
 
-### Launch dummy pods to simulate user workloads
+### Запуск фиктивных подов для имитации пользовательских рабочих нагрузок
 
 ```yaml
 apiVersion: apps/v1
@@ -167,12 +168,12 @@ spec:
         args: ["-c", "while true; do echo 'Dummy pod'; sleep 3600; done"]
 ```
 
-### Scale down the resource-consumer deployment
+### Масштабирование деплоймента resource-consumer
 
 ```bash
 kubectl scale deployment resource-consumer --replicas 0
 ```
 
-### Outcome
+### Результат
 
-You will observe that the dummy-pod and DaemonSet resources (including CNI/CSI, Prometheus exporter, and log-shipper) are evicted while the long-terminating pods are still trying to finish.
+Вы заметите, что ресурсы dummy-pod и DaemonSet (включая CNI/CSI, Prometheus exporter и log-shipper) выселяются, пока поды long-terminating все еще пытаются завершить работу.
