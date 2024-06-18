@@ -18,11 +18,6 @@ shell:
   - cd /usr/src/app
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana.git .
   - find /patches -name '*.patch' -exec git apply {} \;
-  - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana-deps.git /grafana-deps
-  - rm -rf .yarn
-  - mv /grafana-deps/.yarn .
-  - mv /grafana-deps/package.json .
-  - mv /grafana-deps/yarn.lock .
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-js-builder
 from: {{ $.Images.BASE_NODE_16_ALPINE }}
