@@ -9,6 +9,8 @@ metadata:
     rbac.deckhouse.io/aggregate-to-networking: "true"
     rbac.deckhouse.io/aggregate-to-role: manager
     rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-system
   name: d8:manage:capability:module:network-policy-engine:edit
 rules:
 - apiGroups:

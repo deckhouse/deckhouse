@@ -1,4 +1,5 @@
 module: network-policy-engine
+namespace: d8-system
 scopes:
   - networking
   - infrastructure

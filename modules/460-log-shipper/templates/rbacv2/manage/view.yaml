@@ -8,6 +8,8 @@ metadata:
     rbac.deckhouse.io/aggregate-to-observability: "true"
     rbac.deckhouse.io/aggregate-to-role: viewer
     rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-log-shipper
   name: d8:manage:capability:module:log-shipper:view
 rules:
 - apiGroups:

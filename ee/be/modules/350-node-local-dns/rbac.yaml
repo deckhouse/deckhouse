@@ -1,4 +1,5 @@
 module: node-local-dns
+namespace: kube-system
 scopes:
   - networking
   - infrastructure

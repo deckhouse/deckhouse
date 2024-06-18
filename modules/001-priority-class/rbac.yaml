@@ -1,3 +1,4 @@
 module: priority-class
+namespace: none
 scopes:
   - infrastructure

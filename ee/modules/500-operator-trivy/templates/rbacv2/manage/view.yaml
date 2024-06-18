@@ -8,6 +8,8 @@ metadata:
     rbac.deckhouse.io/aggregate-to-role: viewer
     rbac.deckhouse.io/aggregate-to-security: "true"
     rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-operator-trivy
   name: d8:manage:capability:module:operator-trivy:view
 rules:
 - apiGroups:

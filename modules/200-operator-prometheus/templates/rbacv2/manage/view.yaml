@@ -8,6 +8,8 @@ metadata:
     rbac.deckhouse.io/aggregate-to-observability: "true"
     rbac.deckhouse.io/aggregate-to-role: viewer
     rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-operator-prometheus
   name: d8:manage:capability:module:operator-prometheus:view
 rules:
 - apiGroups:

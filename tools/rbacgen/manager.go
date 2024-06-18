@@ -39,6 +39,7 @@ var scopeTemplate = "rbac.deckhouse.io/aggregate-to-%s"
 
 type moduleGenerator struct {
 	module             string
+	namespace          string
 	path               string
 	crds               []string
 	scopes             []string
@@ -49,6 +50,7 @@ type moduleGenerator struct {
 
 type settings struct {
 	Module             string     `yaml:"module"`
+	Namespace          string     `json:"namespace"`
 	Scopes             []string   `yaml:"scopes"`
 	CRDs               []string   `yaml:"crds"`
 	AllowedResources   []resource `yaml:"allowedResources"`
@@ -71,6 +73,7 @@ func newModuleGenerator(settings settings) (*moduleGenerator, error) {
 	}
 	return &moduleGenerator{
 		module:             settings.Module,
+		namespace:          settings.Namespace,
 		path:               settings.path,
 		crds:               crds,
 		scopes:             settings.Scopes,
@@ -244,6 +247,14 @@ func (m *moduleGenerator) buildRole(rbacRole, rbacKind, rbacVerb string, rules [
 	if rbacKind == "manage" {
 		for _, scope := range m.scopes {
 			role.ObjectMeta.Labels[fmt.Sprintf(scopeTemplate, scope)] = "true"
+		}
+		role.ObjectMeta.Labels["rbac.deckhouse.io/level"] = "module"
+		if m.namespace != "none" {
+			if m.namespace == "" {
+				role.ObjectMeta.Labels["rbac.deckhouse.io/namespace"] = fmt.Sprintf("d8-%s", m.module)
+			} else {
+				role.ObjectMeta.Labels["rbac.deckhouse.io/namespace"] = m.namespace
+			}
 		}
 	}
 	return role

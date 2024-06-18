@@ -8,6 +8,8 @@ metadata:
     rbac.deckhouse.io/aggregate-to-infrastructure: "true"
     rbac.deckhouse.io/aggregate-to-role: manager
     rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-cloud-provider-zvirt
   name: d8:manage:capability:module:cloud-provider-zvirt:edit
 rules:
 - apiGroups:

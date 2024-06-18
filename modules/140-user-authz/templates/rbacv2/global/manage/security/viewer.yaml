@@ -6,12 +6,14 @@ metadata:
     heritage: deckhouse
     module: user-authz
     rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/aggregate-to-role: manager
+    rbac.deckhouse.io/level: scope
+    rbac.deckhouse.io/scope: security
+    rbac.deckhouse.io/aggregate-to-role: user
     rbac.deckhouse.io/aggregate-to-security: "true"
     rbac.deckhouse.io/aggregate-to-all-as: viewer
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
-        rbac.deckhouse.io/aggregate-to-security: viewer
+        rbac.deckhouse.io/aggregate-to-security: "true"
         rbac.deckhouse.io/aggregate-to-role: viewer
 rules: []
