@@ -23,21 +23,21 @@ func ParseName(name string) (string, string, error) {
 
 // GetNodegroupContextKey parses context secretKey for nodegroup bundles
 func GetNodegroupContextKey(name string) (string, error) {
-	os, ng, err := ParseName(name)
+	_, ng, err := ParseName(name)
 	if err != nil {
-		return "", fmt.Errorf("bad os name: %v", err)
+		return "", fmt.Errorf("bad name: %v", err)
 	}
-	return fmt.Sprintf("bundle-%s-%s", os, ng), nil
+	return fmt.Sprintf("bundle-%s", ng), nil
 }
 
 // GetVersionContextKey parses context secretKey for kubernetes bundles
 func GetVersionContextKey(name string) (string, error) {
-	os, version, err := ParseName(name)
+	_, version, err := ParseName(name)
 	if err != nil {
 		return "", fmt.Errorf("bad os name: %v", err)
 	}
 	version = strings.ReplaceAll(version, "-", ".")
-	return fmt.Sprintf("bundle-%s-%s", os, version), nil
+	return fmt.Sprintf("bundle-%s", version), nil
 }
 
 // GetBashibleContextKey parses context secretKey bashible
