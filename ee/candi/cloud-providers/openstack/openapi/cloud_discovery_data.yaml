@@ -42,7 +42,6 @@ apiVersions:
         type: object
       loadBalancer:
         type: object
-        required: [subnetID, floatingNetworkID]
         additionalProperties: false
         properties:
           subnetID:
@@ -145,6 +144,7 @@ apiVersions:
               minLength: 1
           loadBalancer:
             type: object
+            required: []
             additionalProperties: false
             properties:
               subnetID:
@@ -158,4 +158,5 @@ apiVersions:
             items:
               type: string
               minLength: 1
+            minItems: 0
             uniqueItems: true
