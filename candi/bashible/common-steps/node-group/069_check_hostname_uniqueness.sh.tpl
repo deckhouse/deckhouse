@@ -13,18 +13,42 @@
 # limitations under the License.
 
 {{- if and ( or (eq .nodeGroup.nodeType "Static") (eq .nodeGroup.nodeType "CloudStatic")) (eq .runType "Normal") }}
+failure_count=0
+failure_limit=3
+curl_out=$( mktemp -t curl_out.XXXXX )
 
 if [ -f /var/lib/bashible/bootstrap-token ]; then
+  retry=true
   token="$(</var/lib/bashible/bootstrap-token)"
-  while true; do
+  while [ "$retry" = true ]; do
     for server in {{ .normal.apiserverEndpoints | join " " }}; do
       url="https://$server/api/v1/nodes/$HOSTNAME"
-      if d8-curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt" > /dev/null
+      if d8-curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt" > $curl_out 2>&1
       then
-        bb-log-error "ERROR: A node with the hostname $HOSTNAME already exists in the cluster\nPlease change the hostname, it should be unique in the cluster.\nThen clean up the server by running the script /var/lib/bashible/cleanup_static_node.sh and try again."
-        exit 1
+        failure_count=$((failure_count + 1))
+
+        if [[ $failure_count -eq $failure_limit ]]; then
+          bb-log-error "ERROR: A node with the hostname $HOSTNAME already exists in the cluster\nPlease change the hostname, it should be unique in the cluster.\nThen clean up the server by running the script /var/lib/bashible/cleanup_static_node.sh and try again."
+          retry=false
+          exit 1
+        fi
+
+        bb-log-error "ERROR: A node with the hostname $HOSTNAME already exists in the cluster. ${failure_count} of ${failure_limit} attempts..."
       else
-        exit 0
+        if cat $curl_out | grep "The requested URL returned error: 404" > /dev/null; then
+          exit 0
+        else
+          curl_error="$(<$curl_out)"
+          failure_count=$((failure_count + 1))
+
+          if [[ $failure_count -eq $failure_limit ]]; then
+            bb-log-error "ERROR: The request to the $url returned an error: $curl_error"
+            retry=false
+            exit 1
+          fi
+
+          bb-log-error "ERROR: The request the $url returned an error: $curl_error ${failure_count} of ${failure_limit} attempts..."
+        fi
       fi
     done
     sleep 10
