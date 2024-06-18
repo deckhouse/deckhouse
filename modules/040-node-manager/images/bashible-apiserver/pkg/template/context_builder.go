@@ -164,7 +164,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 				checksumCollector = sha256.New()
 				hashMap[ng.Name()] = checksumCollector
 			}
-			bundleContextName := fmt.Sprintf("bundle-%s", ng.Name())
+			bundleContextName := fmt.Sprintf("bundle-%s-%s", bundle, ng.Name())
 			bashibleContextName := fmt.Sprintf("bashible-%s-%s", bundle, ng.Name())
 			bundleNgContext := cb.newBundleNGContext(ng, cb.clusterInputData.Freq, bundle, cb.clusterInputData.CloudProvider, commonContext)
 			bb.bashibleContexts[bundleContextName] = bundleNgContext
@@ -178,7 +178,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		}
 
 		for _, k8sVersion := range cb.clusterInputData.AllowedKubernetesVersions {
-			k8sContextName := fmt.Sprintf("bundle-%s", k8sVersion)
+			k8sContextName := fmt.Sprintf("bundle-%s-%s", bundle, k8sVersion)
 			bb.bashibleContexts[k8sContextName] = bundleK8sVersionContext{
 				tplContextCommon:  commonContext,
 				KubernetesVersion: k8sVersion,

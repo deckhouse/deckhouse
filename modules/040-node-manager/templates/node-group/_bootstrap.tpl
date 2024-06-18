@@ -120,15 +120,15 @@ EOF
 
 
 function get_phase2() {
-  bootstrap_ng_name="{{ $ng.name }}"
+  bootstrap_bundle_name="${BUNDLE}.{{ $ng.name }}"
   token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
   while true; do
     for server in {{ $context.Values.nodeManager.internal.clusterMasterAddresses | join " " }}; do
-      url="https://${server}/apis/bashible.deckhouse.io/v1alpha1/bootstrap/${bootstrap_ng_name}"
+      url="https://${server}/apis/bashible.deckhouse.io/v1alpha1/bootstrap/${bootstrap_bundle_name}"
       if eval "${python_binary}" - "${url}" "${token}" <<< "$(load_phase2_script)"; then
         return 0
       fi
-      >&2 echo "failed to get bootstrap ${bootstrap_ng_name} from $url"
+      >&2 echo "failed to get bootstrap ${bootstrap_bundle_name} from $url"
     done
     sleep 10
   done
