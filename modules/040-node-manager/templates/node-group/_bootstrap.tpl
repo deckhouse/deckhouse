@@ -19,9 +19,6 @@ mkdir -p "${BOOTSTRAP_DIR}" "${TMPDIR}"
 exec >"${TMPDIR}/bootstrap.log" 2>&1
   {{- end }}
 
-function detect_bundle() {
-  {{- $context.Files.Get "candi/bashible/detect_bundle.sh" | nindent 2 }}
-}
 
 function check_python() {
   for pybin in python3 python2 python; do
@@ -123,15 +120,15 @@ EOF
 
 
 function get_phase2() {
-  bootstrap_bundle_name="${BUNDLE}.{{ $ng.name }}"
+  bootstrap_ng_name="{{ $ng.name }}"
   token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
   while true; do
     for server in {{ $context.Values.nodeManager.internal.clusterMasterAddresses | join " " }}; do
-      url="https://${server}/apis/bashible.deckhouse.io/v1alpha1/bootstrap/${bootstrap_bundle_name}"
+      url="https://${server}/apis/bashible.deckhouse.io/v1alpha1/bootstrap/${bootstrap_ng_name}"
       if eval "${python_binary}" - "${url}" "${token}" <<< "$(load_phase2_script)"; then
         return 0
       fi
-      >&2 echo "failed to get bootstrap ${bootstrap_bundle_name} from $url"
+      >&2 echo "failed to get bootstrap ${bootstrap_ng_name} from $url"
     done
     sleep 10
   done
@@ -211,8 +208,7 @@ run_cloud_network_setup
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 run_log_output
   {{- end }}
-prepary_base_d8_binaries
-BUNDLE="$(detect_bundle)"
+prepare_base_d8_binaries
 get_phase2 | bash
 
   {{- /*

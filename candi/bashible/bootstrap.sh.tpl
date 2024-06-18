@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+function detect_bundle() {
+  {{- .Files.Get "candi/bashible/detect_bundle.sh" | nindent 2 }}
+}
+
+
 function get_bundle() {
   resource="$1"
   name="$2"
@@ -30,7 +35,8 @@ mkdir -p "$BOOTSTRAP_DIR" "$TMPDIR"
 chmod 0700 $BOOTSTRAP_DIR
 
 # Detect bundle
-BUNDLE="{{ .bundle }}"
+BUNDLE="$(detect_bundle)"
+
 
 # set proxy env variables
 {{- if .proxy }}
