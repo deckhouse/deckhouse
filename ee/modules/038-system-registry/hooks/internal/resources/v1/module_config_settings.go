@@ -134,7 +134,7 @@ func fromInitSecretDataToModuleConfigSettings(initData *InitSecretData) (*Module
 
 func FromModuleConfigSettingsToUnstructured(mcSettings *ModuleConfigSettings) (map[string]interface{}, error) {
 	if mcSettings == nil {
-		return nil, fmt.Errorf("mcSettings is nil")
+		return map[string]interface{}{}, nil
 	}
 	unstruct, err := sdk.ToUnstructured(mcSettings)
 	if err != nil {
@@ -148,7 +148,7 @@ func FromModuleConfigSettingsToUnstructured(mcSettings *ModuleConfigSettings) (m
 
 func FromUnstructuredToModuleConfigSettings(mcSettings map[string]interface{}) (*ModuleConfigSettings, error) {
 	if mcSettings == nil {
-		return nil, fmt.Errorf("mcSettings is nil")
+		return &ModuleConfigSettings{}, nil
 	}
 	var mcSettingsStruct ModuleConfigSettings
 	err := sdk.FromUnstructured(&unstructured.Unstructured{Object: mcSettings}, &mcSettingsStruct)
