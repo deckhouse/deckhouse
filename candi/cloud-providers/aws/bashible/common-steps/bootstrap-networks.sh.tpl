@@ -20,6 +20,8 @@ if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
   d8-curl -L -o /opt/deckhouse/bin/ec2_describe_tags https://github.com/flant/go-ec2-describe-tags/releases/download/v0.0.1-flant.2/ec2_describe_tags
   chmod +x /opt/deckhouse/bin/ec2_describe_tags
   instance_name=$(/opt/deckhouse/bin/ec2_describe_tags -query_meta | grep -Po '(?<=Name=).+')
+	echo $(/opt/deckhouse/bin/ec2_describe_tags -query_meta )
+	echo $instance_name
   hostnamectl set-hostname "$instance_name"
   rm /opt/deckhouse/bin/ec2_describe_tags
   mkdir -p /var/lib/bashible
