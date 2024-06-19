@@ -200,12 +200,12 @@ spec:
   type: OIDC
 ```
 
-In order for the application logout to work correctly (the token was revoked and reauthorization was required), you need to set `login` in the value of the 'promptType` parameter.
+For the application logout to work correctly (the token being revoked so that re-authorization is required), set `login` as the value of the 'promptType` parameter.
 
-To ensure granular user access to applications, it is necessary:
+To ensure granular user access to applications, you have to:
  
-* Add the `allowedUserGroups` parameter to the `ModuleConfig` of the desired application.
-* Add groups to the user (the names of the groups must match on both the Blitz and Deckhouse sides).
+* Add the `allowedUserGroups` parameter to the `ModuleConfig` of the target application.
+* Add the user to the groups (group names should be the same for Blitz and Deckhouse).
 
 An example for prometheus.
 
