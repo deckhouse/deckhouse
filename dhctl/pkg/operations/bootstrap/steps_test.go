@@ -53,6 +53,26 @@ func TestNewRegistryClientConfigGetter(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, getter.Repository, "registry.deckhouse.io/deckhouse/ee")
 	})
+	t.Run("Host with port, path with leading slash", func(t *testing.T) {
+		config := config.RegistryData{
+			Address:   "registry.deckhouse.io:30000",
+			Path:      "/deckhouse/ee",
+			DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbzozMDAwMCI6IHt9fX0=", // {"auths": { "registry.deckhouse.io:30000": {}}}
+		}
+		getter, err := newRegistryClientConfigGetter(config)
+		require.NoError(t, err)
+		require.Equal(t, getter.Repository, "registry.deckhouse.io:30000/deckhouse/ee")
+	})
+	t.Run("Host with port, path without leading slash", func(t *testing.T) {
+		config := config.RegistryData{
+			Address:   "registry.deckhouse.io:30000",
+			Path:      "deckhouse/ee",
+			DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbzozMDAwMCI6IHt9fX0=", // {"auths": { "registry.deckhouse.io:30000	": {}}}
+		}
+		getter, err := newRegistryClientConfigGetter(config)
+		require.NoError(t, err)
+		require.Equal(t, getter.Repository, "registry.deckhouse.io:30000/deckhouse/ee")
+	})
 }
 
 func TestBootstrapGetNodesFromCache(t *testing.T) {
