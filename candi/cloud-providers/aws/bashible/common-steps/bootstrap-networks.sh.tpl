@@ -16,7 +16,7 @@
 */}}
 
 if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
-  /opt/deckhouse/bin/d8-curl -L -o /opt/deckhouse/bin/ec2_describe_tags https://github.com/flant/go-ec2-describe-tags/releases/download/v0.0.1-flant.2/ec2_describe_tags
+  /opt/deckhouse/bin/d8-curl -L -k -o /opt/deckhouse/bin/ec2_describe_tags https://github.com/flant/go-ec2-describe-tags/releases/download/v0.0.1-flant.2/ec2_describe_tags
   chmod +x /opt/deckhouse/bin/ec2_describe_tags
   attempt=0
   until [[ $(/opt/deckhouse/bin/ec2_describe_tags -query_meta) ]]; do 
