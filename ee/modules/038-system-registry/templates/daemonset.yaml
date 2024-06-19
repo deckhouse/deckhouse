@@ -88,7 +88,12 @@ spec:
       containers:
       - name: system-registry-manager
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_CHROOT")) | nindent 8 }}
+        {{- if $.Values.systemRegistry.imagesOverride.registryManager  }}
+        image: {{ $.Values.systemRegistry.imagesOverride.registryManager }}
+        imagePullPolicy: Always
+        {{- else }}
         image: {{ include "helm_lib_module_image" (list . "systemRegistryManager") }}
+        {{- end }}
         args:
           - start
           - --config=/config/config.yaml
