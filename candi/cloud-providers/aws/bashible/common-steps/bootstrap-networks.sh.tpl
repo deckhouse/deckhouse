@@ -30,7 +30,7 @@ if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
   done
 
   if [[ $fail_describe_tags -eq 1 ]]; then
-    >&2 echo "Failed to define hostnamce instance. Number of attempts exceeded."
+    >&2 echo "Failed to define hostname instance. Number of attempts exceeded."
     exit 1
   fi
   instance_name=$(/opt/deckhouse/bin/ec2_describe_tags -query_meta | grep -Po '(?<=Name=).+')
