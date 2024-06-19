@@ -20,8 +20,8 @@ create_user_and_group() {
     local groupname="$3"
     local groupid="$4"
 
-    uid="$(id -u "${username}" 2>/dev/null)"
-    gid="$(getent group "${groupname}" | cut -d: -f3)"
+    uid="$(id -u "${username}" 2>/dev/null || true)"
+    gid="$(getent group "${groupname}" | cut -d: -f3 || true)"
 
     if [ "$uid" == "$userid" ] && [ "$gid" == "$groupid" ]; then
         return
