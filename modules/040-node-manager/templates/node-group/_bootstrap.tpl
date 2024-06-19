@@ -139,42 +139,42 @@ function prepare_base_d8_binaries() {
   export REPOSITORY=""
   export BB_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages"
   export BB_FETCHED_PACKAGES_STORE="/${TMPDIR}/registrypackages"
-{{- with $context.Values.global.clusterConfiguration }}
-{{- if .proxy }}
-    {{- if .proxy.httpProxy }}
+  {{- with $context.Values.global.clusterConfiguration }}
+    {{- if .proxy }}
+      {{- if .proxy.httpProxy }}
   export HTTP_PROXY={{ .proxy.httpProxy | quote }}
   export http_proxy=${HTTP_PROXY}
-    {{- end }}
-    {{- if .proxy.httpsProxy }}
+      {{- end }}
+      {{- if .proxy.httpsProxy }}
   export HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
   export https_proxy=${HTTPS_PROXY}
-    {{- end }}
-    {{- if .proxy.noProxy }}
+      {{- end }}
+      {{- if .proxy.noProxy }}
   export NO_PROXY={{ .proxy.noProxy | join "," | quote }}
   export no_proxy=${NO_PROXY}
-    {{- end }}
-  {{- else }}
+      {{- end }}
+    {{- else }}
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
-{{- end }}
+    {{- end }}
+  {{- end }}
   {{- if $context.Values.nodeManager.internal.packagesProxy }}
   export PACKAGES_PROXY_ADDRESSES="{{ $context.Values.nodeManager.internal.packagesProxy.addresses | join "," }}"
   export PACKAGES_PROXY_TOKEN="{{ $context.Values.nodeManager.internal.packagesProxy.token }}"
   {{- end }}
-{{- with $context.Values.global.modulesImages.digests.registrypackages }}
+  {{- with $context.Values.global.modulesImages.digests.registrypackages }}
   bb-package-install "jq:{{ .jq16 }}" "curl:{{ .d8Curl821 }}" "netcat:{{ .netcat110481 }}"
-{{- end }}
-{{- end }}
+  {{- end }}
 }
 
   {{- if not (hasKey $ng "staticInstances") }}
-  {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
+    {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
 function run_cloud_network_setup() {
-    {{- if $bootstrap_script_common := $context.Files.Get "candi/bashible/bootstrap-networks.sh.tpl" }}
+      {{- if $bootstrap_script_common := $context.Files.Get "candi/bashible/bootstrap-networks.sh.tpl" }}
   cat > ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh <<"EOF"
       {{- tpl $bootstrap_script_common $tpl_context | nindent 0 }}
 EOF
   chmod +x ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh
-  {{- end }}
+      {{- end }}
   {{- /*
   # Execute cloud provider specific network bootstrap script. It will organize connectivity to kube-apiserver.
   */}}
@@ -186,28 +186,26 @@ EOF
     done
   fi
 }
-  {{- end }}
+    {{- end }}
   {{- end }}
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 function run_log_output() {
-  {{- /*
-  # Start output bootstrap logs
-  */}}
   if type nc >/dev/null 2>&1; then
     tail -n 100 -f ${TMPDIR}/bootstrap.log | nc -l -p 8000 &
     bootstrap_job_log_pid=$!
   fi
 }
- {{- end }}
-  {{- if not (hasKey $ng "staticInstances") }}
-  {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
-run_cloud_network_setup
   {{- end }}
+  
+prepare_base_d8_binaries
+  {{- if not (hasKey $ng "staticInstances") }}
+    {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
+run_cloud_network_setup
+    {{- end }}
   {{- end }}
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 run_log_output
   {{- end }}
-prepare_base_d8_binaries
 get_phase2 | bash
 
   {{- /*
