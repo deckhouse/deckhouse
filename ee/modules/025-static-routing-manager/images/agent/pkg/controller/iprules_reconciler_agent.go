@@ -14,13 +14,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-logr/logr"
-
-	"github.com/vishvananda/netlink"
-
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/api/v1alpha1"
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/config"
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/utils"
+
+	"github.com/go-logr/logr"
+
+	"github.com/mitchellh/hashstructure/v2"
+
+	"github.com/vishvananda/netlink"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -237,7 +239,7 @@ type IPRuleEntry struct {
 	Table      int
 }
 
-func (ire *IPRuleEntry) getHash() string {
+func (ire *IPRuleEntry) String() string {
 	hashRaw := make([]string, 0)
 	hashRaw = append(hashRaw, strconv.Itoa(ire.Priority))
 	hashRaw = append(hashRaw, strconv.FormatBool(ire.Invert))
@@ -262,6 +264,15 @@ func (ire *IPRuleEntry) getHash() string {
 	}
 	hashRaw = append(hashRaw, strconv.Itoa(ire.Table))
 	return strings.Join(hashRaw, "#")
+}
+
+func (ire *IPRuleEntry) getHash() string {
+	hash, err := hashstructure.Hash(*ire, hashstructure.FormatV2, nil)
+	if err != nil {
+		return ire.String()
+	}
+
+	return fmt.Sprintf("%s", hash)
 }
 
 func (ire *IPRuleEntry) getNetlinkRule() (*netlink.Rule, error) {

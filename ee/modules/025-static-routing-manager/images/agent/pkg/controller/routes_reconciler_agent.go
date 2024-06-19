@@ -13,13 +13,15 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-logr/logr"
-
-	"github.com/vishvananda/netlink"
-
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/api/v1alpha1"
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/config"
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/utils"
+
+	"github.com/go-logr/logr"
+
+	"github.com/mitchellh/hashstructure/v2"
+
+	"github.com/vishvananda/netlink"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -226,8 +228,17 @@ type RouteEntry struct {
 	table       int
 }
 
-func (re *RouteEntry) getHash() string {
+func (re *RouteEntry) String() string {
 	return fmt.Sprintf("%d#%s#%s", re.table, re.destination, re.gateway)
+}
+
+func (re *RouteEntry) getHash() string {
+	hash, err := hashstructure.Hash(*re, hashstructure.FormatV2, nil)
+	if err != nil {
+		return re.String()
+	}
+
+	return fmt.Sprintf("%s", hash)
 }
 
 // RouteEntryMap: type, service functions and methods

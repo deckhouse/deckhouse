@@ -8,6 +8,7 @@ replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16
 
 require (
 	github.com/go-logr/logr v1.4.1
+	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/prometheus/client_golang v1.19.0
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20240221172127-ec7bcb248e94
 	k8s.io/api v0.29.3

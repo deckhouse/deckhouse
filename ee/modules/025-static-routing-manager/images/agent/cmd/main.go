@@ -12,7 +12,6 @@ import (
 	"os"
 	goruntime "runtime"
 
-	"k8s.io/klog/v2"
 	"k8s.io/klog/v2/klogr"
 
 	v1 "k8s.io/api/core/v1"
@@ -20,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -55,7 +55,7 @@ func main() {
 	}
 	flag.Parse()
 
-	log := klogr.New().WithCallDepth(1)
+	log := klogr.New()
 
 	log.V(config.InfoLvl).Info(fmt.Sprintf("[main] Go Version:%s ", goruntime.Version()))
 	log.V(config.InfoLvl).Info(fmt.Sprintf("[main] OS/Arch:Go OS/Arch:%s/%s ", goruntime.GOOS, goruntime.GOARCH))
