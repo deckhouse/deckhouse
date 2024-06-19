@@ -20,13 +20,14 @@ import (
 	"context"
 	"os"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	. "github.com/deckhouse/deckhouse/testing/hooks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("deckhouse :: hooks :: set_deckhouse_leader_pod ::", func() {
@@ -54,7 +55,7 @@ var _ = Describe("deckhouse :: hooks :: set_deckhouse_leader_pod ::", func() {
 			Expect(leader.Exists()).To(Equal(true))
 			Expect(leader.Field("metadata.labels").Exists()).To(Equal(true))
 			Expect(leader.Field("metadata.labels.deckhouse-leader").Exists()).To(Equal(true))
-			Expect(leader.Field("metadata.labels.deckhouse-leader").Bool()).To(Equal(true))
+			Expect(leader.Field("metadata.labels.deckhouse-leader").String()).To(Equal(""))
 		})
 	})
 
@@ -74,11 +75,13 @@ var _ = Describe("deckhouse :: hooks :: set_deckhouse_leader_pod ::", func() {
 
 			leader := f.KubernetesResource("Pod", d8Namespace, deckhouseTestLeaderPodName)
 			Expect(leader.Exists()).To(Equal(true))
+			Expect(leader.Field("metadata.labels").Exists()).To(Equal(true))
 			Expect(leader.Field("metadata.labels.deckhouse-leader").Exists()).To(Equal(true))
-			Expect(leader.Field("metadata.labels.deckhouse-leader").Bool()).To(Equal(true))
+			Expect(leader.Field("metadata.labels.deckhouse-leader").String()).To(Equal(""))
 
 			slave := f.KubernetesResource("Pod", d8Namespace, deckhouseTestSlavePodName)
 			Expect(slave.Exists()).To(Equal(true))
+			Expect(slave.Field("metadata.labels").Exists()).To(Equal(true))
 			Expect(slave.Field("metadata.labels.deckhouse-leader").Exists()).To(Equal(false))
 		})
 	})
