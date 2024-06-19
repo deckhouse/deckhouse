@@ -396,8 +396,8 @@ func (nm *nrtMap) deleteRoutesAndFinalizers(globalDesiredRoutesForNode, actualRo
 			ns.desiredRoutesToDelByNRT,
 			globalDesiredRoutesForNode,
 			&actualRoutesOnNode,
-			nh,
 			status,
+			nh,
 			log,
 		)
 		if ns.nrtWasDeleted && ns.newReconciliationStatus.IsSuccess {
@@ -583,7 +583,7 @@ func delRouteFromNode(nh *netlink.Handle, route RouteEntry) error {
 
 // other service functions
 
-func deleteRouteEntriesFromNode(delREM, gdREM RouteEntryMap, actREM *RouteEntryMap, nh *netlink.Handle, status utils.ReconciliationStatus, log logr.Logger) utils.ReconciliationStatus {
+func deleteRouteEntriesFromNode(delREM, gdREM RouteEntryMap, actREM *RouteEntryMap, status utils.ReconciliationStatus, nh *netlink.Handle, log logr.Logger) utils.ReconciliationStatus {
 	for hash, route := range delREM {
 		log.V(config.DebugLvl).Info(fmt.Sprintf("Route %v should be deleted", route))
 		if _, ok := (gdREM)[hash]; ok {

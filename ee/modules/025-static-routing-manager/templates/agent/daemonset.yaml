@@ -46,8 +46,6 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: agent
@@ -58,7 +56,7 @@ spec:
           type: Directory
       containers:
       - name: agent
-        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN")) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "agent") }}
         command: ["/agent"]
         volumeMounts:

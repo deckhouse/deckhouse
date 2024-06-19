@@ -146,6 +146,7 @@ func GetNetlinkNSHandlerByPath(pathToNS string) (*netlink.Handle, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed get host namespace, err: %w", err)
 	}
+
 	nh, err := netlink.NewHandleAt(NsHandle)
 	if err != nil {
 		return nil, fmt.Errorf("failed create new namespace handler, err: %w", err)
