@@ -12,9 +12,6 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
 spec:
   failurePolicy: Fail
-  matchConditions:
-    - expression: (request.userInfo.username != "system:serviceaccount:d8-system:deckhouse")
-      name: exclude-system-user
   matchConstraints:
     resourceRules:
       - apiGroups:   ["*"]
@@ -22,8 +19,9 @@ spec:
         operations:  ["CREATE"]
         resources:   ["namespaces"]
   validations:
-    - expression: (!object.metadata.name.startsWith('d8-') && (!object.metadata.name.startsWith('kube-')))
-      messageExpression: '''Restrics create system namespaces'''
+    - expression: '!(request.userInfo.username != ''system:serviceaccount:d8-system:deckhouse''
+        && (object.metadata.name.startsWith(''d8-'') || object.metadata.name.startsWith(''kube-'')))'
+      messageExpression: '''Restricts create system namespaces'''
 ---
 {{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1beta1
