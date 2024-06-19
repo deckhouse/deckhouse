@@ -1,5 +1,17 @@
 type: object
 properties:
+  imagesOverride:
+    type: object
+    default: {}
+    description: |
+      Images override
+    properties:
+      registryManager:
+        type: string
+        description: |
+          Registry manager img full path
+        x-example:
+          - dev-registry.deckhouse.io/registryManager:latest
   cluster:
     type: object
     default: {}
