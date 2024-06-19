@@ -15,7 +15,7 @@ bb-is-rosa-version?() {
   local ROSA_VERSION=$1
   source /etc/os-release
 
-  local VERSION_KEY="${VERSION}" # different version key for Cobals and Chrome releases
+  local VERSION_KEY="${VERSION}" # different version key for Cobalt and Chrome releases
   [[ "${VERSION_ID}" == "7.9" ]] && VERSION_KEY="${VERSION_ID}"
   
   if [[ "${VERSION_KEY}" =~ ^${ROSA_VERSION}.*$ ]]; then
