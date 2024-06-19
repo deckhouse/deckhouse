@@ -25,7 +25,7 @@ type Master struct {
 	log       *logrus.Entry
 }
 
-func New(rootCtx context.Context, rCfg *common.RuntimeConfig) (*Master, error) {
+func New(rootCtx context.Context, rCfg *common.RuntimeConfig) (*Master) {
 	rootCtx = pkg_logs.SetLoggerToContext(rootCtx, processName)
 	log := pkg_logs.GetLoggerFromContext(rootCtx)
 
@@ -34,9 +34,7 @@ func New(rootCtx context.Context, rCfg *common.RuntimeConfig) (*Master, error) {
 		rootCtx:   rootCtx,
 		log:       log,
 	}
-
-	var err error
-	return master, err
+	return master
 }
 
 func (m *Master) Start() {
