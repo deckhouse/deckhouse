@@ -7,15 +7,13 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	goruntime "runtime"
 
-	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/api/v1alpha1"
-	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/config"
-	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/controller"
-	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/kubutils"
-	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/logger"
+	"k8s.io/klog/v2"
+	"k8s.io/klog/v2/klogr"
 
 	v1 "k8s.io/api/core/v1"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -25,6 +23,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/api/v1alpha1"
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/config"
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/controller"
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/kubutils"
 )
 
 var (
@@ -45,28 +48,31 @@ func main() {
 		os.Exit(1)
 	}
 
-	log, err := logger.NewLogger(cfgParams.Loglevel)
-	if err != nil {
-		fmt.Println(fmt.Sprintf("unable to create NewLogger, err: %v", err))
+	klog.InitFlags(nil)
+	if err := flag.Set("v", cfgParams.Loglevel); err != nil {
+		fmt.Println(fmt.Sprintf("unable to get flag for logger, err: %v", err))
 		os.Exit(1)
 	}
+	flag.Parse()
 
-	log.Info(fmt.Sprintf("[main] Go Version:%s ", goruntime.Version()))
-	log.Info(fmt.Sprintf("[main] OS/Arch:Go OS/Arch:%s/%s ", goruntime.GOOS, goruntime.GOARCH))
+	log := klogr.New().WithCallDepth(1)
 
-	log.Info("[main] CfgParams has been successfully created")
-	log.Info(fmt.Sprintf("[main] %s = %s", config.LogLevelENV, cfgParams.Loglevel))
-	log.Info(fmt.Sprintf("[main] %s = %d", config.RequeueIntervalENV, cfgParams.RequeueInterval))
-	log.Info(fmt.Sprintf("[main] %s = %d", config.PeriodicReconciliationIntervalENV, cfgParams.PeriodicReconciliationInterval))
-	log.Info(fmt.Sprintf("[main] %s = %s", config.ProbeAddressPortENV, cfgParams.ProbeAddressPort))
-	log.Info(fmt.Sprintf("[main] %s = %s", config.MetricsAddressPortENV, cfgParams.MetricsAddressPort))
-	log.Info(fmt.Sprintf("[main] %s = %s", config.NodeNameENV, cfgParams.NodeName))
+	log.V(config.InfoLvl).Info(fmt.Sprintf("[main] Go Version:%s ", goruntime.Version()))
+	log.V(config.InfoLvl).Info(fmt.Sprintf("[main] OS/Arch:Go OS/Arch:%s/%s ", goruntime.GOOS, goruntime.GOARCH))
+
+	log.V(config.InfoLvl).Info("[main] CfgParams has been successfully created")
+	log.V(config.InfoLvl).Info(fmt.Sprintf("[main] %s = %s", config.LogLevelENV, cfgParams.Loglevel))
+	log.V(config.InfoLvl).Info(fmt.Sprintf("[main] %s = %d", config.RequeueIntervalENV, cfgParams.RequeueInterval))
+	log.V(config.InfoLvl).Info(fmt.Sprintf("[main] %s = %d", config.PeriodicReconciliationIntervalENV, cfgParams.PeriodicReconciliationInterval))
+	log.V(config.InfoLvl).Info(fmt.Sprintf("[main] %s = %s", config.ProbeAddressPortENV, cfgParams.ProbeAddressPort))
+	log.V(config.InfoLvl).Info(fmt.Sprintf("[main] %s = %s", config.MetricsAddressPortENV, cfgParams.MetricsAddressPort))
+	log.V(config.InfoLvl).Info(fmt.Sprintf("[main] %s = %s", config.NodeNameENV, cfgParams.NodeName))
 
 	kConfig, err := kubutils.KubernetesDefaultConfigCreate()
 	if err != nil {
 		log.Error(err, "[main] unable to KubernetesDefaultConfigCreate")
 	}
-	log.Info("[main] kubernetes config has been successfully created.")
+	log.V(config.InfoLvl).Info("[main] kubernetes config has been successfully created.")
 
 	scheme := runtime.NewScheme()
 	for _, f := range resourcesSchemeFuncs {
@@ -76,12 +82,12 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	log.Info("[main] successfully read scheme CR")
+	log.V(config.InfoLvl).Info("[main] successfully read scheme CR")
 
 	managerOpts := manager.Options{
 		Scheme:                 scheme,
 		HealthProbeBindAddress: cfgParams.ProbeAddressPort,
-		Logger:                 log.GetLogger(),
+		Logger:                 log,
 		Metrics: metricsserver.Options{
 			BindAddress: cfgParams.MetricsAddressPort,
 		},
@@ -92,16 +98,16 @@ func main() {
 		log.Error(err, "[main] unable to manager.New")
 		os.Exit(1)
 	}
-	log.Info("[main] successfully created kubernetes manager")
+	log.V(config.InfoLvl).Info("[main] successfully created kubernetes manager")
 
 	// metrics := monitoring.GetMetrics("")
 
-	if _, err = controller.RunRoutesReconcilerAgentController(mgr, *cfgParams, *log); err != nil {
+	if _, err = controller.RunRoutesReconcilerAgentController(mgr, *cfgParams, log); err != nil {
 		log.Error(err, "[main] unable to controller.RunRoutesReconcilerAgentController")
 		os.Exit(1)
 	}
 
-	if _, err = controller.RunIPRulesReconcilerAgentController(mgr, *cfgParams, *log); err != nil {
+	if _, err = controller.RunIPRulesReconcilerAgentController(mgr, *cfgParams, log); err != nil {
 		log.Error(err, "[main] unable to controller.RunIPRulesReconcilerAgentController")
 		os.Exit(1)
 	}
@@ -110,13 +116,13 @@ func main() {
 		log.Error(err, "[main] unable to mgr.AddHealthzCheck")
 		os.Exit(1)
 	}
-	log.Info("[main] successfully AddHealthzCheck")
+	log.V(config.InfoLvl).Info("[main] successfully AddHealthzCheck")
 
 	if err = mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		log.Error(err, "[main] unable to mgr.AddReadyzCheck")
 		os.Exit(1)
 	}
-	log.Info("[main] successfully AddReadyzCheck")
+	log.V(config.InfoLvl).Info("[main] successfully AddReadyzCheck")
 
 	err = mgr.Start(ctx)
 	if err != nil {
@@ -124,5 +130,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Info("[main] successfully starts the manager")
+	log.V(config.InfoLvl).Info("[main] successfully starts the manager")
 }

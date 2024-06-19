@@ -10,8 +10,6 @@ import (
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/logger"
 )
 
 const (
@@ -27,8 +25,23 @@ const (
 	defaultPeriodicReconciliationInterval = 30
 )
 
+const (
+	ErrorLevel   = "0"
+	WarningLevel = "1"
+	InfoLevel    = "2"
+	DebugLevel   = "3"
+	TraceLevel   = "4"
+)
+
+const (
+	WarnLvl = iota + 1
+	InfoLvl
+	DebugLvl
+	TraceLvl
+)
+
 type Options struct {
-	Loglevel                       logger.Verbosity
+	Loglevel                       string
 	ProbeAddressPort               string
 	MetricsAddressPort             string
 	ControllerNamespace            string
@@ -43,17 +56,17 @@ func NewConfig() (*Options, error) {
 	loglevel := os.Getenv(LogLevelENV)
 	switch loglevel {
 	case "Error":
-		opts.Loglevel = logger.ErrorLevel
+		opts.Loglevel = ErrorLevel
 	case "Warning":
-		opts.Loglevel = logger.WarningLevel
+		opts.Loglevel = WarningLevel
 	case "Info":
-		opts.Loglevel = logger.InfoLevel
+		opts.Loglevel = InfoLevel
 	case "Debug":
-		opts.Loglevel = logger.DebugLevel
+		opts.Loglevel = DebugLevel
 	case "Trace":
-		opts.Loglevel = logger.TraceLevel
+		opts.Loglevel = TraceLevel
 	default:
-		opts.Loglevel = logger.DebugLevel
+		opts.Loglevel = DebugLevel
 	}
 
 	probeAddressPort := os.Getenv(ProbeAddressPortENV)

@@ -10,11 +10,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/api/v1alpha1"
-	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/logger"
+	"github.com/go-logr/logr"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/api/v1alpha1"
 )
 
 type ReconciliationStatus struct {
@@ -88,7 +89,7 @@ func FindStatusCondition(conditions []v1alpha1.ExtendedCondition, conditionType 
 
 //
 
-func SetStatusConditionPendingToNIRS(ctx context.Context, cl client.Client, log logger.Logger, nirs *v1alpha1.SDNInternalNodeIPRuleSet) error {
+func SetStatusConditionPendingToNIRS(ctx context.Context, cl client.Client, log logr.Logger, nirs *v1alpha1.SDNInternalNodeIPRuleSet) error {
 	t := metav1.NewTime(time.Now())
 	nirs.Status.ObservedGeneration = nirs.Generation
 
@@ -109,7 +110,7 @@ func SetStatusConditionPendingToNIRS(ctx context.Context, cl client.Client, log 
 	return nil
 }
 
-func SetStatusConditionPendingToNRT(ctx context.Context, cl client.Client, log logger.Logger, nrt *v1alpha1.SDNInternalNodeRoutingTable) error {
+func SetStatusConditionPendingToNRT(ctx context.Context, cl client.Client, log logr.Logger, nrt *v1alpha1.SDNInternalNodeRoutingTable) error {
 	t := metav1.NewTime(time.Now())
 	nrt.Status.ObservedGeneration = nrt.Generation
 
