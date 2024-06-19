@@ -415,7 +415,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
 Доступно только в Standard Edition (SE), Enterprise Edition (EE) и Certified Security Edition (CSE).
 {% endalert %}
 
-1. [Скачайте и установите утилиту Deckhouse CLI](https://github.com/deckhouse/deckhouse-cli/blob/main/README.md#how-to-install).
+1. [Скачайте и установите утилиту Deckhouse CLI](https://github.com/deckhouse/deckhouse-cli/blob/main/README.md#how-to-install).  
 
 1. Скачайте образы Deckhouse в выделенную директорию, используя команду `d8 mirror pull`.
 
@@ -509,24 +509,39 @@ Deckhouse поддерживает работу только с Bearer token-с�
 
 1. [Скачайте и установите утилиту Deckhouse CLI](https://github.com/deckhouse/deckhouse-cli/blob/main/README.md#how-to-install).
 
+1. Создайте строку аутентификации для `registry.deckhouse.ru` командой:
+   ```shell     
+   YOUR_LICENSE_KEY="ваш_лицензионный_ключ" base64 -w0 <<EOF
+     {
+       "auths": {
+         "registry.deckhouse.ru": {
+           "auth": "$(echo -n license-token:${YOUR_LICENSE_KEY} | base64 -w0)"
+         }
+       }
+     }
+   EOF
+   ```
+   > Не забудьте заменить `ваш_лицензионный_ключ` на свой реальный лицензионный ключ.
+
 1. Скачайте образы модулей из их источника, описанного в виде ресурса `ModuleSource`, в выделенную директорию, используя команду `d8 mirror modules pull`.
 
    `d8 mirror modules pull` скачивает только версии модулей, доступные в каналах обновлений модуля на момент копирования, если не передан параметр `--modules-filter`.
    
    Пример файла `module_source.yml` с описанием ModuleSource:
-    ```yaml
-    apiVersion: deckhouse.io/v1alpha1
-    kind: ModuleSource
-    metadata:
-    name: deckhouse
-    spec:
-    registry:
-    # Укажите строку, полученную в п.1 вместо CHANGE
-    dockerCfg: CHANGE
-    repo: registry.deckhouse.ru/deckhouse/ee/modules
-    scheme: HTTPS
-    releaseChannel: "Stable"
-    ```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleSource
+   metadata:
+     name: deckhouse
+   spec:
+     registry:
+     # Укажите строку, полученную в п.2 вместо CHANGE
+       dockerCfg: CHANGE
+       repo: registry.deckhouse.ru/deckhouse/ee/modules
+       scheme: HTTPS
+     # Выберите подходящий канал обновлений: Alpha, Beta, EarlyAccess, Stable, RockSolid
+     releaseChannel: "Stable"
+   ```
 
    Следующая команда скачает образы модулей из источника, описанного в ресурсе `ModuleSource`, находящемся в файле `$HOME/module_source.yml`:
 
@@ -562,21 +577,21 @@ Deckhouse поддерживает работу только с Bearer token-с�
    * Измените поле `.spec.registry.repo` на адрес, который вы указали в параметре `--registry` при выгрузке образов;
    * Измените поле `.spec.registry.dockerCfg` на Base64-строку с данными для авторизации в вашем registry в формате `dockercfg`. Обратитесь к документации вашего registry для получения информации о том, как сгенерировать этот токен.
     
-    Пример:
-    ```yaml
-    apiVersion: deckhouse.io/v1alpha1
-    kind: ModuleSource
-    metadata:
-      name: deckhouse
-    spec:
-      registry:
-      # Укажите строку, полученную в п.1 вместо CHANGE
-        dockerCfg: CHANGE
-        repo: registry.deckhouse.ru/deckhouse/ee/modules
-        scheme: HTTPS
-      # Выберите подходящий канал обновлений: Alpha, Beta, EarlyAccess, Stable, RockSolid
-      releaseChannel: "Stable"
-    ```
+   Пример:
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleSource
+   metadata:
+     name: deckhouse
+   spec:
+     registry:
+       # Укажите строку, полученную в п.2 вместо CHANGE
+       dockerCfg: CHANGE
+       repo: registry.deckhouse.ru/deckhouse/ee/modules
+       scheme: HTTPS
+     # Выберите подходящий канал обновлений: Alpha, Beta, EarlyAccess, Stable, RockSolid
+     releaseChannel: "Stable"
+   ```
 
    > Не забудьте изменить путь на соответствующий вашей редакции платформы – замените в ссылке `ee` на `se` или `cse`. Например, для редакции SE ссылка будет выглядеть так: `registry.deckhouse.ru/deckhouse/se`.
 
