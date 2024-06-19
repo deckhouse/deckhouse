@@ -54,7 +54,7 @@ func setLeaderLabelToPod(input *go_hook.HookInput, dc dependency.Container) erro
 		patch := map[string]any{
 			"metadata": map[string]any{
 				"labels": map[string]any{
-					"deckhouse-leader": trueOrNil(pod.Name == podName),
+					"deckhouse-leader": emptyOrNil(pod.Name == podName),
 				},
 			},
 		}
@@ -65,9 +65,9 @@ func setLeaderLabelToPod(input *go_hook.HookInput, dc dependency.Container) erro
 	return nil
 }
 
-func trueOrNil(b bool) any {
+func emptyOrNil(b bool) any {
 	if b {
-		return true
+		return ""
 	}
 
 	return nil
