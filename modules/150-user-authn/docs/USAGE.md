@@ -207,7 +207,7 @@ To ensure granular user access to applications, you have to:
 * Add the `allowedUserGroups` parameter to the `ModuleConfig` of the target application.
 * Add the user to the groups (group names should be the same for Blitz and Deckhouse).
 
-An example for prometheus.
+Below is an example for prometheus:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
