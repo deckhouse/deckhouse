@@ -22,14 +22,14 @@ if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
   until [[ $(/opt/deckhouse/bin/ec2_describe_tags -query_meta) ]]; do 
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "2" ]; then
-      describe_tags=false
+      fail_describe_tags=1
       break
     fi
     >&2 echo "ec2_describe_tags return empty"
     sleep 2
   done
 
-  if [[ $describe_tags -eq "false" ]]; then
+  if [[ $fail_describe_tags -eq 1 ]]; then
     >&2 echo "Failed to define hostnamce instance. Number of attempts exceeded."
     exit 1
   fi
