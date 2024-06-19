@@ -329,7 +329,7 @@ function node_os_image_metrics() {
                 "(?:(rocky).*(8|9))",
                 "(?:(almalinux).*(7|8))",
                 "(?:(redos).*(7|8))",
-                "(?:(rosa).*(7|2021))", # TODO 12.5.1 or 2021.1
+                "(?:(rosa).*(7|12))",
                 "(?:(astra))"
               ] | join("|")
             ).captures // [{string: "unknown"}] |

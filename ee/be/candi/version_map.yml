@@ -4,7 +4,8 @@ bashible:
     '8.0':
   rosa: &rosa
     '7.9':
-    '2021.1':
+    '12.4':
+    '12.5.1':
   astra: &astra
     '1.7':
   altlinux:
