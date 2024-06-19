@@ -293,7 +293,7 @@ func isNamespaced(kubeCl *client.KubernetesClient, gvk schema.GroupVersionKind, 
 				continue
 			}
 			if resource.Name == name {
-				return true, nil
+				return resource.Namespaced, nil
 			}
 		}
 	}
