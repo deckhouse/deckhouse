@@ -98,6 +98,7 @@ export PATH="/opt/deckhouse/bin:$PATH"
 export LANG=C
 export REPOSITORY=""
 export BB_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages"
+export TMPDIR="/opt/deckhouse/tmp"
 export BB_FETCHED_PACKAGES_STORE="/${TMPDIR}/registrypackages"
 {{- if .proxy }}
   {{- if .proxy.httpProxy }}
