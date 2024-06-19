@@ -146,15 +146,15 @@ spec:
 
 ### OIDC (OpenID Connect)
 
-Аутентификация через OIDC-провайдера требует регистрации клиента (или создания приложения). Сделайте это по документации вашего провайдера (например, [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration), [Blitz](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html)).
+Аутентификация через OIDC-провайдера требует регистрации клиента (или создания приложения). Сделайте это по документации вашего провайдера (например, [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration) или [Blitz](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html)).
 
-Полученные в ходе выполнения инструкции `clientID` и `clientSecret` укажите в кастомном ресурсе [DexProvider](cr.html#dexprovider).
+Полученные в ходе выполнения инструкции `clientID` и `clientSecret` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
 
 Ниже можно ознакомиться с некоторыми примерами.
 
 #### Okta
 
-В примере представлены настройки провайдера для интеграции с Okta.
+В примере представлены настройки провайдера для интеграции с Okta:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -174,9 +174,9 @@ spec:
 
 #### Blitz Identity Provider
 
-На стороне провайдера Blitz Identity Provider, при [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html), необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`. `publicDomainTemplate` [указывается](https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) в модуле `global`.
+На стороне провайдера Blitz Identity Provider при [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html) необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`, где `publicDomainTemplate` – [указанный](https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) в модуле `global` шаблон DNS-имен кластера.
 
-В примере представлены настройки провайдера для интеграции с Blitz Identity Provider.
+В примере представлены настройки провайдера для интеграции с Blitz Identity Provider:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -205,14 +205,14 @@ spec:
   type: OIDC
 ```
 
-Для того, чтобы корректно отрабатывал логаут из приложений (происходил отзыв токена и требовалась повторная авторизация), нужно установить `login` в значении параметра `promptType`.
+Для того чтобы корректно отрабатывал выход из приложений (происходил отзыв токена и требовалась повторная авторизация), нужно установить `login` в значении параметра `promptType`.
 
-Для обеспечения гранулированного доступа пользователя к приложениям, необходимо:
+Для обеспечения гранулированного доступа пользователя к приложениям необходимо:
  
 * Добавить параметр `allowedUserGroups` в `ModuleConfig` нужного приложения.
 * Добавить группы к пользователю (наименования групп должны совпадать как на стороне Blitz, так и на стороне Deckhouse).
 
-Пример для prometheus.
+Пример для Prometheus:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -230,7 +230,7 @@ spec:
 
 ### LDAP
 
-В примере представлены настройки провайдера для интеграции с Active Directory.
+В примере представлены настройки провайдера для интеграции с Active Directory:
 
 ```yaml
 apiVersion: deckhouse.io/v1
