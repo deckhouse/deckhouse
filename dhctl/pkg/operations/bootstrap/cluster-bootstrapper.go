@@ -384,7 +384,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	if err := RunBashiblePipeline(b.SSHClient, metaConfig, nodeIP, devicePath); err != nil {
+	if err := RunBashiblePipeline(b.SSHClient, metaConfig, nodeIP, devicePath, true); err != nil {
 		return err
 	}
 

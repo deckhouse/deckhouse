@@ -28,6 +28,7 @@ type ReverseTunnel struct {
 	Session *session.Session
 	Address string
 	sshCmd  *exec.Cmd
+	stopped bool
 }
 
 func NewReverseTunnel(sess *session.Session, address string) *ReverseTunnel {
@@ -77,6 +78,11 @@ func (t *ReverseTunnel) Up() error {
 }
 
 func (t *ReverseTunnel) Stop() error {
+	if t.stopped {
+		log.DebugLn("Reverse tunnel already stopped")
+		return nil
+	}
+
 	log.DebugLn("Stop reverse tunnel")
 	defer log.DebugLn("End stop reverse tunnel")
 
@@ -84,6 +90,8 @@ func (t *ReverseTunnel) Stop() error {
 	if err != nil {
 		return fmt.Errorf("stop tunnel '%s': %w", t.String(), err)
 	}
+
+	t.stopped = true
 
 	return nil
 }

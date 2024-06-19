@@ -60,64 +60,30 @@ const (
 	BastionHostCacheKey              = "bastion-hosts"
 )
 
-func BootstrapMaster(sshClient *ssh.Client, bundleName, nodeIP string, metaConfig *config.MetaConfig, controller *template.Controller) error {
+func BootstrapMaster(sshClient *ssh.Client, controller *template.Controller) error {
 	return log.Process("bootstrap", "Initial bootstrap", func() error {
-		if err := template.PrepareBootstrap(controller, nodeIP, bundleName, metaConfig); err != nil {
-			return fmt.Errorf("prepare bootstrap: %v", err)
-		}
-
-		err := retry.NewLoop(fmt.Sprintf("Prepare %s", app.NodeDeckhouseDirectoryPath), 30, 10*time.Second).Run(func() error {
-			if err := sshClient.Command("mkdir", "-p", "-m", "0755", app.DeckhouseNodeBinPath).Sudo().Run(); err != nil {
-				return fmt.Errorf("ssh: mkdir -p %s -m 0755: %w", app.DeckhouseNodeBinPath, err)
-			}
-
-			return nil
-		})
-
-		if err != nil {
-			return fmt.Errorf("cannot create %s directories: %w", app.NodeDeckhouseDirectoryPath, err)
-		}
-
-		err = retry.NewLoop(fmt.Sprintf("Prepare %s", app.DeckhouseNodeTmpPath), 30, 10*time.Second).Run(func() error {
-			if err := sshClient.Command("mkdir", "-p", "-m", "1777", app.DeckhouseNodeTmpPath).Sudo().Run(); err != nil {
-				return fmt.Errorf("ssh: mkdir -p -m 1777 %s: %w", app.DeckhouseNodeTmpPath, err)
-			}
-
-			return nil
-		})
-
-		if err != nil {
-			return fmt.Errorf("cannot create %s directories: %w", app.NodeDeckhouseDirectoryPath, err)
-		}
-
 		for _, bootstrapScript := range []string{"bootstrap.sh", "bootstrap-networks.sh"} {
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
-			err := retry.NewLoop(bootstrapScript, 30, 10*time.Second).Run(func() error {
-				if _, err := os.Stat(scriptPath); err != nil {
-					if os.IsNotExist(err) {
-						log.InfoF("Script %s wasn't found\n", scriptPath)
-						return nil
-					}
-					return fmt.Errorf("script path: %v", err)
+			if _, err := os.Stat(scriptPath); err != nil {
+				if os.IsNotExist(err) {
+					log.InfoF("Script %s wasn't found\n", scriptPath)
+					return nil
 				}
-				logs := make([]string, 0)
-				cmd := sshClient.UploadScript(scriptPath).
-					WithStdoutHandler(func(l string) {
-						logs = append(logs, l)
-						log.DebugLn(l)
-					}).Sudo()
-
-				_, err := cmd.Execute()
-				if err != nil {
-					log.ErrorLn(strings.Join(logs, "\n"))
-					return fmt.Errorf("run %s: %w", scriptPath, err)
-				}
-				return nil
-			})
-
-			if err != nil {
-				return err
+				return fmt.Errorf("script path: %v", err)
 			}
+			logs := make([]string, 0)
+			cmd := sshClient.UploadScript(scriptPath).
+				WithStdoutHandler(func(l string) {
+					logs = append(logs, l)
+					log.DebugLn(l)
+				}).Sudo()
+
+			_, err := cmd.Execute()
+			if err != nil {
+				log.ErrorLn(strings.Join(logs, "\n"))
+				return fmt.Errorf("run %s: %w", scriptPath, err)
+			}
+			return nil
 		}
 		return nil
 	})
@@ -320,7 +286,28 @@ func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
 	return tlsCert, nil
 }
 
-func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, devicePath string) error {
+func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, devicePath string, useRegistryProxy bool) error {
+	var tun *frontend.ReverseTunnel
+	if useRegistryProxy {
+		log.DebugLn("Starting reverse tunnel routine")
+		// we need reup tunnel every step because we can lost connection
+		var err error
+		tun, err = SetupSSHTunnelToRegistryPackagesProxy(sshClient)
+		if err != nil {
+			return fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
+		}
+		defer func() {
+			if tun == nil {
+				return
+			}
+
+			err := tun.Stop()
+			if err != nil {
+				log.DebugF("Cannot stop SSH tunnel to registry packages proxy: %v\n", err)
+			}
+		}()
+	}
+
 	if err := CheckDHCTLDependencies(sshClient); err != nil {
 		return err
 	}
@@ -333,9 +320,31 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 	templateController := template.NewTemplateController("")
 	log.DebugF("Rendered templates directory %s\n", templateController.TmpDir)
 
-	if err := BootstrapMaster(sshClient, bundleName, nodeIP, cfg, templateController); err != nil {
-		return err
-	}
+	err = log.Process("bootstrap", "Preparing bootstrap", func() error {
+		if err := template.PrepareBootstrap(templateController, nodeIP, bundleName, cfg); err != nil {
+			return fmt.Errorf("prepare bootstrap: %v", err)
+		}
+
+		err := retry.NewLoop(fmt.Sprintf("Prepare %s", app.NodeDeckhouseDirectoryPath), 30, 10*time.Second).Run(func() error {
+			if err := sshClient.Command("mkdir", "-p", "-m", "0755", app.DeckhouseNodeBinPath).Sudo().Run(); err != nil {
+				return fmt.Errorf("ssh: mkdir -p %s -m 0755: %w", app.DeckhouseNodeBinPath, err)
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			return fmt.Errorf("cannot create %s directories: %w", app.NodeDeckhouseDirectoryPath, err)
+		}
+
+		return retry.NewLoop(fmt.Sprintf("Prepare %s", app.DeckhouseNodeTmpPath), 30, 10*time.Second).Run(func() error {
+			if err := sshClient.Command("mkdir", "-p", "-m", "1777", app.DeckhouseNodeTmpPath).Sudo().Run(); err != nil {
+				return fmt.Errorf("ssh: mkdir -p -m 1777 %s: %w", app.DeckhouseNodeTmpPath, err)
+			}
+
+			return nil
+		})
+	})
 
 	if err = PrepareBashibleBundle(bundleName, nodeIP, devicePath, cfg, templateController); err != nil {
 		return err
@@ -346,11 +355,22 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 		}
 	})
 
+	if err := BootstrapMaster(sshClient, templateController); err != nil {
+		return err
+	}
+
 	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
 		BreakIf(func(err error) bool { return errors.Is(err, ErrBashibleTimeout) }).
 		Run(func() error {
+			// Unfortunately we can't put the first start of the tunnel in this loop,
+			//  because bringing up the tunnel still takes some time after running the ssh command.
+			// This will cause unnecessary errors and output them to the user.
+			// We could do a separate pending tunnel ready loop, but we are fighting for a fast bootstrap of the cluster,
+			//  so we are now running it before the rest of the cluster preparation procedures.
+			// During this time, the tunnel has time to go up.
+			// I don't see any problems apart from not very nice code
+
 			log.DebugLn("Check bundle routine start")
-			defer log.DebugLn("Execute bundle end")
 
 			if ok := CheckBashibleBundle(sshClient); ok {
 				return nil
@@ -362,23 +382,26 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 				return err
 			}
 
-			log.DebugLn("Starting reverse tunnel routine")
-
-			// we need reup tunnel every step because we can lost connection
-			tun, err := SetupSSHTunnelToRegistryPackagesProxy(sshClient)
-			if err != nil {
-				return fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
-			}
-			defer func() {
-				err := tun.Stop()
-				if err != nil {
-					log.DebugF("Cannot stop SSH tunnel to registry packages proxy: %v\n", err)
-				}
-			}()
-
 			log.DebugLn("Start execute bashible bundle routine")
 
-			return ExecuteBashibleBundle(sshClient, templateController.TmpDir)
+			err := ExecuteBashibleBundle(sshClient, templateController.TmpDir)
+			if err != nil {
+				if tun == nil {
+					return err
+				}
+
+				if err = tun.Stop(); err != nil {
+					return err
+				}
+
+				// we do not need defer for stopping tunnel. Tunnel will stop in deferrer above
+				tun, err = SetupSSHTunnelToRegistryPackagesProxy(sshClient)
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
 		})
 }
 
