@@ -49,9 +49,9 @@ spec:
 В организации GitHub необходимо создать новое приложение.
 
 Для этого выполните следующие шаги:
-Перейдите в `Settings` -> `Developer settings` -> `OAuth Aps` -> `Register a new OAuth application` и в качестве `Authorization callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`.
+* перейдите в `Settings` -> `Developer settings` -> `OAuth Aps` -> `Register a new OAuth application` и в качестве `Authorization callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`.
 
-Полученные `Client ID` и `Client Secret` укажите в кастомном ресурсе [DexProvider](cr.html#dexprovider).
+Полученные `Client ID` и `Client Secret` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
 
 Если организация GitHub находится под управлением клиента, перейдите в `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` и нажмите `Send Request` для подтверждения. Попросите клиента подтвердить запрос, который придет к нему на email.
 
@@ -83,7 +83,7 @@ spec:
 * **cloud gitlab.com**: под главной учетной записью проекта перейдите в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
 * (для GitLab версии 16 и выше) включить опцию `Trusted`/`Trusted applications are automatically authorized on Gitlab OAuth flow` при создании приложения.
 
-Полученные `Application ID` и `Secret` укажите в кастомном ресурсе [DexProvider](cr.html#dexprovider).
+Полученные `Application ID` и `Secret` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
 
 ### Atlassian Crowd
 
@@ -110,7 +110,7 @@ spec:
 В соответствующем проекте Atlassian Crowd необходимо создать новое `Generic`-приложение.
 
 Для этого выполните следующие шаги:
-Перейдите в `Applications` -> `Add application`.
+* перейдите в `Applications` -> `Add application`.
 
 Полученные `Application Name` и `Password` укажите в custom ресурсе [DexProvider](cr.html#dexprovider).
 
