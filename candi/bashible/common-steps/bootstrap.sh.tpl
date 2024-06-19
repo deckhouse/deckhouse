@@ -14,6 +14,7 @@
 # limitations under the License.
 */}}
 #!/bin/bash
+set -Eeuo pipefail
 
 function check_python() {
   for pybin in python3 python2 python; do
