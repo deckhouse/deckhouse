@@ -51,11 +51,19 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: agent
+      volumes:
+      - name: hostproc
+        hostPath:
+          path: /proc
+          type: Directory
       containers:
       - name: agent
         {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "agent") }}
         command: ["/agent"]
+        volumeMounts:
+          - name: hostproc
+            mountPath: /hostproc
         env:
         - name: LOG_LEVEL
           value: {{ .Values.staticRoutingManager.logLevel | quote }}

@@ -272,7 +272,7 @@ func (ire *IPRuleEntry) getHash() string {
 		return ire.String()
 	}
 
-	return fmt.Sprintf("%s", hash)
+	return fmt.Sprintf("%v", hash)
 }
 
 func (ire *IPRuleEntry) getNetlinkRule() (*netlink.Rule, error) {
