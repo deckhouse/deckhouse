@@ -112,9 +112,9 @@ spec:
 Для этого выполните следующие шаги:
 * перейдите в `Applications` -> `Add application`.
 
-Полученные `Application Name` и `Password` укажите в custom ресурсе [DexProvider](cr.html#dexprovider).
+Полученные `Application Name` и `Password` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
 
-Группы CROWD укажите в lowercase-формате для кастомного ресурса `DexProvider`.
+Группы CROWD укажите в lowercase-формате для Custom Resource `DexProvider`.
 
 ### Bitbucket Cloud
 
@@ -140,9 +140,9 @@ spec:
 Для настройки аутентификации необходимо в Bitbucket в меню команды создать нового OAuth consumer.
 
 Для этого выполните следующие шаги:
-Перейдите в `Settings` -> `OAuth consumers` -> `New application` и в качестве `Callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, разрешите доступ для `Account: Read` и `Workspace membership: Read`.
+* перейдите в `Settings` -> `OAuth consumers` -> `New application` и в качестве `Callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, разрешите доступ для `Account: Read` и `Workspace membership: Read`.
 
-Полученные `Key` и `Secret` укажите в кастомном ресурсе [DexProvider](cr.html#dexprovider).
+Полученные `Key` и `Secret` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
 
 ### OIDC (OpenID Connect)
 
@@ -268,14 +268,14 @@ spec:
 
 Для настройки аутентификации заведите в LDAP read-only-пользователя (service account).
 
-Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` кастомном ресурсе [DexProvider](cr.html#dexprovider).
+Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` Custom Resource [DexProvider](cr.html#dexprovider).
 1. Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
 2. В параметре `bindPW` укажите пароль в plain-виде. Стратегии с передачей хэшированных паролей не предусмотрены.
 
 ## Настройка OAuth2-клиента в Dex для подключения приложения
 
-Этот вариант настройки подходит приложениям, которые имеют возможность использовать oauth2-аутентификацию самостоятельно, без помощи `oauth2-proxy`.
-Чтобы позволить подобным приложениям взаимодействовать с Dex, используется кастомном ресурс [`DexClient`](cr.html#dexclient).
+Этот вариант настройки подходит приложениям, которые имеют возможность использовать OAuth2-аутентификацию самостоятельно, без помощи `oauth2-proxy`.
+Чтобы позволить подобным приложениям взаимодействовать с Dex, используется Custom Resource [`DexClient`](cr.html#dexclient).
 
 {% raw %}
 
@@ -363,4 +363,4 @@ spec:
 
 ## Выдача прав пользователю или группе
 
-Для настройки используются параметры в кастомном ресурсе [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule).
+Для настройки используются параметры в Custom Resource [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule).
