@@ -19,9 +19,22 @@ mkdir -p /opt/deckhouse/bin
 if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
   d8-curl -L -o /opt/deckhouse/bin/ec2_describe_tags https://github.com/flant/go-ec2-describe-tags/releases/download/v0.0.1-flant.2/ec2_describe_tags
   chmod +x /opt/deckhouse/bin/ec2_describe_tags
+  attempt=0
+  until [[ $(/opt/deckhouse/bin/ec2_describe_tags -query_meta) ]]; do 
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "10" ]; then
+      describe_tags=false
+      break
+    fi
+    >&2 echo "ec2_describe_tags return empty"
+    sleep 2
+  done
+
+  if [[ $describe_tags -eq "false" ]]; then
+    >&2 echo "Failed to define hostnamce instance. Number of attempts exceeded."
+    exit 1
+  fi
   instance_name=$(/opt/deckhouse/bin/ec2_describe_tags -query_meta | grep -Po '(?<=Name=).+')
-	echo $(/opt/deckhouse/bin/ec2_describe_tags -query_meta ) > /opt/deckhouse/bin/ec2_describe_tags.txt
-	echo $instance_name > /opt/deckhouse/bin/ec2_instance_name.txt
   hostnamectl set-hostname "$instance_name"
   rm /opt/deckhouse/bin/ec2_describe_tags
   mkdir -p /var/lib/bashible
