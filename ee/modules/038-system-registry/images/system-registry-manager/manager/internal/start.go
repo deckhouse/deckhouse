@@ -32,11 +32,7 @@ func StartManager() {
 
 	cfg := common_config.NewRuntimeConfig(&rootCtxcancel)
 	worker := worker.New(rootCtx, cfg)
-	master, err := master.New(rootCtx, cfg)
-	if err != nil {
-		log.Errorf("error, %v", err)
-		return
-	}
+	master := master.New(rootCtx, cfg)
 
 	var wg sync.WaitGroup
 	wg.Add(3) // Changed the value to 2 since we have only two worker goroutines
