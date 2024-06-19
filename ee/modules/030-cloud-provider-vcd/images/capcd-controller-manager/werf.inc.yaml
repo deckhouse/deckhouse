@@ -31,7 +31,7 @@ shell:
     - export GOPROXY={{ $.GOPROXY }}
     - git clone --depth 1 --branch {{ $value.clusterApi.vcd }} {{ $.SOURCE_REPO }}/vmware/cluster-api-provider-cloud-director /src
     - cd /src
-    - find /patches/ -name '*.patch' | xargs git apply --verbose
+    - git apply /patches/*.patch --verbose
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X github.com/vmware/cluster-api-provider-cloud-director/release.Version={{ $value.clusterApi.vcd }}" -o /cluster-api-provider-cloud-director
     - chown 64535:64535 /cluster-api-provider-cloud-director
     - chmod 0755 /cluster-api-provider-cloud-director

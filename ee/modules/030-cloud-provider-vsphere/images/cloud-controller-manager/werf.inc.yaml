@@ -38,7 +38,7 @@ shell:
   - git clone https://github.com/kubernetes/cloud-provider-vsphere.git /src
   - cd /src
   - git checkout {{ $value.ccm.vsphere }}
-  - find /patches/{{ $version }} -name '*.patch' | sort | xargs git apply --verbose
+  - git apply /patches/{{ $version }}/*.patch --verbose
   - make build VERSION={{ $value.ccm.vsphere }}
   - chown 64535:64535 /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
   - chmod 0755 /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
