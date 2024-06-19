@@ -333,7 +333,7 @@ func DeleteNodes(ctx context.Context, log *logrus.Entry, nodes []NodeManager) er
 		status, err := node.GetNodeRunningStatus()
 		if err == nil && !status.IsExist {
 			log.Infof("Node %s has already been deleted", node.GetNodeName())
-			return nil
+			continue
 		}
 
 		log.Infof("Deleting manifests for node %s", node.GetNodeName())
