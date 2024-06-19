@@ -33,9 +33,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "crowd-proxy-ingress",
 			ApiVersion: "networking.k8s.io/v1",
 			Kind:       "Ingress",
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"crowd-basic-auth-proxy"},
-			},
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"d8-user-authn"},
@@ -50,6 +47,9 @@ func filterIngressName(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	var ingress v1.Ingress
 	if err := sdk.FromUnstructured(obj, &ingress); err != nil {
 		return nil, err
+	}
+	if ingress.Name != "crowd-basic-auth-proxy" {
+		return nil, nil
 	}
 	return ingress.Name, nil
 }
