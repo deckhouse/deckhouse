@@ -29,13 +29,13 @@ shell:
   - cd /src
 {{- if semverCompare ">=1.30" $version }}
   - git clone --depth 1 --branch v1.28.{{ $value.clusterAutoscalerPatch }} {{ $.SOURCE_REPO }}/gardener/autoscaler.git .
-  - find /patches/{{ $version }} -name '*.patch' | sort | xargs git apply --verbose
+  - git apply /patches/{{ $version }}/*.patch --verbose
 {{- else if semverCompare ">=1.28" $version }}
   - git clone --depth 1 --branch v1.27.{{ $value.clusterAutoscalerPatch }} {{ $.SOURCE_REPO }}/gardener/autoscaler.git .
   - find /patches/1.27 -name '*.patch' | xargs git apply --verbose
 {{- else }}
   - git clone --depth 1 --branch v{{ $version }}.{{ $value.clusterAutoscalerPatch }} {{ $.SOURCE_REPO }}/gardener/autoscaler.git .
-  - find /patches/{{ $version }} -name '*.patch' | sort | xargs git apply --verbose
+  - git apply /patches/{{ $version }}/*.patch --verbose
 {{- end }}
   - cd cluster-autoscaler
   - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o cluster-autoscaler

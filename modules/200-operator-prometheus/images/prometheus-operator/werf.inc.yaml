@@ -30,7 +30,7 @@ shell:
     - cd /prometheus-operator
     - export VERSION=$(cat VERSION | tr -d " \t\n\r")
     - export GO_BUILD_LDFLAGS="-X github.com/prometheus/common/version.Version=${VERSION} -X github.com/prometheus/common/version.BuildUser=deckhouse"
-    - find /patches -name '*.patch' | xargs git apply --verbose
+    - git apply /patches/*.patch --verbose
     - go get golang.org/x/net@v0.17.0
     - go mod tidy
     - go build -ldflags="-s -w ${GO_BUILD_LDFLAGS}" -o operator cmd/operator/main.go
