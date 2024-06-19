@@ -78,6 +78,7 @@
  - **[ingress-nginx]** Fix usage custom logs formats without our fields. [#8621](https://github.com/deckhouse/deckhouse/pull/8621)
  - **[ingress-nginx]** Digital ocean Kubernetes upgrade, update `timeoutSeconds`. [#8413](https://github.com/deckhouse/deckhouse/pull/8413)
  - **[ingress-nginx]** Replace status with formatted status in logs. [#8385](https://github.com/deckhouse/deckhouse/pull/8385)
+ - **[istio]** Fixed Istio module release requirements checker. [#8705](https://github.com/deckhouse/deckhouse/pull/8705)
  - **[kube-dns]** Fix empty array error in domain alias validation webhook. [#8503](https://github.com/deckhouse/deckhouse/pull/8503)
  - **[kube-proxy]** Start `kube-proxy` only if `cni-flannel` or `cni-simple-bridge` modules is enabled. [#8258](https://github.com/deckhouse/deckhouse/pull/8258)
  - **[metallb]** Switched to state-timeline plugin in MetalLB  Grafana dashboard. [#8389](https://github.com/deckhouse/deckhouse/pull/8389)

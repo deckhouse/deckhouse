@@ -48,8 +48,10 @@ apiServer:
     api-audiences: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}{{ with .apiserver.serviceAccount.additionalAPIAudiences }},{{ . | join "," }}{{ end }}
     {{- if .apiserver.serviceAccount.issuer }}
     service-account-issuer: {{ .apiserver.serviceAccount.issuer }}
+    service-account-jwks-uri: {{ .apiserver.serviceAccount.issuer }}/openid/v1/jwks
     {{- else }}
     service-account-issuer: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}
+    service-account-jwks-uri: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}/openid/v1/jwks
     {{- end }}
     service-account-key-file: /etc/kubernetes/pki/sa.pub
     service-account-signing-key-file: /etc/kubernetes/pki/sa.key
