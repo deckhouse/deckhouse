@@ -128,7 +128,7 @@ spec:
     apiVersion: deckhouse.io/v1alpha1
     kind: AuthorizationRule
     metadata:
-      name: {{ $administrator.name | replace "@" "-" }}
+      name: {{ $administrator.name | include "slugify" }}
     spec:
       accessLevel: Admin
       subjects:
