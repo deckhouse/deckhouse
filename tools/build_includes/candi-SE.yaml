@@ -9,7 +9,7 @@
   to: /deckhouse/candi/bashible/bundles/astra
 - add: /ee/be/candi/bashible/bundles/redos
   to: /deckhouse/candi/bashible/bundles/redos
-- add: /ee/be/candi/bashible/bundles/rels
-  to: /deckhouse/candi/bashible/bundles/rels
+- add: /ee/be/candi/bashible/bundles/rosa
+  to: /deckhouse/candi/bashible/bundles/rosa
 - add: /ee/be/candi/bashible/detect_bundle.sh
   to: /deckhouse/candi/bashible/detect_bundle.sh

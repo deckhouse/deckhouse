@@ -11,10 +11,21 @@ bb-is-redos-version?() {
   fi
 }
 
-bb-is-rels-version?() {
-  local RELS_VERSION=$1
+bb-is-rosa-version?() {
+  local ROSA_VERSION=$1
   source /etc/os-release
-  if [[ "${VERSION_ID}" =~ ^${RELS_VERSION}.*$ ]] ; then
+  if [[ "${VERSION_ID}" =~ ^${ROSA_VERSION}.*$ ]] ; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+
+bb-is-rosa-version?() {
+  local ROSA_VERSION=$1
+  source /etc/os-release
+  if [[ "${VERSION_ID}" =~ ^${ROSA_VERSION}.*$ ]] ; then
     return 0
   else
     return 1

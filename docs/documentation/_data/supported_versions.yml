@@ -26,9 +26,9 @@ osDistributions:
     url: https://redos.red-soft.ru/product/server/
     ru_support: 'true'
     en_support: 'false'
-  '_rels':
-    name: 'РОСА «КОБАЛЬТ» Сервер'
-    url: https://rosa.ru/cobalt-server/
+  '_rosa':
+    name: 'РОСА Сервер'
+    url: https://rosa.ru
     ru_support: 'true'
     en_support: 'false'
     additional_notes: 'true'

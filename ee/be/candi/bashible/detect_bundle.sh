@@ -33,9 +33,9 @@ case "$ID" in
     esac
     name_is_not_supported
   ;;
-  rels)
-    case "$VERSION_ID" in 7|7.*)
-      echo "rels" && exit 0 ;;
+  rels|rosa)
+    case "$VERSION_ID" in 7|7.*|2021.*)
+      echo "rosa" && exit 0 ;;
     esac
     name_is_not_supported
   ;;

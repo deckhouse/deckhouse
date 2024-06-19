@@ -2,8 +2,9 @@ bashible:
   redos: &redos
     '7.3':
     '8.0':
-  rels: &rels
+  rosa: &rosa
     '7.9':
+    '2021.1':
   astra: &astra
     '1.7':
   altlinux:
@@ -16,8 +17,8 @@ k8s:
     bashible:
       redos:
         !!merge <<: *redos
-      rels:
-        !!merge <<: *rels
+      rosa:
+        !!merge <<: *rosa
       astra:
         !!merge <<: *astra
     clusterApi:
@@ -28,8 +29,8 @@ k8s:
     bashible:
       redos:
         !!merge <<: *redos
-      rels:
-        !!merge <<: *rels
+      rosa:
+        !!merge <<: *rosa
       astra:
         !!merge <<: *astra
     clusterApi:
@@ -40,8 +41,6 @@ k8s:
     bashible:
       redos:
         !!merge <<: *redos
-      rels:
-        !!merge <<: *rels
       astra:
         !!merge <<: *astra
     clusterApi:
@@ -52,8 +51,8 @@ k8s:
     bashible:
       redos:
         !!merge <<: *redos
-      rels:
-        !!merge <<: *rels
+      rosa:
+        !!merge <<: *rosa
       astra:
         !!merge <<: *astra
     clusterApi:
@@ -64,8 +63,8 @@ k8s:
     bashible:
       redos:
         !!merge <<: *redos
-      rels:
-        !!merge <<: *rels
+      rosa:
+        !!merge <<: *rosa
       astra:
         !!merge <<: *astra
     clusterApi:
