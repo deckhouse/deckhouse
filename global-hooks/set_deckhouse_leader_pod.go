@@ -27,10 +27,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
-const (
-	d8Namespace = "d8-system"
-)
-
 // should run after start pod
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 1},
