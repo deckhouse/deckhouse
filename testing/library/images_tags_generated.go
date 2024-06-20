@@ -117,6 +117,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"cniCilium": map[string]interface{}{
 		"agentDistroless":    "imageHash-cniCilium-agentDistroless",
+		"baseAltCiliumDev":   "imageHash-cniCilium-baseAltCiliumDev",
 		"baseCiliumDev":      "imageHash-cniCilium-baseCiliumDev",
 		"checkKernelVersion": "imageHash-cniCilium-checkKernelVersion",
 		"egressGatewayAgent": "imageHash-cniCilium-egressGatewayAgent",
