@@ -440,7 +440,7 @@ This feature is only available in Standard Edition (SE), Enterprise Edition (EE)
    ```shell
    d8 mirror pull --source="registry.deckhouse.io/deckhouse/ee" --license="<DECKHOUSE_LICENSE_KEY>" --min-version=1.45 $(pwd)/d8.tar
    ```
-   > Не забудьте изменить путь на соответствующий вашей редакции платформы – замените последнюю часть ссылки на `se` или `cse`. Например, для редакции SE ссылка будет выглядеть так: `registry.deckhouse.io/deckhouse/se`.
+   > Make sure to edit the path to match your platform edition — replace the last section of the link with `se` or `cse`. For example, for the SE edition, the link would look as follows: `registry.deckhouse.io/deckhouse/se`.
    >
    > Note that `--min-version` parameter will be ignored if you specify version above the current rock-solid channel.
 
