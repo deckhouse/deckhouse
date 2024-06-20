@@ -184,7 +184,7 @@ Possible options for action if something went wrong:
   ```
 
 - [Collect debugging information](modules/002-deckhouse/faq.html#how-to-collect-debug-info) and contact technical support.
-- Ask for help from the [community](https://deckhouse.ru/community/about.html).
+- Ask for help from the [community](https://deckhouse.io/community/about.html).
 {% endalert %}
 
 ### How do I know that a new version is available for the cluster?
@@ -424,9 +424,10 @@ This feature is only available in Standard Edition (SE), Enterprise Edition (EE)
    The command below will pull Deckhouse tarballs for versions that are on the release channels (check [flow.deckhouse.io](https://flow.deckhouse.io) for the current status of the release channels):
 
    ```shell
-   d8 mirror pull --license "<DECKHOUSE_LICENSE_KEY>" $(pwd)/d8.tar
+   d8 mirror pull --source="registry.deckhouse.io/deckhouse/ee" --license="<DECKHOUSE_LICENSE_KEY>" $(pwd)/d8.tar
    ```
-
+   > Не забудьте изменить путь на соответствующий вашей редакции платформы – замените последнюю часть ссылки на `se` или `cse`. Например, для редакции SE ссылка будет выглядеть так: `registry.deckhouse.io/deckhouse/se`.
+   >
    > If you interrupt the download before it is finished, calling the command again will check which images have already been downloaded, and the download will continue. This will only happen if no more than 24 hours have passed since the download interruption.
    > Use the `--no-pull-resume` flag, to start the download from scratch.
    >
@@ -437,9 +438,10 @@ This feature is only available in Standard Edition (SE), Enterprise Edition (EE)
    For example, here is how you can pull all Deckhouse version images starting from version 1.45:
 
    ```shell
-   d8 mirror pull --license="<DECKHOUSE_LICENSE_KEY>" --min-version=1.45 $(pwd)/d8.tar
+   d8 mirror pull --source="registry.deckhouse.io/deckhouse/ee" --license="<DECKHOUSE_LICENSE_KEY>" --min-version=1.45 $(pwd)/d8.tar
    ```
-
+   > Не забудьте изменить путь на соответствующий вашей редакции платформы – замените последнюю часть ссылки на `se` или `cse`. Например, для редакции SE ссылка будет выглядеть так: `registry.deckhouse.io/deckhouse/se`.
+   >
    > Note that `--min-version` parameter will be ignored if you specify version above the current rock-solid channel.
 
    You can also pull a single specific Deckhouse release by using the `--release=X.Y.Z` flag.
@@ -479,7 +481,8 @@ This feature is only available in Standard Edition (SE), Enterprise Edition (EE)
    ```shell
    d8 mirror push /tmp/d8-images/d8.tar "your.private.registry.com:5000/deckhouse/ee" --registry-login="<USER>" --registry-password="<PASSWORD>"
    ```
-
+   > Не забудьте изменить путь на соответствующий вашей редакции платформы – замените последнюю часть ссылки на `se` или `cse`. Например, для редакции SE ссылка будет выглядеть так: `your.private.registry.com:5000/deckhouse/se`.
+   >
    > Please note that the images will be uploaded to the registry along the path specified in the `--registry` parameter (in the example above - /deckhouse/ee).
    > Before running the command, make sure this path exists in your registry, and the account you are using has write permissions.
 
@@ -503,22 +506,50 @@ The steps below are necessary for manually loading images of modules connected f
 
 1. [Download and install the Deckhouse CLI tool](https://github.com/deckhouse/deckhouse-cli/blob/main/README.md#how-to-install).
 
-   1. Pull module images from their source registry, defined as a `ModuleSource` resource, into a dedicated directory using the command `d8 mirror modules pull`.
+1. Создайте строку аутентификации для `registry.deckhouse.io` командой:
+   ```shell     
+   YOUR_LICENSE_KEY="ваш_лицензионный_ключ" base64 -w0 <<EOF
+     {
+       "auths": {
+         "registry.deckhouse.io": {
+           "auth": "$(echo -n license-token:${YOUR_LICENSE_KEY} | base64 -w0)"
+         }
+       }
+     }
+   EOF
+   ```
+   > Не забудьте заменить `ваш_лицензионный_ключ` на свой реальный лицензионный ключ.
 
-      `d8 mirror modules pull` pulls only the module versions available in the module release channels at the time of copying unless the `--modules-filter` flag is set.
+1. Pull module images from their source registry, defined as a `ModuleSource` resource, into a dedicated directory using the command `d8 mirror modules pull`.
 
-      The following command will pull module images from the source described in the `ModuleSource` resource located in the `$HOME/module_source.yml` file:
+   `d8 mirror modules pull` pulls only the module versions available in the module release channels at the time of copying unless the `--modules-filter` flag is set.
+   Пример файла `module_source.yml` с описанием ModuleSource:
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleSource
+   metadata:
+     name: deckhouse
+   spec:
+     registry:
+       # Укажите строку, полученную в п.2 вместо CHANGE
+       dockerCfg: CHANGE
+       repo: registry.deckhouse.io/deckhouse/ee/modules
+       scheme: HTTPS
+     # Выберите подходящий канал обновлений: Alpha, Beta, EarlyAccess, Stable, RockSolid
+     releaseChannel: "Stable"
+   ```
+   The following command will pull module images from the source described in the `ModuleSource` resource located in the `$HOME/module_source.yml` file:
 
-      ```shell
-      d8 mirror modules pull -d /tmp/d8-modules -m $HOME/module_source.yml
-      ```
+   ```shell
+   d8 mirror modules pull -d /tmp/d8-modules -m $HOME/module_source.yml
+   ```
 
-      To download only a specific set of modules of specific versions, use the `--modules-filter` flag followed by the list of required modules and their versions separated by the `;` character.
-      For example:
+   To download only a specific set of modules of specific versions, use the `--modules-filter` flag followed by the list of required modules and their versions separated by the `;` character.
+   For example:
 
-      ```shell
-      d8 mirror modules pull -d /tmp/d8-modules -m $HOME/module_source.yml --modules-filter="deckhouse-admin:v1.0.0;deckhouse-admin:v1.3.3; sds-drbd:v0.0.1"
-      ```
+   ```shell
+   d8 mirror modules pull -d /tmp/d8-modules -m $HOME/module_source.yml --modules-filter="deckhouse-admin:v1.0.0;deckhouse-admin:v1.3.3; sds-drbd:v0.0.1"
+   ```
 
 1. Upload the directory with the pulled images of the Deckhouse modules to a host with access to the air-gapped registry.
    To continue, install and use the Deckhouse CLI tool on that host further on.
@@ -540,6 +571,24 @@ The steps below are necessary for manually loading images of modules connected f
 
     * Change the `.spec.registry.repo` field to the address that you specified in the `--registry` parameter when you uploaded the images;
     * Change the `.spec.registry.dockerCfg` field to a base64 string with the authorization data for your registry in `dockercfg` format. Refer to your registry's documentation for information on how to obtain this token.
+ 
+   Пример:
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleSource
+   metadata:
+     name: deckhouse
+   spec:
+     registry:
+       # Укажите строку, полученную в п.2 вместо CHANGE
+       dockerCfg: CHANGE
+       repo: registry.deckhouse.io/deckhouse/ee/modules
+       scheme: HTTPS
+     # Выберите подходящий канал обновлений: Alpha, Beta, EarlyAccess, Stable, RockSolid
+     releaseChannel: "Stable"
+   ```
+
+   > Не забудьте изменить путь на соответствующий вашей редакции платформы – замените в ссылке `ee` на `se` или `cse`. Например, для редакции SE ссылка будет выглядеть так: `registry.deckhouse.io/deckhouse/se`.
 
 1. Apply the `ModuleSource` manifest you got in the previous step to the cluster.
 

@@ -458,7 +458,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
    Например, вот как можно загрузить образы из стороннего registry:
 
    ```shell
-   d8 mirror pull --source="corp.company.ru/sys/deckhouse" --source-login="<USER>" --source-password="<PASSWORD>" $(pwd)/d8.tar
+   d8 mirror pull --source="corp.company.com/sys/deckhouse" --source-login="<USER>" --source-password="<PASSWORD>" $(pwd)/d8.tar
    ```
 
    > Параметр `--license` действует как сокращение для параметров `--source-login` и `--source-password` и предназначен для использования с официальным registry Deckhouse.
@@ -535,7 +535,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
      name: deckhouse
    spec:
      registry:
-     # Укажите строку, полученную в п.2 вместо CHANGE
+       # Укажите строку, полученную в п.2 вместо CHANGE
        dockerCfg: CHANGE
        repo: registry.deckhouse.ru/deckhouse/ee/modules
        scheme: HTTPS
