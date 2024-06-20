@@ -422,25 +422,19 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.26 is available. Release will be applied at: Friday, 01-Jan-21 14:30:00 UTC")
 		require.Contains(suite.T(), httpBody, `"version":"1.26"`)
-
-		//TODO: check
-		//Expect(cm.Field("data.notified").Bool()).To(BeTrue())
 	})
 
 	suite.Run("Notification: after met conditions", func() {
 		suite.setupController("notification-after-met-conditions.yaml", initValues, embeddedMUP)
 		_, err := suite.ctr.createOrUpdateReconcile(ctx)
 		require.NoError(suite.T(), err)
-
-		//TODO: check
-		//Expect(cm.Field("data.isUpdating").Bool()).To(BeTrue())
-		//Expect(cm.Field("data.notified").Bool()).To(BeFalse())
 	})
 
 	suite.Run("Update: Release is deployed", func() {
 		suite.setupController("update-release-is-deployed.yaml", initValues, embeddedMUP)
 		_, err := suite.ctr.createOrUpdateReconcile(ctx)
 		require.NoError(suite.T(), err)
+		//TODO default annotations in release
 
 		//TODO: check
 		//Expect(cm.Field("data.isUpdating").Bool()).To(BeFalse())
@@ -467,9 +461,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.36 is available. Release will be applied at: Monday, 11-Nov-22 23:23:23 UTC")
 		require.Contains(suite.T(), httpBody, `"version":"1.36"`)
-
-		//TODO: check
-		//Expect(cm.Field("data.notified").Bool()).To(BeTrue())
 	})
 
 	suite.Run("Notification: basic auth", func() {
@@ -531,9 +522,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		suite.setupController("update-minimal-notification-time-without-configuring-notification-webhook.yaml", values, embeddedMUP)
 		_, err = suite.ctr.createOrUpdateReconcile(ctx)
 		require.NoError(suite.T(), err)
-
-		//TODO: check
-		//Expect(cm.Field("data.notified").Bool()).To(BeTrue())
 	})
 
 	suite.Run("Release with apply-now annotation out of window", func() {
@@ -669,6 +657,16 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, item := range deploymentList.Items {
+		got, _ := yaml.Marshal(item)
+		result.WriteString("---\n")
+		result.Write(got)
+	}
+
+	var cmList corev1.ConfigMapList
+	err = suite.kubeClient.List(context.TODO(), &cmList)
+	require.NoError(suite.T(), err)
+
+	for _, item := range cmList.Items {
 		got, _ := yaml.Marshal(item)
 		result.WriteString("---\n")
 		result.Write(got)

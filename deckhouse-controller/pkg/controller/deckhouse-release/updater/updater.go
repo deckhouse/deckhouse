@@ -117,7 +117,7 @@ func (api *kubeAPI) DeployRelease(release *v1alpha1.DeckhouseRelease) error {
 	return api.client.Update(ctx, &depl)
 }
 
-func (api *kubeAPI) SaveReleaseData(_ *v1alpha1.DeckhouseRelease, data updater.DeckhouseReleaseData) error {
+func (api *kubeAPI) SaveReleaseData(release *v1alpha1.DeckhouseRelease, data updater.DeckhouseReleaseData) error {
 	ctx := context.Background()
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -143,9 +143,14 @@ func (api *kubeAPI) SaveReleaseData(_ *v1alpha1.DeckhouseRelease, data updater.D
 	if errors.IsAlreadyExists(err) {
 		err = api.client.Update(ctx, cm)
 	}
+	if err != nil {
+		return fmt.Errorf("update release data: %w", err)
+	}
 
-	//TODO: update release
-	return err
+	return api.PatchReleaseAnnotations(release, map[string]interface{}{
+		"release.deckhouse.io/isUpdating": strconv.FormatBool(data.IsUpdating),
+		"release.deckhouse.io/notified":   strconv.FormatBool(data.Notified),
+	})
 }
 
 func newValueSettings(disruptionApprovalMode string) *ValueSettings {

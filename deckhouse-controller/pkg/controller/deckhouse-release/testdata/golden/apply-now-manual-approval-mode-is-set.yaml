@@ -18,13 +18,16 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
+  annotations:
+    release.deckhouse.io/isUpdating: "true"
+    release.deckhouse.io/notified: "false"
   creationTimestamp: null
   name: v1.26.0
-  resourceVersion: "1002"
+  resourceVersion: "1005"
 spec:
   version: v1.26.0
 status:
-  approved: false
+  approved: true
   message: ""
   phase: Deployed
   transitionTime: "2019-10-17T15:33:00Z"
@@ -73,3 +76,16 @@ spec:
         name: deckhouse
         resources: {}
 status: {}
+---
+apiVersion: v1
+data:
+  isUpdating: "true"
+  notified: "false"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+  name: d8-release-data
+  namespace: d8-system
+  resourceVersion: "3"

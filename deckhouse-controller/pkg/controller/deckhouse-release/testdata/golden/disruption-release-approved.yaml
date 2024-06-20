@@ -5,9 +5,11 @@ kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/disruption-approved: "true"
+    release.deckhouse.io/isUpdating: "true"
+    release.deckhouse.io/notified: "false"
   creationTimestamp: null
   name: v1.36.0
-  resourceVersion: "1000"
+  resourceVersion: "1003"
 spec:
   disruptions:
   - testme
@@ -62,3 +64,16 @@ spec:
         name: deckhouse
         resources: {}
 status: {}
+---
+apiVersion: v1
+data:
+  isUpdating: "true"
+  notified: "false"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+  name: d8-release-data
+  namespace: d8-system
+  resourceVersion: "3"
