@@ -117,8 +117,9 @@ cat > ${TMPDIR}/source_fetch.sh <<"EOF"
       from urllib.request import urlopen, Request
   except ImportError as e:
       from urllib2 import urlopen, Request
-  # Choose a random endpoint to increase fault tolerance and reduce load on a single endpoint.
   endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
+  # Choose a random endpoint as first ep, that increase fault tolerance and reduce load on first endpoint.
+	endpoints.insert(0, random.choice(endpoints))
   ssl._create_default_https_context = ssl._create_unverified_context
   for ep in endpoints:
     url = 'https://{}/package?digest=$1&repository=${REPOSITORY}'.format(ep)
