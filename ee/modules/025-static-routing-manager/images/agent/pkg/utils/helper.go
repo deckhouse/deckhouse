@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 
 	"github.com/go-logr/logr"
@@ -136,7 +135,7 @@ func SetStatusConditionPendingToNRT(ctx context.Context, cl client.Client, log l
 
 // netlink
 
-func GetNetlinkNSHandlerByPath(pathToNS string) (*netlink.Handle, error) {
+func GetNetnsNsHandleByPath(pathToNS string) (netns.NsHandle, error) {
 
 	if pathToNS == "" {
 		pathToNS = "/hostproc/1/ns/net"
@@ -144,12 +143,9 @@ func GetNetlinkNSHandlerByPath(pathToNS string) (*netlink.Handle, error) {
 
 	NsHandle, err := netns.GetFromPath(pathToNS)
 	if err != nil {
-		return nil, fmt.Errorf("failed get host namespace, err: %w", err)
+		return -1, fmt.Errorf("failed get host namespace, err: %w", err)
 	}
+	// defer NsHandle.Close()
 
-	nh, err := netlink.NewHandleAt(NsHandle)
-	if err != nil {
-		return nil, fmt.Errorf("failed create new namespace handler, err: %w", err)
-	}
-	return nh, nil
+	return NsHandle, nil
 }
