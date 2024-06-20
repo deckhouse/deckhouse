@@ -3,6 +3,8 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
+  annotations:
+    release.deckhouse.io/cooldown: "2026-06-06T16:16:16Z"
   creationTimestamp: null
   name: v1.31.1
   resourceVersion: "1"
