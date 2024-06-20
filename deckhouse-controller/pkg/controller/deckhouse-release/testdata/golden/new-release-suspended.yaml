@@ -4,6 +4,8 @@ approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
+    release.deckhouse.io/isUpdating: "false"
+    release.deckhouse.io/notified: "false"
     release.deckhouse.io/suspended: "true"
   creationTimestamp: null
   name: v1.25.0

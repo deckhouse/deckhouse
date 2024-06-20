@@ -246,8 +246,11 @@ releaseLoop:
 			APIVersion: "deckhouse.io/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        releaseChecker.releaseMetadata.Version,
-			Annotations: make(map[string]string),
+			Name: releaseChecker.releaseMetadata.Version,
+			Annotations: map[string]string{
+				"release.deckhouse.io/isUpdating": "false",
+				"release.deckhouse.io/notified":   "false",
+			},
 		},
 		Spec: v1alpha1.DeckhouseReleaseSpec{
 			Version:       releaseChecker.releaseMetadata.Version,

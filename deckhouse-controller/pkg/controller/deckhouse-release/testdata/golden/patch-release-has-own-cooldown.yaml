@@ -5,6 +5,8 @@ kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/cooldown: "2030-05-05T15:15:15Z"
+    release.deckhouse.io/isUpdating: "false"
+    release.deckhouse.io/notified: "false"
   creationTimestamp: null
   name: v1.31.2
   resourceVersion: "1"
