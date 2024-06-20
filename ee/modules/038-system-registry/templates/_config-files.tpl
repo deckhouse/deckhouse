@@ -27,7 +27,12 @@ manager:
   leaderElection: {}
 
 cluster:
-  size: {{ $.Values.systemRegistry.cluster.size | default 1 }}
+  {{- if and (hasKey $.Values "systemRegistry") (hasKey $.Values.systemRegistry "cluster") (hasKey $.Values.systemRegistry.cluster "size") }}
+  size:  {{ $.Values.systemRegistry.cluster.size }}
+  {{- else }}
+  size:  1
+  {{- end }}
+
 etcd:
   addresses:
   {{- range $etcd_addresses := $.Values.systemRegistry.internal.etcd.addresses }}
