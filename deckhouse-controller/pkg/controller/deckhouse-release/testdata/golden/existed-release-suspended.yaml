@@ -7,7 +7,7 @@ metadata:
     release.deckhouse.io/suspended: "true"
   creationTimestamp: null
   name: v1.25.0
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   version: v1.25.0
 status:

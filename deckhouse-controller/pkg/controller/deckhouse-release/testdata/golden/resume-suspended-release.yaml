@@ -5,11 +5,11 @@ kind: DeckhouseRelease
 metadata:
   creationTimestamp: null
   name: v1.25.0
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   version: v1.25.0
 status:
   approved: false
   message: ""
-  phase: Suspended
+  phase: Pending
   transitionTime: null

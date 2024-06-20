@@ -158,9 +158,6 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 		suite.setupController("resume-suspended-release.yaml", initValues, embeddedMUP)
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
-
-		//TODO:
-		//Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1.25.0").Field("status.phase").String()).To(Equal("Pending"))
 	})
 
 	suite.Run("Image hash not changed", func() {
