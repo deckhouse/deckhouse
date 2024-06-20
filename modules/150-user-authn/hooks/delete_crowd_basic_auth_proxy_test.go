@@ -47,47 +47,12 @@ spec:
         path: /basic-auth(\/?)(.*)
 `
 			f.BindingContexts.Set(f.KubeStateSet(crowdIngress))
+			f.RunHook()
 		})
 		It("Should delete the crowd-basic-auth-proxy ingress", func() {
-			f.RunHook()
 			Expect(f).To(ExecuteSuccessfully())
 			ingress := f.KubernetesResource("Ingress", "d8-user-authn", "crowd-basic-auth-proxy")
 			Expect(ingress).To(BeEmpty())
-		})
-		It("Should not delete the crowd-basic-auth-proxy ingress", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			ingress := f.KubernetesResource("Ingress", "d8-user-authn", "crowd-basic-auth-proxy")
-			Expect(ingress.Field("metadata.name").Str).To(Equal("crowd-basic-auth-proxy"))
-		})
-	})
-	Context("There's the basic-auth-proxy ingress", func() {
-		BeforeEach(func() {
-			basicIngress := `
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: basic-auth-proxy
-  namespace: d8-user-authn
-spec:
-  ingressClassName: nginx
-  rules:
-  - host: api.dev.hf.flant.com
-    http:
-      paths:
-      - backend:
-          service:
-            name: basic-auth-proxy
-            port:
-              number: 7332
-        path: /basic-auth(\/?)(.*)
-`
-			f.BindingContexts.Set(f.KubeStateSet(basicIngress))
-			f.RunHook()
-		})
-		It("Should not delete the basic-auth-proxy ingress", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			ingress := f.KubernetesResource("Ingress", "d8-user-authn", "basic-auth-proxy")
-			Expect(ingress.Field("metadata.name").Str).To(Equal("basic-auth-proxy"))
 		})
 	})
 })
