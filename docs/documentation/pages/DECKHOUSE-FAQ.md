@@ -481,7 +481,7 @@ This feature is only available in Standard Edition (SE), Enterprise Edition (EE)
    ```shell
    d8 mirror push /tmp/d8-images/d8.tar "your.private.registry.com:5000/deckhouse/ee" --registry-login="<USER>" --registry-password="<PASSWORD>"
    ```
-   > Не забудьте изменить путь на соответствующий вашей редакции платформы – замените последнюю часть ссылки на `se` или `cse`. Например, для редакции SE ссылка будет выглядеть так: `your.private.registry.com:5000/deckhouse/se`.
+   > Make sure to edit the path to match your platform edition — replace the last section of the link with `se` or `cse`. For example, for the SE edition, the link would look as follows: `your.private.registry.com:5000/deckhouse/se`.
    >
    > Please note that the images will be uploaded to the registry along the path specified in the `--registry` parameter (in the example above - /deckhouse/ee).
    > Before running the command, make sure this path exists in your registry, and the account you are using has write permissions.
