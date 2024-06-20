@@ -47,21 +47,10 @@ const (
 func RunIPRulesReconcilerAgentController(
 	mgr manager.Manager,
 	cfg config.Options,
+	nh netns.NsHandle,
 	log logr.Logger,
 ) (controller.Controller, error) {
 	cl := mgr.GetClient()
-
-	nh, err := utils.GetNetnsNsHandleByPath("")
-	if err != nil {
-		log.Error(err, "[RunIPRulesReconcilerAgentController] unable to create netns.NsHandle")
-		return nil, err
-	}
-	defer func() {
-		err = nh.Close()
-		if err != nil {
-			log.Error(err, "[RunIPRulesReconcilerAgentController] unable to close netns.NsHandle")
-		}
-	}()
 
 	c, err := controller.New(ipRuleCtrlName, mgr, controller.Options{
 		Reconciler: reconcile.Func(func(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {

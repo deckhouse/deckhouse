@@ -28,6 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/config"
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/controller"
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/kubutils"
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/utils"
 )
 
 var (
@@ -102,12 +103,24 @@ func main() {
 
 	// metrics := monitoring.GetMetrics("")
 
-	if _, err = controller.RunRoutesReconcilerAgentController(mgr, *cfgParams, log); err != nil {
+	nh, err := utils.GetNetnsNsHandleByPath("")
+	if err != nil {
+		log.Error(err, "[RunIPRulesReconcilerAgentController] unable to create netns.NsHandle")
+		os.Exit(1)
+	}
+	defer func() {
+		err = nh.Close()
+		if err != nil {
+			log.Error(err, "[RunIPRulesReconcilerAgentController] unable to close netns.NsHandle")
+		}
+	}()
+
+	if _, err = controller.RunRoutesReconcilerAgentController(mgr, *cfgParams, nh, log); err != nil {
 		log.Error(err, "[main] unable to controller.RunRoutesReconcilerAgentController")
 		os.Exit(1)
 	}
 
-	if _, err = controller.RunIPRulesReconcilerAgentController(mgr, *cfgParams, log); err != nil {
+	if _, err = controller.RunIPRulesReconcilerAgentController(mgr, *cfgParams, nh, log); err != nil {
 		log.Error(err, "[main] unable to controller.RunIPRulesReconcilerAgentController")
 		os.Exit(1)
 	}
