@@ -246,14 +246,18 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76869")
 			},
+			ConfigFileStub: func() (*v1.ConfigFile, error) {
+				return &v1.ConfigFile{
+					Config: v1.Config{
+						Labels: map[string]string{"cooldown": "2026-06-06 16:16:16"},
+					},
+				}, nil
+			},
 		}, nil)
 
 		suite.setupController("inherit-release-cooldown.yaml", initValues, embeddedMUP)
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
-
-		//TODO:
-		//Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).String()).To(Equal("2026-06-06T16:16:16Z"))
 	})
 
 	suite.Run("Patch release has own cooldown", func() {
@@ -276,9 +280,6 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 		suite.setupController("patch-release-has-own-cooldown.yaml", initValues, embeddedMUP)
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
-
-		//TODO:
-		//Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).String()).To(Equal("2030-05-05T15:15:15Z"))
 	})
 
 	suite.Run("Release has disruptions", func() {
