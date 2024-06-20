@@ -165,7 +165,7 @@ spec:
     apiVersion: deckhouse.io/v1alpha1
     kind: AuthorizationRule
     metadata:
-      name: {{ $administrator.name | include "slugify" }}
+      name: {{ $administrator.name | include "normalize" }}
     spec:
       accessLevel: Admin
       subjects:
