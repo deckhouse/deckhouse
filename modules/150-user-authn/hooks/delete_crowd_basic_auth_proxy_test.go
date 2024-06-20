@@ -46,7 +46,7 @@ spec:
               number: 7332
         path: /basic-auth(\/?)(.*)
 `
-			f.BindingContexts.Set(f.KubeStateSet(crowdIngress))
+			f.BindingContexts.Set(f.KubeStateSet(crowdIngress), f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("Should delete the crowd-basic-auth-proxy ingress", func() {

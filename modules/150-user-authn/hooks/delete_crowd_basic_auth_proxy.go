@@ -31,10 +31,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/user-authn/delete-crowd-proxy-ingress",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                "crowd-proxy-ingress",
-			ApiVersion:          "networking.k8s.io/v1",
-			Kind:                "Ingress",
-			ExecuteHookOnEvents: pointer.Bool(false),
+			Name:                         "crowd-proxy-ingress",
+			ApiVersion:                   "networking.k8s.io/v1",
+			Kind:                         "Ingress",
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"crowd-basic-auth-proxy"},
 			},
