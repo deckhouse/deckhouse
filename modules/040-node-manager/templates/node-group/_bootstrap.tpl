@@ -215,6 +215,7 @@ prepare_base_d8_binaries
 run_cloud_network_setup
     {{- end }}
   {{- end }}
+rm -f ${TMPDIR}/source_fetch.sh
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 run_log_output
   {{- end }}
@@ -228,5 +229,4 @@ if [ -n "${bootstrap_job_log_pid}" ]; then
   kill -9 "${bootstrap_job_log_pid}"
 fi
   {{- end }}
-  rm -f ${TMPDIR}/source_fetch.sh
 {{- end }}
