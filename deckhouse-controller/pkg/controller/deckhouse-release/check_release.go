@@ -162,19 +162,29 @@ releaseLoop:
 			switch release.Status.Phase {
 			case v1alpha1.PhasePending, "":
 				if releaseChecker.releaseMetadata.Suspend {
-					patch := buildSuspendAnnotation(releaseChecker.releaseMetadata.Suspend)
-					err := r.client.Patch(ctx, release, client.RawPatch(types.MergePatchType, patch))
+					patch := client.RawPatch(types.MergePatchType, buildSuspendAnnotation(releaseChecker.releaseMetadata.Suspend))
+					err := r.client.Patch(ctx, release, patch)
 					if err != nil {
 						return fmt.Errorf("patch release %v: %w", release.Name, err)
+					}
+
+					err = r.client.Status().Patch(ctx, release, patch)
+					if err != nil {
+						return fmt.Errorf("patch release %v status: %w", release.Name, err)
 					}
 				}
 
 			case v1alpha1.PhaseSuspended:
 				if !releaseChecker.releaseMetadata.Suspend {
-					patch := buildSuspendAnnotation(releaseChecker.releaseMetadata.Suspend)
-					err := r.client.Patch(ctx, release, client.RawPatch(types.MergePatchType, patch))
+					patch := client.RawPatch(types.MergePatchType, buildSuspendAnnotation(releaseChecker.releaseMetadata.Suspend))
+					err := r.client.Patch(ctx, release, patch)
 					if err != nil {
 						return fmt.Errorf("patch release %v: %w", release.Name, err)
+					}
+
+					err = r.client.Status().Patch(ctx, release, patch)
+					if err != nil {
+						return fmt.Errorf("patch release %v status: %w", release.Name, err)
 					}
 				}
 			}
