@@ -97,7 +97,8 @@ protoc:
 	pkg/server/api/dhctl/destroy.proto \
 	pkg/server/api/dhctl/abort.proto \
 	pkg/server/api/dhctl/converge.proto \
-	pkg/server/api/dhctl/attach_commander.proto \
+  pkg/server/api/dhctl/commander_attach.proto \
+	pkg/server/api/dhctl/commander_detach.proto \
 	pkg/server/api/dhctl/validation.proto \
 	pkg/server/api/dhctl/services.proto
 
