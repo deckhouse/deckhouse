@@ -225,11 +225,12 @@ func TestPrepareRegistry(t *testing.T) {
 
 		t.Run("Correct prepare registry object", func(t *testing.T) {
 			expectedData := RegistryData{
-				Address:   "r.example.com",
-				Path:      "/deckhouse/ce",
-				Scheme:    "https",
-				CA:        "",
-				DockerCfg: "eyJhdXRocyI6eyJyLmV4YW1wbGUuY29tIjp7ImF1dGgiOiJZVHBpIn19fQ==",
+				Address:      "r.example.com",
+				Path:         "/deckhouse/ce",
+				Scheme:       "https",
+				CA:           "",
+				DockerCfg:    "eyJhdXRocyI6eyJyLmV4YW1wbGUuY29tIjp7ImF1dGgiOiJZVHBpIn19fQ==",
+				RegistryMode: "Direct",
 			}
 
 			require.Equal(t, cfg.Registry, expectedData)
@@ -241,11 +242,12 @@ func TestPrepareRegistry(t *testing.T) {
 
 		t.Run("Registry object for CE edition", func(t *testing.T) {
 			expectedData := RegistryData{
-				Address:   "registry.deckhouse.io",
-				Path:      "/deckhouse/ce",
-				Scheme:    "https",
-				CA:        "",
-				DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=",
+				Address:      "registry.deckhouse.io",
+				Path:         "/deckhouse/ce",
+				Scheme:       "https",
+				CA:           "",
+				DockerCfg:    "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=",
+				RegistryMode: "Direct",
 			}
 
 			require.Equal(t, cfg.Registry, expectedData)
@@ -314,7 +316,7 @@ func TestParseRegistryData(t *testing.T) {
 				"imagesRepo": "r.example.com/deckhouse/ce/",
 			})
 
-			m, err := cfg.ParseRegistryData()
+			m, err := ParseRegistryData(cfg.Registry)
 			require.NoError(t, err)
 
 			require.Equal(t, m["auth"], dockerCfgAuth(user, password))
@@ -330,7 +332,7 @@ func TestParseRegistryData(t *testing.T) {
 					"imagesRepo": "r.example.com/deckhouse/ce/",
 				})
 
-				m, err := cfg.ParseRegistryData()
+				m, err := ParseRegistryData(cfg.Registry)
 				require.NoError(t, err)
 
 				require.Equal(t, m["auth"], dockerCfgAuth(user, password))
@@ -345,7 +347,7 @@ func TestParseRegistryData(t *testing.T) {
 					"imagesRepo": "r.example.com/deckhouse/ce/",
 				})
 
-				m, err := cfg.ParseRegistryData()
+				m, err := ParseRegistryData(cfg.Registry)
 				require.NoError(t, err)
 
 				require.Equal(t, m["auth"], "")
@@ -360,7 +362,7 @@ func TestParseRegistryData(t *testing.T) {
 					"imagesRepo": "r.example.com/deckhouse/ce/",
 				})
 
-				m, err := cfg.ParseRegistryData()
+				m, err := ParseRegistryData(cfg.Registry)
 				require.NoError(t, err)
 
 				require.Equal(t, m["auth"], "")
@@ -372,7 +374,7 @@ func TestParseRegistryData(t *testing.T) {
 		t.Run("sets empty auth key", func(t *testing.T) {
 			cfg := generateMetaConfigForMetaConfigTest(t, make(map[string]interface{}))
 
-			m, err := cfg.ParseRegistryData()
+			m, err := ParseRegistryData(cfg.Registry)
 			require.NoError(t, err)
 
 			require.Equal(t, m["auth"], "")

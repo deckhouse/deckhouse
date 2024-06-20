@@ -52,6 +52,7 @@ type MetaConfig struct {
 	VersionMap       map[string]interface{} `json:"-"`
 	Images           imagesDigests          `json:"-"`
 	Registry         RegistryData           `json:"-"`
+	UpstreamRegistry RegistryData           `json:"-"`
 	UUID             string                 `json:"clusterUUID,omitempty"`
 	InstallerVersion string                 `json:"-"`
 	ResourcesYAML    string                 `json:"-"`
@@ -60,11 +61,12 @@ type MetaConfig struct {
 type imagesDigests map[string]map[string]interface{}
 
 type RegistryData struct {
-	Address   string `json:"address"`
-	Path      string `json:"path"`
-	Scheme    string `json:"scheme"`
-	CA        string `json:"ca"`
-	DockerCfg string `json:"dockerCfg"`
+	Address      string `json:"address"`
+	Path         string `json:"path"`
+	Scheme       string `json:"scheme"`
+	CA           string `json:"ca"`
+	DockerCfg    string `json:"dockerCfg"`
+	RegistryMode string `json:"registryMode"`
 }
 
 // Prepare extracts all necessary information from raw json messages to the root structure
@@ -100,6 +102,21 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		m.Registry.Address = parts[0]
 		if len(parts) == 2 {
 			m.Registry.Path = fmt.Sprintf("/%s", parts[1])
+		}
+
+		m.Registry.RegistryMode = m.DeckhouseConfig.RegistryMode
+
+		if m.DeckhouseConfig.RegistryMode != "Direct" {
+			internalRegistryData := RegistryData{
+				Address:      "localhost:5001",
+				Path:         m.Registry.Path,
+				Scheme:       "http",
+				DockerCfg:    "ewogICJhdXRocyI6IHsKICAgICJsb2NhbGhvc3Q6NTAwMSI6IHsKICAgICAgImF1dGgiOiAiY0hWemFHVnlPbkIxYzJobGNnPT0iCiAgICB9CiAgfQp9Cg==",
+				CA:           "",
+				RegistryMode: m.DeckhouseConfig.RegistryMode,
+			}
+			m.UpstreamRegistry = m.Registry
+			m.Registry = internalRegistryData
 		}
 	}
 
@@ -310,9 +327,17 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	registryData, err := m.ParseRegistryData()
+	registryData, err := ParseRegistryData(m.Registry)
 	if err != nil {
 		return nil, err
+	}
+
+	if m.Registry.RegistryMode != "Direct" {
+		upstreamRegistryData, err := ParseRegistryData(m.UpstreamRegistry)
+		if err != nil {
+			return nil, err
+		}
+		result["upstreamRegistry"] = upstreamRegistryData
 	}
 
 	result["registry"] = registryData
@@ -363,7 +388,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	registryData, err := m.ParseRegistryData()
+	registryData, err := ParseRegistryData(m.Registry)
 	if err != nil {
 		return nil, err
 	}
@@ -389,6 +414,15 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 			configForBashibleBundleTemplate["proxy"] = proxyData
 		}
 	}
+
+	if m.Registry.RegistryMode == "Proxy" {
+		upstreamRegistryData, err := ParseRegistryData(m.UpstreamRegistry)
+		if err != nil {
+			return nil, err
+		}
+		configForBashibleBundleTemplate["upstreamRegistry"] = upstreamRegistryData
+	}
+
 	configForBashibleBundleTemplate["registry"] = registryData
 
 	images := m.Images
@@ -505,23 +539,6 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 	return nil
 }
 
-func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
-	log.DebugF("registry data: %v\n", m.Registry)
-
-	ret := m.Registry.ConvertToMap()
-
-	if m.Registry.DockerCfg != "" {
-		auth, err := m.Registry.Auth()
-		if err != nil {
-			return nil, err
-		}
-
-		ret["auth"] = auth
-	}
-
-	return ret, nil
-}
-
 func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	type proxy struct {
 		HttpProxy  string   `json:"httpProxy" yaml:"httpProxy"`
@@ -603,11 +620,12 @@ func (m *MetaConfig) LoadInstallerVersion() error {
 
 func (r *RegistryData) ConvertToMap() map[string]interface{} {
 	return map[string]interface{}{
-		"address":   r.Address,
-		"path":      r.Path,
-		"scheme":    r.Scheme,
-		"ca":        r.CA,
-		"dockerCfg": r.DockerCfg,
+		"address":      r.Address,
+		"path":         r.Path,
+		"scheme":       r.Scheme,
+		"ca":           r.CA,
+		"dockerCfg":    r.DockerCfg,
+		"registryMode": r.RegistryMode,
 	}
 }
 
@@ -649,6 +667,23 @@ func (r *RegistryData) Auth() (string, error) {
 	}
 
 	return registryAuth, nil
+}
+
+func ParseRegistryData(data RegistryData) (map[string]interface{}, error) {
+	log.DebugF("registry data: %v\n", data)
+
+	ret := data.ConvertToMap()
+
+	if data.DockerCfg != "" {
+		auth, err := data.Auth()
+		if err != nil {
+			return nil, err
+		}
+
+		ret["auth"] = auth
+	}
+
+	return ret, nil
 }
 
 func getDNSAddress(serviceCIDR string) string {
