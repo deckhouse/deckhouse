@@ -201,6 +201,33 @@ tags:
   env: production
 `
 
+		stateAClusterConfigurationSimpleWithInternalNetworkWithoutDHCP = `
+apiVersion: deckhouse.io/v1
+kind: OpenStackClusterConfiguration
+layout: SimpleWithInternalNetwork
+simpleWithInternalNetwork:
+  internalSubnetName: pivot-standard
+  externalNetworkDHCP: false
+provider:
+  authURL: https://cloud.flant.com/v3/
+  domainName: Default
+  tenantName: tenant-name
+  username: user-name
+  password: pa$$word
+  region: HetznerFinland
+sshPublicKey: "aaaa"
+masterNodeGroup:
+  replicas: 3
+  instanceClass:
+    flavorName: m1.large
+    imageName: ubuntu-18-04-cloud-amd64
+  volumeTypeMap:
+    nova: ceph-ssd
+tags:
+  project: default
+  env: production
+`
+
 		stateAWithoutLoadbalancers = fmt.Sprintf(`
 apiVersion: v1
 kind: Secret
@@ -222,6 +249,17 @@ data:
   "cloud-provider-cluster-configuration.yaml": %s
   "cloud-provider-discovery-data.json": %s
 `, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryData)))
+
+		stateASimpleWithInternalNetworkWithoutDHCP = fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cluster-configuration
+  namespace: kube-system
+data:
+  "cloud-provider-cluster-configuration.yaml": %s
+  "cloud-provider-discovery-data.json": %s
+`, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfigurationSimpleWithInternalNetworkWithoutDHCP)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryData)))
 
 		stateB = `
 apiVersion: v1
@@ -260,6 +298,7 @@ data: {}
 			Expect(f.ValuesGet(internal + "externalNetworkNames").String()).To(MatchYAML(`
 [additional-ext-net, external]
 `))
+			Expect(f.ValuesGet(internal + "externalNetworkDHCP").Bool()).To(BeTrue())
 			Expect(f.ValuesGet(internal + "zones").String()).To(MatchYAML(`
 ["zone1", "zone2"]
 `))
@@ -303,6 +342,7 @@ connection:
   password: nein
   region: HetznerFinland
 externalNetworkNames: [additional-ext-net, public1, public2]
+externalNetworkDHCP: true
 internalNetworkNames: [int1, int2]
 podNetworkMode: DirectRouting
 instances:
@@ -469,6 +509,56 @@ sshKeyPairName: my-ssh-keypair
 `))
 			Expect(c.ValuesGet(internal + "loadBalancer").String()).To(MatchYAML(`{}`))
 			Expect(c.ValuesGet(internal + "tags").String()).To(MatchYAML(`
+project: default
+env: production
+`))
+		})
+	})
+
+	d := HookExecutionConfigInit(initValuesStringA, `{}`)
+
+	Context("Cluster has SimpleWithInternalNetworkLayout without DHCP and not empty discovery data", func() {
+		BeforeEach(func() {
+			d.BindingContexts.Set(f.KubeStateSet(stateASimpleWithInternalNetworkWithoutDHCP))
+			d.RunHook()
+		})
+
+		It("Should fill values from discovery data", func() {
+			Expect(d).To(ExecuteSuccessfully())
+			connection := "cloudProviderOpenstack.internal.connection."
+			Expect(d.ValuesGet(connection + "authURL").String()).To(Equal("https://cloud.flant.com/v3/"))
+			Expect(d.ValuesGet(connection + "domainName").String()).To(Equal("Default"))
+			Expect(d.ValuesGet(connection + "tenantName").String()).To(Equal("tenant-name"))
+			Expect(d.ValuesGet(connection + "username").String()).To(Equal("user-name"))
+			Expect(d.ValuesGet(connection + "password").String()).To(Equal("pa$$word"))
+			Expect(d.ValuesGet(connection + "region").String()).To(Equal("HetznerFinland"))
+			internal := "cloudProviderOpenstack.internal."
+			Expect(d.ValuesGet(internal + "internalNetworkNames").String()).To(MatchYAML(`
+[internal]
+`))
+			Expect(d.ValuesGet(internal + "externalNetworkNames").String()).To(MatchYAML(`
+[additional-ext-net, external]
+`))
+			Expect(d.ValuesGet(internal + "externalNetworkDHCP").Bool()).To(BeFalse())
+			Expect(d.ValuesGet(internal + "zones").String()).To(MatchYAML(`
+["zone1", "zone2"]
+`))
+			Expect(d.ValuesGet(internal + "podNetworkMode").String()).To(Equal("DirectRoutingWithPortSecurityEnabled"))
+			Expect(d.ValuesGet(internal + "instances").String()).To(MatchYAML(`
+"imageName": "ubuntu"
+"mainNetwork": "kube"
+"sshKeyPairName": "my-key"
+"securityGroups": [
+  "default",
+  "ssh-and-ping",
+  "security_group_1"
+]
+`))
+			Expect(d.ValuesGet(internal + "loadBalancer").String()).To(MatchYAML(`
+subnetID: "subnetID"
+floatingNetworkID: "floatingNetworkID"
+`))
+			Expect(d.ValuesGet(internal + "tags").String()).To(MatchYAML(`
 project: default
 env: production
 `))
