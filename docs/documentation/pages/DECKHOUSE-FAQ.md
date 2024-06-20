@@ -523,7 +523,7 @@ The steps below are necessary for manually loading images of modules connected f
 1. Pull module images from their source registry, defined as a `ModuleSource` resource, into a dedicated directory using the `d8 mirror modules pull` command.
 
    `d8 mirror modules pull` pulls only the module versions available in the module release channels at the time of copying unless the `--modules-filter` flag is set.
-   Пример файла `module_source.yml` с описанием ModuleSource:
+   Below is an example of a `module_source.yml` file with the ModuleSource definition:
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleSource
