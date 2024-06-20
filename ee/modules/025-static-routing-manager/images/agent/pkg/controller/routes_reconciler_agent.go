@@ -22,8 +22,6 @@ import (
 	"github.com/mitchellh/hashstructure/v2"
 
 	"github.com/vishvananda/netlink"
-	"github.com/vishvananda/netns"
-
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -483,17 +481,7 @@ func (nm *nrtMap) updateStateInK8S(ctx context.Context, cl client.Client, log lo
 // netlink service functions
 
 func getActualRouteEntryMapFromNode() (RouteEntryMap, error) {
-	nsHandle, err := netns.GetFromPath("/hostproc/1/ns/net")
-	if err != nil {
-		return nil, fmt.Errorf("unable to create netns.NsHandle, err: %w", err)
-	}
-	nh, err := netlink.NewHandleAt(nsHandle)
-	if err != nil {
-		return nil, fmt.Errorf("failed create new netlink handler, err: %w", err)
-	}
-	defer nh.Close()
-
-	routes, err := nh.RouteListFiltered(netlink.FAMILY_V4, &netlink.Route{Realm: v1alpha1.D8Realm}, netlink.RT_FILTER_REALM|netlink.RT_FILTER_TABLE)
+	routes, err := netlink.RouteListFiltered(netlink.FAMILY_V4, &netlink.Route{Realm: v1alpha1.D8Realm}, netlink.RT_FILTER_REALM|netlink.RT_FILTER_TABLE)
 	if err != nil {
 		return nil, fmt.Errorf("failed get routes from node, err: %w", err)
 	}
@@ -531,16 +519,7 @@ func addRouteToNode(route RouteEntry) error {
 	}
 	gwNetIP := net.ParseIP(route.gateway)
 
-	nsHandle, err := netns.GetFromPath("/hostproc/1/ns/net")
-	if err != nil {
-		return fmt.Errorf("unable to create netns.NsHandle, err: %w", err)
-	}
-	nh, err := netlink.NewHandleAt(nsHandle)
-	if err != nil {
-		return fmt.Errorf("failed create new netlink handler, err: %w", err)
-	}
-	defer nh.Close()
-	err = nh.RouteAdd(&netlink.Route{
+	err = netlink.RouteAdd(&netlink.Route{
 		Realm: v1alpha1.D8Realm,
 		Table: route.table,
 		Dst:   dstnetIPNet,
@@ -577,17 +556,7 @@ func delRouteFromNode(route RouteEntry) error {
 	}
 	gwNetIP := net.ParseIP(route.gateway)
 
-	nsHandle, err := netns.GetFromPath("/hostproc/1/ns/net")
-	if err != nil {
-		return fmt.Errorf("unable to create netns.NsHandle, err: %w", err)
-	}
-	nh, err := netlink.NewHandleAt(nsHandle)
-	if err != nil {
-		return fmt.Errorf("failed create new netlink handler, err: %w", err)
-	}
-	defer nh.Close()
-
-	err = nh.RouteDel(&netlink.Route{
+	err = netlink.RouteDel(&netlink.Route{
 		Realm: v1alpha1.D8Realm,
 		Table: route.table,
 		Dst:   dstnetIPNet,

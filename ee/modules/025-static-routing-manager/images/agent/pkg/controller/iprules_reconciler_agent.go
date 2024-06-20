@@ -23,8 +23,6 @@ import (
 	"github.com/mitchellh/hashstructure/v2"
 
 	"github.com/vishvananda/netlink"
-	"github.com/vishvananda/netns"
-
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -736,16 +734,7 @@ func addIPRuleToNode(ipRule IPRuleEntry) error {
 	}
 	PreparedIPRule.Flow = v1alpha1.D8Realm
 
-	nsHandle, err := netns.GetFromPath("/hostproc/1/ns/net")
-	if err != nil {
-		return fmt.Errorf("unable to create netns.NsHandle, err: %w", err)
-	}
-	nh, err := netlink.NewHandleAt(nsHandle)
-	if err != nil {
-		return fmt.Errorf("failed create new netlink handler, err: %w", err)
-	}
-	defer nh.Close()
-	err = nh.RuleAdd(PreparedIPRule)
+	err = netlink.RuleAdd(PreparedIPRule)
 	if err != nil {
 		return fmt.Errorf("unable to add IPRule %v, err: %w",
 			ipRule,
@@ -765,16 +754,7 @@ func delIPRuleFromNode(ipRule IPRuleEntry) error {
 	}
 	PreparedIPRule.Flow = v1alpha1.D8Realm
 
-	nsHandle, err := netns.GetFromPath("/hostproc/1/ns/net")
-	if err != nil {
-		return fmt.Errorf("unable to create netns.NsHandle, err: %w", err)
-	}
-	nh, err := netlink.NewHandleAt(nsHandle)
-	if err != nil {
-		return fmt.Errorf("failed create new netlink handler, err: %w", err)
-	}
-	defer nh.Close()
-	err = nh.RuleDel(PreparedIPRule)
+	err = netlink.RuleDel(PreparedIPRule)
 	if err != nil {
 		return fmt.Errorf("unable to del IPRule %v, err: %w",
 			ipRule,
@@ -785,17 +765,7 @@ func delIPRuleFromNode(ipRule IPRuleEntry) error {
 }
 
 func getActualIPRuleEntryMapFromNode() (IPRuleEntryMap, error) {
-	nsHandle, err := netns.GetFromPath("/hostproc/1/ns/net")
-	if err != nil {
-		return nil, fmt.Errorf("unable to create netns.NsHandle, err: %w", err)
-	}
-	nh, err := netlink.NewHandleAt(nsHandle)
-	if err != nil {
-		return nil, fmt.Errorf("failed create new netlink handler, err: %w", err)
-	}
-	defer nh.Close()
-
-	nlRules, err := nh.RuleListFiltered(netlink.FAMILY_V4, nil, 0)
+	nlRules, err := netlink.RuleListFiltered(netlink.FAMILY_V4, nil, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed get IPRule from node, err: %w", err)
 	}
