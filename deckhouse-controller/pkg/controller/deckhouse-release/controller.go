@@ -120,7 +120,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	if deckhousePods == nil || len(deckhousePods) == 0 {
+	if len(deckhousePods) == 0 {
 		r.logger.Warn("Deckhouse pods not found. Skipping update")
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
@@ -252,7 +252,7 @@ func (r *deckhouseReleaseReconciler) getDeckhouseDiscoveryData(ctx context.Conte
 		NotificationConfig:     new(updater.NotificationConfig),
 	}
 
-	//default case in template
+	// default case in template
 	if data.ReleaseChannel == "Unknown" {
 		data.ReleaseChannel = ""
 	}
@@ -392,7 +392,6 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, pods []corev
 	}
 
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-
 }
 
 func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*corev1.Secret, error) {

@@ -397,7 +397,7 @@ func (c *moduleSourceReconciler) getReleasePolicy(sourceName, moduleName string,
 	}
 
 	if !found {
-		c.logger.Infof("ModuleUpdatePolicy for ModuleSource: %q, Module: %q not found, using Embedded policy: %+v", sourceName, moduleName, *c.deckhouseEmbeddedPolicy)
+		c.logger.Infof("ModuleUpdatePolicy for ModuleSource: %q, Module: %q not found, using Embedded policy: %+v", sourceName, moduleName, *c.deckhouseEmbeddedPolicy.Get())
 		return &v1alpha1.ModuleUpdatePolicy{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,

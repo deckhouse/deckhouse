@@ -26,16 +26,15 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/updater"
-
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/iancoleman/strcase"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
 func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
