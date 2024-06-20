@@ -50,6 +50,7 @@ git:
   - common-steps
   - bashible.sh.tpl
   - bootstrap.sh.tpl
+  - base_pkgs_source.sh.tpl
   - bootstrap-networks.sh.tpl
   excludePaths:
   - "**/cluster-bootstrap"
