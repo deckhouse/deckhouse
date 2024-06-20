@@ -588,7 +588,7 @@ The steps below are necessary for manually loading images of modules connected f
      releaseChannel: "Stable"
    ```
 
-   > Не забудьте изменить путь на соответствующий вашей редакции платформы – замените в ссылке `ee` на `se` или `cse`. Например, для редакции SE ссылка будет выглядеть так: `registry.deckhouse.io/deckhouse/se`.
+   > Make sure to edit the path to match your platform edition — replace the `ee` section of the link with `se` or `cse`. For example, for the SE edition, the link would look as follows: `registry.deckhouse.io/deckhouse/se/modules`.
 
 1. Apply the `ModuleSource` manifest you got in the previous step to the cluster.
 
