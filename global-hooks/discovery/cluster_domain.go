@@ -24,6 +24,7 @@ import (
 	v1core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/filter"
 )
@@ -82,7 +83,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"d8-cluster-configuration"},
 			},
-			FilterFunc: applyClusterConfigurationYamlFilter,
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			FilterFunc:                   applyClusterConfigurationYamlFilter,
 		},
 	},
 }, discoveryClusterDomain)
