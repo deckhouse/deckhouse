@@ -535,7 +535,7 @@ The steps below are necessary for manually loading images of modules connected f
        dockerCfg: CHANGE
        repo: registry.deckhouse.io/deckhouse/ee/modules
        scheme: HTTPS
-     # Выберите подходящий канал обновлений: Alpha, Beta, EarlyAccess, Stable, RockSolid
+     # Select the appropriate release channel: Alpha, Beta, EarlyAccess, Stable, or RockSolid
      releaseChannel: "Stable"
    ```
    The following command will pull module images from the source described in the `ModuleSource` resource located in the `$HOME/module_source.yml` file:
