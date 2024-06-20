@@ -19,18 +19,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander/attach"
 	"io"
 	"log/slog"
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander/attach"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
@@ -40,19 +41,19 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func (s *Service) AttachCommander(server pb.DHCTL_AttachCommanderServer) error {
+func (s *Service) CommanderAttach(server pb.DHCTL_CommanderAttachServer) error {
 	ctx := operationCtx(server)
 
 	logger.L(ctx).Info("started")
 
-	f := fsm.New("initial", s.attachCommanderServerTransitions())
+	f := fsm.New("initial", s.CommanderAttachServerTransitions())
 
 	doneCh := make(chan struct{})
 	internalErrCh := make(chan error)
-	receiveCh := make(chan *pb.AttachCommanderRequest)
-	sendCh := make(chan *pb.AttachCommanderResponse)
+	receiveCh := make(chan *pb.CommanderAttachRequest)
+	sendCh := make(chan *pb.CommanderAttachResponse)
 
-	phaseSwitcher := &attachCommanderPhaseSwitcher{
+	phaseSwitcher := &CommanderAttachPhaseSwitcher{
 		sendCh: sendCh,
 		f:      f,
 		next:   make(chan error),
@@ -74,22 +75,22 @@ connectionProcessor:
 
 		case request := <-receiveCh:
 			logger.L(ctx).Info(
-				"processing AttachCommanderRequest",
+				"processing CommanderAttachRequest",
 				slog.String("message", fmt.Sprintf("%T", request.Message)),
 			)
 			switch message := request.Message.(type) {
-			case *pb.AttachCommanderRequest_Start:
+			case *pb.CommanderAttachRequest_Start:
 				err := f.Event("start")
 				if err != nil {
 					logger.L(ctx).Error("got unprocessable message",
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startAttachCommander(
-					ctx, message.Start, phaseSwitcher, &attachCommanderLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
+				s.startCommanderAttach(
+					ctx, message.Start, phaseSwitcher, &CommanderAttachLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
 				)
 
-			case *pb.AttachCommanderRequest_Continue:
+			case *pb.CommanderAttachRequest_Continue:
 				err := f.Event("toNextPhase")
 				if err != nil {
 					logger.L(ctx).Error("got unprocessable message",
@@ -117,8 +118,8 @@ connectionProcessor:
 }
 
 func (s *Service) startattacherReceiver(
-	server pb.DHCTL_AttachCommanderServer,
-	receiveCh chan *pb.AttachCommanderRequest,
+	server pb.DHCTL_CommanderAttachServer,
+	receiveCh chan *pb.CommanderAttachRequest,
 	doneCh chan struct{},
 	internalErrCh chan error,
 ) {
@@ -139,8 +140,8 @@ func (s *Service) startattacherReceiver(
 }
 
 func (s *Service) startattacherSender(
-	server pb.DHCTL_AttachCommanderServer,
-	sendCh chan *pb.AttachCommanderResponse,
+	server pb.DHCTL_CommanderAttachServer,
+	sendCh chan *pb.CommanderAttachResponse,
 	internalErrCh chan error,
 ) {
 	go func() {
@@ -157,29 +158,29 @@ func (s *Service) startattacherSender(
 	}()
 }
 
-func (s *Service) startAttachCommander(
+func (s *Service) startCommanderAttach(
 	ctx context.Context,
-	request *pb.AttachCommanderStart,
-	phaseSwitcher *attachCommanderPhaseSwitcher,
-	logWriter *attachCommanderLogWriter,
-	sendCh chan *pb.AttachCommanderResponse,
+	request *pb.CommanderAttachStart,
+	phaseSwitcher *CommanderAttachPhaseSwitcher,
+	logWriter *CommanderAttachLogWriter,
+	sendCh chan *pb.CommanderAttachResponse,
 ) {
 	go func() {
-		result := s.attachCommanderCluster(ctx, request, phaseSwitcher, logWriter)
-		sendCh <- &pb.AttachCommanderResponse{
-			Message: &pb.AttachCommanderResponse_Result{
+		result := s.CommanderAttachCluster(ctx, request, phaseSwitcher, logWriter)
+		sendCh <- &pb.CommanderAttachResponse{
+			Message: &pb.CommanderAttachResponse_Result{
 				Result: result,
 			},
 		}
 	}()
 }
 
-func (s *Service) attachCommanderCluster(
+func (s *Service) CommanderAttachCluster(
 	ctx context.Context,
-	request *pb.AttachCommanderStart,
-	phaseSwitcher *attachCommanderPhaseSwitcher,
+	request *pb.CommanderAttachStart,
+	phaseSwitcher *CommanderAttachPhaseSwitcher,
 	logWriter io.Writer,
-) *pb.AttachCommanderResult {
+) *pb.CommanderAttachResult {
 	var err error
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
@@ -217,12 +218,21 @@ func (s *Service) attachCommanderCluster(
 		return nil
 	})
 	if err != nil {
-		return &pb.AttachCommanderResult{Err: err.Error()}
+		return &pb.CommanderAttachResult{Err: err.Error()}
 	}
 	defer sshClient.Stop()
 
+	var commanderUUID uuid.UUID
+	if request.Options.CommanderUuid != "" {
+		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
+		if err != nil {
+			return &pb.CommanderAttachResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
+		}
+	}
+
 	attacher := attach.NewAttacher(&attach.Params{
 		CommanderMode:    request.Options.CommanderMode,
+		CommanderUUID:    commanderUUID,
 		SSHClient:        sshClient,
 		OnCheckResult:    onCheckResult,
 		TerraformContext: terraform.NewTerraformContext(),
@@ -240,10 +250,10 @@ func (s *Service) attachCommanderCluster(
 	resultString, marshalResultErr := json.Marshal(result)
 	err = errors.Join(attacherr, marshalStateErr, marshalResultErr)
 
-	return &pb.AttachCommanderResult{State: string(stateData), Result: string(resultString), Err: errToString(err)}
+	return &pb.CommanderAttachResult{State: string(stateData), Result: string(resultString), Err: errToString(err)}
 }
 
-func (s *Service) attachCommanderServerTransitions() []fsm.Transition {
+func (s *Service) CommanderAttachServerTransitions() []fsm.Transition {
 	return []fsm.Transition{
 		{
 			Event:       "start",
@@ -263,15 +273,15 @@ func (s *Service) attachCommanderServerTransitions() []fsm.Transition {
 	}
 }
 
-type attachCommanderLogWriter struct {
+type CommanderAttachLogWriter struct {
 	l      *slog.Logger
-	sendCh chan *pb.AttachCommanderResponse
+	sendCh chan *pb.CommanderAttachResponse
 
 	m    sync.Mutex
 	prev []byte
 }
 
-func (w *attachCommanderLogWriter) Write(p []byte) (n int, err error) {
+func (w *CommanderAttachLogWriter) Write(p []byte) (n int, err error) {
 	w.m.Lock()
 	defer w.m.Unlock()
 
@@ -294,21 +304,21 @@ func (w *attachCommanderLogWriter) Write(p []byte) (n int, err error) {
 		for _, line := range r {
 			w.l.Info(line, logTypeDHCTL)
 		}
-		w.sendCh <- &pb.AttachCommanderResponse{
-			Message: &pb.AttachCommanderResponse_Logs{Logs: &pb.Logs{Logs: r}},
+		w.sendCh <- &pb.CommanderAttachResponse{
+			Message: &pb.CommanderAttachResponse_Logs{Logs: &pb.Logs{Logs: r}},
 		}
 	}
 
 	return len(p), nil
 }
 
-type attachCommanderPhaseSwitcher struct {
-	sendCh chan *pb.AttachCommanderResponse
+type CommanderAttachPhaseSwitcher struct {
+	sendCh chan *pb.CommanderAttachResponse
 	f      *fsm.FiniteStateMachine
 	next   chan error
 }
 
-func (b *attachCommanderPhaseSwitcher) switchPhase(
+func (b *CommanderAttachPhaseSwitcher) switchPhase(
 	completedPhase phases.OperationPhase,
 	completedPhaseState phases.DhctlState,
 	phaseData attach.PhaseData,
@@ -325,9 +335,9 @@ func (b *attachCommanderPhaseSwitcher) switchPhase(
 		return fmt.Errorf("changing state to waiting: %w", err)
 	}
 
-	b.sendCh <- &pb.AttachCommanderResponse{
-		Message: &pb.AttachCommanderResponse_PhaseEnd{
-			PhaseEnd: &pb.AttachCommanderPhaseEnd{
+	b.sendCh <- &pb.CommanderAttachResponse{
+		Message: &pb.CommanderAttachResponse_PhaseEnd{
+			PhaseEnd: &pb.CommanderAttachPhaseEnd{
 				CompletedPhase:      string(completedPhase),
 				CompletedPhaseState: completedPhaseState,
 				CompletedPhaseData:  string(phaseDataBytes),
