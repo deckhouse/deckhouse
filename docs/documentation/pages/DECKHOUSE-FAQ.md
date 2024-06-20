@@ -572,7 +572,7 @@ The steps below are necessary for manually loading images of modules connected f
     * Change the `.spec.registry.repo` field to the address that you specified in the `--registry` parameter when you uploaded the images;
     * Change the `.spec.registry.dockerCfg` field to a base64 string with the authorization data for your registry in `dockercfg` format. Refer to your registry's documentation for information on how to obtain this token.
  
-   Пример:
+   An example:
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleSource
