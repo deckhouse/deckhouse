@@ -1,5 +1,5 @@
 {{- if semverCompare ">= 1.26" .Values.global.discovery.kubernetesVersion }}
-{{- $policyName := "d8-create-namespace-validator" }}
+{{- $policyName := "system-ns.deckhouse.io" }}
 ---
 {{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1beta1
@@ -14,7 +14,7 @@ spec:
   failurePolicy: Fail
   matchConstraints:
     resourceRules:
-      - apiGroups:   ["*"]
+      - apiGroups:   [""]
         apiVersions: ["*"]
         operations:  ["CREATE"]
         resources:   ["namespaces"]
@@ -43,7 +43,7 @@ apiVersion: admissionregistration.k8s.io/v1alpha1
 {{- end }}
 kind: ValidatingAdmissionPolicy
 metadata:
-  name: "d8-create-heritage-deckhouse-objects"
+  name: "label-objects.deckhouse.io"
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
 spec:
   failurePolicy: Fail
@@ -55,7 +55,7 @@ spec:
         resources:   ["*"]
   validations:
     - expression: 'request.userInfo.username.startsWith(''system:serviceaccount:d8-'')'
-      messageExpression: '''Restricts create object as NOT service account'''
+      messageExpression: '''Creating an object with the `heritage: deckhouse` label is forbidden'''
 ---
 {{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1beta1
@@ -64,10 +64,10 @@ apiVersion: admissionregistration.k8s.io/v1alpha1
 {{- end }}
 kind: ValidatingAdmissionPolicyBinding
 metadata:
-  name: "d8-create-heritage-deckhouse-objects"
+  name: "heritage-label-objects.deckhouse.io"
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
 spec:
-  policyName: "d8-create-heritage-deckhouse-objects"
+  policyName: "label-objects.deckhouse.io"
   validationActions: [Deny]
   matchResources:
     objectSelector:
