@@ -434,11 +434,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		suite.setupController("update-release-is-deployed.yaml", initValues, embeddedMUP)
 		_, err := suite.ctr.createOrUpdateReconcile(ctx)
 		require.NoError(suite.T(), err)
-		//TODO default annotations in release
-
-		//TODO: check
-		//Expect(cm.Field("data.isUpdating").Bool()).To(BeFalse())
-		//Expect(cm.Field("data.notified").Bool()).To(BeFalse())
 	})
 
 	suite.Run("Notification: release applyAfter time is after notification period", func() {
