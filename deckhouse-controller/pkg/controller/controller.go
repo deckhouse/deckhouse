@@ -25,8 +25,6 @@ import (
 	"sync"
 	"time"
 
-	deckhouse_release "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
-
 	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
@@ -53,6 +51,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
+	deckhouse_release "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
