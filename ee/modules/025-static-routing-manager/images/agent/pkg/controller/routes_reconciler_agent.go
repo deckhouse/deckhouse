@@ -46,7 +46,6 @@ const (
 func RunRoutesReconcilerAgentController(
 	mgr manager.Manager,
 	cfg config.Options,
-	nh netns.NsHandle,
 	log logr.Logger,
 ) (controller.Controller, error) {
 	cl := mgr.GetClient()
@@ -96,7 +95,7 @@ func RunRoutesReconcilerAgentController(
 
 			// ============================= main logic start =============================
 			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Starts of the reconciliation (initiated by the k8s-event)"))
-			shouldRequeue, err := runEventRouteReconcile(ctx, cl, nh, log, cfg.NodeName)
+			shouldRequeue, err := runEventRouteReconcile(ctx, cl, log, cfg.NodeName)
 			if err != nil {
 				log.Error(err, fmt.Sprintf("[NRTReconciler] An error occurred while route reconcile"))
 			}
@@ -126,7 +125,7 @@ func RunRoutesReconcilerAgentController(
 
 	// trigger reconcile every 30 sec
 	ctx := context.Background()
-	go periodicalRunEventReconcile(ctx, cfg, cl, nh, log, cfg.NodeName)
+	go periodicalRunEventReconcile(ctx, cfg, cl, log, cfg.NodeName)
 
 	return c, nil
 }
@@ -134,7 +133,6 @@ func RunRoutesReconcilerAgentController(
 func runEventRouteReconcile(
 	ctx context.Context,
 	cl client.Client,
-	nh netns.NsHandle,
 	log logr.Logger,
 	nodeName string) (bool, error) {
 	// Declaring variables
@@ -153,7 +151,7 @@ func runEventRouteReconcile(
 
 	// Getting all routes from our node
 	log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Getting all routes from our node"))
-	actualRoutesOnNode, err = getActualRouteEntryMapFromNode(nh)
+	actualRoutesOnNode, err = getActualRouteEntryMapFromNode()
 	if err != nil {
 		log.Error(err, fmt.Sprintf("[NRTReconciler] unable to get Actual routes from node"))
 		return true, err
@@ -174,17 +172,17 @@ func runEventRouteReconcile(
 		// Actions: add routes
 		if len(nrtSummary.desiredRoutesToAddByNRT) > 0 {
 			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Starting adding routes to the node"))
-			nrtSummary.addRoutes(&actualRoutesOnNode, nh, log)
+			nrtSummary.addRoutes(&actualRoutesOnNode, log)
 		}
 
 		(*nrtMap)[nrt.Name] = nrtSummary
 	}
 
 	// Actions: delete routes and finalizers (based on each NRT)
-	nrtMap.deleteRoutesAndFinalizers(globalDesiredRoutesForNode, actualRoutesOnNode, nh, log)
+	nrtMap.deleteRoutesAndFinalizers(globalDesiredRoutesForNode, actualRoutesOnNode, log)
 
 	// Actions: Deleting orphan routes (with realm 216) that are not mentioned in any NRT
-	deleteOrphanRoutes(globalDesiredRoutesForNode, actualRoutesOnNode, nh, log)
+	deleteOrphanRoutes(globalDesiredRoutesForNode, actualRoutesOnNode, log)
 
 	// Generate new condition for each processed nrt
 	log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Starting generate new conditions"))
@@ -201,7 +199,6 @@ func periodicalRunEventReconcile(
 	ctx context.Context,
 	cfg config.Options,
 	cl client.Client,
-	nh netns.NsHandle,
 	log logr.Logger,
 	nodeName string,
 ) {
@@ -212,7 +209,7 @@ func periodicalRunEventReconcile(
 		select {
 		case <-ticker.C:
 			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Starts a periodic reconciliation (initiated by a timer)"))
-			_, err := runEventRouteReconcile(ctx, cl, nh, log, nodeName)
+			_, err := runEventRouteReconcile(ctx, cl, log, nodeName)
 			if err != nil {
 				log.Error(err, fmt.Sprintf("[NRTReconciler] an error occurred while route reconcile"))
 			}
@@ -351,7 +348,7 @@ func (ns *nrtSummary) discoverFacts(nrt v1alpha1.SDNInternalNodeRoutingTable, gl
 	return false
 }
 
-func (ns *nrtSummary) addRoutes(actualRoutesOnNode *RouteEntryMap, nh netns.NsHandle, log logr.Logger) {
+func (ns *nrtSummary) addRoutes(actualRoutesOnNode *RouteEntryMap, log logr.Logger) {
 	status := ns.newReconciliationStatus
 	for _, route := range ns.desiredRoutesToAddByNRT {
 		log.V(config.DebugLvl).Info(fmt.Sprintf("Route %v should be added", route))
@@ -359,7 +356,7 @@ func (ns *nrtSummary) addRoutes(actualRoutesOnNode *RouteEntryMap, nh netns.NsHa
 			log.V(config.DebugLvl).Info(fmt.Sprintf("but it is already present on Node"))
 			continue
 		}
-		err := addRouteToNode(nh, route)
+		err := addRouteToNode(route)
 		if err == nil {
 			actualRoutesOnNode.AppendRE(route)
 		} else {
@@ -380,7 +377,7 @@ func nrtMapInit() *nrtMap {
 	return newNRTMap
 }
 
-func (nm *nrtMap) deleteRoutesAndFinalizers(globalDesiredRoutesForNode, actualRoutesOnNode RouteEntryMap, nh netns.NsHandle, log logr.Logger) {
+func (nm *nrtMap) deleteRoutesAndFinalizers(globalDesiredRoutesForNode, actualRoutesOnNode RouteEntryMap, log logr.Logger) {
 	for nrtName, ns := range *nm {
 		if len(ns.desiredRoutesToDelByNRT) == 0 && !ns.nrtWasDeleted {
 			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] NRT %v has no entries in desiredRoutesToDelByNRT and DeletionTimestamp is not set", nrtName))
@@ -393,7 +390,6 @@ func (nm *nrtMap) deleteRoutesAndFinalizers(globalDesiredRoutesForNode, actualRo
 			globalDesiredRoutesForNode,
 			&actualRoutesOnNode,
 			status,
-			nh,
 			log,
 		)
 		if ns.nrtWasDeleted && ns.newReconciliationStatus.IsSuccess {
@@ -486,7 +482,11 @@ func (nm *nrtMap) updateStateInK8S(ctx context.Context, cl client.Client, log lo
 
 // netlink service functions
 
-func getActualRouteEntryMapFromNode(nsHandle netns.NsHandle) (RouteEntryMap, error) {
+func getActualRouteEntryMapFromNode() (RouteEntryMap, error) {
+	nsHandle, err := netns.GetFromPath("/hostproc/1/ns/net")
+	if err != nil {
+		return nil, fmt.Errorf("unable to create netns.NsHandle, err: %w", err)
+	}
 	nh, err := netlink.NewHandleAt(nsHandle)
 	if err != nil {
 		return nil, fmt.Errorf("failed create new netlink handler, err: %w", err)
@@ -511,7 +511,7 @@ func getActualRouteEntryMapFromNode(nsHandle netns.NsHandle) (RouteEntryMap, err
 	return ar, nil
 }
 
-func addRouteToNode(nsHandle netns.NsHandle, route RouteEntry) error {
+func addRouteToNode(route RouteEntry) error {
 	ip, dstnetIPNet, err := net.ParseCIDR(route.destination)
 	if err != nil {
 		return fmt.Errorf("unable to parse destination in route %v gw %v tbl %v, err: %w",
@@ -531,12 +531,15 @@ func addRouteToNode(nsHandle netns.NsHandle, route RouteEntry) error {
 	}
 	gwNetIP := net.ParseIP(route.gateway)
 
+	nsHandle, err := netns.GetFromPath("/hostproc/1/ns/net")
+	if err != nil {
+		return fmt.Errorf("unable to create netns.NsHandle, err: %w", err)
+	}
 	nh, err := netlink.NewHandleAt(nsHandle)
 	if err != nil {
 		return fmt.Errorf("failed create new netlink handler, err: %w", err)
 	}
 	defer nh.Close()
-
 	err = nh.RouteAdd(&netlink.Route{
 		Realm: v1alpha1.D8Realm,
 		Table: route.table,
@@ -554,7 +557,7 @@ func addRouteToNode(nsHandle netns.NsHandle, route RouteEntry) error {
 	return nil
 }
 
-func delRouteFromNode(nsHandle netns.NsHandle, route RouteEntry) error {
+func delRouteFromNode(route RouteEntry) error {
 	ip, dstnetIPNet, err := net.ParseCIDR(route.destination)
 	if err != nil {
 		return fmt.Errorf("unable to parse destination in route %v gw %v tbl %v, err: %w",
@@ -574,6 +577,10 @@ func delRouteFromNode(nsHandle netns.NsHandle, route RouteEntry) error {
 	}
 	gwNetIP := net.ParseIP(route.gateway)
 
+	nsHandle, err := netns.GetFromPath("/hostproc/1/ns/net")
+	if err != nil {
+		return fmt.Errorf("unable to create netns.NsHandle, err: %w", err)
+	}
 	nh, err := netlink.NewHandleAt(nsHandle)
 	if err != nil {
 		return fmt.Errorf("failed create new netlink handler, err: %w", err)
@@ -599,7 +606,7 @@ func delRouteFromNode(nsHandle netns.NsHandle, route RouteEntry) error {
 
 // other service functions
 
-func deleteRouteEntriesFromNode(delREM, gdREM RouteEntryMap, actREM *RouteEntryMap, status utils.ReconciliationStatus, nh netns.NsHandle, log logr.Logger) utils.ReconciliationStatus {
+func deleteRouteEntriesFromNode(delREM, gdREM RouteEntryMap, actREM *RouteEntryMap, status utils.ReconciliationStatus, log logr.Logger) utils.ReconciliationStatus {
 	for hash, route := range delREM {
 		log.V(config.DebugLvl).Info(fmt.Sprintf("Route %v should be deleted", route))
 		if _, ok := (gdREM)[hash]; ok {
@@ -610,7 +617,7 @@ func deleteRouteEntriesFromNode(delREM, gdREM RouteEntryMap, actREM *RouteEntryM
 			log.V(config.DebugLvl).Info(fmt.Sprintf("but it is not present on Node"))
 			continue
 		}
-		err := delRouteFromNode(nh, route)
+		err := delRouteFromNode(route)
 		if err == nil {
 			delete(*actREM, hash)
 		} else {
@@ -621,14 +628,14 @@ func deleteRouteEntriesFromNode(delREM, gdREM RouteEntryMap, actREM *RouteEntryM
 	return status
 }
 
-func deleteOrphanRoutes(gdREM, actREM RouteEntryMap, nh netns.NsHandle, log logr.Logger) {
+func deleteOrphanRoutes(gdREM, actREM RouteEntryMap, log logr.Logger) {
 	log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Starting to find and delete orphan routes (with realm %v) from node.", v1alpha1.D8Realm))
 	for hash, route := range actREM {
 		if _, ok := (gdREM)[hash]; ok {
 			continue
 		}
 		log.V(config.DebugLvl).Info(fmt.Sprintf("Route %v should be deleted.", route))
-		err := delRouteFromNode(nh, route)
+		err := delRouteFromNode(route)
 		if err != nil {
 			log.V(config.DebugLvl).Info(fmt.Sprintf("Unable to delete route %v,err: %v", route, err))
 		}

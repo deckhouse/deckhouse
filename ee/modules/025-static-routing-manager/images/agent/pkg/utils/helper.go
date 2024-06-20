@@ -10,8 +10,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/vishvananda/netns"
-
 	"github.com/go-logr/logr"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -131,21 +129,4 @@ func SetStatusConditionPendingToNRT(ctx context.Context, cl client.Client, log l
 		return err
 	}
 	return nil
-}
-
-// netlink
-
-func GetNetnsNsHandleByPath(pathToNS string) (netns.NsHandle, error) {
-
-	if pathToNS == "" {
-		pathToNS = "/hostproc/1/ns/net"
-	}
-
-	NsHandle, err := netns.GetFromPath(pathToNS)
-	if err != nil {
-		return -1, fmt.Errorf("failed get host namespace, err: %w", err)
-	}
-	// defer NsHandle.Close()
-
-	return NsHandle, nil
 }

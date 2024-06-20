@@ -47,7 +47,6 @@ const (
 func RunIPRulesReconcilerAgentController(
 	mgr manager.Manager,
 	cfg config.Options,
-	nh netns.NsHandle,
 	log logr.Logger,
 ) (controller.Controller, error) {
 	cl := mgr.GetClient()
@@ -97,7 +96,7 @@ func RunIPRulesReconcilerAgentController(
 
 			// ============================= main logic start =============================
 			log.V(config.DebugLvl).Info(fmt.Sprintf("[NIRSReconciler] Starts of the reconciliation (initiated by the k8s-event)"))
-			shouldRequeue, err := runEventIPRuleReconcile(ctx, cl, nh, log, cfg.NodeName)
+			shouldRequeue, err := runEventIPRuleReconcile(ctx, cl, log, cfg.NodeName)
 			if err != nil {
 				log.Error(err, fmt.Sprintf("[NIRSReconciler] An error occurred while route reconcile"))
 			}
@@ -127,7 +126,7 @@ func RunIPRulesReconcilerAgentController(
 
 	// trigger reconcile every 30 sec
 	ctx := context.Background()
-	go periodicalRunEventIPRuleReconcile(ctx, cfg, cl, nh, log, cfg.NodeName)
+	go periodicalRunEventIPRuleReconcile(ctx, cfg, cl, log, cfg.NodeName)
 
 	return c, nil
 }
@@ -135,7 +134,6 @@ func RunIPRulesReconcilerAgentController(
 func runEventIPRuleReconcile(
 	ctx context.Context,
 	cl client.Client,
-	nh netns.NsHandle,
 	log logr.Logger,
 	nodeName string) (bool, error) {
 	// Declaring variables
@@ -154,7 +152,7 @@ func runEventIPRuleReconcile(
 
 	// Getting all IPRules from our node
 	log.V(config.DebugLvl).Info(fmt.Sprintf("[NIRSReconciler] Getting all IPRules from our node"))
-	actualIPRulesOnNode, err = getActualIPRuleEntryMapFromNode(nh)
+	actualIPRulesOnNode, err = getActualIPRuleEntryMapFromNode()
 	if err != nil {
 		log.Error(err, fmt.Sprintf("[NIRSReconciler] unable to get Actual IPRules from node"))
 		return true, err
@@ -175,17 +173,17 @@ func runEventIPRuleReconcile(
 		// Actions: add IPRules
 		if len(nirsSummary.desiredIPRulesToAddByNIRS) > 0 {
 			log.V(config.DebugLvl).Info(fmt.Sprintf("[NIRSReconciler] Starting adding IPRules to the node"))
-			nirsSummary.addIPRules(&actualIPRulesOnNode, nh, log)
+			nirsSummary.addIPRules(&actualIPRulesOnNode, log)
 		}
 
 		(*nirsMap)[nirs.Name] = nirsSummary
 	}
 
 	// Actions: delete IPRules and finalizers
-	nirsMap.deleteIPRulesAndFinalizers(globalDesiredIPRulesForNode, actualIPRulesOnNode, nh, log)
+	nirsMap.deleteIPRulesAndFinalizers(globalDesiredIPRulesForNode, actualIPRulesOnNode, log)
 
 	// Actions: Deleting orphan IPRules (with realm 216) that are not mentioned in any NIRS
-	deleteOrphanIPRules(globalDesiredIPRulesForNode, actualIPRulesOnNode, nh, log)
+	deleteOrphanIPRules(globalDesiredIPRulesForNode, actualIPRulesOnNode, log)
 
 	// Generate new condition for each processed nirs
 	log.V(config.DebugLvl).Info(fmt.Sprintf("[NIRSReconciler] Starting generate new conditions"))
@@ -202,7 +200,6 @@ func periodicalRunEventIPRuleReconcile(
 	ctx context.Context,
 	cfg config.Options,
 	cl client.Client,
-	nh netns.NsHandle,
 	log logr.Logger,
 	nodeName string,
 ) {
@@ -213,7 +210,7 @@ func periodicalRunEventIPRuleReconcile(
 		select {
 		case <-ticker.C:
 			log.V(config.DebugLvl).Info(fmt.Sprintf("[NIRSReconciler] Starts a periodic reconciliation (initiated by a timer)"))
-			_, err := runEventIPRuleReconcile(ctx, cl, nh, log, nodeName)
+			_, err := runEventIPRuleReconcile(ctx, cl, log, nodeName)
 			if err != nil {
 				log.Error(err, fmt.Sprintf("[NIRSReconciler] an error occurred while IPRule reconcile"))
 			}
@@ -595,7 +592,7 @@ func (ns *nirsSummary) discoverFacts(nirs v1alpha1.SDNInternalNodeIPRuleSet, glo
 	return false
 }
 
-func (ns *nirsSummary) addIPRules(actualIPRulesOnNode *IPRuleEntryMap, nh netns.NsHandle, log logr.Logger) {
+func (ns *nirsSummary) addIPRules(actualIPRulesOnNode *IPRuleEntryMap, log logr.Logger) {
 	status := ns.newReconciliationStatus
 	for _, ipRule := range ns.desiredIPRulesToAddByNIRS {
 		log.V(config.DebugLvl).Info(fmt.Sprintf("IPRule %v should be added", ipRule))
@@ -603,7 +600,7 @@ func (ns *nirsSummary) addIPRules(actualIPRulesOnNode *IPRuleEntryMap, nh netns.
 			log.V(config.DebugLvl).Info(fmt.Sprintf("but it is already present on Node"))
 			continue
 		}
-		err := addIPRuleToNode(nh, ipRule)
+		err := addIPRuleToNode(ipRule)
 		if err == nil {
 			actualIPRulesOnNode.AppendIRE(ipRule)
 		} else {
@@ -624,7 +621,7 @@ func nirsMapInit() *nirsMap {
 	return newNIRSMap
 }
 
-func (nm *nirsMap) deleteIPRulesAndFinalizers(globalDesiredIPRulesForNode, actualIPRulesOnNode IPRuleEntryMap, nh netns.NsHandle, log logr.Logger) {
+func (nm *nirsMap) deleteIPRulesAndFinalizers(globalDesiredIPRulesForNode, actualIPRulesOnNode IPRuleEntryMap, log logr.Logger) {
 	for nirsName, ns := range *nm {
 		if len(ns.desiredIPRulesToDelByNIRS) == 0 && !ns.nirsWasDeleted {
 			log.V(config.DebugLvl).Info(fmt.Sprintf("[NIRSReconciler] NIRS %v has no entries in desiredIPRulesToDelByNIRS and DeletionTimestamp is not set", nirsName))
@@ -637,7 +634,6 @@ func (nm *nirsMap) deleteIPRulesAndFinalizers(globalDesiredIPRulesForNode, actua
 			globalDesiredIPRulesForNode,
 			&actualIPRulesOnNode,
 			status,
-			nh,
 			log,
 		)
 		if ns.nirsWasDeleted && ns.newReconciliationStatus.IsSuccess {
@@ -730,7 +726,7 @@ func (nm *nirsMap) updateStateInK8S(ctx context.Context, cl client.Client, log l
 
 // netlink service functions
 
-func addIPRuleToNode(nsHandle netns.NsHandle, ipRule IPRuleEntry) error {
+func addIPRuleToNode(ipRule IPRuleEntry) error {
 	PreparedIPRule, err := ipRule.getNetlinkRule()
 	if err != nil {
 		return fmt.Errorf("unable to parse IPRule %v, err: %w",
@@ -740,12 +736,15 @@ func addIPRuleToNode(nsHandle netns.NsHandle, ipRule IPRuleEntry) error {
 	}
 	PreparedIPRule.Flow = v1alpha1.D8Realm
 
+	nsHandle, err := netns.GetFromPath("/hostproc/1/ns/net")
+	if err != nil {
+		return fmt.Errorf("unable to create netns.NsHandle, err: %w", err)
+	}
 	nh, err := netlink.NewHandleAt(nsHandle)
 	if err != nil {
 		return fmt.Errorf("failed create new netlink handler, err: %w", err)
 	}
 	defer nh.Close()
-
 	err = nh.RuleAdd(PreparedIPRule)
 	if err != nil {
 		return fmt.Errorf("unable to add IPRule %v, err: %w",
@@ -756,7 +755,7 @@ func addIPRuleToNode(nsHandle netns.NsHandle, ipRule IPRuleEntry) error {
 	return nil
 }
 
-func delIPRuleFromNode(nsHandle netns.NsHandle, ipRule IPRuleEntry) error {
+func delIPRuleFromNode(ipRule IPRuleEntry) error {
 	PreparedIPRule, err := ipRule.getNetlinkRule()
 	if err != nil {
 		return fmt.Errorf("unable to parse IPRule %v, err: %w",
@@ -766,12 +765,15 @@ func delIPRuleFromNode(nsHandle netns.NsHandle, ipRule IPRuleEntry) error {
 	}
 	PreparedIPRule.Flow = v1alpha1.D8Realm
 
+	nsHandle, err := netns.GetFromPath("/hostproc/1/ns/net")
+	if err != nil {
+		return fmt.Errorf("unable to create netns.NsHandle, err: %w", err)
+	}
 	nh, err := netlink.NewHandleAt(nsHandle)
 	if err != nil {
 		return fmt.Errorf("failed create new netlink handler, err: %w", err)
 	}
 	defer nh.Close()
-
 	err = nh.RuleDel(PreparedIPRule)
 	if err != nil {
 		return fmt.Errorf("unable to del IPRule %v, err: %w",
@@ -782,7 +784,11 @@ func delIPRuleFromNode(nsHandle netns.NsHandle, ipRule IPRuleEntry) error {
 	return nil
 }
 
-func getActualIPRuleEntryMapFromNode(nsHandle netns.NsHandle) (IPRuleEntryMap, error) {
+func getActualIPRuleEntryMapFromNode() (IPRuleEntryMap, error) {
+	nsHandle, err := netns.GetFromPath("/hostproc/1/ns/net")
+	if err != nil {
+		return nil, fmt.Errorf("unable to create netns.NsHandle, err: %w", err)
+	}
 	nh, err := netlink.NewHandleAt(nsHandle)
 	if err != nil {
 		return nil, fmt.Errorf("failed create new netlink handler, err: %w", err)
@@ -807,7 +813,7 @@ func getActualIPRuleEntryMapFromNode(nsHandle netns.NsHandle) (IPRuleEntryMap, e
 
 // other service functions
 
-func deleteIPRuleEntriesFromNode(delIREM, gdIREM IPRuleEntryMap, actIREM *IPRuleEntryMap, status utils.ReconciliationStatus, nh netns.NsHandle, log logr.Logger) utils.ReconciliationStatus {
+func deleteIPRuleEntriesFromNode(delIREM, gdIREM IPRuleEntryMap, actIREM *IPRuleEntryMap, status utils.ReconciliationStatus, log logr.Logger) utils.ReconciliationStatus {
 	for hash, ipRule := range delIREM {
 		log.V(config.DebugLvl).Info(fmt.Sprintf("IPRule %v should be deleted", ipRule))
 		if _, ok := (gdIREM)[hash]; ok {
@@ -818,7 +824,7 @@ func deleteIPRuleEntriesFromNode(delIREM, gdIREM IPRuleEntryMap, actIREM *IPRule
 			log.V(config.DebugLvl).Info(fmt.Sprintf("but it is not present on Node"))
 			continue
 		}
-		err := delIPRuleFromNode(nh, ipRule)
+		err := delIPRuleFromNode(ipRule)
 		if err == nil {
 			delete(*actIREM, hash)
 		} else {
@@ -829,14 +835,14 @@ func deleteIPRuleEntriesFromNode(delIREM, gdIREM IPRuleEntryMap, actIREM *IPRule
 	return status
 }
 
-func deleteOrphanIPRules(gdIREM, actIREM IPRuleEntryMap, nh netns.NsHandle, log logr.Logger) {
+func deleteOrphanIPRules(gdIREM, actIREM IPRuleEntryMap, log logr.Logger) {
 	log.V(config.DebugLvl).Info(fmt.Sprintf("[NIRSReconciler] Starting to find and delete orphan IPRules (with realm %v) from node.", v1alpha1.D8Realm))
 	for hash, ipRule := range actIREM {
 		if _, ok := (gdIREM)[hash]; ok {
 			continue
 		}
 		log.V(config.DebugLvl).Info(fmt.Sprintf("ipRule %v should be deleted.", ipRule))
-		err := delIPRuleFromNode(nh, ipRule)
+		err := delIPRuleFromNode(ipRule)
 		if err != nil {
 			log.V(config.DebugLvl).Info(fmt.Sprintf("Unable to delete ipRule %v,err: %v", ipRule, err))
 		}
