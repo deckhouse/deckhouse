@@ -116,6 +116,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"zvirtCsiDriver":         "imageHash-cloudProviderZvirt-zvirtCsiDriver",
 	},
 	"cniCilium": map[string]interface{}{
+		"agentAltDistroless": "imageHash-cniCilium-agentAltDistroless",
 		"agentDistroless":    "imageHash-cniCilium-agentDistroless",
 		"baseAltCiliumDev":   "imageHash-cniCilium-baseAltCiliumDev",
 		"baseCiliumDev":      "imageHash-cniCilium-baseCiliumDev",

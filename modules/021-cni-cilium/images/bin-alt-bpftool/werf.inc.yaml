@@ -1,4 +1,5 @@
 {{- $bpftoolRev := "93270357daa949e4bed375b40d0a100ce04f3399" }}
+{{- $fromCacheVersion := "17" }}
 ---
 # #####################################################################
 # Build BPFTOOL binaries (based on base-cilium-dev)
@@ -16,6 +17,7 @@
 ---
 artifact: {{ $.ModuleName }}/bpftool-alt-artifact
 fromImage: {{ $.ModuleName }}/base-alt-cilium-dev
+fromCacheVersion: {{ $fromCacheVersion }}
 shell:
   beforeInstall:
   - git clone {{ $.SOURCE_REPO }}/bpf/bpf-next.git /src/linux
