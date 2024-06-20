@@ -506,9 +506,9 @@ The steps below are necessary for manually loading images of modules connected f
 
 1. [Download and install the Deckhouse CLI tool](https://github.com/deckhouse/deckhouse-cli/blob/main/README.md#how-to-install).
 
-1. Создайте строку аутентификации для `registry.deckhouse.io` командой:
+1. Create an authentication string for `registry.deckhouse.io` using the following command:
    ```shell     
-   YOUR_LICENSE_KEY="ваш_лицензионный_ключ" base64 -w0 <<EOF
+   YOUR_LICENSE_KEY="your_license_key" base64 -w0 <<EOF
      {
        "auths": {
          "registry.deckhouse.io": {
