@@ -426,7 +426,7 @@ This feature is only available in Standard Edition (SE), Enterprise Edition (EE)
    ```shell
    d8 mirror pull --source="registry.deckhouse.io/deckhouse/ee" --license="<DECKHOUSE_LICENSE_KEY>" $(pwd)/d8.tar
    ```
-   > Не забудьте изменить путь на соответствующий вашей редакции платформы – замените последнюю часть ссылки на `se` или `cse`. Например, для редакции SE ссылка будет выглядеть так: `registry.deckhouse.io/deckhouse/se`.
+   > Make sure to edit the path to match your platform edition — replace the last section of the link with `se` or `cse`. For example, for the SE edition, the link would look as follows: `registry.deckhouse.io/deckhouse/se`.
    >
    > If you interrupt the download before it is finished, calling the command again will check which images have already been downloaded, and the download will continue. This will only happen if no more than 24 hours have passed since the download interruption.
    > Use the `--no-pull-resume` flag, to start the download from scratch.
