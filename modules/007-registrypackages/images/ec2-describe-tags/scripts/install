@@ -15,4 +15,4 @@
 
 set -Eeo pipefail
 mkdir -p /opt/deckhouse/bin
-cp -f ec2-describe-tags /opt/deckhouse/bin
+cp -f ec2_describe_tags /opt/deckhouse/bin
