@@ -153,7 +153,10 @@ releaseLoop:
 		case release.GetVersion().GreaterThan(newSemver):
 			// cleanup versions which are older than current version in a specified channel and are in a Pending state
 			if release.Status.Phase == v1alpha1.PhasePending {
-				r.client.Delete(ctx, release, client.PropagationPolicy(metav1.DeletePropagationBackground))
+				err = r.client.Delete(ctx, release, client.PropagationPolicy(metav1.DeletePropagationBackground))
+				if err != nil {
+					return fmt.Errorf("delete old release: %w", err)
+				}
 			}
 
 			// EQ
