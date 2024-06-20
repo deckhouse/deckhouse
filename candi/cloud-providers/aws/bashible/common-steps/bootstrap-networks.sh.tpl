@@ -16,8 +16,10 @@
 */}}
 
 if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
-  source ${TMPDIR}/source_fetch.sh
-  bb-package-install "ec2DescribeTags:{{ .images.registrypackages.ec2DescribeTagsV001Flant2 }}"
+  source ${TMPDIR}/base_pkgs_source.sh
+  {{- with $.Values.global.modulesImages.digests.registrypackages }}
+  bb-package-install "ec2DescribeTags:{{ .ec2DescribeTagsV001Flant2 }}"
+  {{- end }}
   attempt=0
   until [[ $(/opt/deckhouse/bin/ec2_describe_tags -query_meta) ]]; do 
     attempt=$(( attempt + 1 ))
