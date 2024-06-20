@@ -39,5 +39,10 @@ post-install() {
   fi
 }
 
+if command -v containerd >/dev/null 2>&1; then
+  bb-log-error "containerd exist on servers $HOSTNAME. Deckhouse not support working with embedded containerd. Please uninstall containerd and try again"
+  exit 1
+fi
+
 bb-package-install "containerd:{{- index $.images.registrypackages "containerd1713" }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"
 {{- end }}
