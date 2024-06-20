@@ -8,7 +8,7 @@ import:
   add: /
   to: /
   includePaths:
-  - ec2-describe-tags
+  - ec2_describe_tags
   - install
   - uninstall
   before: setup

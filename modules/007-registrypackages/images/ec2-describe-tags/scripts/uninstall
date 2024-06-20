@@ -14,4 +14,4 @@
 # limitations under the License.
 
 set -Eeo pipefail
-rm -f /opt/deckhouse/bin/ec2-describe-tags
+rm -f /opt/deckhouse/bin/ec2_describe_tags
