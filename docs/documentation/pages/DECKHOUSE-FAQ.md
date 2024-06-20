@@ -518,9 +518,9 @@ The steps below are necessary for manually loading images of modules connected f
      }
    EOF
    ```
-   > Не забудьте заменить `ваш_лицензионный_ключ` на свой реальный лицензионный ключ.
+   > Make sure to replace the `your_license_key` placeholder with your actual license key.
 
-1. Pull module images from their source registry, defined as a `ModuleSource` resource, into a dedicated directory using the command `d8 mirror modules pull`.
+1. Pull module images from their source registry, defined as a `ModuleSource` resource, into a dedicated directory using the `d8 mirror modules pull` command.
 
    `d8 mirror modules pull` pulls only the module versions available in the module release channels at the time of copying unless the `--modules-filter` flag is set.
    Пример файла `module_source.yml` с описанием ModuleSource:
