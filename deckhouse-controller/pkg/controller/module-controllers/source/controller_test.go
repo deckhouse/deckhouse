@@ -443,12 +443,12 @@ func (suite *ControllerTestSuite) setupController(yamlDoc string) {
 		dc:                 dependency.NewDependencyContainer(),
 		logger:             log.New(),
 
-		deckhouseEmbeddedPolicy: &v1alpha1.ModuleUpdatePolicySpec{
+		deckhouseEmbeddedPolicy: v1alpha1.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
 			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
 				Mode: "Auto",
 			},
 			ReleaseChannel: "Stable",
-		},
+		}),
 		moduleSourcesChecksum: make(sourceChecksum),
 	}
 
