@@ -531,7 +531,7 @@ The steps below are necessary for manually loading images of modules connected f
      name: deckhouse
    spec:
      registry:
-       # Укажите строку, полученную в п.2 вместо CHANGE
+       # Replace CHANGE with the string produced in step 2
        dockerCfg: CHANGE
        repo: registry.deckhouse.io/deckhouse/ee/modules
        scheme: HTTPS
