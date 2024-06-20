@@ -27,7 +27,6 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -195,10 +194,8 @@ func newRegistryClientConfigGetter(config config.RegistryData) (*registryClientC
 		return nil, fmt.Errorf("registry auth: %v", err)
 	}
 
-	repo, err := url.JoinPath(config.Address, config.Path)
-	if err != nil {
-		return nil, fmt.Errorf("registry repo: %v", err)
-	}
+	repo := fmt.Sprintf("%s/%s", strings.Trim(config.Address, "/"), strings.Trim(config.Path, "/"))
+
 	return &registryClientConfigGetter{
 		ClientConfig: registry.ClientConfig{
 			Repository: repo,
