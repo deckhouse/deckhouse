@@ -108,7 +108,7 @@ import random
 import ssl
 try:
     from urllib.request import urlopen, Request
-except ImportError as e:
+except ImportError:
     from urllib2 import urlopen, Request
 endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
 # Choose a random endpoint as first ep, that increase fault tolerance and reduce load on first endpoint.
@@ -119,8 +119,8 @@ for ep in endpoints:
   request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
   try:
     response = urlopen(request, timeout=300)
-  except Exception as error:
-    print(e)
+  except HTTPError as e:
+    print("Access to {} return HTTP Error {}: {}".format(url, e.getcode(), e.read()[:255]))
     continue
   break
 with open('$2', 'wb') as f:
