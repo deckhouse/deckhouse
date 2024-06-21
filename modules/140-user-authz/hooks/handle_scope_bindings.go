@@ -162,6 +162,9 @@ func filterModuleManageRole(obj *unstructured.Unstructured) (go_hook.FilterResul
 			role.Namespace = val
 		}
 	}
+	if role.Namespace == "" {
+		return nil, nil
+	}
 	return &role, nil
 }
 

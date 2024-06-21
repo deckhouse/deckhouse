@@ -10,7 +10,7 @@ metadata:
     rbac.deckhouse.io/aggregate-to-role: manager
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
-    rbac.deckhouse.io/namespace: d8-kube-dns
+    rbac.deckhouse.io/namespace: kube-system
   name: d8:manage:capability:module:kube-dns:edit
 rules:
 - apiGroups:
