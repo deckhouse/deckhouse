@@ -171,6 +171,11 @@ EOFILE
   }
   {{- with $context.Values.global.modulesImages.digests.registrypackages }}
   bb-package-install "jq:{{ .jq16 }}" "curl:{{ .d8Curl821 }}" "netcat:{{ .netcat110481 }}"
+    {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
+      {{- if eq $context.Values.nodeManager.internal.type "aws" }}
+  bb-package-install "ec2DescribeTags:{{ .ec2DescribeTagsV001Flant2 }}" 
+      {{- end }}
+    {{- end }}
   {{- end }}
 }
 
