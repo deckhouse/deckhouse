@@ -43,7 +43,7 @@ On the command line, the utility can be invoked using the `d8` alias. All the co
    ```bash
    tar -xvf "d8-v${RELEASE_VERSION}-${OS}-${ARCH}.tar.gz" "${OS}-${ARCH}/d8"
    ```
-   > Например, для архива с названием `d8-v0.1.2-linux-amd64.tar.gz` команда будет выглядеть так: `tar -xvf "d8-v0.1.2-linux-amd64.tar.gz" "linux-amd64/d8"`.
+   > For example, for an archive named `d8-v0.1.2-linux-amd64.tar.gz`, the command would look as follows: `tar -xvf "d8-v0.1.2-linux-amd64.tar.gz" "linux-amd64/d8"`.
 
 1. Copy the `d8` file to a directory at the `PATH` variable on your system:
 
