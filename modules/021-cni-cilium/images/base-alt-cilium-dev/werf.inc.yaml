@@ -42,7 +42,7 @@ shell:
     jq tzdata  \
     bash-completion iproute2 iptables ipset kmod ca-certificates \
     coreutils binutils make cmake ccache automake autoconf ccache patch patchelf \
-    git zip unzip wget \
+    git zip unzip wget mount \
     gcc gcc9 gcc-c++   \
     glibc glibc-devel libmnl-devel \
     bison flex \
@@ -52,14 +52,15 @@ shell:
     libnftnl-devel \
     elfutils-devel zlib-devel
   # for debug
-  - apt-get install -y strace
+  - apt-get install -y strace vim-console
   # apt clean
   - apt-get autoclean && apt-get clean
   # download-only
   - |
     apt-get update && apt-get install -y -d \
     libcap-devel \
-    clang15.0 clang15.0-tools lldb15.0 lld15.0
+    clang15.0 clang15.0-tools lldb15.0 lld15.0 llvm15.0-devel \
+    libstdc++-devel libstdc++-devel-static libstdc++10-devel-static glibc-devel-static libcxxabi-devel
   # - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
   install:
   # Install Go
