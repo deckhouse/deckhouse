@@ -6,11 +6,11 @@
 shopt -s extglob
 
 primary_mac="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
-primary_ifname="$(ip -o link show | grep "link/ether $primary_mac" | cut -d ":" -f2 | tr -d " ")"
 
-
-if [ -z "$primary_ifname" ]; then
-  primary_ifname="$(cat /etc/netplan/50-cloud-init.yaml | grep "^ *ens[0-9]*:$" | awk '{sub(/:/,"");print $1}')"
+if [ -z "$primary_mac" ]; then
+  primary_ifname=$(grep -Po '(ens|eth|eno|enp)[0-9]+(?=:)' /etc/netplan/50-cloud-init.yaml | head -n1)
+else
+  primary_ifname="$(ip -o link show | grep "link/ether $primary_mac" | cut -d ":" -f2 | tr -d " ")"
 fi
 
 for i in /sys/class/net/!($primary_ifname); do
