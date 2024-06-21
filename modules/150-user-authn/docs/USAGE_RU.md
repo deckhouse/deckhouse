@@ -49,9 +49,9 @@ spec:
 В организации GitHub необходимо создать новое приложение.
 
 Для этого выполните следующие шаги:
-Перейдите в `Settings` -> `Developer settings` -> `OAuth Aps` -> `Register a new OAuth application` и в качестве `Authorization callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`.
+* перейдите в `Settings` -> `Developer settings` -> `OAuth Aps` -> `Register a new OAuth application` и в качестве `Authorization callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`.
 
-Полученные `Client ID` и `Client Secret` укажите в кастомном ресурсе [DexProvider](cr.html#dexprovider).
+Полученные `Client ID` и `Client Secret` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
 
 Если организация GitHub находится под управлением клиента, перейдите в `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` и нажмите `Send Request` для подтверждения. Попросите клиента подтвердить запрос, который придет к нему на email.
 
@@ -83,7 +83,7 @@ spec:
 * **cloud gitlab.com**: под главной учетной записью проекта перейдите в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
 * (для GitLab версии 16 и выше) включить опцию `Trusted`/`Trusted applications are automatically authorized on Gitlab OAuth flow` при создании приложения.
 
-Полученные `Application ID` и `Secret` укажите в кастомном ресурсе [DexProvider](cr.html#dexprovider).
+Полученные `Application ID` и `Secret` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
 
 ### Atlassian Crowd
 
@@ -110,11 +110,11 @@ spec:
 В соответствующем проекте Atlassian Crowd необходимо создать новое `Generic`-приложение.
 
 Для этого выполните следующие шаги:
-Перейдите в `Applications` -> `Add application`.
+* перейдите в `Applications` -> `Add application`.
 
-Полученные `Application Name` и `Password` укажите в custom ресурсе [DexProvider](cr.html#dexprovider).
+Полученные `Application Name` и `Password` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
 
-Группы CROWD укажите в lowercase-формате для кастомного ресурса `DexProvider`.
+Группы CROWD укажите в lowercase-формате для Custom Resource `DexProvider`.
 
 ### Bitbucket Cloud
 
@@ -140,13 +140,21 @@ spec:
 Для настройки аутентификации необходимо в Bitbucket в меню команды создать нового OAuth consumer.
 
 Для этого выполните следующие шаги:
-Перейдите в `Settings` -> `OAuth consumers` -> `New application` и в качестве `Callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, разрешите доступ для `Account: Read` и `Workspace membership: Read`.
+* перейдите в `Settings` -> `OAuth consumers` -> `New application` и в качестве `Callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, разрешите доступ для `Account: Read` и `Workspace membership: Read`.
 
-Полученные `Key` и `Secret` укажите в кастомном ресурсе [DexProvider](cr.html#dexprovider).
+Полученные `Key` и `Secret` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
 
 ### OIDC (OpenID Connect)
 
-В примере представлены настройки провайдера для интеграции с Okta.
+Аутентификация через OIDC-провайдера требует регистрации клиента (или создания приложения). Сделайте это по документации вашего провайдера (например, [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration) или [Blitz](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html)).
+
+Полученные в ходе выполнения инструкции `clientID` и `clientSecret` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
+
+Ниже можно ознакомиться с некоторыми примерами.
+
+#### Okta
+
+В примере представлены настройки провайдера для интеграции с Okta:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -164,13 +172,65 @@ spec:
     getUserInfo: true
 ```
 
-Аутентификация через OIDC-провайдера требует регистрации клиента (или создания приложения). Сделайте это по документации вашего провайдера (например, [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration)).
+#### Blitz Identity Provider
 
-Полученные в ходе выполнения инструкции `clientID` и `clientSecret` укажите в кастомном ресурсе [DexProvider](cr.html#dexprovider).
+На стороне провайдера Blitz Identity Provider при [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html) необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`, где `publicDomainTemplate` – [указанный](https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) в модуле `global` шаблон DNS-имен кластера.
+
+В примере представлены настройки провайдера для интеграции с Blitz Identity Provider:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: blitz
+spec:
+  displayName: Blitz Identity Provider
+  oidc:
+    basicAuthUnsupported: false
+    claimMapping:
+      email: email
+      groups: your_claim # Claim для получения групп пользователя, группы пользователя настраиваются на стороне провайдера Blitz Identity Provider
+    clientID: clientID
+    clientSecret: clientSecret
+    getUserInfo: true
+    insecureSkipEmailVerified: true # Установить true, если нет необходимости в проверке email пользователя
+    insecureSkipVerify: false
+    issuer: https://yourdomain.idblitz.ru/blitz
+    promptType: consent 
+    scopes:
+    - profile
+    - openid
+    userIDKey: sub
+    userNameKey: email
+  type: OIDC
+```
+
+Чтобы корректно отрабатывал выход из приложений (происходил отзыв токена и требовалась повторная авторизация), нужно установить `login` в значении параметра `promptType`.
+
+Для обеспечения гранулированного доступа пользователя к приложениям необходимо:
+
+* добавить параметр `allowedUserGroups` в `ModuleConfig` нужного приложения;
+* добавить группы к пользователю (наименования групп должны совпадать как на стороне Blitz, так и на стороне Deckhouse).
+
+Пример для Prometheus:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  version: 2
+  settings:
+    auth:
+      allowedUserGroups:
+        - adm-grafana-access
+        - grafana-access
+```
 
 ### LDAP
 
-В примере представлены настройки провайдера для интеграции с Active Directory.
+В примере представлены настройки провайдера для интеграции с Active Directory:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -208,14 +268,14 @@ spec:
 
 Для настройки аутентификации заведите в LDAP read-only-пользователя (service account).
 
-Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` кастомном ресурсе [DexProvider](cr.html#dexprovider).
+Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` Custom Resource [DexProvider](cr.html#dexprovider).
 1. Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
 2. В параметре `bindPW` укажите пароль в plain-виде. Стратегии с передачей хэшированных паролей не предусмотрены.
 
 ## Настройка OAuth2-клиента в Dex для подключения приложения
 
-Этот вариант настройки подходит приложениям, которые имеют возможность использовать oauth2-аутентификацию самостоятельно, без помощи `oauth2-proxy`.
-Чтобы позволить подобным приложениям взаимодействовать с Dex, используется кастомном ресурс [`DexClient`](cr.html#dexclient).
+Этот вариант настройки подходит приложениям, которые имеют возможность использовать OAuth2-аутентификацию самостоятельно, без помощи `oauth2-proxy`.
+Чтобы позволить подобным приложениям взаимодействовать с Dex, используется Custom Resource [`DexClient`](cr.html#dexclient).
 
 {% raw %}
 
@@ -303,4 +363,4 @@ spec:
 
 ## Выдача прав пользователю или группе
 
-Для настройки используются параметры в кастомном ресурсе [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule).
+Для настройки используются параметры в Custom Resource [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule).
