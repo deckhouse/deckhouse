@@ -1,0 +1,274 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: iprulesets.network.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: static-routing-manager
+spec:
+  group: network.deckhouse.io
+  scope: Cluster
+  names:
+    plural: iprulesets
+    singular: ipruleset
+    kind: IPRuleSet
+  preserveUnknownFields: false
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+      - jsonPath: .status.conditions[?(@.type=="Ready")].status
+        name: Ready
+        type: string
+      - jsonPath: .status.readyNodeIPRuleSets
+        name: readyNodes
+        type: integer
+      - jsonPath: .status.affectedNodeIPRuleSets
+        name: desiredNodes
+        type: integer
+      - jsonPath: .metadata.creationTimestamp
+        name: Age
+        type: date
+    schema: &schema
+      openAPIV3Schema:
+        type: object
+        description: |
+          This resource describes a set of rules (`ip rule`) that will be created on nodes with the appropriate labels.
+        required:
+        - spec
+        properties:
+          spec:
+            type: object
+            required:
+            - rules
+            - nodeSelector
+            properties:
+              rules:
+                type: array
+                minItems: 1
+                description: |
+                  The desired set of rules (`ip rule').
+                items:
+                  type: object
+                  required:
+                    - selectors
+                    - actions
+                    - priority
+                  properties:
+                    priority:
+                      type: integer
+                      minimum: 0
+                      maximum: 4294967295
+                      description: |
+                        The priority of the rule (the order of application depends on it).
+                        When choosing a number, it is worth considering several nuances:
+                        - All rules are sorted by node's linux network subsystem in order of priority (from lesser to greater) until a match is found.
+                        - If the packet falls under some rule, and the corresponding action has been successfully performed, then the search for rules termitated.
+                        - The default rule for searching the `main` routing table is 32766. In this case, if you specify a higher value, the rule will never be processed.
+                    selectors:
+                      type: object
+                      description: |
+                        A set of package attributes.
+                        If the package has the attributes described in the `selectors` section, then actions from the `actions` section will be applied to it.
+                      oneOf:
+                        - required: [ not ]
+                          minProperties: 2
+                        - not:
+                            required: [ not ]
+                          minProperties: 1
+                      properties:
+                        not:
+                          type: boolean
+                          default: false
+                          description: |
+                            If this flag is specified, the rule will be inverted, that is, all packets that do not have the specified attributes will fall under it.
+                        from:
+                          type: array
+                          description: |
+                            An array of subnets of the source.
+                          items:
+                            type: string
+                            format: cidr
+                            description: |
+                              The subnet of the source.
+                        to:
+                          type: array
+                          description: |
+                            An array of subnets of the destination.
+                          items:
+                            type: string
+                            format: cidr
+                            description: |
+                              The subnet of the destination.
+                        tos:
+                          type: string
+                          pattern: '^0[xX][0-9a-fA-F]{1,2}$'
+                          description: |
+                            QOS traffic label (TOS/diffserv/dscp) transmitted over the network in the IP headers of the packet.
+                            Available values stored in the file /etc/iproute2/rt_dsfield.
+                        fwMark:
+                          type: string
+                          pattern: '^0[xX][0-9a-fA-F]{1,8}(/0[xX][0-9a-fA-F]{1,8})?$'
+                          description: |
+                            The traffic label exists only inside the linux network subsystem on the node.
+                        iif:
+                          type: string
+                          description: |
+                            The name of the incoming interface for the packet.
+                        oif:
+                          type: string
+                          description: |
+                            The name of the outgoing interface for the packet.
+                        ipProto:
+                          type: integer
+                          description: |
+                            The number of the L4 protocol that is encapsulated in the IP in packet.
+                            The numbers of the most popular protocols are:
+                            - `ICMP` - 1
+                            - `TCP` - 6
+                            - `UDP` - 17
+                            All available values can be found [at the link] (https://www.iana.org/assignments/protocol-numbers/protocol-numbers .xhtml), or in the /etc/protocols file on the node.
+                        sportRange:
+                          type: object
+                          required:
+                            - start
+                          description: |
+                            The range of source ports.
+                            If there is only one port, then you can either fill in only the `start` field, or specify the same value in the `start` and `end` fields.
+                          x-kubernetes-validations:
+                          - rule: "has(self.end) && self.start <= self.end"
+                            message: "end port should be greater than or equal to start port."
+                          properties:
+                            start:
+                              type: integer
+                              minimum: 0
+                              maximum: 65535
+                              description: |
+                                The beginning of the range.
+                            end:
+                              type: integer
+                              minimum: 0
+                              maximum: 65535
+                              description: |
+                                The end of the range.
+                        dportRange:
+                          type: object
+                          required:
+                            - start
+                          description: |
+                            The range of destination ports.
+                            If there is only one port, then you can either fill in only the `start` field, or specify the same value in the `start` and `end` fields.
+                          x-kubernetes-validations:
+                          - rule: "has(self.end) && self.start <= self.end"
+                            message: "end port should be greater than or equal to start port."
+                          properties:
+                            start:
+                              type: integer
+                              minimum: 0
+                              maximum: 65535
+                              description: |
+                                The beginning of the range.
+                            end:
+                              type: integer
+                              minimum: 0
+                              maximum: 65535
+                              description: |
+                                The end of the range.
+                        uidRange:
+                          type: object
+                          required:
+                            - start
+                          description: |
+                            The range of UIDS(UserID) of applications that transmitting traffic.
+                            If there is only one UID, then you can either fill in only the `start` field, or specify the same value in the `start` and `end` fields.
+                          x-kubernetes-validations:
+                            - rule: "has(self.end) && self.start <= self.end"
+                              message: "end should be greater than or equal to start."
+                          properties:
+                            start:
+                              type: integer
+                              minimum: 0
+                              maximum: 4294967295
+                              description: |
+                                The beginning of the range.
+                            end:
+                              type: integer
+                              minimum: 0
+                              maximum: 4294967295
+                              description: |
+                                The end of the range.
+                    actions:
+                      type: object
+                      description: |
+                        A set of actions that must be performed with a packet that has the attributes described in the `selectors' section.
+                      required:
+                        - lookup
+                      properties:
+                        lookup:
+                          type: object
+                          description: |
+                            Define the routing table in which the gateway address will be searched.
+                          oneOf:
+                          - required: [ipRoutingTableID]
+                          - required: [routingTableName]
+                          properties:
+                            ipRoutingTableID:
+                              type: integer
+                              minimum: 1
+                              maximum: 4294967295
+                              description: |
+                                ID of the routing table on the node
+                            routingTableName:
+                              type: string
+                              description: |
+                                The name of kubernetes resource RoutingTable in which the routing table ID will be searched.
+              nodeSelector:
+                type: object
+                description: |
+                  A set of labels that define the nodes on which these rules must be applied.
+                additionalProperties:
+                  type: string
+          status:
+            type: object
+            properties:
+              observedGeneration:
+                description: ObservedGeneration is the latest generation observed
+                  by the controller.
+                format: int64
+                type: integer
+              readyNodeIPRuleSets:
+                type: integer
+              affectedNodeIPRuleSets:
+                type: integer
+              conditions:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - type
+                    - status
+                    - reason
+                  properties:
+                    type:
+                      description: Type of condition.
+                      type: string
+                    lastHeartbeatTime:
+                      type: string
+                      format: date-time
+                      description: Last time the ip rules were checked.
+                    status:
+                      description: Status of the condition, one of True, False.
+                      type: string
+                    lastTransitionTime:
+                      type: string
+                      format: date-time
+                      description: Last time the condition transit from one status to another.
+                    reason:
+                      description: The reason for the condition's last transition in CamelCase.
+                      type: string
+                    message:
+                      description: Human readable message indicating details about last transition.
+                      type: string

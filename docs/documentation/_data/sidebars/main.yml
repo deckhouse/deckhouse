@@ -538,6 +538,26 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/040-terraform-manager/configuration.html
+            - title: static-routing-manager
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/025-static-routing-manager/
+                - title:
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/025-static-routing-manager/configuration.html
+                    - title: Custom Resources
+                      url: /modules/025-static-routing-manager/cr.html
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/025-static-routing-manager/examples.html
     - title:
         en: Accessing cluster
         ru: Доступ к кластеру
