@@ -1,5 +1,5 @@
 {{- $llvmRev := "llvmorg-10.0.0" }}
-{{- $llvmCacheRev := "llvmorg-10.0.0-v1" }}
+{{- $llvmCacheRev := "llvmorg-10.0.0-alt-v1" }}
 {{- $fromCacheVersion := "16" }}
 ---
 # #####################################################################
