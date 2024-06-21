@@ -149,9 +149,9 @@ function prepare_base_d8_binaries() {
 import random
 import ssl
 try:
-  from urllib.request import urlopen, Request
+  from urllib.request import urlopen, Request, HTTPError
 except ImportError:
-  from urllib2 import urlopen, Request
+  from urllib2 import urlopen, Request, HTTPError
 endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
 # Choose a random endpoint as first ep, that increase fault tolerance and reduce load on first endpoint.
 endpoints.insert(0, random.choice(endpoints))
