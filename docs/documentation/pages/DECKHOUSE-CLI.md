@@ -50,9 +50,9 @@ On the command line, the utility can be invoked using the `d8` alias. All the co
    ```bash
    sudo mv "${OS}-${ARCH}/d8" /usr/local/bin/
    ```
-   > Например, для распакованного файла `linux-amd64/d8` команда будет выглядеть так: `sudo mv "linux-amd64/d8" /usr/local/bin/`.
+   > For example, for an extracted file named `linux-amd64/d8`, the command would look as follows: `sudo mv "linux-amd64/d8" /usr/local/bin/`.
    >
-   > `PATH` — это системная переменная, содержащая список каталогов, в которых ОС будет искать исполняемый файл при вызове команды из терминала. Просмотреть этот список можно командой `echo $PATH`.
+   > `PATH` is a system variable containing a list of directories with executable files. This is where the OS will look for the binary when a command is run in the terminal. You can view this list with the `echo $PATH` command.
 
 1. Check that the CLI is working:
 
