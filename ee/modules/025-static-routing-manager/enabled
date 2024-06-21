@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Copyright 2024 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+source /deckhouse/shell_lib.sh
+
+function __main__() {
+  echo "true" > $MODULE_ENABLED_RESULT
+}
+
+enabled::run "$@"

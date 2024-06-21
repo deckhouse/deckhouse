@@ -1,0 +1,188 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      nodeRoutingTables:
+        type: array
+        default: []
+        x-examples:
+          - [
+            {
+              ipRoutingTableID: 100500,
+              name: external-952302c494,
+              nodeName: sandbox-worker-02334ee2-7694f-mt9rm,
+              ownerRTName: external,
+              ownerRTUID: 4d734e48-21aa-4cb3-ac95-138d30246bd6,
+              routes: [
+                {
+                  destination: 0.0.0.0/0,
+                  gateway: 192.168.199.1
+                },
+                {
+                  destination: 192.168.0.0/24,
+                  gateway: 192.168.199.1
+                }
+              ]
+            },
+          ]
+        items:
+          type: object
+          default: {}
+          properties:
+            name:
+              type: string
+            nodeName:
+              type: string
+            ownerRTName:
+              type: string
+            ownerRTUID:
+              type: string
+            ipRoutingTableID:
+              type: integer
+            routes:
+              type: array
+              default: []
+              items:
+                type: object
+                default: {}
+                properties:
+                  destination:
+                    type: string
+                    format: cidr
+                  gateway:
+                    type: string
+                    format: ipv4
+      nodeIPRuleSets:
+        type: array
+        default: []
+        items:
+          type: object
+          default: {}
+          properties:
+            name:
+              type: string
+            nodeName:
+              type: string
+            ownerIRSName:
+              type: string
+            ownerIRSUID:
+              type: string
+            rules:
+              type: array
+              default: []
+              x-examples:
+                - [
+                  {
+                    name: myiprule-69028a3136,
+                    nodeName: sandbox-worker-02334ee2-7694f-mt9rm,
+                    ownerIRSName: myiprule,
+                    ownerIRSUID: 641bfb93-a25a-483a-a433-a8e6dab7dd50,
+                    rules: [
+                      {
+                        actions: {
+                          lookup: {
+                            ipRoutingTableID: 100500,
+                            routingTableName: external
+                          },
+                        },
+                        priority: 50,
+                        selectors: {
+                          dportRange: {
+                            end: 400,
+                            start: 300
+                          },
+                          from: [
+                            { 192.168.111.0/24 },
+                            { 192.168.222.0/24 },
+                          ],
+                          fwMark: "0x42/0xff",
+                          ipProto: 6,
+                          iif: "eth1",
+                          not: false,
+                          oif: "cilium_net",
+                          sportRange: {
+                            end: 200,
+                            start: 100
+                          },
+                          to: [
+                            { 8.8.8.8/32 },
+                            { 172.16.8.0/21 },
+                          ],
+                          tos: "0x10",
+                          uidRange: {
+                            end: 1000,
+                            start: 1000
+                          },
+                        },
+                      },
+                    ],
+                  },
+                ]
+              items:
+                type: object
+                default: {}
+                properties:
+                  priority:
+                    type: integer
+                  selectors:
+                    type: object
+                    properties:
+                      not:
+                        type: boolean
+                      from:
+                        type: array
+                        items:
+                          type: string
+                          format: cidr
+                      to:
+                        type: array
+                        items:
+                          type: string
+                          format: cidr
+                      tos:
+                        type: string
+                        pattern: '^0[xX][0-9a-fA-F]{1,2}$'
+                      fwMark:
+                        type: string
+                        pattern: '^0[xX][0-9a-fA-F]{1,8}(/0[xX][0-9a-fA-F]{1,8})?$'
+                      iif:
+                        type: string
+                      oif:
+                        type: string
+                      ipProto:
+                        type: integer
+                      sportRange:
+                        type: object
+                        properties:
+                          start:
+                            type: integer
+                          end:
+                            type: integer
+                      dportRange:
+                        type: object
+                        properties:
+                          start:
+                            type: integer
+                          end:
+                            type: integer
+                      uidRange:
+                        type: object
+                        properties:
+                          start:
+                            type: integer
+                          end:
+                            type: integer
+                  actions:
+                    type: object
+                    properties:
+                      lookup:
+                        type: object
+                        properties:
+                          ipRoutingTableID:
+                            type: integer
+                          routingTableName:
+                            type: string
