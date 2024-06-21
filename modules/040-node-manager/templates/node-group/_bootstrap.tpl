@@ -62,7 +62,7 @@ function prepare_base_d8_binaries() {
   export BB_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages"
   export TMPDIR="/opt/deckhouse/tmp"
   export BB_FETCHED_PACKAGES_STORE="/${TMPDIR}/registrypackages"
-  {{- with $.Values.global.clusterConfiguration }}
+  {{- with $context.Values.global.clusterConfiguration }}
     {{- if .proxy }}
       {{- if .proxy.httpProxy }}
   export HTTP_PROXY={{ .proxy.httpProxy | quote }}
@@ -80,9 +80,9 @@ function prepare_base_d8_binaries() {
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
     {{- end }}
   {{- end }}
-  {{- if $.Values.nodeManager.internal.packagesProxy }}
-  export PACKAGES_PROXY_ADDRESSES="{{ $.Values.nodeManager.internal.packagesProxy.addresses | join "," }}"
-  export PACKAGES_PROXY_TOKEN="{{ $.Values.nodeManager.internal.packagesProxy.token }}"
+  {{- if $context.Values.nodeManager.internal.packagesProxy }}
+  export PACKAGES_PROXY_ADDRESSES="{{ $context.Values.nodeManager.internal.packagesProxy.addresses | join "," }}"
+  export PACKAGES_PROXY_TOKEN="{{ $context.Values.nodeManager.internal.packagesProxy.token }}"
   {{- end }}
 
   function check_python() {
