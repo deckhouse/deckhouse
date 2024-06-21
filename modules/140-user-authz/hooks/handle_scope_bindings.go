@@ -244,7 +244,7 @@ func buildBinding(filtered *filteredBinding) *rbacv1.RoleBinding {
 		},
 		Subjects: filtered.Subjects,
 		RoleRef: rbacv1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io/v1",
+			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
 			Name:     filtered.RoleName,
 		},

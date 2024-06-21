@@ -160,7 +160,7 @@ func useBinding(relatedWith, namespace string) string {
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io/v1",
+			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
 			Name:     "d8:use:role",
 		},
