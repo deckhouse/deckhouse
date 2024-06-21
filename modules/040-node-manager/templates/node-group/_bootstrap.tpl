@@ -162,7 +162,7 @@ function prepare_base_d8_binaries() {
     try:
       response = urlopen(request, timeout=300)
     except Exception as error:
-      print(e)
+      print(error)
       continue
     break
   with open('$2', 'wb') as f:
