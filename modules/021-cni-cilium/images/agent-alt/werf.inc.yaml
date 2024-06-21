@@ -141,13 +141,13 @@ import:
 #  - opt/cni/bin/cilium-cni
 #  - usr/bin/cilium*
 #  - var/lib/cilium/bpf
-#- artifact: {{ $.ModuleName }}/cilium-envoy-artifact
-#  add: /tmp/install/usr
-#  to: /usr
-#  before: install
-#  includePaths:
-#  - bin/cilium-envoy
-#  - lib/libcilium.so
+- artifact: {{ $.ModuleName }}/cilium-envoy-alt-artifact
+  add: /tmp/install/usr
+  to: /usr
+  before: install
+  includePaths:
+  - bin/cilium-envoy
+  - lib/libcilium.so
 - artifact: {{ $.ModuleName }}/hubble-artifact
   add: /hubble
   to: /usr/bin/hubble
