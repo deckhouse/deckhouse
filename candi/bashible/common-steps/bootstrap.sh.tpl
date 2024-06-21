@@ -130,4 +130,11 @@ with open('$2', 'wb') as f:
 EOFILE
 }
 bb-package-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}" "netcat:{{ .images.registrypackages.netcat110481 }}"
+
+{{- with $.Values.global.clusterConfiguration.cloud }}
+	{{- if eq .provider "aws"  }}
+bb-package-install "jq:{{ .images.registrypackages.ec2DescribeTagsV001Flant2 }}" 
+	{{- end }}
+{{- end }}
+
 mkdir -p /var/lib/bashible/
