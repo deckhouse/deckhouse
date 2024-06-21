@@ -36,13 +36,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "manageBindings",
-			ApiVersion: rbacv1.SchemeGroupVersion.String(),
+			ApiVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "ClusterRoleBinding",
 			FilterFunc: filterClusterRoleBinding,
 		},
 		{
 			Name:       "useBindings",
-			ApiVersion: rbacv1.SchemeGroupVersion.String(),
+			ApiVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "RoleBinding",
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
@@ -54,7 +54,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:       "scopeManageRoles",
-			ApiVersion: rbacv1.SchemeGroupVersion.String(),
+			ApiVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "ClusterRole",
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
@@ -67,7 +67,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:       "moduleManageRoles",
-			ApiVersion: rbacv1.SchemeGroupVersion.String(),
+			ApiVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "ClusterRole",
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
@@ -221,7 +221,7 @@ func ensureBindings(input *go_hook.HookInput, expectedUseBindings []*filteredBin
 		if existing != nil {
 			binding := existing.(*filteredBinding)
 			if _, found := foundBindings[fmt.Sprintf("%s-%s", binding.Name, binding.Name)]; !found {
-				input.PatchCollector.Delete(rbacv1.SchemeGroupVersion.String(), "RoleBinding", binding.Namespace, binding.Name)
+				input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "RoleBinding", binding.Namespace, binding.Name)
 			}
 		}
 	}
@@ -230,7 +230,7 @@ func ensureBindings(input *go_hook.HookInput, expectedUseBindings []*filteredBin
 func buildBinding(filtered *filteredBinding) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io",
+			APIVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "RoleBinding",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -244,7 +244,7 @@ func buildBinding(filtered *filteredBinding) *rbacv1.RoleBinding {
 		},
 		Subjects: filtered.Subjects,
 		RoleRef: rbacv1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
+			APIGroup: "rbac.authorization.k8s.io/v1",
 			Kind:     "ClusterRole",
 			Name:     filtered.RoleName,
 		},
