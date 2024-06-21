@@ -50,6 +50,16 @@ else
   DATA_DEVICE="$(get_data_device_secret | jq -re --arg hostname "$HOSTNAME" '.data[$hostname]' | base64 -d)"
 fi
 
+if ! [ -b "$DATA_DEVICE" ]; then
+  >&2 echo "failed to find $DATA_DEVICE disk. Trying to detect the correct one"
+  DATA_DEVICE=$(lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '.blockdevices[] | select (.type == "disk" and .mountpoint == null and .children == null) | .path')
+fi
+
+if [ $(wc -l <<< $DATA_DEVICE) -ne 1 ]; then
+  >&2 echo "failed to detect the correct disk: more than one or no matching disks found: $DATA_DEVICE"
+  return 1
+fi
+
 mkdir -p /mnt/kubernetes-data
 
 if ! file -s $DATA_DEVICE | grep -q ext4; then
