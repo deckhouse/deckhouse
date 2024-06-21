@@ -150,7 +150,7 @@ function prepare_base_d8_binaries() {
   import ssl
   try:
       from urllib.request import urlopen, Request
-  except ImportError as e:
+  except ImportError:
       from urllib2 import urlopen, Request
   endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
   # Choose a random endpoint as first ep, that increase fault tolerance and reduce load on first endpoint.
@@ -161,13 +161,13 @@ function prepare_base_d8_binaries() {
     request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
     try:
       response = urlopen(request, timeout=300)
-    except Exception as error:
-      print(error)
+    except HTTPError as e:
+      print("Access to {} return HTTP Error {}: {}".format(url, e.getcode(), e.read()[:255]))
       continue
     break
   with open('$2', 'wb') as f:
       f.write(response.read())
-  EOFILE
+EOFILE
   }
   {{- with $context.Values.global.modulesImages.digests.registrypackages }}
   bb-package-install "jq:{{ .jq16 }}" "curl:{{ .d8Curl821 }}" "netcat:{{ .netcat110481 }}"
