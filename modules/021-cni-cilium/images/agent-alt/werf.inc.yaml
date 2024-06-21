@@ -99,13 +99,13 @@ git:
     install:
     - binary_replace.sh
 import:
-#- artifact: {{ $.ModuleName }}/llvm-artifact
-#  add: /usr/local/bin/
-#  to: /usr/local/bin
-#  before: install
-#  includePaths:
-#  - clang
-#  - llc
+- artifact: {{ $.ModuleName }}/llvm-alt-artifact
+  add: /usr/local/bin/
+  to: /usr/local/bin
+  before: install
+  includePaths:
+  - clang
+  - llc
 - artifact: {{ $.ModuleName }}/bpftool-alt-artifact
   add: /usr/local/bin/bpftool
   to: /usr/local/bin/bpftool
