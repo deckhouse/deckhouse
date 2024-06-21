@@ -21,7 +21,7 @@ spec:
   validations:
     - expression: '!(request.userInfo.username != ''system:serviceaccount:d8-system:deckhouse''
         && (object.metadata.name.startsWith(''d8-'') || object.metadata.name.startsWith(''kube-'')))'
-      messageExpression: '''Restricts create system namespaces'''
+      messageExpression: '''Creation of system namespaces is forbidden'''
 ---
 {{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1beta1
