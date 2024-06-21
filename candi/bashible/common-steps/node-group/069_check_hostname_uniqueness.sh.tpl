@@ -13,11 +13,10 @@
 # limitations under the License.
 
 {{- if and ( or (eq .nodeGroup.nodeType "Static") (eq .nodeGroup.nodeType "CloudStatic")) (eq .runType "Normal") }}
-failure_count=0
-failure_limit=3
-curl_out=$( mktemp -t curl_out.XXXXX )
-
 if [ -f /var/lib/bashible/bootstrap-token ]; then
+  failure_count=0
+  failure_limit=3
+  curl_out=$( mktemp -t curl_out.XXXXX )
   retry=true
   token="$(</var/lib/bashible/bootstrap-token)"
   while [ "$retry" = true ]; do
@@ -53,9 +52,6 @@ if [ -f /var/lib/bashible/bootstrap-token ]; then
     done
     sleep 10
   done
-else
-  bb-log-error "failed to get node $HOSTNAME: can't find bootstrap-token"
-  exit 1
 fi
 
 {{- end }}

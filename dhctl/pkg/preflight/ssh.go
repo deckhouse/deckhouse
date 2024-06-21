@@ -84,7 +84,7 @@ func (pc *Checker) CheckSingleSSHHostForStatic() error {
 
 	if len(pc.sshClient.Settings.AvailableHosts()) > 1 {
 		return fmt.Errorf(
-			"for the bootstrap first master, only one --ssh-host parameter should be used for a static cluster",
+			"during the bootstrap of the first static master node, only one --ssh-host parameter is allowed",
 		)
 	}
 	return nil
