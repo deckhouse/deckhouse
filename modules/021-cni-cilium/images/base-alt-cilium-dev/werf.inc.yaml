@@ -50,7 +50,7 @@ shell:
     python python3 python3-module-pip python3-module-virtualenv \
     libnetfilter_conntrack-devel libnetfilter_conntrack libnfnetlink-devel \
     libnftnl-devel \
-    elfutils-devel
+    elfutils-devel zlib-devel
   # for debug
   - apt-get install -y strace
   # apt clean
