@@ -44,11 +44,17 @@ On the command line, the utility can be invoked using the `d8` alias. All the co
    tar -xvf "d8-v${RELEASE_VERSION}-${OS}-${ARCH}.tar.gz" "${OS}-${ARCH}/d8"
    ```
 
+   > For example, for an archive named `d8-v0.1.2-linux-amd64.tar.gz`, the command would look as follows: `tar -xvf "d8-v0.1.2-linux-amd64.tar.gz" "linux-amd64/d8"`.
+
 1. Copy the `d8` file to a directory at the `PATH` variable on your system:
 
    ```bash
    sudo mv "${OS}-${ARCH}/d8" /usr/local/bin/
    ```
+
+   > For example, for an extracted file named `linux-amd64/d8`, the command would look as follows: `sudo mv "linux-amd64/d8" /usr/local/bin/`.
+   >
+   > `PATH` is a system variable containing a list of directories with executable files. This is where the OS will look for the binary when a command is run in the terminal. You can view this list with the `echo $PATH` command.
 
 1. Check that the CLI is working:
 
