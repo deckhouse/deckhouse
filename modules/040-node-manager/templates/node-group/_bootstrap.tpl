@@ -146,27 +146,27 @@ function prepare_base_d8_binaries() {
     check_python
 
     cat - <<EOFILE | $python_binary
-  import random
-  import ssl
+import random
+import ssl
+try:
+  from urllib.request import urlopen, Request
+except ImportError:
+  from urllib2 import urlopen, Request
+endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
+# Choose a random endpoint as first ep, that increase fault tolerance and reduce load on first endpoint.
+endpoints.insert(0, random.choice(endpoints))
+ssl._create_default_https_context = ssl._create_unverified_context
+for ep in endpoints:
+  url = 'https://{}/package?digest=$1&repository=${REPOSITORY}'.format(ep)
+  request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
   try:
-      from urllib.request import urlopen, Request
-  except ImportError:
-      from urllib2 import urlopen, Request
-  endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
-  # Choose a random endpoint as first ep, that increase fault tolerance and reduce load on first endpoint.
-  endpoints.insert(0, random.choice(endpoints))
-  ssl._create_default_https_context = ssl._create_unverified_context
-  for ep in endpoints:
-    url = 'https://{}/package?digest=$1&repository=${REPOSITORY}'.format(ep)
-    request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
-    try:
-      response = urlopen(request, timeout=300)
-    except HTTPError as e:
-      print("Access to {} return HTTP Error {}: {}".format(url, e.getcode(), e.read()[:255]))
-      continue
-    break
-  with open('$2', 'wb') as f:
-      f.write(response.read())
+    response = urlopen(request, timeout=300)
+  except HTTPError as e:
+    print("Access to {} return HTTP Error {}: {}".format(url, e.getcode(), e.read()[:255]))
+    continue
+  break
+with open('$2', 'wb') as f:
+  f.write(response.read())
 EOFILE
   }
   {{- with $context.Values.global.modulesImages.digests.registrypackages }}
