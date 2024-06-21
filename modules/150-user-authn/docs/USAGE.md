@@ -203,7 +203,7 @@ spec:
 For the application logout to work correctly (the token being revoked so that re-authorization is required), set `login` as the value of the 'promptType` parameter.
 
 To ensure granular user access to applications, you have to:
- 
+
 * Add the `allowedUserGroups` parameter to the `ModuleConfig` of the target application.
 * Add the user to the groups (group names should be the same for Blitz and Deckhouse).
 
