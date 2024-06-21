@@ -14,7 +14,7 @@
 # limitations under the License.
 */}}
 #!/bin/bash
-set -Eeuo pipefail
+set -Eeo pipefail
 
 export PATH="/opt/deckhouse/bin:$PATH"
 export LANG=C
