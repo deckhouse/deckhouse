@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -80,7 +79,6 @@ func walkModules(workDir string) ([]settings, error) {
 			for idx, crds := range moduleSettings.CRDs {
 				moduleSettings.CRDs[idx] = filepath.Join(workDir, crds)
 			}
-			log.Printf("found module with settings: %v\n", moduleSettings)
 			modules = append(modules, moduleSettings)
 			return nil
 		}

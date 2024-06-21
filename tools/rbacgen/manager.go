@@ -25,7 +25,6 @@ import (
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apimachineryv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apimachineryYaml "k8s.io/apimachinery/pkg/util/yaml"
-	"log"
 	"os"
 	"path/filepath"
 	"sigs.k8s.io/yaml"
@@ -274,7 +273,6 @@ func (m *moduleGenerator) writeRoles(manageRoles, useRoles []*rbacv1.ClusterRole
 			return err
 		}
 		managePath := filepath.Join(m.path, "templates/rbacv2/manage", fmt.Sprintf("%s.yaml", name))
-		log.Printf("render manage role %v in %s\n", role, managePath)
 		if err = os.WriteFile(managePath, marshaled, 0644); err != nil {
 			return err
 		}
@@ -292,7 +290,6 @@ func (m *moduleGenerator) writeRoles(manageRoles, useRoles []*rbacv1.ClusterRole
 			return err
 		}
 		usePath := filepath.Join(m.path, "templates/rbacv2/use", fmt.Sprintf("%s.yaml", name))
-		log.Printf("render use role %v in %s\n", role, usePath)
 		if err = os.WriteFile(usePath, marshaled, 0644); err != nil {
 			return err
 		}
