@@ -41,7 +41,7 @@ spec:
   tls:
   - hosts:
     - {{ include "helm_lib_module_public_domain" (list . "grafana-v10") }}
-    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls-v10") }}
   {{- end }}
   rules:
   - host: {{ include "helm_lib_module_public_domain" (list . "grafana-v10") }}
@@ -64,7 +64,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "grafana-v10")) | nindent 2 }}
 spec:
   certificateOwnerRef: false
-  secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls-v10") }}
   {{ include "helm_lib_module_generate_common_name" (list . "grafana-v10") | nindent 2 }}
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "grafana-v10") }}
