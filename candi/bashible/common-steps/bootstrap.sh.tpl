@@ -38,9 +38,9 @@ export no_proxy=${NO_PROXY}
 {{- else }}
 unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- end }}
-{{- if $.Values.nodeManager.internal.packagesProxy }}
-export PACKAGES_PROXY_ADDRESSES="{{ $.Values.nodeManager.internal.packagesProxy.addresses | join "," }}"
-export PACKAGES_PROXY_TOKEN="{{ $.Values.nodeManager.internal.packagesProxy.token }}"
+{{- if .packagesProxy }}
+export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
+export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
 {{- end }}
 
 function check_python() {
