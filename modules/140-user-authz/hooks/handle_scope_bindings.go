@@ -18,15 +18,16 @@ package hooks
 
 import (
 	"fmt"
+	"reflect"
+	"slices"
+	"strings"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"reflect"
-	"slices"
-	"strings"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -229,7 +230,7 @@ func ensureBindings(input *go_hook.HookInput, expectedUseBindings []*filteredBin
 func buildBinding(filtered *filteredBinding) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: rbacv1.SchemeGroupVersion.String(),
+			APIVersion: "rbac.authorization.k8s.io",
 			Kind:       "RoleBinding",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -243,7 +244,7 @@ func buildBinding(filtered *filteredBinding) *rbacv1.RoleBinding {
 		},
 		Subjects: filtered.Subjects,
 		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.SchemeGroupVersion.String(),
+			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
 			Name:     filtered.RoleName,
 		},
