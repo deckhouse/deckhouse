@@ -9,7 +9,7 @@ metadata:
 spec:
   applicationDomain: {{ include "helm_lib_module_public_domain" (list . "grafana-v10") }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
-  applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls-v10") }}
+  applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   {{- end }}
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   signOutURL: "/logout"
