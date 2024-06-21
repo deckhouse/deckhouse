@@ -43,12 +43,16 @@ On the command line, the utility can be invoked using the `d8` alias. All the co
    ```bash
    tar -xvf "d8-v${RELEASE_VERSION}-${OS}-${ARCH}.tar.gz" "${OS}-${ARCH}/d8"
    ```
+   > Например, для архива с названием `d8-v0.1.2-linux-amd64.tar.gz` команда будет выглядеть так: `tar -xvf "d8-v0.1.2-linux-amd64.tar.gz" "linux-amd64/d8"`.
 
 1. Copy the `d8` file to a directory at the `PATH` variable on your system:
 
    ```bash
    sudo mv "${OS}-${ARCH}/d8" /usr/local/bin/
    ```
+   > Например, для распакованного файла `linux-amd64/d8` команда будет выглядеть так: `sudo mv "linux-amd64/d8" /usr/local/bin/`.
+   >
+   > `PATH` — это системная переменная, содержащая список каталогов, в которых ОС будет искать исполняемый файл при вызове команды из терминала. Просмотреть этот список можно командой `echo $PATH`.
 
 1. Check that the CLI is working:
 
