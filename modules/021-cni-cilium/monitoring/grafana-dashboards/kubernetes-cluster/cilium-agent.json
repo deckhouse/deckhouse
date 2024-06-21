@@ -22,10 +22,12 @@
     ]
   },
   "description": "Dashboard for Cilium (https://cilium.io/) metrics",
-  "editable": true,
+  "editable": false,
+  "fiscalYearStartMonth": 0,
   "gnetId": 15513,
   "graphTooltip": 1,
-  "iteration": 1606309591568,
+  "id": 37,
+  "iteration": 1718965516377,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -43,7 +45,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -71,11 +73,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -102,9 +104,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Errors & Warnings",
       "tooltip": {
         "shared": true,
@@ -113,33 +113,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "opm",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -155,7 +146,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -183,11 +174,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -241,9 +232,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "CPU Usage per node",
       "tooltip": {
         "shared": true,
@@ -252,33 +241,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "percent",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -295,6 +275,15 @@
       },
       "id": 161,
       "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "Generic",
       "type": "row"
     },
@@ -314,7 +303,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -342,11 +331,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -366,6 +355,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "min(cilium_process_virtual_memory_bytes{job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
@@ -373,6 +366,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(cilium_process_virtual_memory_bytes{job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
@@ -380,6 +377,10 @@
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(cilium_process_virtual_memory_bytes{job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
@@ -388,9 +389,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Virtual Memory Bytes",
       "tooltip": {
         "shared": true,
@@ -399,33 +398,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "bytes",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -441,7 +431,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -471,11 +461,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -485,6 +475,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(cilium_process_resident_memory_bytes{job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "interval": "",
@@ -493,6 +487,10 @@
           "refId": "C"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(cilium_process_resident_memory_bytes{job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "interval": "",
@@ -501,6 +499,10 @@
           "refId": "D"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "min(cilium_process_resident_memory_bytes{job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
@@ -509,9 +511,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Resident memory status",
       "tooltip": {
         "shared": true,
@@ -520,33 +520,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "bytes",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -562,7 +553,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -590,11 +581,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -609,6 +600,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(cilium_process_open_fds{job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
@@ -616,6 +611,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "min(cilium_process_open_fds{job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
@@ -623,6 +622,10 @@
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(cilium_process_open_fds{job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
@@ -630,6 +633,10 @@
           "refId": "C"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(cilium_process_open_fds{job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
@@ -638,9 +645,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Open file descriptors",
       "tooltip": {
         "shared": true,
@@ -649,33 +654,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -692,7 +688,7 @@
       "description": "BPF memory usage in the entire system including components not managed by Cilium.",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -722,11 +718,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -777,9 +773,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "System-wide BPF memory usage",
       "tooltip": {
         "shared": true,
@@ -788,9 +782,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -798,25 +790,18 @@
         {
           "$$hashKey": "object:136",
           "format": "bytes",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:137",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -831,7 +816,7 @@
       "description": "Fill percentage of BPF maps, tagged by map name",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -858,10 +843,10 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -871,6 +856,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "cilium_bpf_map_pressure",
           "interval": "",
           "legendFormat": "",
@@ -878,9 +867,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "BPF map pressure",
       "tooltip": {
         "shared": true,
@@ -889,9 +876,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -899,25 +884,19 @@
         {
           "$$hashKey": "object:230",
           "format": "percentunit",
-          "label": null,
           "logBase": 1,
           "max": "1.0",
-          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:231",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -934,6 +913,15 @@
       },
       "id": 155,
       "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "API",
       "type": "row"
     },
@@ -948,7 +936,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -980,11 +968,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -994,6 +982,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_agent_api_process_time_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])/rate(cilium_agent_api_process_time_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1002,9 +994,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "API call latency (average node)",
       "tooltip": {
         "shared": true,
@@ -1013,33 +1003,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -1053,7 +1034,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -1085,11 +1066,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1099,6 +1080,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(rate(cilium_agent_api_process_time_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])/rate(cilium_agent_api_process_time_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1107,9 +1092,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "API call latency (max node)",
       "tooltip": {
         "shared": true,
@@ -1118,33 +1101,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -1158,7 +1132,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -1190,11 +1164,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1204,6 +1178,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_agent_api_process_time_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1212,9 +1190,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "# API calls (average node)",
       "tooltip": {
         "shared": true,
@@ -1223,33 +1199,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -1263,7 +1230,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -1295,11 +1262,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1309,6 +1276,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(rate(cilium_agent_api_process_time_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1317,9 +1288,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "# API calls (max node)",
       "tooltip": {
         "shared": true,
@@ -1328,33 +1297,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -1368,7 +1328,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -1400,11 +1360,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1414,6 +1374,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_agent_api_process_time_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path, return_code)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1422,9 +1386,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "API return codes (average node)",
       "tooltip": {
         "shared": true,
@@ -1433,33 +1395,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -1473,7 +1426,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -1505,11 +1458,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1519,6 +1472,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_agent_api_process_time_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path, return_code)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1527,9 +1484,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "API return codes (sum all nodes)",
       "tooltip": {
         "shared": true,
@@ -1538,33 +1493,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -1581,6 +1527,15 @@
       },
       "id": 72,
       "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "Cilium",
       "type": "row"
     },
@@ -1588,13 +1543,6 @@
       "datasource": {
         "type": "prometheus",
         "uid": "$ds_prometheus"
-      },
-      "content": "",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
       },
       "gridPos": {
         "h": 1,
@@ -1604,7 +1552,25 @@
       },
       "id": 144,
       "links": [],
-      "mode": "markdown",
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "",
+        "mode": "markdown"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "BPF",
       "type": "text"
     },
@@ -1619,7 +1585,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -1651,11 +1617,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1665,6 +1631,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_bpf_syscall_duration_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, operation)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1673,9 +1643,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "# system calls (average node)",
       "tooltip": {
         "shared": true,
@@ -1684,33 +1652,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -1725,7 +1684,7 @@
       "decimals": 2,
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -1757,11 +1716,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "8.5.13",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1771,6 +1730,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(rate(cilium_bpf_syscall_duration_seconds_count{k8s_app=\"cilium\", pod=~\"$pod\"}[1m])) by (pod, operation)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1779,9 +1742,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "# system calls (max node)",
       "tooltip": {
         "shared": true,
@@ -1790,9 +1751,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -1800,24 +1759,17 @@
         {
           "decimals": 0,
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -1831,7 +1783,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -1863,11 +1815,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1877,6 +1829,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_bpf_syscall_duration_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])/ rate(cilium_bpf_syscall_duration_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, operation)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1885,9 +1841,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "system call latency (avg node)",
       "tooltip": {
         "shared": true,
@@ -1896,33 +1850,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -1936,7 +1881,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -1966,11 +1911,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1980,6 +1925,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(rate(cilium_bpf_syscall_duration_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])/ rate(cilium_bpf_syscall_duration_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, operation)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1988,9 +1937,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "system call latency (max node)",
       "tooltip": {
         "shared": true,
@@ -1999,33 +1946,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -2039,7 +1977,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -2071,11 +2009,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2085,6 +2023,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "topk(5, avg(rate(cilium_bpf_map_ops_total{job=\"cilium-agent\",pod=~\"$pod\"}[5m])) by (pod, map_name, operation))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -2093,9 +2035,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "map ops (average node)",
       "tooltip": {
         "shared": true,
@@ -2104,33 +2044,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -2144,7 +2075,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -2176,11 +2107,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2190,6 +2121,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "topk(5, max(rate(cilium_bpf_map_ops_total{job=\"cilium-agent\",pod=~\"$pod\"}[5m])) by (pod, map_name, operation))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -2198,9 +2133,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "map ops (max node)",
       "tooltip": {
         "shared": true,
@@ -2209,33 +2142,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -2249,7 +2173,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -2281,11 +2205,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2295,6 +2219,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_bpf_map_ops_total{job=\"cilium-agent\",pod=~\"$pod\",outcome=\"fail\"}[5m])) by (pod, map_name, operation)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -2303,9 +2231,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "map ops (sum failures)",
       "tooltip": {
         "shared": true,
@@ -2314,46 +2240,30 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
-      "content": "",
       "datasource": {
         "type": "prometheus",
         "uid": "$ds_prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
       },
       "gridPos": {
         "h": 1,
@@ -2363,7 +2273,25 @@
       },
       "id": 182,
       "links": [],
-      "mode": "markdown",
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "",
+        "mode": "markdown"
+      },
+      "pluginVersion": "10.2.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "kvstore",
       "type": "text"
     },
@@ -2379,7 +2307,7 @@
       "decimals": 2,
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -2411,10 +2339,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2424,6 +2353,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(kvstore_operations_total{pod=~\"$pod\"}[1m])) by (pod, scope, action)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -2432,9 +2365,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "# operations (sum all nodes)",
       "tooltip": {
         "shared": true,
@@ -2443,9 +2374,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -2453,24 +2382,17 @@
         {
           "decimals": 0,
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -2485,7 +2407,7 @@
       "decimals": 2,
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -2517,10 +2439,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2530,6 +2453,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(rate(kvstore_operations_total{pod=~\"$pod\"}[1m])) by (pod, scope, action)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -2538,9 +2465,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "# operations (max node)",
       "tooltip": {
         "shared": true,
@@ -2549,9 +2474,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -2559,24 +2482,17 @@
         {
           "decimals": 0,
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -2590,7 +2506,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -2622,10 +2538,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2635,6 +2552,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "topk(5, avg(rate(cilium_kvstore_operations_duration_seconds_sum{pod=~\"$pod\"}[1m])) by (pod, action, scope) / avg(rate(cilium_kvstore_operations_duration_seconds_count{pod=~\"$pod\"}[1m])) by (pod, action, scope))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -2643,9 +2564,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "latency (average node)",
       "tooltip": {
         "shared": true,
@@ -2654,33 +2573,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -2694,7 +2604,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -2726,10 +2636,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2739,6 +2650,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "topk(5, max(rate(cilium_kvstore_operations_duration_seconds_sum{pod=~\"$pod\"}[1m])) by (pod, action, scope) / avg(rate(cilium_kvstore_operations_duration_seconds_count{pod=~\"$pod\"}[1m])) by (pod, action, scope))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -2747,9 +2662,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "latency (max node)",
       "tooltip": {
         "shared": true,
@@ -2758,33 +2671,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -2798,7 +2702,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -2828,10 +2732,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2841,6 +2746,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_kvstore_events_queue_seconds_count{pod=~\"$pod\"}[1m])) by (pod, scope, action)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -2849,9 +2758,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Events received (average node)",
       "tooltip": {
         "shared": true,
@@ -2860,46 +2767,30 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
-      "content": "",
       "datasource": {
         "type": "prometheus",
         "uid": "$ds_prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
       },
       "gridPos": {
         "h": 1,
@@ -2909,7 +2800,25 @@
       },
       "id": 47,
       "links": [],
-      "mode": "markdown",
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "",
+        "mode": "markdown"
+      },
+      "pluginVersion": "10.2.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "Cilium network information",
       "type": "text"
     },
@@ -2924,7 +2833,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -2952,11 +2861,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2966,6 +2875,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_forward_count_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, direction)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -2974,9 +2887,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Forwarded Packets",
       "tooltip": {
         "shared": true,
@@ -2985,33 +2896,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "pps",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -3025,7 +2927,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -3053,11 +2955,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3072,6 +2974,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_forward_bytes_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, direction) * 8",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3080,9 +2986,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Forwarded Traffic",
       "tooltip": {
         "shared": true,
@@ -3091,33 +2995,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "bps",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -3149,7 +3044,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -3177,11 +3072,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3213,6 +3108,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "min(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",pod=~\"$pod\", status=\"alive\", family=\"ipv4\", protocol=\"TCP\"}) by (family,status)",
           "format": "time_series",
           "interval": "",
@@ -3221,6 +3120,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",pod=~\"$pod\", status=\"alive\", family=\"ipv4\", protocol=\"TCP\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3228,6 +3131,10 @@
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",pod=~\"$pod\", status=\"alive\", family=\"ipv4\", protocol=\"TCP\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3235,6 +3142,10 @@
           "refId": "C"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",pod=~\"$pod\", status=\"deleted\", family=\"ipv4\", protocol=\"TCP\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3242,6 +3153,10 @@
           "refId": "D"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",pod=~\"$pod\", status=\"deleted\", family=\"ipv4\", protocol=\"TCP\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3250,9 +3165,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "IPv4 Conntrack TCP",
       "tooltip": {
         "shared": true,
@@ -3261,33 +3174,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -3319,7 +3223,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -3347,11 +3251,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3383,6 +3287,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "min(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "interval": "",
@@ -3391,6 +3299,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3398,6 +3310,10 @@
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3405,6 +3321,10 @@
           "refId": "C"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"deleted\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3412,6 +3332,10 @@
           "refId": "D"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"deleted\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3420,9 +3344,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "IPv6 Conntrack TCP",
       "tooltip": {
         "shared": true,
@@ -3431,33 +3353,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -3489,7 +3402,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -3517,11 +3430,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3553,6 +3466,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "min(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",status=\"alive\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "interval": "",
@@ -3561,6 +3478,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",status=\"alive\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3568,6 +3489,10 @@
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",status=\"alive\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3575,6 +3500,10 @@
           "refId": "C"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",status=\"deleted\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3582,6 +3511,10 @@
           "refId": "D"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",status=\"deleted\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3590,9 +3523,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "IPv4 Conntrack Non-TCP",
       "tooltip": {
         "shared": true,
@@ -3601,33 +3532,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -3659,7 +3581,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -3687,10 +3609,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3722,6 +3645,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "min(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "interval": "",
@@ -3730,6 +3657,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3737,6 +3668,10 @@
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3744,6 +3679,10 @@
           "refId": "C"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"deleted\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3751,6 +3690,10 @@
           "refId": "D"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"deleted\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3759,9 +3702,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "IPv6 Conntrack Non-TCP",
       "tooltip": {
         "shared": true,
@@ -3770,33 +3711,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -3811,10 +3743,9 @@
         "type": "prometheus",
         "uid": "$ds_prometheus"
       },
-      "decimals": null,
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -3844,10 +3775,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3861,6 +3793,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(cilium_ip_addresses{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod, family)\n",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3869,9 +3805,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Allocated Addresses",
       "tooltip": {
         "shared": true,
@@ -3880,33 +3814,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -3923,7 +3848,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -3951,10 +3876,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3964,6 +3890,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(cilium_datapath_conntrack_dump_resets_total{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod, area, family, name)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3972,9 +3902,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Datapath Conntrack Dump Resets",
       "tooltip": {
         "shared": true,
@@ -3983,33 +3911,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -4023,7 +3942,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -4051,10 +3970,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -4064,6 +3984,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_services_events_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, action)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -4072,9 +3996,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Service Updates",
       "tooltip": {
         "shared": true,
@@ -4083,33 +4005,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -4123,7 +4036,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -4151,10 +4064,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -4173,6 +4087,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(cilium_unreachable_nodes{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -4180,6 +4098,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(cilium_unreachable_health_endpoints{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -4188,9 +4110,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Connectivity Health",
       "tooltip": {
         "shared": true,
@@ -4199,33 +4119,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -4239,7 +4150,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -4267,10 +4178,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -4280,6 +4192,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_drop_count_total{direction=\"EGRESS\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (reason)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -4288,9 +4204,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Dropped Egress Packets",
       "tooltip": {
         "shared": true,
@@ -4299,33 +4213,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -4342,7 +4247,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -4370,10 +4275,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -4409,6 +4315,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_nodes_all_events_received_total{job=\"cilium-agent\", pod=~\"$pod\"}[1m])) by (pod, event_type, source) * 60",
           "format": "time_series",
           "intervalFactor": 1,
@@ -4417,9 +4327,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Node Events",
       "tooltip": {
         "shared": true,
@@ -4428,33 +4336,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -4468,7 +4367,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -4496,10 +4395,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -4509,6 +4409,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_drop_bytes_total{direction=\"EGRESS\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (reason) * 8",
           "format": "time_series",
           "intervalFactor": 1,
@@ -4517,9 +4421,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Dropped Egress Traffic",
       "tooltip": {
         "shared": true,
@@ -4528,33 +4430,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "bps",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -4571,7 +4464,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -4601,10 +4494,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -4624,6 +4518,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(cilium_nodes_all_num{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -4631,6 +4529,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "min(cilium_nodes_all_num{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -4638,6 +4540,10 @@
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(cilium_nodes_all_num{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -4646,9 +4552,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Nodes",
       "tooltip": {
         "shared": true,
@@ -4657,46 +4561,30 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
-      "content": "",
       "datasource": {
         "type": "prometheus",
         "uid": "$ds_prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
       },
       "gridPos": {
         "h": 1,
@@ -4706,7 +4594,25 @@
       },
       "id": 28,
       "links": [],
-      "mode": "markdown",
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "",
+        "mode": "markdown"
+      },
+      "pluginVersion": "10.2.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "Policy",
       "type": "text"
     },
@@ -4725,7 +4631,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -4753,10 +4659,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -4775,6 +4682,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_policy_l7_denied_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -4782,6 +4693,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_policy_l7_forwarded_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -4789,6 +4704,10 @@
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_policy_l7_received_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -4797,9 +4716,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "L7 forwarded request",
       "tooltip": {
         "shared": true,
@@ -4808,33 +4725,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "reqps",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "reqps",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -4848,7 +4756,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -4876,11 +4784,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -4890,6 +4798,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_drop_count_total{direction=\"INGRESS\", job=\"cilium-agent\",pod=~\"$pod\"}[5m])) by (reason)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -4898,9 +4810,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Cilium drops Ingress",
       "tooltip": {
         "shared": true,
@@ -4909,33 +4819,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -4954,7 +4855,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -4984,10 +4885,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -5014,6 +4916,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_proxy_upstream_reply_seconds_sum{job=\"cilium-agent\", pod=~\"$pod\"}[$__rate_interval])) by (pod, scope) / sum(rate(cilium_proxy_upstream_reply_seconds_count{job=\"cilium-agent\", pod=~\"$pod\"}[$__rate_interval])) by (pod, scope)",
           "format": "time_series",
           "interval": "",
@@ -5022,6 +4928,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(cilium_policy_l7_parse_errors_total{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -5030,9 +4940,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Proxy response time (Avg)",
       "tooltip": {
         "shared": true,
@@ -5041,33 +4949,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -5081,7 +4980,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -5109,11 +5008,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -5123,6 +5022,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_drop_bytes_total{direction=\"INGRESS\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (reason) * 8",
           "format": "time_series",
           "intervalFactor": 1,
@@ -5131,9 +5034,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Dropped Ingress Traffic",
       "tooltip": {
         "shared": true,
@@ -5142,33 +5043,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "bps",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -5187,7 +5079,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -5215,10 +5107,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -5249,6 +5142,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "min(rate(cilium_triggers_policy_update_call_duration_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope) / sum(rate(cilium_triggers_policy_update_call_duration_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -5256,6 +5153,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_triggers_policy_update_call_duration_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope) / sum(rate(cilium_triggers_policy_update_call_duration_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -5263,6 +5164,10 @@
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(rate(cilium_triggers_policy_update_call_duration_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope) / sum(rate(cilium_triggers_policy_update_call_duration_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -5271,9 +5176,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Policy Trigger Duration",
       "tooltip": {
         "shared": true,
@@ -5282,33 +5185,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "opm",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -5326,7 +5220,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -5356,10 +5250,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -5374,6 +5269,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(rate(cilium_proxy_upstream_reply_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope) / sum(rate(cilium_proxy_upstream_reply_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -5381,6 +5280,10 @@
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(rate(cilium_policy_l7_parse_errors_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -5389,9 +5292,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Proxy response time (Max)",
       "tooltip": {
         "shared": true,
@@ -5400,33 +5301,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -5445,7 +5337,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -5467,7 +5359,6 @@
         "min": false,
         "rightSide": true,
         "show": true,
-        "sideWidth": null,
         "total": false,
         "values": true
       },
@@ -5476,11 +5367,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -5490,6 +5381,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(cilium_policy_endpoint_enforcement_status{job=\"cilium-agent\",pod=~\"$pod\"}) by (enforcement)",
           "format": "time_series",
           "hide": false,
@@ -5501,9 +5396,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Endpoints policy enforcement status",
       "tooltip": {
         "shared": false,
@@ -5512,9 +5405,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "series",
-        "name": null,
         "show": true,
         "values": [
           "total"
@@ -5523,24 +5414,17 @@
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -5558,7 +5442,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -5586,11 +5470,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -5610,6 +5494,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "min(cilium_proxy_redirects{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -5617,6 +5505,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(cilium_proxy_redirects{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -5624,6 +5516,10 @@
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(cilium_proxy_redirects{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -5632,9 +5528,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Proxy Redirects",
       "tooltip": {
         "shared": true,
@@ -5643,33 +5537,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -5690,7 +5575,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -5718,10 +5603,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -5745,6 +5631,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "min(rate(cilium_triggers_policy_update_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod) * 60",
           "format": "time_series",
           "intervalFactor": 1,
@@ -5752,6 +5642,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_triggers_policy_update_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod) * 60",
           "format": "time_series",
           "intervalFactor": 1,
@@ -5759,6 +5653,10 @@
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(rate(cilium_triggers_policy_update_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod) * 60",
           "format": "time_series",
           "intervalFactor": 1,
@@ -5766,6 +5664,10 @@
           "refId": "C"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(rate(cilium_triggers_policy_update_folds{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod) * 60",
           "format": "time_series",
           "intervalFactor": 1,
@@ -5774,9 +5676,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Policy Trigger Runs",
       "tooltip": {
         "shared": true,
@@ -5785,112 +5685,189 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
-      "aliasColors": {
-        "max": "#f2c96d",
-        "policy errors": "#bf1b00",
-        "policy change errors": "#bf1b00"
-      },
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
       "datasource": {
         "type": "prometheus",
         "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 35,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "max"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#f2c96d",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "policy change errors"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#bf1b00",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "policy errors"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#bf1b00",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "max"
+            },
+            "properties": [
+              {
+                "id": "custom.fillBelowTo",
+                "value": "min"
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "min"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              }
+            ]
+          }
+        ]
       },
-      "fill": 0,
-      "fillGradient": 0,
       "gridPos": {
         "h": 5,
         "w": 12,
         "x": 0,
         "y": 135
       },
-      "hiddenSeries": false,
       "id": 85,
-      "legend": {
-        "alignAsTable": false,
-        "avg": false,
-        "current": true,
-        "max": false,
-        "min": false,
-        "rightSide": false,
-        "show": true,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 1,
       "links": [],
-      "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
-      },
-      "paceLength": 10,
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "policy errors",
-          "yaxis": 2
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
-        {
-          "alias": "max",
-          "fillBelowTo": "min",
-          "lines": false
-        },
-        {
-          "alias": "min",
-          "lines": false
-        },
-        {
-          "alias": "policy change errors",
-          "yaxis": 2
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
         }
-      ],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
+      },
+      "pluginVersion": "10.2.2",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "min(cilium_policy{job=\"cilium-agent\",pod=~\"$pod\"}) by(pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -5898,6 +5875,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(cilium_policy{job=\"cilium-agent\",pod=~\"$pod\"}) by(pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -5905,6 +5886,10 @@
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(cilium_policy{job=\"cilium-agent\",pod=~\"$pod\"}) by(pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -5912,53 +5897,21 @@
           "refId": "C"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
           "expr": "sum(cilium_policy_change_total{job=\"cilium-agent\",pod=~\"$pod\"}, outcome=\"fail\") by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "policy change errors",
+          "range": true,
           "refId": "D"
         }
       ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
       "title": "Policies Per Node",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
+      "type": "timeseries"
     },
     {
       "aliasColors": {
@@ -5975,7 +5928,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -6005,11 +5958,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -6024,6 +5977,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_proxy_upstream_reply_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -6032,9 +5989,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "DNS proxy requests",
       "tooltip": {
         "shared": true,
@@ -6043,33 +5998,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "s",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -6087,7 +6033,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -6115,11 +6061,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -6139,6 +6085,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "min(cilium_policy_max_revision{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -6146,6 +6096,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(cilium_policy_max_revision{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -6153,6 +6107,10 @@
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(cilium_policy_max_revision{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -6161,9 +6119,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Policy Revision",
       "tooltip": {
         "shared": true,
@@ -6172,46 +6128,30 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
-      "content": "",
       "datasource": {
         "type": "prometheus",
         "uid": "$ds_prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
       },
       "gridPos": {
         "h": 1,
@@ -6221,7 +6161,25 @@
       },
       "id": 73,
       "links": [],
-      "mode": "markdown",
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "",
+        "mode": "markdown"
+      },
+      "pluginVersion": "10.2.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "Endpoints",
       "type": "text"
     },
@@ -6234,10 +6192,9 @@
         "type": "prometheus",
         "uid": "$ds_prometheus"
       },
-      "decimals": null,
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -6267,11 +6224,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -6281,6 +6238,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(histogram_quantile(0.90, rate(cilium_endpoint_regeneration_time_stats_seconds_bucket{job=\"cilium-agent\", scope!=\"total\", pod=~\"$pod\"}[5m]))) by (scope)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -6289,9 +6250,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Endpoint regeneration time (90th percentile)",
       "tooltip": {
         "shared": true,
@@ -6300,33 +6259,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -6338,10 +6288,9 @@
         "type": "prometheus",
         "uid": "$ds_prometheus"
       },
-      "decimals": null,
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -6371,11 +6320,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -6385,6 +6334,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(histogram_quantile(0.99, rate(cilium_endpoint_regeneration_time_stats_seconds_bucket{job=\"cilium-agent\",scope!=\"total\", pod=~\"$pod\"}[5m]))) by (scope)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -6393,9 +6346,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Endpoint regeneration time (99th percentile)",
       "tooltip": {
         "shared": true,
@@ -6404,33 +6355,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -6449,7 +6391,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -6477,11 +6419,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -6499,6 +6441,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_endpoint_regenerations_total{job=\"cilium-agent\",pod=~\"$pod\"}[30s])) by(outcome)",
           "format": "time_series",
           "instant": false,
@@ -6508,9 +6454,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Endpoint regenerations",
       "tooltip": {
         "shared": false,
@@ -6519,33 +6463,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "opm",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -6563,7 +6498,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -6592,11 +6527,11 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -6606,6 +6541,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(cilium_endpoint_state{job=\"cilium-agent\",pod=~\"$pod\"}) by (endpoint_state)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -6614,9 +6553,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Cilium endpoint state",
       "tooltip": {
         "shared": false,
@@ -6625,46 +6562,30 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
-      "content": "",
       "datasource": {
         "type": "prometheus",
         "uid": "$ds_prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
       },
       "gridPos": {
         "h": 1,
@@ -6674,7 +6595,25 @@
       },
       "id": 74,
       "links": [],
-      "mode": "markdown",
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "",
+        "mode": "markdown"
+      },
+      "pluginVersion": "10.2.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "Controllers",
       "type": "text"
     },
@@ -6693,7 +6632,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -6722,11 +6661,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -6745,6 +6684,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_controllers_runs_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -6752,6 +6695,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(cilium_controllers_failing{job=\"cilium-agent\",pod=~\"$pod\"}) by(pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -6760,9 +6707,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Controllers",
       "tooltip": {
         "shared": true,
@@ -6771,33 +6716,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "opm",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -6818,7 +6754,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -6849,15 +6785,14 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
-      "repeat": null,
       "repeatDirection": "h",
       "seriesOverrides": [
         {
@@ -6874,6 +6809,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_controllers_runs_duration_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, status) / sum(rate(cilium_controllers_runs_duration_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, status)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -6882,9 +6821,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Controller Durations",
       "tooltip": {
         "shared": true,
@@ -6893,9 +6830,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -6904,35 +6839,23 @@
           "format": "s",
           "label": "",
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "s",
           "label": "",
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
-      "content": "",
       "datasource": {
         "type": "prometheus",
         "uid": "$ds_prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
       },
       "gridPos": {
         "h": 1,
@@ -6942,7 +6865,25 @@
       },
       "id": 60,
       "links": [],
-      "mode": "markdown",
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "",
+        "mode": "markdown"
+      },
+      "pluginVersion": "10.2.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "Kubernetes integration",
       "type": "text"
     },
@@ -6957,7 +6898,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -6989,11 +6930,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -7003,6 +6944,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_k8s_client_api_latency_time_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])/rate(cilium_k8s_client_api_latency_time_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -7011,9 +6956,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "apiserver latency (average node)",
       "tooltip": {
         "shared": true,
@@ -7022,33 +6965,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -7062,7 +6996,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -7094,11 +7028,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -7108,6 +7042,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "max(rate(cilium_k8s_client_api_latency_time_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])/rate(cilium_k8s_client_api_latency_time_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -7116,9 +7054,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "apiserver latency (max node)",
       "tooltip": {
         "shared": true,
@@ -7127,33 +7063,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "s",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -7167,7 +7094,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -7199,11 +7126,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -7213,6 +7140,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_k8s_client_api_latency_time_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -7221,9 +7152,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "apiserver #calls (sum all nodes)",
       "tooltip": {
         "shared": true,
@@ -7232,33 +7161,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -7272,7 +7192,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -7304,11 +7224,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -7318,6 +7238,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_k8s_client_api_calls_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, return_code)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -7326,9 +7250,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "apiserver calls (sum all nodes)",
       "tooltip": {
         "shared": true,
@@ -7337,33 +7259,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -7377,7 +7290,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -7408,11 +7321,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -7422,6 +7335,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_kubernetes_events_received_total{job=\"cilium-agent\",equal=\"true\", valid=\"true\", pod=~\"$pod\"}[5m])) by (pod, scope, action)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -7430,9 +7347,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Valid, Unnecessary K8s Events Received",
       "tooltip": {
         "shared": true,
@@ -7441,33 +7356,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -7481,7 +7387,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -7511,11 +7417,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -7525,6 +7431,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_kubernetes_events_received_total{job=\"cilium-agent\",equal=\"true\", valid=\"false\", pod=~\"$pod\"}[5m])) by (pod, scope, action)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -7533,9 +7443,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Invalid, Unnecessary K8s Events Received",
       "tooltip": {
         "shared": true,
@@ -7544,33 +7452,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -7584,7 +7483,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -7614,11 +7513,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -7628,6 +7527,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_kubernetes_events_received_total{job=\"cilium-agent\",equal=\"false\", valid=\"true\", pod=~\"$pod\"}[5m])) by (pod, scope, action, valid)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -7636,9 +7539,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Valid, Necessary K8s Events Received",
       "tooltip": {
         "shared": true,
@@ -7647,33 +7548,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -7687,7 +7579,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -7717,10 +7609,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -7730,6 +7623,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "sum(rate(cilium_kubernetes_events_received_total{job=\"cilium-agent\",equal=\"false\", valid=\"false\", pod=~\"$pod\"}[5m])) by (pod, scope, action)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -7738,9 +7635,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Invalid, Necessary K8s Events Received",
       "tooltip": {
         "shared": true,
@@ -7749,33 +7644,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -7789,7 +7675,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -7819,11 +7705,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -7833,6 +7719,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"CiliumNetworkPolicy\"}[$__rate_interval])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
@@ -7841,9 +7731,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "CiliumNetworkPolicy Events",
       "tooltip": {
         "shared": true,
@@ -7852,33 +7740,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -7896,7 +7775,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -7926,11 +7805,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -7940,6 +7819,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"NetworkPolicy\"}[$__rate_interval])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
@@ -7948,9 +7831,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "NetworkPolicy Events",
       "tooltip": {
         "shared": true,
@@ -7959,33 +7840,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -8003,7 +7875,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -8033,11 +7905,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -8047,6 +7919,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"Pod\"}[$__rate_interval])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
@@ -8055,9 +7931,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Pod Events",
       "tooltip": {
         "shared": true,
@@ -8066,33 +7940,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -8110,7 +7975,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -8140,11 +8005,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -8154,6 +8019,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",scope=\"Node\", pod=~\"$pod\"}[$__rate_interval])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
@@ -8162,9 +8031,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Node Events",
       "tooltip": {
         "shared": true,
@@ -8173,33 +8040,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -8213,7 +8071,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -8243,11 +8101,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -8257,6 +8115,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"Service\"}[$__rate_interval])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
@@ -8265,9 +8127,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Service Events",
       "tooltip": {
         "shared": true,
@@ -8276,33 +8136,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -8316,7 +8167,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -8346,11 +8197,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -8360,6 +8211,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"Endpoint\"}[$__rate_interval])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
@@ -8368,9 +8223,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Endpoints Events",
       "tooltip": {
         "shared": true,
@@ -8379,33 +8232,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -8419,7 +8263,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -8449,11 +8293,11 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": true,
-        "dataLinks": []
+        "alertThreshold": true
       },
       "paceLength": 10,
       "percentage": false,
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -8463,6 +8307,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"Namespace\"}[$__rate_interval])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
@@ -8471,9 +8319,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Namespace Events",
       "tooltip": {
         "shared": true,
@@ -8482,58 +8328,70 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "opm",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     }
   ],
   "refresh": false,
-  "schemaVersion": 25,
+  "schemaVersion": 36,
   "style": "dark",
   "tags": [],
   "templating": {
     "list": [
       {
+        "current": {
+          "selected": false,
+          "text": "main",
+          "value": "main"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "datasource",
+        "multi": false,
+        "name": "ds_prometheus",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
         "allValue": ".*",
         "current": {
-          "selected": true,
-          "text": "All",
-          "value": "$__all"
+          "selected": false,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "$ds_prometheus"
+          "uid": "${ds_prometheus}"
         },
         "definition": "label_values(cilium_version, pod)",
         "hide": 0,
         "includeAll": true,
-        "label": null,
-        "multi": false,
+        "multi": true,
         "name": "pod",
         "options": [],
         "query": {
@@ -8545,7 +8403,6 @@
         "skipUrlSync": false,
         "sort": 1,
         "tagValuesQuery": "",
-        "tags": [],
         "tagsQuery": "",
         "type": "query",
         "useTags": false
@@ -8553,7 +8410,7 @@
     ]
   },
   "time": {
-    "from": "now-3h",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {
@@ -8583,6 +8440,6 @@
   "timezone": "browser",
   "title": "Cilium Metrics",
   "uid": "vtuWtdumz",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }
