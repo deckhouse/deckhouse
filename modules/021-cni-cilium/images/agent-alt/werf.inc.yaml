@@ -122,25 +122,25 @@ import:
 #  add: /iptables
 #  to: /iptables
 #  before: install
-#- artifact: {{ $.ModuleName }}/cilium-artifact
-#  add: /go/src/github.com/cilium/cilium/images/runtime/orig/
-#  to: /go/src/github.com/cilium/cilium/images/runtime
-#  before: install
-#  includePaths:
-#  - iptables-wrapper-installer.sh
-#- artifact: {{ $.ModuleName }}/cilium-artifact
-#  add: /tmp/install
-#  to: /
-#  before: install
-#  includePaths:
-#  - cni-uninstall.sh
-#  - init-container.sh
-#  - install-plugin.sh
-#  - LICENSE.all
-#  - etc/bash_completion.d/cilium
-#  - opt/cni/bin/cilium-cni
-#  - usr/bin/cilium*
-#  - var/lib/cilium/bpf
+- artifact: {{ $.ModuleName }}/cilium-alt-artifact
+  add: /go/src/github.com/cilium/cilium/images/runtime/orig/
+  to: /go/src/github.com/cilium/cilium/images/runtime
+  before: install
+  includePaths:
+  - iptables-wrapper-installer.sh
+- artifact: {{ $.ModuleName }}/cilium-alt-artifact
+  add: /tmp/install
+  to: /
+  before: install
+  includePaths:
+  - cni-uninstall.sh
+  - init-container.sh
+  - install-plugin.sh
+  - LICENSE.all
+  - etc/bash_completion.d/cilium
+  - opt/cni/bin/cilium-cni
+  - usr/bin/cilium*
+  - var/lib/cilium/bpf
 - artifact: {{ $.ModuleName }}/cilium-envoy-alt-artifact
   add: /tmp/install/usr
   to: /usr

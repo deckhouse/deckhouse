@@ -51,6 +51,7 @@ shell:
     libnetfilter_conntrack-devel libnetfilter_conntrack libnfnetlink-devel \
     libnftnl-devel \
     elfutils-devel zlib-devel
+  - apt-get install -y llvm-devel
   # for debug
   - apt-get install -y strace vim-console
   # apt clean
