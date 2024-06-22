@@ -362,18 +362,6 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	var clusterDomain string
-	err = json.Unmarshal(metaConfig.ClusterConfig["clusterDomain"], &clusterDomain)
-	if err != nil {
-		return err
-	}
-
-	// we need clusterDomain to generate proper certificate for packages proxy
-	err = StartRegistryPackagesProxy(metaConfig.Registry, clusterDomain)
-	if err != nil {
-		return fmt.Errorf("failed to start registry packages proxy: %v", err)
-	}
-
 	if err := WaitForSSHConnectionOnMaster(b.SSHClient); err != nil {
 		return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
 	}
@@ -384,7 +372,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	if err := RunBashiblePipeline(b.SSHClient, metaConfig, nodeIP, devicePath, true); err != nil {
+	if err := RunBashiblePipeline(b.SSHClient, metaConfig, nodeIP, devicePath); err != nil {
 		return err
 	}
 

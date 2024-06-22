@@ -23,6 +23,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -125,35 +126,122 @@ const (
 `
 )
 
-func CheckBashibleBundle(sshClient *ssh.Client) bool {
-	var bashibleUpToDate bool
-	_ = log.Process("bootstrap", "Check Bashible", func() error {
-		bashibleCmd := sshClient.Command("/var/lib/bashible/bashible.sh", "--local").
-			Sudo().WithTimeout(20 * time.Second)
-		var output string
+func checkBashibleAlreadyRun(sshClient *ssh.Client) (bool, error) {
+	isReady := false
+	err := log.Process("bootstrap", "Checking bashible is ready", func() error {
+		cmd := sshClient.Command("ls", "/var/lib/bashible/first-control-plane-bashible-ran").Sudo().WithTimeout(10 * time.Second)
 
-		err := bashibleCmd.WithStdoutHandler(func(l string) {
-			if output == "" {
-				output = l
-			} else {
-				return
+		if err := cmd.Run(); err != nil {
+			var ee *exec.ExitError
+			// ssh exits with the exit status of the remote command or with 255 if an error occurred.
+			if errors.As(err, &ee) {
+				// file not found - it is ok, need start bashible pipeline
+				isReady = false
+				if ee.ExitCode() == 2 {
+					return nil
+				}
+
+				return err
 			}
-			switch {
-			case strings.Contains(output, "Can't acquire lockfile /var/lock/bashible."):
-				break
-			case strings.Contains(output, "Configuration is in sync, nothing to do."):
-				log.InfoF(bashibleInstalledMessage, output)
-				bashibleUpToDate = true
-			default:
-				log.InfoF(bashibleIsNotReadyMessage, output)
-			}
-		}).Run()
-		if err != nil {
-			log.DebugLn(err.Error())
 		}
+
+		// file exists - should not start bashible pipeline
+		isReady = true
 		return nil
 	})
-	return bashibleUpToDate
+
+	return isReady, err
+}
+
+func getBashiblePIDs(sshClient *ssh.Client) ([]string, error) {
+	var psStrings []string
+	h := func(l string) {
+		psStrings = append(psStrings, l)
+	}
+	cmd := sshClient.Command("ps", "--no-headers", "-o", "args:1024", "-o", "|%p").
+		Sudo().
+		WithTimeout(10 * time.Second).
+		WithStdoutHandler(h)
+
+	if err := cmd.Run(); err != nil {
+		var ee *exec.ExitError
+		// ssh exits with the exit status of the remote command or with 255 if an error occurred.
+		if errors.As(err, &ee) && ee.ExitCode() == 255 {
+			return nil, err
+		}
+	}
+
+	var res []string
+	for _, l := range psStrings {
+		log.DebugF("ps string: '%s'\n", l)
+
+		parts := strings.SplitN(l, "|", 2)
+		if len(parts) < 2 {
+			log.DebugLn("Skip ps string without pid")
+			continue
+		}
+
+		if !strings.Contains("bashible.sh", parts[0]) {
+			continue
+		}
+
+		pid := strings.TrimSpace(parts[1])
+		log.DebugF("Found bashible PID: %s\n", pid)
+
+		res = append(res, pid)
+	}
+
+	return res, nil
+}
+
+func killBashible(sshClient *ssh.Client, pids []string) error {
+	cmd := sshClient.Command("kill", pids...).
+		Sudo().
+		WithTimeout(10 * time.Second)
+
+	if err := cmd.Run(); err != nil {
+		var ee *exec.ExitError
+		// ssh exits with the exit status of the remote command or with 255 if an error occurred.
+		if errors.As(err, &ee) && ee.ExitCode() == 255 {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func unlockBashible(sshClient *ssh.Client) error {
+	cmd := sshClient.Command("rm", "-f", "/var/lock/bashible").
+		Sudo().
+		WithTimeout(10 * time.Second)
+
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func cleanupPreviousBashibleRunIfNeed(sshClient *ssh.Client) error {
+	return log.Process("bootstrap", "Cleanup previous bashible run if need", func() error {
+		log.DebugF("Gettting bashible pids")
+		pids, err := getBashiblePIDs(sshClient)
+		if err != nil {
+			return err
+		}
+
+		log.DebugLn("Got bashible pids: %v", pids)
+		if len(pids) == 0 {
+			log.InfoLn("Bashible instance not found. Start it!")
+			return nil
+		}
+
+		if err := killBashible(sshClient, pids); err != nil {
+			return err
+		}
+
+		return unlockBashible(sshClient)
+	})
 }
 
 func SetupSSHTunnelToRegistryPackagesProxy(sshCl *ssh.Client) (*frontend.ReverseTunnel, error) {
@@ -286,27 +374,38 @@ func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
 	return tlsCert, nil
 }
 
-func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, devicePath string, useRegistryProxy bool) error {
-	var tun *frontend.ReverseTunnel
-	if useRegistryProxy {
-		log.DebugLn("Starting reverse tunnel routine")
-		// we need reup tunnel every step because we can lost connection
-		var err error
-		tun, err = SetupSSHTunnelToRegistryPackagesProxy(sshClient)
-		if err != nil {
-			return fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
-		}
-		defer func() {
-			if tun == nil {
-				return
-			}
-
-			err := tun.Stop()
-			if err != nil {
-				log.DebugF("Cannot stop SSH tunnel to registry packages proxy: %v\n", err)
-			}
-		}()
+func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, devicePath string) error {
+	var clusterDomain string
+	err := json.Unmarshal(cfg.ClusterConfig["clusterDomain"], &clusterDomain)
+	if err != nil {
+		return err
 	}
+
+	log.DebugF("Got cluster domain: %s", clusterDomain)
+	log.DebugLn("Starting registry packages proxy")
+
+	// we need clusterDomain to generate proper certificate for packages proxy
+	err = StartRegistryPackagesProxy(cfg.Registry, clusterDomain)
+	if err != nil {
+		return fmt.Errorf("failed to start registry packages proxy: %v", err)
+	}
+
+	var tun *frontend.ReverseTunnel
+	log.DebugLn("Starting reverse tunnel routine")
+	tun, err = SetupSSHTunnelToRegistryPackagesProxy(sshClient)
+	if err != nil {
+		return fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
+	}
+	defer func() {
+		if tun == nil {
+			return
+		}
+
+		err := tun.Stop()
+		if err != nil {
+			log.DebugF("Cannot stop SSH tunnel to registry packages proxy: %v\n", err)
+		}
+	}()
 
 	if err := CheckDHCTLDependencies(sshClient); err != nil {
 		return err
@@ -371,20 +470,23 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 			// I don't see any problems apart from not very nice code
 
 			log.DebugLn("Check bundle routine start")
+			ready, err := checkBashibleAlreadyRun(sshClient)
+			if err != nil {
+				return err
+			}
 
-			if ok := CheckBashibleBundle(sshClient); ok {
+			if ready {
+				log.Success("Bashible already run!")
 				return nil
 			}
 
-			log.DebugLn("Kill bashible routine start")
-
-			if err := killBashible(sshClient); err != nil {
+			if err := cleanupPreviousBashibleRunIfNeed(sshClient); err != nil {
 				return err
 			}
 
 			log.DebugLn("Start execute bashible bundle routine")
 
-			err := ExecuteBashibleBundle(sshClient, templateController.TmpDir)
+			err = ExecuteBashibleBundle(sshClient, templateController.TmpDir)
 			if err != nil {
 				if tun == nil {
 					return err
@@ -394,6 +496,7 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 					return err
 				}
 
+				// we need reup tunnel every step because we can lost connection
 				// we do not need defer for stopping tunnel. Tunnel will stop in deferrer above
 				tun, err = SetupSSHTunnelToRegistryPackagesProxy(sshClient)
 				if err != nil {
@@ -405,33 +508,14 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 		})
 }
 
-func killBashible(sshClient *ssh.Client) error {
-	return retry.NewSilentLoop("Kill bashible", 30, 10*time.Second).Run(func() error {
-		cmd := sshClient.Command("killall", "bash").Sudo().WithTimeout(10 * time.Second)
-
-		err := cmd.Run()
-		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) && ee.ExitCode() == 1 {
-				return nil
-			}
-
-			return err
-		}
-		return nil
-	})
-}
-
-const dependencyCmd = "type"
-
 func CheckDHCTLDependencies(sshClient *ssh.Client) error {
 	return log.Process("bootstrap", "Check DHCTL Dependencies", func() error {
 		dependencyArgs := []string{"sudo", "rm", "tar", "mount", "awk", "grep", "cut", "sed", "shopt",
-			"mkdir", "cp", "join", "killall"}
+			"mkdir", "cp", "join", "cat", "ps", "kill"}
 
 		for _, args := range dependencyArgs {
 			err := retry.NewLoop(fmt.Sprintf("Check dependency %s", args), 30, 10*time.Second).Run(func() error {
-				output, err := sshClient.Command(dependencyCmd, args).CombinedOutput()
+				output, err := sshClient.Command("type", args).CombinedOutput()
 				if err != nil {
 					return fmt.Errorf("bashible dependency error: %s",
 						string(output),
