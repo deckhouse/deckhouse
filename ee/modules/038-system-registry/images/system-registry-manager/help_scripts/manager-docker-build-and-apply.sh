@@ -3,8 +3,8 @@
 set -e
 
 # Входные параметры:
-DECKHOUSE_PATH="/Users/vadimmartynov/Data/Flant/deckhouse/"
-IMG_PREFIX="vadim"
+DECKHOUSE_PATH="/deckhouse/"
+IMG_PREFIX="$USER"
 DOCKER_REGISTRY="cr.yandex/crp8n201pre28pm81udl/sys/deckhouse-oss"
 PATCH_MODULE_CONFIG_BY_IMAGE_AMD64_NAME_DIGEST=true
 
@@ -54,7 +54,7 @@ else
 fi
 docker buildx build $DECKHOUSE_PATH \
     -f Manager.Dockerfile \
-    --platform linux/amd64,linux/arm64 \
+    --platform linux/amd64 \
     -t $IMG_NAME_LATEST \
     --push
 
