@@ -34,6 +34,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
+var imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
+
 const (
 	deckhouseRegistrySecretName = "deckhouse-registry"
 
@@ -43,8 +45,6 @@ const (
 	deployTimeEnvVarFormat      = time.RFC3339
 
 	ConvergeLabel = "dhctl.deckhouse.io/node-for-converge"
-
-	imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 )
 
 type DeckhouseDeploymentParams struct {
@@ -675,4 +675,8 @@ func KubeDNSService(ipAddress string) *apiv1.Service {
 			},
 		},
 	}
+}
+
+func InitGlobalVars(pwd string) {
+	imagesDigestsJSON = pwd + "/deckhouse/candi/images_digests.json"
 }
