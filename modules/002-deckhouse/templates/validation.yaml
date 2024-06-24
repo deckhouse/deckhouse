@@ -62,7 +62,7 @@ spec:
         apiVersions: ["*"]
         operations:  ["CREATE", "UPDATE"]
         resources:   ["*"]
-{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'exclude-kube-system'
       expression: '!("system:nodes" in request.userInfo.groups)' # exclude kubelet and kube-controller requests
