@@ -48,9 +48,9 @@ git:
   includePaths:
   - bundles
   - common-steps
+  - bootstrap
   - bashible.sh.tpl
-  - bootstrap.sh.tpl
-  - bootstrap-networks.sh.tpl
+
   excludePaths:
   - "**/cluster-bootstrap"
 - add: /{{ .ModulePath }}candi/cloud-providers
