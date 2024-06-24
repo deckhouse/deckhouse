@@ -35,7 +35,7 @@ jobs:
       pull-requests: write
       contents: read
     steps:
-    - uses: devindford/Append_PR_Comment@v1
+    - uses: devindford/Append_PR_Comment@v1.1.3
       with:
         repo-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         body-update-action: 'suffix'
