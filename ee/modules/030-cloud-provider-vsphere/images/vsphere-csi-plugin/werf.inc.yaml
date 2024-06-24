@@ -2,10 +2,10 @@
   {{- $version := toString $key }}
   {{- if $value.csi.vsphere }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/vsphere-csi
   to: /bin/vsphere-csi
   before: setup
@@ -18,7 +18,7 @@ import:
 docker:
   ENTRYPOINT: ["/bin/vsphere-csi"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     {{- if semverCompare ">=1.30" $version }}
 from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
     {{- else }}
@@ -35,6 +35,8 @@ shell:
   - git clone --depth 1 --branch {{ $value.csi.vsphere }} {{ $.SOURCE_REPO }}/kubernetes-sigs/vsphere-csi-driver.git /src
   - cd /src
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o vsphere-csi cmd/vsphere-csi/main.go
+  {{- end }}
+{{- end }}
 ---
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs* /sbin/mount.nfs* /sbin/umount.nfs*" }}
 ---

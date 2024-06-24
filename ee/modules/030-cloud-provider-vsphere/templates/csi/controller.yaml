@@ -33,7 +33,9 @@
   readOnly: true
 {{- end }}
 
-{{- $csiControllerImage := include "helm_lib_module_image" (list . "vsphereCsiPlugin") }}
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $csiImageName := join "" (list "vsphereCsiPlugin" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- $csiControllerImage := include "helm_lib_module_image" (list . $csiImageName) }}
 
 {{- $csiControllerConfig := dict }}
 {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
