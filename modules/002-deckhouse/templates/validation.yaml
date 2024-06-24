@@ -24,7 +24,7 @@ spec:
     - expression: '!(request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
         && (object.metadata.name.startsWith("d8-") || object.metadata.name.startsWith("kube-")))'
       reason: Forbidden
-{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
       messageExpression: '''Creation of system namespaces is forbidden'''
 {{- end }}
 ---
@@ -39,7 +39,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
 spec:
   policyName: {{ $policyName }}
-{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   validationActions: [Deny]
 {{- end }}
 ---
@@ -87,8 +87,8 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
 spec:
   policyName: "label-objects.deckhouse.io"
-{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
-  validationActions: [Deny]
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+  validationActions: [Deny, Audit]
 {{- end }}
   matchResources:
     objectSelector:
