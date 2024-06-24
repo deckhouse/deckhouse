@@ -72,7 +72,7 @@ spec:
       messageExpression: '''Creating an object with the `heritage: deckhouse` label is forbidden'''
 {{- else }}
   validations:
-    - expression: '(request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username.startsWith("system:node:"))'
+    - expression: '(request.userInfo.username.startsWith("system:serviceaccount:d8-") || "system:nodes" in request.userInfo.groups)'
       reason: Forbidden
 {{- end }}
 ---
