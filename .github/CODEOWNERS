@@ -32,7 +32,7 @@
 110-istio/                      @apolovov
 140-user-authz/                 @nabokihms @apolovov
 150-user-authn/                 @nabokihms
-160-multitenancy-manager/       @yalosev @Dmitrykob @miklezzzz
+160-multitenancy-manager/       @yalosev @miklezzzz
 200-operator-prometheus/        @nabokihms @vladimirGuryanov @lazovskiy
 300-prometheus/                 @nabokihms @vladimirGuryanov @lazovskiy
 301-prometheus-*/               @nabokihms @vladimirGuryanov @lazovskiy
