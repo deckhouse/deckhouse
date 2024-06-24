@@ -1,7 +1,9 @@
 {{- if semverCompare ">= 1.26" .Values.global.discovery.kubernetesVersion }}
 {{- $policyName := "d8-multitenancy-manager" }}
 ---
-{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
+{{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
+apiVersion: admissionregistration.k8s.io/v1
+{{- else if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1beta1
 {{- else }}
 apiVersion: admissionregistration.k8s.io/v1alpha1
@@ -23,7 +25,9 @@ spec:
     - expression: 'request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"'
       messageExpression: "'This resource is managed by ' + string(object.metadata.namespace) + ' Project. Manual modification is forbidden.'"
 ---
-{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
+{{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
+apiVersion: admissionregistration.k8s.io/v1
+{{- else if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1beta1
 {{- else }}
 apiVersion: admissionregistration.k8s.io/v1alpha1
