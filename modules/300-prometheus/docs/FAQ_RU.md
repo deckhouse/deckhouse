@@ -651,7 +651,7 @@ spec:
   metricsPath: '/metrics'
 ```
 
-## Как добавить дополнительные пробы в Blackbox exporter? 
+## Как опрашивать дополнительные эндпоинты используя Probe?
 
 Добавьте в namespace, в котором находится Probe, лейбл `prometheus.deckhouse.io/probe-watcher-enabled: "true"`.
 
