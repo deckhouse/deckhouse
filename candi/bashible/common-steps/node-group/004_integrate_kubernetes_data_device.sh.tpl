@@ -50,6 +50,37 @@ else
   DATA_DEVICE="$(get_data_device_secret | jq -re --arg hostname "$HOSTNAME" '.data[$hostname]' | base64 -d)"
 fi
 
+{{- /*
+# Sometimes the `device_path` output from terraform points to a non-existent device.
+# In such situation we want to find an unpartitioned unused disk
+# with no file system, assuming it is the correct one.
+#
+# Example of this situation (lsblk -o path,type,mountpoint,fstype --tree --json):
+#         {
+#          "path": "/dev/vda",
+#          "type": "disk",
+#          "mountpoint": null,
+#          "fstype": null,
+#          "children": [
+#             {
+#                "path": "/dev/vda1",
+#                "type": "part",
+#                "mountpoint": "/",
+#                "fstype": "ext4"
+#             },{
+#                "path": "/dev/vda15",
+#                "type": "part",
+#                "mountpoint": "/boot/efi",
+#                "fstype": "vfat"
+#             }
+#          ]
+#       },{
+#          "path": "/dev/vdb",
+#          "type": "disk",
+#          "mountpoint": null,
+#          "fstype": null
+#       }
+*/}}
 if ! [ -b "$DATA_DEVICE" ]; then
   >&2 echo "failed to find $DATA_DEVICE disk. Trying to detect the correct one"
   DATA_DEVICE=$(lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '.blockdevices[] | select (.type == "disk" and .mountpoint == null and .children == null) | .path')
