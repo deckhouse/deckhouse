@@ -1,13 +1,15 @@
 module trivy-provider
 
-go 1.22
+go 1.22.0
+
+toolchain go1.22.3
 
 require (
 	github.com/aquasecurity/trivy v0.52.2
 	github.com/go-chi/chi/v5 v5.0.14
-	github.com/go-logr/logr v1.4.1
+	github.com/go-logr/logr v1.4.2
 	github.com/go-logr/zapr v1.3.0
-	github.com/google/go-containerregistry v0.19.1
+	github.com/google/go-containerregistry v0.19.2
 	github.com/open-policy-agent/frameworks/constraint v0.0.0-20240524210416-5368a3b697f2
 	go.uber.org/zap v1.27.0
 	modernc.org/sqlite v1.30.1
