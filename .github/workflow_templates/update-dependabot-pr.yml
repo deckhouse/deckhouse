@@ -33,15 +33,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
+      contents: read
     steps:
-    - uses: tzkhan/pr-update-action@v2
+    - uses: devindford/Append_PR_Comment@v1
       with:
-        base-branch-regex: '.+'
-        head-branch-regex: '.+'
         repo-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         body-update-action: 'suffix'
         body-template: |
-
           ---
           ```changes
           section: dependabot
