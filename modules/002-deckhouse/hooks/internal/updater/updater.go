@@ -33,14 +33,14 @@ import (
 )
 
 func NewDeckhouseUpdater(input *go_hook.HookInput, mode string, data updater.DeckhouseReleaseData,
-	podIsReady, isBootstrapping bool) (*updater.Updater[*DeckhouseRelease], error) {
+	podIsReady, isBootstrapping bool, enabledModules []string) (*updater.Updater[*DeckhouseRelease], error) {
 	nConfig, err := updater.ParseNotificationConfigFromValues(input)
 	if err != nil {
 		return nil, fmt.Errorf("parsing notification config: %v", err)
 	}
 
 	return updater.NewUpdater[*DeckhouseRelease](input.LogEntry, nConfig, mode, data, podIsReady, isBootstrapping,
-		newKubeAPI(input), newMetricsUpdater(input), newValueSettings(input), newWebhookDataGetter()), nil
+		newKubeAPI(input), newMetricsUpdater(input), newValueSettings(input), newWebhookDataGetter(), enabledModules), nil
 }
 
 func newWebhookDataGetter() *webhookDataGetter {
