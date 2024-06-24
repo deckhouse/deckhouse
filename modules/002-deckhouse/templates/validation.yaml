@@ -21,8 +21,8 @@ spec:
         operations:  ["CREATE"]
         resources:   ["namespaces"]
   validations:
-    - expression: '!(request.userInfo.username != ''system:serviceaccount:d8-system:deckhouse''
-        && (object.metadata.name.startsWith(''d8-'') || object.metadata.name.startsWith(''kube-'')))'
+    - expression: '!(request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
+        && (object.metadata.name.startsWith("d8-") || object.metadata.name.startsWith("kube-")))'
       reason: Forbidden
 {{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
       messageExpression: '''Creation of system namespaces is forbidden'''
@@ -67,12 +67,12 @@ spec:
     - name: 'exclude-kube-system'
       expression: '!("system:nodes" in request.userInfo.groups)' # exclude kubelet and kube-controller requests
   validations:
-    - expression: 'request.userInfo.username.startsWith(''system:serviceaccount:d8-'')'
+    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-")'
       reason: Forbidden
       messageExpression: '''Creating an object with the `heritage: deckhouse` label is forbidden'''
 {{- else }}
   validations:
-    - expression: 'request.userInfo.username.startsWith(''system:serviceaccount:d8-'') || request.userInfo.username.startsWith(''system:node:'')'
+    - expression: '(request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username.startsWith("system:node:"))'
       reason: Forbidden
 {{- end }}
 ---
