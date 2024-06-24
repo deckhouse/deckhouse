@@ -28,7 +28,7 @@ function prepare_base_d8_binaries() {
   {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
     {{- if $bootstrap_networks := $context.Files.Get "candi/bashible/bootstrap/02-network-scripts.sh.tpl" }}
 function run_cloud_network_setup() {
-      {{- tpl $fetch_base_pkgs $tpl_context | nindent 2 }}
+      {{- tpl $bootstrap_networks $tpl_context | nindent 2 }}
     {{- end }}
 return 0
 }
