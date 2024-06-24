@@ -24,6 +24,12 @@ from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
     {{- else }}
 from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
     {{- end }}
+git:
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -31,9 +37,12 @@ shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p /src
+  - git clone --depth 1 --branch v0.2.0 {{ $.SOURCE_REPO }}/gofsutil.git /gofsutil
+  - cd /gofsutil && go mod init deckhouse/3p/gofsutil
   - git clone --depth 1 --branch {{ $value.csi.vsphere }} {{ $.SOURCE_REPO }}/kubernetes-sigs/vsphere-csi-driver.git /src
   - cd /src
+  - git apply /patches/{{ $version }}/*.patch --verbose
+  - go mod tidy
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o vsphere-csi cmd/vsphere-csi/main.go
   {{- end }}
 {{- end }}
