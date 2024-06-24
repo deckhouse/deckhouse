@@ -1,0 +1,47 @@
+control-plane-manager:
+  features:
+    - summary: Adding a new module static-routing-manager.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7952
+deckhouse-controller:
+  features:
+    - summary: Adding a new module static-routing-manager.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7952
+dhctl:
+  features:
+    - summary: Add new commander/detach operation, add commander-uuid option for all commander operations
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8607
+    - summary: Add cluster config validation gRPC services.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8606
+docs:
+  features:
+    - summary: Adding a new module static-routing-manager.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7952
+ingress-nginx:
+  fixes:
+    - summary: Fix HostPortWithProxyProtocol inlet.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8742
+monitoring-kubernetes-control-plane:
+  fixes:
+    - summary: Add missing datasource variable to deprecated-apis dashboard
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8689
+node-manager:
+  features:
+    - summary: Re-enable ClusterHasOrphanedDisks alert for Yandex Cloud.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8718
+static-routing-manager:
+  features:
+    - summary: Adding a new module static-routing-manager.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7952
+testing:
+  features:
+    - summary: Adding a new module static-routing-manager.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7952
+tools:
+  features:
+    - summary: Adding a new module static-routing-manager.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7952
+user-authn:
+  fixes:
+    - summary: Fix crowd basic auth proxy migration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8704
+
