@@ -30,7 +30,7 @@ func PrepareBootstrap(templateController *Controller, nodeIP, bundleName string,
 	}
 	saveInfo := []saveFromTo{
 		{
-			from: filepath.Join(candiBashibleDir, "common-steps"),
+			from: filepath.Join(candiBashibleDir, "bootstrap"),
 			to:   bootstrapDir,
 			data: bashibleData,
 		},
