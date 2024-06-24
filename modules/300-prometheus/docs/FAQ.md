@@ -654,7 +654,7 @@ spec:
   metricsPath: '/metrics'
 ```
 
-## How do I add Prometheus Blackbox exporter Probes?
+## How do I add additional Blackbox exporter Probes?
 
 Add the label `prometheus.deckhouse.io/probe-watcher-enabled: "true"` to the namespace where the Probe was created.
 
