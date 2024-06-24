@@ -64,15 +64,17 @@ spec:
         resources:   ["*"]
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
+    - name: 'exclude-system-node'
+      expression: '!("system:nodes" in request.userInfo.groups)'
     - name: 'exclude-kube-system'
-      expression: '!("system:nodes" in request.userInfo.groups)' # exclude kubelet and kube-controller requests
+      expression: '!("system:serviceaccounts:kube-system" in request.userInfo.groups)'
   validations:
     - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-")'
       reason: Forbidden
       messageExpression: '''Creating an object with the `heritage: deckhouse` label is forbidden'''
 {{- else }}
   validations:
-    - expression: '(request.userInfo.username.startsWith("system:serviceaccount:d8-") || "system:nodes" in request.userInfo.groups)'
+    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || "system:nodes" in request.userInfo.groups || "system:serviceaccounts:kube-system" in request.userInfo.groups'
       reason: Forbidden
 {{- end }}
 ---
