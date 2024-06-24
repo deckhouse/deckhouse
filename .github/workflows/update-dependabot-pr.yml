@@ -35,6 +35,8 @@ jobs:
         github.actor == 'dependabot-preview'
       )
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
     - uses: tzkhan/pr-update-action@v2
       with:
