@@ -28,6 +28,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 const (
@@ -68,11 +69,13 @@ type Updater[R Release] struct {
 	metricsUpdater    MetricsUpdater
 	settings          Settings
 	webhookDataGetter WebhookDataGetter[R]
+
+	enabledModules set.Set
 }
 
 func NewUpdater[R Release](logger logger.Logger, notificationConfig *NotificationConfig, mode string,
 	data DeckhouseReleaseData, podIsReady, isBootstrapping bool, kubeAPI KubeAPI[R], metricsUpdater MetricsUpdater,
-	settings Settings, webhookDataGetter WebhookDataGetter[R]) *Updater[R] {
+	settings Settings, webhookDataGetter WebhookDataGetter[R], enabledModules []string) *Updater[R] {
 	now := time.Now().UTC()
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		now = time.Date(2021, 01, 01, 13, 30, 00, 00, time.UTC)
@@ -94,6 +97,8 @@ func NewUpdater[R Release](logger logger.Logger, notificationConfig *Notificatio
 		metricsUpdater:    metricsUpdater,
 		settings:          settings,
 		webhookDataGetter: webhookDataGetter,
+
+		enabledModules: set.New(enabledModules...),
 	}
 }
 
@@ -643,7 +648,7 @@ func (du *Updater[R]) PrepareReleases(releases []R) {
 
 func (du *Updater[R]) checkReleaseRequirements(rl *R) bool {
 	for key, value := range (*rl).GetRequirements() {
-		passed, err := requirements.CheckRequirement(key, value)
+		passed, err := requirements.CheckRequirement(key, value, du.enabledModules)
 		if !passed {
 			msg := fmt.Sprintf("%q requirement for DeckhouseRelease %q not met: %s", key, (*rl).GetVersion(), err)
 			if errors.Is(err, requirements.ErrNotRegistered) {
