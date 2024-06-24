@@ -56,7 +56,6 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 }`, `{}`)
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "yes")
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "DeckhouseRelease", false)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "Module", false)
 
 	dependency.TestDC.CRClient = cr.NewClientMock(GinkgoT())
 
