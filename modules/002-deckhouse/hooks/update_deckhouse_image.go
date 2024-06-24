@@ -160,7 +160,7 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	podReady := isDeckhousePodReady(dc.GetHTTPClient())
 
 	enabledModulesFromValues := input.Values.Get("global.enabledModules").Array()
-	enabledModules := make([]string, len(enabledModulesFromValues))
+	enabledModules := make([]string, 0, len(enabledModulesFromValues))
 	for _, module := range enabledModulesFromValues {
 		enabledModules = append(enabledModules, module.String())
 	}
