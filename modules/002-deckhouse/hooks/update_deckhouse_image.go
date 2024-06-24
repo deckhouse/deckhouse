@@ -107,14 +107,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnEvents:          pointer.Bool(false),
 			FilterFunc:                   filterReleaseDataCM,
 		},
-		{
-			Name:                         "modules",
-			ApiVersion:                   "deckhouse.io/v1alpha1",
-			Kind:                         "Module",
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			FilterFunc:                   filterModules,
-		},
 	},
 }, dependency.WithExternalDependencies(updateDeckhouse))
 
@@ -167,12 +159,10 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 
 	podReady := isDeckhousePodReady(dc.GetHTTPClient())
 
-	var enabledModules []string
-	for _, m := range input.Snapshots["modules"] {
-		module := m.(moduleState)
-		if module.State == "Enabled" {
-			enabledModules = append(enabledModules, module.Name)
-		}
+	enabledModulesFromValues := input.Values.Get("global.enabledModules").Array()
+	enabledModules := make([]string, len(enabledModulesFromValues))
+	for _, module := range enabledModulesFromValues {
+		enabledModules = append(enabledModules, module.String())
 	}
 
 	deckhouseUpdater, err := d8updater.NewDeckhouseUpdater(input, approvalMode, releaseData, podReady, clusterBootstrapping, enabledModules)
@@ -322,25 +312,6 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 		},
 		ManuallyApproved: releaseApproved,
 		AnnotationFlags:  annotationFlags,
-	}, nil
-}
-
-type moduleState struct {
-	Name  string
-	State string
-}
-
-func filterModules(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var module v1alpha1.Module
-
-	err := sdk.FromUnstructured(unstructured, &module)
-	if err != nil {
-		return nil, err
-	}
-
-	return moduleState{
-		Name:  module.Name,
-		State: module.Properties.State,
 	}, nil
 }
 

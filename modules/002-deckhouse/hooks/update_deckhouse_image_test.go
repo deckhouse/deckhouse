@@ -540,21 +540,8 @@ status:
 				return true, nil
 			})
 			requirements.SaveValue("global.discovery.kubernetesVersion", "1.16.0")
-			f.KubeStateSet(deckhousePodYaml + releaseWithRequirements + `
----
-apiVersion: deckhouse.io/v1alpha1
-kind: Module
-metadata:
-  labels:
-    deckhouse.io/epoch: "3464194253"
-  name: deckhouse
-properties:
-  source: Embedded
-  state: Enabled
-  weight: 2
-status:
-  status: Ready
-`)
+			f.KubeStateSet(deckhousePodYaml + releaseWithRequirements)
+			f.ValuesSet("global.enabledModules", []string{"deckhouse"})
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
 		})
@@ -600,19 +587,7 @@ status:
 				return true, nil
 			})
 			requirements.SaveValue("global.discovery.kubernetesVersion", "1.16.0")
-			f.KubeStateSet(deckhousePodYaml + releaseWithRequirements + `
----
-apiVersion: deckhouse.io/v1alpha1
-kind: Module
-metadata:
-  labels:
-    deckhouse.io/epoch: "3464194253"
-  name: deckhouse
-properties:
-  source: Embedded
-  state: Disabled
-  weight: 2
-`)
+			f.KubeStateSet(deckhousePodYaml + releaseWithRequirements)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
 		})
