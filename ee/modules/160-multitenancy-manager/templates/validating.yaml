@@ -23,7 +23,10 @@ spec:
         scope: "*"
   validations:
     - expression: 'request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"'
+      reason: Forbidden
+{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
       messageExpression: "'This resource is managed by ' + string(object.metadata.namespace) + ' Project. Manual modification is forbidden.'"
+{{- end }}
 ---
 {{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1
@@ -38,7 +41,9 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
 spec:
   policyName: {{ $policyName }}
+{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
   validationActions: [Deny, Audit]
+{{- end }}
   matchResources:
     namespaceSelector:
       matchLabels:
