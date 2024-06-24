@@ -127,9 +127,11 @@ with open('$2', 'wb') as f:
     f.write(response.read())
 EOFILE
 }
-bb-package-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}" "netcat:{{ .images.registrypackages.netcat110481 }}"
-{{ if eq .provider "aws" }}
-bb-package-install "ec2DescribeTags:{{ .images.registrypackages.ec2DescribeTagsV001Flant2 }}" 
-{{- end }}
 
+{{ with $.Values.global.modulesImages.digests.registrypackages }}
+bb-package-install "jq:{{ .jq16 }}" "curl:{{ .d8Curl821 }}" "netcat:{{ .netcat110481 }}"
+{{ if eq $.provider "aws" }}
+bb-package-install "ec2DescribeTags:{{ .ec2DescribeTagsV001Flant2 }}" 
+{{- end }}
+{{- end }}
 mkdir -p /var/lib/bashible/
