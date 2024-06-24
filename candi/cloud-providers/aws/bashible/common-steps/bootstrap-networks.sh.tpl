@@ -33,7 +33,6 @@ if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
   fi
   instance_name=$(/opt/deckhouse/bin/ec2_describe_tags -query_meta | grep -Po '(?<=Name=).+')
   hostnamectl set-hostname "$instance_name"
-  rm /opt/deckhouse/bin/ec2_describe_tags
   mkdir -p /var/lib/bashible
   touch /var/lib/bashible/hosname-set-as-in-aws
 fi
