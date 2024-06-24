@@ -35,7 +35,8 @@
 
 {{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
 {{- $csiImageName := join "" (list "vsphereCsiPlugin" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
-{{- $csiControllerImage := include "helm_lib_module_image" (list . $csiImageName) }}
+{{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . $csiImageName) }}
+{{- if $csiControllerImage }}
 
 {{- $csiControllerConfig := dict }}
 {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
@@ -48,7 +49,7 @@
 {{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "legacy" }}
 {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
 {{- end }}
-
+{{- end }}
 ###
 ### node
 ###
@@ -88,15 +89,22 @@
   readOnly: true
 {{- end }}
 
-{{- $csiNodeConfig := dict }}
-{{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
-{{- $_ := set $csiNodeConfig "driverFQDN" "csi.vsphere.vmware.com" }}
-{{- $_ := set $csiNodeConfig "serviceAccount" "csi" }}
-{{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "csi_node_args" . | fromYamlArray) }}
-{{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
-{{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
-{{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $csiImageName := join "" (list "vsphereCsiPlugin" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . $csiImageName) }}
+{{- if $csiControllerImage }}
 
-{{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "legacy" }}
-{{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
+  {{- $csiNodeConfig := dict }}
+  {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
+  {{- $_ := set $csiNodeConfig "driverFQDN" "csi.vsphere.vmware.com" }}
+  {{- $_ := set $csiNodeConfig "serviceAccount" "csi" }}
+  {{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "csi_node_args" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
+
+  {{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "legacy" }}
+  {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
+  {{- end }}
+
 {{- end }}
