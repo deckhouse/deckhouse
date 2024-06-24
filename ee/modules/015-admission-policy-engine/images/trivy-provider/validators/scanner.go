@@ -7,6 +7,7 @@ package validators
 
 import (
 	"context"
+	"github.com/google/go-containerregistry/pkg/name"
 	"net/http"
 	"os"
 
@@ -28,7 +29,13 @@ func scanArtifact(ctx context.Context, imageName, remoteURL string, customHeader
 	if len(javadbImage) == 0 {
 		javadbImage = "ghcr.io/aquasecurity/trivy-java-db"
 	}
-	javadb.Init("/home/javadb", javadbImage, false, false, false)
+
+	ref, err := name.ParseReference(javadbImage)
+	if err != nil {
+		return types.Report{}, err
+	}
+
+	javadb.Init("/home/javadb", ref, false, false, ftypes.RegistryOptions{Insecure: false})
 	img, cleanup, err := image.NewContainerImage(ctx, imageName, ftypes.ImageOptions{
 		ImageSources: ftypes.ImageSources{ftypes.RemoteImageSource},
 	})
@@ -38,12 +45,12 @@ func scanArtifact(ctx context.Context, imageName, remoteURL string, customHeader
 	defer cleanup()
 
 	artifactCache := cache.NewRemoteCache(remoteURL, customHeaders, false)
-	artifact, err := fimage.NewArtifact(img, artifactCache, artifact.Option{DisabledHandlers: []ftypes.HandlerType{ftypes.UnpackagedPostHandler}})
+	artf, err := fimage.NewArtifact(img, artifactCache, artifact.Option{DisabledHandlers: []ftypes.HandlerType{ftypes.UnpackagedPostHandler}})
 	if err != nil {
 		return types.Report{}, err
 	}
 
 	clientScanner := client.NewScanner(client.ScannerOption{RemoteURL: remoteURL, CustomHeaders: customHeaders})
-	myScanner := scanner.NewScanner(clientScanner, artifact)
+	myScanner := scanner.NewScanner(clientScanner, artf)
 	return myScanner.ScanArtifact(ctx, scanOpts)
 }
