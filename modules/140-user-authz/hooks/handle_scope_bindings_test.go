@@ -35,10 +35,14 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-scope-bindings ::", f
 	Context("There`s ManageScopeBinding", func() {
 		BeforeEach(func() {
 			resources := []string{
-				manageModuleRole("d8:manage:capability:module:test:admin", "others", "test-ns"),
-				manageModuleRole("d8:manage:capability:module:test2:admin", "others", "test2-ns"),
+				manageModuleRole("d8:manage:capability:module:test:edit", "others", "test-ns"),
+				manageModuleRole("d8:manage:capability:module:test2:edit", "others", "test2-ns"),
 				manageScopeRole("d8:manage:others:admin", "others"),
 				manageScopeBinding("test", "d8:manage:others:admin"),
+
+				manageModuleRole("d8:manage:capability:module:test3:edit", "test", "test2-ns"),
+				manageScopeRole("d8:manage:test:admin", "test"),
+				manageScopeBinding("test2", "d8:manage:test:admin"),
 			}
 			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
 			f.RunHook()
@@ -50,6 +54,9 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-scope-bindings ::", f
 			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:binding:test"))
 			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:binding:test")
 			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:binding:test"))
+
+			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:binding:test2")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:binding:test2"))
 		})
 	})
 
@@ -57,6 +64,9 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-scope-bindings ::", f
 		BeforeEach(func() {
 			resources := []string{
 				useBinding("test", "test-ns"),
+				useBinding("test2", "test-ns"),
+				useBinding("test3", "test-ns2"),
+				useBinding("test4", "test-ns2"),
 			}
 			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
 			f.RunHook()
@@ -65,6 +75,12 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-scope-bindings ::", f
 		It("Should delete RoleBinding", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:binding:test")
+			Expect(roleBinding).To(BeEmpty())
+			roleBinding = f.KubernetesResource("RoleBinding", "test-ns", "d8:binding:test2")
+			Expect(roleBinding).To(BeEmpty())
+			roleBinding = f.KubernetesResource("RoleBinding", "test-ns2", "d8:binding:test3")
+			Expect(roleBinding).To(BeEmpty())
+			roleBinding = f.KubernetesResource("RoleBinding", "test-ns2", "d8:binding:test4")
 			Expect(roleBinding).To(BeEmpty())
 		})
 	})

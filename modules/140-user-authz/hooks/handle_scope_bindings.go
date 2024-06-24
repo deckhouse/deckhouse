@@ -19,7 +19,6 @@ package hooks
 import (
 	"fmt"
 	"reflect"
-	"slices"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -142,9 +141,8 @@ func filterScopeManageRole(obj *unstructured.Unstructured) (go_hook.FilterResult
 }
 
 type filteredModuleRole struct {
-	Name      string   `json:"name"`
-	Scopes    []string `json:"scopes"`
 	Namespace string   `json:"namespace"`
+	Scopes    []string `json:"scopes"`
 }
 
 func filterModuleManageRole(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -152,8 +150,11 @@ func filterModuleManageRole(obj *unstructured.Unstructured) (go_hook.FilterResul
 	if err := sdk.FromUnstructured(obj, &clusterRole); err != nil {
 		return nil, err
 	}
+	//there is no need to handle both view and edit roles, they have the same namespace and scopes
+	if strings.HasSuffix(clusterRole.Name, ":view") {
+		return nil, nil
+	}
 	var role filteredModuleRole
-	role.Name = clusterRole.Name
 	for key, val := range clusterRole.Labels {
 		if roleScope, found := strings.CutPrefix(key, "rbac.deckhouse.io/aggregate-to-"); found && val == "true" {
 			role.Scopes = append(role.Scopes, roleScope)
@@ -169,40 +170,46 @@ func filterModuleManageRole(obj *unstructured.Unstructured) (go_hook.FilterResul
 }
 
 func syncRoles(input *go_hook.HookInput) error {
+	scopesMap := make(map[string][]string)
+	for _, moduleRole := range input.Snapshots["moduleManageRoles"] {
+		if moduleRole != nil {
+			for _, scope := range moduleRole.(*filteredModuleRole).Scopes {
+				scopesMap[scope] = append(scopesMap[scope], moduleRole.(*filteredModuleRole).Namespace)
+			}
+		}
+	}
+	rolesMap := make(map[string][]string)
+	useRolesMap := make(map[string]string)
+	for _, scopeRole := range input.Snapshots["scopeManageRoles"] {
+		if scopeRole != nil {
+			role := scopeRole.(*filteredScopeRole)
+			if namespaces, ok := scopesMap[role.Scope]; ok {
+				rolesMap[role.Name] = namespaces
+				useRolesMap[role.Name] = fmt.Sprintf("d8:use:role:%s", role.Role)
+			}
+		}
+	}
 	var bindings []*filteredBinding
 	for _, binding := range input.Snapshots["manageBindings"] {
 		if binding != nil {
-			bindings = append(bindings, expectedRoleBindings(input.Snapshots, binding.(*filteredBinding))...)
-		}
-	}
-	ensureBindings(input, bindings)
-	return nil
-}
-
-func expectedRoleBindings(snapshots go_hook.Snapshots, manageBinding *filteredBinding) []*filteredBinding {
-	var expectedUseBindings []*filteredBinding
-	for _, sr := range snapshots["scopeManageRoles"] {
-		if sr != nil {
-			scopeRole := sr.(*filteredScopeRole)
-			if scopeRole.Name == manageBinding.RoleName {
-				for _, mr := range snapshots["moduleManageRoles"] {
-					if mr != nil {
-						moduleRole := mr.(*filteredModuleRole)
-						if slices.Contains(moduleRole.Scopes, scopeRole.Scope) {
-							expectedUseBindings = append(expectedUseBindings, &filteredBinding{
-								Name:        fmt.Sprintf("d8:binding:%s", manageBinding.Name),
-								Namespace:   moduleRole.Namespace,
-								RelatedWith: manageBinding.Name,
-								RoleName:    fmt.Sprintf("d8:use:role:%s", scopeRole.Role),
-								Subjects:    manageBinding.Subjects,
-							})
-						}
-					}
+			parsedBinding := binding.(*filteredBinding)
+			if namespaces, ok := rolesMap[parsedBinding.RoleName]; ok {
+				roleName := useRolesMap[parsedBinding.RoleName]
+				bindingName := fmt.Sprintf("d8:binding:%s", parsedBinding.Name)
+				for _, namespace := range namespaces {
+					bindings = append(bindings, &filteredBinding{
+						Name:        bindingName,
+						Namespace:   namespace,
+						RelatedWith: parsedBinding.Name,
+						RoleName:    roleName,
+						Subjects:    parsedBinding.Subjects,
+					})
 				}
 			}
 		}
 	}
-	return expectedUseBindings
+	ensureBindings(input, bindings)
+	return nil
 }
 
 func ensureBindings(input *go_hook.HookInput, expectedUseBindings []*filteredBinding) {
