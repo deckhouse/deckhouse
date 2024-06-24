@@ -68,13 +68,17 @@ spec:
       expression: '!("system:nodes" in request.userInfo.groups)'
     - name: 'exclude-kube-system'
       expression: '!("system:serviceaccounts:kube-system" in request.userInfo.groups)'
+    - name: 'rbac' # Skip RBAC requests.
+      expression: 'request.resource.group != "rbac.authorization.k8s.io"'
+    - name: 'exclude-leases'
+      expression: '!(request.resource.group == "coordination.k8s.io" && request.resource.resource == "leases")'
   validations:
     - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-")'
       reason: Forbidden
       messageExpression: '''Creating an object with the `heritage: deckhouse` label is forbidden'''
 {{- else }}
   validations:
-    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || "system:nodes" in request.userInfo.groups || "system:serviceaccounts:kube-system" in request.userInfo.groups'
+    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || "system:nodes" in request.userInfo.groups || "system:serviceaccounts:kube-system" in request.userInfo.groups || request.resource.group == "rbac.authorization.k8s.io" || (request.resource.group == "coordination.k8s.io" && request.resource.resource == "leases")'
       reason: Forbidden
 {{- end }}
 ---
