@@ -16,23 +16,17 @@ rules:
       - persistentvolumeclaims
       - persistentvolumeclaims/status
       - pods
+      - pods/status
       - replicationcontrollers
       - replicationcontrollers/scale
       - serviceaccounts
       - services
       - services/status
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - bindings
-      - events
       - limitranges
+      - nodes
+      - persistentvolumes
+      - namespaces
       - namespaces/status
-      - pods/status
       - replicationcontrollers/status
       - resourcequotas
       - resourcequotas/status
@@ -42,8 +36,9 @@ rules:
       - watch
   - apiGroups:
       - ""
+      - events.k8s.io
     resources:
-      - namespaces
+      - events
     verbs:
       - get
       - list
@@ -85,6 +80,15 @@ rules:
       - list
       - watch
   - apiGroups:
+      - autoscaling.k8s.io
+    resources:
+      - verticalpodautoscalers
+      - verticalpodautoscalercheckpoints
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
       - batch
     resources:
       - cronjobs
@@ -110,6 +114,7 @@ rules:
       - ingresses
       - ingresses/status
       - networkpolicies
+      - ingressclasses
     verbs:
       - get
       - list
@@ -122,3 +127,67 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - csidrivers
+      - csinodes
+      - storageclasses
+      - csistoragecapacities
+      - volumeattachments
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - scheduling.k8s.io
+    resources:
+      - priorityclasses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - flowcontrol.apiserver.k8s.io
+    resources:
+      - prioritylevelconfigurations
+      - flowschemas
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - apiextensions.k8s.io
+    resources:
+      - customresourcedefinitions
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - node.k8s.io
+    resources:
+      - runtimeclasses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - snapshot.storage.k8s.io
+    resources:
+      - volumesnapshots
+    verbs:
+      - get
+      - list
+      - watch
+  - nonResourceURLs:
+      - /api
+      - /api/*
+      - /apis
+      - /apis/*
+      - /openapi
+      - /openapi/*
+      - /version
+      - /version/
+    verbs:
+      - get

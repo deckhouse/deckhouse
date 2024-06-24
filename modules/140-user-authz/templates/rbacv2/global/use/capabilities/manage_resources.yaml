@@ -14,47 +14,78 @@ rules:
       - pods
     verbs:
       - create
-      - patch
       - update
+      - patch
   - apiGroups:
       - ""
     resources:
       - configmaps
-      - events
-      - persistentvolumeclaims
-      - replicationcontrollers
       - secrets
+      - persistentvolumeclaims
+      - persistentvolumes
+      - replicationcontrollers
+      - serviceaccounts
       - services
+      - limitranges
+      - namespaces
     verbs:
       - create
+      - update
+      - patch
       - delete
       - deletecollection
-      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - bindings
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+      - events.k8s.io
+    resources:
+      - events
+    verbs:
+      - create
       - update
+      - patch
+      - delete
+      - deletecollection
   - apiGroups:
       - apps
     resources:
+      - controllerrevisions
       - daemonsets
       - deployments
-      - deployments/rollback
       - replicasets
       - statefulsets
     verbs:
       - create
+      - update
+      - patch
       - delete
       - deletecollection
-      - patch
-      - update
   - apiGroups:
       - autoscaling
     resources:
       - horizontalpodautoscalers
     verbs:
       - create
+      - update
+      - patch
       - delete
       - deletecollection
-      - patch
+  - apiGroups:
+      - autoscaling.k8s.io
+    resources:
+      - verticalpodautoscalers
+      - verticalpodautoscalercheckpoints
+    verbs:
+      - create
       - update
+      - patch
+      - delete
+      - deletecollection
   - apiGroups:
       - batch
     resources:
@@ -62,34 +93,57 @@ rules:
       - jobs
     verbs:
       - create
+      - update
+      - patch
       - delete
       - deletecollection
-      - patch
-      - update
   - apiGroups:
       - policy
     resources:
       - poddisruptionbudgets
     verbs:
       - create
+      - update
+      - patch
       - delete
       - deletecollection
-      - patch
-      - update
   - apiGroups:
       - networking.k8s.io
     resources:
       - ingresses
+      - ingressclasses
     verbs:
-      - create
-      - delete
-      - deletecollection
-      - patch
-      - update
+      - get
+      - list
+      - watch
   - apiGroups:
       - coordination.k8s.io
     resources:
       - leases
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - csidrivers
+      - csinodes
+      - storageclasses
+      - csistoragecapacities
+      - volumeattachments
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  - apiGroups:
+      - snapshot.storage.k8s.io
+    resources:
+      - volumesnapshots
     verbs:
       - create
       - update

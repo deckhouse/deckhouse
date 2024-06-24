@@ -150,7 +150,7 @@ func filterModuleManageRole(obj *unstructured.Unstructured) (go_hook.FilterResul
 	if err := sdk.FromUnstructured(obj, &clusterRole); err != nil {
 		return nil, err
 	}
-	//there is no need to handle both view and edit roles, they have the same namespace and scopes
+	// there is no need to handle both view and edit roles, they have the same namespace and scopes
 	if strings.HasSuffix(clusterRole.Name, ":view") {
 		return nil, nil
 	}

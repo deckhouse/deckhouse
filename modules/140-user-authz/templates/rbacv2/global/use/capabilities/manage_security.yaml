@@ -9,9 +9,41 @@ metadata:
     rbac.deckhouse.io/aggregate-to-role: admin
 rules:
   - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - mutatingwebhookconfigurations
+      - validatingadmissionpolicies
+      - validatingadmissionpolicybindings
+      - validatingwebhookconfigurations
+    verbs:
+      - create
+      - delete
+      - deletecollection
+      - patch
+      - update
+  - apiGroups:
+      - certificates.k8s.io
+    resources:
+      - certificatesigningrequests
+    verbs:
+      - create
+      - delete
+      - deletecollection
+      - patch
+      - update
+  - apiGroups:
+      - authentication.k8s.io
+    resources:
+      - tokenreviews
+      - selfsubjectreviews
+    verbs:
+      - create
+  - apiGroups:
       - rbac.authorization.k8s.io
     resources:
+      - clusterrolebindings
       - rolebindings
+      - clusterroles
       - roles
     verbs:
       - create
@@ -23,6 +55,7 @@ rules:
       - authorization.k8s.io
     resources:
       - localsubjectaccessreviews
+      - subjectaccessreviews
     verbs:
       - create
   - apiGroups:
@@ -44,15 +77,10 @@ rules:
       - update
       - delete
       - list
+      - impersonate
   - apiGroups:
       - ""
     resources:
       - serviceaccounts/token
     verbs:
       - create
-  - apiGroups:
-      - ""
-    resources:
-      - serviceaccounts
-    verbs:
-      - impersonate
