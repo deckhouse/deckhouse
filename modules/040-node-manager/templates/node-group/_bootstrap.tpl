@@ -179,27 +179,15 @@ EOFILE
   {{- end }}
 }
 
-  {{- if not (hasKey $ng "staticInstances") }}
-    {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
+  {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
 function run_cloud_network_setup() {
-      {{- if $bootstrap_script_common := $context.Files.Get "candi/bashible/bootstrap-networks.sh.tpl" }}
-  cat > ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh <<"EOF"
-      {{- tpl $bootstrap_script_common $tpl_context | nindent 0 }}
-EOF
-  chmod +x ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh
-      {{- end }}
+    {{- if $bootstrap_script_common := $context.Files.Get "candi/bashible/bootstrap-networks.sh.tpl" }}
+      {{- tpl $bootstrap_script_common $tpl_context | nindent 2 }}
+    {{- end }}
   {{- /*
   # Execute cloud provider specific network bootstrap script. It will organize connectivity to kube-apiserver.
   */}}
-
-  if [[ -f ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh ]] ; then
-    until ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh; do
-      >&2 echo "Failed to execute cloud provider specific bootstrap. Retry in 10 seconds."
-      sleep 10
-    done
-  fi
 }
-    {{- end }}
   {{- end }}
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 function run_log_output() {
@@ -210,10 +198,8 @@ function run_log_output() {
 }
   {{- end }}
 prepare_base_d8_binaries
-  {{- if not (hasKey $ng "staticInstances") }}
-    {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
+  {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
 run_cloud_network_setup
-    {{- end }}
   {{- end }}
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 run_log_output
