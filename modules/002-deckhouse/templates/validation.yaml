@@ -65,7 +65,7 @@ spec:
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'exclude-groups'
-      expression: '!(["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups))'
+      expression: '!(["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups)))'
     - name: 'exclude-kube-controller'
       expression: 'request.userInfo.username != "system:kube-controller-manager"'
     - name: 'exclude-leases'
