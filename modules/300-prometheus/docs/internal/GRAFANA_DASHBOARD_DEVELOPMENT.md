@@ -148,7 +148,6 @@ Granted, in some cases, the level of detail makes it difficult to track global t
       </li>
     </ul>
 
-
 5. **use `$__range` as the range for the range vectors in the avg/max/min_over_time functions**;
 
 #### The absence of data must be obvious
