@@ -11,13 +11,11 @@ docker:
 
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
-  beforeInstall:
-    - apk add --no-cache ca-certificates make git
   install:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
