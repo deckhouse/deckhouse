@@ -60,6 +60,7 @@ spec:
         app: aggregating-proxy
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/aggregating-proxy/configmap.yaml") . | sha256sum }}
+        checksum/kube-rbac-proxy: {{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
