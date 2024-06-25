@@ -40,7 +40,6 @@ type Executor interface {
 }
 
 func terraformCmd(args ...string) *exec.Cmd {
-	args = append(args, "-plugin-dir", fmt.Sprintf("%s/plugins", os.Getenv("PWD")))
 	cmd := exec.Command("terraform", args...)
 	cmd.Env = append(
 		os.Environ(),
