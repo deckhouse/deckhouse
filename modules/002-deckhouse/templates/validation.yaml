@@ -64,14 +64,10 @@ spec:
         resources:   ["*"]
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
-    - name: 'exclude-system-node'
-      expression: '!("system:nodes" in request.userInfo.groups)'
-    - name: 'exclude-kube-system'
-      expression: '!("system:serviceaccounts:kube-system" in request.userInfo.groups)'
+    - name: 'exclude-groups'
+      expression: '!(["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups))'
     - name: 'exclude-kube-controller'
       expression: 'request.userInfo.username != "system:kube-controller-manager"'
-    - name: 'rbac' # Skip RBAC requests.
-      expression: 'request.resource.group != "rbac.authorization.k8s.io"'
     - name: 'exclude-leases'
       expression: '!(request.resource.group == "coordination.k8s.io" && request.resource.resource == "leases")'
   validations:
@@ -80,7 +76,7 @@ spec:
       messageExpression: '''Creating an object with the `heritage: deckhouse` label is forbidden'''
 {{- else }}
   validations:
-    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username == "system:kube-controller-manager" || "system:nodes" in request.userInfo.groups || "system:serviceaccounts:kube-system" in request.userInfo.groups || request.resource.group == "rbac.authorization.k8s.io" || (request.resource.group == "coordination.k8s.io" && request.resource.resource == "leases")'
+    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username == "system:kube-controller-manager" || ["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups)) || (request.resource.group == "coordination.k8s.io" && request.resource.resource == "leases")'
       reason: Forbidden
 {{- end }}
 ---
