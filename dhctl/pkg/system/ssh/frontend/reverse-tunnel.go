@@ -52,6 +52,7 @@ func (t *ReverseTunnel) Up() error {
 			"-n", // no stdin
 			"-R", t.Address,
 		).
+		WithExitWhenTunnelFailure(true).
 		Cmd()
 
 	err := t.sshCmd.Start()

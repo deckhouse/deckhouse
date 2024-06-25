@@ -21,4 +21,4 @@ rm -f /tmp/bundle*.tar
 rm -f /tmp/kubeadm-config*
 
 # needs for dhctl bootstrap restarting check
-echo "OK" > /var/lib/bashible/first-control-plane-bashible-ran
+echo "OK" > /opt/deckhouse/first-control-plane-bashible-ran
