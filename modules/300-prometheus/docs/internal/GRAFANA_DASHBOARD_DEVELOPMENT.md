@@ -101,7 +101,7 @@ Granted, in some cases, the level of detail makes it difficult to track global t
 
     ![Data accuracy and granularity](/docs/documentation/images/300-prometheus/grafana_accuracy.jpg)
 
-    {% offtopic title="Reasons and details" %}
+    **Reasons and details:**
       <ul dir="auto">
         <li>You can specify <code>step</code> in the Prometheus's API request. Suppose we have three hours of data and set a <code>step</code> of 30 seconds. In this case, we will get 360 data points (3 hours *60 minutes* 2 points per minute), and they can easily fit on the graph. Now suppose we have data for 24 hours. In this case, the 30-second step does not make any sense since you cannot fit 2880 data points on a screen (unless, of course, you have a 4K monitor - but still, each data point will have the size of a pixel, and the human eye cannot discern so much tightly packed information). To solve this problem, Grafana implements a tricky mechanism to auto-determine the step size. It works as follows:
         <ul>
@@ -147,7 +147,7 @@ Granted, in some cases, the level of detail makes it difficult to track global t
         </ul>
       </li>
     </ul>
-    {% endofftopic %}
+
 
 5. **use `$__range` as the range for the range vectors in the avg/max/min_over_time functions**;
 
