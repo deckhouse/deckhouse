@@ -35,9 +35,15 @@ EOF
 	chmod +x ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh
 
   if [[ -f ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh ]] ; then
+		attempt=0
     until ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh; do
+			attempt=$(( attempt + 1 ))
       >&2 echo "Failed to execute cloud provider bootstrap-networks. Retry in 10 seconds."
       sleep 10
+
+			if [ "$attempt" -gt "2" ]; then
+				break
+    	fi
     done
   fi
     {{- end }}
