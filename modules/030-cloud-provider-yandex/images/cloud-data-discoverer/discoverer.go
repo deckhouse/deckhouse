@@ -97,11 +97,6 @@ func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error)
 	disksMeta := make([]v1alpha1.DiskMeta, 0, len(disks))
 
 	for _, disk := range disks {
-		// skip disks created from another clusters
-		clusterUUID, ok := disk.Labels["clusterUUID"]
-		if ok && clusterUUID != d.clusterUUID {
-			continue
-		}
 		disksMeta = append(disksMeta, v1alpha1.DiskMeta{ID: disk.Id, Name: disk.Name})
 	}
 
@@ -120,7 +115,7 @@ func (d *Discoverer) getDisksCreatedByCSIDriver(ctx context.Context) ([]*compute
 	disksCreatedByCSIDriver := make([]*compute.Disk, 0, len(disks))
 
 	for _, disk := range disks {
-		if disk.Description == "Created by Yandex CSI driver" {
+		if clusterUUID, ok := disk.Labels["cluster_uuid"]; ok && clusterUUID == d.clusterUUID {
 			disksCreatedByCSIDriver = append(disksCreatedByCSIDriver, disk)
 		}
 	}
