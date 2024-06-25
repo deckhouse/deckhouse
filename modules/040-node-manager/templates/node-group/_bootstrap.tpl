@@ -83,9 +83,9 @@ function get_phase2() {
   {{- end }}
 
 #run network scripts
-	{{- if $bootstrap_networks := $context.Files.Get "candi/bashible/bootstrap/02-network-scripts.sh.tpl" }}
-		{{- tpl ( $bootstrap_networks ) $tpl_context | nindent 0 }}
-	{{- end }}
+  {{- if $bootstrap_networks := $context.Files.Get "candi/bashible/bootstrap/02-network-scripts.sh.tpl" }}
+    {{- tpl ( $bootstrap_networks ) $tpl_context | nindent 0 }}
+  {{- end }}
 
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 run_log_output

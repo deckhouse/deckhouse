@@ -117,7 +117,7 @@ try:
 except ImportError:
   from urllib2 import urlopen, Request, HTTPError
 endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
-# Choose a random endpoint as first ep, that increase fault tolerance and reduce load on first endpoint.
+# Choose a random endpoint to increase fault tolerance and reduce load on a single endpoint.
 random.shuffle(endpoints)
 ssl._create_default_https_context = ssl._create_unverified_context
 for ep in endpoints:
@@ -127,6 +127,9 @@ for ep in endpoints:
     response = urlopen(request, timeout=300)
   except HTTPError as e:
     print("Access to {} return HTTP Error {}: {}".format(url, e.getcode(), e.read()[:255]))
+    continue
+  except Exception as e:
+    print("Access to {} return Error: {}".format(url, e))
     continue
   break
 with open('$2', 'wb') as f:
