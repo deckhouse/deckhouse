@@ -1111,6 +1111,13 @@ shell:
         path    = "/usr/local/share/terraform/plugins"
         include = ["*/*/*"]
       }
+      network_mirror {
+        url = "https://terraform-mirror.yandexcloud.net/"
+        include = ["registry.terraform.io/*/*"]
+      }
+      direct {
+        exclude = ["registry.terraform.io/*/*"]
+      }
     }
     EOD
 
