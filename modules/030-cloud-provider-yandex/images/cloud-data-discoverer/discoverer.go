@@ -115,7 +115,7 @@ func (d *Discoverer) getDisksCreatedByCSIDriver(ctx context.Context) ([]*compute
 	disksCreatedByCSIDriver := make([]*compute.Disk, 0, len(disks))
 
 	for _, disk := range disks {
-		if clusterUUID, ok := disk.Labels["cluster_uuid"]; ok && clusterUUID == d.clusterUUID {
+		if disk.Labels["cluster_uuid"] == d.clusterUUID {
 			disksCreatedByCSIDriver = append(disksCreatedByCSIDriver, disk)
 		}
 	}
