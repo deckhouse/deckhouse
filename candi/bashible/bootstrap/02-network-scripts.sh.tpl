@@ -16,7 +16,7 @@
 */}}
 
 {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
-  {{- if $bootstrap_script_common := $.Files.Get (printf "candi/cloud-providers/%s/bashible/common-steps/bootstrap-networks.sh.tpl" $.Values.nodeManager.internal.cloudProvider.type) }}
-    {{- tpl ($bootstrap_script_common) $ | nindent 0 }}
+  {{- if $bootstrap_script_network := $.Files.Get (printf "candi/cloud-providers/%s/bashible/bootstrap-networks.sh.tpl" $.Values.nodeManager.internal.cloudProvider.type) }}
+    {{- tpl ($bootstrap_script_network) $ | nindent 0 }}
   {{- end }}
 {{- end }}
