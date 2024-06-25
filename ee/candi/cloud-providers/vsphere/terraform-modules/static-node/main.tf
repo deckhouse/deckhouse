@@ -173,4 +173,5 @@ resource "vsphere_virtual_machine" "node" {
       firmware,
     ]
   }
+  wait_for_guest_net_routable = false
 }
