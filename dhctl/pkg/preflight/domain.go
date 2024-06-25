@@ -16,6 +16,7 @@ package preflight
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -42,7 +43,8 @@ func (pc *Checker) CheckLocalhostDomain() error {
 	out, err := scriptCmd.Execute()
 	if err != nil {
 		log.ErrorLn(strings.Trim(string(out), "\n"))
-		if ee, ok := err.(*exec.ExitError); ok {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) {
 			return fmt.Errorf("Localhost domain resolving check failed: %w, %s", err, string(ee.Stderr))
 		}
 		return fmt.Errorf("Could not execute a script to check for localhost domain resolution: %w", err)

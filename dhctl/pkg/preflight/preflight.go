@@ -98,7 +98,7 @@ func (pc *Checker) Global() error {
 		},
 		{
 			fun:            pc.CheckRegistryCredentials,
-			successMessage: "regestry credentials are correct",
+			successMessage: "registry credentials are correct",
 			skipFlag:       app.RegistryCredentialsCheckArgName,
 		},
 	})

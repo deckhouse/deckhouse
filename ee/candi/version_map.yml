@@ -1,4 +1,5 @@
 k8s:
+  '1.25':
     clusterApi:
       vcd: v1.2.0
     ccm:

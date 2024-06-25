@@ -16,31 +16,33 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net"
-	"os"
-	"path/filepath"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
+	"github.com/mwitkow/grpc-proxy/proxy"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	pbdhctl "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/interceptors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
+// full method example: /dhctl.DHCTL/Check
+const singlethreadedMethodsPrefix = "/dhctl.DHCTL"
+
 // Serve starts GRPC server
-func Serve(network, address string) error {
+func Serve(network, address string, parallelTasksLimit int) error {
 	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{})
 	lvl := &slog.LevelVar{}
 	lvl.Set(slog.LevelDebug)
@@ -49,28 +51,21 @@ func Serve(network, address string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	defer close(done)
-	sem := make(chan struct{}, 1)
+	sem := make(chan struct{}, parallelTasksLimit)
 
-	podName := os.Getenv("HOSTNAME")
+	director := NewStreamDirector(log, singlethreadedMethodsPrefix)
 
+	log.Info(
+		"starting grpc server",
+		slog.String("network", network),
+		slog.String("address", address),
+	)
 	tomb.RegisterOnShutdown("server", func() {
 		log.Info("stopping grpc server")
 		cancel()
 		<-done
 		log.Info("grpc server stopped")
 	})
-
-	cacheDir, err := cacheDirectory()
-	if err != nil {
-		return fmt.Errorf("failed to init grpc server: %w", err)
-	}
-
-	log.Info(
-		"starting grpc server",
-		slog.String("network", network),
-		slog.String("address", address),
-		slog.String("cache directory", cacheDir),
-	)
 
 	listener, err := net.Listen(network, address)
 	if err != nil {
@@ -82,14 +77,15 @@ func Serve(network, address string) error {
 			interceptors.UnaryLogger(log),
 			logging.UnaryServerInterceptor(interceptors.Logger()),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
-			interceptors.UnaryParallelTasksLimiter(sem),
+			interceptors.UnaryParallelTasksLimiter(sem, singlethreadedMethodsPrefix),
 		),
 		grpc.ChainStreamInterceptor(
 			interceptors.StreamLogger(log),
 			logging.StreamServerInterceptor(interceptors.Logger()),
 			recovery.StreamServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
-			interceptors.StreamParallelTasksLimiter(sem),
+			interceptors.StreamParallelTasksLimiter(sem, singlethreadedMethodsPrefix),
 		),
+		grpc.UnknownServiceHandler(proxy.TransparentHandler(director.Director())),
 	)
 
 	// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-grpc-liveness-probe
@@ -99,16 +95,16 @@ func Serve(network, address string) error {
 	// grpcurl -plaintext host:port describe
 	reflection.Register(s)
 
-	// services
-	dhctlService := dhctl.New(podName, cacheDir)
+	// init services
+	validationService := validation.New(config.NewSchemaStore())
 
 	// register services
-	pbdhctl.RegisterDHCTLServer(s, dhctlService)
+	pbdhctl.RegisterValidationServer(s, validationService)
 
 	go func() {
 		<-ctx.Done()
 
-		gracefulStop(s, time.Second*10)
+		pkg.GracefulStop(s, time.Second*10)
 	}()
 
 	if err = s.Serve(listener); err != nil {
@@ -116,31 +112,4 @@ func Serve(network, address string) error {
 		return err
 	}
 	return nil
-}
-
-func gracefulStop(s *grpc.Server, timeout time.Duration) {
-	stopped := make(chan struct{})
-	go func() {
-		s.GracefulStop()
-		close(stopped)
-	}()
-
-	t := time.NewTimer(timeout)
-	select {
-	case <-t.C:
-		s.Stop()
-	case <-stopped:
-		t.Stop()
-	}
-}
-
-func cacheDirectory() (string, error) {
-	id, err := uuid.NewUUID()
-	if err != nil {
-		return "", fmt.Errorf("creating uuid for cache directory")
-	}
-
-	path := filepath.Join(os.TempDir(), "dhctl", "cache_"+id.String())
-
-	return path, nil
 }

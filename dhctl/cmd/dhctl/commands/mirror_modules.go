@@ -28,6 +28,8 @@ func DefineMirrorModulesCommand(parent *kingpin.Application) *kingpin.CmdClause 
 	app.DefineMirrorModulesFlags(cmd)
 
 	cmd.Action(func(context *kingpin.ParseContext) error {
+		printMirrorDeprecationNotice()
+
 		if app.MirrorRegistry != "" {
 			var authProvider authn.Authenticator = nil
 			if app.MirrorRegistryUsername != "" {

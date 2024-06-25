@@ -53,10 +53,10 @@ func InitLogger(loggerType string) {
 	InitLoggerWithOptions(loggerType, LoggerOptions{IsDebug: app.IsDebug})
 }
 
-func WrapLoggerWithTeeLogger(pathToTeeFile string, bufSize int) error {
+func WrapLoggerWithTeeLogger(writer io.WriteCloser, bufSize int) error {
 	previousLogger := defaultLogger
 	var err error
-	defaultLogger, err = NewTeeLogger(defaultLogger, pathToTeeFile, bufSize)
+	defaultLogger, err = NewTeeLogger(defaultLogger, writer, bufSize)
 	if err != nil {
 		defaultLogger = previousLogger
 		return err
@@ -98,8 +98,8 @@ func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 	}
 }
 
-func WrapWithTeeLogger(outFile string, bufSize int) error {
-	l, err := NewTeeLogger(defaultLogger, outFile, bufSize)
+func WrapWithTeeLogger(writer io.WriteCloser, bufSize int) error {
+	l, err := NewTeeLogger(defaultLogger, writer, bufSize)
 	if err != nil {
 		return err
 	}
@@ -168,13 +168,14 @@ type PrettyLogger struct {
 func NewPrettyLogger(opts LoggerOptions) *PrettyLogger {
 	res := &PrettyLogger{
 		processTitles: map[string]styleEntry{
-			"common":    {"🎈 ~ Common: %s", CommonOptions},
-			"terraform": {"🌱 ~ Terraform: %s", TerraformOptions},
-			"converge":  {"🛸 ~ Converge: %s", ConvergeOptions},
-			"bootstrap": {"⛵ ~ Bootstrap: %s", BootstrapOptions},
-			"mirror":    {"🪞 ~ Mirror: %s", MirrorOptions},
-			"attach":    {"📦 ~ Attach: %s", AttachOptions},
-			"default":   {"%s", BoldOptions},
+			"common":           {"🎈 ~ Common: %s", CommonOptions},
+			"terraform":        {"🌱 ~ Terraform: %s", TerraformOptions},
+			"converge":         {"🛸 ~ Converge: %s", ConvergeOptions},
+			"bootstrap":        {"⛵ ~ Bootstrap: %s", BootstrapOptions},
+			"mirror":           {"🪞 ~ Mirror: %s", MirrorOptions},
+			"commander/attach": {"⚓ ~ Attach to commander: %s", CommanderAttachOptions},
+			"commander/detach": {"🚢 ~ Detach from commander: %s", CommanderDetachOptions},
+			"default":          {"%s", BoldOptions},
 		},
 		isDebug: opts.IsDebug,
 	}
@@ -581,21 +582,16 @@ type TeeLogger struct {
 
 	bufMutex sync.Mutex
 	buf      *bufio.Writer
-	out      *os.File
+	out      io.WriteCloser
 }
 
-func NewTeeLogger(l Logger, outFile string, bufferSize int) (*TeeLogger, error) {
-	out, err := os.Create(outFile)
-	if err != nil {
-		return nil, err
-	}
-
-	buf := bufio.NewWriterSize(out, bufferSize)
+func NewTeeLogger(l Logger, writer io.WriteCloser, bufferSize int) (*TeeLogger, error) {
+	buf := bufio.NewWriterSize(writer, bufferSize)
 
 	return &TeeLogger{
 		l:   l,
 		buf: buf,
-		out: out,
+		out: writer,
 	}, nil
 }
 

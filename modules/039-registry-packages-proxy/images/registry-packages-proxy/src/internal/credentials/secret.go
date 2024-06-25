@@ -64,8 +64,10 @@ func (d registrySecretData) toClientConfig() (*registry.ClientConfig, error) {
 		}
 	}
 
+	repo := fmt.Sprintf("%s/%s", strings.Trim(d.Address, "/"), strings.Trim(d.Path, "/"))
+
 	return &registry.ClientConfig{
-		Repository: strings.Join([]string{d.Address, d.Path}, "/"),
+		Repository: repo,
 		Scheme:     d.Scheme,
 		CA:         d.CA,
 		Auth:       auth,

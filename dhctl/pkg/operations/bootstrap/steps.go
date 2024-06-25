@@ -67,6 +67,9 @@ func BootstrapMaster(sshClient *ssh.Client, bundleName, nodeIP string, metaConfi
 		}
 
 		err := log.Process("bootstrap", fmt.Sprintf("Prepare %s", app.NodeDeckhouseDirectoryPath), func() error {
+			if err := sshClient.Command("mkdir", "-p", "-m", "0755", app.NodeDeckhouseDirectoryPath).Sudo().Run(); err != nil {
+				return fmt.Errorf("ssh: mkdir -p -m 0755 %s: %w", app.NodeDeckhouseDirectoryPath, err)
+			}
 			if err := sshClient.Command("mkdir", "-p", app.DeckhouseNodeBinPath).Sudo().Run(); err != nil {
 				return fmt.Errorf("ssh: mkdir -p %s: %w", app.DeckhouseNodeBinPath, err)
 			}
@@ -125,7 +128,8 @@ func ExecuteBashibleBundle(sshClient *ssh.Client, tmpDir string) error {
 
 		_, err := bundleCmd.ExecuteBundle(parentDir, bundleDir)
 		if err != nil {
-			if ee, ok := err.(*exec.ExitError); ok {
+			var ee *exec.ExitError
+			if errors.As(err, &ee) {
 				return fmt.Errorf("bundle '%s' error: %v\nstderr: %s", bundleDir, err, string(ee.Stderr))
 			}
 			return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
@@ -194,9 +198,11 @@ func newRegistryClientConfigGetter(config config.RegistryData) (*registryClientC
 		return nil, fmt.Errorf("registry auth: %v", err)
 	}
 
+	repo := fmt.Sprintf("%s/%s", strings.Trim(config.Address, "/"), strings.Trim(config.Path, "/"))
+
 	return &registryClientConfigGetter{
 		ClientConfig: registry.ClientConfig{
-			Repository: strings.Join([]string{config.Address, config.Path}, "/"),
+			Repository: repo,
 			Scheme:     config.Scheme,
 			CA:         config.CA,
 			Auth:       auth,
@@ -369,7 +375,8 @@ func DetermineBundleName(sshClient *ssh.Client) (string, error) {
 			detectCmd := sshClient.UploadScript(file)
 			stdout, err := detectCmd.Execute()
 			if err != nil {
-				if ee, ok := err.(*exec.ExitError); ok {
+				var ee *exec.ExitError
+				if errors.As(err, &ee) {
 					return fmt.Errorf("detect_bundle.sh: %v, %s", err, string(ee.Stderr))
 				}
 				return fmt.Errorf("detect_bundle.sh: %v", err)

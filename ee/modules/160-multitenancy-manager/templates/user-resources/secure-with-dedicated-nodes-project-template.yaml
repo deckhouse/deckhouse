@@ -212,7 +212,7 @@ spec:
     apiVersion: deckhouse.io/v1alpha1
     kind: AuthorizationRule
     metadata:
-      name: {{ $administrator.name }}
+      name: {{ $administrator.name | include "normalize" }}
     spec:
       accessLevel: Admin
       subjects:

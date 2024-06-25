@@ -15,9 +15,7 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path"
 	"runtime/trace"
@@ -30,14 +28,20 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 func main() {
 	_ = os.Mkdir(app.TmpDirName, 0o755)
+
+	initGlobalVars()
 
 	tomb.RegisterOnShutdown("Trace", EnableTrace())
 	tomb.RegisterOnShutdown("Restore terminal if needed", restoreTerminal())
@@ -56,19 +60,8 @@ func main() {
 		return nil
 	})
 
-	runningInContainer, err := isRunningInContainer()
-	if err != nil {
-		log.ErrorLn(err.Error())
-		return
-	}
-
 	commands.DefineMirrorCommand(kpApp)
 	commands.DefineMirrorModulesCommand(kpApp)
-	if !runningInContainer {
-		// We only allow mirror functions to be used outside of container environments.
-		runApplication(kpApp)
-		return
-	}
 
 	commands.DefineServerCommand(kpApp)
 	commands.DefineSingleThreadedServerCommand(kpApp)
@@ -165,7 +158,12 @@ func runApplication(kpApp *kingpin.Application) {
 			logPath = path.Join(app.TmpDirName, logFile)
 		}
 
-		err := log.WrapWithTeeLogger(logPath, 1024)
+		outFile, err := os.Create(logPath)
+		if err != nil {
+			return err
+		}
+
+		err = log.WrapWithTeeLogger(outFile, 1024)
 		if err != nil {
 			return err
 		}
@@ -198,21 +196,6 @@ func runApplication(kpApp *kingpin.Application) {
 	// Block "main" function until teardown callbacks are finished.
 	exitCode := tomb.WaitShutdown()
 	os.Exit(exitCode)
-}
-
-func isRunningInContainer() (bool, error) {
-	_, err := os.Stat(app.VersionFile)
-	_, inClusterEnvExists := os.LookupEnv("DHCTL_CLI_KUBE_CLIENT_FROM_CLUSTER")
-	switch {
-	case inClusterEnvExists:
-		return true, nil
-	case errors.Is(err, fs.ErrNotExist):
-		return false, nil
-	case err != nil:
-		return false, err
-	default:
-		return true, nil
-	}
 }
 
 func EnableTrace() func() {
@@ -267,4 +250,25 @@ func restoreTerminal() func() {
 	}
 
 	return func() { _ = terminal.Restore(fd, state) }
+}
+
+func initGlobalVars() {
+	// get current path
+	pwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	// set path to ssh and terraform binaries
+	if err := os.Setenv("PATH", fmt.Sprintf("%s/bin:%s", pwd, os.Getenv("PATH"))); err != nil {
+		panic(err)
+	}
+
+	// set relative path to config and template files
+	config.InitGlobalVars(pwd)
+	commands.InitGlobalVars(pwd)
+	app.InitGlobalVars(pwd)
+	terraform.InitGlobalVars(pwd)
+	manifests.InitGlobalVars(pwd)
+	template.InitGlobalVars(pwd)
 }

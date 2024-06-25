@@ -21,10 +21,12 @@ import (
 	"strings"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
@@ -149,25 +151,7 @@ func (c *Creator) TryToCreate() error {
 }
 
 func (c *Creator) isNamespaced(gvk schema.GroupVersionKind, name string) (bool, error) {
-	lists, err := c.kubeCl.APIResourceList(gvk.GroupVersion().String())
-	if err != nil && len(lists) == 0 {
-		// apiVersion is defined and there is a ServerResourcesForGroupVersion error
-		return false, err
-	}
-
-	namespaced := false
-	for _, list := range lists {
-		for _, resource := range list.APIResources {
-			if len(resource.Verbs) == 0 {
-				continue
-			}
-			if resource.Name == name {
-				namespaced = resource.Namespaced
-				break
-			}
-		}
-	}
-	return namespaced, nil
+	return isNamespaced(c.kubeCl, gvk, name)
 }
 
 func (c *Creator) createSingleResource(resource *template.Resource) error {
@@ -257,4 +241,61 @@ func getUnstructuredName(obj *unstructured.Unstructured) string {
 		return fmt.Sprintf("%s %s", obj.GetKind(), obj.GetName())
 	}
 	return fmt.Sprintf("%s %s/%s", obj.GetKind(), obj.GetNamespace(), obj.GetName())
+}
+
+func DeleteResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources) error {
+	for _, res := range resources {
+		name := res.Object.GetName()
+		namespace := res.Object.GetNamespace()
+		gvk := res.GVK
+
+		gvr, err := kubeCl.GroupVersionResource(gvk.ToAPIVersionAndKind())
+		if err != nil {
+			return fmt.Errorf("bad group version resource %s: %w", res.GVK.String(), err)
+		}
+
+		namespaced, err := isNamespaced(kubeCl, gvk, gvr.Resource)
+		if err != nil {
+			return fmt.Errorf("can't determine whether a resource is namespaced or not: %v", err)
+		}
+		if namespace == metav1.NamespaceNone && namespaced {
+			namespace = metav1.NamespaceDefault
+		}
+
+		var resourceClient dynamic.ResourceInterface
+		if namespaced {
+			resourceClient = kubeCl.Dynamic().Resource(gvr).Namespace(namespace)
+		} else {
+			resourceClient = kubeCl.Dynamic().Resource(gvr)
+		}
+
+		if err := resourceClient.Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf("unable to delete %s %s: %w", gvr.String(), name, err)
+			}
+			log.DebugF("Unable to delete resource: %s %s: %s\n", gvr.String(), name, err)
+		}
+	}
+
+	return nil
+}
+
+func isNamespaced(kubeCl *client.KubernetesClient, gvk schema.GroupVersionKind, name string) (bool, error) {
+	lists, err := kubeCl.APIResourceList(gvk.GroupVersion().String())
+	if err != nil && len(lists) == 0 {
+		// apiVersion is defined and there is a ServerResourcesForGroupVersion error
+		return false, err
+	}
+
+	for _, list := range lists {
+		for _, resource := range list.APIResources {
+			if len(resource.Verbs) == 0 {
+				continue
+			}
+			if resource.Name == name {
+				return resource.Namespaced, nil
+			}
+		}
+	}
+	return false, nil
 }
