@@ -10,19 +10,27 @@ from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
     {{- else if semverCompare ">=1.25" $version }}
 from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
     {{- end }}
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache linux-headers build-base git mercurial
+  - apk add --no-cache linux-headers build-base git mercurial patch
   install:
   - mkdir /src
   - cd /src
 {{- if semverCompare ">=1.28" $version }}
   - git clone --depth 1 --branch v1.27.{{ $value.clusterAutoscalerPatch }} {{ $.SOURCE_REPO }}/gardener/autoscaler.git .
+  - test -d /patches/1.27 && for patchfile in /patches/1.27/*.patch ; do patch -p1 < ${patchfile}; done
 {{- else }}
   - git clone --depth 1 --branch v{{ $version }}.{{ $value.clusterAutoscalerPatch }} {{ $.SOURCE_REPO }}/gardener/autoscaler.git .
+  - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
 {{- end }}
   - cd cluster-autoscaler
   - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o cluster-autoscaler
