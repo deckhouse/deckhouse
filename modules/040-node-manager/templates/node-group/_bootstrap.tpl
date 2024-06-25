@@ -9,6 +9,7 @@
   {{- $_ := set $tpl_context "Template" $context.Template }}
   {{- $_ := set $tpl_context "Values" $context.Values }}
   {{- $_ := set $tpl_context "nodeGroup" $ng }}
+	{{- $_ := set $tpl_context "images" $context.Values.global.modulesImages.digests.registrypackages }}
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
