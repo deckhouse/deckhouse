@@ -1122,8 +1122,6 @@ shell:
   - apt-get update
   - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends wget unzip git python3 python3-pip jq curl gettext-base bsdextrautils
   - pip3 install awscli
-  - curl -LO https://dl.k8s.io/release/v1.26.0/bin/linux/amd64/kubectl
-  - install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
   - |
     mkdir /terraform
     mkdir -p /usr/local/share/terraform/plugins
