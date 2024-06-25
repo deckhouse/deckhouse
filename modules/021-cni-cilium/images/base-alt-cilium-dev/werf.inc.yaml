@@ -38,19 +38,16 @@ shell:
   # apt install
   - |
     apt-get install -y \
-    apt-https curl \
-    jq tzdata  \
-    bash-completion iproute2 iptables ipset kmod ca-certificates \
-    coreutils binutils make cmake ccache automake autoconf ccache patch patchelf \
-    git zip unzip wget mount \
-    gcc gcc9 gcc-c++   \
-    glibc glibc-devel libmnl-devel \
-    bison flex \
-    build-essential libtool ninja-build pkg-config  \
+    apt-https curl jq tzdata \
+    ca-certificates bash-completion iproute2 arpd ipset kmod \
+    iptables iptables-ipv6 iptables-nft \
+    coreutils binutils git zip unzip wget mount patch patchelf \
+    make automake autoconf cmake ccache bison flex ninja-build pkg-config \
+    gcc gcc9 gcc-c++ glibc \
     python python3 python3-module-pip python3-module-virtualenv \
-    libnetfilter_conntrack-devel libnetfilter_conntrack libnfnetlink-devel \
-    libnftnl-devel \
-    elfutils-devel zlib-devel
+    build-essential libtool glibc-devel glibc-devel-static \
+    libnetfilter_conntrack libnetfilter_conntrack-devel libnfnetlink-devel \
+    libmnl-devel libnftnl-devel elfutils-devel zlib-devel
   - apt-get install -y llvm-devel
   # for debug
   - apt-get install -y strace vim-console
@@ -61,7 +58,8 @@ shell:
     apt-get update && apt-get install -y -d \
     libcap-devel \
     clang15.0 clang15.0-tools lldb15.0 lld15.0 llvm15.0-devel \
-    libstdc++-devel libstdc++-devel-static libstdc++10-devel-static glibc-devel-static libcxxabi-devel
+    libstdc++-devel libstdc++-devel-static libstdc++10-devel-static \
+    libcxxabi-devel
   # - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
   install:
   # Install Go

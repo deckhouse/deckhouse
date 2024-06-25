@@ -1,6 +1,6 @@
 {{- $ciliumProxyRev := "ad82c7c56e88989992fd25d8d67747de865c823b" }}
 {{- $ciliumProxyCacheRev := "v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b-alt-v1" }}
-{{- $fromCacheVersion := "16" }}
+{{- $fromCacheVersion := "17" }}
 ---
 # #####################################################################
 # Build cilium-envoy binaries
@@ -29,7 +29,8 @@ shell:
     apt-get install -y \
     libcap-devel \
     clang15.0 clang15.0-tools lldb15.0 lld15.0 llvm15.0-devel \
-    libstdc++-devel libstdc++-devel-static libstdc++10-devel-static glibc-devel-static libcxxabi-devel
+    libstdc++-devel libstdc++-devel-static libstdc++10-devel-static \
+    libcxxabi-devel
   - ln -f -s llvm-15.0 "/usr/lib/llvm-15"
   #- ln -f -s /usr/lib64 "/lib/x86_64-linux-gnu"
   - update-alternatives --install /usr/bin/python python /usr/bin/python3 1
