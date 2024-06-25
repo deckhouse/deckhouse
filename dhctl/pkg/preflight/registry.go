@@ -227,7 +227,7 @@ func (pc *Checker) CheckRegistryCredentials() error {
 		return nil
 	}
 
-	image := pc.installConfig.GetImage(false)
+	image := pc.installConfig.GetImage(true)
 	log.DebugF("Image: %s\n", image)
 	// skip for CE edition
 	if image == "registry.deckhouse.ru/deckhouse/ce" {
