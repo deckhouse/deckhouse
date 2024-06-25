@@ -518,7 +518,6 @@ jobs:
             --kubeconfig=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
             --resources=/deckhouse/testing/cloud_layouts/EKS/WithoutNAT/resources.yaml"
 
-            
           docker run --rm \
           -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
