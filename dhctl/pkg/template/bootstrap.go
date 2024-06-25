@@ -33,6 +33,10 @@ func PrepareBootstrap(templateController *Controller, nodeIP, bundleName string,
 			from: filepath.Join(candiBashibleDir, "bootstrap"),
 			to:   bootstrapDir,
 			data: bashibleData,
+			ignorePaths: map[string]struct{}{
+				filepath.Join(candiBashibleDir, "bootstrap", "02-network-scripts.sh.tpl"):  {},
+				filepath.Join(candiBashibleDir, "bootstrap", "03-prepare-bashible.sh.tpl"): {},
+			},
 		},
 		{
 			from: filepath.Join(candiBashibleDir, "bundles", bundleName),
@@ -54,7 +58,7 @@ func PrepareBootstrap(templateController *Controller, nodeIP, bundleName string,
 	return log.Process("default", "Render bootstrap templates", func() error {
 		for _, info := range saveInfo {
 			log.InfoF("From %q to %q\n", info.from, info.to)
-			if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, nil); err != nil {
+			if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, info.ignorePaths); err != nil {
 				return err
 			}
 		}
