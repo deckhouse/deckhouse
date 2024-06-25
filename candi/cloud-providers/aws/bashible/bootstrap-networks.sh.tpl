@@ -17,7 +17,7 @@
 
 if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
   attempt=0
-	fail_describe_tags=0
+  fail_describe_tags=0
   until [[ $(/opt/deckhouse/bin/ec2_describe_tags -query_meta) ]]; do 
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "2" ]; then
