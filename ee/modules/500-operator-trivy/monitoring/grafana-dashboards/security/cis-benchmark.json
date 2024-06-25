@@ -33,7 +33,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$ds_prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -53,7 +53,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "${datasource}"
       },
       "description": "All Checks Passed",
       "fieldConfig": {
@@ -118,7 +118,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$ds_prometheus"
+            "uid": "${datasource}"
           },
           "expr": "count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\"} == 0)/count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\"})",
           "format": "time_series",
@@ -134,7 +134,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "${datasource}"
       },
       "description": "All Checks Passed",
       "fieldConfig": {
@@ -204,7 +204,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$ds_prometheus"
+            "uid": "${datasource}"
           },
           "expr": "count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\"}==0)",
           "format": "time_series",
@@ -220,7 +220,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "${datasource}"
       },
       "description": "Total Number of All Checks Run",
       "fieldConfig": {
@@ -283,7 +283,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$ds_prometheus"
+            "uid": "${datasource}"
           },
           "expr": "count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\"})",
           "format": "time_series",
@@ -299,7 +299,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "${datasource}"
       },
       "description": "CRITICAL severity Checks Passed",
       "fieldConfig": {
@@ -364,7 +364,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$ds_prometheus"
+            "uid": "${datasource}"
           },
           "expr": "count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\",severity=\"CRITICAL\"} == 0)/count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\",severity=\"CRITICAL\"})",
           "format": "time_series",
@@ -380,7 +380,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "${datasource}"
       },
       "description": "HIGH severity Checks Passed",
       "fieldConfig": {
@@ -445,7 +445,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$ds_prometheus"
+            "uid": "${datasource}"
           },
           "expr": "count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\",severity=\"HIGH\"} == 0)/count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\",severity=\"HIGH\"})",
           "format": "time_series",
@@ -461,7 +461,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "${datasource}"
       },
       "description": "MEDIUM severity Checks Passed",
       "fieldConfig": {
@@ -526,7 +526,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$ds_prometheus"
+            "uid": "${datasource}"
           },
           "expr": "count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\",severity=\"MEDIUM\"} == 0)/count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\",severity=\"MEDIUM\"})",
           "format": "time_series",
@@ -542,7 +542,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "${datasource}"
       },
       "description": "LOW severity Checks Passed",
       "fieldConfig": {
@@ -607,7 +607,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$ds_prometheus"
+            "uid": "${datasource}"
           },
           "expr": "count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\",severity=\"LOW\"} == 0)/count(deckhouse_trivy_cis_benchmark{job=\"deckhouse\",severity=\"LOW\"})",
           "format": "time_series",
@@ -623,7 +623,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -747,7 +747,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$ds_prometheus"
+            "uid": "${datasource}"
           },
           "expr": "deckhouse_trivy_cis_benchmark{job=\"deckhouse\"} != 0",
           "format": "table",

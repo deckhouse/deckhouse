@@ -273,6 +273,10 @@ func (s stubModulesManager) GetModule(_ string) *addonmodules.BasicModule {
 	return nil
 }
 
+func (s stubModulesManager) GetEnabledModuleNames() []string {
+	return nil
+}
+
 func (s stubModulesManager) RunModuleWithNewStaticValues(_, _, _ string) error {
 	return nil
 }

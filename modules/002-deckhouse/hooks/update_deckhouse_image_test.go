@@ -528,7 +528,7 @@ status:
 		})
 	})
 
-	Context("Release with not met requirements", func() {
+	Context("Release with not met requirements and module is enabled", func() {
 		BeforeEach(func() {
 			requirements.RegisterCheck("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 				v, _ := getter.Get("global.discovery.kubernetesVersion")
@@ -540,6 +540,7 @@ status:
 			})
 			requirements.SaveValue("global.discovery.kubernetesVersion", "1.16.0")
 			f.KubeStateSet(deckhousePodYaml + releaseWithRequirements)
+			f.ValuesSet("global.enabledModules", []string{"deckhouse"})
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
 		})
@@ -572,6 +573,34 @@ status:
 			})
 		})
 
+	})
+
+	Context("Release with not met requirements and module is disabled", func() {
+		BeforeEach(func() {
+			requirements.RegisterCheck("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+				v, _ := getter.Get("global.discovery.kubernetesVersion")
+				if v != requirementValue {
+					return false, errors.New("min k8s version failed")
+				}
+
+				return true, nil
+			})
+			requirements.SaveValue("global.discovery.kubernetesVersion", "1.16.0")
+			f.KubeStateSet(deckhousePodYaml + releaseWithRequirements)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+			f.RunHook()
+		})
+
+		Context("Release requirements passed", func() {
+			It("Should update deckhouse deployment", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				r130 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.30.0")
+				Expect(r130.Field("status.phase").String()).To(Equal("Deployed"))
+				Expect(r130.Field("status.message").String()).To(Equal(``))
+				dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+				Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.30.0"))
+			})
+		})
 	})
 
 	Context("Disruption release", func() {

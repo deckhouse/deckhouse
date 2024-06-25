@@ -24,12 +24,15 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
-const (
+var (
 	candiDir         = "/deckhouse/candi"
-	bashibleDir      = "/var/lib/bashible"
 	candiBashibleDir = candiDir + "/bashible"
-	stepsDir         = bashibleDir + "/bundle_steps"
 	detectBundlePath = candiBashibleDir + "/detect_bundle.sh"
+)
+
+const (
+	bashibleDir = "/var/lib/bashible"
+	stepsDir    = bashibleDir + "/bundle_steps"
 )
 
 type saveFromTo struct {
@@ -189,4 +192,13 @@ func RenderAndSaveDetectBundle(data map[string]interface{}) (string, error) {
 	log.DebugLn("Start render detect bundle script")
 
 	return RenderAndSaveTemplate("detect_bundle.sh", detectBundlePath, data)
+}
+
+func InitGlobalVars(pwd string) {
+	candiDir = pwd + "/deckhouse/candi"
+	candiBashibleDir = candiDir + "/bashible"
+	detectBundlePath = candiBashibleDir + "/detect_bundle.sh"
+	checkPortsScriptPath = candiBashibleDir + "/preflight/check_ports.sh"
+	checkLocalhostScriptPath = candiBashibleDir + "/preflight/check_localhost.sh"
+	preflightScriptDirPath = candiBashibleDir + "/preflight/"
 }

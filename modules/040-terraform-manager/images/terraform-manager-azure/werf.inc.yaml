@@ -6,7 +6,7 @@ git:
 import:
 - artifact: terraform-provider-azure
   add: /terraform-provider-azurerm
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.azure.namespace }}/{{ .TF.azure.type }}/{{ .TF.azure.version }}/linux_amd64/terraform-provider-azurerm
+  to: /plugins/registry.terraform.io/{{ .TF.azure.namespace }}/{{ .TF.azure.type }}/{{ .TF.azure.version }}/linux_amd64/terraform-provider-azurerm
   before: setup
 ---
 artifact: terraform-provider-azure

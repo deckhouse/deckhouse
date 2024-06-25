@@ -158,7 +158,14 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	podReady := isDeckhousePodReady(dc.GetHTTPClient())
-	deckhouseUpdater, err := d8updater.NewDeckhouseUpdater(input, approvalMode, releaseData, podReady, clusterBootstrapping)
+
+	enabledModulesFromValues := input.Values.Get("global.enabledModules").Array()
+	enabledModules := make([]string, 0, len(enabledModulesFromValues))
+	for _, module := range enabledModulesFromValues {
+		enabledModules = append(enabledModules, module.String())
+	}
+
+	deckhouseUpdater, err := d8updater.NewDeckhouseUpdater(input, approvalMode, releaseData, podReady, clusterBootstrapping, enabledModules)
 
 	if err != nil {
 		return fmt.Errorf("initializing deckhouse updater: %v", err)

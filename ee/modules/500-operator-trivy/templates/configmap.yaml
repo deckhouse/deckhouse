@@ -16,6 +16,7 @@ data:
   configAuditReports.scanner: "Trivy"
   report.recordFailedChecksOnly: "true"
   node.collector.imageRef: {{ include "helm_lib_module_image" (list . "nodeCollector") }}
+  node.collector.imagePullSecret: deckhouse-registry
   {{- with (include "helm_lib_tolerations" (tuple . "any-node") | fromYaml) }}
   scanJob.tolerations: {{ .tolerations | toJson | quote }}
   {{- end }}

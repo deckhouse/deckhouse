@@ -65,6 +65,8 @@
  - **[deckhouse-controller]** Fix MPO _out of sync_ in HA mode. [#8370](https://github.com/deckhouse/deckhouse/pull/8370)
  - **[deckhouse-controller]** Fix updates to module loading statistics and an error related to concurrent requests for module documentation building. [#8235](https://github.com/deckhouse/deckhouse/pull/8235)
  - **[deckhouse-controller]** Repeated queries with a limited number of attempts to get CRDs and apply conversion strategies. [#7949](https://github.com/deckhouse/deckhouse/pull/7949)
+ - **[dhctl]** Fix working with registries on non-standard ports. [#8727](https://github.com/deckhouse/deckhouse/pull/8727)
+    registry-packages-proxy should be restarted
  - **[dhctl]** Fix registry path calculation. [#8646](https://github.com/deckhouse/deckhouse/pull/8646)
     Registry packages proxy should be restarted.
  - **[dhctl]** Print invalid YAML documents. [#8296](https://github.com/deckhouse/deckhouse/pull/8296)
@@ -91,6 +93,8 @@
  - **[operator-trivy]** Fix incorrect reports links. [#7997](https://github.com/deckhouse/deckhouse/pull/7997)
  - **[prometheus]** Change `ignore_error` value from `true` to `false` in the aggregation proxy config to prevent caching empty results. [#8415](https://github.com/deckhouse/deckhouse/pull/8415)
  - **[prometheus]** Drop the metrics named `memcached_slab_*` from memcached. [#8342](https://github.com/deckhouse/deckhouse/pull/8342)
+ - **[registry-packages-proxy]** Fix working with registries on non-standard ports. [#8727](https://github.com/deckhouse/deckhouse/pull/8727)
+    registry-packages-proxy should be restarted
  - **[registry-packages-proxy]** Fix registry path calculation. [#8646](https://github.com/deckhouse/deckhouse/pull/8646)
     Registry packages proxy should be restarted.
  - **[registry-packages-proxy]** Don't replace the system CA certificates if a custom CA is used. [#8537](https://github.com/deckhouse/deckhouse/pull/8537)
