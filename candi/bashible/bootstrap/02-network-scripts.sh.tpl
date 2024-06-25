@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 */}}
-
 {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
   {{- if $bootstrap_script_network := $.Files.Get (printf "candi/cloud-providers/%s/bashible/bootstrap-networks.sh.tpl" $.Values.nodeManager.internal.cloudProvider.type) }}
     {{- tpl ($bootstrap_script_network) $ | nindent 0 }}
