@@ -9,8 +9,8 @@
   {{- $_ := set $tpl_context "Template" $context.Template }}
   {{- $_ := set $tpl_context "Values" $context.Values }}
   {{- $_ := set $tpl_context "nodeGroup" $ng }}
-	{{- $_ := set $tpl_context "images" $context.Values.global.modulesImages.digests.registrypackages }}
-	{{- $_ := set $tpl_context "packagesProxy" $context.Values.nodeManager.internal.packagesProxy }}
+  {{- $_ := set $tpl_context "images" $context.Values.global.modulesImages.digests.registrypackages }}
+  {{- $_ := set $tpl_context "packagesProxy" $context.Values.nodeManager.internal.packagesProxy }}
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
@@ -33,22 +33,22 @@ function run_cloud_network_setup() {
   cat > ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh <<"EOF"
       {{- tpl $bootstrap_networks $tpl_context | nindent 0 }}
 EOF
-	chmod +x ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh
+  chmod +x ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh
 
   if [[ -f ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh ]] ; then
-		attempt=0
+    attempt=0
     until ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh; do
-			attempt=$(( attempt + 1 ))
+      attempt=$(( attempt + 1 ))
       >&2 echo "Failed to execute cloud provider bootstrap-networks. Retry in 10 seconds."
       sleep 10
 
-			if [ "$attempt" -gt "2" ]; then
-				break
-    	fi
+      if [ "$attempt" -gt "2" ]; then
+        break
+      fi
     done
   fi
     {{- end }}
-	return 0
+  return 0
 }
   {{- end }}
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
@@ -93,7 +93,7 @@ function check_python() {
 function get_phase2() {
   bootstrap_ng_name="common.{{ $ng.name }}"
   token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
-	check_python
+  check_python
   while true; do
     for server in {{ $context.Values.nodeManager.internal.clusterMasterAddresses | join " " }}; do
       url="https://${server}/apis/bashible.deckhouse.io/v1alpha1/bootstrap/${bootstrap_ng_name}"
