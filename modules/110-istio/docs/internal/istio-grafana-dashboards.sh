@@ -40,11 +40,3 @@ SERVICES_UID=$(cat service.json| jq .uid -r)
 # Fix dashboard urls
 sed -i '' -e 's|/dashboard/db/istio-workload-dashboard|/d/'${WORKLOADS_UID}'/istio-workload-dashboard|g' *.json
 sed -i '' -e 's|/dashboard/db/istio-service-dashboard|/d/'${SERVICES_UID}'/istio-service-dashboard|g' *.json
-
-# Find all ranges and replace them to `$__interval_sx4`:
-for dashboard in *.json; do
-  for range in $(grep '\[[0-9]\+[a-z]\]' $dashboard | sed 's/.*\(\[[0-9][a-z]\]\).*/\1/g' | tr -d "[]" | sort | uniq); do
-    echo $dashboard $range
-    sed -i '' -e 's/\['${range}'\]/[$__interval_sx4]/g' $dashboard
-  done
-done
