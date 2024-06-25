@@ -34,9 +34,14 @@ func PrepareBootstrap(templateController *Controller, nodeIP, bundleName string,
 			to:   bootstrapDir,
 			data: bashibleData,
 			ignorePaths: map[string]struct{}{
-				filepath.Join(candiBashibleDir, "bootstrap", "02-network-scripts.sh.tpl"):  {},
+				filepath.Join(candiBashibleDir, "bootstrap", "02-network-scripts.sh.tpl"):  {}, // Files are rendered separately, Files.Get is not supported on this files.
 				filepath.Join(candiBashibleDir, "bootstrap", "03-prepare-bashible.sh.tpl"): {},
 			},
+		},
+		{
+			from: filepath.Join(candiDir, "cloud-providers", metaConfig.ProviderName, "bashible"), // for bootstrap-network scripts
+			to:   bootstrapDir,
+			data: bashibleData,
 		},
 		{
 			from: filepath.Join(candiBashibleDir, "bundles", bundleName),

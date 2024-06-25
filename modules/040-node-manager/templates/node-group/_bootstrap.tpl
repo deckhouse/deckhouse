@@ -9,7 +9,8 @@
   {{- $_ := set $tpl_context "Template" $context.Template }}
   {{- $_ := set $tpl_context "Values" $context.Values }}
   {{- $_ := set $tpl_context "nodeGroup" $ng }}
-	{{- $_ := set $tpl_context "images" $context.Values.global.modulesImages.digests.registrypackages }}
+  {{- $_ := set $tpl_context "images" $context.Values.global.modulesImages.digests.registrypackages }}
+  {{- $_ := set $tpl_context "packagesProxy" $context.Values.nodeManager.internal.packagesProxy }}
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
@@ -20,20 +21,7 @@ mkdir -p "${BOOTSTRAP_DIR}" "${TMPDIR}"
 exec >"${TMPDIR}/bootstrap.log" 2>&1
   {{- end }}
 
-  {{- if $fetch_base_pkgs := $context.Files.Get "candi/bashible/bootstrap/01-base-pkgs.sh.tpl" }}
-function prepare_base_d8_binaries() {
-    {{- tpl $fetch_base_pkgs $tpl_context | nindent 0 }}
-}
-  {{- end }}
 
-  {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
-    {{- if $bootstrap_networks := $context.Files.Get "candi/bashible/bootstrap/02-network-scripts.sh.tpl" }}
-function run_cloud_network_setup() {
-      {{- tpl $bootstrap_networks $tpl_context | nindent 2 }}
-    {{- end }}
-return 0
-}
-  {{- end }}
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 function run_log_output() {
   if type nc >/dev/null 2>&1; then
@@ -62,10 +50,21 @@ sys.stdout.write(data["bootstrap"])
 EOF
 }
 
+function check_python() {
+  for pybin in python3 python2 python; do
+    if command -v "$pybin" >/dev/null 2>&1; then
+      python_binary="$pybin"
+      return 0
+    fi
+  done
+  echo "Python not found, exiting..."
+  return 1
+}
 
 function get_phase2() {
   bootstrap_ng_name="common.{{ $ng.name }}"
   token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
+  check_python
   while true; do
     for server in {{ $context.Values.nodeManager.internal.clusterMasterAddresses | join " " }}; do
       url="https://${server}/apis/bashible.deckhouse.io/v1alpha1/bootstrap/${bootstrap_ng_name}"
@@ -78,13 +77,21 @@ function get_phase2() {
   done
 }
 
-prepare_base_d8_binaries
-  {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
-run_cloud_network_setup
+#prepare_base_d8_binaries
+  {{- if $fetch_base_pkgs := $context.Files.Get "candi/bashible/bootstrap/01-base-pkgs.sh.tpl" }}
+    {{- tpl ( $fetch_base_pkgs ) $tpl_context | nindent 0 }}
   {{- end }}
+
+#run network scripts
+	{{- if $bootstrap_networks := $context.Files.Get "candi/bashible/bootstrap/02-network-scripts.sh.tpl" }}
+		{{- tpl ( $bootstrap_networks ) $tpl_context | nindent 0 }}
+	{{- end }}
+
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 run_log_output
   {{- end }}
+
+#run phase2
 get_phase2 | bash
 
   {{- /*
