@@ -22,7 +22,7 @@ exec >"${TMPDIR}/bootstrap.log" 2>&1
 
   {{- if $fetch_base_pkgs := $context.Files.Get "candi/bashible/bootstrap/01-base-pkgs.sh.tpl" }}
 function prepare_base_d8_binaries() {
-    {{- tpl $fetch_base_pkgs $tpl_context | nindent 2 }}
+    {{- tpl $fetch_base_pkgs $tpl_context | nindent 0 }}
 }
   {{- end }}
 
