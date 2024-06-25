@@ -21,36 +21,7 @@ mkdir -p "${BOOTSTRAP_DIR}" "${TMPDIR}"
 exec >"${TMPDIR}/bootstrap.log" 2>&1
   {{- end }}
 
-  {{- if $fetch_base_pkgs := $context.Files.Get "candi/bashible/bootstrap/01-base-pkgs.sh.tpl" }}
-function prepare_base_d8_binaries() {
-    {{- tpl $fetch_base_pkgs $tpl_context | nindent 0 }}
-}
-  {{- end }}
 
-  {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
-    {{- if $bootstrap_networks := $context.Files.Get "candi/bashible/bootstrap/02-network-scripts.sh.tpl" }}
-function run_cloud_network_setup() {
-  cat > ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh <<"EOF"
-      {{- tpl $bootstrap_networks $tpl_context | nindent 0 }}
-EOF
-  chmod +x ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh
-
-  if [[ -f ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh ]] ; then
-    attempt=0
-    until ${BOOTSTRAP_DIR}/cloud-provider-bootstrap-networks.sh; do
-      attempt=$(( attempt + 1 ))
-      >&2 echo "Failed to execute cloud provider bootstrap-networks. Retry in 10 seconds."
-      sleep 10
-
-      if [ "$attempt" -gt "2" ]; then
-        break
-      fi
-    done
-  fi
-    {{- end }}
-  return 0
-}
-  {{- end }}
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 function run_log_output() {
   if type nc >/dev/null 2>&1; then
@@ -106,13 +77,23 @@ function get_phase2() {
   done
 }
 
-prepare_base_d8_binaries
-  {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
-run_cloud_network_setup
+#prepare_base_d8_binaries
+  {{- if $fetch_base_pkgs := $context.Files.Get "candi/bashible/bootstrap/01-base-pkgs.sh.tpl" }}
+    {{- tpl $fetch_base_pkgs $tpl_context | nindent 0 }}
   {{- end }}
+
+#run network scripts
+  {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
+    {{- if $bootstrap_networks := $context.Files.Get "candi/bashible/bootstrap/02-network-scripts.sh.tpl" }}
+      {{- tpl $bootstrap_networks $tpl_context | nindent 0 }}
+    {{- end }}
+  {{- end }}
+
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 run_log_output
   {{- end }}
+
+#run phase2
 get_phase2 | bash
 
   {{- /*
