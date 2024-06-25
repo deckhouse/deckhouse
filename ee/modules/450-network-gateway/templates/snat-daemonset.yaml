@@ -43,7 +43,7 @@ spec:
       labels:
         app: snat
       annotations:
-        {{ include "helm_lib_ds_eviction_annotation" (list . "false" ) | nindent 8 }}
+        {{ include "helm_lib_ds_eviction_annotation" . | nindent 8 }}
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet

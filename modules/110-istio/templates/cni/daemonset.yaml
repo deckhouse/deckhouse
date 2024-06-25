@@ -54,7 +54,7 @@ spec:
   template:
     metadata:
       annotations:
-        {{ include "helm_lib_ds_eviction_annotation" (list . "false" ) | nindent 8 }}
+        {{ include "helm_lib_ds_eviction_annotation" . | nindent 8 }}
       labels:
         app: istio-cni-node
         sidecar.istio.io/inject: "false"

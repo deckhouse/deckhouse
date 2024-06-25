@@ -24,7 +24,7 @@ spec:
         container.apparmor.security.beta.kubernetes.io/mount-cgroup: "unconfined"
         container.apparmor.security.beta.kubernetes.io/apply-sysctl-overwrites: "unconfined"
         container.apparmor.security.beta.kubernetes.io/install-cni-binaries: "unconfined"
-        {{ include "helm_lib_ds_eviction_annotation" (list . "false" ) | nindent 8 }}
+        {{ include "helm_lib_ds_eviction_annotation" . | nindent 8 }}
       labels:
         app: agent
         module: cni-cilium

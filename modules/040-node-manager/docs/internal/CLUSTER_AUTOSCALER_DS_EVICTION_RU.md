@@ -10,7 +10,7 @@ description: Примеры настройки Cluster Autoscaler в Kubernetes.
 
 Вы можете отключить выселение daemonset подов указав аннотацию:
 
-{{ include "helm_lib_ds_eviction_annotation" (list . "false" ) | nindent 8 }}
+{{ include "helm_lib_ds_eviction_annotation" . | nindent 8 }}
 
 ## Почему это важно
 

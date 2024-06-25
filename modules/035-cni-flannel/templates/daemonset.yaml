@@ -47,7 +47,7 @@ spec:
         app: flannel
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        {{ include "helm_lib_ds_eviction_annotation" (list . "false" ) | nindent 8 }}
+        {{ include "helm_lib_ds_eviction_annotation" . | nindent 8 }}
     spec:
       # https://github.com/coreos/flannel/issues/1002 workaround
       terminationGracePeriodSeconds: 0
