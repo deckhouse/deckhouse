@@ -78,10 +78,21 @@ sys.stdout.write(data["bootstrap"])
 EOF
 }
 
+function check_python() {
+  for pybin in python3 python2 python; do
+    if command -v "$pybin" >/dev/null 2>&1; then
+      python_binary="$pybin"
+      return 0
+    fi
+  done
+  echo "Python not found, exiting..."
+  return 1
+}
 
 function get_phase2() {
   bootstrap_ng_name="common.{{ $ng.name }}"
   token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
+	check_python
   while true; do
     for server in {{ $context.Values.nodeManager.internal.clusterMasterAddresses | join " " }}; do
       url="https://${server}/apis/bashible.deckhouse.io/v1alpha1/bootstrap/${bootstrap_ng_name}"
