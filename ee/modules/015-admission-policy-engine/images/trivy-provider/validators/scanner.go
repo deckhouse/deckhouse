@@ -24,18 +24,28 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+var inited bool
+
 func scanArtifact(ctx context.Context, imageName, remoteURL string, customHeaders http.Header, scanOpts types.ScanOptions) (types.Report, error) {
-	javadbImage := os.Getenv("TRIVY_JAVA_DB_IMAGE")
-	if len(javadbImage) == 0 {
-		javadbImage = "ghcr.io/aquasecurity/trivy-java-db:1"
+	if !inited {
+		javadbImage := os.Getenv("TRIVY_JAVA_DB_IMAGE")
+		if len(javadbImage) == 0 {
+			javadbImage = "ghcr.io/aquasecurity/trivy-java-db:1"
+		}
+
+		ref, err := name.ParseReference(javadbImage)
+		if err != nil {
+			return types.Report{}, err
+		}
+
+		javadb.Init("/home/javadb", ref, false, true, ftypes.RegistryOptions{Insecure: false})
+		inited = true
+		javadb.Update()
+		if err != nil {
+			return types.Report{}, err
+		}
 	}
 
-	ref, err := name.ParseReference(javadbImage)
-	if err != nil {
-		return types.Report{}, err
-	}
-
-	javadb.Init("/home/javadb", ref, false, true, ftypes.RegistryOptions{Insecure: false})
 	img, cleanup, err := image.NewContainerImage(ctx, imageName, ftypes.ImageOptions{
 		ImageSources: ftypes.ImageSources{ftypes.RemoteImageSource},
 	})
