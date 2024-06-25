@@ -128,7 +128,7 @@ with open('$2', 'wb') as f:
 EOFILE
 }
 
-{{ with $.Values.global.modulesImages.digests.registrypackages }}
+{{ with .images.registrypackages }}
 bb-package-install "jq:{{ .jq16 }}" "curl:{{ .d8Curl821 }}" "netcat:{{ .netcat110481 }}"
 {{ if eq $.provider "aws" }}
 bb-package-install "ec2DescribeTags:{{ .ec2DescribeTagsV001Flant2 }}" 
