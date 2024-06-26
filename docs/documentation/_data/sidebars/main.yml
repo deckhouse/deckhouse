@@ -1219,6 +1219,8 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/470-chrony/configuration.html
+            - title: FAQ
+              url: /modules/470-chrony/faq.html
         - title: namespace-configurator
           folders:
             - title:
