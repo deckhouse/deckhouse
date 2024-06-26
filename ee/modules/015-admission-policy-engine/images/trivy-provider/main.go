@@ -98,7 +98,7 @@ func main() {
 
 	go func() {
 		logger.Info("starting server...")
-		if err = server.ListenAndServeTLS(certFile, keyFile); err != nil {
+		if err = server.ListenAndServeTLS(certFile, keyFile); err != nil && err != http.ErrServerClosed {
 			zapLog.Fatal(fmt.Sprintf("Couldn't start HTTP server: %v", err))
 		}
 	}()
