@@ -6,7 +6,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-  add: /bin/vsphere-syncer
+  add: /src/vsphere-syncer
   to: /bin/vsphere-syncer
   before: setup
 docker:

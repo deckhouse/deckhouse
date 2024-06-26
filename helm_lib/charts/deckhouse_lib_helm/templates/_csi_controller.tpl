@@ -41,7 +41,7 @@ memory: 50Mi
   {{- $fullname := $config.fullname | default "csi-controller" }}
   {{- $snapshotterEnabled := dig "snapshotterEnabled" true $config }}
   {{- $resizerEnabled := dig "resizerEnabled" true $config }}
-  {{- $syncerEnabled := dig "syncerEnabled" "true" $config }}
+  {{- $syncerEnabled := dig "syncerEnabled" false $config }}
   {{- $topologyEnabled := dig "topologyEnabled" true $config }}
   {{- $extraCreateMetadataEnabled := dig "extraCreateMetadataEnabled" false $config }}
   {{- $controllerImage := $config.controllerImage | required "$config.controllerImage is required" }}
