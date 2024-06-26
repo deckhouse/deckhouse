@@ -11,6 +11,6 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - pod/logs
+      - pods/log
     verbs:
       - get
