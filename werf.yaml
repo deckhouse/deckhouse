@@ -599,7 +599,6 @@ shell:
 ---
 image: dev/install
 from: {{ .Images.BASE_ALT }}
-fromCacheVersion: 2
 git:
 - add: /
   to: /deckhouse
