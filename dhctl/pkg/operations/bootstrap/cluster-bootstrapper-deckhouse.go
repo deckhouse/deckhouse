@@ -19,7 +19,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -58,7 +58,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse() error {
 		}
 	}
 
-	kubeCl, err := operations.ConnectToKubernetesAPI(b.SSHClient)
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(b.SSHClient)
 	if err != nil {
 		return err
 	}

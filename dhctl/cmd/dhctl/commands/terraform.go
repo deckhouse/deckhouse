@@ -21,6 +21,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
@@ -59,7 +60,7 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
+		kubeCl, err := kubernetes.ConnectToKubernetesAPI(sshClient)
 		if err != nil {
 			return err
 		}

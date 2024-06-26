@@ -23,12 +23,12 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
@@ -418,7 +418,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	kubeCl, err := operations.ConnectToKubernetesAPI(b.SSHClient)
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(b.SSHClient)
 	if err != nil {
 		return err
 	}
@@ -434,10 +434,14 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		}
 
 		localBootstraper := func(f func() error) error {
-			if b.CommanderMode {
-				return f()
+			if !b.CommanderMode {
+				err := converge.NewInLockLocalRunner(kubeCl, "local-bootstraper").Run()
+				if err != nil {
+					return err
+				}
 			}
-			return converge.NewInLockLocalRunner(kubeCl, "local-bootstraper").Run(f)
+
+			return f()
 		}
 
 		err := localBootstraper(func() error {

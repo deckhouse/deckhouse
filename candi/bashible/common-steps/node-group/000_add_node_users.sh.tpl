@@ -272,6 +272,7 @@ function main() {
     done
     if [[ "$is_user_id_found" == "false" ]]; then
       if [ "$local_user_id" -gt "1000" ]; then
+        pkill -U $local_user_id
         userdel -r "$(id -nu $local_user_id)"
       else
         bb-log-error "Strange user with UID: $local_user_id, cannot delete it"
