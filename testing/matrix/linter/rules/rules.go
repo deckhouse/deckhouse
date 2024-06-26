@@ -296,6 +296,7 @@ func (l *ObjectLinter) ApplyObjectRules(object storage.StoreObject) {
 
 	if !skipObjectIfNeeded(&object) {
 		l.ErrorsList.Add(objectSecurityContext(object))
+		l.ErrorsList.Add(roles.ObjectRolesWildcard(object))
 	}
 
 	l.ErrorsList.Add(objectRevisionHistoryLimit(object))
