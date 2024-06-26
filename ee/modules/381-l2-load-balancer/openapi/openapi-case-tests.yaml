@@ -1,6 +1,6 @@
 positive:
   configValues:
-    loadBalancerClass: custom
+    - loadBalancerClass: custom
 negative:
   configValues:
   # Invalid value: pools are configured in L2LoadBalacncer resources
