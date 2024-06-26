@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"flag"
@@ -13,7 +14,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 	"trivy-provider/validators"
 	"trivy-provider/web"
@@ -54,6 +57,8 @@ func main() {
 	}
 	zapLog.Info("JavaDB was successfully initialized")
 
+	done := make(chan bool)
+
 	go func() {
 		ticker := time.NewTicker(1 * time.Hour)
 		defer ticker.Stop()
@@ -64,6 +69,8 @@ func main() {
 				if err := javadb.Update(); err != nil {
 					zapLog.Error(fmt.Sprintf("Couldn't update JavaDB: %v", err))
 				}
+			case <-done:
+				return
 			}
 		}
 	}()
@@ -86,10 +93,20 @@ func main() {
 	validator := web.NewHandler(scanner, scanningTimeout, logger)
 	handler.HandleFunc("/validate", validator.HandleRequest())
 
-	logger.Info("starting server...")
-	if err = server.ListenAndServeTLS(certFile, keyFile); err != nil {
-		zapLog.Fatal(fmt.Sprintf("Couldn't start HTTP server: %v", err))
-	}
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		logger.Info("starting server...")
+		if err = server.ListenAndServeTLS(certFile, keyFile); err != nil {
+			zapLog.Fatal(fmt.Sprintf("Couldn't start HTTP server: %v", err))
+		}
+	}()
+
+	sig := <-sigs
+	zapLog.Info(fmt.Sprintf("Recived %s signal, exiting...", sig))
+	done <- true
+	server.Shutdown(context.Background())
 }
 
 func initJavaDB() error {
