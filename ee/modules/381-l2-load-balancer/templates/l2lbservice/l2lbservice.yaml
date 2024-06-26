@@ -18,4 +18,7 @@ spec:
   selector:
     {{ $l2lbservice.selector | toYaml | nindent 4 }}
   type: LoadBalancer
+  {{ if $.Values.l2LoadBalancer.loadBalancerClass }}
+  loadBalancerClass: {{ $.Values.l2LoadBalancer.loadBalancerClass }}
+  {{- end }}
 {{- end }}
