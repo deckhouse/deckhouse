@@ -45,18 +45,18 @@ func main() {
 
 	zapLog, err := zap.NewDevelopment(zap.AddStacktrace(zap.ErrorLevel))
 	if err != nil {
-		panic(fmt.Sprintf("unable to initialize logger: %v", err))
+		zapLog.Fatal(fmt.Sprintf("unable to initialize logger: %v", err))
 	}
 	logger := zapr.NewLogger(zapLog).WithName("trivy-provider")
 
 	if err = initJavaDB(); err != nil {
-		panic(fmt.Sprintf("Couldn't initialize JavaDB: %v", err))
+		zapLog.Fatal(fmt.Sprintf("Couldn't initialize JavaDB: %v", err))
 	}
-	logger.Info("JavaDB was successfully initialized")
+	zapLog.Info("JavaDB was successfully initialized")
 
 	tlsConfig, err := newTLSConfig(clientCAFile)
 	if err != nil {
-		panic(err)
+		zapLog.Fatal(fmt.Sprintf("Couldnn't initialize tls config: %v", err))
 	}
 
 	handler := chi.NewRouter()
@@ -74,7 +74,7 @@ func main() {
 
 	logger.Info("starting server...")
 	if err = server.ListenAndServeTLS(certFile, keyFile); err != nil {
-		panic(err)
+		zapLog.Fatal(fmt.Sprintf("Couldn't start HTTP server: %v", err))
 	}
 }
 
