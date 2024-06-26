@@ -1,6 +1,6 @@
 {{- $ciliumProxyRev := "ad82c7c56e88989992fd25d8d67747de865c823b" }}
-{{- $ciliumProxyCacheRev := "v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b-v2" }}
-{{- $fromCacheVersion := "16" }}
+{{- $ciliumProxyCacheRev := "v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b-alt-v1" }}
+{{- $fromCacheVersion := "17" }}
 ---
 # #####################################################################
 # Build cilium-envoy binaries
@@ -26,31 +26,34 @@ shell:
   - git checkout {{ $ciliumProxyRev }}
   install:
   - |
-    apt-get install -y --no-install-recommends \
-    libcap-dev \
-    python-is-python3 \
-    clang-15 clang-tools-15 lldb-15 lld-15 clang-format-15 libc++-15-dev libc++abi-15-dev
-  - apt-get purge --auto-remove && apt-get clean
-  - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    apt-get install -y \
+    libcap-devel \
+    clang15.0 clang15.0-tools lldb15.0 lld15.0 llvm15.0-devel \
+    libstdc++-devel libstdc++-devel-static libstdc++10-devel-static \
+    libcxxabi-devel
+  - ln -f -s llvm-15.0 "/usr/lib/llvm-15"
+  - update-alternatives --install /usr/bin/python python /usr/bin/python3 1
+  - apt-get autoclean && apt-get clean
   beforeSetup:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /cilium/proxy
-  - sed -i 's/EXTRA_GO_BUILD_LDFLAGS = -extldflags -Wl,-soname,libcilium.so/EXTRA_GO_BUILD_LDFLAGS = -s -w -extldflags "-Wl,-soname,libcilium.so -static"/' proxylib/Makefile
-  - sed -i "s/\$(QUIET)\$(GO_BUILD_WITH_CGO) -ldflags '\$(EXTRA_GO_BUILD_LDFLAGS)' -o \$@ -buildmode=c-shared/\$(QUIET)\$(GO_BUILD_WITH_CGO) -tags netgo,osusergo -ldflags '\$(EXTRA_GO_BUILD_LDFLAGS)' -o \$@/" proxylib/Makefile
   - make -C proxylib all
   - mkdir -p /tmp/install/usr/lib
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
   setup:
+  - mkdir -p /tmp/bazel-cache
+  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache
   - export TARGETARCH=amd64 ARCH="x86_64"
   - export BAZEL_VERSION="6.1.0" USE_BAZEL_VERSION="6.1.0"
+  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
+  - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
   - cd /cilium/proxy
   - echo "{{ $ciliumProxyRev }}" >SOURCE_VERSION
   - sed -i "s,https://github.com,{{ $.SOURCE_REPO }}," WORKSPACE
-  - mkdir -p /tmp/bazel-cache
-  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache
-  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --linkopt='-static'"
-  - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
+  - sed -i 's/$(SUDO) apt info clang-15 || $(call add_clang_apt_source,$(shell lsb_release -cs))/rpm -q clang15.0/' Makefile
+  - sed -i "/\$(SUDO) apt install -y clang-15 llvm-15-dev lld-15 clang-format-15/d" Makefile
+  - sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-15.0/lib64/clang/15.0.7/include",' bazel/toolchains/BUILD
   - make bazel-bin/cilium-envoy
   - ./bazel/get_workspace_status
   - make install
