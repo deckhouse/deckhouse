@@ -27,6 +27,8 @@ var (
 	PreflightSkipSSHCredentialsCheck       = false
 	PreflightSkipRegistryCredentials       = false
 	PreflightSkipContainerdExistCheck      = false
+	PreflightSkipMasterHostname            = false
+	PreflightSkipOneSSHHost                = false
 )
 
 const (
@@ -39,6 +41,7 @@ const (
 	SSHCredentialsCheckArgName       = "preflight-skip-ssh-credentials-check"
 	RegistryCredentialsCheckArgName  = "preflight-skip-registry-credential"
 	ContainerdExistCheckArgName      = "preflight-skip-containerd-exist"
+	OneSSHHostCheckArgName           = "preflight-skip-one-ssh-host"
 )
 
 func DefinePreflight(cmd *kingpin.CmdClause) {
@@ -72,4 +75,7 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(ContainerdExistCheckArgName, "Skip verifying contanerd exist").
 		Envar(configEnvName("PREFLIGHT_SKIP_CONTAINERD_EXIST")).
 		BoolVar(&PreflightSkipContainerdExistCheck)
+	cmd.Flag(OneSSHHostCheckArgName, "Skip verifying one ssh-host parametr").
+		Envar(configEnvName("PREFLIGHT_SKIP_ONE_SSH_HOST")).
+		BoolVar(&PreflightSkipOneSSHHost)
 }
