@@ -69,13 +69,13 @@ var (
 	fetchSecretsInterval = 1 * time.Second
 )
 
-type ControllerVersion struct {
+type controllerVersion struct {
 	Name    string
 	Version string
 }
 
 func inletHostWithFailoverFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	controller := ControllerVersion{}
+	controller := controllerVersion{}
 	controller.Name = obj.GetName()
 	controllerVersion, ok, err := unstructured.NestedString(obj.Object, "spec", "controllerVersion")
 	if err != nil {
@@ -100,7 +100,7 @@ func searchForDeprecatedGeoip(input *go_hook.HookInput, dc dependency.Container)
 
 	// check ingressnginxcontrollers' configs
 	for _, c := range controllers {
-		controller := c.(ControllerVersion)
+		controller := c.(controllerVersion)
 		var cVer *semver.Version
 
 		if len(controller.Version) == 0 {
