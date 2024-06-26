@@ -426,6 +426,7 @@ This feature is only available in Standard Edition (SE), Enterprise Edition (EE)
    ```shell
    d8 mirror pull --source="registry.deckhouse.io/deckhouse/ee" --license="<DECKHOUSE_LICENSE_KEY>" $(pwd)/d8.tar
    ```
+
    > Make sure to edit the path to match your platform edition — replace the last section of the link with `se` or `cse`. For example, for the SE edition, the link would look as follows: `registry.deckhouse.io/deckhouse/se`.
    >
    > If you interrupt the download before it is finished, calling the command again will check which images have already been downloaded, and the download will continue. This will only happen if no more than 24 hours have passed since the download interruption.
@@ -440,6 +441,7 @@ This feature is only available in Standard Edition (SE), Enterprise Edition (EE)
    ```shell
    d8 mirror pull --source="registry.deckhouse.io/deckhouse/ee" --license="<DECKHOUSE_LICENSE_KEY>" --min-version=1.45 $(pwd)/d8.tar
    ```
+
    > Make sure to edit the path to match your platform edition — replace the last section of the link with `se` or `cse`. For example, for the SE edition, the link would look as follows: `registry.deckhouse.io/deckhouse/se`.
    >
    > Note that `--min-version` parameter will be ignored if you specify version above the current rock-solid channel.
@@ -481,6 +483,7 @@ This feature is only available in Standard Edition (SE), Enterprise Edition (EE)
    ```shell
    d8 mirror push /tmp/d8-images/d8.tar "your.private.registry.com:5000/deckhouse/ee" --registry-login="<USER>" --registry-password="<PASSWORD>"
    ```
+
    > Make sure to edit the path to match your platform edition — replace the last section of the link with `se` or `cse`. For example, for the SE edition, the link would look as follows: `your.private.registry.com:5000/deckhouse/se`.
    >
    > Please note that the images will be uploaded to the registry along the path specified in the `--registry` parameter (in the example above - /deckhouse/ee).
@@ -507,7 +510,8 @@ The steps below are necessary for manually loading images of modules connected f
 1. [Download and install the Deckhouse CLI tool](https://github.com/deckhouse/deckhouse-cli/blob/main/README.md#how-to-install).
 
 1. Create an authentication string for `registry.deckhouse.io` using the following command:
-   ```shell     
+
+   ```shell
    YOUR_LICENSE_KEY="your_license_key" base64 -w0 <<EOF
      {
        "auths": {
@@ -518,12 +522,14 @@ The steps below are necessary for manually loading images of modules connected f
      }
    EOF
    ```
+
    > Make sure to replace the `your_license_key` placeholder with your actual license key.
 
 1. Pull module images from their source registry, defined as a `ModuleSource` resource, into a dedicated directory using the `d8 mirror modules pull` command.
 
    `d8 mirror modules pull` pulls only the module versions available in the module release channels at the time of copying unless the `--modules-filter` flag is set.
    Below is an example of a `module_source.yml` file with the ModuleSource definition:
+
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleSource
@@ -538,6 +544,7 @@ The steps below are necessary for manually loading images of modules connected f
      # Select the appropriate release channel: Alpha, Beta, EarlyAccess, Stable, or RockSolid
      releaseChannel: "Stable"
    ```
+
    The following command will pull module images from the source described in the `ModuleSource` resource located in the `$HOME/module_source.yml` file:
 
    ```shell
@@ -571,8 +578,9 @@ The steps below are necessary for manually loading images of modules connected f
 
     * Change the `.spec.registry.repo` field to the address that you specified in the `--registry` parameter when you uploaded the images;
     * Change the `.spec.registry.dockerCfg` field to a base64 string with the authorization data for your registry in `dockercfg` format. Refer to your registry's documentation for information on how to obtain this token.
- 
+
    An example:
+
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleSource
