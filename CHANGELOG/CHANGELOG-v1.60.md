@@ -67,6 +67,8 @@
  - **[docs]** Update kube-bench documentation to use `kubectl` and `jq` instead of `yq`. [#8439](https://github.com/deckhouse/deckhouse/pull/8439)
  - **[documentation]** Fix search. Fix version badge. [#8520](https://github.com/deckhouse/deckhouse/pull/8520)
  - **[extended-monitoring]** Add support of mirrors for container registries for `image_availability_exporter`. [#8568](https://github.com/deckhouse/deckhouse/pull/8568)
+ - **[ingress-nginx]** Fix pod descheduling from a not-ready node. [#8647](https://github.com/deckhouse/deckhouse/pull/8647)
+    Kruise controller's pods will be recreadted.
  - **[ingress-nginx]** Digital ocean Kubernetes upgrade, update `timeoutSeconds`. [#8413](https://github.com/deckhouse/deckhouse/pull/8413)
  - **[ingress-nginx]** Replace status with formatted status in logs. [#8385](https://github.com/deckhouse/deckhouse/pull/8385)
  - **[kube-dns]** Fix empty array error in domain alias validation webhook. [#8503](https://github.com/deckhouse/deckhouse/pull/8503)
