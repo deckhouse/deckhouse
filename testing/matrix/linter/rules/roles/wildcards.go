@@ -17,16 +17,28 @@ limitations under the License.
 package roles
 
 import (
+	"slices"
 	"strings"
 
 	rbac "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/strings/slices"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
 )
 
+// skipCheckWildcards is exclusion rules for wildcard verification
+//
+// the key is the file name
+// value is an array of rule names that allow wildcards
+var skipCheckWildcards = map[string][]string{
+	"admission-policy-engine/templates/rbac-for-us.yaml": {
+		"d8:admission-policy-engine:gatekeeper",
+	},
+}
+
+// ObjectRolesWildcard is a linter for checking the presence
+// of a wildcard in a Role and ClusterRole
 func ObjectRolesWildcard(object storage.StoreObject) errors.LintRuleError {
 	// check only `rbac-for-us.yaml` files
 	if !strings.HasSuffix(object.ShortPath(), "rbac-for-us.yaml") {
@@ -44,6 +56,15 @@ func ObjectRolesWildcard(object storage.StoreObject) errors.LintRuleError {
 }
 
 func checkRoles(object storage.StoreObject) errors.LintRuleError {
+	// check rules for skip
+	for path, rules := range skipCheckWildcards {
+		if strings.EqualFold(object.Path, path) {
+			if slices.Contains(rules, object.Unstructured.GetName()) {
+				return errors.EmptyRuleError
+			}
+		}
+	}
+
 	converter := runtime.DefaultUnstructuredConverter
 
 	role := new(rbac.Role)
@@ -53,25 +74,25 @@ func checkRoles(object storage.StoreObject) errors.LintRuleError {
 	}
 
 	for _, rule := range role.Rules {
+		var objs []string
 		if slices.Contains(rule.APIGroups, "*") {
-			return newWildCardError(object, "apiGroups contained a wildcard rule")
+			objs = append(objs, "apiGroups")
 		}
 		if slices.Contains(rule.Resources, "*") {
-			return newWildCardError(object, "resources contained a wildcard rule")
+			objs = append(objs, "resources")
 		}
 		if slices.Contains(rule.Verbs, "*") {
-			return newWildCardError(object, "verbs contained a wildcard rule")
+			objs = append(objs, "verbs")
+		}
+		if len(objs) > 0 {
+			return errors.NewLintRuleError(
+				"WILDCARD001",
+				object.Identity(),
+				object.Path,
+				strings.Join(objs, ", ")+" contains a wildcards",
+			)
 		}
 	}
 
 	return errors.EmptyRuleError
-}
-
-func newWildCardError(object storage.StoreObject, message string) errors.LintRuleError {
-	return errors.NewLintRuleError(
-		"WILDCARD001",
-		object.Identity(),
-		object.Path,
-		message,
-	)
 }
