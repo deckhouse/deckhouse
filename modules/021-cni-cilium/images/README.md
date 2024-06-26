@@ -3,9 +3,9 @@
 ### Building BASE_CILIUM_DEV images (used for build other images and binaries, and contain all dependencies)
 
 - `BASE_CILIUM_DEV` - contain all dependencies from original images: runtime, builder, compilers, cilium-envoy, iptables
-  - based on `BASE_UBUNTU` image
+  - based on `BASE_ALT` image
   - includes `(!!! loaded from internet)`:
-    - packages from repo: ubuntu-jammy and apt.llvm.org
+    - packages from repo: p10
     - binaries of go (1.21.5) from [go.dev](https://go.dev)
     - binaries and plugins of protoc (22.3) from github releases
     - binaries of bazel and wrapper shell-scripts from github releases
@@ -41,8 +41,8 @@
 - `+` `iptables`
   - based on `BASE_CILIUM_DEV` image
   - includes:
-    - src of iptables deb-package *(loaded from fox)*
-    - deb-packages of iptables 1.8.8-1 *(builded from src)*
+    - src of iptables *(loaded from fox)*
+    - binaries of iptables 1.8.8 *(builded from src)*
 - `+` `cilium-envoy`
   - based on `BASE_CILIUM_DEV` image
   - includes:
@@ -57,7 +57,6 @@
     - binaries from image `bpftool`
     - binaries from image `cni-plugins`
     - binaries from image `gops`
-    - deb-packages loaded from image `iptables` and installed
     - src of cilium *(loaded from fox)*
     - patches
     - binaries and shell-scripts of cilium *(builded from src)*
@@ -72,9 +71,9 @@
     - binaries from image `bpftool`
     - binaries from image `cni-plugins`
     - binaries from image `gops`
-    - deb-packages loaded from image `iptables` and installed
-    - binaries, libs and scripts from image `cilium`
+    - binaries and libs from image `iptables`
     - binaries and libs from image `cilium-envoy`
+    - binaries, libs and scripts from image `cilium`
     - binaries for prepull: pause and true
     - prepared all binaries, libs and scripts what required for running cilium-agent and stored in separate dir
 
@@ -178,6 +177,6 @@ In general, the original description is [here](https://github.com/cilium/cilium/
 
 - All dependencies are collected in one image (`BASE_CILIUM_DEV`)
 - All "non-common" binaries and packages build from sources
-- *todo* All common packages taken from ALTLinux
+- All common packages taken from ALTLinux
 - All utility images are based on `BASE_CILIUM_DEV` and are build in one pass (without complex multi-stage assemblies)
 - Final image based on distroless
