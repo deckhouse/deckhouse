@@ -18,8 +18,11 @@ import (
 	"trivy-provider/validators"
 	"trivy-provider/web"
 
+	ftypes "github.com/aquasecurity/trivy/pkg/fanal/types"
+	"github.com/aquasecurity/trivy/pkg/javadb"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-logr/zapr"
+	"github.com/google/go-containerregistry/pkg/name"
 	"go.uber.org/zap"
 )
 
@@ -46,6 +49,11 @@ func main() {
 	}
 	logger := zapr.NewLogger(zapLog).WithName("trivy-provider")
 
+	if err = initJavaDB(); err != nil {
+		panic(fmt.Sprintf("Couldn't initialize JavaDB: %v", err))
+	}
+	logger.Info("JavaDB was successfully initialized")
+
 	tlsConfig, err := newTLSConfig(clientCAFile)
 	if err != nil {
 		panic(err)
@@ -68,6 +76,25 @@ func main() {
 	if err = server.ListenAndServeTLS(certFile, keyFile); err != nil {
 		panic(err)
 	}
+}
+
+func initJavaDB() error {
+	javaDbImage := os.Getenv("TRIVY_JAVA_DB_IMAGE")
+	if len(javaDbImage) == 0 {
+		javaDbImage = "ghcr.io/aquasecurity/trivy-java-db:1"
+	}
+
+	ref, err := name.ParseReference(javaDbImage)
+	if err != nil {
+		return err
+	}
+
+	javadb.Init("/home/javadb", ref, false, true, ftypes.RegistryOptions{Insecure: false})
+	if err = javadb.Update(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func newTLSConfig(caCertFile string) (*tls.Config, error) {

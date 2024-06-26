@@ -8,50 +8,20 @@ package validators
 import (
 	"context"
 	"net/http"
-	"os"
-	"sync"
 
 	"github.com/aquasecurity/trivy/pkg/cache"
 	fartifact "github.com/aquasecurity/trivy/pkg/fanal/artifact"
 	fimage "github.com/aquasecurity/trivy/pkg/fanal/artifact/image"
 	"github.com/aquasecurity/trivy/pkg/fanal/image"
 	ftypes "github.com/aquasecurity/trivy/pkg/fanal/types"
-	"github.com/aquasecurity/trivy/pkg/javadb"
 	"github.com/aquasecurity/trivy/pkg/rpc/client"
 	"github.com/aquasecurity/trivy/pkg/scanner"
 	"github.com/aquasecurity/trivy/pkg/types"
 
-	"github.com/google/go-containerregistry/pkg/name"
-
 	_ "modernc.org/sqlite"
 )
 
-var validatorsOnce sync.Once
-
 func scanArtifact(ctx context.Context, imageName, remoteURL string, customHeaders http.Header, scanOpts types.ScanOptions) (types.Report, error) {
-	var err error
-	validatorsOnce.Do(func() {
-		javaDbImage := os.Getenv("TRIVY_JAVA_DB_IMAGE")
-		if len(javaDbImage) == 0 {
-			javaDbImage = "ghcr.io/aquasecurity/trivy-java-db:1"
-		}
-
-		var ref name.Reference
-		ref, err = name.ParseReference(javaDbImage)
-		if err != nil {
-			return
-		}
-
-		javadb.Init("/home/javadb", ref, false, true, ftypes.RegistryOptions{Insecure: false})
-		if err = javadb.Update(); err != nil {
-			return
-		}
-	})
-
-	if err != nil {
-		return types.Report{}, err
-	}
-
 	img, cleanup, err := image.NewContainerImage(ctx, imageName, ftypes.ImageOptions{
 		ImageSources: ftypes.ImageSources{ftypes.RemoteImageSource},
 	})
