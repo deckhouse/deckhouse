@@ -10,7 +10,7 @@ metadata:
     rbac.deckhouse.io/aggregate-to-role: viewer
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
-    rbac.deckhouse.io/namespace: d8-kube-proxy
+    rbac.deckhouse.io/namespace: kube-system
   name: d8:manage:capability:module:kube-proxy:view
 rules:
 - apiGroups:
