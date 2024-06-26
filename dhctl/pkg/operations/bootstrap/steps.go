@@ -82,7 +82,7 @@ func BootstrapMaster(sshClient *ssh.Client, bundleName, nodeIP string, metaConfi
 			return fmt.Errorf("cannot create %s directories: %w", app.NodeDeckhouseDirectoryPath, err)
 		}
 
-		for _, bootstrapScript := range []string{"bootstrap.sh", "01-base-pkgs.sh", "02-network-scripts.sh", "03-prepare-bashible.sh", "bootstrap-networks.sh"} {
+		for _, bootstrapScript := range []string{"01-base-pkgs.sh", "02-network-scripts.sh"} {
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
 			err := log.Process("default", bootstrapScript, func() error {
 				if _, err := os.Stat(scriptPath); err != nil {

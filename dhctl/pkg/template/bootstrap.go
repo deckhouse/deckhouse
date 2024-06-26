@@ -34,7 +34,7 @@ func PrepareBootstrap(templateController *Controller, nodeIP, bundleName string,
 			to:   bootstrapDir,
 			data: bashibleData,
 			ignorePaths: map[string]struct{}{
-				filepath.Join(candiBashibleDir, "bootstrap", "03-prepare-bashible.sh.tpl"): {},
+				filepath.Join(candiBashibleDir, "bootstrap", "03-prepare-bashible.sh.tpl"): {}, // will running in next stage
 			},
 		},
 		{
