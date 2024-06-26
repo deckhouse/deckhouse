@@ -35,7 +35,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
-// TODO: Remove this migration hook after release 1.65
+// TODO: Remove this migration hook after deprecating ingress controllers of 1.10< versions
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/ingress-nginx/deprecated_geoip_version",
