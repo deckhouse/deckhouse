@@ -6,6 +6,7 @@ title: "The l2-load-balancer module: примеры"
 
 {% raw %}
 * Настройте модуль:
+
   ```
   apiVersion: deckhouse.io/v1alpha1
   kind: ModuleConfig
@@ -17,11 +18,15 @@ title: "The l2-load-balancer module: примеры"
       loadBalancerClass: l2-class
     version: 1
   ```
+
 * Подготовьте приложение, которое хотите опубликовать:
+
   ```
   kubectl create deploy nginx --image=nginx
   ```
+
 * Создайте ресурс _L2LoadBalancer_:
+
   ```
   apiVersion: network.deckhouse.io/v1alpha1
   kind: L2LoadBalancer
@@ -33,7 +38,9 @@ title: "The l2-load-balancer module: примеры"
     nodeSelector:
       node-role.kubernetes.io/loadbalancer: "" # селектор узлов-балансировщиков
   ```
+
 * Создайте ресурс _Service_ со специальными аннотациями:
+
   ```
   apiVersion: v1
   kind: Service
@@ -54,12 +61,15 @@ title: "The l2-load-balancer module: примеры"
   ```
 
   В результате, созданному сервису с типом `LoadBalancer` будут присвоены адреса в заданном количестве:
+
   ```
   $ kubectl get svc
   NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)        AGE
   nginx-deployment       LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30544/TCP   11s
   ```
+
   Полученные EXTERNAL-IP можно прописывать в качестве A-записей для прикладного домена.
+
   ```
   $ curl -s -o /dev/null -w "%{http_code}" 192.168.2.100:8000
   200
@@ -68,4 +78,5 @@ title: "The l2-load-balancer module: примеры"
   $ curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
   200
   ```
+
 {% endraw %}

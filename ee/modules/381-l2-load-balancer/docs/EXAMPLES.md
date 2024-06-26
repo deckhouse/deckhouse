@@ -6,6 +6,7 @@ title: "The l2-load-balancer module: examples"
 
 {% raw %}
 * Configure the module:
+
   ```
   apiVersion: deckhouse.io/v1alpha1
   kind: ModuleConfig
@@ -17,11 +18,15 @@ title: "The l2-load-balancer module: examples"
       loadBalancerClass: l2-class
     version: 1
   ```
+
 * Prepare the application to publish:
+
   ```
   kubectl create deploy nginx --image=nginx
   ```
+
 * Deploy the _L2LoadBalancer_ resource:
+
   ```
   apiVersion: network.deckhouse.io/v1alpha1
   kind: L2LoadBalancer
@@ -33,7 +38,9 @@ title: "The l2-load-balancer module: examples"
     nodeSelector:
       node-role.kubernetes.io/loadbalancer: "" 
   ```
+
 * Deploy standard resource _Service_ with special annotations:
+
   ```
   apiVersion: v1
   kind: Service
@@ -54,12 +61,15 @@ title: "The l2-load-balancer module: examples"
   ```
 
   As a result, the created Service with the type `LoadBalancer` will be assigned the specified number of addresses.:
+
   ```
   $ kubectl get svc
   NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)        AGE
   nginx-deployment       LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30544/TCP   11s
   ```
+
   The resulting EXTERNAL-IP are ready to use in application DNS-domain.
+
   ```
   $ curl -s -o /dev/null -w "%{http_code}" 192.168.2.100:8000
   200
@@ -68,4 +78,5 @@ title: "The l2-load-balancer module: examples"
   $ curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
   200
   ```
+
 {% endraw %}
