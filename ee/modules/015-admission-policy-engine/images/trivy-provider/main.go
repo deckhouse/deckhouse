@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"flag"
@@ -13,13 +14,18 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 	"trivy-provider/validators"
 	"trivy-provider/web"
 
+	ftypes "github.com/aquasecurity/trivy/pkg/fanal/types"
+	"github.com/aquasecurity/trivy/pkg/javadb"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-logr/zapr"
+	"github.com/google/go-containerregistry/pkg/name"
 	"go.uber.org/zap"
 )
 
@@ -42,13 +48,36 @@ func main() {
 
 	zapLog, err := zap.NewDevelopment(zap.AddStacktrace(zap.ErrorLevel))
 	if err != nil {
-		panic(fmt.Sprintf("unable to initialize logger: %v", err))
+		zapLog.Fatal(fmt.Sprintf("unable to initialize logger: %v", err))
 	}
 	logger := zapr.NewLogger(zapLog).WithName("trivy-provider")
 
+	if err = initJavaDB(); err != nil {
+		zapLog.Fatal(fmt.Sprintf("Couldn't initialize JavaDB: %v", err))
+	}
+	zapLog.Info("JavaDB was successfully initialized")
+
+	done := make(chan bool)
+
+	go func() {
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				zapLog.Info("Starting periodic JavaDB update")
+				if err := javadb.Update(); err != nil {
+					zapLog.Error(fmt.Sprintf("Couldn't update JavaDB: %v", err))
+				}
+			case <-done:
+				return
+			}
+		}
+	}()
+
 	tlsConfig, err := newTLSConfig(clientCAFile)
 	if err != nil {
-		panic(err)
+		zapLog.Fatal(fmt.Sprintf("Couldn't initialize tls config: %v", err))
 	}
 
 	handler := chi.NewRouter()
@@ -64,10 +93,39 @@ func main() {
 	validator := web.NewHandler(scanner, scanningTimeout, logger)
 	handler.HandleFunc("/validate", validator.HandleRequest())
 
-	logger.Info("starting server...")
-	if err = server.ListenAndServeTLS(certFile, keyFile); err != nil {
-		panic(err)
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		logger.Info("starting server...")
+		if err = server.ListenAndServeTLS(certFile, keyFile); err != nil && err != http.ErrServerClosed {
+			zapLog.Fatal(fmt.Sprintf("Couldn't start HTTP server: %v", err))
+		}
+	}()
+
+	sig := <-sigs
+	zapLog.Info(fmt.Sprintf("Recived %s signal, exiting...", sig))
+	done <- true
+	server.Shutdown(context.Background())
+}
+
+func initJavaDB() error {
+	javaDbImage := os.Getenv("TRIVY_JAVA_DB_IMAGE")
+	if len(javaDbImage) == 0 {
+		javaDbImage = "ghcr.io/aquasecurity/trivy-java-db:1"
 	}
+
+	ref, err := name.ParseReference(javaDbImage)
+	if err != nil {
+		return err
+	}
+
+	javadb.Init("/home/javadb", ref, false, true, ftypes.RegistryOptions{Insecure: false})
+	if err = javadb.Update(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func newTLSConfig(caCertFile string) (*tls.Config, error) {

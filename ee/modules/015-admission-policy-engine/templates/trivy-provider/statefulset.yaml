@@ -3,7 +3,7 @@ cpu: 100m
 memory: 128Mi
 {{- end }}
 
-{{ $JavaDbRepository := printf "%s/security/trivy-java-db" .Values.global.modulesImages.registry.base | quote }}
+{{ $JavaDbRepository := printf "%s/security/trivy-java-db:1" .Values.global.modulesImages.registry.base | quote }}
 
 {{- if include "trivy.provider.enabled" $ }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
