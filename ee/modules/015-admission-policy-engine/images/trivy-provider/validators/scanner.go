@@ -7,12 +7,12 @@ package validators
 
 import (
 	"context"
-	"github.com/google/go-containerregistry/pkg/name"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/aquasecurity/trivy/pkg/cache"
-	"github.com/aquasecurity/trivy/pkg/fanal/artifact"
+	fartifact "github.com/aquasecurity/trivy/pkg/fanal/artifact"
 	fimage "github.com/aquasecurity/trivy/pkg/fanal/artifact/image"
 	"github.com/aquasecurity/trivy/pkg/fanal/image"
 	ftypes "github.com/aquasecurity/trivy/pkg/fanal/types"
@@ -21,29 +21,35 @@ import (
 	"github.com/aquasecurity/trivy/pkg/scanner"
 	"github.com/aquasecurity/trivy/pkg/types"
 
+	"github.com/google/go-containerregistry/pkg/name"
+
 	_ "modernc.org/sqlite"
 )
 
-var inited bool
+var validatorsOnce sync.Once
 
 func scanArtifact(ctx context.Context, imageName, remoteURL string, customHeaders http.Header, scanOpts types.ScanOptions) (types.Report, error) {
-	if !inited {
-		javadbImage := os.Getenv("TRIVY_JAVA_DB_IMAGE")
-		if len(javadbImage) == 0 {
-			javadbImage = "ghcr.io/aquasecurity/trivy-java-db:1"
+	var err error
+	validatorsOnce.Do(func() {
+		javaDbImage := os.Getenv("TRIVY_JAVA_DB_IMAGE")
+		if len(javaDbImage) == 0 {
+			javaDbImage = "ghcr.io/aquasecurity/trivy-java-db:1"
 		}
 
-		ref, err := name.ParseReference(javadbImage)
+		var ref name.Reference
+		ref, err = name.ParseReference(javaDbImage)
 		if err != nil {
-			return types.Report{}, err
+			return
 		}
 
 		javadb.Init("/home/javadb", ref, false, true, ftypes.RegistryOptions{Insecure: false})
-		inited = true
-		javadb.Update()
-		if err != nil {
-			return types.Report{}, err
+		if err = javadb.Update(); err != nil {
+			return
 		}
+	})
+
+	if err != nil {
+		return types.Report{}, err
 	}
 
 	img, cleanup, err := image.NewContainerImage(ctx, imageName, ftypes.ImageOptions{
@@ -55,12 +61,13 @@ func scanArtifact(ctx context.Context, imageName, remoteURL string, customHeader
 	defer cleanup()
 
 	artifactCache := cache.NewRemoteCache(remoteURL, customHeaders, false)
-	artf, err := fimage.NewArtifact(img, artifactCache, artifact.Option{DisabledHandlers: []ftypes.HandlerType{ftypes.UnpackagedPostHandler}})
+	artifact, err := fimage.NewArtifact(img, artifactCache, fartifact.Option{DisabledHandlers: []ftypes.HandlerType{ftypes.UnpackagedPostHandler}})
 	if err != nil {
 		return types.Report{}, err
 	}
 
 	clientScanner := client.NewScanner(client.ScannerOption{RemoteURL: remoteURL, CustomHeaders: customHeaders})
-	myScanner := scanner.NewScanner(clientScanner, artf)
+	myScanner := scanner.NewScanner(clientScanner, artifact)
+
 	return myScanner.ScanArtifact(ctx, scanOpts)
 }
