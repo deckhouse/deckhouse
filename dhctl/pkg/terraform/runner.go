@@ -301,6 +301,7 @@ func (r *Runner) Init() error {
 			"-get-plugins=false",
 			"-no-color",
 			"-input=false",
+			fmt.Sprintf("-var-file=%s", r.variablesPath),
 			r.workingDir,
 		}
 

@@ -315,6 +315,7 @@ spec:
         {{- $additionalSyncerEnvs | toYaml | nindent 8 }}
     {{- end }}
     {{- if $additionalControllerVolumeMounts }}
+        volumeMounts:
         {{- $additionalControllerVolumeMounts | toYaml | nindent 8 }}
     {{- end }}
         resources:

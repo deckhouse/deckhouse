@@ -114,6 +114,12 @@
   readOnly: true
 {{- end }}
 
+{{- define "csi_node_registrar_liveness_exec_probes_command" }}
+    - /csi-node-driver-registrar
+    - --kubelet-registration-path=/var/lib/kubelet/csi-plugins/csi.vsphere.vmware.com/csi.sock"
+    - --mode=kubelet-registration-probe
+{{- end }}
+
 {{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
 {{- $csiImageName := join "" (list "vsphereCsiPlugin" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
 {{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . $csiImageName) }}
@@ -127,6 +133,7 @@
   {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeLivenessProbesCmd" (include "csi_node_registrar_liveness_exec_probes_command" . | fromYamlArray) }}
 
   {{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "legacy" }}
   {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
