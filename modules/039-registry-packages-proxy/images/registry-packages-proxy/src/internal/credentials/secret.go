@@ -18,7 +18,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"strings"
+	"net/url"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 )
@@ -64,8 +64,13 @@ func (d registrySecretData) toClientConfig() (*registry.ClientConfig, error) {
 		}
 	}
 
+	repo, err := url.JoinPath(d.Address, d.Path)
+	if err != nil {
+		return nil, err
+	}
+
 	return &registry.ClientConfig{
-		Repository: strings.Join([]string{d.Address, d.Path}, "/"),
+		Repository: repo,
 		Scheme:     d.Scheme,
 		CA:         d.CA,
 		Auth:       auth,
