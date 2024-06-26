@@ -329,7 +329,12 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 	}
 
 	for nodeName, tfState := range cfg.NodesTerraformState {
-		getManifest := func() interface{} { return manifests.SecretWithNodeTerraformState(nodeName, "master", tfState, nil) }
+		getManifest := func() interface{} {
+			return manifests.NewManifestWrapper(
+				manifests.SecretWithNodeTerraformState(nodeName, "master", tfState, nil),
+				manifests.SecretNameLenghtValidator,
+			)
+		}
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			Manifest: getManifest,
@@ -572,7 +577,6 @@ func WaitForReadinessNotOnNode(kubeCl *client.KubernetesClient, excludeNode stri
 					WaitPodBecomeReady().
 					WithExcludeNode(excludeNode).
 					Print(ctx)
-
 				if err != nil {
 					if errors.Is(err, ErrTimedOut) {
 						return err

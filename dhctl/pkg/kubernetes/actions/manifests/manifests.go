@@ -575,14 +575,24 @@ func SecretWithStaticClusterConfig(configData []byte) *apiv1.Secret {
 }
 
 func SecretNameForNodeTerraformState(nodeName string) string {
-	return "d8-node-terraform-state-" + nodeName
+	builder := strings.Builder{}
+	builder.WriteString("d8-node-terraform-state-")
+	builder.WriteString(nodeName)
+
+	return builder.String()
 }
 
-func SecretWithNodeTerraformState(nodeName, nodeGroup string, data, settings []byte) *apiv1.Secret {
+func SecretWithNodeTerraformState(
+	nodeName,
+	nodeGroup string,
+	data,
+	settings []byte,
+) *apiv1.Secret {
 	body := map[string][]byte{"node-tf-state.json": data}
 	if settings != nil {
 		body["node-group-settings.json"] = settings
 	}
+
 	return generateSecret(
 		SecretNameForNodeTerraformState(nodeName),
 		"d8-system",
