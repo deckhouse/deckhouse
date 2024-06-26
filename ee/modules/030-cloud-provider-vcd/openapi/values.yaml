@@ -288,10 +288,11 @@ properties:
                 type: boolean
                 description: Set to `true` if VCD has a self-signed certificate.
                 x-doc-default: false
+              apiToken:
+                type: string
+                description: The user's password.
             required:
               - server
-              - username
-              - password
       capcdControllerManagerWebhookCert:
         type: object
         default: { }
