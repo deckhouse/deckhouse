@@ -528,6 +528,45 @@ spec:
     - port: web
 ```
 
+## How do I set up a Probe to work with Prometheus?
+
+Add the `prometheus: main` to Probe.
+Add the label `prometheus.deckhouse.io/probe-watcher-enabled: "true"` to the namespace where the Probe was created.
+
+Example:
+
+```yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: frontend
+  labels:
+    prometheus.deckhouse.io/probe-watcher-enabled: "true"
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  labels:
+    app: prometheus
+    component: probes
+    prometheus: main
+  name: cdn-is-up
+  namespace: frontend
+spec:
+  interval: 30s
+  jobName: httpGet
+  module: http_2xx
+  prober:
+    path: /probe
+    scheme: http
+    url: blackbox-exporter.blackbox-exporter.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+      - https://{{ .Values.global.cdn.baseURL }}/status
+```
+
 ## How do I set up a PrometheusRules to work with Prometheus?
 
 Add the label `prometheus.deckhouse.io/rules-watcher-enabled: "true"` to the namespace where the PrometheusRules was created.
