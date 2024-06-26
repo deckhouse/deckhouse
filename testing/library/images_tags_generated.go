@@ -379,6 +379,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"d8Curl821":                "imageHash-registrypackages-d8Curl821",
 		"drbd":                     "imageHash-registrypackages-drbd",
 		"e2fsprogs1470":            "imageHash-registrypackages-e2fsprogs1470",
+		"ec2DescribeTagsV001Flant2": "imageHash-registrypackages-ec2DescribeTagsV001Flant2",
 		"ecrCredentialProvider126": "imageHash-registrypackages-ecrCredentialProvider126",
 		"ecrCredentialProvider127": "imageHash-registrypackages-ecrCredentialProvider127",
 		"ecrCredentialProvider128": "imageHash-registrypackages-ecrCredentialProvider128",
