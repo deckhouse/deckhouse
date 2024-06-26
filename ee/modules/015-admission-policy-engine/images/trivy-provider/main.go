@@ -54,9 +54,23 @@ func main() {
 	}
 	zapLog.Info("JavaDB was successfully initialized")
 
+	go func() {
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				zapLog.Info("Starting periodic JavaDB update")
+				if err := javadb.Update(); err != nil {
+					zapLog.Error(fmt.Sprintf("Couldn't update JavaDB: %v", err))
+				}
+			}
+		}
+	}()
+
 	tlsConfig, err := newTLSConfig(clientCAFile)
 	if err != nil {
-		zapLog.Fatal(fmt.Sprintf("Couldnn't initialize tls config: %v", err))
+		zapLog.Fatal(fmt.Sprintf("Couldn't initialize tls config: %v", err))
 	}
 
 	handler := chi.NewRouter()
