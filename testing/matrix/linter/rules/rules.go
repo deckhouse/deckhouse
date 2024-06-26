@@ -85,6 +85,16 @@ func skipObjectContainerIfNeeded(o *storage.StoreObject, c *v1.Container) bool {
 	return false
 }
 
+func skipObjectWithWildCardIfNeeded(o *storage.StoreObject) bool {
+	// skip file with object `d8:admission-policy-engine:gatekeeper`
+	if o.Path == "admission-policy-engine/templates/rbac-for-us.yaml" &&
+		o.Unstructured.GetName() == "d8:admission-policy-engine:gatekeeper" {
+		return true
+	}
+
+	return false
+}
+
 type ObjectLinter struct {
 	ObjectStore    *storage.UnstructuredObjectStore
 	ErrorsList     *errors.LintRuleErrorsList
@@ -296,13 +306,17 @@ func (l *ObjectLinter) ApplyObjectRules(object storage.StoreObject) {
 
 	if !skipObjectIfNeeded(&object) {
 		l.ErrorsList.Add(objectSecurityContext(object))
-		l.ErrorsList.Add(roles.ObjectRolesWildcard(object))
 	}
 
 	l.ErrorsList.Add(objectRevisionHistoryLimit(object))
 	l.ErrorsList.Add(objectHostNetworkPorts(object))
 
 	l.ErrorsList.Add(modules.PromtoolRuleCheck(l.Module, object))
+
+	if !skipObjectWithWildCardIfNeeded(&object) {
+		l.ErrorsList.Add(roles.ObjectRolesWildcard(object))
+	}
+
 }
 
 func objectRecommendedLabels(object storage.StoreObject) errors.LintRuleError {
