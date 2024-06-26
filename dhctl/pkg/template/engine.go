@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,12 +22,19 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/mitchellh/copystructure"
 	"github.com/pkg/errors"
 )
 
 type Engine struct {
 	Name string
 	Data map[string]interface{}
+}
+
+// deepCopyData make a non-shallow copy of Data field
+func (e Engine) deepCopyData() map[string]interface{} {
+	ret := copystructure.Must(copystructure.Copy(e.Data))
+	return ret.(map[string]interface{})
 }
 
 // Render
@@ -100,8 +107,11 @@ func (e Engine) renderWithTemplate(tmpl string, t *template.Template) (out *byte
 		return nil, cleanupParseError(e.Name, err)
 	}
 
+	data := e.deepCopyData()
+	data["Files"] = Files{}
+
 	var buf bytes.Buffer
-	if err := t.ExecuteTemplate(&buf, e.Name, e.Data); err != nil {
+	if err := t.ExecuteTemplate(&buf, e.Name, data); err != nil {
 		return nil, cleanupExecError(e.Name, err)
 	}
 
