@@ -1,5 +1,5 @@
 {{- $llvmRev := "llvmorg-10.0.0" }}
-{{- $llvmCacheRev := "llvmorg-10.0.0-v1" }}
+{{- $llvmCacheRev := "llvmorg-10.0.0-alt-v1" }}
 {{- $fromCacheVersion := "16" }}
 ---
 # #####################################################################
@@ -44,8 +44,6 @@ shell:
       -DCMAKE_BUILD_TYPE="Release" \
       -DLLVM_BUILD_RUNTIME="OFF" \
       -DCMAKE_INSTALL_PREFIX="/usr/local" \
-      -DLLVM_BUILD_STATIC="ON" \
-      -DLLVM_STATIC_LINK_CXX_STDLIB="ON" \
       -DLLVM_CCACHE_BUILD="ON" \
       -DLLVM_CCACHE_DIR="/tmp/ccache-dir" \
       -DLLVM_CCACHE_MAXSIZE="0"
