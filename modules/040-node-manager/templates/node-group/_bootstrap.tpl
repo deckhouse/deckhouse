@@ -11,7 +11,9 @@
   {{- $_ := set $tpl_context "nodeGroup" $ng }}
   {{- $_ := set $tpl_context "images" $context.Values.global.modulesImages.digests }}
   {{- $_ := set $tpl_context "packagesProxy" $context.Values.nodeManager.internal.packagesProxy }}
-	{{- $_ := set $tpl_context "provider" $context.Values.nodeManager.internal.cloudProvider.type }}
+	{{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
+		{{- $_ := set $tpl_context "provider" $context.Values.nodeManager.internal.cloudProvider.type }}
+	{{- end }}
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
