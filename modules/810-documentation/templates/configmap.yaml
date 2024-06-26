@@ -62,6 +62,7 @@ data:
 
       ssi on;
       gzip off;
+      port_in_redirect off;
 
       map $uri $lang {
         "~^/ru/"      "ru";
@@ -96,6 +97,10 @@ data:
 
         location ~* ^(/(ru|en))?/(platform/)?(presentations|assets|images|js|css)/(.+)$ {
             try_files /platform/$4/$5 /platform/$4/$5/ =404;
+        }
+
+        location ~* ^(/(ru|en))?/platform/(presentations/.+)$ {
+            try_files /platform/$3/$4 /platform/$3/$4/ =404;
         }
 
         location ~* ^/(ru|en)/modules/([^0-9]+[^/]+)/(.*)$ {
