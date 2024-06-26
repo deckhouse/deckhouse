@@ -66,15 +66,18 @@ spec:
   matchConditions:
     - name: 'exclude-groups'
       expression: '!(["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups)))'
-    - name: 'exclude-kube-controller'
-      expression: 'request.userInfo.username != "system:kube-controller-manager"'
+    - name: 'exclude-kube-control-plane' # Ignore kube-controller manager and kube-scheduler
+      expression: '!(["system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler"].exists(e, (e == request.userInfo.username)))'
   validations:
     - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-")'
       reason: Forbidden
       messageExpression: '''Creating an object with the `heritage: deckhouse` label is forbidden'''
+  auditAnnotations:
+    - key: 'source-user'
+      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change object with the heritage label'"
 {{- else }}
   validations:
-    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username == "system:kube-controller-manager" || ["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups))'
+    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || ["system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler"].exists(e, (e == request.userInfo.username)) || ["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups))'
       reason: Forbidden
 {{- end }}
 ---
