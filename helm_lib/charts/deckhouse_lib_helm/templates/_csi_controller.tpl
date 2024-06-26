@@ -13,6 +13,11 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
+{{- define "syncer_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- define "snapshotter_resources" }}
 cpu: 10m
 memory: 25Mi
@@ -36,7 +41,9 @@ memory: 50Mi
   {{- $fullname := $config.fullname | default "csi-controller" }}
   {{- $snapshotterEnabled := dig "snapshotterEnabled" true $config }}
   {{- $resizerEnabled := dig "resizerEnabled" true $config }}
+  {{- $syncerEnabled := dig "syncerEnabled" "true" $config }}
   {{- $topologyEnabled := dig "topologyEnabled" true $config }}
+  {{- $extraCreateMetadataEnabled := dig "extraCreateMetadataEnabled" false $config }}
   {{- $controllerImage := $config.controllerImage | required "$config.controllerImage is required" }}
   {{- $provisionerTimeout := $config.provisionerTimeout | default "600s" }}
   {{- $attacherTimeout := $config.attacherTimeout | default "600s" }}
@@ -47,6 +54,7 @@ memory: 50Mi
   {{- $resizerWorkers := $config.resizerWorkers | default "10" }}
   {{- $snapshotterWorkers := $config.snapshotterWorkers | default "10" }}
   {{- $additionalControllerEnvs := $config.additionalControllerEnvs }}
+	{{- $additionalSyncerEnvs := $config.additionalSyncerEnvs }}
   {{- $additionalControllerArgs := $config.additionalControllerArgs }}
   {{- $additionalControllerVolumes := $config.additionalControllerVolumes }}
   {{- $additionalControllerVolumeMounts := $config.additionalControllerVolumeMounts }}
@@ -63,6 +71,9 @@ memory: 50Mi
 
   {{- $resizerImageName := join "" (list "csiExternalResizer" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $resizerImage := include "helm_lib_module_common_image_no_fail" (list $context $resizerImageName) }}
+
+  {{- $syncerImageName := join "" (list "csiVsphereSyncer" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
+  {{- $syncerImage := include "helm_lib_module_common_image_no_fail" (list $context $syncerImageName) }}
 
   {{- $snapshotterImageName := join "" (list "csiExternalSnapshotter" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $snapshotterImage := include "helm_lib_module_common_image_no_fail" (list $context $snapshotterImageName) }}
@@ -104,6 +115,14 @@ spec:
     - containerName: "resizer"
       minAllowed:
         {{- include "resizer_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    {{- end }}
+    {{- if $syncerEnabled }}
+    - containerName: "syncer"
+      minAllowed:
+        {{- include "syncer_resources" $context | nindent 8 }}
       maxAllowed:
         cpu: 20m
         memory: 50Mi
@@ -172,7 +191,11 @@ spec:
       {{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple $context "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $context "any-node" "with-uninitialized") | nindent 6 }}
+{{- if $context.Values.global.enabledModules | has "csi-nfs" }}
+      {{- include "helm_lib_module_pod_security_context_runtime_default" . | nindent 6 }}
+{{- else }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+{{- end }}
       serviceAccountName: csi
       containers:
       - name: provisioner
@@ -193,6 +216,9 @@ spec:
         - "--leader-election-namespace=$(NAMESPACE)"
         - "--enable-capacity"
         - "--capacity-ownerref-level=2"
+  {{- if $extraCreateMetadataEnabled }}
+        - "--extra-create-metadata=true"
+  {{- end }}
         - "--worker-threads={{ $provisionerWorkers }}"
         env:
         - name: ADDRESS
@@ -272,6 +298,32 @@ spec:
             {{- include "resizer_resources" $context | nindent 12 }}
   {{- end }}
             {{- end }}
+            {{- if $syncerEnabled }}
+      - name: syncer
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ $syncerImage | quote }}
+        args:
+        - "--leader-election"
+        - "--leader-election-lease-duration=30s"
+        - "--leader-election-renew-deadline=20s"
+        - "--leader-election-retry-period=10s"
+    {{- if $additionalControllerArgs }}
+        {{- $additionalControllerArgs | toYaml | nindent 8 }}
+    {{- end }}
+    {{- if $additionalSyncerEnvs }}
+        env:
+        {{- $additionalSyncerEnvs | toYaml | nindent 8 }}
+    {{- end }}
+    {{- if $additionalControllerVolumeMounts }}
+        {{- $additionalControllerVolumeMounts | toYaml | nindent 8 }}
+    {{- end }}
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "syncer_resources" $context | nindent 12 }}
+  {{- end }}
+            {{- end }}
             {{- if $snapshotterEnabled }}
       - name: snapshotter
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -324,7 +376,11 @@ spec:
             {{- include "livenessprobe_resources" $context | nindent 12 }}
   {{- end }}
       - name: controller
+{{- if $context.Values.global.enabledModules | has "csi-nfs" }}
+        {{- include "helm_lib_module_container_security_context_escalated_sys_admin_privileged" . | nindent 8 }}
+{{- else }}
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+{{- end }}
         image: {{ $controllerImage | quote }}
         args:
     {{- if $additionalControllerArgs }}

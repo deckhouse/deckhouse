@@ -6,6 +6,25 @@
 - "--fss-namespace=$(CSI_NAMESPACE)"
 {{- end }}
 
+{{- define "csi_syncer_envs" }}
+- name: FULL_SYNC_INTERVAL_MINUTES
+  value: "30"
+- name: VSPHERE_CSI_CONFIG
+  value: "/etc/cloud/cloud-config"
+- name: LOGGER_LEVEL
+  value: "PRODUCTION"
+- name: INCLUSTER_CLIENT_QPS
+  value: "100"
+- name: INCLUSTER_CLIENT_BURST
+  value: "100"
+- name: GODEBUG
+  value: x509sha1=1,tlsmaxrsasize=16384
+- name: CSI_NAMESPACE
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.namespace
+{{- end }}
+
 {{- define "csi_controller_envs" }}
 - name: CSI_ENDPOINT
   value: "unix:///csi/csi.sock"
@@ -15,6 +34,10 @@
   value: "false"
 - name: VSPHERE_CSI_CONFIG
   value: "/etc/cloud/cloud-config"
+- name: X_CSI_SPEC_DISABLE_LEN_CHECK
+  value: "true"
+- name: X_CSI_SERIAL_VOL_ACCESS_TIMEOUT
+  value: 3m
 - name: CSI_NAMESPACE
   valueFrom:
     fieldRef:
@@ -41,8 +64,10 @@
 {{- $csiControllerConfig := dict }}
 {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
 {{- $_ := set $csiControllerConfig "snapshotterEnabled" false }}
+{{- $_ := set $csiControllerConfig "syncerEnabled" true }}
 {{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
+{{- $_ := set $csiControllerConfig "additionalSyncerEnvs" (include "csi_syncer_envs" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
 

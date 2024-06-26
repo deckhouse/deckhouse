@@ -10,4 +10,5 @@ data:
   "csi-auth-check": "true"
   "online-volume-extend": "true"
   "use-csinode-id": "true"
+  "multi-vcenter-csi-topology": "true"
 {{- end }}
