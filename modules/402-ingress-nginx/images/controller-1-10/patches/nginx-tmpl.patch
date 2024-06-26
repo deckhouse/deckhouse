@@ -65,7 +65,15 @@ index 4c0da2eb9..7dfa3f8f6 100644
  
          ssl_certificate_by_lua_block {
              certificate.call()
-@@ -960,9 +973,7 @@ stream {
+@@ -955,14 +968,15 @@ stream {
+             proxy_set_header       Host               $best_http_host;
+ 
+             set $proxy_upstream_name {{ $upstreamName | quote }};
++            set $formatted_status $status;
++            set $upstream_retries "0";
++            set $total_upstream_response_time "0";
+ 
+             rewrite                (.*) / break;
  
              proxy_pass            http://upstream_balancer;
              log_by_lua_block {
@@ -76,7 +84,7 @@ index 4c0da2eb9..7dfa3f8f6 100644
              }
          }
          {{ end }}
-@@ -1008,6 +1019,9 @@ stream {
+@@ -1008,8 +1022,14 @@ stream {
  
          {{ buildHTTPListener  $all $server.Hostname }}
          {{ buildHTTPSListener $all $server.Hostname }}
@@ -85,8 +93,13 @@ index 4c0da2eb9..7dfa3f8f6 100644
 +        {{ end }}
  
          set $proxy_upstream_name "-";
++        set $formatted_status $status;
++        set $upstream_retries "0";
++        set $total_upstream_response_time "0";
  
-@@ -1247,6 +1261,9 @@ stream {
+         {{ if not ( empty $server.CertificateAuth.MatchCN ) }}
+         {{ if gt (len $server.CertificateAuth.MatchCN) 0 }}
+@@ -1247,6 +1267,9 @@ stream {
          {{ end }}
  
          location {{ $path }} {
@@ -96,7 +109,7 @@ index 4c0da2eb9..7dfa3f8f6 100644
              {{ $ing := (getIngressInformation $location.Ingress $server.Hostname $location.IngressPath) }}
              set $namespace      {{ $ing.Namespace | quote}};
              set $ingress_name   {{ $ing.Rule | quote }};
-@@ -1255,6 +1272,8 @@ stream {
+@@ -1255,6 +1278,8 @@ stream {
              set $location_path  {{ $ing.Path | escapeLiteralDollar | quote }};
              set $global_rate_limit_exceeding n;
  
@@ -105,7 +118,7 @@ index 4c0da2eb9..7dfa3f8f6 100644
              {{ buildOpentelemetryForLocation $all.Cfg.EnableOpentelemetry $all.Cfg.OpentelemetryTrustIncomingSpan $location }}
  
              {{ if $location.Mirror.Source }}
-@@ -1285,11 +1304,9 @@ stream {
+@@ -1285,11 +1310,9 @@ stream {
  
              log_by_lua_block {
                  balancer.log()
@@ -118,7 +131,7 @@ index 4c0da2eb9..7dfa3f8f6 100644
              }
  
              {{ if not $location.Logs.Access }}
-@@ -1570,14 +1587,15 @@ stream {
+@@ -1570,14 +1593,15 @@ stream {
  
          {{ if eq $server.Hostname "_" }}
          # health checks in cloud providers require the use of port {{ $all.ListenPorts.HTTP }}
