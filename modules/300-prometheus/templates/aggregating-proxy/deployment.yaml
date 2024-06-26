@@ -60,6 +60,7 @@ spec:
         app: aggregating-proxy
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/aggregating-proxy/configmap.yaml") . | sha256sum }}
+        checksum/kube-rbac-proxy: {{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
@@ -138,9 +139,13 @@ spec:
           image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
           args:
             - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
+            - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
             - "--v=2"
             - "--logtostderr=true"
             - "--stale-cache-interval=1h30m"
+          volumeMounts:
+            - name: kube-rbac-proxy-ca
+              mountPath: /etc/kube-rbac-proxy
           ports:
             - containerPort: 8443
               name: https
@@ -195,5 +200,9 @@ spec:
         - name: aggregating-proxy-config
           configMap:
             name: aggregating-proxy-config
+        - name: kube-rbac-proxy-ca
+          configMap:
+            defaultMode: 420
+            name: kube-rbac-proxy-ca.crt
       imagePullSecrets:
         - name: deckhouse-registry
