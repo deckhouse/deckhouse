@@ -10,6 +10,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	keyAnnotationL2BalancerName   = "network.deckhouse.io/l2-load-balancer-name"
+	keyAnnotationExternalIPsCount = "network.deckhouse.io/l2-load-balancer-external-ips-count"
+	memberLabelKey                = "l2-load-balancer.network.deckhouse.io/member"
+)
+
 type NodeInfo struct {
 	Name      string
 	Labels    map[string]string

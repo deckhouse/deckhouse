@@ -16,12 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const (
-	keyAnnotationL2BalancerName   = "network.deckhouse.io/l2-load-balancer-name"
-	keyAnnotationExternalIPsCount = "network.deckhouse.io/l2-load-balancer-external-ips-count"
-	memberLabelKey                = "l2-load-balancer.network.deckhouse.io/member"
-)
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Queue:        "/modules/l2-load-balancer/discovery",
@@ -130,9 +124,6 @@ func handleLoadBalancers(input *go_hook.HookInput) error {
 	l2lbservices := make([]L2LBServiceConfig, 0, 4)
 	l2loadbalancers := makeL2LoadBalancersMapFromSnapshot(input.Snapshots["l2loadbalancers"])
 
-	alreadyLabeledNodes := getLabeledNodes(input.Snapshots["nodes"])
-	needToBeLabeledNodes := make([]NodeInfo, 0, 4)
-
 	for _, serviceSnap := range input.Snapshots["services"] {
 		service, ok := serviceSnap.(ServiceInfo)
 		if !ok {
@@ -156,8 +147,6 @@ func handleLoadBalancers(input *go_hook.HookInput) error {
 			continue
 		}
 
-		needToBeLabeledNodes = append(needToBeLabeledNodes, nodes...)
-
 		for i := 1; i <= service.ExternalIPsCount; i++ {
 			nodeIndex := i % len(nodes)
 			l2lbservices = append(l2lbservices, L2LBServiceConfig{
@@ -172,29 +161,6 @@ func handleLoadBalancers(input *go_hook.HookInput) error {
 				Selector:          service.Selector,
 			})
 		}
-	}
-
-	nodesToUnlabel, nodesToLabel := calcDifferenceForNodes(alreadyLabeledNodes, needToBeLabeledNodes)
-
-	for _, node := range nodesToUnlabel {
-		labelsPatch := map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"labels": map[string]interface{}{
-					memberLabelKey: nil,
-				},
-			},
-		}
-		input.PatchCollector.MergePatch(labelsPatch, "v1", "Node", "", node.Name)
-	}
-
-	for _, node := range nodesToLabel {
-		node.Labels[memberLabelKey] = ""
-		labelsPatch := map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"labels": node.Labels,
-			},
-		}
-		input.PatchCollector.MergePatch(labelsPatch, "v1", "Node", "", node.Name)
 	}
 
 	// L2 Load Balncers are sorted before saving
@@ -226,70 +192,4 @@ func makeL2LoadBalancersMapFromSnapshot(snapshot []go_hook.FilterResult) map[str
 		}
 	}
 	return l2lbMap
-}
-
-func getNodesByNodeSelector(nodeSelector map[string]string, snapshot []go_hook.FilterResult) []NodeInfo {
-	nodes := make([]NodeInfo, 0, 4)
-	for _, nodeSnap := range snapshot {
-		node := nodeSnap.(NodeInfo)
-		if nodeMatchesNodeSelector(node.Labels, nodeSelector) {
-			nodes = append(nodes, node)
-		}
-	}
-	return nodes
-}
-
-func nodeMatchesNodeSelector(nodeLabels, selectorLabels map[string]string) bool {
-	for selectorKey, selectorValue := range selectorLabels {
-		nodeLabelValue, exists := nodeLabels[selectorKey]
-		if !exists {
-			return false
-		}
-		if selectorValue != nodeLabelValue {
-			return false
-		}
-	}
-	return true
-}
-
-func getLabeledNodes(snapshot []go_hook.FilterResult) []NodeInfo {
-	result := make([]NodeInfo, 0, 4)
-	for _, l2lbSnap := range snapshot {
-		nodeInfo, ok := l2lbSnap.(NodeInfo)
-		if !ok {
-			continue
-		}
-
-		if nodeInfo.IsLabeled {
-			result = append(result, nodeInfo)
-		}
-	}
-	return result
-}
-
-func calcDifferenceForNodes(nodesLabeled, nodesNeeded []NodeInfo) ([]NodeInfo, []NodeInfo) {
-	left := []NodeInfo{}
-	right := []NodeInfo{}
-
-	seenLeft := map[string]struct{}{}
-	seenRight := map[string]struct{}{}
-
-	for _, node := range nodesLabeled {
-		seenLeft[node.Name] = struct{}{}
-	}
-	for _, node := range nodesNeeded {
-		seenRight[node.Name] = struct{}{}
-	}
-	for _, node := range nodesLabeled {
-		if _, exists := seenRight[node.Name]; !exists {
-			left = append(left, node)
-		}
-	}
-
-	for _, node := range nodesNeeded {
-		if _, exists := seenLeft[node.Name]; !exists {
-			right = append(right, node)
-		}
-	}
-	return left, right
 }
