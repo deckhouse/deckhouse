@@ -561,7 +561,7 @@ spec:
   targets:
     staticConfig:
       static:
-      - https://{{ .Values.global.cdn.baseURL }}/status
+      - https://example.com/status
 ```
 
 ## Как настроить PrometheusRules для работы с Prometheus?
