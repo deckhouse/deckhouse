@@ -29,11 +29,6 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/se/modules/010-metallb-crd
-  to: /deckhouse/modules/010-metallb-crd
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/se/modules/380-metallb
   to: /deckhouse/modules/380-metallb
   stageDependencies:
