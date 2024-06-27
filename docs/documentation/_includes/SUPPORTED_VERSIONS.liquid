@@ -23,11 +23,11 @@
 {%- if site.data.supported_versions.osDistributions[osKey][langSupportKey] and site.data.supported_versions.osDistributions[osKey][langSupportKey] != "true" %}{% continue %}{% endif %}
 <tr>
   <td class="name">
-    <span 
-      {% if site.data.supported_versions.osDistributions[osKey]['additional_notes'] %} 
-        class="table__double_asterisk" 
-      {% elsif site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %} 
-        class="table__asterisk" 
+    <span
+      {% if site.data.supported_versions.osDistributions[osKey]['additional_notes'] %}
+        class="table__double_asterisk"
+      {% elsif site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}
+        class="table__asterisk"
       {% endif %}
     >
       {%- if site.data.supported_versions.osDistributions[osKey].url %}
@@ -47,25 +47,10 @@
 </tbody>
 </table>
 {% if page.lang == 'ru' %}
-<em style="margin-top: 16px; display: block;">* Поддержка предоставляется только в редакции EE. Работоспособность в редакции CE не гарантируется.</em>
-<em style="margin-top: 16px; display: block;">** Есть дополнительные замечания.</em>
+<em style="margin-top: 16px; display: block;">* Поддержка предоставляется только в Basic Edition, Standard Edition, Enterprise Edition. Работоспособность в Community Edition не гарантируется.</em>
+<em style="margin-top: 16px; display: block;">** Невозможна работа модуля runtime-audit-engine (из-за отсутствия поддержки ядром BPF Type Format (BTF)). Для <strong>РОСА «КОБАЛЬТ» Сервер</strong> рекомендуется установка ядра не ниже версии <code>5.15.33</code> (пакет <code>kernel-ml</code>).</em>
 {%  endif %}
 </div>
-
-{% if page.lang == 'ru' %}
-
-### Дополнительные замечания по поддержке дистрибутива Linux
-
-#### РОСА «КОБАЛЬТ» Сервер
-
-При использовании Роса Сервер версии 7.x рекомендуется установка ядра не ниже версии 5.15.33 (пакет kernel-ml). Ввиду отсутствия поддержки ядром BPF Type Format (BTF) невозможна работа модуля runtime-audit-engine.
-
-#### РОСА «ХРОМ» Сервер
-
-Ввиду отсутствия поддержки ядром BPF Type Format (BTF) невозможна работа модуля runtime-audit-engine.
-
-
-{%  endif %}
 
 ## Kubernetes
 
