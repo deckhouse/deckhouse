@@ -20,11 +20,12 @@ import (
 	"context"
 	"os"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
