@@ -312,7 +312,7 @@ set-build-envs:
  		export WERF_CHANNEL=ea
   endif
   ifeq ($(DEV_REGISTRY_PATH),)
- 		export DEV_REGISTRY_PATH=/sys/deckhouse-oss
+ 		export DEV_REGISTRY_PATH=dev-registry.deckhouse.io/sys/deckhouse-oss
   endif
   ifeq ($(SOURCE_REPO),)
  		export SOURCE_REPO=https://github.com
@@ -320,7 +320,30 @@ set-build-envs:
   ifeq ($(GOPROXY),)
  		export GOPROXY=https://proxy.golang.org,direct
   endif
+  ifeq ($(CI_COMMIT_TAG),)
+ 		export CI_COMMIT_TAG=$(shell git describe --abbrev=0 2>/dev/null)
+  endif
+  ifeq ($(CI_COMMIT_BRANCH),)
+ 		export CI_COMMIT_BRANCH=$(shell git branch --show-current)
+  endif
+  ifeq ($(CI_COMMIT_REF_NAME),)
+ 		export CI_COMMIT_REF_NAME=$(shell  git rev-parse --abbrev-ref HEAD)
+ 	else
+		ifeq ($(CI_COMMIT_TAG),)
+			export CI_COMMIT_REF_NAME=$(CI_COMMIT_BRANCH)
+		else
+			export CI_COMMIT_REF_NAME=$(CI_COMMIT_TAG)
+		endif
+ 	endif
+  ifeq ($(CI_COMMIT_REF_SLUG),)
+ 		export CI_COMMIT_REF_SLUG=$(shell echo $(CI_COMMIT_BRANCH) | cut -c -63 | sed -E 's/[^a-z0-9-]+/-/g' | sed -E 's/^-*([a-z0-9-]+[a-z0-9])-*$$/\1/g')
+ 	endif
+  ifeq ($(DECKHOUSE_REGISTRY_HOST),)
+ 		export DECKHOUSE_REGISTRY_HOST=registry.deckhouse.io
+  endif
+	export WERF_REPO=${DEV_REGISTRY_PATH}
+	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
+	export SECONDARY_REPO=--cache-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/${REGISTRY_SUFFIX}
 
-build: set-build-envs generate ## build Deckhouse images
-	export
-	werf build --platform linux/amd64
+build: set-build-envs ## build Deckhouse images
+	werf build --platform linux/amd64 --report-path images_tags_werf.json ${SECONDARY_REPO}
