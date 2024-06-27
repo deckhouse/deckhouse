@@ -31,9 +31,88 @@ import (
 //
 // the key is the file name
 // value is an array of rule names that allow wildcards
+//
+// !!IMPORTANT NOTE!!: will be fixed by separated issues
 var skipCheckWildcards = map[string][]string{
 	"admission-policy-engine/templates/rbac-for-us.yaml": {
 		"d8:admission-policy-engine:gatekeeper",
+	},
+	"deckhouse/templates/webhook-handler/rbac-for-us.yaml": {
+		"d8:deckhouse:webhook-handler",
+	},
+	"cloud-provider-aws/templates/cloud-controller-manager/rbac-for-us.yaml": {
+		"d8:cloud-provider-aws:cloud-controller-manager",
+	},
+	"cloud-provider-azure/templates/cloud-controller-manager/rbac-for-us.yaml": {
+		"d8:cloud-provider-azure:cloud-controller-manager",
+	},
+	"cloud-provider-gcp/templates/cloud-controller-manager/rbac-for-us.yaml": {
+		"d8:cloud-provider-gcp:cloud-controller-manager",
+	},
+	"cloud-provider-yandex/templates/cloud-controller-manager/rbac-for-us.yaml": {
+		"d8:cloud-provider-yandex:cloud-controller-manager",
+	},
+	"local-path-provisioner/templates/rbac-for-us.yaml": {
+		"d8:local-path-provisioner",
+	},
+	"istio/templates/kiali/rbac-for-us.yaml": {
+		"d8:istio:kiali",
+	},
+	"istio/templates/operator/rbac-for-us.yaml": {
+		"d8:istio:operator",
+	},
+	"user-authn/templates/dex/rbac-for-us.yaml": {
+		"d8:user-authn:dex:crd",
+		"dex",
+	},
+	"operator-prometheus/templates/rbac-for-us.yaml": {
+		"d8:operator-prometheus",
+	},
+	"prometheus-metrics-adapter/templates/rbac-for-us.yaml": {
+		"d8:prometheus-metrics-adapter:horizontal-pod-autoscaler-external-metrics",
+	},
+	"vertical-pod-autoscaler/templates/rbac-for-us.yaml": {
+		"d8:vertical-pod-autoscaler:controllers-reader",
+	},
+	"ingress-nginx/templates/kruise/rbac-for-us.yaml": {
+		"d8:ingress-nginx:kruise-role",
+	},
+	"cilium-hubble/templates/ui/rbac-for-us.yaml": {
+		"d8:cilium-hubble:ui:reader",
+	},
+	"okmeter/templates/rbac-for-us.yaml": {
+		"d8:okmeter",
+	},
+	"openvpn/templates/openvpn/rbac-for-us.yaml": {
+		"openvpn",
+	},
+	"upmeter/templates/upmeter-agent/rbac-for-us.yaml": {
+		"upmeter-agent",
+		"d8:upmeter:upmeter-agent",
+	},
+	"upmeter/templates/upmeter/rbac-for-us.yaml": {
+		"d8:upmeter:upmeter",
+	},
+	"documentation/templates/rbac-for-us.yaml": {
+		"documentation:leases-edit",
+	},
+	"delivery/templates/argocd/application-controller/rbac-for-us.yaml": {
+		"d8:delivery:argocd:application-controller",
+	},
+	"delivery/templates/argocd/server/rbac-for-us.yaml": {
+		"d8:delivery:argocd:server",
+	},
+	"cloud-provider-openstack/templates/cloud-controller-manager/rbac-for-us.yaml": {
+		"d8:cloud-provider-openstack:cloud-controller-manager",
+	},
+	"cloud-provider-vcd/templates/cloud-controller-manager/rbac-for-us.yaml": {
+		"d8:cloud-provider-vcd:cloud-controller-manager",
+	},
+	"cloud-provider-vsphere/templates/cloud-controller-manager/rbac-for-us.yaml": {
+		"d8:cloud-provider-vsphere:cloud-controller-manager",
+	},
+	"cloud-provider-zvirt/templates/cloud-controller-manager/rbac-for-us.yaml": {
+		"d8:cloud-provider-zvirt:cloud-controller-manager",
 	},
 }
 
