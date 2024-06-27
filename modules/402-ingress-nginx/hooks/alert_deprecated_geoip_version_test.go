@@ -232,6 +232,53 @@ spec:
 			})
 		})
 	})
+
+	Context("Cluster with outdated controller without configMaps", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: second
+spec:
+  controllerVersion: "1.6"
+  ingressClass: "test"
+`))
+			err := createNs(d8IngressNginxNamespace)
+			Expect(err).To(BeNil())
+
+			err = createNs(testNamespace)
+			Expect(err).To(BeNil())
+
+			err = createIngress(testNsIngress, "test")
+			Expect(err).To(BeNil())
+
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
+			f.RunGoHook()
+		})
+
+		Context("check there are no metrics for configMaps", func() {
+			It("must have metrics only for ingresses", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				metrics := f.MetricsCollector.CollectedMetrics()
+				Expect(metrics).To(HaveLen(2))
+				Expect(metrics[0]).To(BeEquivalentTo(operation.MetricOperation{
+					Group:  "d8_deprecated_geoip_version",
+					Action: "expire",
+				}))
+				Expect(metrics[1].Group).To(BeEquivalentTo("d8_deprecated_geoip_version"))
+				Expect(metrics[1].Action).To(BeEquivalentTo("set"))
+				Expect(metrics[1].Value).To(BeEquivalentTo(pointer.Float64(1)))
+				Expect(metrics[1].Labels).To(BeEquivalentTo(map[string]string{
+					"kind":               "Ingress",
+					"resource_namespace": "test",
+					"resource_name":      "nginx",
+					"resource_key":       "nginx.ingress.kubernetes.io/canary-by-header",
+				}))
+			})
+		})
+	})
 })
 
 const configMapWithGeoIP = `
