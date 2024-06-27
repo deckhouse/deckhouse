@@ -54,6 +54,7 @@ metadata:
     web.deckhouse.io/export-name: "istio"
     web.deckhouse.io/export-icon: "/public/img/istio.ico"
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.istio.auth.externalAuthentication }}
+    nginx.ingress.kubernetes.io/auth-response-headers: Authorization
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.istio.auth.externalAuthentication.authSignInURL | quote }}
     nginx.ingress.kubernetes.io/auth-url: {{ .Values.istio.auth.externalAuthentication.authURL | quote }}
   {{- else }}

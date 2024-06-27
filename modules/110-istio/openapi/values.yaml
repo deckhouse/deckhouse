@@ -26,6 +26,8 @@ properties:
             isReady:
               type: boolean
               x-examples: [false]
+      kialiSigningKey:
+        type: string
       istioToK8sCompatibilityMap:
         type: object
         default:

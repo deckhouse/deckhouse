@@ -10,7 +10,7 @@ metadata:
 data:
   config.yaml: |
     auth:
-      strategy: anonymous
+      strategy: header
     deployment:
       namespace: d8-{{ $.Chart.Name }}
       accessible_namespaces:
