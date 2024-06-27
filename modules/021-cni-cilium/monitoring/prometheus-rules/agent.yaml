@@ -17,7 +17,7 @@
       description: |
         Check what's going on: `kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}`
 
-  - alert: CiliumAgentNotFountHealthEndpoints
+  - alert: CiliumAgentNodeHealthEndpointsUnreachable
     expr: (count by (namespace,pod) (cilium_unreachable_health_endpoints) OR count by (namespace,pod) (cilium_endpoint_state)) != 1
     for: 5m
     labels:
@@ -32,7 +32,9 @@
       plk_create_group_if_not_exists__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
       summary: Some node's health endpoints are not reachable by agent {{ $labels.namespace }}/{{ $labels.pod }}.
       description: |
-        Check what's going on: `kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}`
+        Check what's going on:
+        `kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}`
+        `kubectl -n {{ $labels.namespace }} exec -ti {{ $labels.pod }} cilium-health status`
 
   - alert: CiliumAgentEndpointsNotReady
     expr: sum by (namespace, pod) (cilium_endpoint_state{endpoint_state="ready"} / cilium_endpoint_state) < 0.5
