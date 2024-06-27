@@ -13,10 +13,10 @@ parameters:
   DatastoreURL: {{ $storageClass.datastoreURL | quote }}
 allowedTopologies:
 - matchLabelExpressions:
-  - key: topology.csi.vmware.com/k8s-region
+  - key: failure-domain.beta.kubernetes.io/region
     values:
     - {{ $.Values.cloudProviderVsphere.internal.providerClusterConfiguration.region }}
-  - key: topology.csi.vmware.com/k8s-zone
+  - key: failure-domain.beta.kubernetes.io/zone
     values:
   {{- range $storageClass.zones}}
     - {{ . }}
