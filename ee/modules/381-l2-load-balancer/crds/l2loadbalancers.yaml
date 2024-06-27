@@ -43,14 +43,20 @@ spec:
                   items:
                     type: string
                   type: array
+                  description: A list of IP address ranges over which L2 Load Balancer has authority.
                 interfaces:
                   items:
                     type: string
                   type: array
+                  description: |-
+                    A list of interfaces to announce from. The LB IP will be announced only from these interfaces.
+                    If the field is not set, we advertise from all the interfaces on the host.
                 nodeSelector:
                   additionalProperties:
                     type: string
                   type: object
+                  description: |-
+                    NodeSelectors allows to limit the nodes to announce by specify the node labels you want the target node to have.
               type: object
             status:
               description: L2LoadBalancerStatus defines the observed state of L2LoadBalancer
