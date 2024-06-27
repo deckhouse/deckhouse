@@ -513,7 +513,7 @@ Follow these steps for manual loading images of modules, connected from the modu
 
 1. Pull module images from their source registry, defined as a `ModuleSource` resource, into a dedicated directory using the `d8 mirror modules pull` command.
 
-   `d8 mirror modules pull` pulls only the module versions available in the module release channels at the time of copying unless the `--modules-filter` flag is set.
+   `d8 mirror modules pull` pulls only the module versions available in the module release channels at the time of copying unless the `--filter` flag is set.
 
    - Create a file with the `ModuleSource` resource (for example, `$HOME/module_source.yml`).
 
@@ -542,13 +542,13 @@ Follow these steps for manual loading images of modules, connected from the modu
      d8 mirror modules pull -d ./d8-modules -m $HOME/module_source.yml
      ```
 
-     To download only a specific set of modules of specific versions, use the `--modules-filter` flag followed by the list of required modules and their versions separated by the `;` character.
+     To download only a specific set of modules of specific versions, use the `--filter` flag followed by the list of required modules and their versions separated by the `;` character.
 
      For example:
 
      ```shell
      d8 mirror modules pull -d /tmp/d8-modules -m $HOME/module_source.yml \
-       --modules-filter='deckhouse-admin:v1.0.0;deckhouse-admin:v1.3.3; sds-drbd:v0.0.1'
+       --filter='deckhouse-admin:v1.0.0;deckhouse-admin:v1.3.3; sds-drbd:v0.0.1'
      ```
 
 1. Upload the directory with the pulled images of the Deckhouse modules to a host with access to the air-gapped registry and install [Deckhouse CLI](deckhouse-cli/) tool.
