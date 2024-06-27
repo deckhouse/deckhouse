@@ -4,7 +4,7 @@ FORMATTING_BEGIN_YELLOW = \033[0;33m
 FORMATTING_BEGIN_BLUE = \033[36m
 FORMATTING_END = \033[0m
 
-FOCUS=""
+FOCUS =
 
 MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476
 
@@ -48,7 +48,7 @@ else ifeq ($(PLATFORM_NAME), arm64)
 endif
 
 # Set testing path for tests-modules
-ifeq ($(FOCUS),"")
+ifeq ($(FOCUS),)
 	TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/... ./ee/be/modules/... ./ee/se/modules/...
 else
 	CE_MODULES = $(shell find ./modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
@@ -298,7 +298,7 @@ update-k8s-patch-versions: ## Run update-patchversion script to generate new ver
 
 ##@ Lib helm
 .PHONY: update-lib-helm
-update-lib-helm: ## Update lib-helm
+update-lib-helm: ## Update lib-helm.
 	##~ Options: version=MAJOR.MINOR.PATCH
 	cd helm_lib/ && yq -i '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*
 
@@ -343,7 +343,8 @@ set-build-envs:
   endif
 	export WERF_REPO=${DEV_REGISTRY_PATH}
 	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
-	export SECONDARY_REPO=--cache-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/${REGISTRY_SUFFIX}
+	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/${REGISTRY_SUFFIX}
 
-build: set-build-envs ## build Deckhouse images
-	werf build --platform linux/amd64 --report-path images_tags_werf.json ${SECONDARY_REPO}
+build: set-build-envs ## Build Deckhouse images.
+	##~ Options: FOCUS=image-name
+	werf build --platform linux/amd64 --report-path images_tags_werf.json ${SECONDARY_REPO} ${FOCUS}
