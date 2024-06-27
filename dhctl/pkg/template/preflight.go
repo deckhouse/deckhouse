@@ -16,7 +16,7 @@ package template
 
 import "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 
-const (
+var (
 	checkPortsScriptPath     = candiBashibleDir + "/preflight/check_ports.sh"
 	checkLocalhostScriptPath = candiBashibleDir + "/preflight/check_localhost.sh"
 	preflightScriptDirPath   = candiBashibleDir + "/preflight/"

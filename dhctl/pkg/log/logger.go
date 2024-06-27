@@ -168,13 +168,14 @@ type PrettyLogger struct {
 func NewPrettyLogger(opts LoggerOptions) *PrettyLogger {
 	res := &PrettyLogger{
 		processTitles: map[string]styleEntry{
-			"common":    {"🎈 ~ Common: %s", CommonOptions},
-			"terraform": {"🌱 ~ Terraform: %s", TerraformOptions},
-			"converge":  {"🛸 ~ Converge: %s", ConvergeOptions},
-			"bootstrap": {"⛵ ~ Bootstrap: %s", BootstrapOptions},
-			"mirror":    {"🪞 ~ Mirror: %s", MirrorOptions},
-			"attach":    {"📦 ~ Attach: %s", AttachOptions},
-			"default":   {"%s", BoldOptions},
+			"common":           {"🎈 ~ Common: %s", CommonOptions},
+			"terraform":        {"🌱 ~ Terraform: %s", TerraformOptions},
+			"converge":         {"🛸 ~ Converge: %s", ConvergeOptions},
+			"bootstrap":        {"⛵ ~ Bootstrap: %s", BootstrapOptions},
+			"mirror":           {"🪞 ~ Mirror: %s", MirrorOptions},
+			"commander/attach": {"⚓ ~ Attach to commander: %s", CommanderAttachOptions},
+			"commander/detach": {"🚢 ~ Detach from commander: %s", CommanderDetachOptions},
+			"default":          {"%s", BoldOptions},
 		},
 		isDebug: opts.IsDebug,
 	}

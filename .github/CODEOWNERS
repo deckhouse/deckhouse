@@ -3,8 +3,8 @@
 005-external-module-manager/    @yalosev @miklezzzz
 007-registrypackages/           @RomanenkoDenys
 010-cloud-data-crd/             @nabokihms
-010-operator-prometheus-crd/    @nabokihms
-010-prometheus-crd/             @nabokihms
+010-operator-prometheus-crd/    @nabokihms @vladimirGuryanov @lazovskiy
+010-prometheus-crd/             @nabokihms @vladimirGuryanov @lazovskiy
 010-snapshot-controller-crd/    @AleksZimin
 010-user-authn-crd/             @nabokihms
 010-vertical-pod-autoscaler-crd/ @nabokihms
@@ -32,20 +32,20 @@
 110-istio/                      @apolovov
 140-user-authz/                 @nabokihms @apolovov
 150-user-authn/                 @nabokihms
-160-multitenancy-manager/       @yalosev @Dmitrykob @miklezzzz
-200-operator-prometheus/        @nabokihms
-300-prometheus/                 @nabokihms
-301-prometheus-*/               @nabokihms
+160-multitenancy-manager/       @yalosev @miklezzzz
+200-operator-prometheus/        @nabokihms @vladimirGuryanov @lazovskiy
+300-prometheus/                 @nabokihms @vladimirGuryanov @lazovskiy
+301-prometheus-*/               @nabokihms @vladimirGuryanov @lazovskiy
 302-vertical-pod-autoscaler/    @RomanenkoDenys
-303-prometheus-*/               @nabokihms
-340-extended-monitoring/        @nabokihms
-340-monitoring-*/               @nabokihms
+303-prometheus-*/               @nabokihms @vladimirGuryanov @lazovskiy
+340-extended-monitoring/        @nabokihms @vladimirGuryanov @lazovskiy
+340-monitoring-*/               @nabokihms @vladimirGuryanov @lazovskiy
 350-node-local-dns/             @RomanenkoDenys
 380-metallb/                    @RomanenkoDenys @apolovov
 400-descheduler/                @RomanenkoDenys @name212
 402-ingress-nginx/              @miklezzzz @yalosev
-460-log-shipper/                @nabokihms
-462-loki/                       @nabokihms
+460-log-shipper/                @nabokihms @vladimirGuryanov @lazovskiy
+462-loki/                       @nabokihms @vladimirGuryanov @lazovskiy
 465-pod-reloader/               @RomanenkoDenys
 470-chrony/                     @RomanenkoDenys
 491-containerized-data-importer @fl64

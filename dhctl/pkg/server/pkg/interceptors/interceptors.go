@@ -62,9 +62,9 @@ func Logger() logging.Logger {
 	})
 }
 
-func UnaryParallelTasksLimiter(sem chan struct{}) grpc.UnaryServerInterceptor {
+func UnaryParallelTasksLimiter(sem chan struct{}, prefix string) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
-		if !strings.Contains(info.FullMethod, "dhctl") {
+		if !strings.HasPrefix(info.FullMethod, prefix) {
 			return handler(ctx, req)
 		}
 
@@ -87,9 +87,9 @@ func UnaryParallelTasksLimiter(sem chan struct{}) grpc.UnaryServerInterceptor {
 	}
 }
 
-func StreamParallelTasksLimiter(sem chan struct{}) grpc.StreamServerInterceptor {
+func StreamParallelTasksLimiter(sem chan struct{}, prefix string) grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-		if !strings.Contains(info.FullMethod, "dhctl") {
+		if !strings.HasPrefix(info.FullMethod, prefix) {
 			return handler(srv, ss)
 		}
 

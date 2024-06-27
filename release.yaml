@@ -32,6 +32,8 @@ requirements:
   "nodesMinimalOSVersionDebian": "10" # modules/040-node-manager/requirements/check.go
   "containerdOnAllNodes": "true" # modules/040-node-manager/requirements/check.go
   "istioMinimalVersion": "1.16" # modules/110-istio/requirements/check.go
+  "yandexHasDeprecatedZoneInConfig": "false" # modules/030-cloud-provider-yandex/requirements/check.go
+  "yandexHasDeprecatedZoneInNodes": "false" # modules/030-cloud-provider-yandex/requirements/check.go
 
 # map of disruptions, associated with a specific release. You have to register check functions before specified release
 disruptions:

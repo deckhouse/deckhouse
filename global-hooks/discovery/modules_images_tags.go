@@ -58,7 +58,10 @@ func discoveryModulesImagesDigests(input *go_hook.HookInput) error {
 
 	modulesDigestsObj := readModulesImagesDigests(input, externalModulesDir)
 	for k, v := range modulesDigestsObj {
-		digestsObj[k] = v
+		// under no circumstances do we overwrite existing digests
+		if _, found := digestsObj[k]; !found {
+			digestsObj[k] = v
+		}
 	}
 
 	input.Values.Set("global.modulesImages.digests", digestsObj)

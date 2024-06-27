@@ -1,0 +1,11 @@
+dhctl:
+  fixes:
+    - summary: Fix working with registries on non-standard ports.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8727
+      impact: registry-packages-proxy should be restarted
+registry-packages-proxy:
+  fixes:
+    - summary: Fix working with registries on non-standard ports.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8727
+      impact: registry-packages-proxy should be restarted
+

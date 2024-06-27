@@ -25,10 +25,7 @@ import (
 )
 
 const (
-	AppName                  = "dhctl"
-	VersionFile              = "/deckhouse/version"
-	DeckhouseImageDigestFile = "/deckhouse/image_digest"
-
+	AppName = "dhctl"
 	// NodeDeckhouseDirectoryPath deckhouse operating directory path.
 	NodeDeckhouseDirectoryPath = "/opt/deckhouse"
 
@@ -36,6 +33,12 @@ const (
 	DeckhouseNodeTmpPath = NodeDeckhouseDirectoryPath + "/tmp"
 	// DeckhouseNodeBinPath deckhouse directory for binary files.
 	DeckhouseNodeBinPath = NodeDeckhouseDirectoryPath + "/bin"
+)
+
+var (
+	deckhouseDir             = "/deckhouse"
+	VersionFile              = deckhouseDir + "/version"
+	DeckhouseImageDigestFile = deckhouseDir + "/image_digest"
 )
 
 var TmpDirName = filepath.Join(os.TempDir(), "dhctl")
@@ -108,4 +111,10 @@ func DefineSanityFlags(cmd *kingpin.CmdClause) {
 
 func configEnvName(name string) string {
 	return "DHCTL_CLI_" + name
+}
+
+func InitGlobalVars(pwd string) {
+	deckhouseDir = pwd + "/deckhouse"
+	VersionFile = deckhouseDir + "/version"
+	DeckhouseImageDigestFile = deckhouseDir + "/image_digest"
 }

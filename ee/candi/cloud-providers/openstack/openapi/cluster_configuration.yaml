@@ -541,6 +541,8 @@ apiVersions:
             default: DirectRoutingWithPortSecurityEnabled
           externalNetworkName:
             <<: *externalNetworkName
+          externalNetworkDHCP:
+            <<: *externalNetworkDHCP
           masterWithExternalFloatingIP:
             description: |
               Defines if Floating IP must be assigned to master nodes.

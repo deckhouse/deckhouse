@@ -50,8 +50,8 @@ rm -rf /etc/systemd/system/bashible.*
 rm -rf /etc/systemd/system/sysctl-tuner.*
 rm -rf /etc/systemd/system/old-csi-mount-cleaner.*
 rm -rf /etc/systemd/system/d8-containerd-cgroup-migration.*
-rm -rf /etc/systemd/system/containerd-deckhouse.service /etc/systemd/system/containerd-deckhouse.service.d
-rm -rf /etc/systemd/system/kubelet.service /etc/systemd/system/kubelet.service.d
+rm -rf /etc/systemd/system/containerd-deckhouse.service /etc/systemd/system/containerd-deckhouse.service.d /lib/systemd/system/containerd-deckhouse.service
+rm -rf /etc/systemd/system/kubelet.service /etc/systemd/system/kubelet.service.d /lib/systemd/system/kubelet.service
 
 systemctl daemon-reload
 
