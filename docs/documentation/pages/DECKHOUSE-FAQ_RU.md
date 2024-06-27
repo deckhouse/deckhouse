@@ -893,14 +893,11 @@ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-control
 
 ### Как получить доступ к контроллеру Deckhouse в multi-master кластере?
 
-В кластерах с несколькими master-узлами Deckhouse запускается в режиме высокой доступности. Поэтому для привычного доступа к контроллеру Deckhouse нужно использовать команду:
+В кластерах с несколькими master-узлами Deckhouse запускается в режиме высокой доступности (в нескольких экземплярах). Для доступа к активному контроллеру Deckhouse можно использовать следующую команду (на примере команды `deckhouse-controller queue list`):
 
 ```shell
 kubectl -n d8-system exec -it $(kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath='{.spec.holderIdentity}' | awk -F'.' '{ print $1 }') -c deckhouse -- deckhouse-controller queue list
 ```
-
-> В примере выше указана команда `queue list` для просмотра очереди Deckhouse. Её можно заменить на любую привычную вам команду.
-
 ### Как обновить версию Kubernetes в кластере?
 
 Чтобы обновить версию Kubernetes в кластере, измените параметр [kubernetesVersion](installing/configuration.html#clusterconfiguration-kubernetesversion) в структуре [ClusterConfiguration](installing/configuration.html#clusterconfiguration) выполнив следующие шаги:
