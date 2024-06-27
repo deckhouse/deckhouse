@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -35,7 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
-// TODO: Remove this migration hook after deprecating ingress controllers of 1.10< versions
+// TODO: Remove this alerting hook after deprecating ingress controllers of 1.10< versions
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/ingress-nginx/deprecated_geoip_version",
@@ -116,10 +117,7 @@ func searchForDeprecatedGeoip(input *go_hook.HookInput, dc dependency.Container)
 			continue
 		}
 
-		err := checkControllerConfigMaps(kubeClient, input.MetricsCollector, controller.Name)
-		if err != nil {
-			return fmt.Errorf("couldn't check %s controller's configMaps: %w", controller.Name, err)
-		}
+		checkControllerConfigMaps(kubeClient, input.MetricsCollector, controller.Name)
 	}
 
 	// check ingress objects' annotations
@@ -133,7 +131,8 @@ func searchForDeprecatedGeoip(input *go_hook.HookInput, dc dependency.Container)
 			ResourceVersionMatch: metav1.ResourceVersionMatchNotOlderThan,
 		})
 		if err != nil {
-			return fmt.Errorf("couldn't list ingresses: %w", err)
+			log.Printf("couldn't list ingresses: %v", err)
+			return nil
 		}
 		ingressList.GetRemainingItemCount()
 
@@ -161,13 +160,14 @@ func searchForDeprecatedGeoip(input *go_hook.HookInput, dc dependency.Container)
 	return nil
 }
 
-func checkControllerConfigMaps(client k8s.Client, collector go_hook.MetricsCollector, controllerName string) error {
+func checkControllerConfigMaps(client k8s.Client, collector go_hook.MetricsCollector, controllerName string) {
 	configMaps := []string{fmt.Sprintf("%s-config", controllerName), fmt.Sprintf("%s-custom-headers", controllerName)}
 
 	for _, cmName := range configMaps {
 		configMap, err := client.CoreV1().ConfigMaps(ingressNamespace).Get(context.Background(), cmName, metav1.GetOptions{})
 		if err != nil {
-			return fmt.Errorf("couldn't get %s controller's configmap %s: %w", controllerName, cmName, err)
+			log.Printf("couldn't get %s controller's configmap %s: %v", controllerName, cmName, err)
+			continue
 		}
 		for k, v := range configMap.Data {
 			if geoipVarsRegexp.MatchString(v) {
@@ -175,6 +175,4 @@ func checkControllerConfigMaps(client k8s.Client, collector go_hook.MetricsColle
 			}
 		}
 	}
-
-	return nil
 }
