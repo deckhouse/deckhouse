@@ -54,6 +54,7 @@ resource "vcd_vapp_vm" "node" {
     is_primary         = true
     ip                 = local.ip_address
   }
+  network_dhcp_wait_seconds = 60
 
   override_template_disk {
     bus_type        = "paravirtual"

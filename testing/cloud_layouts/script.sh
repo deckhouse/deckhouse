@@ -80,6 +80,10 @@ Provider specific environment variables:
 
 \$LAYOUT_VSPHERE_PASSWORD
 
+  vCloudDirector:
+
+\$LAYOUT_VCLOUD_DIRECTOR_PASSWORD
+
   Static:
 
 \$LAYOUT_OS_PASSWORD
@@ -321,6 +325,23 @@ function prepare_environment() {
     env VSPHERE_PASSWORD="$(base64 -d <<<"$LAYOUT_VSPHERE_PASSWORD")" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" \
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VSPHERE_PASSWORD} ${VSPHERE_BASE_DOMAIN}' \
+        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+
+    ssh_user="ubuntu"
+    ;;
+
+"vCloudDirector")
+    # shellcheck disable=SC2016
+    env VCD_PASSWORD="$(base64 -d <<<"$LAYOUT_VCD_PASSWORD")" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" \
+        CRI="$CRI" \
+        DEV_BRANCH="$DEV_BRANCH" \
+        PREFIX="$PREFIX" \
+        DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+        VCD_SERVER="$LAYOUT_VCD_SERVER" \
+        VCD_USERNAME="$LAYOUT_VCD_USERNAME" \
+        VCD_ORG="$LAYOUT_VCD_ORG" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VCD_PASSWORD} ${VCD_SERVER} ${VCD_USERNAME} ${VCD_ORG} ${VCD_MASTER_IP_LAST_OCTET}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     ssh_user="ubuntu"
