@@ -341,7 +341,7 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 ### Tips for configuring Nexus
 
 {% alert level="warning" %}
-When interacting with a `docker` repository located in Nexus (including executing `docker pull`, `docker push` commands), you must specify the address `<NEXUS_URL>:<REPOSITORY_PORT>/<PATH>`.  
+When interacting with a `docker` repository located in Nexus (e. g. executing `docker pull`, `docker push` commands), you must specify the address in the `<NEXUS_URL>:<REPOSITORY_PORT>/<PATH>` format.  
 
 Using the `URL` value from the Nexus repository options is **not acceptable**
 {% endalert %}
