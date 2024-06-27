@@ -891,13 +891,13 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 
 ### How do I get access to Deckhouse controller in multimaster cluster?
 
-In clusters with multiple master-nodes, Deckhouse runs in high availability mode. Therefore, for the usual access to the Deckhouse controller, you need to use the command:
+In clusters with multiple master nodes, Deckhouse runs in high availability mode. This is why you have to use the following command to access the Deckhouse controller:
 
 ```shell
 kubectl -n d8-system exec -it $(kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath='{.spec.holderIdentity}' | awk -F'.' '{ print $1 }') -c deckhouse -- deckhouse-controller queue list
 ```
 
-> In the example above, the `queue list` command is specified to view the Deckhouse queue, it can be replaced with any command you need.
+> In the example above, the `queue list` command lists the Deckhouse queue. It is used for illustrative purposes only. You can replace it with any command you need.
 
 ## How do I upgrade the Kubernetes version in a cluster?
 
