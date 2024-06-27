@@ -301,3 +301,26 @@ update-k8s-patch-versions: ## Run update-patchversion script to generate new ver
 update-lib-helm: ## Update lib-helm
 	##~ Options: version=MAJOR.MINOR.PATCH
 	cd helm_lib/ && yq -i '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*
+
+##@ Build
+.PHONY: build
+set-build-envs:
+  ifeq ($(WERF_ENV),)
+  	export WERF_ENV=FE
+  endif
+  ifeq ($(WERF_CHANNEL),)
+ 		export WERF_CHANNEL=ea
+  endif
+  ifeq ($(DEV_REGISTRY_PATH),)
+ 		export DEV_REGISTRY_PATH=/sys/deckhouse-oss
+  endif
+  ifeq ($(SOURCE_REPO),)
+ 		export SOURCE_REPO=https://github.com
+  endif
+  ifeq ($(GOPROXY),)
+ 		export GOPROXY=https://proxy.golang.org,direct
+  endif
+
+build: set-build-envs generate ## build Deckhouse images
+	export
+	werf build --platform linux/amd64
