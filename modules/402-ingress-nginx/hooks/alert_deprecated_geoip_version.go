@@ -19,7 +19,6 @@ package hooks
 import (
 	"context"
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -117,7 +116,7 @@ func searchForDeprecatedGeoip(input *go_hook.HookInput, dc dependency.Container)
 			continue
 		}
 
-		checkControllerConfigMaps(kubeClient, input.MetricsCollector, controller.Name)
+		checkControllerConfigMaps(kubeClient, input, controller.Name)
 	}
 
 	// check ingress objects' annotations
@@ -131,7 +130,7 @@ func searchForDeprecatedGeoip(input *go_hook.HookInput, dc dependency.Container)
 			ResourceVersionMatch: metav1.ResourceVersionMatchNotOlderThan,
 		})
 		if err != nil {
-			log.Printf("couldn't list ingresses: %v", err)
+			input.LogEntry.Warnf("couldn't list ingresses: %v", err)
 			return nil
 		}
 		ingressList.GetRemainingItemCount()
@@ -160,18 +159,18 @@ func searchForDeprecatedGeoip(input *go_hook.HookInput, dc dependency.Container)
 	return nil
 }
 
-func checkControllerConfigMaps(client k8s.Client, collector go_hook.MetricsCollector, controllerName string) {
+func checkControllerConfigMaps(client k8s.Client, input *go_hook.HookInput, controllerName string) {
 	configMaps := []string{fmt.Sprintf("%s-config", controllerName), fmt.Sprintf("%s-custom-headers", controllerName)}
 
 	for _, cmName := range configMaps {
 		configMap, err := client.CoreV1().ConfigMaps(ingressNamespace).Get(context.Background(), cmName, metav1.GetOptions{})
 		if err != nil {
-			log.Printf("couldn't get %s controller's configmap %s: %v", controllerName, cmName, err)
+			input.LogEntry.Warnf("couldn't get %s controller's configmap %s: %v", controllerName, cmName, err)
 			continue
 		}
 		for k, v := range configMap.Data {
 			if geoipVarsRegexp.MatchString(v) {
-				collector.Set(metricsGroup, 1, map[string]string{"kind": "IngressNginxController", "resource_namespace": "", "resource_name": controllerName, "resource_key": k}, metrics.WithGroup(metricsGroup))
+				input.MetricsCollector.Set(metricsGroup, 1, map[string]string{"kind": "IngressNginxController", "resource_namespace": "", "resource_name": controllerName, "resource_key": k}, metrics.WithGroup(metricsGroup))
 			}
 		}
 	}
