@@ -18,6 +18,10 @@ properties:
               type: array
               items:
                 type: string
+            interfaces:
+              type: array
+              items:
+                type: string
             nodeSelector:
               additionalProperties:
                 type: string

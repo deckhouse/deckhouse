@@ -55,6 +55,7 @@ type L2LBServiceConfig struct {
 type L2LoadBalancerInfo struct {
 	Name         string            `json:"name"`
 	AddressPool  []string          `json:"addressPool"`
+	Interfaces   []string          `json:"interfaces"`
 	NodeSelector map[string]string `json:"nodeSelector"`
 }
 
@@ -68,6 +69,7 @@ type L2LoadBalancer struct {
 
 type L2LoadBalancerSpec struct {
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	Interfaces   []string          `json:"interfaces,omitempty"`
 	AddressPool  []string          `json:"addressPool,omitempty"`
 }
 

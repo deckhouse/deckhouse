@@ -43,6 +43,10 @@ spec:
                   items:
                     type: string
                   type: array
+                interfaces:
+                  items:
+                    type: string
+                  type: array
                 nodeSelector:
                   additionalProperties:
                     type: string

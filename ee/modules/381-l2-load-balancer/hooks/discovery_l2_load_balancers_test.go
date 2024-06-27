@@ -90,6 +90,7 @@ spec:
             "addressPool": [
               "192.168.199.100-192.168.199.110"
             ],
+			"interfaces": [],
             "nodeSelector": {
               "node-role.kubernetes.io/frontend": ""
             }

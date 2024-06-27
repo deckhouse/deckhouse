@@ -113,9 +113,15 @@ func applyLoadBalancerFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		return nil, err
 	}
 
+	interfaces := []string{}
+	if len(l2loadbalancer.Spec.Interfaces) > 0 {
+		interfaces = l2loadbalancer.Spec.Interfaces
+	}
+
 	return L2LoadBalancerInfo{
 		Name:         l2loadbalancer.Name,
 		AddressPool:  l2loadbalancer.Spec.AddressPool,
+		Interfaces:   interfaces,
 		NodeSelector: l2loadbalancer.Spec.NodeSelector,
 	}, nil
 }
