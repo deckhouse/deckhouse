@@ -59,6 +59,9 @@ spec:
     node-role.kubernetes.io/frontend: ""
   addressPool:
   - 192.168.199.100-192.168.199.110
+  interfaces:
+  - eth1
+  - eth2
 ---
 apiVersion: v1
 kind: Node
@@ -90,7 +93,10 @@ spec:
             "addressPool": [
               "192.168.199.100-192.168.199.110"
             ],
-			"interfaces": [],
+			"interfaces": [
+				"eth1",
+				"eth2"
+			],
             "nodeSelector": {
               "node-role.kubernetes.io/frontend": ""
             }
