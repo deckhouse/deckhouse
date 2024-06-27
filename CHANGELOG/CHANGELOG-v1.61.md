@@ -49,6 +49,7 @@
  - **[ingress-nginx]** Add missing `severity_level` for NginxIngressConfigTestFailed rule. [#8661](https://github.com/deckhouse/deckhouse/pull/8661)
  - **[istio]** Fixed Istio module release requirements checker. [#8678](https://github.com/deckhouse/deckhouse/pull/8678)
  - **[monitoring-kubernetes-control-plane]** Add missing datasource variable to deprecated-apis dashboard [#8689](https://github.com/deckhouse/deckhouse/pull/8689)
+ - **[node-manager]** Create status.errors object for all NodeUsers (migration) and add conversion webhook for same logic. [#8814](https://github.com/deckhouse/deckhouse/pull/8814)
  - **[node-manager]** Fix RBAC permissions and startup schedule cleanup of NodeUser creation errors. [#8803](https://github.com/deckhouse/deckhouse/pull/8803)
  - **[node-manager]** Write the SSH private key to a temporary file and delete the file after use. [#8490](https://github.com/deckhouse/deckhouse/pull/8490)
  - **[registry-packages-proxy]** Fix working with registries on non-standard ports. [#8809](https://github.com/deckhouse/deckhouse/pull/8809)
