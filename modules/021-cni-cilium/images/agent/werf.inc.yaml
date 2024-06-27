@@ -168,8 +168,8 @@ shell:
   # additional relocate from cilium
   - mkdir -p /relocate/var/lib/cilium
   - cp -a /var/lib/cilium/bpf /relocate/var/lib/cilium
-  - echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc
-  - cp -a /etc/bash.bashrc /relocate/etc
+  - echo ". /etc/profile.d/bash_completion.sh" >> /etc/profile
+  - cp -a /etc/profile /relocate/etc
   setup:
   # prepare final fs
   - mkdir -p /relocate/usr/sbin
