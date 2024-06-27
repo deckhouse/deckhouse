@@ -296,6 +296,7 @@ func (r *Runner) Init() error {
 	return log.Process("default", "terraform init ...", func() error {
 		args := []string{
 			"init",
+			fmt.Sprintf("-plugin-dir=%splugins", os.Getenv("PWD")),
 			"-get-plugins=false",
 			"-no-color",
 			"-input=false",
