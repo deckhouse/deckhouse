@@ -20,9 +20,10 @@ import (
 	"context"
 	"os"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
@@ -51,7 +52,7 @@ func setLeaderLabelToPod(input *go_hook.HookInput, dc dependency.Container) erro
 		patch := map[string]any{
 			"metadata": map[string]any{
 				"labels": map[string]any{
-					"deckhouse-leader": emptyOrNil(pod.Name == podName),
+					"leader": trueOrNil(pod.Name == podName),
 				},
 			},
 		}
@@ -62,9 +63,9 @@ func setLeaderLabelToPod(input *go_hook.HookInput, dc dependency.Container) erro
 	return nil
 }
 
-func emptyOrNil(b bool) any {
+func trueOrNil(b bool) any {
 	if b {
-		return ""
+		return true
 	}
 
 	return nil

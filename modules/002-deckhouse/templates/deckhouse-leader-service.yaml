@@ -9,7 +9,7 @@ spec:
   publishNotReadyAddresses: true
   selector:
     app: deckhouse
-    deckhouse-leader: ""
+    leader: true
   ports:
     - name: self
       port: 8080
