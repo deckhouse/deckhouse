@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -296,7 +297,7 @@ func (r *Runner) Init() error {
 	return log.Process("default", "terraform init ...", func() error {
 		args := []string{
 			"init",
-			fmt.Sprintf("-plugin-dir=%splugins", os.Getenv("PWD")),
+			fmt.Sprintf("-plugin-dir=%s/plugins", strings.TrimRight(os.Getenv("PWD"), "/")),
 			"-get-plugins=false",
 			"-no-color",
 			"-input=false",
