@@ -340,6 +340,12 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 
 ### Tips for configuring Nexus
 
+{% alert level="warning" %}
+When interacting with a `docker` repository located in Nexus (e. g. executing `docker pull`, `docker push` commands), you must specify the address in the `<NEXUS_URL>:<REPOSITORY_PORT>/<PATH>` format.  
+
+Using the `URL` value from the Nexus repository options is **not acceptable**
+{% endalert %}
+
 The following requirements must be met if the [Nexus](https://github.com/sonatype/nexus-public) repository manager is used:
 
 * `Docker Bearer Token Realm` must be enabled (*Administration* -> *Security* -> *Realms*).
@@ -384,6 +390,8 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
   * Create a user with the role above granted.
 
     ![Create a Nexus user](images/registry/nexus/nexus-user.png)
+
+Thus, Deckhouse images will be available at `https://<NEXUS_HOST>:<REPOSITORY_PORT>/deckhouse/ee:<d8s-version>`.
 
 ### Tips for configuring Harbor
 
