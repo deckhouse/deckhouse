@@ -45,7 +45,6 @@ func terraformCmd(args ...string) *exec.Cmd {
 		os.Environ(),
 		"TF_IN_AUTOMATION=yes",
 		"TF_DATA_DIR="+filepath.Join(app.TmpDirName, "tf_dhctl"),
-		fmt.Sprintf("TF_PLUGIN_CACHE_DIR=%s/plugins", os.Getenv("PWD")),
 	)
 
 	// always use dug log for write its to debug log file
