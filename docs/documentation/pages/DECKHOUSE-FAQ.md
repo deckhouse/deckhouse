@@ -477,7 +477,7 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
      --registry-login='<USER>' --registry-password='<PASSWORD>'
    ```
 
-   > Before pushind images, make sure that the path for loading into the registry exists (`/sys/deckhouse` in the example above), and the account being used has write permissions.
+   > Before pushing images, make sure that the path for loading into the registry exists (`/sys/deckhouse` in the example above), and the account being used has write permissions.
 
 1. Once pushing images to the air-gapped private registry is complete, you are ready to install Deckhouse from it. Refer to the [Getting started](/gs/bm-private/step2.html) guide.
 
