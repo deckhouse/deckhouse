@@ -26,7 +26,7 @@ k8s:
       azure: v1.26.17
       gcp: ccm/v26.0.4
     csi:
-      vsphere: v3.1.2
+      vsphere: v3.0.3
       openstack: v1.26.1
       provisioner: v3.4.1
       attacher: v4.2.0
@@ -47,7 +47,7 @@ k8s:
       azure: v1.27.11
       gcp: ccm/v27.1.0
     csi:
-      vsphere: v3.1.2
+      vsphere: v3.0.3
       openstack: v1.27.1
       provisioner: v3.5.0
       attacher: v4.3.0
@@ -68,7 +68,7 @@ k8s:
       azure: v1.28.3
       gcp: ccm/v27.1.6
     csi:
-      vsphere: v3.1.2
+      vsphere: v3.0.3
       openstack: v1.28.0
       provisioner: v3.6.0
       attacher: v4.4.0
@@ -89,7 +89,7 @@ k8s:
       azure: v1.29.0
       gcp: ccm/v29.0.0
     csi:
-      vsphere: v3.1.2
+      vsphere: v3.0.3
       openstack: v1.29.0
       provisioner: v4.0.0
       attacher: v4.5.0
@@ -110,7 +110,7 @@ k8s:
       azure: v1.30.2
       gcp: ccm/v29.0.1
     csi:
-      vsphere: v3.2.0
+      vsphere: v3.0.3
       openstack: v1.30.0
       provisioner: v5.0.0
       attacher: v4.6.1
