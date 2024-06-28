@@ -1,5 +1,6 @@
 {{- $ciliumProxyRev := "ad82c7c56e88989992fd25d8d67747de865c823b" }}
-{{- $ciliumProxyCacheRev := "v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b-alt-v1" }}
+{{- $ciliumProxyCacheRev := "v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b-alt-v2" }}
+{{- $ciliumProxyDepsRev := "v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b-alt-v2" }}
 {{- $fromCacheVersion := "17" }}
 ---
 # #####################################################################
@@ -43,10 +44,12 @@ shell:
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
   setup:
   - mkdir -p /tmp/bazel-cache
-  #- git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache
+  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache
+  - mkdir -p /tmp/bazel-deps
+  - git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} {{ .SOURCE_REPO }}/cilium/proxy-build-deps.git /tmp/bazel-deps
   - export TARGETARCH=amd64 ARCH="x86_64"
   - export BAZEL_VERSION="6.1.0" USE_BAZEL_VERSION="6.1.0"
-  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
+  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache  --nofetch"
   - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
   - cd /cilium/proxy
   - echo "{{ $ciliumProxyRev }}" >SOURCE_VERSION
@@ -54,7 +57,12 @@ shell:
   - sed -i 's/$(SUDO) apt info clang-15 || $(call add_clang_apt_source,$(shell lsb_release -cs))/rpm -q clang15.0/' Makefile
   - sed -i "/\$(SUDO) apt install -y clang-15 llvm-15-dev lld-15 clang-format-15/d" Makefile
   - sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-15.0/lib64/clang/15.0.7/include",' bazel/toolchains/BUILD
-  - bazel fetch //:cilium-envoy
+  #- bazel fetch //:cilium-envoy
+  #
+  - mkdir -p $(bazel info output_base)/external
+  - tar -zxf /tmp/bazel-deps/external.tar.gz -C $(bazel info output_base)/external
+  - rm -rf /tmp/bazel-deps
+  #
   - make bazel-bin/cilium-envoy
   - ./bazel/get_workspace_status
   - make install
