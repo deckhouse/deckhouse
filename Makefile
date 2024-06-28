@@ -318,7 +318,7 @@ set-build-envs:
  		export SOURCE_REPO=https://github.com
   endif
   ifeq ($(GOPROXY),)
- 		export GOPROXY=https://proxy.golang.org,direct
+ 		export GOPROXY=https://proxy.golang.org
   endif
   ifeq ($(CI_COMMIT_TAG),)
  		export CI_COMMIT_TAG=$(shell git describe --abbrev=0 2>/dev/null)
@@ -347,4 +347,4 @@ set-build-envs:
 
 build: set-build-envs ## Build Deckhouse images.
 	##~ Options: FOCUS=image-name
-	werf build --platform linux/amd64 --report-path images_tags_werf.json ${SECONDARY_REPO} ${FOCUS}
+	werf build --debug --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --report-path images_tags_werf.json ${SECONDARY_REPO} ${FOCUS}
