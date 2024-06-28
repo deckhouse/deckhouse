@@ -44,7 +44,7 @@ func (pc *Checker) CheckSSHTunnel() error {
 	builder.WriteString(":localhost:")
 	builder.WriteString(strconv.Itoa(DefaultTunnelRemotePort))
 
-	tun := pc.sshClient.Tunnel("L", builder.String())
+	tun := pc.sshClient.Tunnel("R", builder.String())
 	err := tun.Up()
 	if err != nil {
 		return fmt.Errorf(`Cannot setup tunnel to control-plane host: %w.
