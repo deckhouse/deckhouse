@@ -1,8 +1,3 @@
-Index: storage/kubernetes/types.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
 --- a/storage/kubernetes/types.go	(revision 23efe9200ccd9e0a69242bf61cd221462370d1f4)
 +++ b/storage/kubernetes/types.go	(date 1718355089197)
@@ -36,11 +31,6 @@ diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
  	}
  }
 
-Index: server/server.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/server/server.go b/server/server.go
 --- a/server/server.go	(revision 23efe9200ccd9e0a69242bf61cd221462370d1f4)
 +++ b/server/server.go	(date 1718355089194)
@@ -52,11 +42,6 @@ diff --git a/server/server.go b/server/server.go
  	}, true, nil
  }
 
-Index: storage/sql/crud.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/storage/sql/crud.go b/storage/sql/crud.go
 --- a/storage/sql/crud.go	(revision 23efe9200ccd9e0a69242bf61cd221462370d1f4)
 +++ b/storage/sql/crud.go	(date 1718355089201)
@@ -118,11 +103,6 @@ diff --git a/storage/sql/crud.go b/storage/sql/crud.go
  	)
  	if err != nil {
  		if err == sql.ErrNoRows {
-Index: cmd/dex/config.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
 --- a/cmd/dex/config.go	(revision 23efe9200ccd9e0a69242bf61cd221462370d1f4)
 +++ b/cmd/dex/config.go	(date 1718355089189)
@@ -152,11 +132,6 @@ diff --git a/cmd/dex/config.go b/cmd/dex/config.go
  	})
  	if len(data.Hash) == 0 && len(data.HashFromEnv) > 0 {
  		data.Hash = os.Getenv(data.HashFromEnv)
-Index: storage/storage.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/storage/storage.go b/storage/storage.go
 --- a/storage/storage.go	(revision 23efe9200ccd9e0a69242bf61cd221462370d1f4)
 +++ b/storage/storage.go	(date 1718355089203)

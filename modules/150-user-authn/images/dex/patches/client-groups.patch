@@ -1,8 +1,3 @@
-Index: storage/kubernetes/types.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
 --- a/storage/kubernetes/types.go	(revision 23efe9200ccd9e0a69242bf61cd221462370d1f4)
 +++ b/storage/kubernetes/types.go	(date 1718352821998)
@@ -57,11 +52,6 @@ diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
  	}
  }
 
-Index: server/handlers.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/server/handlers.go b/server/handlers.go
 --- a/server/handlers.go	(revision 23efe9200ccd9e0a69242bf61cd221462370d1f4)
 +++ b/server/handlers.go	(date 1718355021185)
@@ -96,11 +86,6 @@ diff --git a/server/handlers.go b/server/handlers.go
 
  	switch r.Method {
  	case http.MethodGet:
-Index: storage/storage.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/storage/storage.go b/storage/storage.go
 --- a/storage/storage.go	(revision 23efe9200ccd9e0a69242bf61cd221462370d1f4)
 +++ b/storage/storage.go	(date 1718352822001)
