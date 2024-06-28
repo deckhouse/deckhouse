@@ -83,7 +83,6 @@
 {!{- else if eq $provider "vsphere" }!}
   LAYOUT_VSPHERE_PASSWORD: ${{ secrets.LAYOUT_VSPHERE_PASSWORD }}
   LAYOUT_VSPHERE_BASE_DOMAIN: ${{ secrets.LAYOUT_VSPHERE_BASE_DOMAIN }}
-{!{- end }!}
 {!{- else if eq $provider "vcd" }!}
   LAYOUT_VCD_PASSWORD: ${{ secrets.LAYOUT_VCD_PASSWORD }}
   LAYOUT_VCD_USERNAME: ${{ secrets.LAYOUT_VCD_USERNAME }}
