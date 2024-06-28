@@ -525,6 +525,45 @@ spec:
     - port: web
 ```
 
+## Как настроить Probe для работы с Prometheus?
+
+Добавьте лейбл `prometheus: main` к Probe.
+Добавьте в namespace, в котором находится Probe, лейбл `prometheus.deckhouse.io/probe-watcher-enabled: "true"`.
+
+Пример:
+
+```yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: frontend
+  labels:
+    prometheus.deckhouse.io/probe-watcher-enabled: "true"
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  labels:
+    app: prometheus
+    component: probes
+    prometheus: main
+  name: cdn-is-up
+  namespace: frontend
+spec:
+  interval: 30s
+  jobName: httpGet
+  module: http_2xx
+  prober:
+    path: /probe
+    scheme: http
+    url: blackbox-exporter.blackbox-exporter.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+      - https://example.com/status
+```
+
 ## Как настроить PrometheusRules для работы с Prometheus?
 
 Добавьте в namespace, в котором находятся PrometheusRules, лейбл `prometheus.deckhouse.io/rules-watcher-enabled: "true"`.

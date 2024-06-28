@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -36,10 +37,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
+var cloudProvidersDir = "/deckhouse/candi/cloud-providers/"
+
 const (
 	deckhouseClusterStateSuffix = "-dhctl.*.tfstate"
 	deckhousePlanSuffix         = "-dhctl.*.tfplan"
-	cloudProvidersDir           = "/deckhouse/candi/cloud-providers/"
 	varFileName                 = "cluster-config.auto.*.tfvars.json"
 
 	terraformHasChangesExitCode = 2
@@ -295,6 +297,7 @@ func (r *Runner) Init() error {
 	return log.Process("default", "terraform init ...", func() error {
 		args := []string{
 			"init",
+			fmt.Sprintf("-plugin-dir=%s/plugins", strings.TrimRight(os.Getenv("PWD"), "/")),
 			"-get-plugins=false",
 			"-no-color",
 			"-input=false",
@@ -715,4 +718,8 @@ func hasAction(actions []string, findAction string) bool {
 
 func buildTerraformPath(provider, layout, step string) string {
 	return filepath.Join(cloudProvidersDir, provider, "layouts", layout, step)
+}
+
+func InitGlobalVars(pwd string) {
+	cloudProvidersDir = pwd + "/deckhouse/candi/cloud-providers/"
 }

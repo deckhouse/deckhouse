@@ -31,13 +31,14 @@ properties:
       - "centos"
       - "debian"
       - "redos"
+      - "rosa"
       - "astra"
       - "altlinux"
     x-examples:
       - ["ubuntu-lts"]
     items:
       type: string
-      enum: [ubuntu-lts, centos, debian, redos, astra, altlinux]
+      enum: [ubuntu-lts, centos, debian, redos, rosa, astra, altlinux]
     description: |
       Names of available bashible OS bundles to reduce Helm release size.
   allowedKubernetesVersions:

@@ -304,6 +304,8 @@ apiVersions:
               > **Внимание!** После переключения с/на VXLAN требуется перезагрузка всех узлов кластера.
           externalNetworkName:
             <<: *externalNetworkName_ru
+          externalNetworkDHCP:
+            <<: *externalNetworkDHCP_ru
           masterWithExternalFloatingIP:
             description: |
               Флаг, который указывает, создавать ли Floating IP на master-узлах.

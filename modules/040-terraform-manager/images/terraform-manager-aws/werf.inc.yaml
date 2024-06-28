@@ -6,7 +6,7 @@ git:
 import:
 - artifact: terraform-provider-aws
   add: /terraform-provider-aws
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.aws.namespace }}/{{ .TF.aws.type }}/{{ .TF.aws.version }}/linux_amd64/terraform-provider-aws
+  to: /plugins/registry.terraform.io/{{ .TF.aws.namespace }}/{{ .TF.aws.type }}/{{ .TF.aws.version }}/linux_amd64/terraform-provider-aws
   before: setup
 ---
 artifact: terraform-provider-aws

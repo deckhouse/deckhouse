@@ -91,7 +91,6 @@ apiVersions:
               enum:
               - ru-central1-a
               - ru-central1-b
-              - ru-central1-c
               - ru-central1-d
             uniqueItems: true
           instanceClass:
@@ -210,7 +209,6 @@ apiVersions:
                 enum:
                 - ru-central1-a
                 - ru-central1-b
-                - ru-central1-c
                 - ru-central1-d
               uniqueItems: true
             nodeTemplate:
@@ -311,7 +309,6 @@ apiVersions:
         x-examples:
           - ru-central1-a: e2lu8r1tbbtryhdpa9ro
             ru-central1-b: e2lu8r1tbbtryhdpa9ro
-            ru-central1-c: e2lu8r1tbbtryhdpa9ro
             ru-central1-d: e2lu8r1tbbtryhdpa9ro
         additionalProperties:
           type: string
@@ -448,7 +445,6 @@ apiVersions:
           enum:
             - ru-central1-a
             - ru-central1-b
-            - ru-central1-c
             - ru-central1-d
         uniqueItems: true
     oneOf:

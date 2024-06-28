@@ -1,10 +1,5 @@
 # Changelog v1.60
 
-## [MALFORMED]
-
-
- - #8429 unknown section "l2-load-balancer"
-
 ## Know before update
 
 
@@ -13,6 +8,7 @@
  - Okagent will update from the Deckhouse Observability platform source and will start sending metrics to DOP for FE installations.
  - The method for configuring network interfaces and routes has changed in OpenStack instances.
  - You can use multiple `--config` flag in bootstrap command for logical separation bootstrap configuration. The `--resources` flag is now deprecated.
+ - The experimental `l2-load-balancer` module is not available anymore. A renewed one is coming soon.
 
 ## Features
 
@@ -77,7 +73,6 @@
  - **[extended-monitoring]** Add support of mirrors for container registries for `image_availability_exporter`. [#8568](https://github.com/deckhouse/deckhouse/pull/8568)
  - **[ingress-nginx]** Fix pod descheduling from a not-ready node. [#8647](https://github.com/deckhouse/deckhouse/pull/8647)
     Kruise controller's pods will be recreadted.
- - **[ingress-nginx]** Fix usage custom logs formats without our fields. [#8621](https://github.com/deckhouse/deckhouse/pull/8621)
  - **[ingress-nginx]** Digital ocean Kubernetes upgrade, update `timeoutSeconds`. [#8413](https://github.com/deckhouse/deckhouse/pull/8413)
  - **[ingress-nginx]** Replace status with formatted status in logs. [#8385](https://github.com/deckhouse/deckhouse/pull/8385)
  - **[istio]** Fixed Istio module release requirements checker. [#8705](https://github.com/deckhouse/deckhouse/pull/8705)
@@ -126,6 +121,7 @@
  - **[ingress-nginx]** Fix base image for the Ingress nginx controller v1.6. [#8183](https://github.com/deckhouse/deckhouse/pull/8183)
  - **[ingress-nginx]** Fix the way the number of ingress nginx replicas is counted. [#8155](https://github.com/deckhouse/deckhouse/pull/8155)
     Kruise-controller pod will be recreated.
+ - **[l2-load-balancer]** The l2-load-balancer module is cancelled. [#8429](https://github.com/deckhouse/deckhouse/pull/8429)
  - **[prometheus]** Fix URLs to the documentation in the Grafana home panel. [#8072](https://github.com/deckhouse/deckhouse/pull/8072)
  - **[registrypackages]** Update the `d8` registry package version. [#8563](https://github.com/deckhouse/deckhouse/pull/8563)
  - **[registrypackages]** Bump d8 CLI version to v0.1.0. [#8378](https://github.com/deckhouse/deckhouse/pull/8378)

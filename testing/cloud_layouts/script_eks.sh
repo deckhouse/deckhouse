@@ -14,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -x
-
 usage=$(cat <<EOF
 Usage:
   ./script.sh [command]
@@ -105,7 +103,7 @@ function prepare_environment() {
 
 
 function bootstrap_eks() {
-  set -x
+  # set -x
 
   >&2 echo "Run terraform to create nodes for EKS cluster ..."
 #  pushd "$cwd"

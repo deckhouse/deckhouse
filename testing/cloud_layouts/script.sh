@@ -159,7 +159,7 @@ function destroy_static_infra() {
   >&2 echo "Run destroy_static_infra from ${terraform_state_file}"
 
   pushd "$cwd"
-  terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
+  terraform init -input=false -plugin-dir=/plugins || return $?
   terraform destroy -state="${terraform_state_file}" -input=false -auto-approve || exitCode=$?
   popd
 
@@ -205,7 +205,7 @@ function cleanup() {
 }
 
 function prepare_environment() {
-  root_wd="$(pwd)/testing/cloud_layouts"
+  root_wd="/deckhouse/testing/cloud_layouts"
 
   if [[ -z "$PROVIDER" || ! -d "$root_wd/$PROVIDER" ]]; then
     >&2 echo "ERROR: Unknown provider \"$PROVIDER\""
@@ -410,7 +410,7 @@ function run-test() {
 function bootstrap_static() {
   >&2 echo "Run terraform to create nodes for Static cluster ..."
   pushd "$cwd"
-  terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
+  terraform init -input=false -plugin-dir=/plugins || return $?
   terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
   popd
 
@@ -573,7 +573,7 @@ ENDSSH
   # Bootstrap
   >&2 echo "Run dhctl bootstrap ..."
   dhctl --do-not-write-debug-log-file bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache --ssh-bastion-host "$bastion_ip" --ssh-bastion-user="$ssh_user" --ssh-host "$master_ip" --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
-  --config "$cwd/configuration.yaml" --resources "$cwd/resources.yaml" | tee -a "$bootstrap_log" || return $?
+  --config "$cwd/configuration.yaml" --config "$cwd/resources.yaml" | tee -a "$bootstrap_log" || return $?
 
   >&2 echo "==============================================================
 
@@ -799,14 +799,12 @@ function parse_master_ip_from_log() {
 }
 
 function chmod_dirs_for_cleanup() {
-  if [ -n $USER_RUNNER_ID ]; then
+  if [ -n "$USER_RUNNER_ID" ]; then
     echo "Fix temp directories owner before cleanup ..."
-    chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
     chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
     chown -R $USER_RUNNER_ID /tmp || true
   else
     echo "Fix temp directories permissions before cleanup ..."
-    chmod -f -R 777 "$(pwd)/testing" || true
     chmod -f -R 777 "/deckhouse/testing" || true
     chmod -f -R 777 /tmp || true
   fi
@@ -815,6 +813,9 @@ function chmod_dirs_for_cleanup() {
 
 function main() {
   >&2 echo "Start cloud test script"
+  # switch to the / folder to dhctl proper work
+  cd /
+
   if ! prepare_environment ; then
     exit 2
   fi

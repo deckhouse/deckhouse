@@ -133,7 +133,7 @@ run: |
 
   $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 {!{ end }!}
-  
+
 {!{- if eq $provider "eks" }!}
   chmod 755 $(pwd)/testing/cloud_layouts/{!{ $script_eks }!}
 

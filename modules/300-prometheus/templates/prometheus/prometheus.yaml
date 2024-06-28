@@ -172,7 +172,7 @@ spec:
       prometheus.deckhouse.io/scrape-configs-watcher-enabled: "true"
   probeNamespaceSelector:
     matchLabels:
-      heritage: deckhouse
+      prometheus.deckhouse.io/probe-watcher-enabled: "true"
   podMetadata:
     labels:
       threshold.extended-monitoring.deckhouse.io/disk-bytes-warning: "94"
