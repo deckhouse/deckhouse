@@ -4,8 +4,6 @@ title: "The metallb module"
 
 The module implements an improved (relative to the standard [[L2 mode in MetalLB]](../../modules/380-metallb/#layer-2-mode)) balancing mechanism for services in bare metal clusters when there is no option to use cloud load balancers or [MetalLB](../../modules/380-metallb/#mode-bgp) in BGP mode with Equal-cost multi-path (ECMP) configured.
 
-Based on [MetalLB](https://metallb.universe.tf/) solution.
-
 ## Principle of operation compared to L2 mode in MetalLB module
 
 [[MetalLB in L2 mode]](../../../se/modules/380-metallb/#layer-2-mode) allows to order _Service_ with `LoadBalancer` type, the operation of which is based on the fact that balancing nodes simulate ARP-responses from the "public" IP in a peering network. This mode has a significant limitation — only one balancing node handles all the incoming traffic of this service at a time. Therefore:
