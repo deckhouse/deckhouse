@@ -15,7 +15,7 @@
 # limitations under the License.
 
 CONFIG_DIR=~/.kind-d8
-KIND_IMAGE=kindest/node:v1.25.9@sha256:c08d6c52820aa42e533b70bce0c2901183326d86dcdcbedecc9343681db45161
+KIND_IMAGE=kindest/node:v1.27.13@sha256:17439fa5b32290e3ead39ead1250dca1d822d94a10d26f1981756cd51b24b9d8
 D8_RELEASE_CHANNEL_TAG=stable
 D8_RELEASE_CHANNEL_NAME=Stable
 D8_REGISTRY_ADDRESS=registry.deckhouse.io
@@ -25,11 +25,11 @@ D8_LICENSE_KEY=
 KIND_INSTALL_DIRECTORY=$CONFIG_DIR
 KIND_PATH=kind
 KIND_CLUSTER_NAME=d8
-KIND_VERSION=v0.19.0
+KIND_VERSION=v0.23.0
 
 KUBECTL_INSTALL_DIRECTORY=$CONFIG_DIR
 KUBECTL_PATH=kubectl
-KUBECTL_VERSION=v1.25.9
+KUBECTL_VERSION=v1.27.13
 
 REQUIRE_MEMORY_MIN_BYTES=4000000000 # 4GB
 
@@ -269,7 +269,7 @@ kind_check() {
     echo "Detected ${KIND_INSTALL_DIRECTORY}/kind..."
     KIND_PATH=${KIND_INSTALL_DIRECTORY}/kind
   else
-    echo "kind is not installed or is not version $KIND_VERSION."
+    echo "kind is not installed or is not $KIND_VERSION version."
     while [[ "$should_install_kind" != "y" ]]; do
       read -rp "Install kind? y/[n]: " should_install_kind
 
