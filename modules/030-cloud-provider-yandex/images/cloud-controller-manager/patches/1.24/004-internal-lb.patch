@@ -1,0 +1,80 @@
+diff --git a/pkg/cloudprovider/yandex/cloud.go b/pkg/cloudprovider/yandex/cloud.go
+index 6cfd97f..8fffc4a 100644
+--- a/pkg/cloudprovider/yandex/cloud.go
++++ b/pkg/cloudprovider/yandex/cloud.go
+@@ -29,26 +29,28 @@ import (
+ const (
+ 	providerName = "yandex"
+ 
+-	envClusterName        = "YANDEX_CLUSTER_NAME"
+-	envRouteTableID       = "YANDEX_CLOUD_ROUTE_TABLE_ID"
+-	envServiceAccountJSON = "YANDEX_CLOUD_SERVICE_ACCOUNT_JSON"
+-	envFolderID           = "YANDEX_CLOUD_FOLDER_ID"
+-	envLbListenerSubnetID = "YANDEX_CLOUD_DEFAULT_LB_LISTENER_SUBNET_ID"
+-	envLbTgNetworkID      = "YANDEX_CLOUD_DEFAULT_LB_TARGET_GROUP_NETWORK_ID"
+-	envInternalNetworkIDs = "YANDEX_CLOUD_INTERNAL_NETWORK_IDS"
+-	envExternalNetworkIDs = "YANDEX_CLOUD_EXTERNAL_NETWORK_IDS"
++	envClusterName                = "YANDEX_CLUSTER_NAME"
++	envRouteTableID               = "YANDEX_CLOUD_ROUTE_TABLE_ID"
++	envServiceAccountJSON         = "YANDEX_CLOUD_SERVICE_ACCOUNT_JSON"
++	envFolderID                   = "YANDEX_CLOUD_FOLDER_ID"
++	envLbListenerSubnetID         = "YANDEX_CLOUD_DEFAULT_LB_LISTENER_SUBNET_ID"
++	envInternalLbListenerSubnetID = "YANDEX_CLOUD_DEFAULT_INTERNAL_LB_LISTENER_SUBNET_ID"
++	envLbTgNetworkID              = "YANDEX_CLOUD_DEFAULT_LB_TARGET_GROUP_NETWORK_ID"
++	envInternalNetworkIDs         = "YANDEX_CLOUD_INTERNAL_NETWORK_IDS"
++	envExternalNetworkIDs         = "YANDEX_CLOUD_EXTERNAL_NETWORK_IDS"
+ )
+ 
+ // CloudConfig includes all the necessary configuration for creating Cloud object
+ type CloudConfig struct {
+ 	ClusterName string
+ 
+-	lbListenerSubnetID string
+-	lbTgNetworkID      string
+-	FolderID           string
+-	LocalRegion        string
+-	LocalZone          string
+-	RouteTableID       string
++	lbListenerSubnetID         string
++	internalLbListenerSubnetID string
++	lbTgNetworkID              string
++	FolderID                   string
++	LocalRegion                string
++	LocalZone                  string
++	RouteTableID               string
+ 
+ 	InternalNetworkIDsSet map[string]struct{}
+ 	ExternalNetworkIDsSet map[string]struct{}
+@@ -127,6 +129,8 @@ func NewCloudConfig() (*CloudConfig, error) {
+ 
+ 	cloudConfig.lbListenerSubnetID = os.Getenv(envLbListenerSubnetID)
+ 
++	cloudConfig.internalLbListenerSubnetID = os.Getenv(envInternalLbListenerSubnetID)
++
+ 	cloudConfig.lbTgNetworkID = os.Getenv(envLbTgNetworkID)
+ 	if len(cloudConfig.lbTgNetworkID) == 0 {
+ 		log.Fatalf("%q env is required", envLbTgNetworkID)
+diff --git a/pkg/cloudprovider/yandex/load_balancer.go b/pkg/cloudprovider/yandex/load_balancer.go
+index 7b09147..f18e85c 100644
+--- a/pkg/cloudprovider/yandex/load_balancer.go
++++ b/pkg/cloudprovider/yandex/load_balancer.go
+@@ -19,6 +19,7 @@ const (
+ 	externalLoadBalancerAnnotation        = "yandex.cpi.flant.com/loadbalancer-external"
+ 	listenerSubnetIdAnnotation            = "yandex.cpi.flant.com/listener-subnet-id"
+ 	listenerAddressIPv4                   = "yandex.cpi.flant.com/listener-address-ipv4"
++	loadBalancerInternal                  = "yandex.cpi.flant.com/loadbalancer-internal"
+ 
+ 	nodesHealthCheckPath = "/healthz"
+ 	// NOTE: Please keep the following port in sync with ProxyHealthzPort in pkg/cluster/ports/ports.go
+@@ -219,6 +220,11 @@ func (yc *Cloud) getLoadBalancerParameters(svc *v1.Service) (lbParams loadBalanc
+ 		lbParams.listenerSubnetID = yc.config.lbListenerSubnetID
+ 		_, isExternal := svc.ObjectMeta.Annotations[externalLoadBalancerAnnotation]
+ 		lbParams.internal = !isExternal
++	} else if len(yc.config.internalLbListenerSubnetID) != 0 {
++		if _, isInternal := svc.ObjectMeta.Annotations[loadBalancerInternal]; isInternal {
++			lbParams.internal = true
++			lbParams.listenerSubnetID = yc.config.internalLbListenerSubnetID
++		}
+ 	}
+ 
+ 	if value, ok := svc.ObjectMeta.Annotations[targetGroupNetworkIdAnnotation]; ok {

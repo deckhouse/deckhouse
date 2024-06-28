@@ -4,11 +4,10 @@ title: "Cloud provider — Yandex Cloud: FAQ"
 
 ## Как настроить INTERNAL LoadBalancer?
 
-Для настройки INTERNAL LoadBalancer'а установите аннотацию для сервиса:
+Для настройки INTERNAL LoadBalancer'а установите одну из следующих аннотаций для сервиса:
 
-```yaml
-yandex.cpi.flant.com/listener-subnet-id: SubnetID
-```
+- `yandex.cpi.flant.com/listener-subnet-id: SubnetID` — аннотация указывает, какой subnet будет слушать LoadBalancer.
+- `yandex.cpi.flant.com/loadbalancer-internal: ""` — LoadBalancer будет слушать первую из доступных subnet.
 
 Аннотация указывает, какой subnet будет слушать LoadBalancer.
 

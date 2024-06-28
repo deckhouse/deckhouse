@@ -4,13 +4,10 @@ title: "Cloud provider — Yandex Cloud: FAQ"
 
 ## How do I set up the INTERNAL LoadBalancer?
 
-Attach the following annotation to the service:
+Attach one of the following annotations to the service:
 
-```yaml
-yandex.cpi.flant.com/listener-subnet-id: SubnetID
-```
-
-The annotation links the LoadBalancer with the appropriate Subnet.
+- `yandex.cpi.flant.com/listener-subnet-id: SubnetID` — the annotation links the LoadBalancer with the appropriate subnet.
+- `yandex.cpi.flant.com/loadbalancer-internal: ""` — LoadBalancer will listen to the first available subnet.
 
 ## How to reserve a public IP address?
 
