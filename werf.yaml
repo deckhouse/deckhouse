@@ -3,6 +3,8 @@ project: deckhouse
 configVersion: 1
 gitWorktree:
   forceShallowClone: true
+cleanup:
+  disableGitHistoryBasedPolicy: {{ env "WERF_DISABLE_META_TAGS" "false" }}
 ---
 # revisions settings
 {{- $editionsSettings := (.Files.Get "editions.yaml" | fromYaml) }}
