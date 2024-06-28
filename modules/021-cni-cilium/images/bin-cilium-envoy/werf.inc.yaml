@@ -43,7 +43,7 @@ shell:
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
   setup:
   - mkdir -p /tmp/bazel-cache
-  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache
+  #- git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache
   - export TARGETARCH=amd64 ARCH="x86_64"
   - export BAZEL_VERSION="6.1.0" USE_BAZEL_VERSION="6.1.0"
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
@@ -54,6 +54,7 @@ shell:
   - sed -i 's/$(SUDO) apt info clang-15 || $(call add_clang_apt_source,$(shell lsb_release -cs))/rpm -q clang15.0/' Makefile
   - sed -i "/\$(SUDO) apt install -y clang-15 llvm-15-dev lld-15 clang-format-15/d" Makefile
   - sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-15.0/lib64/clang/15.0.7/include",' bazel/toolchains/BUILD
+  - bazel fetch //:cilium-envoy
   - make bazel-bin/cilium-envoy
   - ./bazel/get_workspace_status
   - make install
