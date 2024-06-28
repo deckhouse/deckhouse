@@ -47,7 +47,7 @@ steps:
 {!{- $ctx := index . 0 -}!}
 {!{- $buildType := index . 1 -}!}
 # <template: build_template>
-runs-on: [self-hosted, regular, selectel]
+runs-on: [self-hosted, regular]
 outputs:
   tests_image_name: ${{ steps.build.outputs.tests_image_name }}
 steps:
