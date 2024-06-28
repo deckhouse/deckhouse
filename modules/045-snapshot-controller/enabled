@@ -17,34 +17,11 @@
 source /deckhouse/shell_lib.sh
 
 function __main__() {
+  enabled=true
   enabled::disable_module_if_cluster_is_not_bootstraped
-  enabled=false
-  for module in \
-      ceph-csi \
-      cloud-provider-aws \
-      cloud-provider-azure \
-      cloud-provider-gcp \
-      cloud-provider-openstack \
-      cloud-provider-vsphere \
-      sds-replicated-volume \
-      csi-nfs \
-    ; do
-    if values::array_has global.enabledModules "$module"; then
-      enabled=true
-    fi
-  done
-  if [ "$enabled" = "false" ]; then
-    # workaround: allow explicit enabling of the module
-    case "$(kubectl get moduleconfig snapshot-controller -o jsonpath={.spec.enabled} 2>/dev/null || true)" in
-      # match all cases of true|y|yes|1
-      [Tt][Rr][Uu][Ee]|[Yy]|[Yy][Ee][Ss]|1)
-        enabled=true
-        ;;
-    esac
-  fi
   if ! values::array_has global.enabledModules "snapshot-controller-crd" ; then
     echo "You must enable the snapshot-controller-crd module for the module to work."
-    exit 1
+    enabled=false
   fi
   echo "$enabled" > $MODULE_ENABLED_RESULT
 }
