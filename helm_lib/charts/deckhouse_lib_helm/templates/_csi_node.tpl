@@ -16,7 +16,7 @@ memory: 25Mi
   {{- $fullname := $config.fullname | default "csi-node" }}
   {{- $nodeImage := $config.nodeImage | required "$config.nodeImage is required" }}
   {{- $driverFQDN := $config.driverFQDN | required "$config.driverFQDN is required" }}
-  {{- $serviceAccount := $config.serviceAccount | default "" }}
+  {{- $serviceAccount := $config.serviceAccount | default "csi" }}
   {{- $additionalNodeEnvs := $config.additionalNodeEnvs }}
   {{- $additionalNodeArgs := $config.additionalNodeArgs }}
   {{- $additionalNodeVolumes := $config.additionalNodeVolumes }}

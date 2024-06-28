@@ -218,7 +218,6 @@
   {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
   {{- $_ := set $csiNodeConfig "driverFQDN" $csiDriverName }}
   {{- $_ := set $csiNodeConfig "fullname" "csi-node-cephfs" }}
-  {{- $_ := set $csiNodeConfig "serviceAccount" "csi" }}
 
   {{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "cephfs_csi_node_args" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "cephfs_csi_node_envs" (list $csiDriverName) | fromYamlArray) }}
