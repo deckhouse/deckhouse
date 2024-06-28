@@ -20,11 +20,10 @@ import (
 	"context"
 	"os"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 )
 
 // should run after start pod
