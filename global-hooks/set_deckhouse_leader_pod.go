@@ -64,7 +64,7 @@ func setLeaderLabelToPod(input *go_hook.HookInput, dc dependency.Container) erro
 
 func trueOrNil(b bool) any {
 	if b {
-		return true
+		return "true"
 	}
 
 	return nil

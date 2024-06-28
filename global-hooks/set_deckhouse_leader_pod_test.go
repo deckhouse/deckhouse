@@ -56,7 +56,7 @@ var _ = Describe("deckhouse :: hooks :: set_deckhouse_leader_pod ::", func() {
 			Expect(leader.Exists()).To(Equal(true))
 			Expect(leader.Field("metadata.labels").Exists()).To(Equal(true))
 			Expect(leader.Field("metadata.labels.leader").Exists()).To(Equal(true))
-			Expect(leader.Field("metadata.labels.leader").Bool()).To(Equal(true))
+			Expect(leader.Field("metadata.labels.leader").String()).To(Equal("true"))
 		})
 	})
 
@@ -78,7 +78,7 @@ var _ = Describe("deckhouse :: hooks :: set_deckhouse_leader_pod ::", func() {
 			Expect(leader.Exists()).To(Equal(true))
 			Expect(leader.Field("metadata.labels").Exists()).To(Equal(true))
 			Expect(leader.Field("metadata.labels.leader").Exists()).To(Equal(true))
-			Expect(leader.Field("metadata.labels.leader").Bool()).To(Equal(true))
+			Expect(leader.Field("metadata.labels.leader").String()).To(Equal("true"))
 
 			slave := f.KubernetesResource("Pod", d8Namespace, deckhouseTestSlavePodName)
 			Expect(slave.Exists()).To(Equal(true))
