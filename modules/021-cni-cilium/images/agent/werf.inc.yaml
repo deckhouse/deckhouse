@@ -1,4 +1,4 @@
-{{- $fromCacheVersion := "19" }}
+{{- $fromCacheVersion := "20" }}
 # #####################################################################
 # Final image of cilium-agent (used in helm-templates)
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
@@ -24,41 +24,40 @@
 # clang dependencies
 {{ $binariesFromALT := cat $binariesFromALT "/usr/lib64/libstdc++.so.6" }}
 # bash-completion
-## ln -snf /etc/bashrc.d/bash_completion.sh /etc/profile.d/bash_completion.sh
-{{ $binariesFromALT := cat $binariesFromALT "/etc/profile.d/bash_completion.sh" }}
+{{ $binariesFromALT := cat $binariesFromALT "/etc/bashrc.d/bash_completion.sh" }}
 {{ $binariesFromALT := cat $binariesFromALT "/usr/share/bash-completion/bash_completion" }}
 # groups
 {{ $binariesFromALT := cat $binariesFromALT "/usr/bin/groups" }}
 # for prepull
 {{ $binariesFromALT := cat $binariesFromALT "/bin/true" }}
 # for debug
-{{ $binariesFromALT := cat $binariesFromALT "/bin/sleep /bin/ls /usr/bin/curl /usr/bin/ldd /usr/bin/strace" }}
+{{ $binariesFromALT := cat $binariesFromALT "/bin/sleep /bin/ls /usr/bin/curl /usr/bin/ldd /usr/bin/strace /usr/bin/env" }}
 #####################################################################
-{{ $selfBuildedBinaries := "" }}
+{{ $selfBuiltBinaries := "" }}
 # from llvm-artifact
-{{ $selfBuildedBinaries := cat $selfBuildedBinaries "/usr/local/bin/clang /usr/local/bin/llc" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/clang /usr/local/bin/llc" }}
 # from bpftool-artifact
-{{ $selfBuildedBinaries := cat $selfBuildedBinaries "/usr/local/bin/bpftool" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }}
 # from cilium-envoy-artifact
-{{ $selfBuildedBinaries := cat $selfBuildedBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
 # from cni-plugins-artifact
-{{ $selfBuildedBinaries := cat $selfBuildedBinaries "/cni/loopback" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni/loopback" }}
 # from gops-artifact
-{{ $selfBuildedBinaries := cat $selfBuildedBinaries "/bin/gops" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/bin/gops" }}
 # from hubble-artifact
-{{ $selfBuildedBinaries := cat $selfBuildedBinaries "/usr/bin/hubble /etc/bash_completion.d/hubble" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/hubble /etc/bash_completion.d/hubble" }}
 # from cilium-artifact
-{{ $selfBuildedBinaries := cat $selfBuildedBinaries "/cni-uninstall.sh /init-container.sh /install-plugin.sh" }}
-{{ $selfBuildedBinaries := cat $selfBuildedBinaries "/LICENSE.all /etc/bash_completion.d/cilium" }}
-{{ $selfBuildedBinaries := cat $selfBuildedBinaries "/opt/cni/bin/cilium-cni /usr/bin/cilium*" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni-uninstall.sh /init-container.sh /install-plugin.sh" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/LICENSE.all /etc/bash_completion.d/cilium" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/opt/cni/bin/cilium-cni /usr/bin/cilium*" }}
 # from common/pause
-{{ $selfBuildedBinaries := cat $selfBuildedBinaries "/pause" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/pause" }}
 # iptables and dependencies
-{{ $selfBuildedBinaries := cat $selfBuildedBinaries "/sbin/xtables*" }}
-{{ $selfBuildedBinaries := cat $selfBuildedBinaries "/sbin/arptables* /sbin/ebtables* /sbin/ip6tables* /sbin/iptables*" }}
-{{ $selfBuildedBinaries := cat $selfBuildedBinaries "/usr/bin/iptables-xml" }}
-{{ $selfBuildedBinaries := cat $selfBuildedBinaries "/sbin/nfnl_osf" }}
-{{ $selfBuildedBinaries := cat $selfBuildedBinaries "/lib64/iptables/*" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/xtables*" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/arptables* /sbin/ebtables* /sbin/ip6tables* /sbin/iptables*" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/iptables-xml" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/nfnl_osf" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/lib64/iptables/*" }}
 # #####################################################################
 # Binaries artifact for distroless agent (based on Ubuntu)
 ---
@@ -153,10 +152,9 @@ shell:
   - mkdir -p /relocate
   # copy base binaries and deps from ALT
   - ln -snf /usr/share/zoneinfo/Etc/UTC /etc/localtime
-  - ln -snf /etc/bashrc.d/bash_completion.sh /etc/profile.d/bash_completion.sh
   - /binary_replace.sh -i "{{ $binariesFromALT }}" -o /relocate
-  # copy self builded binaries and deps
-  - /binary_replace.sh -i "{{ $selfBuildedBinaries }}" -o /relocate
+  # copy self built binaries and deps
+  - /binary_replace.sh -i "{{ $selfBuiltBinaries }}" -o /relocate
   # additional relocate from runtime
   - |
     for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
@@ -168,8 +166,8 @@ shell:
   # additional relocate from cilium
   - mkdir -p /relocate/var/lib/cilium
   - cp -a /var/lib/cilium/bpf /relocate/var/lib/cilium
-  - echo ". /etc/profile.d/bash_completion.sh" >> /etc/profile
-  - cp -a /etc/profile /relocate/etc
+  - echo ". /etc/bashrc.d/bash_completion.sh" >> /root/.bashrc
+  - mkdir -p /relocate/root && cp -a /root/.bashrc /relocate/root
   setup:
   # prepare final fs
   - mkdir -p /relocate/usr/sbin
