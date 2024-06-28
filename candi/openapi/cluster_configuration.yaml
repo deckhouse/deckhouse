@@ -154,7 +154,7 @@ apiVersions:
             x-examples:
             - 'http://proxy.company.my'
             - 'https://user:password@proxy.company.my:8443'
-            - 'https://DOMAIN\user:password@proxy.company.my:8443'
+            - 'https://DOMAIN%5Cuser:password@proxy.company.my:8443'
             - 'https://user%40domain.local:password@proxy.company.my:8443'
           httpsProxy:
             type: string
@@ -167,7 +167,7 @@ apiVersions:
             x-examples:
             - 'http://proxy.company.my'
             - 'https://user:password@proxy.company.my:8443'
-            - 'https://DOMAIN\user:password@proxy.company.my:8443'
+            - 'https://DOMAIN%5Cuser:password@proxy.company.my:8443'
             - 'https://user%40domain.local:password@proxy.company.my:8443'
           noProxy:
             x-doc-d8Revision: ee
