@@ -66,6 +66,8 @@ k8s:
     bashible:
       redos:
         !!merge <<: *redos
+      rosa:
+        !!merge <<: *rosa
       astra:
         !!merge <<: *astra
     clusterApi:
