@@ -1,0 +1,50 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VCDInstanceClass
+metadata:
+  name: system
+spec:
+  rootDiskSizeGb: 30
+  sizingPolicy: ${VCD_ORG}-MSK
+  storageProfile: Fast vHDD 
+  template: ${VCD_ORG}/Ubuntu 24.04 Server (20240622)
+
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: system
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    minPerZone: 1
+    maxPerZone: 1
+    classReference:
+      kind: VCDInstanceClass
+      name: system
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/system: ""
+    taints:
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
+      value: system
+  chaos:
+    mode: Disabled
+
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: nginx
+  inlet: HostPort
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
+  nodeSelector:
+    node-role.kubernetes.io/master: ''
+  tolerations:
+    - effect: NoSchedule
+      operator: Exists

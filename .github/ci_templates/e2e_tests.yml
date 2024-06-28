@@ -84,6 +84,12 @@
   LAYOUT_VSPHERE_PASSWORD: ${{ secrets.LAYOUT_VSPHERE_PASSWORD }}
   LAYOUT_VSPHERE_BASE_DOMAIN: ${{ secrets.LAYOUT_VSPHERE_BASE_DOMAIN }}
 {!{- end }!}
+{!{- else if eq $provider "vcd" }!}
+  LAYOUT_VCD_PASSWORD: ${{ secrets.LAYOUT_VCD_PASSWORD }}
+  LAYOUT_VCD_USERNAME: ${{ secrets.LAYOUT_VCD_USERNAME }}
+  LAYOUT_VCD_SERVER: ${{ secrets.LAYOUT_VCD_SERVER }}
+  LAYOUT_VCD_ORG: ${{ secrets.LAYOUT_VCD_ORG }}
+{!{- end }!}
   COMMENT_ID: ${{ inputs.comment_id }}
   GITHUB_API_SERVER: ${{ github.api_url }}
   REPOSITORY: ${{ github.repository }}
@@ -230,6 +236,11 @@ run: |
 {!{- else if eq $provider "vsphere" }!}
     -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
     -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
+{!{- else if eq $provider "vcd" }!}
+    -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
+    -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
+    -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
+    -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
 {!{- end }!}
     -e USER_RUNNER_ID=${user_runner_id} \
     -v $(pwd)/testing:/deckhouse/testing \

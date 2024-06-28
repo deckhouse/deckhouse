@@ -660,8 +660,24 @@ ENDSSH
 
 function bootstrap() {
   >&2 echo "Run dhctl bootstrap ..."
-  dhctl --do-not-write-debug-log-file bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
-  --config "$cwd/resources.yaml" --config "$cwd/configuration.yaml" | tee -a "$bootstrap_log"
+
+  # Start ssh-agent and add the private key
+  eval "$(ssh-agent -s)"
+  ssh-add "$ssh_private_key_path"
+
+  # Check if STATIC_BASTION_IP is set and not empty
+  if [[ -n "$STATIC_BASTION_IP" ]]; then
+    ssh_bastion="-J $ssh_user@$STATIC_BASTION_IP"
+    ssh_bastion_params="--ssh-bastion-host $STATIC_BASTION_IP --ssh-bastion-user $ssh_user"
+    >&2 echo "Using static bastion at $STATIC_BASTION_IP"
+  else
+    ssh_bastion=""
+    ssh_bastion_params=""
+  fi
+
+  dhctl --do-not-write-debug-log-file bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache $ssh_bastion_params \
+        --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
+        --config "$cwd/resources.yaml" --config "$cwd/configuration.yaml" | tee -a "$bootstrap_log"
 
   dhctl_exit_code=$?
 
@@ -687,13 +703,13 @@ function bootstrap() {
 
   >&2 echo 'Waiting until Machine provisioning finishes ...'
   for ((i=1; i<=20; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<'ENDSSH'; then
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
 kubectl -n d8-cloud-instance-manager get machines.machine.sapcloud.io
 kubectl -n d8-cloud-instance-manager get machines.machine.sapcloud.io -o json | jq -re '.items | length > 0' >/dev/null
-kubectl -n d8-cloud-instance-manager get machines.machine.sapcloud.io -o json|jq -re '.items | map(.status.currentStatus.phase == "Running") | all' >/dev/null
+kubectl -n d8-cloud-instance-manager get machines.machine.sapcloud.io -o json | jq -re '.items | map(.status.currentStatus.phase == "Running") | all' >/dev/null
 ENDSSH
       provisioning_failed=""
       break
