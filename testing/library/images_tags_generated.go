@@ -383,6 +383,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"ecrCredentialProvider128": "imageHash-registrypackages-ecrCredentialProvider128",
 		"ecrCredentialProvider129": "imageHash-registrypackages-ecrCredentialProvider129",
 		"ecrCredentialProvider130": "imageHash-registrypackages-ecrCredentialProvider130",
+		"growpart033":              "imageHash-registrypackages-growpart033",
 		"iptables1810":             "imageHash-registrypackages-iptables1810",
 		"jq16":                     "imageHash-registrypackages-jq16",
 		"kubeadm12615":             "imageHash-registrypackages-kubeadm12615",
