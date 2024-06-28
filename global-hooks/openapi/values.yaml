@@ -4,12 +4,6 @@ type: object
 default: {}
 additionalProperties: false
 properties:
-  modules:
-    properties:
-      https:
-        type: object
-        additionalProperties: false
-        default: {}
   internal:
     additionalProperties: false
     type: object
