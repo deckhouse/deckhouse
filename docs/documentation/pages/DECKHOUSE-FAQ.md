@@ -486,6 +486,7 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
    ```
 
    > Before pushing images, make sure that the path for loading into the registry exists (`/sys/deckhouse` in the example above), and the account being used has write permissions.
+   > Harbor users, please note that you will not be able to upload images to the project root; instead use a dedicated repository in the project to host Deckhouse images.
 
 1. Once pushing images to the air-gapped private registry is complete, you are ready to install Deckhouse from it. Refer to the [Getting started](/gs/bm-private/step2.html) guide.
 
@@ -949,6 +950,7 @@ In clusters with multiple master nodes Deckhouse runs in high availability mode 
 ```shell
 kubectl -n d8-system exec -it $(kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath='{.spec.holderIdentity}' | awk -F'.' '{ print $1 }') -c deckhouse -- deckhouse-controller queue list
 ```
+
 ## How do I upgrade the Kubernetes version in a cluster?
 
 To upgrade the Kubernetes version in a cluster change the [kubernetesVersion](installing/configuration.html#clusterconfiguration-kubernetesversion) parameter in the [ClusterConfiguration](installing/configuration.html#clusterconfiguration) structure by making the following steps:
