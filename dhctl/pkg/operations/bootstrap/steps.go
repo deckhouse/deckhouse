@@ -243,11 +243,13 @@ func cleanupPreviousBashibleRunIfNeed(sshClient *ssh.Client) error {
 }
 
 func SetupSSHTunnelToRegistryPackagesProxy(sshCl *ssh.Client) (*frontend.ReverseTunnel, error) {
-	tun := sshCl.ReverseTunnel("5444:127.0.0.1:5444")
-	err := tun.Up()
+	tun := sshCl.ReverseTunnel("5444:127.0.0.1:5444", sshCl)
+	err := tun.Up(-1)
 	if err != nil {
 		return nil, err
 	}
+
+	tun.StartHealthMonitor()
 
 	return tun, nil
 }
@@ -474,24 +476,7 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
 		BreakIf(func(err error) bool { return errors.Is(err, ErrBashibleTimeout) }).
 		Run(func() error {
-			// Unfortunately we can't put the first start of the tunnel in this loop,
-			//  because bringing up the tunnel still takes some time after running the ssh command.
-			// This will cause unnecessary errors and output them to the user.
-			// We could do a separate pending tunnel ready loop, but we are fighting for a fast bootstrap of the cluster,
-			//  so we are now running it before the rest of the cluster preparation procedures.
-			// During this time, the tunnel has time to go up.
-			// I don't see any problems apart from not very nice code
-
-			defer cleanUpTunnel()
-
-			if tun == nil {
-				log.DebugLn("tun == nil. Start tunnel")
-				// we need reup tunnel every step because we can lost connection
-				tun, err = SetupSSHTunnelToRegistryPackagesProxy(sshClient)
-				if err != nil {
-					return err
-				}
-			}
+			// we do not need to restart tunnel because we have HealthMonitor
 
 			log.DebugLn("Check bundle routine start")
 			ready, err := checkBashibleAlreadyRun(sshClient)
