@@ -30,19 +30,21 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ../deckhause/tools/helm_generate/runners/alert_templates/template_values/[module-name].yaml
+// ../deckhouse/tools/helm_generate/runners/alert_templates/template_values/[module-name].yaml
 const userDefinedValuesPath = "tools/helm_generate/runners/alert_templates/template_values"
 
-// ../deckhause/modules/[module-name]/monitoring/prometheus-rules[template-name].yaml or .tpl
+// ../deckhouse/modules/[module-name]/monitoring/prometheus-rules[template-name].yaml or .tpl
 const prometheusRules = "monitoring/prometheus-rules"
 
-// ../deckhause/modules/[module-name]/templates/_[helper-name].yaml or .tpl
+// ../deckhouse/modules/[module-name]/templates/_[helper-name].yaml or .tpl
 const helpersPath = "templates"
 
 // Deckhouse edition type
 const (
 	ce edition = "ce" // community edition
 	ee edition = "ee" // enterprise edition
+	be edition = "be" // basic edition
+	se edition = "se" // standard edition
 	fe edition = "fe" // fan edition
 )
 
@@ -105,9 +107,11 @@ func injectToYaml(templateContent []byte, name, edition, sourceFile string) ([]b
 		name = substr[1]
 	}
 
-	values[0]["module"] = name
-	values[0]["edition"] = edition
-	values[0]["sourceFile"] = sourceFile
+    for _, value := range values {
+		value["module"] = name
+		value["edition"] = edition
+		value["sourceFile"] = sourceFile
+	}
 
 	return yaml.Marshal(values)
 }
@@ -139,6 +143,19 @@ func modules(deckhouseRoot string) (modules []module) {
 		}
 	}
 
+	// be modules
+	files, _ = os.ReadDir(filepath.Join(deckhouseRoot, "ee/be/modules"))
+	for _, file := range files {
+		if file.IsDir() {
+			md := module{
+				Name:    file.Name(),
+				Path:    filepath.Join(deckhouseRoot, "ee/be/modules", file.Name()),
+				Edition: be,
+			}
+			modules = append(modules, md)
+		}
+	}
+
 	// fe modules
 	files, _ = os.ReadDir(filepath.Join(deckhouseRoot, "ee/fe/modules"))
 	for _, file := range files {
@@ -147,6 +164,19 @@ func modules(deckhouseRoot string) (modules []module) {
 				Name:    file.Name(),
 				Path:    filepath.Join(deckhouseRoot, "ee/fe/modules", file.Name()),
 				Edition: fe,
+			}
+			modules = append(modules, md)
+		}
+	}
+
+	// se modules
+	files, _ = os.ReadDir(filepath.Join(deckhouseRoot, "ee/se/modules"))
+	for _, file := range files {
+		if file.IsDir() {
+			md := module{
+				Name:    file.Name(),
+				Path:    filepath.Join(deckhouseRoot, "ee/se/modules", file.Name()),
+				Edition: se,
 			}
 			modules = append(modules, md)
 		}
