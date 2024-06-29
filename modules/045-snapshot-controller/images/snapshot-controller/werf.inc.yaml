@@ -21,7 +21,7 @@ shell:
     - export GOPROXY={{ $.GOPROXY }}
     - mkdir -p /go/src/github.com/kubernetes-csi/external-snapshotter
     - |
-      git clone --depth 1 --branch v8.0.1 \
+      git clone --depth 1 --branch v5.0.1 \
         {{ $.SOURCE_REPO }}/kubernetes-csi/external-snapshotter.git \
         /go/src/github.com/kubernetes-csi/external-snapshotter
     - cd /go/src/github.com/kubernetes-csi/external-snapshotter/cmd/snapshot-controller
