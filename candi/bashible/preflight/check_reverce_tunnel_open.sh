@@ -1,4 +1,6 @@
-# Copyright 2021 Flant JSC
+#!/usr/bin/env bash
+{{- /*
+# Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,14 +13,36 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+*/}}
 
-rm -rf /var/lib/bashible/kubeadm
-bb-package-remove kubeadm
+python_binary=""
 
-rm -f /tmp/bootstrap.sh
-rm -rf /tmp/candi-bundle*
-rm -f /tmp/bundle*.tar
-rm -f /tmp/kubeadm-config*
+for pybin in python3 python2 python; do
+  if command -v "$pybin" >/dev/null 2>&1; then
+    python_binary="$pybin"
+    break
+  fi
+done
 
-# needs for dhctl bootstrap restarting check
-echo "OK" > /opt/deckhouse/first-control-plane-bashible-ran
+if [ -z "$python_binary" ]; then
+  echo "Python binary not found"
+  exit 1
+fi
+
+cat - <<EOF | $python_binary
+import socket
+def check():
+  s = socket.socket()
+  try:
+    s.connect(("127.0.0.1", {{.port}} ))
+    return True
+  except socket.error:
+    return False
+  finally:
+    s.close()
+
+exit(0) if check() else exit(1)
+
+EOF
+
+

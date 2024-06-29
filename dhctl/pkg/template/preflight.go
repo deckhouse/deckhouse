@@ -17,9 +17,10 @@ package template
 import "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 
 var (
-	checkPortsScriptPath     = candiBashibleDir + "/preflight/check_ports.sh"
-	checkLocalhostScriptPath = candiBashibleDir + "/preflight/check_localhost.sh"
-	preflightScriptDirPath   = candiBashibleDir + "/preflight/"
+	checkPortsScriptPath              = candiBashibleDir + "/preflight/check_ports.sh"
+	checkLocalhostScriptPath          = candiBashibleDir + "/preflight/check_localhost.sh"
+	checkProxyRevTunnelOpenScriptPath = candiBashibleDir + "/preflight/check_packages_proxy_reverce_tunnel_open.sh"
+	preflightScriptDirPath            = candiBashibleDir + "/preflight/"
 )
 
 func RenderAndSavePreflightCheckPortsScript() (string, error) {
@@ -35,6 +36,18 @@ func RenderAndSavePreflightCheckLocalhostScript() (string, error) {
 		"check_localhost.sh",
 		checkLocalhostScriptPath,
 		map[string]interface{}{},
+	)
+}
+
+func RenderAndSavePreflightReverseTunnelOpenScript(port int) (string, error) {
+	log.DebugLn("Start render proxy reverse tunnel open script")
+
+	return RenderAndSaveTemplate(
+		"check_reverce_tunnel_open.sh",
+		checkProxyRevTunnelOpenScriptPath,
+		map[string]interface{}{
+			"port": port,
+		},
 	)
 }
 
