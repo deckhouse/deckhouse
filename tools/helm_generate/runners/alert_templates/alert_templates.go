@@ -56,6 +56,17 @@ type module struct {
 	Edition edition
 }
 
+type moduleAlert struct {
+	Name         string `yaml:"name"`
+	SourceFile   string `yaml:"sourceFile"`
+	Module       string `yaml:"module"`
+	Edition      string `yaml:"edition"`
+	Description  string `yaml:"description"`
+	Summary      string `yaml:"summary"`
+	Severity     string `yaml:"severity"`
+	MarkupFormat string `yaml:"markupFormat"`
+}
+
 func run() error {
 	deckhouseRoot, err := helper.DeckhouseRoot()
 	if err != nil {
@@ -67,7 +78,7 @@ func run() error {
 
 		if len(yamlTemplates) > 0 {
 			for templateName, templateContent := range yamlTemplates {
-				templateContent, err = injectToYaml(templateContent, module.Name, string(module.Edition), filepath.Join(module.Path, prometheusRules, templateName))
+				templateContent, err = buildYaml(templateContent, module.Name, string(module.Edition), filepath.Join(module.Path, prometheusRules, templateName))
 				if err != nil {
 					return err
 				}
@@ -83,7 +94,7 @@ func run() error {
 			}
 			for templatePath, templateContent := range renderContent {
 				_, templateName := filepath.Split(templatePath)
-				templateContent, err := injectToYaml([]byte(templateContent), module.Name, string(module.Edition), filepath.Join(module.Path, prometheusRules, templateName))
+				templateContent, err := buildYaml([]byte(templateContent), module.Name, string(module.Edition), filepath.Join(module.Path, prometheusRules, templateName))
 				if err != nil {
 					return err
 				}
@@ -96,8 +107,10 @@ func run() error {
 	return nil
 }
 
-func injectToYaml(templateContent []byte, name, edition, sourceFile string) ([]byte, error) {
+func buildYaml(templateContent []byte, name, edition, sourceFile string) ([]byte, error) {
 	var values []map[string]interface{}
+	var alerts []moduleAlert
+
 	err := yaml.Unmarshal(templateContent, &values)
 	if err != nil {
 		return nil, fmt.Errorf("error processing file %s - %w", sourceFile, err)
@@ -107,13 +120,54 @@ func injectToYaml(templateContent []byte, name, edition, sourceFile string) ([]b
 		name = substr[1]
 	}
 
-    for _, value := range values {
-		value["module"] = name
-		value["edition"] = edition
-		value["sourceFile"] = sourceFile
+	for _, value := range values {
+		for _, alert := range value["rules"].([]interface{}) {
+			var description, markupFormat, severity, summary string
+
+			alertMap := alert.(map[string]interface{})
+
+			if _, ok := alertMap["alert"]; !ok {
+				continue // it is not an alerting rule (it is e. g. a recording rule), skip it
+			}
+
+			alertAnnotations, ok := alertMap["annotations"].(map[string]interface{})
+			if ok {
+				description, ok = alertAnnotations["description"].(string)
+				if !ok {
+					description = "" // or any other default value
+				}
+				markupFormat, ok = alertAnnotations["plk_markup_format"].(string)
+				if !ok {
+					markupFormat = "default"
+				}
+				summary, ok = alertAnnotations["summary"].(string)
+				if !ok {
+					summary = ""
+				}
+			}
+
+			alertLabels, ok := alertMap["labels"].(map[string]interface{})
+			if ok {
+				severity, ok = alertLabels["severity_level"].(string)
+				if !ok {
+					severity = "undefined"
+				}
+			}
+
+			alerts = append(alerts, moduleAlert{
+				Name:         alertMap["alert"].(string),
+				SourceFile:   sourceFile,
+				Module:       name,
+				Edition:      edition,
+				Description:  description,
+				Summary:      summary,
+				Severity:     severity,
+				MarkupFormat: markupFormat,
+			})
+		}
 	}
 
-	return yaml.Marshal(values)
+	return yaml.Marshal(alerts)
 }
 
 func modules(deckhouseRoot string) (modules []module) {
