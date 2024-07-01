@@ -21,6 +21,7 @@ memory: 25Mi
   {{- $additionalNodeArgs := $config.additionalNodeArgs }}
   {{- $additionalNodeVolumes := $config.additionalNodeVolumes }}
   {{- $additionalNodeVolumeMounts := $config.additionalNodeVolumeMounts }}
+  {{- $additionalNodeLivenessProbesCmd := $config.additionalNodeLivenessProbesCmd }}
   {{- $initContainerCommand := $config.initContainerCommand }}
   {{- $initContainerImage := $config.initContainerImage }}
 
@@ -100,7 +101,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: node-driver-registrar
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" $context | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" $context | nindent 8 }}
         image: {{ $driverRegistrarImage | quote }}
         args:
         - "--v=5"
@@ -115,6 +116,12 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+      {{- if $additionalNodeLivenessProbesCmd }}
+        livenessProbe:
+          exec:
+            command:
+        {{- $additionalNodeLivenessProbesCmd | toYaml | nindent 12 }}
+      {{- end }}
         volumeMounts:
         - name: plugin-dir
           mountPath: /csi

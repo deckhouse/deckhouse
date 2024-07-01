@@ -137,7 +137,7 @@ shell:
   add: /usr/local/bin/semver
   to: /usr/local/bin/semver
   before: setup
-  {{- range $k8sVersion := tuple "1.25" "1.28" }}
+  {{- range $k8sVersion := tuple "1.27" "1.30"}}
     {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
 - artifact: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubectl
@@ -864,6 +864,8 @@ args:
   BASE_GOLANG_21_BULLSEYE: {{ .Images.BASE_GOLANG_21_BULLSEYE }}
   BASE_GOLANG_21_BULLSEYE_DEV: {{ .Images.BASE_GOLANG_21_BULLSEYE_DEV }}
   BASE_GOLANG_22_ALPINE: {{ .Images.BASE_GOLANG_22_ALPINE }}
+  BASE_GOLANG_22_ALPINE_DEV: {{ .Images.BASE_GOLANG_22_ALPINE_DEV }}
+  BASE_GOLANG_22_BULLSEYE: {{ .Images.BASE_GOLANG_22_BULLSEYE }}
   BASE_NGINX_ALPINE:  {{ .Images.BASE_NGINX_ALPINE }}
   BASE_NGINX_ALPINE_DEV:  {{ .Images.BASE_NGINX_ALPINE_DEV }}
   BASE_NODE_16_ALPINE: {{ .Images.BASE_NODE_16_ALPINE }}
@@ -1090,19 +1092,39 @@ image: e2e-terraform
 # we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
 # current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
 from: {{ .Images.BASE_UBUNTU }}
+import:
+  {{- $k8sVersion := "1.27"}}
+  {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
+  - artifact: common/kubernetes-artifact-{{ $image_version }}
+    add: /src/_output/bin/kubectl
+    to: /usr/local/bin/kubectl
+    before: setup
+  - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+    add: /terraform/terraform
+    to: /image/bin/terraform
+    before: setup
+    {{- range $_, $edition := $.Editions }}
+      {{- if $edition.terraformProviders }}
+        {{- range $_, $tfProvider := $edition.terraformProviders }}
+          {{- $tf := index $.TF $tfProvider }}
+  - artifact: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+    add: /{{ $tf.artifactBinary }}
+    to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}//linux_amd64/{{ $tf.destinationBinary }}
+    before: setup
+      {{- end }}
+    {{- end }}
+    {{- if eq $.Env $edition.name }}
+      {{- break -}}
+    {{- end }}
+  {{- end }}
 shell:
   beforeInstall:
   - apt-get update
   - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends wget unzip git python3 python3-pip jq curl gettext-base bsdextrautils
   - pip3 install awscli
-  - curl -LO https://dl.k8s.io/release/v1.26.0/bin/linux/amd64/kubectl
-  - install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
   - |
     mkdir /terraform
     mkdir -p /usr/local/share/terraform/plugins
-    wget https://releases.hashicorp.com/terraform/1.4.0/terraform_1.4.0_linux_amd64.zip -O /terraform.zip
-    unzip -d /terraform /terraform.zip
-    chmod 755 /terraform/terraform
     cat << EOD > /root/.terraformrc
     provider_installation {
       filesystem_mirror {
@@ -1111,24 +1133,5 @@ shell:
       }
     }
     EOD
-
-    tf_providers=$(cat <<EOF
-    aws 4.47.0 https://releases.hashicorp.com/terraform-provider-aws/4.47.0/terraform-provider-aws_4.47.0_linux_amd64.zip
-    tls 4.0.4 https://releases.hashicorp.com/terraform-provider-tls/4.0.4/terraform-provider-tls_4.0.4_linux_amd64.zip
-    kubernetes 2.10.0 https://releases.hashicorp.com/terraform-provider-kubernetes/2.10.0/terraform-provider-kubernetes_2.10.0_linux_amd64.zip
-    cloudinit 2.2.0 https://releases.hashicorp.com/terraform-provider-cloudinit/2.2.0/terraform-provider-cloudinit_2.2.0_linux_amd64.zip
-    random 3.4.3 https://releases.hashicorp.com/terraform-provider-random/3.4.3/terraform-provider-random_3.4.3_linux_amd64.zip
-    EOF
-    )
-
-    echo "$tf_providers" | while read name ver url ; do
-
-    dir=/usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/${name}/${ver}/linux_amd64
-    mkdir -p $dir
-    wget -q $url -O /terraform-provider-${name}.zip
-    unzip -d $dir /terraform-provider-${name}.zip
-    chmod -R 755 $dir
-    done
-
     touch /terraform.log
     chmod 755 /terraform.log

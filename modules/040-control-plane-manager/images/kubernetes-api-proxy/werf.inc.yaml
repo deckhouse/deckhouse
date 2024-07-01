@@ -10,7 +10,7 @@ docker:
   ENTRYPOINT: ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/reloader
   to: /src

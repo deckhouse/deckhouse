@@ -14,7 +14,7 @@ docker:
   ENTRYPOINT: ["/usr/local/bin/kube-apiserver-healthcheck"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/
   to: /src

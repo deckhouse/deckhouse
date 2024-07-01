@@ -273,7 +273,7 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 	})
 
 	Context("Openstack", func() {
-		openstackCheck(f, "1.25")
+		openstackCheck(f, "1.26")
 	})
 
 	Context("Openstack with default StorageClass specified", func() {
@@ -361,7 +361,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 		Context("all kube versions", func() {
 			Context("ignoreVolumeMicroversion disabled", func() {
 				BeforeEach(func() {
-					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.25", "1.25"))
+					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.27", "1.27"))
 					f.ValuesSet("global.modulesImages", GetModulesImages())
 					f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 					f.ValuesSetFromYaml("cloudProviderOpenstack.ignoreVolumeMicroversion", "false")
@@ -377,7 +377,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 			Context("ignoreVolumeMicroversion enabled", func() {
 				BeforeEach(func() {
-					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.25", "1.25"))
+					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.27", "1.27"))
 					f.ValuesSet("global.modulesImages", GetModulesImages())
 					f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 					f.ValuesSetFromYaml("cloudProviderOpenstack.ignoreVolumeMicroversion", "true")

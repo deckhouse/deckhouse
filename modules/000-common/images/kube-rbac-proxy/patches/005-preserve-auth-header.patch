@@ -1,20 +1,19 @@
 diff --git a/main.go b/main.go
-index f0249d80..09e990ff 100644
+index 435660ca..563d2329 100644
 --- a/main.go
 +++ b/main.go
-
-@@ -294,6 +295,7 @@ func main() {
-
+@@ -297,6 +297,7 @@ func main() {
+ 
  		mux.Handle(upstreamConfig.Path, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
  			klog.V(10).Infof("Proxy URL requested: %s", req.URL.Path)
 +			req.Header.Set("TempAuthorization", req.Header.Get("Authorization"))
-
+ 
  			found := len(cfg.allowPaths) == 0
  			for _, pathAllowed := range cfg.allowPaths {
-@@ -473,6 +475,10 @@ func NewSingleHostReverseProxyWithRewrite(target *url.URL, path string) *httputi
+@@ -476,6 +477,10 @@ func NewSingleHostReverseProxyWithRewrite(target *url.URL, path string) *httputi
  		req.URL.Scheme = target.Scheme
  		req.URL.Host = target.Host
-
+ 
 +		authHeader := req.Header.Get("TempAuthorization")
 +		req.Header.Del("TempAuthorization")
 +		req.Header.Set("Authorization", authHeader)

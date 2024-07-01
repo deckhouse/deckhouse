@@ -21,7 +21,11 @@ docker:
     ecr-credential-provider: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+{{- if semverCompare ">=1.30" $version }}
+from: {{ $.Images.BASE_GOLANG_22_BULLSEYE_DEV }}
+{{- else }}
 from: {{ $.Images.BASE_GOLANG_21_BULLSEYE_DEV }}
+{{- end }}
 git:
   - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /

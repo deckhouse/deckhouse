@@ -1,0 +1,274 @@
+diff --git a/cmd/kube-controller-manager/app/policy.go b/cmd/kube-controller-manager/app/policy.go
+index 001086cb8d8..6c742283324 100644
+--- a/cmd/kube-controller-manager/app/policy.go
++++ b/cmd/kube-controller-manager/app/policy.go
+@@ -45,6 +45,7 @@ func startDisruptionController(ctx context.Context, controllerContext Controller
+ 		controllerContext.InformerFactory.Apps().V1().ReplicaSets(),
+ 		controllerContext.InformerFactory.Apps().V1().Deployments(),
+ 		controllerContext.InformerFactory.Apps().V1().StatefulSets(),
++		controllerContext.InformerFactory.Apps().V1().DaemonSets(),
+ 		client,
+ 		controllerContext.RESTMapper,
+ 		scaleClient,
+diff --git a/pkg/controller/disruption/disruption.go b/pkg/controller/disruption/disruption.go
+index 2527e31480e..f7eac243e16 100644
+--- a/pkg/controller/disruption/disruption.go
++++ b/pkg/controller/disruption/disruption.go
+@@ -102,6 +102,9 @@ type DisruptionController struct {
+ 	ssLister       appsv1listers.StatefulSetLister
+ 	ssListerSynced cache.InformerSynced
+ 
++	dsLister       appsv1listers.DaemonSetLister
++	dsListerSynced cache.InformerSynced
++
+ 	// PodDisruptionBudget keys that need to be synced.
+ 	queue        workqueue.RateLimitingInterface
+ 	recheckQueue workqueue.DelayingInterface
+@@ -137,6 +140,7 @@ func NewDisruptionController(
+ 	rsInformer appsv1informers.ReplicaSetInformer,
+ 	dInformer appsv1informers.DeploymentInformer,
+ 	ssInformer appsv1informers.StatefulSetInformer,
++	dsInformer appsv1informers.DaemonSetInformer,
+ 	kubeClient clientset.Interface,
+ 	restMapper apimeta.RESTMapper,
+ 	scaleNamespacer scaleclient.ScalesGetter,
+@@ -150,6 +154,7 @@ func NewDisruptionController(
+ 		rsInformer,
+ 		dInformer,
+ 		ssInformer,
++		dsInformer,
+ 		kubeClient,
+ 		restMapper,
+ 		scaleNamespacer,
+@@ -168,6 +173,7 @@ func NewDisruptionControllerInternal(ctx context.Context,
+ 	rsInformer appsv1informers.ReplicaSetInformer,
+ 	dInformer appsv1informers.DeploymentInformer,
+ 	ssInformer appsv1informers.StatefulSetInformer,
++	dsInformer appsv1informers.DaemonSetInformer,
+ 	kubeClient clientset.Interface,
+ 	restMapper apimeta.RESTMapper,
+ 	scaleNamespacer scaleclient.ScalesGetter,
+@@ -228,6 +234,9 @@ func NewDisruptionControllerInternal(ctx context.Context,
+ 	dc.ssLister = ssInformer.Lister()
+ 	dc.ssListerSynced = ssInformer.Informer().HasSynced
+ 
++	dc.dsLister = dsInformer.Lister()
++	dc.dsListerSynced = dsInformer.Informer().HasSynced
++
+ 	dc.mapper = restMapper
+ 	dc.scaleNamespacer = scaleNamespacer
+ 	dc.discoveryClient = discoveryClient
+@@ -243,7 +252,7 @@ func NewDisruptionControllerInternal(ctx context.Context,
+ // resources directly and only fall back to the scale subresource when needed.
+ func (dc *DisruptionController) finders() []podControllerFinder {
+ 	return []podControllerFinder{dc.getPodReplicationController, dc.getPodDeployment, dc.getPodReplicaSet,
+-		dc.getPodStatefulSet, dc.getScaleController}
++		dc.getPodStatefulSet, dc.getPodDaemonSet, dc.getScaleController}
+ }
+ 
+ var (
+@@ -251,6 +260,7 @@ var (
+ 	controllerKindSS  = apps.SchemeGroupVersion.WithKind("StatefulSet")
+ 	controllerKindRC  = v1.SchemeGroupVersion.WithKind("ReplicationController")
+ 	controllerKindDep = v1beta1.SchemeGroupVersion.WithKind("Deployment")
++	controllerKindDS  = apps.SchemeGroupVersion.WithKind("DaemonSet")
+ )
+ 
+ // getPodReplicaSet finds a replicaset which has no matching deployments.
+@@ -275,6 +285,24 @@ func (dc *DisruptionController) getPodReplicaSet(ctx context.Context, controller
+ 	return &controllerAndScale{rs.UID, *(rs.Spec.Replicas)}, nil
+ }
+ 
++// getPodDaemonSet returns the daemonset referenced by the provided controllerRef.
++func (dc *DisruptionController) getPodDaemonSet(ctx context.Context, controllerRef *metav1.OwnerReference, namespace string) (*controllerAndScale, error) {
++	ok, err := verifyGroupKind(controllerRef, controllerKindDS.Kind, []string{"apps"})
++	if !ok || err != nil {
++		return nil, err
++	}
++	ds, err := dc.dsLister.DaemonSets(namespace).Get(controllerRef.Name)
++	if err != nil {
++		// The only possible error is NotFound, which is ok here.
++		return nil, nil
++	}
++	if ds.UID != controllerRef.UID {
++		return nil, nil
++	}
++
++	return &controllerAndScale{ds.UID, ds.Status.DesiredNumberScheduled}, nil
++}
++
+ // getPodStatefulSet returns the statefulset referenced by the provided controllerRef.
+ func (dc *DisruptionController) getPodStatefulSet(ctx context.Context, controllerRef *metav1.OwnerReference, namespace string) (*controllerAndScale, error) {
+ 	ok, err := verifyGroupKind(controllerRef, controllerKindSS.Kind, []string{"apps"})
+@@ -444,7 +472,7 @@ func (dc *DisruptionController) Run(ctx context.Context) {
+ 	logger.Info("Starting disruption controller")
+ 	defer logger.Info("Shutting down disruption controller")
+ 
+-	if !cache.WaitForNamedCacheSync("disruption", ctx.Done(), dc.podListerSynced, dc.pdbListerSynced, dc.rcListerSynced, dc.rsListerSynced, dc.dListerSynced, dc.ssListerSynced) {
++	if !cache.WaitForNamedCacheSync("disruption", ctx.Done(), dc.podListerSynced, dc.pdbListerSynced, dc.rcListerSynced, dc.rsListerSynced, dc.dListerSynced, dc.ssListerSynced, dc.dsListerSynced) {
+ 		return
+ 	}
+ 
+diff --git a/pkg/controller/disruption/disruption_test.go b/pkg/controller/disruption/disruption_test.go
+index 3e9fb4e4fd3..8b57be1e1a9 100644
+--- a/pkg/controller/disruption/disruption_test.go
++++ b/pkg/controller/disruption/disruption_test.go
+@@ -134,6 +134,7 @@ type disruptionController struct {
+ 	rsStore  cache.Store
+ 	dStore   cache.Store
+ 	ssStore  cache.Store
++	dsStore  cache.Store
+ 
+ 	coreClient      *fake.Clientset
+ 	scaleClient     *scalefake.FakeScaleClient
+@@ -173,6 +174,7 @@ func newFakeDisruptionControllerWithTime(ctx context.Context, now time.Time) (*d
+ 		informerFactory.Apps().V1().ReplicaSets(),
+ 		informerFactory.Apps().V1().Deployments(),
+ 		informerFactory.Apps().V1().StatefulSets(),
++		informerFactory.Apps().V1().DaemonSets(),
+ 		coreClient,
+ 		testrestmapper.TestOnlyStaticRESTMapper(scheme),
+ 		fakeScaleClient,
+@@ -187,6 +189,7 @@ func newFakeDisruptionControllerWithTime(ctx context.Context, now time.Time) (*d
+ 	dc.rsListerSynced = alwaysReady
+ 	dc.dListerSynced = alwaysReady
+ 	dc.ssListerSynced = alwaysReady
++	dc.dsListerSynced = alwaysReady
+ 	dc.recorder = record.NewFakeRecorder(100)
+ 	informerFactory.Start(ctx.Done())
+ 	informerFactory.WaitForCacheSync(ctx.Done())
+@@ -199,6 +202,7 @@ func newFakeDisruptionControllerWithTime(ctx context.Context, now time.Time) (*d
+ 		informerFactory.Apps().V1().ReplicaSets().Informer().GetStore(),
+ 		informerFactory.Apps().V1().Deployments().Informer().GetStore(),
+ 		informerFactory.Apps().V1().StatefulSets().Informer().GetStore(),
++		informerFactory.Apps().V1().DaemonSets().Informer().GetStore(),
+ 		coreClient,
+ 		fakeScaleClient,
+ 		fakeDiscovery,
+@@ -272,6 +276,13 @@ func updatePodOwnerToRc(t *testing.T, pod *v1.Pod, rc *v1.ReplicationController)
+ 	pod.OwnerReferences = append(pod.OwnerReferences, controllerReference)
+ }
+ 
++func updatePodOwnerToDs(t *testing.T, pod *v1.Pod, ds *apps.DaemonSet) {
++	var controllerReference metav1.OwnerReference
++	var trueVar = true
++	controllerReference = metav1.OwnerReference{UID: ds.UID, APIVersion: controllerKindDS.GroupVersion().String(), Kind: controllerKindDS.Kind, Name: ds.Name, Controller: &trueVar}
++	pod.OwnerReferences = append(pod.OwnerReferences, controllerReference)
++}
++
+ func updatePodOwnerToRs(t *testing.T, pod *v1.Pod, rs *apps.ReplicaSet) {
+ 	var controllerReference metav1.OwnerReference
+ 	var trueVar = true
+@@ -279,6 +290,32 @@ func updatePodOwnerToRs(t *testing.T, pod *v1.Pod, rs *apps.ReplicaSet) {
+ 	pod.OwnerReferences = append(pod.OwnerReferences, controllerReference)
+ }
+ 
++func newDaemonSet(t *testing.T, size int32) (*apps.DaemonSet, string) {
++	ds := &apps.DaemonSet{
++		TypeMeta: metav1.TypeMeta{APIVersion: "v1"},
++		ObjectMeta: metav1.ObjectMeta{
++			UID:             uuid.NewUUID(),
++			Name:            "foobar",
++			Namespace:       metav1.NamespaceDefault,
++			ResourceVersion: "18",
++			Labels:          fooBar(),
++		},
++		Spec: apps.DaemonSetSpec{
++			Selector: newSelFooBar(),
++		},
++		Status: apps.DaemonSetStatus{
++			DesiredNumberScheduled: size,
++		},
++	}
++
++	dsName, err := controller.KeyFunc(ds)
++	if err != nil {
++		t.Fatalf("Unexpected error naming DaemonSet %q: %v", ds.Name, err)
++	}
++
++	return ds, dsName
++}
++
+ func updatePodOwnerToSs(t *testing.T, pod *v1.Pod, ss *apps.StatefulSet) {
+ 	var controllerReference metav1.OwnerReference
+ 	var trueVar = true
+@@ -415,6 +452,37 @@ func update(t *testing.T, store cache.Store, obj interface{}) {
+ 	}
+ }
+ 
++func TestDaemonSetController(t *testing.T) {
++	labels := map[string]string{
++		"foo": "bar",
++		"baz": "quux",
++	}
++
++	dc, ps := newFakeDisruptionController()
++
++	// 34% should round up to 2
++	pdb, pdbName := newMinAvailablePodDisruptionBudget(t, intstr.FromString("34%"))
++	add(t, dc.pdbStore, pdb)
++	ds, _ := newDaemonSet(t, 3)
++	add(t, dc.dsStore, ds)
++	dc.sync(context.TODO(), pdbName)
++
++	ps.VerifyPdbStatus(t, pdbName, 0, 0, 0, 0, map[string]metav1.Time{})
++
++	for i := int32(0); i < 3; i++ {
++		pod, _ := newPod(t, fmt.Sprintf("foobar %d", i))
++		updatePodOwnerToDs(t, pod, ds)
++		pod.Labels = labels
++		add(t, dc.podStore, pod)
++		dc.sync(context.TODO(), pdbName)
++		if i < 2 {
++			ps.VerifyPdbStatus(t, pdbName, 0, i+1, 2, 3, map[string]metav1.Time{})
++		} else {
++			ps.VerifyPdbStatus(t, pdbName, 1, 3, 2, 3, map[string]metav1.Time{})
++		}
++	}
++}
++
+ func add(t *testing.T, store cache.Store, obj interface{}) {
+ 	if err := store.Add(obj); err != nil {
+ 		t.Fatalf("Could not add %+v to %+v: %v", obj, store, err)
+@@ -887,6 +955,8 @@ func TestStatefulSetController(t *testing.T) {
+ 	add(t, dc.pdbStore, pdb)
+ 	ss, _ := newStatefulSet(t, 3)
+ 	add(t, dc.ssStore, ss)
++	ds, _ := newDaemonSet(t, 13)
++	add(t, dc.dsStore, ds)
+ 	dc.sync(ctx, pdbName)
+ 
+ 	// It starts out at 0 expected because, with no pods, the PDB doesn't know
+@@ -1064,6 +1134,8 @@ func TestBasicFinderFunctions(t *testing.T) {
+ 	add(t, dc.rcStore, rc)
+ 	ss, _ := newStatefulSet(t, 14)
+ 	add(t, dc.ssStore, ss)
++	ds, _ := newDaemonSet(t, 13)
++	add(t, dc.dsStore, ds)
+ 
+ 	testCases := map[string]struct {
+ 		finderFunc    podControllerFinder
+@@ -1125,6 +1197,23 @@ func TestBasicFinderFunctions(t *testing.T) {
+ 			uid:        ss.UID,
+ 			findsScale: false,
+ 		},
++		"daemonset controller with extensions group": {
++			finderFunc:    dc.getPodDaemonSet,
++			apiVersion:    "apps/v1",
++			kind:          controllerKindDS.Kind,
++			name:          ds.Name,
++			uid:           ds.UID,
++			findsScale:    true,
++			expectedScale: 13,
++		},
++		"daemonset controller with invalid kind": {
++			finderFunc: dc.getPodDaemonSet,
++			apiVersion: "apps/v1",
++			kind:       controllerKindRS.Kind,
++			name:       ds.Name,
++			uid:        ds.UID,
++			findsScale: false,
++		},
+ 	}
+ 
+ 	for tn, tc := range testCases {

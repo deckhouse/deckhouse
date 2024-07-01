@@ -13,11 +13,13 @@ docker:
   ENTRYPOINT: ["/usr/local/bin/cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.29" $version }}
+    {{- if semverCompare ">=1.30" $version }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+    {{- else if semverCompare "=1.29" $version }}
 from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
     {{- else if semverCompare ">=1.27" $version }}
 from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
-    {{- else if semverCompare ">=1.25" $version }}
+    {{- else if semverCompare "=1.26" $version }}
 from: {{ $.Images.BASE_GOLANG_19_ALPINE_DEV }}
     {{- end }}
 git:
