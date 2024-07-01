@@ -350,8 +350,9 @@ build: set-build-envs ## Build Deckhouse images.
 	werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --report-path images_tags_werf.json $(SECONDARY_REPO) $(FOCUS)
   ifeq ($(FOCUS),)
     ifneq ($(CI_COMMIT_BRANCH),)
-				@# CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-				@# Use it as image tag. Add suffix to not overlap with PRs in main repo.
+    		@# By default in the Github CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+    		@# But in the local build we cannot know pr number. So, to move local build process close to the github ci build,
+    		@# we need to set CI_COMMIT_REF_SLUG env manually. If CI_COMMIT_REF_SLUG is not set, it will be set to branch name.
 				SRC=$(shell jq -r '.Images."dev".DockerImageName' images_tags_werf.json) && \
 				DST=$(DEV_REGISTRY_PATH):$(CI_COMMIT_REF_SLUG) && \
 				echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '$(CI_COMMIT_BRANCH)' and edition '$(WERF_ENV)' using tag '$(CI_COMMIT_REF_SLUG)' ..." && \
