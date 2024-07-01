@@ -33,8 +33,8 @@
       summary: Some of the metrics are not coming from the agent {{ $labels.namespace }}/{{ $labels.pod }}.
       description: |
         Use the following commands to check what's going on:
-        `kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}`
-        `kubectl -n {{ $labels.namespace }} exec -ti {{ $labels.pod }} cilium-health status`
+        - `kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}`
+        - `kubectl -n {{ $labels.namespace }} exec -ti {{ $labels.pod }} cilium-health status`
 
         We need to cross-check the metrics with the neighboring agent.
         Also the absence of metrics is an indirect sign that new pods cannot be created on the node because of the inability to connect to the agent.
