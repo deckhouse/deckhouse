@@ -47,10 +47,10 @@ rules:
     verbs:
       - use
   - apiGroups:
-      - network.deckhouse.io
+      - internal.network.deckhouse.io
     resources:
-      - l2lbservices
-      - l2lbservices/status
+      - sdninternall2lbservices
+      - sdninternall2lbservices/status
     verbs:
       - get
       - list

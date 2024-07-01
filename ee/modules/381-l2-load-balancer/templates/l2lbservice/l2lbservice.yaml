@@ -1,7 +1,7 @@
 {{- range $l2lbservice := .Values.l2LoadBalancer.internal.l2lbservices }}
 ---
-apiVersion: network.deckhouse.io/v1alpha1
-kind: L2LBService
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalL2LBService
 metadata:
   name: {{ $l2lbservice.name }}
   namespace: {{ $l2lbservice.namespace }}
