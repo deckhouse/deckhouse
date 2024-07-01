@@ -32,7 +32,7 @@
       plk_create_group_if_not_exists__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
       summary: Some of the metrics are not coming from the agent {{ $labels.namespace }}/{{ $labels.pod }}.
       description: |
-        Check what's going on:
+        Use the following commands to check what's going on:
         `kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}`
         `kubectl -n {{ $labels.namespace }} exec -ti {{ $labels.pod }} cilium-health status`
 
