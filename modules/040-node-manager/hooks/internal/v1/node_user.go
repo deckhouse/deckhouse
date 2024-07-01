@@ -46,7 +46,7 @@ type NodeUserSpec struct {
 }
 
 type NodeUserStatus struct {
-	Errors map[string]string `json:"errors,omitempty"`
+	Errors map[string]string `json:"errors"`
 }
 
 func (nu NodeUserSpec) IsEqual(newSpec NodeUserSpec) bool {

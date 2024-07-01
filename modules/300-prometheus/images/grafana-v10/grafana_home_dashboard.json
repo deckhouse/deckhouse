@@ -767,7 +767,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max by (version, namespace) (grafana_build_info{service=\"grafana\", namespace=\"d8-monitoring\"})",
+          "expr": "max by (version, namespace) (grafana_build_info{service=\"grafana-v10\", namespace=\"d8-monitoring\"})",
           "instant": true,
           "interval": "",
           "legendFormat": "{{ version }} {{ edition }}",

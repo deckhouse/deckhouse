@@ -35,6 +35,7 @@ module "master" {
   network_port_ids = list(local.network_security ? openstack_networking_port_v2.master_internal_with_security[0].id : openstack_networking_port_v2.master_internal_without_security[0].id)
   internal_network_cidr = data.openstack_networking_subnet_v2.internal.cidr
   floating_ip_network = local.external_network_floating_ip ? local.external_network_name : ""
+  config_drive = !local.external_network_dhcp
   tags = local.tags
   zone = local.zone
   volume_type = local.volume_type
