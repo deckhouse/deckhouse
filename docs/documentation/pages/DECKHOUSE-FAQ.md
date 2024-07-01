@@ -205,7 +205,7 @@ You can get information in advance about updating minor versions of Deckhouse on
 
 ### How do I find out which version of Deckhouse is on which release channel?
 
-Information about which version of Deckhouse is on which release channel can be obtained at <https://flow.deckhouse.io>.
+Information about which version of Deckhouse is on which release channel can be obtained at <https://releases.deckhouse.io>.
 
 ### How does automatic Deckhouse update work?
 
