@@ -34,12 +34,18 @@ import (
 //
 // !!IMPORTANT NOTE!!: will be fixed by separated issues
 var skipCheckWildcards = map[string][]string{
+	// Confirmed excludes
 	"admission-policy-engine/templates/rbac-for-us.yaml": {
+		// Some resources are created dynamically from CR. See more details in the target file
 		"d8:admission-policy-engine:gatekeeper",
 	},
 	"deckhouse/templates/webhook-handler/rbac-for-us.yaml": {
+		// We read all resources from the `deckhouse.io` api group
 		"d8:deckhouse:webhook-handler",
 	},
+
+	// Have to be reviewed
+
 	"cloud-provider-aws/templates/cloud-controller-manager/rbac-for-us.yaml": {
 		"d8:cloud-provider-aws:cloud-controller-manager",
 	},
