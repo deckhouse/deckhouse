@@ -1710,7 +1710,7 @@ index 6d57cb73..fbb4f69d 100644
 +	}
 +
 +	//_, err := c.client.CoreV1().Services(svc.Namespace).UpdateStatus(context.TODO(), svc, metav1.UpdateOptions{})
-+	_, err = c.dynamicClient.Resource(schema.GroupVersionResource{Group: "internal.network.deckhouse.io", Version: "v1alpha1", Resource: "internall2lbservices"}).Namespace(namespace).UpdateStatus(context.TODO(), &unstructured.Unstructured{Object: content}, metav1.UpdateOptions{})
++	_, err = c.dynamicClient.Resource(schema.GroupVersionResource{Group: "internal.network.deckhouse.io", Version: "v1alpha1", Resource: "sdninternall2lbservices"}).Namespace(namespace).UpdateStatus(context.TODO(), &unstructured.Unstructured{Object: content}, metav1.UpdateOptions{})
  	return err
  }
 
