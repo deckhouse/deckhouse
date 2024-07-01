@@ -31,7 +31,7 @@ mount:
   to: /go/pkg
 shell:
   setup:
-    - git clone -b {{ $version }} --depth 1 https://github.com/flant/go-ec2-describe-tags.git src
+    - git clone -b {{ $version }} --depth 1 {{ $.SOURCE_REPO }}/flant/go-ec2-describe-tags.git src
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - cd src ./
