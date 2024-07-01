@@ -304,6 +304,28 @@ spec:
     endpoint: logstash.default:12345
 ```
 
+## Syslog
+
+Следующий пример показывает, как отправлять сообщения через сокет по протоколу TCP в формате syslog:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: rsyslog
+spec:
+  type: Socket
+  socket:
+    mode: TCP
+    address: 192.168.0.1:3000
+    encoding: 
+      codec: Syslog
+  extraLabels:
+    syslog.severity: "alert"
+    # поле request_id должно присутствовать в сообщении
+    syslog.message_id: "{{ request_id }}"
+```
+
 ## Сбор событий Kubernetes
 
 События Kubernetes могут быть собраны log-shipper'ом, если `events-exporter` включен в настройках модуля [extended-monitoring](../340-extended-monitoring/).
