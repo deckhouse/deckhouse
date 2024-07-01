@@ -7,7 +7,7 @@ title: "Cloud provider — VMware Cloud Director: Примеры"
 ## Пример custom resource `VCDInstanceClass`
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: VCDInstanceClass
 metadata:
   name: test

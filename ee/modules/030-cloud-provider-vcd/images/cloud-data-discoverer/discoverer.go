@@ -40,12 +40,6 @@ type Config struct {
 
 func parseEnvToConfig() (*Config, error) {
 	c := &Config{}
-	user := os.Getenv("VCD_USER")
-	if user == "" {
-		return nil, fmt.Errorf("VCD_USER env should be set")
-	}
-	c.User = user
-
 	password := os.Getenv("VCD_PASSWORD")
 	token := os.Getenv("VCD_TOKEN")
 	if password == "" && token == "" {
@@ -53,6 +47,12 @@ func parseEnvToConfig() (*Config, error) {
 	}
 	c.Password = password
 	c.Token = token
+
+	user := os.Getenv("VCD_USER")
+	if user == "" && password != "" {
+		return nil, fmt.Errorf("VCD_USER env should be set")
+	}
+	c.User = user
 
 	org := os.Getenv("VCD_ORG")
 	if org == "" {
