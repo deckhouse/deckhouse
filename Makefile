@@ -327,7 +327,7 @@ set-build-envs:
  		export CI_COMMIT_BRANCH=$(shell git branch --show-current)
   endif
   ifeq ($(CI_COMMIT_REF_NAME),)
- 		export CI_COMMIT_REF_NAME=$(shell  git rev-parse --abbrev-ref HEAD)
+ 		export CI_COMMIT_REF_NAME=$(shell git rev-parse --abbrev-ref HEAD)
  	else
 		ifeq ($(CI_COMMIT_TAG),)
 			export CI_COMMIT_REF_NAME=$(CI_COMMIT_BRANCH)
@@ -341,10 +341,48 @@ set-build-envs:
   ifeq ($(DECKHOUSE_REGISTRY_HOST),)
  		export DECKHOUSE_REGISTRY_HOST=registry.deckhouse.io
   endif
-	export WERF_REPO=${DEV_REGISTRY_PATH}
+	export WERF_REPO=$(DEV_REGISTRY_PATH)
 	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
-	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/${REGISTRY_SUFFIX}
+	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
 
 build: set-build-envs ## Build Deckhouse images.
 	##~ Options: FOCUS=image-name
-	werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --report-path images_tags_werf.json ${SECONDARY_REPO} ${FOCUS}
+	werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --report-path images_tags_werf.json $(SECONDARY_REPO) $(FOCUS)
+  ifeq ($(FOCUS),)
+    ifneq ($(CI_COMMIT_BRANCH),)
+				@# CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+				@# Use it as image tag. Add suffix to not overlap with PRs in main repo.
+				SRC=$(shell jq -r '.Images."dev".DockerImageName' images_tags_werf.json) && \
+				DST=$(DEV_REGISTRY_PATH):$(CI_COMMIT_REF_SLUG) && \
+				echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '$(CI_COMMIT_BRANCH)' and edition '$(WERF_ENV)' using tag '$(CI_COMMIT_REF_SLUG)' ..." && \
+				echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to dev-registry using tag '$(CI_COMMIT_REF_SLUG)'" && \
+				docker pull $$SRC && \
+				docker image tag $$SRC $$DST && \
+				docker image push $$DST && \
+				docker image rmi $$DST || true
+
+				SRC=$(shell jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json) && \
+  			DST=$(DEV_REGISTRY_PATH)/install:$(CI_COMMIT_REF_SLUG) && \
+  			echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to dev-registry using tag '$(CI_COMMIT_REF_SLUG)'" && \
+				docker pull $$SRC && \
+				docker image tag $$SRC $$DST && \
+				docker image push $$DST && \
+				docker image rmi $$DST || true
+
+				SRC=$(shell jq -r '.Images."dev/install-standalone".DockerImageName' images_tags_werf.json) && \
+				DST=$(DEV_REGISTRY_PATH)/install-standalone:$(CI_COMMIT_REF_SLUG) && \
+				echo "⚓️ 💫 [$(date -u)] Publish 'dev/install-standalone' image to dev-registry using tag '$(CI_COMMIT_REF_SLUG)'" && \
+				docker pull $$SRC && \
+				docker image tag $$SRC $$DST && \
+				docker image push $$DST && \
+				docker image rmi $$DST || true
+
+				SRC="$(shell jq -r '.Images."e2e-terraform".DockerImageName' images_tags_werf.json)" && \
+				DST="$(DEV_REGISTRY_PATH)/e2e-terraform:$(CI_COMMIT_REF_SLUG)" && \
+				echo "⚓️ 💫 [$(date -u)] Publish 'e2e-terraform' image to dev-registry using tag '$(CI_COMMIT_REF_SLUG)'" && \
+				docker pull $$SRC && \
+				docker image tag $$SRC $$DST && \
+				docker image push $$DST && \
+				docker image rmi $$DST || true
+    endif
+  endif
