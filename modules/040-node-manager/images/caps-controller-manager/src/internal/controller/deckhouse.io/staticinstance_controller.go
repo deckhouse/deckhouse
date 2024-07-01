@@ -218,8 +218,7 @@ func (r *StaticInstanceReconciler) adoptBootstrappedStaticInstance(ctx context.C
 			continue
 		}
 
-		tmp := m
-		machine = &tmp
+		machine = &m
 		break
 	}
 	if machine == nil {
