@@ -16,7 +16,7 @@ import (
 
 var _ = Describe("l2-load-balancer :: hooks :: update_service_status ::", func() {
 	f := HookExecutionConfigInit(`{"l2LoadBalancer":{"internal": {"l2lbservices": [{}]}}}`, "")
-	f.RegisterCRD("network.deckhouse.io", "v1alpha1", "L2LBService", true)
+	f.RegisterCRD("internal.network.deckhouse.io", "v1alpha1", "SDNInternalL2LBService", true)
 
 	Context("Empty Cluster", func() {
 		BeforeEach(func() {
@@ -51,8 +51,8 @@ spec:
   type: LoadBalancer
   loadBalancerClass: my-lb-class
 ---
-apiVersion: network.deckhouse.io/v1alpha1
-kind: L2LBService
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalL2LBService
 metadata:
   name: nginx-0
   namespace: nginx
@@ -65,8 +65,8 @@ status:
     ingress:
     - ip: 10.0.0.1
 ---
-apiVersion: network.deckhouse.io/v1alpha1
-kind: L2LBService
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalL2LBService
 metadata:
   name: nginx-1
   namespace: nginx
@@ -126,8 +126,8 @@ spec:
   type: LoadBalancer
   loadBalancerClass: my-lb-class
 ---
-apiVersion: network.deckhouse.io/v1alpha1
-kind: L2LBService
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalL2LBService
 metadata:
   name: nginx-0
   namespace: nginx
@@ -140,8 +140,8 @@ status:
     ingress:
     - ip: 10.0.0.1
 ---
-apiVersion: network.deckhouse.io/v1alpha1
-kind: L2LBService
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalL2LBService
 metadata:
   name: nginx-1
   namespace: nginx
@@ -154,8 +154,8 @@ status:
     ingress:
     - ip: 10.0.0.2
 ---
-apiVersion: network.deckhouse.io/v1alpha1
-kind: L2LBService
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalL2LBService
 metadata:
   name: nginx-2
   namespace: nginx

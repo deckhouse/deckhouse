@@ -4,14 +4,14 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: l2lbservices.network.deckhouse.io
+  name: sdninternall2lbservices.internal.network.deckhouse.io
 spec:
-  group: network.deckhouse.io
+  group: internal.network.deckhouse.io
   names:
-    kind: L2LBService
-    listKind: L2LBServiceList
-    plural: l2lbservices
-    singular: l2lbservice
+    kind: SDNInternalL2LBService
+    listKind: SDNInternalL2LBServiceList
+    plural: sdninternall2lbservices
+    singular: sdninternall2lbservice
   scope: Namespaced
   versions:
     - name: v1alpha1

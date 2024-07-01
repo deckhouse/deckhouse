@@ -18,15 +18,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "l2lbservices",
-			ApiVersion: "network.deckhouse.io/v1alpha1",
-			Kind:       "L2LBService",
+			ApiVersion: "internal.network.deckhouse.io/v1alpha1",
+			Kind:       "SDNInternalL2LBService",
 			FilterFunc: applyL2LBServiceFilter,
 		},
 	},
 }, handleL2LBServices)
 
 func applyL2LBServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var l2lbservice L2LBService
+	var l2lbservice SDNInternalL2LBService
 
 	err := sdk.FromUnstructured(obj, &l2lbservice)
 	if err != nil {

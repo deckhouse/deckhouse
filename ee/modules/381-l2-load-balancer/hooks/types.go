@@ -76,20 +76,20 @@ type L2LoadBalancerSpec struct {
 type L2LoadBalancerStatus struct {
 }
 
-type L2LBServiceSpec struct {
+type SDNInternalL2LBServiceSpec struct {
 	v1.ServiceSpec `json:",inline"`
-	ServiceRef     L2LBServiceReference `json:"serviceRef"`
+	ServiceRef     SDNInternalL2LBServiceReference `json:"serviceRef"`
 }
 
-type L2LBServiceReference struct {
+type SDNInternalL2LBServiceReference struct {
 	Namespace string `json:"namespace,omitempty" protobuf:"bytes,1,opt,name=namespace"`
 	Name      string `json:"name" protobuf:"bytes,2,opt,name=name"`
 }
 
-type L2LBService struct {
+type SDNInternalL2LBService struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	Spec   L2LBServiceSpec  `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
-	Status v1.ServiceStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+	Spec   SDNInternalL2LBServiceSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Status v1.ServiceStatus           `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
