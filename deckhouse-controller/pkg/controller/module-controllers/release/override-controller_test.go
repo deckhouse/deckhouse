@@ -19,6 +19,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -100,6 +101,7 @@ func (suite *PullOverrideControllerTestSuite) SetupSuite() {
 	suite.tmpDir = suite.T().TempDir()
 	suite.T().Setenv("EXTERNAL_MODULES_DIR", suite.tmpDir)
 	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0777)
+	log.SetOutput(io.Discard)
 }
 
 type moduleDirDescriptor struct {

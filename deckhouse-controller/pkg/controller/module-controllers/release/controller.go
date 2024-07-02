@@ -30,7 +30,6 @@ import (
 	"time"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/pkg/errors"
@@ -909,7 +908,7 @@ func (c *moduleReleaseReconciler) parseNotificationConfig(ctx context.Context) (
 	return settings.NotificationConfig, nil
 }
 
-func validateModule(def models.DeckhouseModuleDefinition) error {
+func validateModule(manager moduleManager, def models.DeckhouseModuleDefinition) error {
 	if def.Weight < 900 || def.Weight > 999 {
 		return fmt.Errorf("external module weight must be between 900 and 999")
 	}
@@ -918,13 +917,7 @@ func validateModule(def models.DeckhouseModuleDefinition) error {
 		return fmt.Errorf("cannot validate module without path. Path is required to load openapi specs")
 	}
 
-	dm, err := models.NewDeckhouseModule(def, addonutils.Values{}, nil, nil)
-	if err != nil {
-		return fmt.Errorf("new deckhouse module: %w", err)
-	}
-
-	err = dm.GetBasicModule().Validate()
-	if err != nil {
+	if err := manager.GetModule(def.Name).Validate(); err != nil {
 		return fmt.Errorf("validate module: %w", err)
 	}
 

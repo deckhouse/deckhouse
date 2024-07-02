@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"flag"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -25,6 +26,7 @@ import (
 	"time"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	operator "github.com/flant/addon-operator/pkg/utils"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	log "github.com/sirupsen/logrus"
@@ -35,12 +37,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/module-manager/test/mock"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
@@ -76,6 +81,7 @@ func (suite *ReleaseControllerTestSuite) SetupSuite() {
 	suite.tmpDir = suite.T().TempDir()
 	suite.T().Setenv("EXTERNAL_MODULES_DIR", suite.tmpDir)
 	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0777)
+	log.SetOutput(io.Discard)
 }
 
 func (suite *ReleaseControllerTestSuite) TearDownSubTest() {
@@ -269,8 +275,9 @@ func (s stubModulesManager) DisableModuleHooks(_ string) {
 
 }
 
-func (s stubModulesManager) GetModule(_ string) *addonmodules.BasicModule {
-	return nil
+func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
+	m, _ := addonmodules.NewBasicModule(name, "", 900, operator.Values{}, nil, nil)
+	return m
 }
 
 func (s stubModulesManager) GetEnabledModuleNames() []string {
@@ -290,4 +297,40 @@ func singleDocToManifests(doc []byte) (result []string) {
 		}
 	}
 	return
+}
+
+func Test_validateModule(t *testing.T) {
+	log.SetOutput(io.Discard)
+
+	f := func(name string, failed bool) {
+		t.Helper()
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join("./testdata", name)
+			m, err := mock.NewModule(name, path, pointer.Bool(true))
+			if err != nil && failed {
+				return
+			}
+			if err != nil && !failed {
+				t.Fatalf("%s: unexpected error: %v", name, err)
+			}
+
+			err = validateModule(
+				mock.NewModuleManager(m),
+				models.DeckhouseModuleDefinition{
+					Name:   name,
+					Weight: 900,
+					Path:   path,
+				},
+			)
+
+			if err != nil && !failed {
+				t.Fatalf("%s: unexpected error: %v", name, err)
+			}
+		})
+	}
+
+	f("module", false)
+	f("module-not-valid", true)
+	f("module-failed", true)
+	f("module-values-failed", true)
 }
