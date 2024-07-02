@@ -284,14 +284,15 @@ properties:
               password:
                 type: string
                 description: The user's password.
+              apiToken:
+                type: string
+                description: The user's API token.
               insecure:
                 type: boolean
                 description: Set to `true` if VCD has a self-signed certificate.
                 x-doc-default: false
             required:
               - server
-              - username
-              - password
       capcdControllerManagerWebhookCert:
         type: object
         default: { }
