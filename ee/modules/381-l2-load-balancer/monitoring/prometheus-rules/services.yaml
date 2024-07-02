@@ -1,7 +1,7 @@
 - name: d8.l2-load-balancer.services
   rules:
     - alert: L2LoadBalancerIrrelevantServiceFound
-      expr: max by (namespace, name) (d8_istio_irrelevant_service == 1)
+      expr: max by (namespace, name) (d8_l2_load_balancer_irrelevant_service == 1)
       for: 5m
       labels:
         severity_level: "4"
