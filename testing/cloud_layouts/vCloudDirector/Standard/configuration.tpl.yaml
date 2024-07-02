@@ -47,14 +47,14 @@ masterNodeGroup:
     sizingPolicy: ${VCD_ORG}-MSK
     etcdDiskSizeGb: 10
     rootDiskSizeGb: 40
-    template: ${VCD_ORG}/Ubuntu 24.04 Server (20240628)
+    template: private-templates/Ubuntu 24.04 Server (20240628)
   replicas: 1
 nodeGroups:
 - instanceClass:
     storageProfile:  Fast vHDD 
     sizingPolicy: ${VCD_ORG}-MSK
     rootDiskSizeGb: 40
-    template: ${VCD_ORG}/Ubuntu 24.04 Server (20240628)
+    template: private-templates/Ubuntu 24.04 Server (20240628)
   name: system
   replicas: 1
   nodeTemplate:
@@ -82,14 +82,3 @@ metadata:
   name: flant-integration
 spec:
   enabled: false
-
----
-apiVersion: deckhouse.io/v1
-kind: VCDInstanceClass
-metadata:
-  name: worker
-spec:
-  rootDiskSizeGb: 30
-  sizingPolicy: ${VCD_ORG}-MSK
-  storageProfile: Fast vHDD 
-  template: ${VCD_ORG}/Ubuntu 24.04 Server (20240628)

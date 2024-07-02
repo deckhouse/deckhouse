@@ -1,5 +1,16 @@
 ---
 apiVersion: deckhouse.io/v1
+kind: VCDInstanceClass
+metadata:
+  name: worker
+spec:
+  rootDiskSizeGb: 30
+  sizingPolicy: ${VCD_ORG}-MSK
+  storageProfile: Fast vHDD 
+  template: private-templates/Ubuntu 24.04 Server (20240628)
+
+---
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: worker
