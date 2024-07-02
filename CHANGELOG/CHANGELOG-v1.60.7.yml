@@ -1,0 +1,5 @@
+monitoring-kubernetes:
+  features:
+    - summary: Add ConfigMap labels assembly.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8630
+
