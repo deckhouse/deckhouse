@@ -74,14 +74,14 @@ func NewStepsStorage(ctx context.Context, rootDir string, ngConfigFactory dynami
 	return ss
 }
 
-func (s *StepsStorage) Render(target, bundle, provider string, templateContext map[string]interface{}, ng ...string) (map[string]string, error) {
-	steps, err := s.renderSystemScripts(target, bundle, provider, templateContext)
+func (s *StepsStorage) Render(target, provider string, templateContext map[string]interface{}, ng ...string) (map[string]string, error) {
+	steps, err := s.renderSystemScripts(target, provider, templateContext)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(ng) > 0 {
-		userConfigurations, err := s.renderNodeGroupConfigurations(bundle, ng[0], templateContext)
+		userConfigurations, err := s.renderNodeGroupConfigurations(ng[0], templateContext)
 		if err != nil {
 			klog.Errorf("Render user NodeGroupConfigurations failed: %s", err)
 			return steps, nil
@@ -151,15 +151,15 @@ func (s *StepsStorage) subscribeOnCRD(ctx context.Context, ngConfigFactory dynam
 	}
 }
 
-func (s *StepsStorage) renderSystemScripts(target, bundle, provider string, templateContext map[string]interface{}) (map[string]string, error) {
-	key := fmt.Sprintf(keyPattern, target, bundle, provider)
+func (s *StepsStorage) renderSystemScripts(target, provider string, templateContext map[string]interface{}) (map[string]string, error) {
+	key := fmt.Sprintf(keyPattern, target, provider)
 
 	s.m.RLock()
 	templates, ok := s.systemScripts[key]
 	s.m.RUnlock()
 	if !ok {
 		var err error
-		templates, err = s.loadTemplates(target, bundle, provider)
+		templates, err = s.loadTemplates(target, provider)
 		if err != nil {
 			return nil, err
 		}
@@ -169,7 +169,7 @@ func (s *StepsStorage) renderSystemScripts(target, bundle, provider string, temp
 	for name, content := range templates {
 		step, err := RenderTemplate(name, content, templateContext)
 		if err != nil {
-			return nil, fmt.Errorf("cannot render template %q for bundle %q: %v", name, bundle, err)
+			return nil, fmt.Errorf("cannot render template %q: %v", name, err)
 		}
 		steps[step.FileName] = step.Content.String()
 	}
@@ -177,9 +177,9 @@ func (s *StepsStorage) renderSystemScripts(target, bundle, provider string, temp
 	return steps, nil
 }
 
-func (s *StepsStorage) loadTemplates(target, bundle, provider string) (map[string][]byte, error) {
+func (s *StepsStorage) loadTemplates(target, provider string) (map[string][]byte, error) {
 	templates := make(map[string][]byte)
-	dirs := s.lookupDirs(target, bundle, provider)
+	dirs := s.lookupDirs(target, provider)
 	for _, dir := range dirs {
 		err := s.readTemplates(dir, templates)
 		if err != nil {
@@ -187,7 +187,7 @@ func (s *StepsStorage) loadTemplates(target, bundle, provider string) (map[strin
 		}
 	}
 
-	key := fmt.Sprintf(keyPattern, target, bundle, provider)
+	key := fmt.Sprintf(keyPattern, target, provider)
 	s.m.Lock()
 	s.systemScripts[key] = templates
 	s.m.Unlock()
@@ -195,8 +195,8 @@ func (s *StepsStorage) loadTemplates(target, bundle, provider string) (map[strin
 	return templates, nil
 }
 
-// $target:$bundle:$provider
-var keyPattern = "%s:%s:%s"
+// $target:$provider
+var keyPattern = "%s:%s"
 
 // Expected fs hierarchy so far
 //
@@ -208,18 +208,15 @@ var keyPattern = "%s:%s:%s"
 // Where
 //
 //	target   = "all" | "node-group"
-//	bundle   = "centos-7" | "ubuntu-lts" | ...
 //	provider = "" | "aws" | "gcp" | "openstack" | ...
-func (s *StepsStorage) lookupDirs(target, bundle, provider string) []string {
+func (s *StepsStorage) lookupDirs(target, provider string) []string {
 	dirs := []string{
-		filepath.Join(s.rootDir, "bashible", "bundles", bundle, target),
 		filepath.Join(s.rootDir, "bashible", "common-steps", target),
 	}
 
 	// Are we in the cloud?
 	if provider != "" {
 		dirs = append(dirs,
-			filepath.Join(s.rootDir, "cloud-providers", provider, "bashible", "bundles", bundle, target),
 			filepath.Join(s.rootDir, "cloud-providers", provider, "bashible", "common-steps", target),
 		)
 	}
@@ -255,7 +252,6 @@ func (s *StepsStorage) readTemplates(baseDir string, templates map[string][]byte
 func (s *StepsStorage) AddNodeGroupConfiguration(nc *NodeGroupConfiguration) {
 	name := nc.GenerateScriptName()
 	klog.Infof("Adding NodeGroupConfiguration %s to context", name)
-	ngBundlePairs := generateNgBundlePairs(nc.Spec.NodeGroups, nc.Spec.Bundles)
 
 	sc := nodeConfigurationScript{
 		Name:    name,
@@ -264,12 +260,12 @@ func (s *StepsStorage) AddNodeGroupConfiguration(nc *NodeGroupConfiguration) {
 
 	s.m.Lock()
 	defer s.m.Unlock()
-	for _, ngBundlePair := range ngBundlePairs {
-		if m, ok := s.nodeGroupConfigurations[ngBundlePair]; ok {
+	for _, ngName := range nc.Spec.NodeGroups {
+		if m, ok := s.nodeGroupConfigurations[ngName]; ok {
 			m = append(m, &sc)
-			s.nodeGroupConfigurations[ngBundlePair] = m
+			s.nodeGroupConfigurations[ngName] = m
 		} else {
-			s.nodeGroupConfigurations[ngBundlePair] = []*nodeConfigurationScript{&sc}
+			s.nodeGroupConfigurations[ngName] = []*nodeConfigurationScript{&sc}
 		}
 	}
 }
@@ -277,43 +273,36 @@ func (s *StepsStorage) AddNodeGroupConfiguration(nc *NodeGroupConfiguration) {
 func (s *StepsStorage) RemoveNodeGroupConfiguration(nc *NodeGroupConfiguration) {
 	name := nc.GenerateScriptName()
 	klog.Infof("Removing NodeGroupConfiguration %s from context", name)
-	ngBundlePairs := generateNgBundlePairs(nc.Spec.NodeGroups, nc.Spec.Bundles)
 
 	s.m.Lock()
 	defer s.m.Unlock()
-	for _, ngBundlePair := range ngBundlePairs {
-		if configs, ok := s.nodeGroupConfigurations[ngBundlePair]; ok {
+	for _, ngName := range nc.Spec.NodeGroups {
+		if configs, ok := s.nodeGroupConfigurations[ngName]; ok {
 			for i, v := range configs {
 				if v.Name == name {
 					configs = append(configs[:i], configs[i+1:]...)
 					break
 				}
 			}
-			s.nodeGroupConfigurations[ngBundlePair] = configs
+			s.nodeGroupConfigurations[ngName] = configs
 		}
 	}
 }
 
-func (s *StepsStorage) renderNodeGroupConfigurations(bundle, ng string, templateContext map[string]interface{}) (map[string]string, error) {
+func (s *StepsStorage) renderNodeGroupConfigurations(ng string, templateContext map[string]interface{}) (map[string]string, error) {
 	configurations := make([]*nodeConfigurationScript, 0)
 
-	key := fmt.Sprintf("%s:%s", bundle, ng)
-	wildcardBundle := fmt.Sprintf("*:%s", ng)
-	wildcardNG := fmt.Sprintf("%s:*", bundle)
-	totalWildcard := "*:*"
+	key := fmt.Sprintf("%s", ng)
 
 	s.m.RLock()
 	configurations = append(configurations, s.nodeGroupConfigurations[key]...)
-	configurations = append(configurations, s.nodeGroupConfigurations[wildcardBundle]...)
-	configurations = append(configurations, s.nodeGroupConfigurations[wildcardNG]...)
-	configurations = append(configurations, s.nodeGroupConfigurations[totalWildcard]...)
 	s.m.RUnlock()
 
 	steps := make(map[string]string, len(configurations))
 	for _, sc := range configurations {
 		step, err := RenderTemplate(sc.Name, []byte(sc.Content), templateContext)
 		if err != nil {
-			return nil, fmt.Errorf("cannot render node configuration %q for bundle %q: %v", sc.Name, bundle, err)
+			return nil, fmt.Errorf("cannot render node configuration %q: %v", sc.Name, err)
 		}
 		steps[step.FileName] = step.Content.String()
 	}

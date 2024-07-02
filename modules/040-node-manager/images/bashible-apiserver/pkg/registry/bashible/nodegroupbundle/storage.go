@@ -48,18 +48,14 @@ type StorageWithK8sBundles struct {
 
 // Render renders single script content by name which is expected to be of form {bundle}.{node-group-name}
 // with hyphens as delimiters, e.g. `ubuntu-lts.master`.
-func (s StorageWithK8sBundles) Render(name string) (runtime.Object, error) {
-	_, ng, err := template.ParseName(name)
+func (s StorageWithK8sBundles) Render(ng string) (runtime.Object, error) {
+
+	ngBundleData, err := s.ngRenderer.Render(ng)
 	if err != nil {
 		return nil, err
 	}
 
-	ngBundleData, err := s.ngRenderer.Render(name, ng)
-	if err != nil {
-		return nil, err
-	}
-
-	k8sBundleName, err := s.getK8sBundleName(name)
+	k8sBundleName, err := s.getK8sBundleName(ng)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +71,7 @@ func (s StorageWithK8sBundles) Render(name string) (runtime.Object, error) {
 	}
 
 	obj := bashible.NodeGroupBundle{}
-	obj.ObjectMeta.Name = name
+	obj.ObjectMeta.Name = ng
 	obj.ObjectMeta.CreationTimestamp = metav1.NewTime(time.Now())
 	obj.Data = data
 
@@ -107,12 +103,7 @@ func (s StorageWithK8sBundles) getK8sBundleName(name string) (string, error) {
 	}
 	k8sVer := strings.ReplaceAll(versionObj.(string), ".", "-")
 
-	os, _, err := template.ParseName(name)
-	if err != nil {
-		return "", err
-	}
-
-	return fmt.Sprintf("%s.%s", os, k8sVer), nil
+	return fmt.Sprintf("%s", k8sVer), nil
 }
 
 func (s StorageWithK8sBundles) merge(ngBundleData, k8sBundleData map[string]string) (map[string]string, error) {

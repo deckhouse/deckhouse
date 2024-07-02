@@ -213,13 +213,11 @@ func fromUnstructured(unstructuredObj *unstructured.Unstructured, obj interface{
 	return runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.UnstructuredContent(), obj)
 }
 
-func generateNgBundlePairs(ngs, bundles []string) []string {
+func generateNgBundlePairs(ngs []string) []string {
 	result := make([]string, 0)
 
 	for _, ng := range ngs {
-		for _, bundle := range bundles {
-			result = append(result, fmt.Sprintf("%s:%s", bundle, ng))
-		}
+		result = append(result, fmt.Sprintf("%s", ng))
 	}
 
 	if len(result) == 0 {
