@@ -478,36 +478,19 @@ func RollingUpgradeNodesOld(ctx context.Context, log *logrus.Entry, nodes []Regi
 
 		log.Infof("Waiting node %s", node.GetNodeName())
 
-		var cpmFuncLeaderElection CpmFuncNodeClusterStatus = func(status *SeaweedfsNodeClusterStatus) bool {
-
-			log.Infof("!!!")
-			log.Infof(status.ClusterNodesIPs[0])
-			log.Infof(status.ClusterNodesIPs[1])
-			log.Infof(status.ClusterNodesIPs[2])
-			leaders, _ := GetClustersLeaders(ctx, log, nodes)
-			log.Info("cluster leader: %s\n", leaders[0].GetNodeName())
-			log.Infof("!!!")
-
-			log.Infof("Checking if node %s is leader: %t", node.GetNodeName(), status.IsLeader) // ## CHANGED ##
-
-			return status.IsLeader
-		}
-
 		var cpmFuncNodeConnectToCluster CpmFuncNodeClusterStatus = func(status *SeaweedfsNodeClusterStatus) bool {
 			connected := pkg_utils.IsStringInSlice(nodeIP, &status.ClusterNodesIPs)
-			log.Infof("!!!")
-			log.Infof(status.ClusterNodesIPs[0])
-			log.Infof(status.ClusterNodesIPs[1])
-			log.Infof(status.ClusterNodesIPs[2])
-			leaders, _ := GetClustersLeaders(ctx, log, nodes)
-			log.Info("cluster leader: %s\n", leaders[0].GetNodeName())
-			log.Infof("!!!")
 			log.Infof("Checking if node %s is connected to cluster: %t", node.GetNodeName(), connected) // ## CHANGED ##
 			return connected
 		}
-
-		log.Infof("RollingUpgradeNodesOld :: WaitBy for: %s", GetNodeNames(nodes))
-		wait, err := WaitByAllNodes(ctx, log, []RegistryNodeManager{node}, CmpIsRunning, cpmFuncLeaderElection, cpmFuncNodeConnectToCluster)
+		
+		log.Infof("RollingUpgradeNodesOld :: WaitLeaderElectionForNodes for: %s", GetNodeNames(nodes))
+		err = WaitLeaderElectionForNodes(ctx, log, []RegistryNodeManager{node})
+		if err != nil {
+			return err
+		}
+		log.Infof("RollingUpgradeNodesOld :: WaitByAllNodes (mpIsRunning, cpmFuncNodeConnectToCluster) for: %s", GetNodeNames(nodes))
+		wait, err := WaitByAllNodes(ctx, log, []RegistryNodeManager{node}, CmpIsRunning, cpmFuncNodeConnectToCluster)
 		if err != nil {
 			return err
 		}
@@ -519,26 +502,8 @@ func RollingUpgradeNodesOld(ctx context.Context, log *logrus.Entry, nodes []Regi
 }
 
 func WaitLeaderElectionForNodes(ctx context.Context, log *logrus.Entry, nodes []RegistryNodeManager) error {
-	log.Infof("Waiting leader election for nodes: %s", GetNodeNames(nodes))
-	haveLeader := false
-	var cmpFunc = func(status *SeaweedfsNodeClusterStatus) bool {
-		log.Infof("!!!")
-		log.Infof(status.ClusterNodesIPs[0])
-		log.Infof(status.ClusterNodesIPs[1])
-		log.Infof(status.ClusterNodesIPs[2])
-		leaders, _ := GetClustersLeaders(ctx, log, nodes)
-		if status.IsLeader {
-			haveLeader = true
-		}
-		log.Infof("haveLeader: %t", haveLeader)
-		log.Info("cluster leader: %s\n", leaders[0].GetNodeName())
-		log.Infof("!!!")
-
-		return status.IsLeader
-	}
-
-	log.Infof("WaitLeaderElectionForNodes :: WaitBy for: %s", GetNodeNames(nodes))
-	wait, err := WaitByAnyNode(ctx, log, nodes, CmpIsRunning, cmpFunc)
+	log.Infof("WaitByAnyNode (CmpIsRunning, CpmIsLeader) :: WaitBy for: %s", GetNodeNames(nodes))
+	wait, err := WaitByAnyNode(ctx, log, nodes, CmpIsRunning, CpmIsLeader)
 	if err != nil {
 		return err
 	}
