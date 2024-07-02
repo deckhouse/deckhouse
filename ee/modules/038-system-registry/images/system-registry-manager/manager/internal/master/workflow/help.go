@@ -131,7 +131,7 @@ func CpmIsLeader(nodeClusterStatus *SeaweedfsNodeClusterStatus) bool {
 	return nodeClusterStatus.IsLeader
 }
 
-func WaitBy(ctx context.Context, log *logrus.Entry, nodeManagers []RegistryNodeManager, cmpFuncs ...interface{}) (bool, error) {
+func WaitByAllNodes(ctx context.Context, log *logrus.Entry, nodeManagers []RegistryNodeManager, cmpFuncs ...interface{}) (bool, error) {
 	if len(nodeManagers) == 0 {
 		return true, nil
 	}
@@ -179,6 +179,61 @@ func WaitBy(ctx context.Context, log *logrus.Entry, nodeManagers []RegistryNodeM
 			}
 			if isWaited {
 				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+func WaitByAnyNode(ctx context.Context, log *logrus.Entry, nodeManagers []RegistryNodeManager, cmpFuncs ...interface{}) (bool, error) {
+	if len(nodeManagers) == 0 {
+		return true, nil
+	}
+
+	for i := 0; i < pkg_cfg.MaxRetries; i++ {
+		select {
+		case <-ctx.Done():
+			return false, ctx.Err()
+		default:
+			log.Infof("wait by retry count %d/%d", i, pkg_cfg.MaxRetries)
+			time.Sleep(5 * time.Second)
+
+			nodeManagersCache := NewNodeManagerCache()
+
+			for _, nodeManager := range nodeManagers {
+				isWaited := true
+
+				log.Infof("Checking node manager %s", nodeManager.GetNodeName())
+				if !isWaited {
+					break
+				}
+				for _, cmpFunc := range cmpFuncs {
+					if !isWaited {
+						break
+					}
+
+					switch f := cmpFunc.(type) {
+					case CpmFuncNodeClusterStatus:
+						status, err := nodeManagersCache.GetNodeManagerClusterStatus(nodeManager)
+						if err != nil || status == nil {
+							isWaited = false
+							break
+						}
+						isWaited = isWaited && f(status)
+					case CpmFuncNodeRunningStatus:
+						status, err := nodeManagersCache.GetNodeManagerRunningStatus(nodeManager)
+						if err != nil || status == nil {
+							isWaited = false
+							break
+						}
+						isWaited = isWaited && f(status)
+					default:
+						return false, fmt.Errorf("error, unknown function format: %v", cmpFunc)
+					}
+				}
+				if isWaited {
+					return true, nil
+				}
 			}
 		}
 	}
@@ -350,7 +405,7 @@ func CreateNodes(ctx context.Context, log *logrus.Entry, nodes []RegistryNodeMan
 	}
 	{
 		log.Infof("CreateNodes :: WaitBy for: %s", GetNodeNames(nodes))
-		wait, err := WaitBy(ctx, log, nodes, CmpIsRunning)
+		wait, err := WaitByAllNodes(ctx, log, nodes, CmpIsRunning)
 		if err != nil {
 			return err
 		}
@@ -452,7 +507,7 @@ func RollingUpgradeNodesOld(ctx context.Context, log *logrus.Entry, nodes []Regi
 		}
 
 		log.Infof("RollingUpgradeNodesOld :: WaitBy for: %s", GetNodeNames(nodes))
-		wait, err := WaitBy(ctx, log, []RegistryNodeManager{node}, CmpIsRunning, cpmFuncLeaderElection, cpmFuncNodeConnectToCluster)
+		wait, err := WaitByAllNodes(ctx, log, []RegistryNodeManager{node}, CmpIsRunning, cpmFuncLeaderElection, cpmFuncNodeConnectToCluster)
 		if err != nil {
 			return err
 		}
@@ -483,10 +538,11 @@ func WaitLeaderElectionForNodes(ctx context.Context, log *logrus.Entry, nodes []
 	}
 
 	log.Infof("WaitLeaderElectionForNodes :: WaitBy for: %s", GetNodeNames(nodes))
-	wait, err := WaitBy(ctx, log, nodes, CmpIsRunning, cmpFunc)
+	wait, err := WaitByAnyNode(ctx, log, nodes, CmpIsRunning, cmpFunc)
 	if err != nil {
 		return err
 	}
+
 	if !wait {
 		return fmt.Errorf("error waitig cluster status for nodes: %s", GetNodeNames(nodes))
 	}
@@ -504,7 +560,7 @@ func WaitNodesConnection(ctx context.Context, log *logrus.Entry, leader Registry
 	}
 
 	log.Infof("WaitNodesConnection :: WaitBy for leader: %s, nodesIps: %s", leader.GetNodeName(), nodesIps)
-	wait, err := WaitBy(ctx, log, []RegistryNodeManager{leader}, cmpFunc)
+	wait, err := WaitByAllNodes(ctx, log, []RegistryNodeManager{leader}, cmpFunc)
 	if err != nil {
 		return err
 	}
