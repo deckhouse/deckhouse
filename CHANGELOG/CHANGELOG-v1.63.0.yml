@@ -1,0 +1,9 @@
+dhctl:
+  features:
+    - summary: >-
+        dhctl will now check if required python modules are installed on the node before
+        bootstrapping it
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8867
+    - summary: Add new commander/detach operation, add commander-uuid option for all commander operations
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8746
+
