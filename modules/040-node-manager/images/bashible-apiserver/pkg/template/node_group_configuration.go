@@ -48,7 +48,6 @@ type NodeGroupConfigurationSpec struct {
 	Content    string   `json:"content"`
 	Weight     int      `json:"weight"`
 	NodeGroups []string `json:"nodeGroups"`
-	Bundles    []string `json:"bundles"`
 }
 
 func (ngc NodeGroupConfigurationSpec) IsEqual(newSpec NodeGroupConfigurationSpec) bool {
@@ -61,10 +60,6 @@ func (ngc NodeGroupConfigurationSpec) IsEqual(newSpec NodeGroupConfigurationSpec
 	}
 
 	if slicesIsEqual(ngc.NodeGroups, newSpec.NodeGroups) {
-		return false
-	}
-
-	if slicesIsEqual(ngc.Bundles, newSpec.Bundles) {
 		return false
 	}
 

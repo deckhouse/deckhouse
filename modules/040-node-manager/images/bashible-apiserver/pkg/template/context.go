@@ -594,7 +594,7 @@ func (c *BashibleContext) subscribeOnNodeUserCRD(ctx context.Context, ngConfigFa
 
 func (c *BashibleContext) AddNodeUserConfiguration(nu *NodeUser) {
 	klog.Infof("Adding NodeUser %s to context", nu.Name)
-	ngBundlePairs := generateNgBundlePairs(nu.Spec.NodeGroups, []string{"*"})
+	// ngBundlePairs := generateNgBundlePairs(nu.Spec.NodeGroups, []string{"*"})
 
 	nuc := UserConfiguration{
 		Name: nu.Name,
@@ -603,31 +603,31 @@ func (c *BashibleContext) AddNodeUserConfiguration(nu *NodeUser) {
 
 	c.rw.Lock()
 	defer c.rw.Unlock()
-	for _, ngBundlePair := range ngBundlePairs {
-		if m, ok := c.contextBuilder.nodeUserConfigurations[ngBundlePair]; ok {
+	for _, ng := range nu.Spec.NodeGroups {
+		if m, ok := c.contextBuilder.nodeUserConfigurations[ng]; ok {
 			m = append(m, &nuc)
-			c.contextBuilder.nodeUserConfigurations[ngBundlePair] = m
+			c.contextBuilder.nodeUserConfigurations[ng] = m
 		} else {
-			c.contextBuilder.nodeUserConfigurations[ngBundlePair] = []*UserConfiguration{&nuc}
+			c.contextBuilder.nodeUserConfigurations[ng] = []*UserConfiguration{&nuc}
 		}
 	}
 }
 
 func (c *BashibleContext) RemoveNodeUserConfiguration(nu *NodeUser) {
 	klog.Infof("Removing NodeUser %s from context", nu.Name)
-	ngBundlePairs := generateNgBundlePairs(nu.Spec.NodeGroups, []string{"*"})
+	// ngBundlePairs := generateNgBundlePairs(nu.Spec.NodeGroups, []string{"*"})
 
 	c.rw.Lock()
 	defer c.rw.Unlock()
-	for _, ngBundlePair := range ngBundlePairs {
-		if configs, ok := c.contextBuilder.nodeUserConfigurations[ngBundlePair]; ok {
+	for _, ng := range nu.Spec.NodeGroups {
+		if configs, ok := c.contextBuilder.nodeUserConfigurations[ng]; ok {
 			for i, v := range configs {
 				if v.Name == nu.Name {
 					configs = append(configs[:i], configs[i+1:]...)
 					break
 				}
 			}
-			c.contextBuilder.nodeUserConfigurations[ngBundlePair] = configs
+			c.contextBuilder.nodeUserConfigurations[ng] = configs
 		}
 	}
 }

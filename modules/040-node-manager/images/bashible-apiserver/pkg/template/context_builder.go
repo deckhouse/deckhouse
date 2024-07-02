@@ -41,7 +41,7 @@ type ContextBuilder struct {
 	imagesDigests    map[string]map[string]string // module: { image_name: tag }
 
 	// debug function injection
-	emitStepsOutput func(string, string, map[string]string)
+	emitStepsOutput func(string, map[string]string)
 
 	nodeUserConfigurations map[string][]*UserConfiguration
 }
@@ -107,7 +107,7 @@ func (cb *ContextBuilder) SetInputData(data inputData) {
 	cb.clusterInputData = data
 }
 
-func (cb *ContextBuilder) setStepsOutput(f func(string, string, map[string]string)) {
+func (cb *ContextBuilder) setStepsOutput(f func(string, map[string]string)) {
 	cb.emitStepsOutput = f
 }
 
@@ -157,58 +157,51 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		PackagesProxy: cb.clusterInputData.PackagesProxy,
 	}
 
-	cb.clusterInputData.AllowedBundles = append(cb.clusterInputData.AllowedBundles, "common") // temporary hack for using single bundle boostrap for all bundles
-	for _, bundle := range cb.clusterInputData.AllowedBundles {
-		for _, ng := range cb.clusterInputData.NodeGroups {
-			checksumCollector, ok := hashMap[ng.Name()]
-			if !ok {
-				checksumCollector = sha256.New()
-				hashMap[ng.Name()] = checksumCollector
-			}
-			bundleContextName := fmt.Sprintf("bundle-%s-%s", bundle, ng.Name())
-			bashibleContextName := fmt.Sprintf("bashible-%s-%s", bundle, ng.Name())
-			bundleNgContext := cb.newBundleNGContext(ng, cb.clusterInputData.Freq, bundle, cb.clusterInputData.CloudProvider, commonContext)
-			bb.bashibleContexts[bundleContextName] = bundleNgContext
-
-			bashibleContext, err := cb.newBashibleContext(checksumCollector, bundle, ng, cb.versionMap, &bundleNgContext)
-			if err != nil {
-				errorsMap[bundleContextName] = err
-			}
-			// bashibleContext always exists. Err is only for checksum generation
-			bb.bashibleContexts[bashibleContextName] = bashibleContext
+	for _, ng := range cb.clusterInputData.NodeGroups {
+		checksumCollector, ok := hashMap[ng.Name()]
+		if !ok {
+			checksumCollector = sha256.New()
+			hashMap[ng.Name()] = checksumCollector
 		}
+		bundleContextName := fmt.Sprintf("bundle-%s", ng.Name())
+		bashibleContextName := fmt.Sprintf("bashible-%s", ng.Name())
+		bundleNgContext := cb.newBundleNGContext(ng, cb.clusterInputData.Freq, cb.clusterInputData.CloudProvider, commonContext)
+		bb.bashibleContexts[bundleContextName] = bundleNgContext
 
-		for _, k8sVersion := range cb.clusterInputData.AllowedKubernetesVersions {
-			k8sContextName := fmt.Sprintf("bundle-%s-%s", bundle, k8sVersion)
-			bb.bashibleContexts[k8sContextName] = bundleK8sVersionContext{
-				tplContextCommon:  commonContext,
-				Bundle:            bundle,
-				KubernetesVersion: k8sVersion,
-				CloudProvider:     cb.clusterInputData.CloudProvider,
-			}
+		bashibleContext, err := cb.newBashibleContext(checksumCollector, ng, cb.versionMap, &bundleNgContext)
+		if err != nil {
+			errorsMap[bundleContextName] = err
+		}
+		// bashibleContext always exists. Err is only for checksum generation
+		bb.bashibleContexts[bashibleContextName] = bashibleContext
+	}
+
+	for _, k8sVersion := range cb.clusterInputData.AllowedKubernetesVersions {
+		k8sContextName := fmt.Sprintf("bundle-%s", k8sVersion)
+		bb.bashibleContexts[k8sContextName] = bundleK8sVersionContext{
+			tplContextCommon:  commonContext,
+			KubernetesVersion: k8sVersion,
+			CloudProvider:     cb.clusterInputData.CloudProvider,
 		}
 	}
 
-	for _, bundle := range cb.clusterInputData.AllowedBundles {
-		for _, ng := range cb.clusterInputData.NodeGroups {
-			bashibleContextName := fmt.Sprintf("bashible-%s-%s", bundle, ng.Name())
-			checksumCollector := hashMap[ng.Name()]
-			checksum := fmt.Sprintf("%x", checksumCollector.Sum(nil))
-			bcr := bb.bashibleContexts[bashibleContextName]
-			bc := bcr.(bashibleContext)
-			bc.ConfigurationChecksum = checksum
-			bb.bashibleContexts[bashibleContextName] = bc
-			ngMap[ng.Name()] = []byte(checksum)
-		}
+	for _, ng := range cb.clusterInputData.NodeGroups {
+		bashibleContextName := fmt.Sprintf("bashible-%s", ng.Name())
+		checksumCollector := hashMap[ng.Name()]
+		checksum := fmt.Sprintf("%x", checksumCollector.Sum(nil))
+		bcr := bb.bashibleContexts[bashibleContextName]
+		bc := bcr.(bashibleContext)
+		bc.ConfigurationChecksum = checksum
+		bb.bashibleContexts[bashibleContextName] = bc
+		ngMap[ng.Name()] = []byte(checksum)
 	}
 
 	return bb, ngMap, errorsMap
 }
 
-func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, bundle string, ng nodeGroup, versionMap map[string]interface{}, bundleNgContext *bundleNGContext) (bashibleContext, error) {
+func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, ng nodeGroup, versionMap map[string]interface{}, bundleNgContext *bundleNGContext) (bashibleContext, error) {
 	bc := bashibleContext{
 		KubernetesVersion: ng.KubernetesVersion(),
-		Bundle:            bundle,
 		Normal: map[string]interface{}{
 			"apiserverEndpoints": bundleNgContext.tplContextCommon.Normal.ApiserverEndpoints,
 		},
@@ -263,13 +256,13 @@ func (cb *ContextBuilder) generateBashibleChecksum(checksumCollector hash.Hash, 
 	}
 
 	// render steps
-	steps, err := cb.stepsStorage.Render("all", bc.Bundle, providerType, res)
+	steps, err := cb.stepsStorage.Render("all", providerType, res)
 	if err != nil {
 		return errors.Wrap(err, "steps render failed")
 	}
 
 	if cb.emitStepsOutput != nil {
-		cb.emitStepsOutput(bc.Bundle, bc.NodeGroup.Name(), steps)
+		cb.emitStepsOutput(bc.NodeGroup.Name(), steps)
 	}
 
 	stepsData, err := yaml.Marshal(steps)
@@ -292,13 +285,13 @@ func (cb *ContextBuilder) generateBashibleChecksum(checksumCollector hash.Hash, 
 	}
 
 	// render ng steps
-	ngSteps, err := cb.stepsStorage.Render("node-group", bc.Bundle, providerType, bundleRes, bc.NodeGroup.Name())
+	ngSteps, err := cb.stepsStorage.Render("node-group", providerType, bundleRes, bc.NodeGroup.Name())
 	if err != nil {
 		return errors.Wrap(err, "NG steps render failed")
 	}
 
 	if cb.emitStepsOutput != nil {
-		cb.emitStepsOutput(bc.Bundle, bc.NodeGroup.Name(), ngSteps)
+		cb.emitStepsOutput(bc.NodeGroup.Name(), ngSteps)
 	}
 
 	ngStepsData, err := yaml.Marshal(ngSteps)
@@ -311,10 +304,9 @@ func (cb *ContextBuilder) generateBashibleChecksum(checksumCollector hash.Hash, 
 	return nil
 }
 
-func (cb *ContextBuilder) newBundleNGContext(ng nodeGroup, freq interface{}, bundle string, cloudProvider interface{}, contextCommon *tplContextCommon) bundleNGContext {
+func (cb *ContextBuilder) newBundleNGContext(ng nodeGroup, freq interface{}, cloudProvider interface{}, contextCommon *tplContextCommon) bundleNGContext {
 	return bundleNGContext{
 		tplContextCommon:          contextCommon,
-		Bundle:                    bundle,
 		KubernetesVersion:         ng.KubernetesVersion(),
 		CRI:                       ng.CRIType(),
 		NodeGroup:                 ng,
@@ -437,7 +429,6 @@ func (ng nodeGroup) CRIType() string {
 type bashibleContext struct {
 	ConfigurationChecksum string      `json:"configurationChecksum" yaml:"configurationChecksum"`
 	KubernetesVersion     string      `json:"kubernetesVersion" yaml:"kubernetesVersion"`
-	Bundle                string      `json:"bundle" yaml:"bundle"`
 	Normal                interface{} `json:"normal" yaml:"normal"`
 	NodeGroup             nodeGroup   `json:"nodeGroup" yaml:"nodeGroup"`
 	RunType               string      `json:"runType" yaml:"runType"` // Normal
@@ -499,7 +490,6 @@ type tplContextCommon struct {
 type bundleNGContext struct {
 	*tplContextCommon
 
-	Bundle            string      `json:"bundle" yaml:"bundle"`
 	KubernetesVersion string      `json:"kubernetesVersion" yaml:"kubernetesVersion"`
 	CRI               string      `json:"cri" yaml:"cri"`
 	NodeGroup         nodeGroup   `json:"nodeGroup" yaml:"nodeGroup"`
@@ -513,7 +503,6 @@ type bundleNGContext struct {
 type bundleK8sVersionContext struct {
 	*tplContextCommon
 
-	Bundle            string `json:"bundle" yaml:"bundle"`
 	KubernetesVersion string `json:"kubernetesVersion" yaml:"kubernetesVersion"`
 
 	CloudProvider interface{} `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`

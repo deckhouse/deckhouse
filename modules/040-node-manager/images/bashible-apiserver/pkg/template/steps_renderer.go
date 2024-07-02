@@ -17,7 +17,6 @@ limitations under the License.
 package template
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -53,11 +52,7 @@ func (s StepsRenderer) Render(name string, ng ...string) (map[string]string, err
 		return nil, err
 	}
 
-	bundle, ok := templateContext["bundle"].(string)
-	if !ok {
-		return nil, errors.New("expected string in templateContext[\"bundle\"]")
-	}
-	return s.stepsStorage.Render(s.target, bundle, providerType, templateContext, ng...)
+	return s.stepsStorage.Render(s.target, providerType, templateContext, ng...)
 }
 
 func (s StepsRenderer) getContext(name string) (map[string]interface{}, error) {
