@@ -86,8 +86,8 @@ spec:
           - --allow-untagged-cloud=true
           - --configure-cloud-routes=false
           - --controllers=cloud-node,cloud-node-lifecycle
-          - --bind-address=$(HOST_IP)
-          - --secure-port=0
+          - --bind-address=127.0.0.1
+          - --secure-port=10471
           - --v=4
           env:
       # KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make CCM work without kube-proxy
@@ -108,12 +108,14 @@ spec:
           livenessProbe:
             httpGet:
               path: /healthz
-              port: https
+              port: 10471
+              host: 127.0.0.1
               scheme: HTTPS
           readinessProbe:
             httpGet:
               path: /healthz
-              port: https
+              port: 10471
+              host: 127.0.0.1
               scheme: HTTPS
           volumeMounts:
             - name: ccm-controller-config-volume
