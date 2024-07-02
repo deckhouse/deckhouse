@@ -483,7 +483,7 @@ func RollingUpgradeNodesOld(ctx context.Context, log *logrus.Entry, nodes []Regi
 			log.Infof("Checking if node %s is connected to cluster: %t", node.GetNodeName(), connected) // ## CHANGED ##
 			return connected
 		}
-		
+
 		log.Infof("RollingUpgradeNodesOld :: WaitLeaderElectionForNodes for: %s", GetNodeNames(nodes))
 		err = WaitLeaderElectionForNodes(ctx, log, []RegistryNodeManager{node})
 		if err != nil {
