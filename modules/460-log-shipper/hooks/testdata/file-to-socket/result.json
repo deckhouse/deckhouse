@@ -8,12 +8,12 @@
     }
   },
   "transforms": {
-    "transform/destination/test-vector-dest/00_del_parsed_data": {
+    "transform/destination/test-socket2-dest/00_syslog_encoding": {
       "drop_on_abort": false,
       "inputs": [
         "transform/source/test-source/01_local_timezone"
       ],
-      "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
+      "source": "if !exists(.syslog.severity) {\n  .syslog.severity = 6;\n} else if is_string(.syslog.severity) {\n  .syslog.severity = to_syslog_severity!(.syslog.severity);\n} else {\n  .syslog.severity = 6;\n};\n\npri = 1 * 8 + .syslog.severity;\n\n., err = join([\n  \"\u003c\" + to_string(pri) + \"\u003e\" + \"1\",     # \u003cpri\u003eversion\n  to_string!(.timestamp),\n  to_string!(.kubernetes.pod_name || .hostname || \"${VECTOR_SELF_NODE_NAME}\"),\n  to_string!(.app || .kubernetes.labels.app || .syslog.app || \"-\"),\n  \"-\", # procid\n  to_string!(.syslog.message_id || \"-\"), # msgid\n  \"-\", # structured-data\n  decode_base16!(\"EFBBBF\") + to_string!(.message || encode_json(.)) # msg\n], separator: \" \")\n\nif err != null {\n  log(\"Unable to construct syslog message for event:\" + err + \". Dropping invalid event: \" + encode_json(.), level: \"error\", rate_limit_secs: 10)\n}",
       "type": "remap"
     },
     "transform/source/test-source/00_clean_up": {
@@ -34,20 +34,39 @@
     }
   },
   "sinks": {
-    "destination/cluster/test-vector-dest": {
-      "type": "vector",
+    "destination/cluster/test-socket1-dest": {
+      "type": "socket",
       "inputs": [
-        "transform/destination/test-vector-dest/00_del_parsed_data"
+        "transform/source/test-source/01_local_timezone"
       ],
       "healthcheck": {
         "enabled": false
       },
-      "version": "2",
+      "encoding": {
+        "codec": "json",
+        "timestamp_format": "rfc3339"
+      },
+      "mode": "tcp",
       "address": "192.168.1.1:9200",
       "tls": {
         "verify_hostname": false,
-        "verify_certificate": false
+        "verify_certificate": true
       }
+    },
+    "destination/cluster/test-socket2-dest": {
+      "type": "socket",
+      "inputs": [
+        "transform/destination/test-socket2-dest/00_syslog_encoding"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "encoding": {
+        "codec": "text",
+        "timestamp_format": "rfc3339"
+      },
+      "mode": "udp",
+      "address": "192.168.1.1:3000"
     }
   }
 }

@@ -1,5 +1,5 @@
 /*
-Copyright 2022 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,19 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package transform
 
-const (
-	DestElasticsearch = "Elasticsearch"
-	DestLogstash      = "Logstash"
-	DestLoki          = "Loki"
-	DestVector        = "Vector"
-	DestKafka         = "Kafka"
-	DestSplunk        = "Splunk"
-	DestSocket        = "Socket"
+import (
+	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
-const (
-	SourceKubernetesPods = "KubernetesPods"
-	SourceFile           = "File"
-)
+func SyslogEncoding() *DynamicTransform {
+	return &DynamicTransform{
+		CommonTransform: CommonTransform{
+			Name:   "syslog_encoding",
+			Type:   "remap",
+			Inputs: set.New(),
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"source":        vrl.SyslogEncodingRule.String(),
+			"drop_on_abort": false,
+		},
+	}
+}

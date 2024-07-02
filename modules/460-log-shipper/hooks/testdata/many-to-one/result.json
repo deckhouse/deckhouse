@@ -91,8 +91,8 @@
       "version": "2",
       "address": "192.168.1.1:9200",
       "tls": {
-        "verify_certificate": false,
-        "verify_hostname": false
+        "verify_hostname": false,
+        "verify_certificate": false
       }
     }
   }

@@ -1,0 +1,42 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: test-source
+spec:
+  type: File
+  file:
+    include:
+      - /var/log/kube-audit/audit.log
+  destinationRefs:
+    - test-socket1-dest
+    - test-socket2-dest
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: test-socket1-dest
+spec:
+  type: Socket
+  socket:
+    address: 192.168.1.1:9200
+    mode: TCP
+    encoding:
+      codec: JSON
+    tcp:
+      tls:
+        verifyCertificate: true
+        verifyHostname: false
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: test-socket2-dest
+spec:
+  type: Socket
+  socket:
+    address: 192.168.1.1:3000
+    mode: UDP
+    encoding:
+      codec: Syslog

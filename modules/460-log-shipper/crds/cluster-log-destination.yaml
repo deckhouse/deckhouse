@@ -77,10 +77,18 @@ spec:
                   required:
                     - type
                     - splunk
+                - properties:
+                    socket: {}
+                    type:
+                      enum:
+                        - Socket
+                  required:
+                  - type
+                  - socket
               properties:
                 type:
                   type: string
-                  enum: ["Loki", "Elasticsearch", "Logstash", "Vector", "Kafka", "Splunk"]
+                  enum: ["Loki", "Elasticsearch", "Logstash", "Vector", "Kafka", "Splunk", "Socket"]
                   description: Type of a log storage backend.
                 loki:
                   type: object
@@ -509,6 +517,74 @@ spec:
                           type: boolean
                           default: true
                           description: Validate the TLS certificate of the remote host.
+                socket:
+                  type: object
+                  required:
+                    - address
+                    - mode
+                  properties:
+                    address:
+                      type: string
+                      pattern: '^.*:[1-9][0-9]+$'
+                      description: "Address of the socket."
+                    encoding:
+                      type: object
+                      description: "How to encode the message."
+                      properties:
+                        codec:
+                          type: string
+                          enum: ["Text", "JSON", "Syslog", "CEF"]
+                          default: "JSON"
+                    mode:
+                      type: string
+                      enum: ["TCP", "UDP"]
+                      descriptions: "The type of socket to use."
+                    tcp:
+                      type: object
+                      descriptions: "Configuration for TCP sockets."
+                      properties:
+                        tls:
+                          type: object
+                          description: Configures the TLS options for outgoing connections.
+                          properties:
+                            caFile:
+                              type: string
+                              description: Base64-encoded CA certificate in PEM format.
+                            clientCrt:
+                              type: object
+                              description: Configures the client certificate for outgoing connections.
+                              required:
+                                - crtFile
+                                - keyFile
+                              properties:
+                                crtFile:
+                                  type: string
+                                  description: |
+                                    Base64-encoded certificate in PEM format.
+
+                                    You must also set the `keyFile` parameter.
+                                keyFile:
+                                  type: string
+                                  format: password
+                                  description: |
+                                    Base64-encoded private key in PEM format (PKCS#8).
+
+                                    You must also set the `crtFile` parameter.
+                                keyPass:
+                                  type: string
+                                  format: string
+                                  description: Base64-encoded pass phrase used to unlock the encrypted key file.
+                        verifyHostname:
+                          type: boolean
+                          default: true
+                          description: Verifies that the name of the remote host matches the name specified in the remote host's TLS certificate.
+                        verifyCertificate:
+                          type: boolean
+                          default: true
+                          description: |
+                            Validate the TLS certificate of the remote host.
+
+                            If set to `false`, the certificate is not checked in the Certificate Revocation Lists.
                 vector:
                   type: object
                   required:
