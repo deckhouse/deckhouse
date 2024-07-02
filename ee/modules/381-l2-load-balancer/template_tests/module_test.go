@@ -25,6 +25,9 @@ loadBalancerClass: my-lb-class
 internal:
   l2loadbalancers:
     - name: main-a
+      interfaces:
+      - eth0
+      - eth1
       addressPool:
       - 192.168.199.100-192.168.199.110
       nodeSelector:
@@ -54,6 +57,30 @@ var _ = Describe("Module :: l2LoadBalancer :: helm template ::", func() {
 
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ipAddressPool := f.KubernetesResource("IPAddressPool", "d8-l2-load-balancer", "main-a")
+			Expect(ipAddressPool.Exists()).To(BeTrue())
+			Expect(ipAddressPool.Field("spec").String()).To(MatchYAML(`
+addresses:
+- 192.168.199.100-192.168.199.110
+autoAssign: true
+`))
+
+			ipAdv := f.KubernetesResource("L2Advertisement", "d8-l2-load-balancer", "main-a")
+			Expect(ipAdv.Exists()).To(BeTrue())
+			Expect(ipAdv.Field("spec").String()).To(MatchYAML(`
+interfaces:
+- eth0
+- eth1
+ipAddressPools:
+- main-a
+nodeSelectors:
+- matchLabels:
+    node-role.kubernetes.io/worker: ""
+`))
+
+			dsSpeaker := f.KubernetesResource("DaemonSet", "d8-l2-load-balancer", "speaker")
+			Expect(dsSpeaker.Exists()).To(BeTrue())
 		})
 	})
 })

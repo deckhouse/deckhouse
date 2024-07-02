@@ -5,7 +5,7 @@ title: "The l2-load-balancer module: examples"
 ## Publishing an application via L2LoadBalancer
 
 {% raw %}
-* Configure the module:
+* Enable   the module:
 
   ```yaml
   apiVersion: deckhouse.io/v1alpha1
@@ -15,7 +15,7 @@ title: "The l2-load-balancer module: examples"
   spec:
     enabled: true
     settings:
-      loadBalancerClass: l2-class
+      loadBalancerClass: l2-class #optional
     version: 1
   ```
 
@@ -50,17 +50,17 @@ title: "The l2-load-balancer module: examples"
       network.deckhouse.io/l2-load-balancer-name: ingress
       network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
   spec:
+    type: LoadBalancer
+    loadBalancerClass: l2-class
     ports:
     - port: 8000
       protocol: TCP
       targetPort: 80
     selector:
       app: nginx
-    type: LoadBalancer
-    loadBalancerClass: l2-class
   ```
 
-  As a result, the created Service with the type `LoadBalancer` will be assigned the specified number of addresses.:
+  As a result, the created Service with the type `LoadBalancer` will be assigned the specified number of addresses:
 
   ```shell
   $ kubectl get svc

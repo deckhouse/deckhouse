@@ -137,23 +137,23 @@ func handleLoadBalancers(input *go_hook.HookInput) error {
 		}
 
 		if service.AnnotationIsMissed {
-			input.LogEntry.Warnf("Annotation with L2LoadBalancer is missed for service %s in namespace %s", service.Name, service.Namespace)
+			input.LogEntry.Warnf("Annotation %s is missed for service %s in namespace %s", keyAnnotationL2BalancerName, service.Name, service.Namespace)
 			continue
 		}
 
 		l2lb, exists := l2loadbalancers[service.L2LoadBalancerName]
 		if !exists {
-			// L2LoadBalancer is not founded by name
+			// L2LoadBalancer is not found by name
 			continue
 		}
 
-		nodes := getNodesByNodeSelector(l2lb.NodeSelector, input.Snapshots["nodes"])
+		nodes := getNodesByLoadBalancer(l2lb, input.Snapshots["nodes"])
 		if len(nodes) == 0 {
 			// There is no node that matches the specified node selector.
 			continue
 		}
 
-		for i := 1; i <= service.ExternalIPsCount; i++ {
+		for i := 0; i < service.ExternalIPsCount; i++ {
 			nodeIndex := i % len(nodes)
 			l2lbservices = append(l2lbservices, L2LBServiceConfig{
 				Name:              fmt.Sprintf("%s-%s-%d", service.Name, l2lb.Name, i),

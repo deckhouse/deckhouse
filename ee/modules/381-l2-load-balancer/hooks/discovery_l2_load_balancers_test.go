@@ -106,7 +106,7 @@ spec:
 			Expect(f.ValuesGet("l2LoadBalancer.internal.l2lbservices").String()).To(MatchJSON(`
 [
           {
-            "name": "nginx-ingress-1",
+            "name": "nginx-ingress-0",
             "namespace": "nginx",
 			"serviceName": "nginx",
             "serviceNamespace": "nginx",
@@ -125,7 +125,7 @@ spec:
             }
           },
           {
-            "name": "nginx-ingress-2",
+            "name": "nginx-ingress-1",
             "namespace": "nginx",
 			"serviceName": "nginx",
             "serviceNamespace": "nginx",
@@ -144,7 +144,7 @@ spec:
             }
           },
           {
-            "name": "nginx-ingress-3",
+            "name": "nginx-ingress-2",
             "namespace": "nginx",
 			"serviceName": "nginx",
             "serviceNamespace": "nginx",

@@ -5,7 +5,7 @@ title: "The l2-load-balancer module: примеры"
 ## Публикация сервиса через L2LoadBalancer
 
 {% raw %}
-* Настройте модуль:
+* Включите модуль:
 
   ```yaml
   apiVersion: deckhouse.io/v1alpha1
@@ -15,7 +15,7 @@ title: "The l2-load-balancer module: примеры"
   spec:
     enabled: true
     settings:
-      loadBalancerClass: l2-class
+      loadBalancerClass: l2-class #опционально
     version: 1
   ```
 
@@ -50,14 +50,14 @@ title: "The l2-load-balancer module: примеры"
       network.deckhouse.io/l2-load-balancer-name: ingress
       network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
   spec:
+    type: LoadBalancer
+    loadBalancerClass: l2-class
     ports:
     - port: 8000
       protocol: TCP
       targetPort: 80
     selector:
       app: nginx
-    type: LoadBalancer
-    loadBalancerClass: l2-class
   ```
 
   В результате, созданному сервису с типом `LoadBalancer` будут присвоены адреса в заданном количестве:

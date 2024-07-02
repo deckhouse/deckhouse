@@ -6,6 +6,10 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"sort"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
@@ -64,8 +68,8 @@ func applyLoadBalancerLabelFilter(obj *unstructured.Unstructured) (go_hook.Filte
 }
 
 func handleLabelsUpdate(input *go_hook.HookInput) error {
-	alreadyLabeledNodes := getLabeledNodes(input.Snapshots["nodes"])
-	needToBeLabeledNodes := make([]NodeInfo, 0, 4)
+	actualLabeledNodes := getLabeledNodes(input.Snapshots["nodes"])
+	desiredLabeledNodes := make([]NodeInfo, 0, 4)
 
 	for _, l2lbSnap := range input.Snapshots["l2loadbalancers"] {
 		l2lbInfo, ok := l2lbSnap.(L2LoadBalancerInfo)
@@ -73,15 +77,15 @@ func handleLabelsUpdate(input *go_hook.HookInput) error {
 			continue
 		}
 
-		nodes := getNodesByNodeSelector(l2lbInfo.NodeSelector, input.Snapshots["nodes"])
+		nodes := getNodesByLoadBalancer(l2lbInfo, input.Snapshots["nodes"])
 		if len(nodes) == 0 {
 			// There is no node that matches the specified node selector.
 			continue
 		}
-		needToBeLabeledNodes = append(needToBeLabeledNodes, nodes...)
+		desiredLabeledNodes = appendUniq(desiredLabeledNodes, nodes...)
 	}
 
-	nodesToUnlabel, nodesToLabel := calcDifferenceForNodes(alreadyLabeledNodes, needToBeLabeledNodes)
+	nodesToUnlabel, nodesToLabel := calcDifferenceForNodes(actualLabeledNodes, desiredLabeledNodes)
 
 	for _, node := range nodesToUnlabel {
 		labelsPatch := map[string]interface{}{
@@ -122,14 +126,22 @@ func getLabeledNodes(snapshot []go_hook.FilterResult) []NodeInfo {
 	return result
 }
 
-func getNodesByNodeSelector(nodeSelector map[string]string, snapshot []go_hook.FilterResult) []NodeInfo {
+func getNodesByLoadBalancer(lb L2LoadBalancerInfo, snapshot []go_hook.FilterResult) []NodeInfo {
 	nodes := make([]NodeInfo, 0, 4)
 	for _, nodeSnap := range snapshot {
 		node := nodeSnap.(NodeInfo)
-		if nodeMatchesNodeSelector(node.Labels, nodeSelector) {
+		if nodeMatchesNodeSelector(node.Labels, lb.NodeSelector) {
 			nodes = append(nodes, node)
 		}
 	}
+
+	//Sort using hashing and the LoadBalancer name to avoid always occupying the first node in the usual order.
+	//For example: 5 frontend-nodes sorted in alphabet order, 10 LB with number of IPs equal 1, and frontend-0 will be busy
+	sort.Slice(nodes, func(i, j int) bool {
+		hi := sha256.Sum256([]byte(lb.Name + "#" + nodes[i].Name))
+		hj := sha256.Sum256([]byte(lb.Name + "#" + nodes[j].Name))
+		return bytes.Compare(hi[:], hj[:]) < 0
+	})
 	return nodes
 }
 
@@ -147,28 +159,44 @@ func nodeMatchesNodeSelector(nodeLabels, selectorLabels map[string]string) bool 
 }
 
 func calcDifferenceForNodes(nodesLabeled, nodesNeeded []NodeInfo) ([]NodeInfo, []NodeInfo) {
-	left := []NodeInfo{}
-	right := []NodeInfo{}
+	nodesToUnlabel := []NodeInfo{}
+	nodesToLabel := []NodeInfo{}
 
-	seenLeft := map[string]struct{}{}
-	seenRight := map[string]struct{}{}
+	actualLabeledNodesMap := map[string]struct{}{}
+	desiredLabeledNodesMap := map[string]struct{}{}
 
 	for _, node := range nodesLabeled {
-		seenLeft[node.Name] = struct{}{}
+		actualLabeledNodesMap[node.Name] = struct{}{}
 	}
 	for _, node := range nodesNeeded {
-		seenRight[node.Name] = struct{}{}
+		desiredLabeledNodesMap[node.Name] = struct{}{}
 	}
 	for _, node := range nodesLabeled {
-		if _, exists := seenRight[node.Name]; !exists {
-			left = append(left, node)
+		if _, exists := desiredLabeledNodesMap[node.Name]; !exists {
+			nodesToUnlabel = append(nodesToUnlabel, node)
 		}
 	}
 
 	for _, node := range nodesNeeded {
-		if _, exists := seenLeft[node.Name]; !exists {
-			right = append(right, node)
+		if _, exists := actualLabeledNodesMap[node.Name]; !exists {
+			nodesToLabel = append(nodesToLabel, node)
 		}
 	}
-	return left, right
+	return nodesToUnlabel, nodesToLabel
+}
+
+func appendUniq(existingNodes []NodeInfo, nodes ...NodeInfo) []NodeInfo {
+	existingNodesMap := make(map[string]struct{})
+	result := existingNodes[:]
+	for _, node := range existingNodes {
+		existingNodesMap[node.Name] = struct{}{}
+	}
+
+	for _, node := range nodes {
+		if _, exists := existingNodesMap[node.Name]; !exists {
+			result = append(result, node)
+			existingNodesMap[node.Name] = struct{}{}
+		}
+	}
+	return result
 }
