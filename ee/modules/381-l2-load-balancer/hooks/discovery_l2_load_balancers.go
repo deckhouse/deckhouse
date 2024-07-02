@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -127,6 +128,7 @@ func applyLoadBalancerFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func handleLoadBalancers(input *go_hook.HookInput) error {
+	input.MetricsCollector.Expire("d8_l2_load_balancer")
 	l2lbservices := make([]L2LBServiceConfig, 0, 4)
 	l2loadbalancers := makeL2LoadBalancersMapFromSnapshot(input.Snapshots["l2loadbalancers"])
 
@@ -144,6 +146,7 @@ func handleLoadBalancers(input *go_hook.HookInput) error {
 		l2lb, exists := l2loadbalancers[service.L2LoadBalancerName]
 		if !exists {
 			// L2LoadBalancer is not found by name
+			input.MetricsCollector.Set("d8_l2_load_balancer_irrelevant_service", 1, map[string]string{"namespace": service.Namespace, "name": service.Name}, metrics.WithGroup("d8_l2_load_balancer"))
 			continue
 		}
 
