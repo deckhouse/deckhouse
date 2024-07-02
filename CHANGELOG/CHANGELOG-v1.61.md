@@ -38,6 +38,8 @@
  - **[candi]** Set `LC_NUMERIC` in configure kubelet. [#8383](https://github.com/deckhouse/deckhouse/pull/8383)
  - **[cloud-provider-vcd]** Support catalog in instance class template [#8539](https://github.com/deckhouse/deckhouse/pull/8539)
  - **[cloud-provider-yandex]** Fix typo in label key in discoverer. [#8792](https://github.com/deckhouse/deckhouse/pull/8792)
+ - **[deckhouse-controller]** Fix kubectl version detection in `kubectl_wrapper.sh`. [#8829](https://github.com/deckhouse/deckhouse/pull/8829)
+ - **[dhctl]** Fix ssh tunneling preflight check not triggering when TCP forwarding is disabled [#8857](https://github.com/deckhouse/deckhouse/pull/8857)
  - **[dhctl]** Fix working with registries on non-standard ports. [#8809](https://github.com/deckhouse/deckhouse/pull/8809)
  - **[dhctl]** Fix registry path calculation. [#8802](https://github.com/deckhouse/deckhouse/pull/8802)
  - **[dhctl]** Fix bootstrap cluster. [#8787](https://github.com/deckhouse/deckhouse/pull/8787)
