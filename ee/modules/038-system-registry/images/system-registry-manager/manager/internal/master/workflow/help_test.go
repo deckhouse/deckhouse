@@ -242,7 +242,7 @@ func TestWaitBy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := WaitBy(context.Background(), logrus.NewEntry(logrus.New()), tt.nodeManagers, tt.cmpFuncs...)
+			result, err := WaitByAllNodes(context.Background(), logrus.NewEntry(logrus.New()), tt.nodeManagers, tt.cmpFuncs...)
 
 			assert.Equal(t, tt.expError, err)
 			assert.Equal(t, tt.expResult, result)
