@@ -18,10 +18,10 @@ package workflow
 // 	log               *logrus.Entry
 // 	ctx               context.Context
 // 	ExpectedNodeCount int
-// 	NodeManagers      []NodeManager
+// 	NodeManagers      []RegistryNodeManager
 // }
 
-// func NewSeaweedfsScaleWorkflow(ctx context.Context, nodeManagers []NodeManager, expectedNodeCount int) *SeaweedfsScaleWorkflow {
+// func NewSeaweedfsScaleWorkflow(ctx context.Context, nodeManagers []RegistryNodeManager, expectedNodeCount int) *SeaweedfsScaleWorkflow {
 // 	log := pkg_logs.GetLoggerFromContext(ctx)
 // 	return &SeaweedfsScaleWorkflow{
 // 		log:               log,
@@ -56,7 +56,7 @@ package workflow
 // 	}
 
 // 	realNodesNames := make([]string, 0, len(realClusterNodes))
-// 	deleteNodes := []NodeManager{}
+// 	deleteNodes := []RegistryNodeManager{}
 
 // 	for _, realNode := range realClusterNodes {
 // 		realNodesNames = append(realNodesNames, realNode.GetNodeName())
@@ -71,7 +71,7 @@ package workflow
 // 	return w.deleteNodes(deleteNodes)
 // }
 
-// func (w *SeaweedfsScaleWorkflow) needCluster(clusterNodes []NodeManager) ([]NodeManager, error) {
+// func (w *SeaweedfsScaleWorkflow) needCluster(clusterNodes []RegistryNodeManager) ([]RegistryNodeManager, error) {
 // 	w.log.Infof("Ensuring cluster for nodes: %s", GetNodeNames(clusterNodes))
 // 	existNodes, _, err := SelectBy(clusterNodes, CmpIsExist)
 // 	if err != nil {
@@ -92,7 +92,7 @@ package workflow
 // 	return w.scaleCluster(clusterNodes)
 // }
 
-// func (w *SeaweedfsScaleWorkflow) scaleCluster(allClusterNodes []NodeManager) ([]NodeManager, error) {
+// func (w *SeaweedfsScaleWorkflow) scaleCluster(allClusterNodes []RegistryNodeManager) ([]RegistryNodeManager, error) {
 // 	runningNodes, notRunningNodes, err := SelectBy(allClusterNodes, CmpIsRunning)
 // 	if err != nil {
 // 		return nil, err
@@ -180,7 +180,7 @@ package workflow
 // 			return newIPsInCluster
 // 		}
 
-// 		wait, err := WaitBy(w.ctx, w.log, []NodeManager{leader}, cpmFunc)
+// 		wait, err := WaitBy(w.ctx, w.log, []RegistryNodeManager{leader}, cpmFunc)
 // 		if err != nil {
 // 			return nil, err
 // 		}
@@ -214,7 +214,7 @@ package workflow
 // 		var cpmFunc CpmFuncNodeClusterStatus = func(status *SeaweedfsNodeClusterStatus) bool {
 // 			return pkg_utils.IsStringInSlice(nodeIP, &status.ClusterNodesIPs)
 // 		}
-// 		wait, err := WaitBy(w.ctx, w.log, []NodeManager{runningNode}, CmpIsRunning, cpmFunc)
+// 		wait, err := WaitBy(w.ctx, w.log, []RegistryNodeManager{runningNode}, CmpIsRunning, cpmFunc)
 // 		if err != nil {
 // 			return nil, err
 // 		}
@@ -239,7 +239,7 @@ package workflow
 // 	return append(runningNodes, notRunningNodes...), nil
 // }
 
-// func (w *SeaweedfsScaleWorkflow) createCluster(clusterNodes []NodeManager) error {
+// func (w *SeaweedfsScaleWorkflow) createCluster(clusterNodes []RegistryNodeManager) error {
 // 	w.log.Infof("Creating new cluster with nodes: %s", GetNodeNames(clusterNodes))
 // 	createRequest := SeaweedfsCreateNodeRequest{
 // 		MasterPeers: make([]string, 0, len(clusterNodes)),
@@ -297,11 +297,11 @@ package workflow
 // 	return nil
 // }
 
-// func (w *SeaweedfsScaleWorkflow) checkAndSyncCluster(clusterNodes []NodeManager) error {
+// func (w *SeaweedfsScaleWorkflow) checkAndSyncCluster(clusterNodes []RegistryNodeManager) error {
 // 	return nil
 // }
 
-// func (w *SeaweedfsScaleWorkflow) getCurrentClustersMembers(clusterNodes []NodeManager) ([]ClusterMembers, error) {
+// func (w *SeaweedfsScaleWorkflow) getCurrentClustersMembers(clusterNodes []RegistryNodeManager) ([]ClusterMembers, error) {
 // 	w.log.Infof("Get clusters members")
 // 	clustersMembers, err := GetClustersMembers(clusterNodes)
 // 	if clustersMembers != nil {
@@ -310,13 +310,13 @@ package workflow
 // 	return clustersMembers, err
 // }
 
-// func (w *SeaweedfsScaleWorkflow) getClustersLeaders(clusterNodes []NodeManager) ([]NodeManager, error) {
+// func (w *SeaweedfsScaleWorkflow) getClustersLeaders(clusterNodes []RegistryNodeManager) ([]RegistryNodeManager, error) {
 // 	w.log.Infof("Get clusters leaders")
 // 	clustersMembers, err := w.getCurrentClustersMembers(clusterNodes)
 // 	if err != nil {
 // 		return nil, err
 // 	}
-// 	leaders := []NodeManager{}
+// 	leaders := []RegistryNodeManager{}
 
 // 	if clustersMembers == nil {
 // 		return leaders, nil
@@ -330,7 +330,7 @@ package workflow
 // 	return leaders, nil
 // }
 
-// func (w *SeaweedfsScaleWorkflow) getNewAndUnusedClusterIP(clusterNodes []NodeManager) ([]string, []string, error) {
+// func (w *SeaweedfsScaleWorkflow) getNewAndUnusedClusterIP(clusterNodes []RegistryNodeManager) ([]string, []string, error) {
 // 	leaders, err := w.getClustersLeaders(clusterNodes)
 // 	if err != nil {
 // 		return nil, nil, err
@@ -373,7 +373,7 @@ package workflow
 // 	return ipsFromCurrentNodes, unUsedIPs, nil
 // }
 
-// func (w *SeaweedfsScaleWorkflow) deleteNodes(nodes []NodeManager) error {
+// func (w *SeaweedfsScaleWorkflow) deleteNodes(nodes []RegistryNodeManager) error {
 // 	w.log.Infof("Deleting nodes %s", GetNodeNames(nodes))
 // 	for _, node := range nodes {
 // 		status, err := node.GetNodeRunningStatus()

@@ -26,8 +26,8 @@ type CpmFuncNodeClusterStatus = func(*SeaweedfsNodeClusterStatus) bool
 type CpmFuncNodeRunningStatus = func(*SeaweedfsNodeRunningStatus) bool
 
 type ClusterMembers struct {
-	Members []NodeManager
-	Leader  NodeManager
+	Members []RegistryNodeManager
+	Leader  RegistryNodeManager
 }
 
 type NodeManagerCache struct {
@@ -59,7 +59,7 @@ func (cache *NodeManagerCache) loadNodeStatus(nodeName string, nodeStatus NodeSt
 	cache.data[nodeName] = nodeStatus
 }
 
-func (cache *NodeManagerCache) GetNodeManagerRunningStatus(nodeManager NodeManager) (*SeaweedfsNodeRunningStatus, error) {
+func (cache *NodeManagerCache) GetNodeManagerRunningStatus(nodeManager RegistryNodeManager) (*SeaweedfsNodeRunningStatus, error) {
 	nodeName := nodeManager.GetNodeName()
 	status := cache.getNodeStatus(nodeName)
 
@@ -75,7 +75,7 @@ func (cache *NodeManagerCache) GetNodeManagerRunningStatus(nodeManager NodeManag
 	return runningStatus, nil
 }
 
-func (cache *NodeManagerCache) GetNodeManagerClusterStatus(nodeManager NodeManager) (*SeaweedfsNodeClusterStatus, error) {
+func (cache *NodeManagerCache) GetNodeManagerClusterStatus(nodeManager RegistryNodeManager) (*SeaweedfsNodeClusterStatus, error) {
 	nodeName := nodeManager.GetNodeName()
 	status := cache.getNodeStatus(nodeName)
 
@@ -91,7 +91,7 @@ func (cache *NodeManagerCache) GetNodeManagerClusterStatus(nodeManager NodeManag
 	return clusterStatus, nil
 }
 
-func (cache *NodeManagerCache) GetNodeManagerIP(nodeManager NodeManager) (*string, error) {
+func (cache *NodeManagerCache) GetNodeManagerIP(nodeManager RegistryNodeManager) (*string, error) {
 	nodeName := nodeManager.GetNodeName()
 	status := cache.getNodeStatus(nodeName)
 
@@ -131,11 +131,7 @@ func CpmIsLeader(nodeClusterStatus *SeaweedfsNodeClusterStatus) bool {
 	return nodeClusterStatus.IsLeader
 }
 
-func CpmIsNotLeader(nodeClusterStatus *SeaweedfsNodeClusterStatus) bool {
-	return !nodeClusterStatus.IsLeader
-}
-
-func WaitBy(ctx context.Context, log *logrus.Entry, nodeManagers []NodeManager, cmpFuncs ...interface{}) (bool, error) {
+func WaitBy(ctx context.Context, log *logrus.Entry, nodeManagers []RegistryNodeManager, cmpFuncs ...interface{}) (bool, error) {
 	if len(nodeManagers) == 0 {
 		return true, nil
 	}
@@ -152,6 +148,7 @@ func WaitBy(ctx context.Context, log *logrus.Entry, nodeManagers []NodeManager, 
 			nodeManagersCache := NewNodeManagerCache()
 
 			for _, nodeManager := range nodeManagers {
+				log.Infof("Checking node manager %s", nodeManager.GetNodeName())
 				if !isWaited {
 					break
 				}
@@ -188,14 +185,14 @@ func WaitBy(ctx context.Context, log *logrus.Entry, nodeManagers []NodeManager, 
 	return false, nil
 }
 
-func SelectBy(nodeManagers []NodeManager, cmpFuncs ...interface{}) ([]NodeManager, []NodeManager, error) {
+func SelectBy(nodeManagers []RegistryNodeManager, cmpFuncs ...interface{}) ([]RegistryNodeManager, []RegistryNodeManager, error) {
 	if len(nodeManagers) == 0 {
-		return []NodeManager{}, []NodeManager{}, nil
+		return nil, nil, nil
 	}
 
 	nodeManagersCache := NewNodeManagerCache()
-	selectedNodes := []NodeManager{}
-	otherNodes := []NodeManager{}
+	var selectedNodes []RegistryNodeManager
+	var otherNodes []RegistryNodeManager
 
 	for _, nodeManager := range nodeManagers {
 		isSelected := true
@@ -238,18 +235,18 @@ func SelectBy(nodeManagers []NodeManager, cmpFuncs ...interface{}) ([]NodeManage
 	return selectedNodes, otherNodes, nil
 }
 
-func SortBy(nodeManagers []NodeManager, cmpFuncs ...interface{}) ([]NodeManager, error) {
+func SortBy(nodeManagers []RegistryNodeManager, cmpFuncs ...interface{}) ([]RegistryNodeManager, error) {
 	if len(nodeManagers) == 0 {
 		return nil, nil
 	}
 
 	nodeManagersStatusCache := NewNodeManagerCache()
 
-	sortedNodesMap := map[int][]NodeManager{}
-	other := []NodeManager{}
+	sortedNodesMap := map[int][]RegistryNodeManager{}
+	other := []RegistryNodeManager{}
 
 	for len(nodeManagers) > 0 {
-		var nodeManager NodeManager
+		var nodeManager RegistryNodeManager
 		nodeManager, nodeManagers = nodeManagers[0], nodeManagers[1:]
 
 		addedToSorted := false
@@ -297,7 +294,7 @@ func SortBy(nodeManagers []NodeManager, cmpFuncs ...interface{}) ([]NodeManager,
 	}
 	sort.Ints(sortedNodesKeys)
 
-	sortedNodes := []NodeManager{}
+	sortedNodes := []RegistryNodeManager{}
 	for _, key := range sortedNodesKeys {
 		sortedNodes = append(sortedNodes, sortedNodesMap[key]...)
 	}
@@ -312,14 +309,14 @@ func GetExpectedNodeCount(nodeCount, expectedNodeCount int) int {
 	return expectedNodeCount
 }
 
-func GetNodesByCount(nodes []NodeManager, count int) ([]NodeManager, []NodeManager) {
+func SplitNodesByCount(nodes []RegistryNodeManager, count int) ([]RegistryNodeManager, []RegistryNodeManager) {
 	if len(nodes) < count {
-		return nodes, []NodeManager{}
+		return nodes, []RegistryNodeManager{}
 	}
 	return nodes[:count], nodes[count:]
 }
 
-func GetNodeNames(nodes []NodeManager) string {
+func GetNodeNames(nodes []RegistryNodeManager) string {
 	names := make([]string, 0, len(nodes))
 	for _, node := range nodes {
 		names = append(names, node.GetNodeName())
@@ -327,7 +324,7 @@ func GetNodeNames(nodes []NodeManager) string {
 	return fmt.Sprintf("[%s]", strings.Join(names, ","))
 }
 
-func DeleteNodes(ctx context.Context, log *logrus.Entry, nodes []NodeManager) error {
+func DeleteNodes(ctx context.Context, log *logrus.Entry, nodes []RegistryNodeManager) error {
 	log.Infof("Deleting nodes %s", GetNodeNames(nodes))
 	for _, node := range nodes {
 		status, err := node.GetNodeRunningStatus()
@@ -344,7 +341,7 @@ func DeleteNodes(ctx context.Context, log *logrus.Entry, nodes []NodeManager) er
 	return nil
 }
 
-func CreateNodes(ctx context.Context, log *logrus.Entry, nodes []NodeManager, createRequest *SeaweedfsCreateNodeRequest) error {
+func CreateNodes(ctx context.Context, log *logrus.Entry, nodes []RegistryNodeManager, createRequest *SeaweedfsCreateNodeRequest) error {
 	for _, node := range nodes {
 		log.Infof("Creating manifests for node %s", node.GetNodeName())
 		if err := node.CreateNodeManifests(createRequest); err != nil {
@@ -352,7 +349,7 @@ func CreateNodes(ctx context.Context, log *logrus.Entry, nodes []NodeManager, cr
 		}
 	}
 	{
-		log.Infof("Waiting nodes: %s", GetNodeNames(nodes))
+		log.Infof("CreateNodes :: WaitBy for: %s", GetNodeNames(nodes))
 		wait, err := WaitBy(ctx, log, nodes, CmpIsRunning)
 		if err != nil {
 			return err
@@ -364,7 +361,7 @@ func CreateNodes(ctx context.Context, log *logrus.Entry, nodes []NodeManager, cr
 	return nil
 }
 
-func RollingUpgradeNodes(ctx context.Context, log *logrus.Entry, nodes []NodeManager, updateRequest *SeaweedfsUpdateNodeRequest) error {
+func RollingUpgradeNodes(ctx context.Context, log *logrus.Entry, nodes []RegistryNodeManager, updateRequest *SeaweedfsUpdateNodeRequest) error {
 	for _, node := range nodes {
 		nodeIP, err := node.GetNodeIP()
 		if err != nil {
@@ -378,19 +375,84 @@ func RollingUpgradeNodes(ctx context.Context, log *logrus.Entry, nodes []NodeMan
 
 		log.Infof("Waiting node %s", node.GetNodeName())
 
-		haveLeader := false
-		var cpmFuncLeaderElection CpmFuncNodeClusterStatus = func(status *SeaweedfsNodeClusterStatus) bool {
-			if status.IsLeader {
-				haveLeader = true
+		for i := 0; i < pkg_cfg.MaxRetries; i++ {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+				log.Infof("wait by retry count %d/%d", i, pkg_cfg.MaxRetries)
+				time.Sleep(5 * time.Second)
+
+				runningStatus, err := node.GetNodeRunningStatus()
+				log.Infof("!!TRACE node RAW data: err: %+v, runningStatus: %+v, IsRunning: %s", err,
+					runningStatus, runningStatus.IsRunning)
+				if err != nil || runningStatus == nil || !runningStatus.IsRunning {
+					continue
+				}
+
+				clusterStatus, err := node.GetNodeClusterStatus()
+				log.Infof("!!TRACE clusterStatus RAW data: err: %+v, clusterStatus: %+v, IsLeader: %s", err,
+					clusterStatus, clusterStatus.IsLeader)
+
+				if err != nil || clusterStatus == nil || !clusterStatus.IsLeader {
+					continue
+				}
+
+				connected := pkg_utils.IsStringInSlice(nodeIP, &clusterStatus.ClusterNodesIPs)
+				log.Infof("Checking if node %s is connected to cluster: %t", node.GetNodeName(), connected)
+				if connected {
+					break
+				}
 			}
-			return haveLeader
+		}
+	}
+	return nil
+}
+
+func RollingUpgradeNodesOld(ctx context.Context, log *logrus.Entry, nodes []RegistryNodeManager, updateRequest *SeaweedfsUpdateNodeRequest) error {
+	for _, node := range nodes {
+		nodeIP, err := node.GetNodeIP()
+		if err != nil {
+			return err
+		}
+
+		log.Infof("Updating manifests for node %s", node.GetNodeName())
+		if err := node.UpdateNodeManifests(updateRequest); err != nil {
+			return err
+		}
+
+		log.Infof("Waiting node %s", node.GetNodeName())
+
+		var cpmFuncLeaderElection CpmFuncNodeClusterStatus = func(status *SeaweedfsNodeClusterStatus) bool {
+
+			log.Infof("!!!")
+			log.Infof(status.ClusterNodesIPs[0])
+			log.Infof(status.ClusterNodesIPs[1])
+			log.Infof(status.ClusterNodesIPs[2])
+			leaders, _ := GetClustersLeaders(ctx, log, nodes)
+			log.Info("cluster leader: %s\n", leaders[0].GetNodeName())
+			log.Infof("!!!")
+
+			log.Infof("Checking if node %s is leader: %t", node.GetNodeName(), status.IsLeader) // ## CHANGED ##
+
+			return status.IsLeader
 		}
 
 		var cpmFuncNodeConnectToCluster CpmFuncNodeClusterStatus = func(status *SeaweedfsNodeClusterStatus) bool {
-			return pkg_utils.IsStringInSlice(nodeIP, &status.ClusterNodesIPs)
+			connected := pkg_utils.IsStringInSlice(nodeIP, &status.ClusterNodesIPs)
+			log.Infof("!!!")
+			log.Infof(status.ClusterNodesIPs[0])
+			log.Infof(status.ClusterNodesIPs[1])
+			log.Infof(status.ClusterNodesIPs[2])
+			leaders, _ := GetClustersLeaders(ctx, log, nodes)
+			log.Info("cluster leader: %s\n", leaders[0].GetNodeName())
+			log.Infof("!!!")
+			log.Infof("Checking if node %s is connected to cluster: %t", node.GetNodeName(), connected) // ## CHANGED ##
+			return connected
 		}
 
-		wait, err := WaitBy(ctx, log, []NodeManager{node}, CmpIsRunning, cpmFuncLeaderElection, cpmFuncNodeConnectToCluster)
+		log.Infof("RollingUpgradeNodesOld :: WaitBy for: %s", GetNodeNames(nodes))
+		wait, err := WaitBy(ctx, log, []RegistryNodeManager{node}, CmpIsRunning, cpmFuncLeaderElection, cpmFuncNodeConnectToCluster)
 		if err != nil {
 			return err
 		}
@@ -401,16 +463,27 @@ func RollingUpgradeNodes(ctx context.Context, log *logrus.Entry, nodes []NodeMan
 	return nil
 }
 
-func WaitLeaderElectionForNodes(ctx context.Context, log *logrus.Entry, nodes []NodeManager) error {
+func WaitLeaderElectionForNodes(ctx context.Context, log *logrus.Entry, nodes []RegistryNodeManager) error {
 	log.Infof("Waiting leader election for nodes: %s", GetNodeNames(nodes))
 	haveLeader := false
-	var cpmFunc CpmFuncNodeClusterStatus = func(status *SeaweedfsNodeClusterStatus) bool {
+	var cmpFunc = func(status *SeaweedfsNodeClusterStatus) bool {
+		log.Infof("!!!")
+		log.Infof(status.ClusterNodesIPs[0])
+		log.Infof(status.ClusterNodesIPs[1])
+		log.Infof(status.ClusterNodesIPs[2])
+		leaders, _ := GetClustersLeaders(ctx, log, nodes)
 		if status.IsLeader {
 			haveLeader = true
 		}
-		return haveLeader
+		log.Infof("haveLeader: %t", haveLeader)
+		log.Info("cluster leader: %s\n", leaders[0].GetNodeName())
+		log.Infof("!!!")
+
+		return status.IsLeader
 	}
-	wait, err := WaitBy(ctx, log, nodes, CmpIsRunning, cpmFunc)
+
+	log.Infof("WaitLeaderElectionForNodes :: WaitBy for: %s", GetNodeNames(nodes))
+	wait, err := WaitBy(ctx, log, nodes, CmpIsRunning, cmpFunc)
 	if err != nil {
 		return err
 	}
@@ -420,9 +493,9 @@ func WaitLeaderElectionForNodes(ctx context.Context, log *logrus.Entry, nodes []
 	return nil
 }
 
-func WaitNodesConnection(ctx context.Context, log *logrus.Entry, leader NodeManager, nodesIps []string) error {
+func WaitNodesConnection(ctx context.Context, log *logrus.Entry, leader RegistryNodeManager, nodesIps []string) error {
 	log.Infof("Waiting connection for nodes: [%s]", strings.Join(nodesIps, ","))
-	var cpmFunc CpmFuncNodeClusterStatus = func(status *SeaweedfsNodeClusterStatus) bool {
+	var cmpFunc CpmFuncNodeClusterStatus = func(status *SeaweedfsNodeClusterStatus) bool {
 		newIPsInCluster := true
 		for _, ip := range nodesIps {
 			newIPsInCluster = newIPsInCluster && pkg_utils.IsStringInSlice(ip, &status.ClusterNodesIPs)
@@ -430,7 +503,8 @@ func WaitNodesConnection(ctx context.Context, log *logrus.Entry, leader NodeMana
 		return newIPsInCluster
 	}
 
-	wait, err := WaitBy(ctx, log, []NodeManager{leader}, cpmFunc)
+	log.Infof("WaitNodesConnection :: WaitBy for leader: %s, nodesIps: %s", leader.GetNodeName(), nodesIps)
+	wait, err := WaitBy(ctx, log, []RegistryNodeManager{leader}, cmpFunc)
 	if err != nil {
 		return err
 	}
@@ -440,7 +514,7 @@ func WaitNodesConnection(ctx context.Context, log *logrus.Entry, leader NodeMana
 	return nil
 }
 
-func RemoveLeaderStatusForNode(ctx context.Context, log *logrus.Entry, clusterNodes []NodeManager, removeLeaderNode NodeManager) error {
+func RemoveLeaderStatusForNode(ctx context.Context, log *logrus.Entry, clusterNodes []RegistryNodeManager, removeLeaderNode RegistryNodeManager) error {
 	// Check if leader
 	if nodeStatus, err := removeLeaderNode.GetNodeClusterStatus(); err != nil {
 		return err
@@ -486,7 +560,7 @@ func RemoveLeaderStatusForNode(ctx context.Context, log *logrus.Entry, clusterNo
 	return nil
 }
 
-func GetClustersMembers(nodeManagers []NodeManager) ([]ClusterMembers, error) {
+func GetClustersMembers(nodeManagers []RegistryNodeManager) ([]ClusterMembers, error) {
 	cache := NewNodeManagerCache()
 	visited := make(map[string]bool)
 	nodeMap := make(map[string][]string)
@@ -530,7 +604,7 @@ func GetClustersMembers(nodeManagers []NodeManager) ([]ClusterMembers, error) {
 		}
 	}
 
-	getNodeByIP := func(ip string) (NodeManager, error) {
+	getNodeByIP := func(ip string) (RegistryNodeManager, error) {
 		for _, node := range nodeManagers {
 			nodeIP, err := cache.GetNodeManagerIP(node)
 			if err != nil {
@@ -546,8 +620,8 @@ func GetClustersMembers(nodeManagers []NodeManager) ([]ClusterMembers, error) {
 	clusterMembersList := []ClusterMembers{}
 
 	for _, cluster := range clusters {
-		members := make([]NodeManager, 0, len(cluster))
-		var leader NodeManager
+		members := make([]RegistryNodeManager, 0, len(cluster))
+		var leader RegistryNodeManager
 		leaderFound := false
 
 		for _, ip := range cluster {
@@ -579,22 +653,22 @@ func GetClustersMembers(nodeManagers []NodeManager) ([]ClusterMembers, error) {
 	return clusterMembersList, nil
 }
 
-func GetCurrentClustersMembers(ctx context.Context, log *logrus.Entry, clusterNodes []NodeManager) ([]ClusterMembers, error) {
-	log.Infof("Get clusters members")
+func GetCurrentClustersMembers(ctx context.Context, log *logrus.Entry, clusterNodes []RegistryNodeManager) ([]ClusterMembers, error) {
 	clustersMembers, err := GetClustersMembers(clusterNodes)
 	if clustersMembers != nil {
 		log.Infof("Clusters count %d", len(clustersMembers))
+		log.Infof("Clusters members %+v", clustersMembers)
+		log.Infof("Cluster[0] leader %+v", clustersMembers[0].Leader.GetNodeName())
 	}
 	return clustersMembers, err
 }
 
-func GetClustersLeaders(ctx context.Context, log *logrus.Entry, clusterNodes []NodeManager) ([]NodeManager, error) {
-	log.Infof("Get clusters leaders")
+func GetClustersLeaders(ctx context.Context, log *logrus.Entry, clusterNodes []RegistryNodeManager) ([]RegistryNodeManager, error) {
 	clustersMembers, err := GetCurrentClustersMembers(ctx, log, clusterNodes)
 	if err != nil {
 		return nil, err
 	}
-	leaders := []NodeManager{}
+	var leaders []RegistryNodeManager
 
 	if clustersMembers == nil {
 		return leaders, nil
@@ -608,19 +682,24 @@ func GetClustersLeaders(ctx context.Context, log *logrus.Entry, clusterNodes []N
 	return leaders, nil
 }
 
-func GetNewAndUnusedClusterIP(ctx context.Context, log *logrus.Entry, clusterNodes []NodeManager, removedNodes []NodeManager) ([]NodeManager, []string, []string, error) {
+func GetNewAndUnusedClusterIP(ctx context.Context, log *logrus.Entry, clusterNodes []RegistryNodeManager, removedNodes []RegistryNodeManager) (RegistryNodeManager, []string, []string, error) {
 	leaders, err := GetClustersLeaders(ctx, log, clusterNodes)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
+	// Check if we have more than one leader, it's an error
 	if len(leaders) > 1 {
-		log.Infof("Have more than one cluster leaders")
+		log.Infof("GetNewAndUnusedClusterIP: Have more than one cluster leaders")
 		return nil, nil, nil, fmt.Errorf("len(*leaders) > 1")
 	}
 
-	ipsForCreate := []string{}
-	ipsForDelete := []string{}
+	leader := leaders[0]
+
+	//	log.Infof("GetNewAndUnusedClusterIP: Current Leader: %s", leaders[0].GetNodeName())
+
+	var ipsForCreate []string
+	var ipsForDelete []string
 	for _, node := range clusterNodes {
 		nodeIp, err := node.GetNodeIP()
 		if err != nil {
@@ -637,12 +716,12 @@ func GetNewAndUnusedClusterIP(ctx context.Context, log *logrus.Entry, clusterNod
 	}
 
 	if len(leaders) < 1 {
-		return leaders, ipsForCreate, ipsForDelete, nil
+		return leader, ipsForCreate, ipsForDelete, nil
 	}
 
-	ipsFromCluster := []string{}
-	if leaderInfo, err := leaders[0].GetNodeClusterStatus(); err != nil {
-		return leaders, nil, nil, err
+	var ipsFromCluster []string
+	if leaderInfo, err := leader.GetNodeClusterStatus(); err != nil {
+		return leader, nil, nil, err
 	} else {
 		ipsFromCluster = leaderInfo.ClusterNodesIPs
 	}
@@ -653,5 +732,5 @@ func GetNewAndUnusedClusterIP(ctx context.Context, log *logrus.Entry, clusterNod
 		}
 	}
 
-	return leaders, ipsForCreate, ipsForDelete, nil
+	return leader, ipsForCreate, ipsForDelete, nil
 }

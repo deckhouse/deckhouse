@@ -59,7 +59,7 @@ func makeRequestWithResponse(logger *logrus.Entry, client *http.Client, method, 
 
 	// Log response details
 	logger.Tracef("Response body: '%s'", string(body))
-	logger.Infof("%s %s %d", method, url, resp.StatusCode)
+	logger.Debugf("%s %s %d", method, url, resp.StatusCode)
 
 	// Check if response body is empty
 	if len(body) == 0 {
@@ -105,7 +105,7 @@ func makeRequestWithoutResponse(logger *logrus.Entry, client *http.Client, metho
 	defer resp.Body.Close()
 
 	// Log successful response
-	logger.Infof("%s %s %d", method, url, resp.StatusCode)
+	logger.Debugf("%s %s %d", method, url, resp.StatusCode)
 
 	// Check response status code
 	if resp.StatusCode != http.StatusOK {

@@ -27,7 +27,7 @@ func GetSeaweedfsPodByNodeName(nodeNmae string) (*corev1.Pod, error) {
 	return nil, nil
 }
 
-func WaitWorkerDaemonset() (*appsv1.DaemonSet, error) {
+func WaitExecutorDaemonset() (*appsv1.DaemonSet, error) {
 	cfg := pkg_cfg.GetConfig()
 	daemonset, isWaited, err := pkg_k8s_act.WaitDaemonsetInfo(cfg.Manager.Namespace, cfg.Manager.DaemonsetName, pkg_k8s_act.DaemonsetCmpFuncEqualDesiredAndReady)
 	if err != nil {
@@ -39,25 +39,25 @@ func WaitWorkerDaemonset() (*appsv1.DaemonSet, error) {
 	return daemonset, nil
 }
 
-func WaitWorkerEndpoints() (*corev1.Endpoints, error) {
+func WaitExecutorEndpoints() (*corev1.Endpoints, error) {
 	cfg := pkg_cfg.GetConfig()
 	ep, isWaited, err := pkg_k8s_act.WaitEndpointInfo(cfg.Manager.Namespace, cfg.Manager.ServiceName, pkg_k8s_act.EndpointCmpNotReadyAddressesEmpty)
 	if err != nil {
 		return nil, err
 	}
 	if !isWaited {
-		return nil, fmt.Errorf("error WaitWorkerEndpoints")
+		return nil, fmt.Errorf("error WaitExecutorEndpoints")
 	}
 	return ep, nil
 }
 
-func WaitAllWorkers() ([]WorkerInfo, error) {
-	dsInfo, err := WaitWorkerDaemonset()
+func WaitAllExecutors() ([]ExecutorInfo, error) {
+	dsInfo, err := WaitExecutorDaemonset()
 	if err != nil {
 		return nil, err
 	}
 
-	epInfo, err := WaitWorkerEndpoints()
+	epInfo, err := WaitExecutorEndpoints()
 	if err != nil {
 		return nil, err
 	}
@@ -72,9 +72,9 @@ func WaitAllWorkers() ([]WorkerInfo, error) {
 	}
 
 	masterNodes, err := pkg_k8s_act.GetMasterNodesInfo()
-	mergedInfos := make([]WorkerInfo, 0, len(masterNodes.Items))
+	mergedInfos := make([]ExecutorInfo, 0, len(masterNodes.Items))
 	for _, masterNode := range masterNodes.Items {
-		mergedInfo, err := workerInfoByNode(&masterNode, epInfo)
+		mergedInfo, err := executorInfoByNode(&masterNode, epInfo)
 		if err != nil {
 			return nil, err
 		}
@@ -83,21 +83,21 @@ func WaitAllWorkers() ([]WorkerInfo, error) {
 	return mergedInfos, nil
 }
 
-func workerInfoByNode(nodeInfo *corev1.Node, epsInfo *corev1.Endpoints) (*WorkerInfo, error) {
+func executorInfoByNode(nodeInfo *corev1.Node, epsInfo *corev1.Endpoints) (*ExecutorInfo, error) {
 	if nodeInfo == nil {
 		return nil, fmt.Errorf("node == nil")
 	}
-	epInfo := getWorkerEndpointByNodeName(nodeInfo.Name, epsInfo)
+	epInfo := getExecutorEndpointByNodeName(nodeInfo.Name, epsInfo)
 	if epInfo == nil {
 		return nil, fmt.Errorf("ep == nil")
 	}
-	return &WorkerInfo{
+	return &ExecutorInfo{
 		MasterNode: *nodeInfo,
-		Worker:     *epInfo,
+		Executor:   *epInfo,
 	}, nil
 }
 
-func getWorkerEndpointByNodeName(nodeNmae string, ep *corev1.Endpoints) *corev1.EndpointAddress {
+func getExecutorEndpointByNodeName(nodeNmae string, ep *corev1.Endpoints) *corev1.EndpointAddress {
 	if ep == nil {
 		return nil
 	}
@@ -111,7 +111,7 @@ func getWorkerEndpointByNodeName(nodeNmae string, ep *corev1.Endpoints) *corev1.
 	return nil
 }
 
-type WorkerInfo struct {
+type ExecutorInfo struct {
 	MasterNode corev1.Node
-	Worker     corev1.EndpointAddress
+	Executor   corev1.EndpointAddress
 }

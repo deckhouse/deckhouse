@@ -3,60 +3,60 @@ Copyright 2024 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package worker
+package executor
 
 import (
 	"context"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	common "system-registry-manager/internal/common"
+	executor_client "system-registry-manager/pkg/executor/client"
 	pkg_logs "system-registry-manager/pkg/logs"
-	worker_client "system-registry-manager/pkg/worker/client"
 	"time"
 )
 
 const (
-	processName     = "worker"
+	processName     = "executor"
 	shutdownTimeout = 5 * time.Second
 )
 
-type Worker struct {
-	WorkerData
-	WorkerServer
+type Executor struct {
+	ExecutorData
+	ExecutorServer
 }
 
-type WorkerData struct {
+type ExecutorData struct {
 	commonCfg        *common.RuntimeConfig
 	rootCtx          context.Context
 	log              *logrus.Entry
-	singleRequestCfg *worker_client.SingleRequestConfig
+	singleRequestCfg *executor_client.SingleRequestConfig
 }
-type WorkerServer struct {
+type ExecutorServer struct {
 	server *http.Server
 }
 
-func New(rootCtx context.Context, rCfg *common.RuntimeConfig) *Worker {
+func New(rootCtx context.Context, rCfg *common.RuntimeConfig) *Executor {
 	rootCtx = pkg_logs.SetLoggerToContext(rootCtx, processName)
 	log := pkg_logs.GetLoggerFromContext(rootCtx)
 
-	worker := &Worker{
-		WorkerData{
+	executor := &Executor{
+		ExecutorData{
 			commonCfg:        rCfg,
 			rootCtx:          rootCtx,
 			log:              log,
-			singleRequestCfg: worker_client.CreateSingleRequestConfig(),
+			singleRequestCfg: executor_client.CreateSingleRequestConfig(),
 		},
-		WorkerServer{
+		ExecutorServer{
 			server: nil,
 		},
 	}
 
-	worker.server = createServer(&worker.WorkerData)
-	return worker
+	executor.server = createServer(&executor.ExecutorData)
+	return executor
 }
 
-func (m *Worker) Start() {
-	m.log.Info("Worker starting...")
+func (m *Executor) Start() {
+	m.log.Info("Executor starting...")
 	if err := m.server.ListenAndServe(); err != nil {
 		defer m.commonCfg.StopManager()
 		if err != http.ErrServerClosed {
@@ -67,12 +67,12 @@ func (m *Worker) Start() {
 	}
 }
 
-func (m *Worker) Stop() {
-	m.log.Info("Worker shutdown...")
+func (m *Executor) Stop() {
+	m.log.Info("Executor shutdown...")
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 	if err := m.server.Shutdown(ctx); err != nil {
 		m.log.Errorf("error shutting down server: %v", err)
 	}
-	m.log.Info("Worker shutdown")
+	m.log.Info("Executor shutdown")
 }

@@ -12,33 +12,33 @@ import (
 	k8s_info "system-registry-manager/internal/master/k8s_info"
 	master_workflow "system-registry-manager/internal/master/workflow"
 	pkg_cfg "system-registry-manager/pkg/cfg"
+	executer_client "system-registry-manager/pkg/executor/client"
 	pkg_logs "system-registry-manager/pkg/logs"
 	seaweedfs_client "system-registry-manager/pkg/seaweedfs/client"
-	worker_client "system-registry-manager/pkg/worker/client"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
 
 type NodeManager struct {
-	ctx        context.Context
-	log        *logrus.Entry
-	workerInfo k8s_info.WorkerInfo
+	ctx          context.Context
+	log          *logrus.Entry
+	executorInfo k8s_info.ExecutorInfo
 }
 
-func NewNodeManager(ctx context.Context, workerInfo k8s_info.WorkerInfo) *NodeManager {
+func NewNodeManager(ctx context.Context, executorInfo k8s_info.ExecutorInfo) *NodeManager {
 	log := pkg_logs.GetLoggerFromContext(ctx)
 
 	nodeManager := &NodeManager{
-		ctx:        ctx,
-		log:        log,
-		workerInfo: workerInfo,
+		ctx:          ctx,
+		log:          log,
+		executorInfo: executorInfo,
 	}
 	return nodeManager
 }
 
 func (m *NodeManager) GetNodeName() string {
-	return m.workerInfo.MasterNode.Name
+	return m.executorInfo.MasterNode.Name
 }
 
 // Info
@@ -89,19 +89,19 @@ func (m *NodeManager) GetNodeClusterStatus() (*master_workflow.SeaweedfsNodeClus
 }
 
 func (m *NodeManager) GetNodeRunningStatus() (*master_workflow.SeaweedfsNodeRunningStatus, error) {
-	var resp *worker_client.CheckRegistryResponse
+	var resp *executer_client.CheckRegistryResponse
 
-	f := func(client *worker_client.Client) error {
+	f := func(client *executer_client.Client) error {
 		var err error
 		resp, err = client.RequestCheckRegistry(
-			&worker_client.CheckRegistryRequest{
+			&executer_client.CheckRegistryRequest{
 				CheckWithMasterPeers: false,
 				MasterPeers:          []string{},
 			},
 		)
 		return err
 	}
-	err := m.makeRequestToWorker(f)
+	err := m.makeRequestToExecutor(f)
 	if err != nil {
 		return nil, err
 	}
@@ -133,10 +133,10 @@ func (m *NodeManager) GetNodeIP() (string, error) {
 	return m.getNodeInternalIP()
 }
 
-// Cluster actions
+// AddNodeToCluster Cluster actions
 func (m *NodeManager) AddNodeToCluster(newNodeIP string) error {
-	newID := seaweedfs_client.CreateIDFromIP(newNodeIP)
-	newMasterGrpcAddress := seaweedfs_client.FromIpToMasterGrpcHost(newNodeIP)
+	newID := seaweedfs_client.GenerateIDFromIP(newNodeIP)
+	newMasterGrpcAddress := seaweedfs_client.GenerateMasterGrpcAddressFromIP(newNodeIP)
 	serverVoter := true
 
 	f := func(client *seaweedfs_client.Client) error {
@@ -156,7 +156,7 @@ func (m *NodeManager) RemoveNodeFromCluster(removeNodeIP string) error {
 	f := func(client *seaweedfs_client.Client) error {
 		_, err := client.ClusterRaftRemove(
 			seaweedfs_client.NewClusterRaftRemoveArgs(
-				seaweedfs_client.CreateIDFromIP(seaweedfs_client.CreateIDFromIP(removeNodeIP)),
+				seaweedfs_client.GenerateIDFromIP(seaweedfs_client.GenerateIDFromIP(removeNodeIP)),
 			),
 		)
 		return err
@@ -168,35 +168,35 @@ func (m *NodeManager) RemoveNodeFromCluster(removeNodeIP string) error {
 func (m *NodeManager) CheckNodeManifests(request *master_workflow.SeaweedfsCheckNodeRequest) (*master_workflow.SeaweedfsCheckNodeResponce, error) {
 	var err error
 	var resp *master_workflow.SeaweedfsCheckNodeResponce
-	f := func(client *worker_client.Client) error {
+	f := func(client *executer_client.Client) error {
 		resp, err = client.RequestCheckRegistry(request)
 		return nil
 	}
-	m.makeRequestToWorker(f)
+	m.makeRequestToExecutor(f)
 	return resp, err
 }
 
 func (m *NodeManager) CreateNodeManifests(request *master_workflow.SeaweedfsCreateNodeRequest) error {
-	f := func(client *worker_client.Client) error {
+	f := func(client *executer_client.Client) error {
 		return client.RequestCreateRegistry(request)
 	}
 
-	return m.makeRequestToWorker(f)
+	return m.makeRequestToExecutor(f)
 }
 
 func (m *NodeManager) UpdateNodeManifests(request *master_workflow.SeaweedfsUpdateNodeRequest) error {
-	f := func(client *worker_client.Client) error {
+	f := func(client *executer_client.Client) error {
 		return client.RequestUpdateRegistry(request)
 	}
-	return m.makeRequestToWorker(f)
+	return m.makeRequestToExecutor(f)
 }
 
 func (m *NodeManager) DeleteNodeManifests() error {
-	f := func(client *worker_client.Client) error {
+	f := func(client *executer_client.Client) error {
 		return client.RequestDeleteRegistry()
 	}
 
-	return m.makeRequestToWorker(f)
+	return m.makeRequestToExecutor(f)
 }
 
 func (m *NodeManager) makeRequestToSeaweedfs(request func(client *seaweedfs_client.Client) error) error {
@@ -218,19 +218,19 @@ func (m *NodeManager) makeRequestToSeaweedfs(request func(client *seaweedfs_clie
 	return request(client)
 }
 
-func (m *NodeManager) makeRequestToWorker(request func(client *worker_client.Client) error) error {
+func (m *NodeManager) makeRequestToExecutor(request func(client *executer_client.Client) error) error {
 	// update data and get api
-	workerIp, err := m.getWorkerIP()
+	executorIp, err := m.getExecutorIP()
 	if err != nil {
 		return err
 	}
 
-	client := worker_client.NewClient(m.log, workerIp, pkg_cfg.GetConfig().Manager.WorkerPort)
+	client := executer_client.NewClient(m.log, executorIp, pkg_cfg.GetConfig().Manager.ExecutorPort)
 	return request(client)
 }
 
 func (m *NodeManager) getNodeInternalIP() (string, error) {
-	for _, address := range m.workerInfo.MasterNode.Status.Addresses {
+	for _, address := range m.executorInfo.MasterNode.Status.Addresses {
 		if address.Type == corev1.NodeInternalIP {
 			return address.Address, nil
 		}
@@ -238,10 +238,10 @@ func (m *NodeManager) getNodeInternalIP() (string, error) {
 	return "", fmt.Errorf("address.Type != corev1.NodeInternalIP")
 }
 
-func (m *NodeManager) getWorkerIP() (string, error) {
-	return m.workerInfo.Worker.IP, nil
+func (m *NodeManager) getExecutorIP() (string, error) {
+	return m.executorInfo.Executor.IP, nil
 }
 
 func (m *NodeManager) seaweedfsPodInfo() (*corev1.Pod, error) {
-	return k8s_info.GetSeaweedfsPodByNodeName(m.workerInfo.MasterNode.Name)
+	return k8s_info.GetSeaweedfsPodByNodeName(m.executorInfo.MasterNode.Name)
 }

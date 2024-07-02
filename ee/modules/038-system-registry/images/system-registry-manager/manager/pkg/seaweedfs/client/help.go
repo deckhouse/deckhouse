@@ -21,7 +21,7 @@ func FromIpToMasterHttpHost(ip string) string {
 	return fmt.Sprintf("%s:%d", ip, DefaultMasterHttpPort)
 }
 
-func FromIpToMasterGrpcHost(ip string) string {
+func GenerateMasterGrpcAddressFromIP(ip string) string {
 	return fmt.Sprintf("%s:%d", ip, DefaultMasterGrpcPort)
 }
 
@@ -43,6 +43,6 @@ func GetIpFromAddress(address string) string {
 	return address
 }
 
-func CreateIDFromIP(ip string) string {
+func GenerateIDFromIP(ip string) string {
 	return FromIpToMasterHttpHost(ip)
 }

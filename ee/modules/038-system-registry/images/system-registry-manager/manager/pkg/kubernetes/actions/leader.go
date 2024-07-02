@@ -48,6 +48,7 @@ func StartLeaderElection(
 		return fmt.Errorf("error creating leases resource lock: %v", err)
 	}
 
+	logrus.Info("StartLeaderElection ::NewLeaderElector\n")
 	le, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
 		Lock:            rl,
 		LeaseDuration:   time.Duration(cfg.Manager.LeaderElection.LeaseDurationSeconds * int(time.Second)),
@@ -56,6 +57,7 @@ func StartLeaderElection(
 		ReleaseOnCancel: true,
 		Callbacks:       callbacks,
 	})
+	logrus.Info("StartLeaderElection :: After NewLeaderElector\n")
 	if err != nil {
 		return fmt.Errorf("error creating leader elector: %v", err)
 	}
@@ -75,5 +77,5 @@ func NewIdentityForLeaderElection() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get hostname: %v", err)
 	}
-	return componentName + "-" + hostname, nil
+	return hostname, nil
 }

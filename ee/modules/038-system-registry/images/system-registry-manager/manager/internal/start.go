@@ -9,8 +9,8 @@ import (
 	"context"
 	"sync"
 	common_config "system-registry-manager/internal/common"
+	"system-registry-manager/internal/executor"
 	"system-registry-manager/internal/master"
-	"system-registry-manager/internal/worker"
 	pkg_logs "system-registry-manager/pkg/logs"
 )
 
@@ -31,24 +31,24 @@ func StartManager() {
 	log := pkg_logs.GetLoggerFromContext(rootCtx)
 
 	cfg := common_config.NewRuntimeConfig(&rootCtxcancel)
-	worker := worker.New(rootCtx, cfg)
+	executor := executor.New(rootCtx, cfg)
 	master := master.New(rootCtx, cfg)
 
 	var wg sync.WaitGroup
-	wg.Add(3) // Changed the value to 2 since we have only two worker goroutines
+	wg.Add(3) // Changed the value to 2 since we have only two executor goroutines
 
 	// Goroutine for handling signals
 	go func() {
 		defer wg.Done()
 		log.Info("Starting os signal handler...")
-		StartOsSignalHandler(rootCtx, cfg, worker.Stop)
+		StartOsSignalHandler(rootCtx, cfg, executor.Stop)
 	}()
 
-	// Start worker goroutine
+	// Start executor goroutine
 	go func() {
 		defer wg.Done()
-		log.Info("Starting worker...")
-		worker.Start()
+		log.Info("Starting executor...")
+		executor.Start()
 	}()
 
 	// Start master goroutine
