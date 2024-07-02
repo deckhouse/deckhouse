@@ -1,0 +1,10 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - artifact: {{ .ModuleName }}/l2-load-balancer-artifact
+    add: /speaker
+    to: /speaker
+    before: setup
+docker:
+  ENTRYPOINT: ["/speaker"]

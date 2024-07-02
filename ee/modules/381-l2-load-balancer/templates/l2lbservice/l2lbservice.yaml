@@ -1,0 +1,24 @@
+{{- range $l2lbservice := .Values.l2LoadBalancer.internal.l2lbservices }}
+---
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalL2LBService
+metadata:
+  name: {{ $l2lbservice.name }}
+  namespace: {{ $l2lbservice.namespace }}
+  {{- include "helm_lib_module_labels" (list $ (dict "parent-service" $l2lbservice.serviceName)) | nindent 2 }}
+  annotations:
+    metallb.universe.tf/preferredL2SpeakerNode: {{ $l2lbservice.preferredNode }}
+spec:
+  clusterIP: {{ $l2lbservice.clusterIP }}
+  serviceRef:
+    name: {{ $l2lbservice.serviceName }}
+    namespace: {{ $l2lbservice.serviceNamespace }}
+  ports:
+    {{ $l2lbservice.ports | toYaml | nindent 4 }}
+  selector:
+    {{ $l2lbservice.selector | toYaml | nindent 4 }}
+  type: LoadBalancer
+  {{ if $.Values.l2LoadBalancer.loadBalancerClass }}
+  loadBalancerClass: {{ $.Values.l2LoadBalancer.loadBalancerClass }}
+  {{- end }}
+{{- end }}

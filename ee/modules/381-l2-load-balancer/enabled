@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Copyright 2024 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+source /deckhouse/shell_lib.sh
+
+function __main__() {
+  enabled::disable_module_if_cluster_is_not_bootstraped
+
+  if ! values::array_has global.enabledModules "metallb-crd" ; then
+    echo "You must enable the metallb-crd module for the module to work."
+    exit 1
+  fi
+
+  echo "true" > $MODULE_ENABLED_RESULT
+}
+
+enabled::run $@
