@@ -135,8 +135,8 @@ func getNodesByLoadBalancer(lb L2LoadBalancerInfo, snapshot []go_hook.FilterResu
 		}
 	}
 
-	//Sort using hashing and the LoadBalancer name to avoid always occupying the first node in the usual order.
-	//For example: 5 frontend-nodes sorted in alphabet order, 10 LB with number of IPs equal 1, and frontend-0 will be busy
+	// Sort using hashing and the LoadBalancer name to avoid always occupying the first node in the usual order.
+	// For example: 5 frontend-nodes sorted in alphabet order, 10 LB with number of IPs equal 1, and frontend-0 will be busy
 	sort.Slice(nodes, func(i, j int) bool {
 		hi := sha256.Sum256([]byte(lb.Name + "#" + nodes[i].Name))
 		hj := sha256.Sum256([]byte(lb.Name + "#" + nodes[j].Name))
@@ -187,7 +187,7 @@ func calcDifferenceForNodes(nodesLabeled, nodesNeeded []NodeInfo) ([]NodeInfo, [
 
 func appendUniq(existingNodes []NodeInfo, nodes ...NodeInfo) []NodeInfo {
 	existingNodesMap := make(map[string]struct{})
-	result := existingNodes[:]
+	result := existingNodes
 	for _, node := range existingNodes {
 		existingNodesMap[node.Name] = struct{}{}
 	}
