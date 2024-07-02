@@ -30,19 +30,21 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ../deckhause/tools/helm_generate/runners/alert_templates/template_values/[module-name].yaml
+// ../deckhouse/tools/helm_generate/runners/alert_templates/template_values/[module-name].yaml
 const userDefinedValuesPath = "tools/helm_generate/runners/alert_templates/template_values"
 
-// ../deckhause/modules/[module-name]/monitoring/prometheus-rules[template-name].yaml or .tpl
+// ../deckhouse/modules/[module-name]/monitoring/prometheus-rules[template-name].yaml or .tpl
 const prometheusRules = "monitoring/prometheus-rules"
 
-// ../deckhause/modules/[module-name]/templates/_[helper-name].yaml or .tpl
+// ../deckhouse/modules/[module-name]/templates/_[helper-name].yaml or .tpl
 const helpersPath = "templates"
 
 // Deckhouse edition type
 const (
 	ce edition = "ce" // community edition
 	ee edition = "ee" // enterprise edition
+	be edition = "be" // basic edition
+	se edition = "se" // standard edition
 	fe edition = "fe" // fan edition
 )
 
@@ -52,6 +54,17 @@ type module struct {
 	Name    string
 	Path    string
 	Edition edition
+}
+
+type moduleAlert struct {
+	Name         string `yaml:"name"`
+	SourceFile   string `yaml:"sourceFile"`
+	Module       string `yaml:"module"`
+	Edition      string `yaml:"edition"`
+	Description  string `yaml:"description"`
+	Summary      string `yaml:"summary"`
+	Severity     string `yaml:"severity"`
+	MarkupFormat string `yaml:"markupFormat"`
 }
 
 func run() error {
@@ -65,7 +78,7 @@ func run() error {
 
 		if len(yamlTemplates) > 0 {
 			for templateName, templateContent := range yamlTemplates {
-				templateContent, err = injectToYaml(templateContent, module.Name, string(module.Edition), filepath.Join(module.Path, prometheusRules, templateName))
+				templateContent, err = buildYaml(templateContent, module.Name, string(module.Edition), filepath.Join(module.Path, prometheusRules, templateName))
 				if err != nil {
 					return err
 				}
@@ -81,7 +94,7 @@ func run() error {
 			}
 			for templatePath, templateContent := range renderContent {
 				_, templateName := filepath.Split(templatePath)
-				templateContent, err := injectToYaml([]byte(templateContent), module.Name, string(module.Edition), filepath.Join(module.Path, prometheusRules, templateName))
+				templateContent, err := buildYaml([]byte(templateContent), module.Name, string(module.Edition), filepath.Join(module.Path, prometheusRules, templateName))
 				if err != nil {
 					return err
 				}
@@ -94,8 +107,10 @@ func run() error {
 	return nil
 }
 
-func injectToYaml(templateContent []byte, name, edition, sourceFile string) ([]byte, error) {
+func buildYaml(templateContent []byte, name, edition, sourceFile string) ([]byte, error) {
 	var values []map[string]interface{}
+	var alerts []moduleAlert
+
 	err := yaml.Unmarshal(templateContent, &values)
 	if err != nil {
 		return nil, fmt.Errorf("error processing file %s - %w", sourceFile, err)
@@ -105,11 +120,54 @@ func injectToYaml(templateContent []byte, name, edition, sourceFile string) ([]b
 		name = substr[1]
 	}
 
-	values[0]["module"] = name
-	values[0]["edition"] = edition
-	values[0]["sourceFile"] = sourceFile
+	for _, value := range values {
+		for _, alert := range value["rules"].([]interface{}) {
+			var description, markupFormat, severity, summary string
 
-	return yaml.Marshal(values)
+			alertMap := alert.(map[string]interface{})
+
+			if _, ok := alertMap["alert"]; !ok {
+				continue // it is not an alerting rule (it is e. g. a recording rule), skip it
+			}
+
+			alertAnnotations, ok := alertMap["annotations"].(map[string]interface{})
+			if ok {
+				description, ok = alertAnnotations["description"].(string)
+				if !ok {
+					description = "" // or any other default value
+				}
+				markupFormat, ok = alertAnnotations["plk_markup_format"].(string)
+				if !ok {
+					markupFormat = "default"
+				}
+				summary, ok = alertAnnotations["summary"].(string)
+				if !ok {
+					summary = ""
+				}
+			}
+
+			alertLabels, ok := alertMap["labels"].(map[string]interface{})
+			if ok {
+				severity, ok = alertLabels["severity_level"].(string)
+				if !ok {
+					severity = "undefined"
+				}
+			}
+
+			alerts = append(alerts, moduleAlert{
+				Name:         alertMap["alert"].(string),
+				SourceFile:   sourceFile,
+				Module:       name,
+				Edition:      edition,
+				Description:  description,
+				Summary:      summary,
+				Severity:     severity,
+				MarkupFormat: markupFormat,
+			})
+		}
+	}
+
+	return yaml.Marshal(alerts)
 }
 
 func modules(deckhouseRoot string) (modules []module) {
@@ -139,6 +197,19 @@ func modules(deckhouseRoot string) (modules []module) {
 		}
 	}
 
+	// be modules
+	files, _ = os.ReadDir(filepath.Join(deckhouseRoot, "ee/be/modules"))
+	for _, file := range files {
+		if file.IsDir() {
+			md := module{
+				Name:    file.Name(),
+				Path:    filepath.Join(deckhouseRoot, "ee/be/modules", file.Name()),
+				Edition: be,
+			}
+			modules = append(modules, md)
+		}
+	}
+
 	// fe modules
 	files, _ = os.ReadDir(filepath.Join(deckhouseRoot, "ee/fe/modules"))
 	for _, file := range files {
@@ -147,6 +218,19 @@ func modules(deckhouseRoot string) (modules []module) {
 				Name:    file.Name(),
 				Path:    filepath.Join(deckhouseRoot, "ee/fe/modules", file.Name()),
 				Edition: fe,
+			}
+			modules = append(modules, md)
+		}
+	}
+
+	// se modules
+	files, _ = os.ReadDir(filepath.Join(deckhouseRoot, "ee/se/modules"))
+	for _, file := range files {
+		if file.IsDir() {
+			md := module{
+				Name:    file.Name(),
+				Path:    filepath.Join(deckhouseRoot, "ee/se/modules", file.Name()),
+				Edition: se,
 			}
 			modules = append(modules, md)
 		}

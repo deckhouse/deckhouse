@@ -1,0 +1,13 @@
+{% for alert in site.data.deckhouse-alerts %}
+## {{ alert["name"] }}
+
+Module: {{ alert["module"] }} ({{ alert["edition"] }})
+
+{% if alert["severity"] %}Severity: {{ alert["severity"] }}{% endif %}
+
+{% if alert["summary"] %}Alert summary: {{ alert["summary"] }}{% endif %}
+
+{% if alert["description"] %}Alert description (template):
+  {% if alert["markupFormat"] == "markdown" %}{{ alert["description"] | markdownify }}{% else %}{{ alert["description"] }}{% endif %}
+{% endif %}
+{% endfor %}
