@@ -64,7 +64,7 @@ func (pc *Checker) Static() error {
 		},
 		{
 			fun:            pc.CheckSSHTunnel,
-			successMessage: "ssh tunnel will up",
+			successMessage: "ssh tunnel between installer and node is possible",
 			skipFlag:       app.SSHForwardArgName,
 		},
 		{
