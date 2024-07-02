@@ -51,6 +51,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
+	deckhouse_release "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
@@ -86,7 +87,7 @@ type DeckhouseController struct {
 	deckhouseModules map[string]*models.DeckhouseModule
 	// <module-name>: <module-source>
 	sourceModules           map[string]string
-	embeddedDeckhousePolicy *v1alpha1.ModuleUpdatePolicySpec
+	embeddedDeckhousePolicy *v1alpha1.ModuleUpdatePolicySpecContainer
 }
 
 func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager, metricStorage *metric_storage.MetricStorage) (*DeckhouseController, error) {
@@ -96,12 +97,12 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	}
 
 	dc := dependency.NewDependencyContainer()
-	embeddedDeckhousePolicy := &v1alpha1.ModuleUpdatePolicySpec{
+	embeddedDeckhousePolicy := v1alpha1.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
 		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
 			Mode: "Auto",
 		},
 		ReleaseChannel: "Stable",
-	}
+	})
 
 	scheme := runtime.NewScheme()
 
@@ -173,6 +174,11 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	err = docbuilder.NewModuleDocumentationController(mgr, dc)
 	if err != nil {
 		return nil, err
+	}
+
+	err = deckhouse_release.NewDeckhouseReleaseController(ctx, mgr, dc, mm, embeddedDeckhousePolicy)
+	if err != nil {
+		return nil, fmt.Errorf("new Deckhouse release controller: %w", err)
 	}
 
 	return &DeckhouseController{
@@ -281,9 +287,7 @@ func (dml *DeckhouseController) runDeckhouseConfigObserver(deckhouseConfigC <-ch
 			log.Errorf("Error occurred during the Deckhouse embedded policy build: %s", err)
 			continue
 		}
-		dml.embeddedDeckhousePolicy.ReleaseChannel = mups.ReleaseChannel
-		dml.embeddedDeckhousePolicy.Update.Mode = mups.Update.Mode
-		dml.embeddedDeckhousePolicy.Update.Windows = mups.Update.Windows
+		dml.embeddedDeckhousePolicy.Set(mups)
 	}
 }
 

@@ -60,7 +60,7 @@ type moduleSourceReconciler struct {
 	client             client.Client
 	externalModulesDir string
 
-	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpec
+	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpecContainer
 
 	dc dependency.Container
 
@@ -70,7 +70,7 @@ type moduleSourceReconciler struct {
 	moduleSourcesChecksum sourceChecksum
 }
 
-func NewModuleSourceController(mgr manager.Manager, dc dependency.Container, embeddedPolicy *v1alpha1.ModuleUpdatePolicySpec) error {
+func NewModuleSourceController(mgr manager.Manager, dc dependency.Container, embeddedPolicyContainer *v1alpha1.ModuleUpdatePolicySpecContainer) error {
 	lg := log.WithField("component", "ModuleSourceController")
 
 	c := &moduleSourceReconciler{
@@ -79,7 +79,7 @@ func NewModuleSourceController(mgr manager.Manager, dc dependency.Container, emb
 		dc:                 dc,
 		logger:             lg,
 
-		deckhouseEmbeddedPolicy: embeddedPolicy,
+		deckhouseEmbeddedPolicy: embeddedPolicyContainer,
 		moduleSourcesChecksum:   make(sourceChecksum),
 	}
 
@@ -397,7 +397,7 @@ func (c *moduleSourceReconciler) getReleasePolicy(sourceName, moduleName string,
 	}
 
 	if !found {
-		c.logger.Infof("ModuleUpdatePolicy for ModuleSource: %q, Module: %q not found, using Embedded policy: %+v", sourceName, moduleName, *c.deckhouseEmbeddedPolicy)
+		c.logger.Infof("ModuleUpdatePolicy for ModuleSource: %q, Module: %q not found, using Embedded policy: %+v", sourceName, moduleName, *c.deckhouseEmbeddedPolicy.Get())
 		return &v1alpha1.ModuleUpdatePolicy{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
@@ -406,7 +406,7 @@ func (c *moduleSourceReconciler) getReleasePolicy(sourceName, moduleName string,
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "", // special empty default policy, inherits Deckhouse settings for update mode
 			},
-			Spec: *c.deckhouseEmbeddedPolicy,
+			Spec: *c.deckhouseEmbeddedPolicy.Get(),
 		}, nil
 	}
 

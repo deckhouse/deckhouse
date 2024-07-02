@@ -30,6 +30,15 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
 )
 
+type DeckhouseDiscoveryData struct {
+	ReleaseChannel         string
+	ClusterBootstrapping   bool
+	NotificationConfig     *NotificationConfig
+	DisruptionApprovalMode string
+	ImagesRegistry         string
+	ClusterUUID            string
+}
+
 type NotificationConfig struct {
 	WebhookURL              string          `json:"webhook"`
 	SkipTLSVerify           bool            `json:"tlsSkipVerify"`
