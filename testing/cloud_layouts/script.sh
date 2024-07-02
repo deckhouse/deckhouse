@@ -853,5 +853,4 @@ function main() {
   chmod_dirs_for_cleanup
   exit $exitCode
 }
-
 main "$@"
