@@ -76,6 +76,7 @@ properties:
           The HTTPS implementation used by the Deckhouse modules.
         type: object
         additionalProperties: false
+        default: {}
         x-examples:
         - certManager:
             clusterIssuerName: letsencrypt

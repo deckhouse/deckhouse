@@ -225,7 +225,7 @@ func isCRD(data map[interface{}]interface{}) bool {
 	return true
 }
 
-func isDechkouseCRD(data map[interface{}]interface{}) bool {
+func isDeckhouseCRD(data map[interface{}]interface{}) bool {
 	kind, ok := data["kind"].(string)
 	if !ok {
 		return false
@@ -262,7 +262,7 @@ func (fp fileParser) parseForWrongKeys(m map[interface{}]interface{}) {
 
 func runFileParser(fileName string, data map[interface{}]interface{}, resultC chan error) {
 	// exclude external CRDs
-	if isCRD(data) && !isDechkouseCRD(data) {
+	if isCRD(data) && !isDeckhouseCRD(data) {
 		close(resultC)
 		return
 	}
@@ -276,7 +276,7 @@ func runFileParser(fileName string, data map[interface{}]interface{}, resultC ch
 		},
 		resultC: resultC,
 	}
-	if isDechkouseCRD(data) {
+	if isDeckhouseCRD(data) {
 		fileParser.parseForWrongKeys(data)
 	}
 	go fileParser.startParsing(data, resultC)
