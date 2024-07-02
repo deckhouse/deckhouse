@@ -99,7 +99,7 @@
                   {
                     "targetBlank": true,
                     "title": "Pool detail",
-                    "url": "/d/sZzUB4ymk3/?var-ds_prometheus=${ds_prometheus}&var-pool=${__value.raw}&${__url_time_range}"
+                    "url": "/d/sZzUB4ymn3/?var-ds_prometheus=${ds_prometheus}&var-pool=${__value.raw}&${__url_time_range}"
                   }
                 ]
               }
