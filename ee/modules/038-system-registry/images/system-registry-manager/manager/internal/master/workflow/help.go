@@ -204,9 +204,6 @@ func WaitByAnyNode(ctx context.Context, log *logrus.Entry, nodeManagers []Regist
 				isWaited := true
 
 				log.Infof("Checking node manager %s", nodeManager.GetNodeName())
-				if !isWaited {
-					break
-				}
 				for _, cmpFunc := range cmpFuncs {
 					if !isWaited {
 						break
@@ -485,7 +482,7 @@ func RollingUpgradeNodesOld(ctx context.Context, log *logrus.Entry, nodes []Regi
 		}
 
 		log.Infof("RollingUpgradeNodesOld :: WaitLeaderElectionForNodes for: %s", GetNodeNames(nodes))
-		err = WaitLeaderElectionForNodes(ctx, log, []RegistryNodeManager{node})
+		err = WaitLeaderElectionForNodes(ctx, log, nodes)
 		if err != nil {
 			return err
 		}
