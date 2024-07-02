@@ -1,0 +1,4 @@
+module: network-gateway
+scopes:
+  - networking
+  - infrastructure

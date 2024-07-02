@@ -1,0 +1,6 @@
+module: metallb
+scopes:
+  - infrastructure
+  - networking
+crds:
+  - ee/se/modules/380-metallb/crds/*.yaml

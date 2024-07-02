@@ -1,0 +1,4 @@
+module: cni-flannel
+scopes:
+  - infrastructure
+  - networking
