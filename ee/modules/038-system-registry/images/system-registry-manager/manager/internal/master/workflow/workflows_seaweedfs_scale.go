@@ -79,6 +79,7 @@ func (w *SeaweedfsScaleWorkflow) Start() error {
 		w.log.Infof("Cluster nodes: %s, Cluster nodes to delete: %s", GetNodeNames(clusterNodes), GetNodeNames(clusterNodesToDelete))
 		return w.scaleDownCluster(clusterNodes, clusterNodesToDelete)
 	}
+	w.log.Info("SeaweedfsScaleWorkflow completed successfully")
 	return nil
 }
 
