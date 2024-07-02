@@ -49,7 +49,7 @@
 465-pod-reloader/               @RomanenkoDenys
 470-chrony/                     @RomanenkoDenys
 491-containerized-data-importer @fl64
-500-openvpn/                    @vitaliy-sn
+500-openvpn/                    @RomanenkoDenys @name212
 500-cilium-hubble/              @apolovov
 500-dashboard/                  @nabokihms
 500-upmeter/                    @nabokihms
