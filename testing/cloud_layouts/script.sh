@@ -132,7 +132,7 @@ function abort_bootstrap_from_cache() {
   dhctl --do-not-write-debug-log-file bootstrap-phase abort \
     --force-abort-from-cache \
     --config "$cwd/configuration.yaml" \
-    --yes-i-am-sane-and-i-understand-what-i-am-doing
+    --yes-i-am-sane-and-i-understand-what-i-am-doing $ssh_bastion_params
 
   return $?
 }
@@ -143,7 +143,7 @@ function abort_bootstrap() {
     --ssh-user "$ssh_user" \
     --ssh-agent-private-keys "$ssh_private_key_path" \
     --config "$cwd/configuration.yaml" \
-    --yes-i-am-sane-and-i-understand-what-i-am-doing
+    --yes-i-am-sane-and-i-understand-what-i-am-doing $ssh_bastion_params
 
   return $?
 }
@@ -154,7 +154,7 @@ function destroy_cluster() {
     --ssh-agent-private-keys "$ssh_private_key_path" \
     --ssh-user "$ssh_user" \
     --ssh-host "$master_ip" \
-    --yes-i-am-sane-and-i-understand-what-i-am-doing
+    --yes-i-am-sane-and-i-understand-what-i-am-doing $ssh_bastion_params
 
   return $?
 }
@@ -196,6 +196,14 @@ function cleanup() {
       if ! master_ip="$(parse_master_ip_from_log)" ; then
         master_ip=""
       fi
+  fi
+
+  # Check if LAYOUT_STATIC_BASTION_IP is set and not empty
+  if [[ -n "$LAYOUT_STATIC_BASTION_IP" ]]; then
+    ssh_bastion_params="--ssh-bastion-host $LAYOUT_STATIC_BASTION_IP --ssh-bastion-user $ssh_user"
+    >&2 echo "Using static bastion at $LAYOUT_STATIC_BASTION_IP"
+  else
+    ssh_bastion_params=""
   fi
 
   >&2 echo "Run cleanup ..."
@@ -341,7 +349,7 @@ function prepare_environment() {
         VCD_SERVER="$LAYOUT_VCD_SERVER" \
         VCD_USERNAME="$LAYOUT_VCD_USERNAME" \
         VCD_ORG="$LAYOUT_VCD_ORG" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VCD_PASSWORD} ${VCD_SERVER} ${VCD_USERNAME} ${VCD_ORG} ${VCD_MASTER_IP_LAST_OCTET}' \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VCD_PASSWORD} ${VCD_SERVER} ${VCD_USERNAME} ${VCD_ORG}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     ssh_user="ubuntu"
@@ -435,19 +443,19 @@ function bootstrap_static() {
   terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
   popd
 
-  if ! master_ip="$(grep "master_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
+  if ! master_ip="$(grep -m1 "master_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
     >&2 echo "ERROR: can't parse master_ip from terraform.log"
     return 1
   fi
-  if ! system_ip="$(grep "system_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
+  if ! system_ip="$(grep -m1 "system_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
     >&2 echo "ERROR: can't parse system_ip from terraform.log"
     return 1
   fi
-  if ! worker_ip="$(grep "worker_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
+  if ! worker_ip="$(grep -m1 "worker_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
     >&2 echo "ERROR: can't parse worker_ip from terraform.log"
     return 1
   fi
-  if ! bastion_ip="$(grep "bastion_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
+  if ! bastion_ip="$(grep -m1 "bastion_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
     >&2 echo "ERROR: can't parse bastion_ip from terraform.log"
     return 1
   fi
@@ -665,11 +673,15 @@ function bootstrap() {
   eval "$(ssh-agent -s)"
   ssh-add "$ssh_private_key_path"
 
-  # Check if STATIC_BASTION_IP is set and not empty
-  if [[ -n "$STATIC_BASTION_IP" ]]; then
-    ssh_bastion="-J $ssh_user@$STATIC_BASTION_IP"
-    ssh_bastion_params="--ssh-bastion-host $STATIC_BASTION_IP --ssh-bastion-user $ssh_user"
-    >&2 echo "Using static bastion at $STATIC_BASTION_IP"
+  # Check if LAYOUT_STATIC_BASTION_IP is set and not empty
+  if [[ -n "$LAYOUT_STATIC_BASTION_IP" ]]; then
+    ssh_bastion="-J $ssh_user@$LAYOUT_STATIC_BASTION_IP"
+    ssh_bastion_params="--ssh-bastion-host $LAYOUT_STATIC_BASTION_IP --ssh-bastion-user $ssh_user"
+    >&2 echo "Using static bastion at $LAYOUT_STATIC_BASTION_IP"
+
+    echo "bastion_ip_address_for_ssh = \"$LAYOUT_STATIC_BASTION_IP\"" >> "$bootstrap_log"
+    echo "bastion_user_name_for_ssh = \"$ssh_user\"" >> "$bootstrap_log"
+
   else
     ssh_bastion=""
     ssh_bastion_params=""
@@ -703,13 +715,13 @@ function bootstrap() {
 
   >&2 echo 'Waiting until Machine provisioning finishes ...'
   for ((i=1; i<=20; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<'ENDSSH'; then
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
-kubectl -n d8-cloud-instance-manager get machines.machine.sapcloud.io
-kubectl -n d8-cloud-instance-manager get machines.machine.sapcloud.io -o json | jq -re '.items | length > 0' >/dev/null
-kubectl -n d8-cloud-instance-manager get machines.machine.sapcloud.io -o json | jq -re '.items | map(.status.currentStatus.phase == "Running") | all' >/dev/null
+kubectl get instance -o json >/dev/null
+kubectl get instance -o json | jq -re '.items | length > 0' >/dev/null
+kubectl get instance -o json | jq -re '.items | map(.status.currentStatus.phase == "Running") | all' >/dev/null
 ENDSSH
       provisioning_failed=""
       break
@@ -785,12 +797,12 @@ END_SCRIPT
 #  - master_ip
 function wait_cluster_ready() {
   # Print deckhouse info and enabled modules.
-  infoScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/info_script.sh")
+  infoScript=$(cat /deckhous/testing/cloud_layouts/script.d/wait_cluster_ready/info_script.sh)
   $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${infoScript}";
 
   test_failed=
 
-  testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
+  testScript=$(cat /deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh)
 
   testRunAttempts=5
   for ((i=1; i<=$testRunAttempts; i++)); do
@@ -828,7 +840,7 @@ function wait_cluster_ready() {
 
 function parse_master_ip_from_log() {
   >&2 echo "  Detect master_ip from bootstrap.log ..."
-  if ! master_ip="$(grep -Po '(?<=master_ip_address_for_ssh = ")((\d{1,3}\.){3}\d{1,3})(?=")' "$bootstrap_log")"; then
+  if ! master_ip="$(grep -m1 -Po '(?<=master_ip_address_for_ssh = ")((\d{1,3}\.){3}\d{1,3})(?=")' "$bootstrap_log")"; then
     >&2 echo "    ERROR: can't parse master_ip from bootstrap.log"
     return 1
   fi

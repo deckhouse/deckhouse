@@ -32,7 +32,7 @@ $CI_COMMIT_REF_SLUG is a tag of published deckhouse images. It has a form
 
 */}!}
 
-{!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "Static" "EKS" -}!}
+{!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "vCloudDirector" "Static" "EKS" -}!}
 {!{- $criNames := slice "Containerd" -}!}
 {!{- $kubernetesVersions := slice "1.25" "1.26" "1.27" "1.28" "1.29" "1.30" "Automatic" -}!}
 

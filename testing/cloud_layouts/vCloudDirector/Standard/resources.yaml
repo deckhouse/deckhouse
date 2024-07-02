@@ -1,19 +1,8 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: VCDInstanceClass
-metadata:
-  name: system
-spec:
-  rootDiskSizeGb: 30
-  sizingPolicy: ${VCD_ORG}-MSK
-  storageProfile: Fast vHDD 
-  template: ${VCD_ORG}/Ubuntu 24.04 Server (20240622)
-
----
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
-  name: system
+  name: worker
 spec:
   nodeType: CloudEphemeral
   cloudInstances:
@@ -21,14 +10,14 @@ spec:
     maxPerZone: 1
     classReference:
       kind: VCDInstanceClass
-      name: system
+      name: worker
   nodeTemplate:
     labels:
-      node-role.deckhouse.io/system: ""
+      node-role.deckhouse.io/worker: ""
     taints:
     - effect: NoExecute
       key: dedicated.deckhouse.io
-      value: system
+      value: worker
   chaos:
     mode: Disabled
 

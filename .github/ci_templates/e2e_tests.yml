@@ -11,6 +11,9 @@
 {!{- if eq $ctx.provider "vsphere"  -}!}
 {!{-   $layout = "Standard" -}!}
 {!{- end -}!}
+{!{- if eq $ctx.provider "vclouddirector"  -}!}
+{!{-   $layout = "Standard" -}!}
+{!{- end -}!}
 {!{- if eq $ctx.provider "static"  -}!}
 {!{-   $layout = "Static" -}!}
 {!{- end -}!}
@@ -83,9 +86,10 @@
 {!{- else if eq $provider "vsphere" }!}
   LAYOUT_VSPHERE_PASSWORD: ${{ secrets.LAYOUT_VSPHERE_PASSWORD }}
   LAYOUT_VSPHERE_BASE_DOMAIN: ${{ secrets.LAYOUT_VSPHERE_BASE_DOMAIN }}
-{!{- else if eq $provider "vcd" }!}
+{!{- else if eq $provider "vclouddirector" }!}
   LAYOUT_VCD_PASSWORD: ${{ secrets.LAYOUT_VCD_PASSWORD }}
   LAYOUT_VCD_USERNAME: ${{ secrets.LAYOUT_VCD_USERNAME }}
+  LAYOUT_STATIC_BASTION_IP: 80.249.129.56
   LAYOUT_VCD_SERVER: ${{ secrets.LAYOUT_VCD_SERVER }}
   LAYOUT_VCD_ORG: ${{ secrets.LAYOUT_VCD_ORG }}
 {!{- end }!}
@@ -132,6 +136,8 @@ run: |
   bastion_ip_file=""
   if [[ "${PROVIDER}" == "Static" ]] ; then
     bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+  elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+    bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
   fi
 
   echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
@@ -235,11 +241,12 @@ run: |
 {!{- else if eq $provider "vsphere" }!}
     -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
     -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
-{!{- else if eq $provider "vcd" }!}
+{!{- else if eq $provider "vclouddirector" }!}
     -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
     -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
     -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
     -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
+    -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
 {!{- end }!}
     -e USER_RUNNER_ID=${user_runner_id} \
     -v $(pwd)/testing:/deckhouse/testing \

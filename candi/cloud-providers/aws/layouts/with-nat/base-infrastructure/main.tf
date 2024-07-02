@@ -221,7 +221,7 @@ resource "aws_instance" "bastion" {
   subnet_id              = local.subnet_id
   vpc_security_group_ids = concat([module.security-groups.security_group_id_node, module.security-groups.security_group_id_ssh_accessible], local.additional_security_groups)
   source_dest_check      = false
-  iam_instance_profile   = "${local.prefix}-node"
+  iam_instance_profile   = aws_iam_instance_profile.node.name
 
   root_block_device {
     volume_size = local.root_volume_size
@@ -237,7 +237,14 @@ resource "aws_instance" "bastion" {
       ebs_optimized
     ]
   }
+
+  depends_on = [
+    module.vpc,
+    module.security-groups,
+    aws_iam_instance_profile.node
+  ]
 }
+
 
 resource "aws_eip" "bastion" {
   count = local.bastion_instance != {} ? 1 : 0
