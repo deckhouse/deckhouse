@@ -6,10 +6,10 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package workflow
 
 import (
-	worker_client "system-registry-manager/pkg/worker/client"
+	executor_client "system-registry-manager/pkg/executor/client"
 )
 
-type NodeManager interface {
+type RegistryNodeManager interface {
 	GetNodeName() string
 	GetNodeIP() (string, error)
 
@@ -40,7 +40,7 @@ type SeaweedfsNodeRunningStatus struct {
 	NeedUpdateCerts    bool
 }
 
-type SeaweedfsCreateNodeRequest = worker_client.CreateRegistryRequest
-type SeaweedfsUpdateNodeRequest = worker_client.UpdateRegistryRequest
-type SeaweedfsCheckNodeRequest = worker_client.CheckRegistryRequest
-type SeaweedfsCheckNodeResponce = worker_client.CheckRegistryResponse
+type SeaweedfsCreateNodeRequest = executor_client.CreateRegistryRequest
+type SeaweedfsUpdateNodeRequest = executor_client.UpdateRegistryRequest
+type SeaweedfsCheckNodeRequest = executor_client.CheckRegistryRequest
+type SeaweedfsCheckNodeResponce = executor_client.CheckRegistryResponse

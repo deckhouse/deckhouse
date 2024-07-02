@@ -37,24 +37,24 @@ func startMasterWorkflow(ctx context.Context, m *Master) {
 }
 
 func masterWorkflow(ctx context.Context, m *Master) error {
-	workersInfos, err := k8s_info.WaitAllWorkers()
+	executorsInfos, err := k8s_info.WaitAllExecutors()
 	if err != nil {
 		return err
 	}
 
-	nodeManagers := make([]workflow.NodeManager, 0, len(workersInfos))
+	registryNodeManagers := make([]workflow.RegistryNodeManager, 0, len(executorsInfos))
 
-	for _, workerInfo := range workersInfos {
-		nodeManagers = append(nodeManagers, NewNodeManager(ctx, workerInfo))
+	for _, executorInfo := range executorsInfos {
+		registryNodeManagers = append(registryNodeManagers, NewNodeManager(ctx, executorInfo))
 	}
 
-	seaweedfsCaCertsWorkflow := workflow.NewSeaweedfsCertsWorkflow(ctx, nodeManagers, pkg_cfg.GetConfig().Cluster.Size)
+	seaweedfsCaCertsWorkflow := workflow.NewSeaweedfsCertsWorkflow(ctx, registryNodeManagers, pkg_cfg.GetConfig().Cluster.Size)
 	err = seaweedfsCaCertsWorkflow.Start()
 	if err != nil {
 		return err
 	}
 
-	seaweedfsScaleWorkflow := workflow.NewSeaweedfsScaleWorkflow(ctx, nodeManagers, pkg_cfg.GetConfig().Cluster.Size)
+	seaweedfsScaleWorkflow := workflow.NewSeaweedfsScaleWorkflow(ctx, registryNodeManagers, pkg_cfg.GetConfig().Cluster.Size)
 	err = seaweedfsScaleWorkflow.Start()
 	if err != nil {
 		return err

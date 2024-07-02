@@ -15,10 +15,10 @@ type SeaweedfsCertsWorkflow struct {
 	log               *logrus.Entry
 	ctx               context.Context
 	ExpectedNodeCount int
-	NodeManagers      []NodeManager
+	NodeManagers      []RegistryNodeManager
 }
 
-func NewSeaweedfsCertsWorkflow(ctx context.Context, nodeManagers []NodeManager, expectedNodeCount int) *SeaweedfsCertsWorkflow {
+func NewSeaweedfsCertsWorkflow(ctx context.Context, nodeManagers []RegistryNodeManager, expectedNodeCount int) *SeaweedfsCertsWorkflow {
 	log := pkg_logs.GetLoggerFromContext(ctx)
 	return &SeaweedfsCertsWorkflow{
 		log:               log,

@@ -5,14 +5,12 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package workflow
 
+/*
 import (
-	"context"
 	"fmt"
-	pkg_logs "system-registry-manager/pkg/logs"
-	"system-registry-manager/pkg/utils"
-	pkg_utils "system-registry-manager/pkg/utils"
-
 	"github.com/sirupsen/logrus"
+	pkg_logs "system-registry-manager/pkg/logs"
+	pkg_utils "system-registry-manager/pkg/utils"
 )
 
 type SeaweedfsScaleWorkflow struct {
@@ -33,7 +31,6 @@ func NewSeaweedfsScaleWorkflow(ctx context.Context, nodeManagers []RegistryNodeM
 }
 
 func (w *SeaweedfsScaleWorkflow) Start() error {
-	w.log.Info("Starting SeaweedfsScaleWorkflow")
 	expectedNodesCount := GetExpectedNodeCount(len(w.NodeManagers), w.ExpectedNodeCount)
 
 	w.log.Infof("Starting scale workflow with expected node count: %d", expectedNodesCount)
@@ -47,35 +44,35 @@ func (w *SeaweedfsScaleWorkflow) Start() error {
 		w.log.Warnf("!!!!Expected node count is even, removing one node. new expected node count: %d", expectedNodesCount)
 	}
 
-	nodesWithManager, nodesWithoutManager, err := SelectBy(w.NodeManagers, CmpIsExist)
-	w.log.Infof("Nodes with Registry Manager: %s, nodes without Registry Manager: %s", GetNodeNames(nodesWithManager), GetNodeNames(nodesWithoutManager))
+	existNodes, notExistNodes, err := SelectBy(w.NodeManagers, CmpIsExist)
+	w.log.Infof("Exist nodes: %s, Not exist nodes: %s", GetNodeNames(existNodes), GetNodeNames(notExistNodes))
 	if err != nil {
 		return err
 	}
-	if len(nodesWithManager) == 0 {
-		clusterNodes, _ := SplitNodesByCount(nodesWithoutManager, expectedNodesCount)
+	if len(existNodes) == 0 {
+		clusterNodes, _ := SplitNodesByCount(notExistNodes, expectedNodesCount)
 		return w.createCluster(clusterNodes)
 	}
 
-	if len(nodesWithManager) == expectedNodesCount {
-		w.log.Infof("nodesWithManager equal expectedNodesCount, nodesWithManager: %d, expectedNodesCount: %d", len(nodesWithManager), expectedNodesCount)
-		return w.syncCluster(nodesWithManager)
+	if len(existNodes) == expectedNodesCount {
+		w.log.Infof("existsNodesCount qual expectedNodesCount, existNodesCount: %d, expectedNodesCount: %d", len(existNodes), expectedNodesCount)
+		return w.syncCluster(existNodes)
 	}
 
-	if len(nodesWithManager) < expectedNodesCount {
-		w.log.Infof("nodesWithManager less than expectedNodesCount, nodesWithManager: %d, expectedNodesCount: %d", len(nodesWithManager), expectedNodesCount)
-		newClusterNodes, _ := SplitNodesByCount(nodesWithoutManager, expectedNodesCount-len(nodesWithManager))
-		return w.scaleUpCluster(nodesWithManager, newClusterNodes)
+	if len(existNodes) < expectedNodesCount {
+		w.log.Infof("existsNodesCount less than expectedNodesCount, existNodesCount: %d, expectedNodesCount: %d", len(existNodes), expectedNodesCount)
+		newClusterNodes, _ := SplitNodesByCount(notExistNodes, expectedNodesCount-len(existNodes))
+		return w.scaleUpCluster(existNodes, newClusterNodes)
 	}
 
-	if len(nodesWithManager) > expectedNodesCount {
-		w.log.Infof("nodesWithManager more than expectedNodesCount, nodesWithManager: %d, expectedNodesCount: %d", len(nodesWithManager), expectedNodesCount)
-		sortedExistNodes, err := SortBy(nodesWithManager, CmpIsRunning)
+	if len(existNodes) > expectedNodesCount {
+		w.log.Infof("existsNodesCount more than expectedNodesCount, existNodesCount: %d, expectedNodesCount: %d", len(existNodes), expectedNodesCount)
+		sortedExistNodes, err := SortBy(existNodes, CmpIsRunning)
 		if err != nil {
 			return err
 		}
 
-		clusterNodes, clusterNodesToDelete := SplitNodesByCount(sortedExistNodes, len(nodesWithManager)-expectedNodesCount)
+		clusterNodes, clusterNodesToDelete := SplitNodesByCount(sortedExistNodes, len(existNodes)-expectedNodesCount)
 		w.log.Infof("Cluster nodes: %s, Cluster nodes to delete: %s", GetNodeNames(clusterNodes), GetNodeNames(clusterNodesToDelete))
 		return w.scaleDownCluster(clusterNodes, clusterNodesToDelete)
 	}
@@ -83,30 +80,25 @@ func (w *SeaweedfsScaleWorkflow) Start() error {
 }
 
 func (w *SeaweedfsScaleWorkflow) syncCluster(clusterNodes []RegistryNodeManager) error {
-	w.log.Info("Starting syncCluster")
-	w.log.Infof("Syncing cluster nodes: %s", GetNodeNames(clusterNodes))
+	w.log.Infof("Sync cluster with nodes: %s", GetNodeNames(clusterNodes))
 
 	// Prepare leader and ips
-	w.log.Infof("syncCluster :: GetNewAndUnusedClusterIP")
-	leader, newClusterIPs, unUsedIPs, err := GetNewAndUnusedClusterIP(w.ctx, w.log, clusterNodes, []RegistryNodeManager{})
-
-	leaderIP, _ := leader.GetNodeIP()
-	w.log.Infof("RAW!!! error: %s, leaderIP: %v, newClusterIPs: %v, unUsedIPs: %v", err, leaderIP, newClusterIPs, unUsedIPs)
-
+	w.log.Infof("Get IPs for current cluster")
+	leaders, newClusterIPs, unUsedIPs, err := GetNewAndUnusedClusterIP(w.ctx, w.log, clusterNodes, []RegistryNodeManager{})
 	if err != nil {
 		return err
 	}
+	if len(leaders) != 1 {
+		w.log.Infof("The number of leaders is not equal to 1")
+		return fmt.Errorf("len(leaders) != 1")
+	}
+	leader := leaders[0]
 
-	//	if len(leaders) != 1 {
-	//		w.log.Infof("The number of leaders is not equal to 1")
-	//		return fmt.Errorf("len(leaders) != 1")
-	//	}
-	//	leader := leaders[0]
+	w.log.Infof("DEBUG!!! leader: %s, newClusterIPs: %s, unUsedIPs: %s", leader.GetNodeName(), newClusterIPs, unUsedIPs)
 
 	if pkg_utils.IsEvenNumber(len(clusterNodes)) {
-		return fmt.Errorf("the number of nodes is even")
-		//newClusterIPs = utils.InsertString(IpForEvenNodesNumber, newClusterIPs)
-		//unUsedIPs = utils.RemoveStringFromSlice(IpForEvenNodesNumber, unUsedIPs)
+		newClusterIPs = utils.InsertString(IpForEvenNodesNumber, newClusterIPs)
+		unUsedIPs = utils.RemoveStringFromSlice(IpForEvenNodesNumber, unUsedIPs)
 	}
 
 	// Prepare requests
@@ -142,7 +134,7 @@ func (w *SeaweedfsScaleWorkflow) syncCluster(clusterNodes []RegistryNodeManager)
 			needUpgrade = append(needUpgrade, node)
 		}
 	}
-	err = RollingUpgradeNodesOld(w.ctx, w.log, needUpgrade, &updateRequest)
+	err = RollingUpgradeNodes(w.ctx, w.log, needUpgrade, &updateRequest)
 	if err != nil {
 		return err
 	}
@@ -182,8 +174,7 @@ func (w *SeaweedfsScaleWorkflow) createCluster(clusterNodes []RegistryNodeManage
 	}
 
 	if pkg_utils.IsEvenNumber(len(clusterNodes)) {
-		return fmt.Errorf("the number of nodes is even")
-		// createRequest.MasterPeers = append(createRequest.MasterPeers, IpForEvenNodesNumber)
+		createRequest.MasterPeers = append(createRequest.MasterPeers, IpForEvenNodesNumber)
 	}
 
 	for _, node := range clusterNodes {
@@ -209,24 +200,19 @@ func (w *SeaweedfsScaleWorkflow) scaleUpCluster(oldClusterNodes, newClusterNodes
 
 	// Prepare leader and ips
 	w.log.Infof("Prepare IPs for new cluster")
-	leader, newClusterIPs, unUsedIPs, err := GetNewAndUnusedClusterIP(w.ctx, w.log, append(oldClusterNodes, newClusterNodes...), []RegistryNodeManager{})
-
-	leaderIP, _ := leader.GetNodeIP()
-	w.log.Infof("RAW!!! error: %s, leaderIP: %v, newClusterIPs: %v, unUsedIPs: %v", err, leaderIP, newClusterIPs, unUsedIPs)
-
+	leaders, newClusterIPs, unUsedIPs, err := GetNewAndUnusedClusterIP(w.ctx, w.log, append(oldClusterNodes, newClusterNodes...), []RegistryNodeManager{})
 	if err != nil {
 		return err
 	}
-	//	if len(leaders) != 1 {
-	//		w.log.Infof("The number of leaders is not equal to 1")
-	//		return fmt.Errorf("len(leaders) != 1")
-	//	}
-	//	leader := leaders[0]
+	if len(leaders) != 1 {
+		w.log.Infof("The number of leaders is not equal to 1")
+		return fmt.Errorf("len(leaders) != 1")
+	}
+	leader := leaders[0]
 
 	if pkg_utils.IsEvenNumber(len(oldClusterNodes) + len(newClusterNodes)) {
-		return fmt.Errorf("the number of nodes is even")
-		//		newClusterIPs = utils.InsertString(IpForEvenNodesNumber, newClusterIPs)
-		//		unUsedIPs = utils.RemoveStringFromSlice(IpForEvenNodesNumber, unUsedIPs)
+		newClusterIPs = utils.InsertString(IpForEvenNodesNumber, newClusterIPs)
+		unUsedIPs = utils.RemoveStringFromSlice(IpForEvenNodesNumber, unUsedIPs)
 	}
 
 	// Prepare requests
@@ -284,7 +270,7 @@ func (w *SeaweedfsScaleWorkflow) scaleUpCluster(oldClusterNodes, newClusterNodes
 			needUpgrade = append(needUpgrade, node)
 		}
 	}
-	err = RollingUpgradeNodesOld(w.ctx, w.log, needUpgrade, &updateRequest)
+	err = RollingUpgradeNodes(w.ctx, w.log, needUpgrade, &updateRequest)
 	if err != nil {
 		return err
 	}
@@ -312,32 +298,31 @@ func (w *SeaweedfsScaleWorkflow) scaleDownCluster(clusterNodes, clusterNodesToDe
 	return nil
 }
 
-func (w *SeaweedfsScaleWorkflow) scaleDownClusterPerNode(clusterNodes []RegistryNodeManager, clusterNodeToRemove RegistryNodeManager) error {
-	w.log.Infof("scaleDownClusterPerNode :: Deleting node: %s", GetNodeNames([]RegistryNodeManager{clusterNodeToRemove}))
+func (w *SeaweedfsScaleWorkflow) scaleDownClusterPerNode(clusterNodes []RegistryNodeManager, clusterNodeToDelete RegistryNodeManager) error {
+	w.log.Infof("Deleting node: %s", GetNodeNames([]RegistryNodeManager{clusterNodeToDelete}))
 
 	// Change leader
-	w.log.Infof("scaleDownClusterPerNode :: emoveLeaderStatusForNode\n)")
-	if err := RemoveLeaderStatusForNode(w.ctx, w.log, clusterNodes, clusterNodeToRemove); err != nil {
+	w.log.Infof("!!!! POTENTIAL PROBLEM. RemoveLeaderStatusForNode\n)")
+	if err := RemoveLeaderStatusForNode(w.ctx, w.log, clusterNodes, clusterNodeToDelete); err != nil {
 		return err
 	}
 
 	// Prepare leader and ips
 	w.log.Infof("!!!! POTENTIAL PROBLEM. GetNewAndUnusedClusterIP\n")
 
-	leader, newClusterIPs, unUsedIPs, err := GetNewAndUnusedClusterIP(w.ctx, w.log, clusterNodes, []RegistryNodeManager{clusterNodeToRemove})
+	leaders, newClusterIPs, unUsedIPs, err := GetNewAndUnusedClusterIP(w.ctx, w.log, clusterNodes, []RegistryNodeManager{clusterNodeToDelete})
 	if err != nil {
 		return err
 	}
-	//	if len(leaders) != 1 {
-	//		w.log.Infof("The number of leaders is not equal to 1")
-	//		return fmt.Errorf("len(leaders) != 1")
-	//	}
-	//	leader := leaders[0]
+	if len(leaders) != 1 {
+		w.log.Infof("The number of leaders is not equal to 1")
+		return fmt.Errorf("len(leaders) != 1")
+	}
+	leader := leaders[0]
 
 	if pkg_utils.IsEvenNumber(len(clusterNodes)) {
-		return fmt.Errorf("the number of nodes is even")
-		//		newClusterIPs = utils.InsertString(IpForEvenNodesNumber, newClusterIPs)
-		//		unUsedIPs = utils.RemoveStringFromSlice(IpForEvenNodesNumber, unUsedIPs)
+		newClusterIPs = utils.InsertString(IpForEvenNodesNumber, newClusterIPs)
+		unUsedIPs = utils.RemoveStringFromSlice(IpForEvenNodesNumber, unUsedIPs)
 	}
 
 	// Prepare requests
@@ -385,13 +370,14 @@ func (w *SeaweedfsScaleWorkflow) scaleDownClusterPerNode(clusterNodes []Registry
 		}
 	}
 	w.log.Infof("RollingUpgradeNodes: %v, %+v", needUpgrade, updateRequest)
-	err = RollingUpgradeNodesOld(w.ctx, w.log, needUpgrade, &updateRequest)
+	err = RollingUpgradeNodes(w.ctx, w.log, needUpgrade, &updateRequest)
 	if err != nil {
 		return err
 	}
 
-	if err := DeleteNodes(w.ctx, w.log, []RegistryNodeManager{clusterNodeToRemove}); err != nil {
+	if err := DeleteNodes(w.ctx, w.log, []RegistryNodeManager{clusterNodeToDelete}); err != nil {
 		return err
 	}
 	return nil
 }
+*/

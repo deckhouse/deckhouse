@@ -193,13 +193,13 @@ package k8shandler
 
 // 	return &MergeInfo{
 // 		MasterNode:   *masterNode,
-// 		Worker:       *workerEndpoint,
+// 		Executor:       *workerEndpoint,
 // 		SeaweedfsPod: seaweedfsPod,
 // 	}
 // }
 
 // type MergeInfo struct {
 // 	MasterNode   corev1.Node
-// 	Worker       corev1.EndpointAddress
+// 	Executor       corev1.EndpointAddress
 // 	SeaweedfsPod *corev1.Pod
 // }
