@@ -47,14 +47,14 @@ masterNodeGroup:
     sizingPolicy: ${VCD_ORG}-MSK
     etcdDiskSizeGb: 10
     rootDiskSizeGb: 40
-    template: ${VCD_ORG}/Ubuntu 24.04 Server (20240622)
+    template: ${VCD_ORG}/ubuntu-template
   replicas: 1
 nodeGroups:
 - instanceClass:
     storageProfile:  Fast vHDD 
     sizingPolicy: ${VCD_ORG}-MSK
     rootDiskSizeGb: 40
-    template: ${VCD_ORG}/Ubuntu 24.04 Server (20240622)
+    template: ${VCD_ORG}/ubuntu-template
   name: system
   replicas: 1
   nodeTemplate:
@@ -92,4 +92,4 @@ spec:
   rootDiskSizeGb: 30
   sizingPolicy: ${VCD_ORG}-MSK
   storageProfile: Fast vHDD 
-  template: ${VCD_ORG}/Ubuntu 24.04 Server (20240622)
+  template: ${VCD_ORG}/ubuntu-template
