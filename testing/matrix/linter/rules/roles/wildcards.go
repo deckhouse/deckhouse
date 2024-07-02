@@ -89,9 +89,6 @@ var skipCheckWildcards = map[string][]string{
 	"okmeter/templates/rbac-for-us.yaml": {
 		"d8:okmeter",
 	},
-	"openvpn/templates/openvpn/rbac-for-us.yaml": {
-		"openvpn",
-	},
 	"upmeter/templates/upmeter-agent/rbac-for-us.yaml": {
 		"upmeter-agent",
 		"d8:upmeter:upmeter-agent",
