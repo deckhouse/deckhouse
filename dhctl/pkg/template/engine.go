@@ -99,6 +99,7 @@ func (e Engine) renderWithTemplate(tmpl string, t *template.Template) (out *byte
 	if err != nil {
 		return nil, cleanupParseError(e.Name, err)
 	}
+	e.Data["Files"] = Files{}
 
 	var buf bytes.Buffer
 	if err := t.ExecuteTemplate(&buf, e.Name, e.Data); err != nil {

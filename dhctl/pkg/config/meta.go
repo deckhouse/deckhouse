@@ -374,6 +374,11 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 	}
 
 	configForBashibleBundleTemplate["runType"] = "ClusterBootstrap"
+
+	if m.ClusterType == CloudClusterType {
+		configForBashibleBundleTemplate["provider"] = m.ProviderName
+	}
+
 	configForBashibleBundleTemplate["bundle"] = bundle
 	configForBashibleBundleTemplate["cri"] = data["defaultCRI"]
 	configForBashibleBundleTemplate["kubernetesVersion"] = data["kubernetesVersion"]

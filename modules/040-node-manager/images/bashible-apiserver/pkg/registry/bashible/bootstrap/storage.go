@@ -29,12 +29,12 @@ import (
 	"bashible-apiserver/pkg/template"
 )
 
-const templateName = "bootstrap.sh.tpl"
+const templateName = "03-prepare-bashible.sh.tpl"
 
 // NewStorage returns storage object that will work against API services.
 func NewStorage(rootDir string, bashibleContext template.Context) (*Storage, error) {
 	storage := &Storage{
-		templatePath:    filepath.Join(rootDir, "bashible", templateName),
+		templatePath:    filepath.Join(rootDir, "bashible", "bootstrap", templateName),
 		bashibleContext: bashibleContext,
 	}
 
