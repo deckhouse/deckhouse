@@ -31,6 +31,8 @@ func startMasterWorkflow(ctx context.Context, m *Master) {
 			if err != nil {
 				log.Error(err)
 				continue
+			} else {
+				log.Infof("MasterWorkflow :: complete successfully")
 			}
 		}
 	}

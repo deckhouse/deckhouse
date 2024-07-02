@@ -413,8 +413,8 @@ func CreateNodes(ctx context.Context, log *logrus.Entry, nodes []RegistryNodeMan
 	return nil
 }
 
-func RollingUpgradeNodes(ctx context.Context, log *logrus.Entry, nodes []RegistryNodeManager, updateRequest *SeaweedfsUpdateNodeRequest) error {
-	for _, node := range nodes {
+func RollingUpgradeNodes(ctx context.Context, log *logrus.Entry, allNodes []RegistryNodeManager, onlyUpgradNodes []RegistryNodeManager, updateRequest *SeaweedfsUpdateNodeRequest) error {
+	for _, node := range onlyUpgradNodes {
 		nodeIP, err := node.GetNodeIP()
 		if err != nil {
 			return err
@@ -434,13 +434,13 @@ func RollingUpgradeNodes(ctx context.Context, log *logrus.Entry, nodes []Registr
 			return fmt.Errorf("error waitig node %s", node.GetNodeName())
 		}
 
-		log.Infof("RollingUpgradeNodes :: WaitLeaderElectionForNodes :: for: %s", GetNodeNames(nodes))
-		leader, err := WaitLeaderElectionForNodes(ctx, log, nodes)
+		log.Infof("RollingUpgradeNodes :: WaitLeaderElectionForNodes :: for: %s", GetNodeNames(allNodes))
+		leader, err := WaitLeaderElectionForNodes(ctx, log, allNodes)
 		if err != nil {
 			return err
 		}
 
-		log.Infof("RollingUpgradeNodes :: WaitNodesConnection :: for: %s", GetNodeNames(nodes))
+		log.Infof("RollingUpgradeNodes :: WaitNodesConnection :: for: %s", node.GetNodeName())
 		err = WaitNodesConnection(ctx, log, leader, []string{nodeIP})
 		if err != nil {
 			return fmt.Errorf("error waitig node %s: %s", node.GetNodeName(), err.Error())
@@ -622,22 +622,8 @@ func GetClustersMembers(nodeManagers []RegistryNodeManager) ([]ClusterMembers, e
 	return clusterMembersList, nil
 }
 
-func GetCurrentClustersMembers(ctx context.Context, log *logrus.Entry, clusterNodes []RegistryNodeManager) ([]ClusterMembers, error) {
-	clustersMembers, err := GetClustersMembers(clusterNodes)
-	if clustersMembers != nil {
-		log.Infof("Clusters count: %d", len(clustersMembers))
-		log.Infof("Clusters members: %+v", clustersMembers)
-		if len(clustersMembers) > 0 {
-			log.Infof("Cluster[0] leader: %+v", clustersMembers[0].Leader.GetNodeName())
-		} else {
-			log.Info("Cluster[0] leader: nil")
-		}
-	}
-	return clustersMembers, err
-}
-
 func GetClustersLeaders(ctx context.Context, log *logrus.Entry, clusterNodes []RegistryNodeManager) ([]RegistryNodeManager, error) {
-	clustersMembers, err := GetCurrentClustersMembers(ctx, log, clusterNodes)
+	clustersMembers, err := GetClustersMembers(clusterNodes)
 	if err != nil {
 		return nil, err
 	}

@@ -28,27 +28,21 @@ func NewSeaweedfsCertsWorkflow(ctx context.Context, nodeManagers []RegistryNodeM
 	}
 }
 
-func (w *SeaweedfsCertsWorkflow) Start() (err error) {
+func (w *SeaweedfsCertsWorkflow) Start() error {
 	w.log.Info("CertsWorkflow :: Start")
-	defer func() {
-		if err != nil {
-			w.log.Info("CertsWorkflow :: Start :: completed successfully")
-		} else {
-			w.log.Errorf("CertsWorkflow :: Start :: error: %s", err.Error())
-		}
-	}()
 
-	w.log.Info("CertsWorkflow :: Start :: Selecting nodes that exist and need certificate updates")
+	w.log.Info("Start :: Selecting nodes that exist and need certificate updates")
 	existAndNeedUpdateCert, _, err := SelectBy(w.NodeManagers, CmpIsExist, CmpIsNeedUpdateCerts)
 	if err != nil {
 		return err
 	}
 
 	if len(existAndNeedUpdateCert) <= 0 {
-		w.log.Info("CertsWorkflow :: Start :: Nothing to do")
+		w.log.Info("Start :: Nothing to do")
+		return nil
 	}
 
-	w.log.Infof("CertsWorkflow :: Start :: Found %s nodes that need certificate updates", GetNodeNames(existAndNeedUpdateCert))
+	w.log.Infof("Start :: Found %s nodes that need certificate updates", GetNodeNames(existAndNeedUpdateCert))
 	updateRequest := SeaweedfsUpdateNodeRequest{
 		Certs: struct {
 			UpdateOrCreate bool "json:\"updateOrCreate\""
@@ -66,14 +60,10 @@ func (w *SeaweedfsCertsWorkflow) Start() (err error) {
 	}
 
 	for _, node := range existAndNeedUpdateCert {
-		w.log.Infof("CertsWorkflow :: Start :: Updating CA certificates for node: %s", node.GetNodeName())
+		w.log.Infof("Start :: Updating CA certificates for node: %s", node.GetNodeName())
 		if err := node.UpdateNodeManifests(&updateRequest); err != nil {
 			return err
 		}
-	}
-
-	if _, err := WaitLeaderElectionForNodes(w.ctx, w.log, existAndNeedUpdateCert); err != nil {
-		return err
 	}
 	return nil
 }
