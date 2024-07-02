@@ -65,7 +65,7 @@ func (w *SeaweedfsCertsWorkflow) Start() error {
 		}
 	}
 
-	if err := WaitLeaderElectionForNodes(w.ctx, w.log, existAndNeedUpdateCert); err != nil {
+	if _, err := WaitLeaderElectionForNodes(w.ctx, w.log, existAndNeedUpdateCert); err != nil {
 		return err
 	}
 	w.log.Info("SeaweedfsCertsWorkflow completed successfully")

@@ -141,7 +141,7 @@ func WaitByAllNodes(ctx context.Context, log *logrus.Entry, nodeManagers []Regis
 		case <-ctx.Done():
 			return false, ctx.Err()
 		default:
-			log.Infof("wait by retry count %d/%d", i, pkg_cfg.MaxRetries)
+			log.Infof("wait by all nodes, retry count %d/%d", i, pkg_cfg.MaxRetries)
 			time.Sleep(5 * time.Second)
 
 			isWaited := true
@@ -185,17 +185,17 @@ func WaitByAllNodes(ctx context.Context, log *logrus.Entry, nodeManagers []Regis
 	return false, nil
 }
 
-func WaitByAnyNode(ctx context.Context, log *logrus.Entry, nodeManagers []RegistryNodeManager, cmpFuncs ...interface{}) (bool, error) {
+func WaitByAnyNode(ctx context.Context, log *logrus.Entry, nodeManagers []RegistryNodeManager, cmpFuncs ...interface{}) (RegistryNodeManager, bool, error) {
 	if len(nodeManagers) == 0 {
-		return true, nil
+		return nil, false, nil
 	}
 
 	for i := 0; i < pkg_cfg.MaxRetries; i++ {
 		select {
 		case <-ctx.Done():
-			return false, ctx.Err()
+			return nil, false, ctx.Err()
 		default:
-			log.Infof("wait by retry count %d/%d", i, pkg_cfg.MaxRetries)
+			log.Infof("wait by any node, retry count %d/%d", i, pkg_cfg.MaxRetries)
 			time.Sleep(5 * time.Second)
 
 			nodeManagersCache := NewNodeManagerCache()
@@ -225,16 +225,16 @@ func WaitByAnyNode(ctx context.Context, log *logrus.Entry, nodeManagers []Regist
 						}
 						isWaited = isWaited && f(status)
 					default:
-						return false, fmt.Errorf("error, unknown function format: %v", cmpFunc)
+						return nil, false, fmt.Errorf("error, unknown function format: %v", cmpFunc)
 					}
 				}
 				if isWaited {
-					return true, nil
+					return nodeManager, true, nil
 				}
 			}
 		}
 	}
-	return false, nil
+	return nil, false, nil
 }
 
 func SelectBy(nodeManagers []RegistryNodeManager, cmpFuncs ...interface{}) ([]RegistryNodeManager, []RegistryNodeManager, error) {
@@ -420,95 +420,46 @@ func RollingUpgradeNodes(ctx context.Context, log *logrus.Entry, nodes []Registr
 			return err
 		}
 
-		log.Infof("Updating manifests for node %s", node.GetNodeName())
+		log.Infof("RollingUpgradeNodes :: UpdateNodeManifests for: %s", node.GetNodeName())
 		if err := node.UpdateNodeManifests(updateRequest); err != nil {
 			return err
 		}
 
-		log.Infof("Waiting node %s", node.GetNodeName())
-
-		for i := 0; i < pkg_cfg.MaxRetries; i++ {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			default:
-				log.Infof("wait by retry count %d/%d", i, pkg_cfg.MaxRetries)
-				time.Sleep(5 * time.Second)
-
-				runningStatus, err := node.GetNodeRunningStatus()
-				log.Infof("!!TRACE node RAW data: err: %+v, runningStatus: %+v, IsRunning: %s", err,
-					runningStatus, runningStatus.IsRunning)
-				if err != nil || runningStatus == nil || !runningStatus.IsRunning {
-					continue
-				}
-
-				clusterStatus, err := node.GetNodeClusterStatus()
-				log.Infof("!!TRACE clusterStatus RAW data: err: %+v, clusterStatus: %+v, IsLeader: %s", err,
-					clusterStatus, clusterStatus.IsLeader)
-
-				if err != nil || clusterStatus == nil || !clusterStatus.IsLeader {
-					continue
-				}
-
-				connected := pkg_utils.IsStringInSlice(nodeIP, &clusterStatus.ClusterNodesIPs)
-				log.Infof("Checking if node %s is connected to cluster: %t", node.GetNodeName(), connected)
-				if connected {
-					break
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func RollingUpgradeNodesOld(ctx context.Context, log *logrus.Entry, nodes []RegistryNodeManager, updateRequest *SeaweedfsUpdateNodeRequest) error {
-	for _, node := range nodes {
-		nodeIP, err := node.GetNodeIP()
+		log.Infof("RollingUpgradeNodes :: WaitByAllNodes (CmpIsRunning) for: %s", node.GetNodeName())
+		isWait, err := WaitByAllNodes(ctx, log, []RegistryNodeManager{node}, CmpIsRunning)
 		if err != nil {
-			return err
+			return fmt.Errorf("error waitig node %s: %s", node.GetNodeName(), err.Error())
 		}
-
-		log.Infof("Updating manifests for node %s", node.GetNodeName())
-		if err := node.UpdateNodeManifests(updateRequest); err != nil {
-			return err
-		}
-
-		log.Infof("Waiting node %s", node.GetNodeName())
-
-		var cpmFuncNodeConnectToCluster CpmFuncNodeClusterStatus = func(status *SeaweedfsNodeClusterStatus) bool {
-			connected := pkg_utils.IsStringInSlice(nodeIP, &status.ClusterNodesIPs)
-			log.Infof("Checking if node %s is connected to cluster: %t", node.GetNodeName(), connected) // ## CHANGED ##
-			return connected
-		}
-
-		log.Infof("RollingUpgradeNodesOld :: WaitLeaderElectionForNodes for: %s", GetNodeNames(nodes))
-		err = WaitLeaderElectionForNodes(ctx, log, nodes)
-		if err != nil {
-			return err
-		}
-		log.Infof("RollingUpgradeNodesOld :: WaitByAllNodes (mpIsRunning, cpmFuncNodeConnectToCluster) for: %s", GetNodeNames(nodes))
-		wait, err := WaitByAllNodes(ctx, log, []RegistryNodeManager{node}, CmpIsRunning, cpmFuncNodeConnectToCluster)
-		if err != nil {
-			return err
-		}
-		if !wait {
+		if !isWait {
 			return fmt.Errorf("error waitig node %s", node.GetNodeName())
 		}
+
+		log.Infof("RollingUpgradeNodes :: WaitLeaderElectionForNodes for: %s", GetNodeNames(nodes))
+		leader, err := WaitLeaderElectionForNodes(ctx, log, nodes)
+		if err != nil {
+			return err
+		}
+
+		log.Infof("RollingUpgradeNodes :: WaitNodesConnection for: %s", GetNodeNames(nodes))
+		err = WaitNodesConnection(ctx, log, leader, []string{nodeIP})
+		if err != nil {
+			return fmt.Errorf("error waitig node %s: %s", node.GetNodeName(), err.Error())
+		}
 	}
 	return nil
 }
 
-func WaitLeaderElectionForNodes(ctx context.Context, log *logrus.Entry, nodes []RegistryNodeManager) error {
-	log.Infof("WaitByAnyNode (CmpIsRunning, CpmIsLeader) :: WaitBy for: %s", GetNodeNames(nodes))
-	wait, err := WaitByAnyNode(ctx, log, nodes, CmpIsRunning, CpmIsLeader)
+func WaitLeaderElectionForNodes(ctx context.Context, log *logrus.Entry, nodes []RegistryNodeManager) (RegistryNodeManager, error) {
+	log.Infof("WaitLeaderElectionForNodes :: WaitByAnyNode (CmpIsRunning, CpmIsLeader) for: %s", GetNodeNames(nodes))
+	leader, wait, err := WaitByAnyNode(ctx, log, nodes, CmpIsRunning, CpmIsLeader)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if !wait {
-		return fmt.Errorf("error waitig cluster status for nodes: %s", GetNodeNames(nodes))
+		return nil, fmt.Errorf("error wait leader election for: %s", GetNodeNames(nodes))
 	}
-	return nil
+	return leader, nil
 }
 
 func WaitNodesConnection(ctx context.Context, log *logrus.Entry, leader RegistryNodeManager, nodesIps []string) error {
@@ -556,7 +507,7 @@ func RemoveLeaderStatusForNode(ctx context.Context, log *logrus.Entry, clusterNo
 	if err := clusterNode.RemoveNodeFromCluster(IpForEvenNodesNumber); err != nil {
 		return err
 	}
-	if err := WaitLeaderElectionForNodes(ctx, log, clusterNodes); err != nil {
+	if _, err := WaitLeaderElectionForNodes(ctx, log, clusterNodes); err != nil {
 		return err
 	}
 
@@ -564,7 +515,7 @@ func RemoveLeaderStatusForNode(ctx context.Context, log *logrus.Entry, clusterNo
 	if err := clusterNode.RemoveNodeFromCluster(removedLeaderNodeIp); err != nil {
 		return err
 	}
-	if err := WaitLeaderElectionForNodes(ctx, log, clusterNodes); err != nil {
+	if _, err := WaitLeaderElectionForNodes(ctx, log, clusterNodes); err != nil {
 		return err
 	}
 
