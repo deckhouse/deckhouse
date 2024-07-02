@@ -1,0 +1,55 @@
+{{- $version := "0.33" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - growpart
+  - install
+  - uninstall
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-fdisk-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - fdisk
+  - sfdisk
+  before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    growpart: {{ $version }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-fdisk-{{ $image_version }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
+shell:
+  install:
+    - apk update && apk add gettext-dev
+  setup:
+    - git clone -b v2.40.1 --depth 1 {{ $.SOURCE_REPO }}/util-linux/util-linux.git  /src
+    - cd /src
+    - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s" 
+    - export CFLAGS="-fPIC -pie -fstack-protector-all -O2 -D_FORTIFY_SOURCE=2 -static -s"
+    - ./autogen.sh && ./configure --enable-static --enable-static-programs=fdisk,sfdisk --disable-pylibmount --without-python --disable-liblastlog2 
+    - make fdisk.static sfdisk.static && strip ./build/fdisk.static && strip ./build/sfdisk.static
+    - mv ./fdisk.static /fdisk && mv ./sfdisk.static /sfdisk 
+    - chmod +x /fdisk /sfdisk
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_ALPINE_DEV }}
+git:
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  setup:
+    - git clone -b {{ $version }} --depth 1 {{ $.SOURCE_REPO }}/canonical/cloud-utils.git /src
+    - mv /src/bin/growpart /growpart
+    - chmod +x /growpart /install /uninstall
