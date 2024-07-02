@@ -121,13 +121,13 @@ func TestGetClustersMembers(t *testing.T) {
 
 	tests := []struct {
 		name               string
-		nodes              []NodeManager
+		nodes              []RegistryNodeManager
 		expClustersMembers []ClusterMembers
 		expError           error
 	}{
 		{
 			name: "Successful execution",
-			nodes: []NodeManager{
+			nodes: []RegistryNodeManager{
 				mockNodes["node1"],
 				mockNodes["node2"],
 				mockNodes["node3"],
@@ -135,14 +135,14 @@ func TestGetClustersMembers(t *testing.T) {
 			expClustersMembers: []ClusterMembers{
 				{
 					Leader:  mockNodes["node1"],
-					Members: []NodeManager{mockNodes["node1"], mockNodes["node2"], mockNodes["node3"]},
+					Members: []RegistryNodeManager{mockNodes["node1"], mockNodes["node2"], mockNodes["node3"]},
 				},
 			},
 			expError: nil,
 		},
 		{
 			name: "Node returns an error",
-			nodes: []NodeManager{
+			nodes: []RegistryNodeManager{
 				mockNodes["node4"],
 			},
 			expClustersMembers: []ClusterMembers{},
@@ -211,14 +211,14 @@ func TestWaitBy(t *testing.T) {
 	}
 	tests := []struct {
 		name         string
-		nodeManagers []NodeManager
+		nodeManagers []RegistryNodeManager
 		cmpFuncs     []interface{}
 		expResult    bool
 		expError     error
 	}{
 		{
 			name: "Nodes meet condition",
-			nodeManagers: []NodeManager{
+			nodeManagers: []RegistryNodeManager{
 				mockNodes["node1"],
 			},
 			cmpFuncs: []interface{}{
@@ -229,7 +229,7 @@ func TestWaitBy(t *testing.T) {
 		},
 		{
 			name: "Nodes meet condition",
-			nodeManagers: []NodeManager{
+			nodeManagers: []RegistryNodeManager{
 				mockNodes["node2"],
 			},
 			cmpFuncs: []interface{}{
@@ -289,32 +289,32 @@ func TestSelectBy(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		nodeManagers   []NodeManager
+		nodeManagers   []RegistryNodeManager
 		cmpFuncs       []interface{}
-		expSelected    []NodeManager
-		expNotSelected []NodeManager
+		expSelected    []RegistryNodeManager
+		expNotSelected []RegistryNodeManager
 		expError       error
 	}{
 		{
 			name: "Select nodes that meet condition",
-			nodeManagers: []NodeManager{
+			nodeManagers: []RegistryNodeManager{
 				mockNodes["node1"],
 				mockNodes["node2"],
 			},
 			cmpFuncs: []interface{}{
 				CpmIsLeader,
 			},
-			expSelected: []NodeManager{
+			expSelected: []RegistryNodeManager{
 				mockNodes["node1"],
 			},
-			expNotSelected: []NodeManager{
+			expNotSelected: []RegistryNodeManager{
 				mockNodes["node2"],
 			},
 			expError: nil,
 		},
 		{
 			name: "Select nodes that meet condition",
-			nodeManagers: []NodeManager{
+			nodeManagers: []RegistryNodeManager{
 				mockNodes["node1"],
 				mockNodes["node2"],
 				mockNodes["node3"],
@@ -323,10 +323,10 @@ func TestSelectBy(t *testing.T) {
 				CpmIsLeader,
 				CmpIsRunning,
 			},
-			expSelected: []NodeManager{
+			expSelected: []RegistryNodeManager{
 				mockNodes["node3"],
 			},
-			expNotSelected: []NodeManager{
+			expNotSelected: []RegistryNodeManager{
 				mockNodes["node1"],
 				mockNodes["node2"],
 			},
@@ -422,14 +422,14 @@ func TestSortBy(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		nodeManagers []NodeManager
+		nodeManagers []RegistryNodeManager
 		cmpFuncs     []interface{}
-		expSorted    []NodeManager
+		expSorted    []RegistryNodeManager
 		expError     error
 	}{
 		{
 			name: "Sort nodes by leader status",
-			nodeManagers: []NodeManager{
+			nodeManagers: []RegistryNodeManager{
 				mockNodes["node1"],
 				mockNodes["node2"],
 				mockNodes["node3"],
@@ -437,7 +437,7 @@ func TestSortBy(t *testing.T) {
 			cmpFuncs: []interface{}{
 				CpmIsLeader,
 			},
-			expSorted: []NodeManager{
+			expSorted: []RegistryNodeManager{
 				mockNodes["node2"],
 				mockNodes["node1"],
 				mockNodes["node3"],
@@ -446,14 +446,14 @@ func TestSortBy(t *testing.T) {
 		},
 		{
 			name: "Sort nodes by running status",
-			nodeManagers: []NodeManager{
+			nodeManagers: []RegistryNodeManager{
 				mockNodes["node4"],
 				mockNodes["node5"],
 			},
 			cmpFuncs: []interface{}{
 				CmpIsRunning,
 			},
-			expSorted: []NodeManager{
+			expSorted: []RegistryNodeManager{
 				mockNodes["node4"],
 				mockNodes["node5"],
 			},
@@ -461,7 +461,7 @@ func TestSortBy(t *testing.T) {
 		},
 		{
 			name: "Error in getting node status",
-			nodeManagers: []NodeManager{
+			nodeManagers: []RegistryNodeManager{
 				mockNodes["node6"],
 			},
 			cmpFuncs: []interface{}{
@@ -514,11 +514,11 @@ func TestGetNodeNames(t *testing.T) {
 		"node6": СreateMockNode("192.168.1.6", nil, nil, nil, nil),
 	}
 	tests := []struct {
-		nodes     []NodeManager
+		nodes     []RegistryNodeManager
 		expResult string
 	}{
 		{
-			nodes: []NodeManager{
+			nodes: []RegistryNodeManager{
 				mockNodes["node1"],
 				mockNodes["node3"],
 				mockNodes["node5"],
@@ -529,7 +529,7 @@ func TestGetNodeNames(t *testing.T) {
 			expResult: "[Node-192.168.1.1,Node-192.168.1.3,Node-192.168.1.5,Node-192.168.1.6,Node-192.168.1.4,Node-192.168.1.2]",
 		},
 		{
-			nodes:     []NodeManager{},
+			nodes:     []RegistryNodeManager{},
 			expResult: "[]",
 		},
 	}

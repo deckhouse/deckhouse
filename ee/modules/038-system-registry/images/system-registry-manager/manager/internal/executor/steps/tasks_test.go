@@ -31,7 +31,7 @@ func generateInputConfigForTest() error {
 			Namespace      string "mapstructure:\"namespace\""
 			DaemonsetName  string "mapstructure:\"daemonsetName\""
 			ServiceName    string "mapstructure:\"serviceName\""
-			WorkerPort     int    "mapstructure:\"workerPort\""
+			ExecutorPort   int    "mapstructure:\"workerPort\""
 			LeaderElection struct {
 				LeaseDurationSeconds int "mapstructure:\"leaseDurationSeconds\""
 				RenewDeadlineSeconds int "mapstructure:\"renewDeadlineSeconds\""
@@ -41,7 +41,7 @@ func generateInputConfigForTest() error {
 			Namespace:     "filenamespace",
 			DaemonsetName: "filedaemonsetname",
 			ServiceName:   "fileservicename",
-			WorkerPort:    123,
+			ExecutorPort:  123,
 			LeaderElection: struct {
 				LeaseDurationSeconds int "mapstructure:\"leaseDurationSeconds\""
 				RenewDeadlineSeconds int "mapstructure:\"renewDeadlineSeconds\""

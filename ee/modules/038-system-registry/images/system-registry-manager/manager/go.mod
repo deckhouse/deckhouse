@@ -9,7 +9,7 @@ require (
 	github.com/bombsimon/logrusr/v2 v2.0.1
 	github.com/deckhouse/deckhouse/go_lib/system-registry-manager v0.0.0-00010101000000-000000000000
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/seaweedfs/seaweedfs v0.0.0-20240619154028-610d397f76a3
+	github.com/seaweedfs/seaweedfs v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
@@ -104,4 +104,4 @@ require (
 
 replace github.com/deckhouse/deckhouse/go_lib/system-registry-manager => ../../../../../../go_lib/system-registry-manager
 
-// replace github.com/seaweedfs/seaweedfs => github.com/vadimartynov/seaweedfs v1.0.1
+replace github.com/seaweedfs/seaweedfs => github.com/sample/seaweedfs v0.0.0-20240620111256-7f30de56112b
