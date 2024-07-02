@@ -125,6 +125,33 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
 	}
 
+	if cloud.Provider == "Yandex" {
+		var masterNodeGroup YandexMasterNodeGroupSpec
+		if err := json.Unmarshal(m.ProviderClusterConfig["masterNodeGroup"], &masterNodeGroup); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
+		}
+
+		if masterNodeGroup.Replicas > 0 &&
+			masterNodeGroup.Replicas != len(masterNodeGroup.InstanceClass.ExternalIPAddresses) {
+			return nil, fmt.Errorf("number of masterNodeGroup.replicas should be equal to the length of masterNodeGroup.instanceClass.externalIPAddresses")
+		}
+
+		nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
+		if ok {
+			var yandexNodeGroups []YandexNodeGroupSpec
+			if err := json.Unmarshal(nodeGroups, &yandexNodeGroups); err != nil {
+				return nil, fmt.Errorf("unable to unmarshal node groups from provider cluster configuration: %v", err)
+			}
+
+			for _, nodeGroup := range yandexNodeGroups {
+				if nodeGroup.Replicas > 0 &&
+					nodeGroup.Replicas != len(nodeGroup.InstanceClass.ExternalIPAddresses) {
+					return nil, fmt.Errorf(`number of nodeGroups["%s"].replicas should be equal to the length of nodeGroups["%s"].instanceClass.externalIPAddresses`, nodeGroup.Name, nodeGroup.Name)
+				}
+			}
+		}
+	}
+
 	m.TerraNodeGroupSpecs = []TerraNodeGroupSpec{}
 	nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
 	if ok {
