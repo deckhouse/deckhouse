@@ -21,10 +21,12 @@ ifeq ($(OS_NAME), Linux)
 	JQ_PLATFORM = linux64
 	YQ_PLATFORM = linux
 	TRDL_PLATFORM = linux
+	GH_PLATFORM = linux
 else ifeq ($(OS_NAME), Darwin)
 	JQ_PLATFORM = osx-amd64
 	YQ_PLATFORM = darwin
 	TRDL_PLATFORM = darwin
+	GH_PLATFORM = macOS
 endif
 JQ_VERSION = 1.6
 
@@ -33,18 +35,14 @@ ifeq ($(PLATFORM_NAME), x86_64)
 	YQ_ARCH = amd64
 	CRANE_ARCH = x86_64
 	TRDL_ARCH = amd64
+	CRANE_ARCH = x86_64
+	GH_ARCH = amd64
 else ifeq ($(PLATFORM_NAME), arm64)
 	YQ_ARCH = arm64
 	CRANE_ARCH = arm64
 	TRDL_ARCH = arm64
-endif
-
-
-# Set arch for crane
-ifeq ($(PLATFORM_NAME), x86_64)
-	CRANE_ARCH = x86_64
-else ifeq ($(PLATFORM_NAME), arm64)
 	CRANE_ARCH = arm64
+	GH_ARCH = arm64
 endif
 
 # Set testing path for tests-modules
@@ -105,11 +103,12 @@ GOLANGCI_VERSION = 1.54.2
 TRIVY_VERSION= 0.38.3
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
+GH_VERSION = 2.52.0
 TESTS_TIMEOUT="15m"
 
 ##@ General
 
-deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/werf ## Install dev dependencies.
+deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/werf bin/gh ## Install dev dependencies.
 
 ##@ Tests
 
@@ -292,6 +291,11 @@ bin/werf: bin bin/trdl ## Install werf for images-digests generator.
 	trdl --home-dir bin/.trdl --no-self-update=true update werf 1.2 stable
 	ln -sf $$(bin/trdl --home-dir bin/.trdl bin-path werf 1.2 stable | sed 's|^.*/bin/\(.trdl.*\)|\1/werf|') bin/werf
 
+bin/gh: bin ## Install gh cli.
+	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).zip -o bin/gh.zip
+	unzip -d bin -oj bin/gh.zip gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH)/bin/gh
+	rm bin/gh.zip
+
 .PHONY: update-k8s-patch-versions
 update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.
 	cd candi/tools; bash update_kubernetes_patchversions.sh
@@ -336,7 +340,7 @@ set-build-envs:
 		endif
  	endif
   ifeq ($(CI_COMMIT_REF_SLUG),)
- 		export CI_COMMIT_REF_SLUG=$(shell echo $(CI_COMMIT_BRANCH) | cut -c -63 | sed -E 's/[^a-z0-9-]+/-/g' | sed -E 's/^-*([a-z0-9-]+[a-z0-9])-*$$/\1/g')
+ 		export CI_COMMIT_REF_SLUG=pr$(shell bin/gh pr view main --json number -q .number 2>/dev/null)
  	endif
   ifeq ($(DECKHOUSE_REGISTRY_HOST),)
  		export DECKHOUSE_REGISTRY_HOST=registry.deckhouse.io
@@ -349,10 +353,8 @@ build: set-build-envs ## Build Deckhouse images.
 	##~ Options: FOCUS=image-name
 	werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --report-path images_tags_werf.json $(SECONDARY_REPO) $(FOCUS)
   ifeq ($(FOCUS),)
-    ifneq ($(CI_COMMIT_BRANCH),)
-				@# By default in the Github CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-				@# But in the local build we cannot know pr number. So, to move local build process close to the github ci build,
-				@# we need to set CI_COMMIT_REF_SLUG env manually. If CI_COMMIT_REF_SLUG is not set, it will be set to branch name.
+    ifneq ($(CI_COMMIT_REF_SLUG),)
+				@# By default in the Github CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches.
 				SRC=$(shell jq -r '.Images."dev".DockerImageName' images_tags_werf.json) && \
 				DST=$(DEV_REGISTRY_PATH):$(CI_COMMIT_REF_SLUG) && \
 				echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '$(CI_COMMIT_BRANCH)' and edition '$(WERF_ENV)' using tag '$(CI_COMMIT_REF_SLUG)' ..." && \
