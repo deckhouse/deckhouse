@@ -207,6 +207,7 @@ if: ${{ needs.discover.outputs.run_doc_changes == 'true' && github.repository ==
 runs-on: ubuntu-24.04
 steps:
   {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_dev_registry_step"   $ctx | strings.Indent 2 }!}
 
   - name: Restore diff artifact
     uses: {!{ index (ds "actions") "actions/download-artifact" }!}
