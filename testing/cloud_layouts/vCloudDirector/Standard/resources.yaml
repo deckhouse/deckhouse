@@ -11,13 +11,6 @@ spec:
     classReference:
       kind: VCDInstanceClass
       name: worker
-  nodeTemplate:
-    labels:
-      node-role.deckhouse.io/worker: ""
-    taints:
-    - effect: NoExecute
-      key: dedicated.deckhouse.io
-      value: worker
   chaos:
     mode: Disabled
 
