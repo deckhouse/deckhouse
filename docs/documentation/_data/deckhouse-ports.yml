@@ -45,11 +45,11 @@ groups:
     description:
       en: "*bashible apiserver* for delivering node configurations"
       ru: "*apiserver bashible* для доставки конфигурации на узлы"
-  - ports: "9680"
+  - ports: "4227"
     protocol: TCP
     description:
-      en: runtime-audit-engine webhook
-      ru: webhook компонента runtime-audit-engine
+      en: "runtime-audit-engine webhook handler"
+      ru: "Webhook-обработчик компонента runtime-audit-engine"
 
 - group: NodesToMasters
   description:
