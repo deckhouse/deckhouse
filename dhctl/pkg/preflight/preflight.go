@@ -68,6 +68,11 @@ func (pc *Checker) Static() error {
 			skipFlag:       app.SSHForwardArgName,
 		},
 		{
+			fun:            pc.CheckPythonAndItsModules,
+			successMessage: "python and required modules are installed",
+			skipFlag:       app.PythonChecksArgName,
+		},
+		{
 			fun:            pc.CheckRegistryAccessThroughProxy,
 			successMessage: "registry access through proxy",
 			skipFlag:       app.RegistryThroughProxyCheckArgName,
