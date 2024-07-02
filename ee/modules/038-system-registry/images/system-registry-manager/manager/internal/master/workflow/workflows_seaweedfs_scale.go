@@ -134,7 +134,7 @@ func (w *SeaweedfsScaleWorkflow) syncCluster(clusterNodes []RegistryNodeManager)
 			needUpgrade = append(needUpgrade, node)
 		}
 	}
-	err = RollingUpgradeNodesOld(w.ctx, w.log, needUpgrade, &updateRequest)
+	err = RollingUpgradeNodes(w.ctx, w.log, needUpgrade, &updateRequest)
 	if err != nil {
 		return err
 	}
@@ -185,7 +185,7 @@ func (w *SeaweedfsScaleWorkflow) createCluster(clusterNodes []RegistryNodeManage
 		return err
 	}
 
-	if err := WaitLeaderElectionForNodes(w.ctx, w.log, clusterNodes); err != nil {
+	if _, err := WaitLeaderElectionForNodes(w.ctx, w.log, clusterNodes); err != nil {
 		return err
 	}
 	return nil
@@ -263,7 +263,7 @@ func (w *SeaweedfsScaleWorkflow) scaleUpCluster(oldClusterNodes, newClusterNodes
 			needUpgrade = append(needUpgrade, node)
 		}
 	}
-	err = RollingUpgradeNodesOld(w.ctx, w.log, needUpgrade, &updateRequest)
+	err = RollingUpgradeNodes(w.ctx, w.log, needUpgrade, &updateRequest)
 	if err != nil {
 		return err
 	}
@@ -347,7 +347,7 @@ func (w *SeaweedfsScaleWorkflow) scaleDownClusterPerNode(clusterNodes []Registry
 		if err := leader.RemoveNodeFromCluster(ip); err != nil {
 			return err
 		}
-		if err := WaitLeaderElectionForNodes(w.ctx, w.log, clusterNodes); err != nil {
+		if _, err := WaitLeaderElectionForNodes(w.ctx, w.log, clusterNodes); err != nil {
 			return err
 		}
 	}
@@ -364,7 +364,7 @@ func (w *SeaweedfsScaleWorkflow) scaleDownClusterPerNode(clusterNodes []Registry
 		}
 	}
 	w.log.Infof("RollingUpgradeNodes: %v, %+v", needUpgrade, updateRequest)
-	err = RollingUpgradeNodesOld(w.ctx, w.log, needUpgrade, &updateRequest)
+	err = RollingUpgradeNodes(w.ctx, w.log, needUpgrade, &updateRequest)
 	if err != nil {
 		return err
 	}
