@@ -487,7 +487,7 @@ func getDeckhousePods(snap []go_hook.FilterResult) ([]deckhousePodInfo, error) {
 func isDeckhousePodReady(httpClient d8http.Client) bool {
 	deckhousePodIP := os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS")
 
-	url := fmt.Sprintf("http://%s:9650/readyz", deckhousePodIP)
+	url := fmt.Sprintf("http://%s:4222/readyz", deckhousePodIP)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		klog.Errorf("error getting deckhouse pod readyz status: %s", err)

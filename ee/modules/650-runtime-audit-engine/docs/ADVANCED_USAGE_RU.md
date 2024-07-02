@@ -97,7 +97,7 @@ kubectl run falco-event-generator --image=falcosecurity/event-generator run
     "metric": {
       "__name__": "falco_events",
       "container": "kube-rbac-proxy",
-      "instance": "192.168.199.60:8766",
+      "instance": "192.168.199.60:4212",
       "job": "runtime-audit-engine",
       "node": "dev-master-0",
       "priority": "Debug",

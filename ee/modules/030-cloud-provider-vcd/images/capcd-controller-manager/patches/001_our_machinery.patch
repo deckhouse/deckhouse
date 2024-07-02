@@ -1014,7 +1014,7 @@ diff --git a/main.go b/main.go
  		Scheme:                 myscheme,
  		MetricsBindAddress:     metricsAddr,
 -		Port:                   9443,
-+		Port:                   9444,
++		Port:                   4201,
  		SyncPeriod:             &syncPeriod,
  		HealthProbeBindAddress: probeAddr,
  		LeaderElection:         enableLeaderElection,

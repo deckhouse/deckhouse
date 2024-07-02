@@ -180,7 +180,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9254"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4224"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -192,7 +192,7 @@ spec:
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             upstreams:
-            - upstream: http://127.0.0.1:9254/metrics
+            - upstream: http://127.0.0.1:4224/metrics
               path: /metrics
               authorization:
                 resourceAttributes:
@@ -203,7 +203,7 @@ spec:
                   subresource: prometheus-metrics
                   name: node-local-dns
         ports:
-        - containerPort: 9254
+        - containerPort: 4224
           name: https-metrics
         resources:
           requests:

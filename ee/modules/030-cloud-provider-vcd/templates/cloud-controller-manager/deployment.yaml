@@ -86,7 +86,7 @@ spec:
           - --allow-untagged-cloud=true
           - --configure-cloud-routes=false
           - --controllers=cloud-node,cloud-node-lifecycle
-          - --bind-address=$(HOST_IP)
+          - --bind-address=127.0.0.1
           - --secure-port=10471
           - --v=4
           env:
@@ -105,18 +105,17 @@ spec:
               fieldRef:
                 fieldPath: status.hostIP
           {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
-          ports:
-          - name: https
-            containerPort: 10471
           livenessProbe:
             httpGet:
               path: /healthz
-              port: https
+              port: 10471
+              host: 127.0.0.1
               scheme: HTTPS
           readinessProbe:
             httpGet:
               path: /healthz
-              port: https
+              port: 10471
+              host: 127.0.0.1
               scheme: HTTPS
           volumeMounts:
             - name: ccm-controller-config-volume

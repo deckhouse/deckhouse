@@ -98,11 +98,6 @@ spec:
             exec:
               command:
               - /cni-uninstall.sh
-        ports:
-        - name: prometheus
-          containerPort: 9092
-          hostPort: 9092
-          protocol: TCP
         securityContext:
           privileged: false
           seLinuxOptions:
@@ -176,7 +171,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $context | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $context "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9734"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4241"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -199,7 +194,7 @@ spec:
                   subresource: prometheus-metrics
                   name: agent
         ports:
-        - containerPort: 9734
+        - containerPort: 4241
           name: https-metrics
         resources:
           requests:

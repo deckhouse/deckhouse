@@ -84,21 +84,20 @@ spec:
           - --configure-cloud-routes=true
           - --cloud-provider=yandex
           - --cluster-name={{ .Values.global.discovery.clusterUUID | sha256sum | trunc 24 }}
-          - --bind-address=$(HOST_IP)
+          - --bind-address=127.0.0.1
           - --secure-port=10471
           - --v=2
-          ports:
-          - name: https
-            containerPort: 10471
           livenessProbe:
             httpGet:
               path: /healthz
-              port: https
+              port: 10471
+              host: 127.0.0.1
               scheme: HTTPS
           readinessProbe:
             httpGet:
               path: /healthz
-              port: https
+              port: 10471
+              host: 127.0.0.1
               scheme: HTTPS
           env:
       # KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make CCM work without kube-proxy

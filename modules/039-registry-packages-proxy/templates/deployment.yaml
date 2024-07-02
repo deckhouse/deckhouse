@@ -85,12 +85,12 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 5443
+            port: 4219
             scheme: HTTPS
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 5443
+            port: 4219
             scheme: HTTPS
         resources:
           requests:
@@ -105,15 +105,15 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
-          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):5443"
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4219"
           - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
           - "--v=2"
           - "--logtostderr=true"
           - "--stale-cache-interval=1h30m"
           - "--livez-path=/livez"
         ports:
-          - containerPort: 5443
-            hostPort: 5443
+          - containerPort: 4219
+            hostPort: 4219
             name: https
         env:
           - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
@@ -150,12 +150,12 @@ spec:
         livenessProbe:
           httpGet:
             path: /livez
-            port: 5443
+            port: 4219
             scheme: HTTPS
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 5443
+            port: 4219
             scheme: HTTPS
         resources:
           requests:

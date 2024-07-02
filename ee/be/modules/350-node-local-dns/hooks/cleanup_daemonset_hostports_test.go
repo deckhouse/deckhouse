@@ -61,7 +61,7 @@ spec:
           name: dns-tcp
           protocol: TCP
       - args:
-        - --secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9254
+        - --secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4224
         - --v=2
         - --logtostderr=true
         - --stale-cache-interval=1h30m
@@ -74,8 +74,8 @@ spec:
         image: kube-rbac-proxy
         name: kube-rbac-proxy
         ports:
-        - containerPort: 9254
-          hostPort: 9254
+        - containerPort: 4224
+          hostPort: 4224
           name: https-metrics
           protocol: TCP
       dnsPolicy: Default
@@ -122,7 +122,7 @@ spec:
           name: dns-tcp
           protocol: TCP
       - args:
-        - --secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9254
+        - --secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4224
         - --v=2
         - --logtostderr=true
         - --stale-cache-interval=1h30m
@@ -135,8 +135,8 @@ spec:
         image: kube-rbac-proxy
         name: kube-rbac-proxy
         ports:
-        - containerPort: 9254
-          hostPort: 9254
+        - containerPort: 4224
+          hostPort: 4224
           name: https-metrics
           protocol: TCP
       dnsPolicy: ClusterFirstWithHostNet
@@ -179,7 +179,7 @@ spec:
           name: dns-tcp
           protocol: TCP
       - args:
-        - --secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9254
+        - --secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4224
         - --v=2
         - --logtostderr=true
         - --stale-cache-interval=1h30m
@@ -192,7 +192,7 @@ spec:
         image: kube-rbac-proxy
         name: kube-rbac-proxy
         ports:
-        - containerPort: 9254
+        - containerPort: 4224
           name: https-metrics
           protocol: TCP
       dnsPolicy: Default

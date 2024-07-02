@@ -84,7 +84,7 @@ spec:
           - --configure-cloud-routes=true
           - --cloud-config=/etc/config/cloud-config
           - --cloud-provider=openstack
-          - --bind-address=$(HOST_IP)
+          - --bind-address=127.0.0.1
           - --secure-port=10471
           - --tls-cipher-suites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
           - --v=2
@@ -104,18 +104,17 @@ spec:
               fieldRef:
                 fieldPath: status.hostIP
           {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
-          ports:
-          - name: https
-            containerPort: 10471
           livenessProbe:
             httpGet:
               path: /healthz
-              port: https
+              port: 10471
+              host: 127.0.0.1
               scheme: HTTPS
           readinessProbe:
             httpGet:
               path: /healthz
-              port: https
+              port: 10471
+              host: 127.0.0.1
               scheme: HTTPS
           volumeMounts:
             - mountPath: /etc/kubernetes/pki
