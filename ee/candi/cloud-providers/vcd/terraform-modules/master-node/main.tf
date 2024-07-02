@@ -67,7 +67,8 @@ resource "vcd_vapp_vm" "master" {
     is_primary         = true
     ip                 = local.ip_address
   }
-
+  network_dhcp_wait_seconds = 60
+  
   override_template_disk {
     bus_type        = "paravirtual"
     size_in_mb      = local.master_instance_class.rootDiskSizeGb * 1024
@@ -90,3 +91,4 @@ resource "vcd_vapp_vm" "master" {
     "disk.EnableUUID"     = "1"
   }, length(var.cloudConfig) > 0 ? {"user-data" = var.cloudConfig} : {} )
 }
+
