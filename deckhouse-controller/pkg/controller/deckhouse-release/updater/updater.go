@@ -36,10 +36,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
-func NewDeckhouseUpdater(logger logger.Logger, client client.Client, dc dependency.Container, discoveryData updater.DeckhouseDiscoveryData, mode string, releaseData updater.DeckhouseReleaseData, podIsReady bool) (*updater.Updater[*v1alpha1.DeckhouseRelease], error) {
+func NewDeckhouseUpdater(logger logger.Logger, client client.Client, dc dependency.Container, discoveryData updater.DeckhouseDiscoveryData, mode string, releaseData updater.DeckhouseReleaseData, podIsReady bool, enabledModules []string) (*updater.Updater[*v1alpha1.DeckhouseRelease], error) {
 	return updater.NewUpdater[*v1alpha1.DeckhouseRelease](logger, discoveryData.NotificationConfig, mode, releaseData,
 		podIsReady, discoveryData.ClusterBootstrapping, newKubeAPI(client, dc, discoveryData.ImagesRegistry),
-		newMetricsUpdater(), newValueSettings(discoveryData.DisruptionApprovalMode), newWebhookDataGetter()), nil
+		newMetricsUpdater(), newValueSettings(discoveryData.DisruptionApprovalMode), newWebhookDataGetter(), enabledModules), nil
 }
 
 func newWebhookDataGetter() *webhookDataGetter {
