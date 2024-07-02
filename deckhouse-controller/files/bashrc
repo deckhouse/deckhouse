@@ -2,5 +2,21 @@ PS1='\[\033[01;30m\][deckhouse]\[\033[00m\] \[\033[01;33m\]\u@\h\[\033[01;34m\] 
 
 source /etc/bashrc.d/bash_completion.sh
 
-eval "$(kubectl-1.28 completion bash)"
+
+if [ -s /tmp/kubectl_version ]; then
+ kubernetes_version="$(cat /tmp/kubectl_version)"
+else
+ kubectl_version="1.27"
+fi
+
+case "$kubernetes_version" in
+  1.26.* | 1.27.* | 1.28.* )
+    kubectl_version="1.27"
+    ;;
+  1.29.* | 1.30.* | 1.31.* )
+    kubectl_version="1.30"
+    ;;
+esac
+
+eval "$(kubectl-${kubectl_version} completion bash)"
 eval "$(deckhouse-controller --completion-script-bash | sed -e s/deckhouse/deckhouse-controller/g)"

@@ -311,7 +311,7 @@ docker run -it --pull=always \
 ```shell
 dhctl bootstrap \
   --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-  --config=/config.yml --resources=/resources.yml
+  --config=/config.yml --config=/resources.yml
 ```
 
 где:

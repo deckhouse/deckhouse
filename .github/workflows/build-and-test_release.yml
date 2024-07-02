@@ -592,6 +592,7 @@ jobs:
             echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
             if [[ -n ${DECKHOUSE_REGISTRY_HOST} ]] ; then
               # Copy stages to prod registry from dev registry.
+              export WERF_DISABLE_META_TAGS=true
               werf build \
                 --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \
@@ -898,6 +899,7 @@ jobs:
             echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
             if [[ -n ${DECKHOUSE_REGISTRY_HOST} ]] ; then
               # Copy stages to prod registry from dev registry.
+              export WERF_DISABLE_META_TAGS=true
               werf build \
                 --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \
@@ -1204,6 +1206,7 @@ jobs:
             echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
             if [[ -n ${DECKHOUSE_REGISTRY_HOST} ]] ; then
               # Copy stages to prod registry from dev registry.
+              export WERF_DISABLE_META_TAGS=true
               werf build \
                 --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \
@@ -1510,6 +1513,7 @@ jobs:
             echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
             if [[ -n ${DECKHOUSE_REGISTRY_HOST} ]] ; then
               # Copy stages to prod registry from dev registry.
+              export WERF_DISABLE_META_TAGS=true
               werf build \
                 --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \
@@ -1816,6 +1820,7 @@ jobs:
             echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
             if [[ -n ${DECKHOUSE_REGISTRY_HOST} ]] ; then
               # Copy stages to prod registry from dev registry.
+              export WERF_DISABLE_META_TAGS=true
               werf build \
                 --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \

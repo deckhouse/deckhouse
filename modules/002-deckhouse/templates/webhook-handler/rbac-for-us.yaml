@@ -19,7 +19,7 @@ rules:
   resources: ["customresourcedefinitions"]
   verbs: ["get", "list", "update"]
 - apiGroups: ["deckhouse.io"]
-  resources: ["*"]
+  resources: ["*"] # We want to read all resources from the deckhouse.io group
   verbs: ["get","list","watch"]
 - apiGroups: [""]
   resources: ["secrets","endpoints","configmaps","namespaces"]

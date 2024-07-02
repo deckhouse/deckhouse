@@ -15,11 +15,6 @@ data "vsphere_dynamic" "datacenter_id" {
   type       = "Datacenter"
 }
 
-data "vsphere_folder" "main" {
-  count         = var.providerClusterConfiguration.vmFolderExists ? 1 : 0
-  path = format("/%s/vm/%s", var.providerClusterConfiguration.region, var.providerClusterConfiguration.vmFolderPath)
-}
-
 resource "vsphere_folder" "main" {
   count         = var.providerClusterConfiguration.vmFolderExists ? 0 : 1
   path          = var.providerClusterConfiguration.vmFolderPath

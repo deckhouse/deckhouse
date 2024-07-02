@@ -23,7 +23,7 @@
 
 # release requirements, don't forget to register check function in a file requirements.go
 requirements:
-  "k8s": "1.25.0" # modules/040-control-plane-manager/requirements/check.go
+  "k8s": "1.27.0" # modules/040-control-plane-manager/requirements/check.go
   "ingressNginx": "1.1" # modules/402-ingress-nginx/requirements/check.go
   "nodesMinimalOSVersionUbuntu": "18.04" # modules/040-node-manager/requirements/check.go
   "containerdOnAllNodes": "true" # modules/040-node-manager/requirements/check.go

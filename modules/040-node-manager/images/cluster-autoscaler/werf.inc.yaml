@@ -3,11 +3,13 @@
   {{- if $value.clusterAutoscalerPatch }}
 ---
 artifact: {{ $.ModuleName }}/distroless-{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.29" $version }}
+    {{- if semverCompare ">=1.30" $version }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE }}
+    {{- else if semverCompare ">=1.29" $version }}
 from: {{ $.Images.BASE_GOLANG_21_ALPINE }}
     {{- else if semverCompare ">=1.27" $version }}
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
-    {{- else if semverCompare ">=1.25" $version }}
+    {{- else if semverCompare "=1.26" $version }}
 from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
     {{- end }}
 git:
@@ -25,12 +27,15 @@ shell:
   install:
   - mkdir /src
   - cd /src
-{{- if semverCompare ">=1.28" $version }}
+{{- if semverCompare ">=1.30" $version }}
+  - git clone --depth 1 --branch v1.28.{{ $value.clusterAutoscalerPatch }} {{ $.SOURCE_REPO }}/gardener/autoscaler.git .
+  - git apply /patches/{{ $version }}/*.patch --verbose
+{{- else if semverCompare ">=1.28" $version }}
   - git clone --depth 1 --branch v1.27.{{ $value.clusterAutoscalerPatch }} {{ $.SOURCE_REPO }}/gardener/autoscaler.git .
-  - test -d /patches/1.27 && for patchfile in /patches/1.27/*.patch ; do patch -p1 < ${patchfile}; done
+  - git apply /patches/1.27/*.patch --verbose
 {{- else }}
   - git clone --depth 1 --branch v{{ $version }}.{{ $value.clusterAutoscalerPatch }} {{ $.SOURCE_REPO }}/gardener/autoscaler.git .
-  - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
+  - git apply /patches/{{ $version }}/*.patch --verbose
 {{- end }}
   - cd cluster-autoscaler
   - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o cluster-autoscaler

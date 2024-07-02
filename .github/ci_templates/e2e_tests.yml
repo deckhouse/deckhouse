@@ -21,7 +21,7 @@
 {!{ end -}!}
 
 {!{- define "e2e_kubernetes_default_version" -}!}
-1.25
+1.27
 {!{- end -}!}
 
 # job for set e2e requirement status

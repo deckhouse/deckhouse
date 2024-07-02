@@ -33,6 +33,15 @@ case "$ID" in
     esac
     name_is_not_supported
   ;;
+  rels|rosa)
+    case "$VERSION_ID" in 7.9)
+        echo "rosa" && exit 0 ;;
+    esac
+    case "$VERSION" in 12.4|12.5.*)
+        echo "rosa" && exit 0 ;;
+    esac
+    name_is_not_supported
+  ;;
   ubuntu)
     case "$VERSION_ID" in 18.04|20.04|22.04|24.04)
       echo "ubuntu-lts" && exit 0 ;;

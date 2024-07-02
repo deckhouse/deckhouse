@@ -160,6 +160,7 @@ spec:
         - --cookie-expire={{ duration (add (sub ($delta | mustDateModify $idTokenTTL | unixEpoch) ($delta | unixEpoch)) 1) }}
     {{- end }}
         - --insecure-oidc-allow-unverified-email=true
+        - --approval-prompt=basic
         env:
         - name: OAUTH2_PROXY_CLIENT_SECRET
           valueFrom:

@@ -21,7 +21,7 @@ apiVersions:
       podSubnetNodeCIDRPrefix: "24"
       podSubnetCIDR: 10.244.0.0/16
       serviceSubnetCIDR: 192.168.0.0/16
-      kubernetesVersion: "1.25"
+      kubernetesVersion: "1.27"
       clusterDomain: k8s.internal
       clusterType: "Cloud"
       cloud:
@@ -126,11 +126,11 @@ apiVersions:
           If `Automatic` is specified, then the control plane version is used, which is considered stable at the moment. If the stable version of control plane is less than the maximum version that has ever been installed in the cluster, more than 1 minor version, then the version of the cluster will not be changed.
           The version may change when the minor version of the Deckhouse release is changed (see a corresponding release message).
         enum:
-        - "1.25"
         - "1.26"
         - "1.27"
         - "1.28"
         - "1.29"
+        - "1.30"
         - "Automatic"
       proxy:
         x-doc-d8Revision: ee
@@ -146,7 +146,7 @@ apiVersions:
           httpProxy:
             type: string
             x-doc-d8Revision: ee
-            pattern: ^https?://([0-9a-zA-Z\.\-\_]+(\:[!*'();:@&=+$,/?%#\[\]0-9a-zA-Z\.\-\_]+)?@)?[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?$
+            pattern: ^https?://([!*'();&=+$,/?%#\[\]0-9a-zA-Z\.\-\_]+(\:[!*'();:@&=+$,/?%#\[\]0-9a-zA-Z\.\-\_]+)?@)?[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?$
             description: |
               Proxy URL for HTTP requests.
 
@@ -154,10 +154,12 @@ apiVersions:
             x-examples:
             - 'http://proxy.company.my'
             - 'https://user:password@proxy.company.my:8443'
+            - 'https://DOMAIN%5Cuser:password@proxy.company.my:8443'
+            - 'https://user%40domain.local:password@proxy.company.my:8443'
           httpsProxy:
             type: string
             x-doc-d8Revision: ee
-            pattern: ^https?://([0-9a-zA-Z\.\-\_]+(\:[!*'();:@&=+$,/?%#\[\]0-9a-zA-Z\.\-\_]+)?@)?[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?$
+            pattern: ^https?://([!*'();&=+$,/?%#\[\]0-9a-zA-Z\.\-\_]+(\:[!*'();:@&=+$,/?%#\[\]0-9a-zA-Z\.\-\_]+)?@)?[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?$
             description: |
               Proxy URL for HTTPS requests.
 
@@ -165,6 +167,8 @@ apiVersions:
             x-examples:
             - 'http://proxy.company.my'
             - 'https://user:password@proxy.company.my:8443'
+            - 'https://DOMAIN%5Cuser:password@proxy.company.my:8443'
+            - 'https://user%40domain.local:password@proxy.company.my:8443'
           noProxy:
             x-doc-d8Revision: ee
             description: |

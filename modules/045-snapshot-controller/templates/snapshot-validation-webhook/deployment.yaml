@@ -92,3 +92,4 @@ spec:
         - name: snapshot-validation-webhook-certs
           secret:
             secretName: snapshot-validation-webhook-certs
+      serviceAccountName: snapshot-controller

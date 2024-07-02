@@ -34,6 +34,12 @@ spec:
 
 Prometheus supports remote_write'ing data from the local Prometheus to a separate longterm storage (e.g., [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). In Deckhouse, this mechanism is implemented using the `PrometheusRemoteWrite` custom resource.
 
+{% endraw -%}
+{% alert level="info" %}
+For VictoriaMetrics detailed information about how to send data to vmagent can be found in the VictoriaMetrics [documentation](https://docs.victoriametrics.com/vmagent/index.html#how-to-push-data-to-vmagent).
+{% endalert %}
+{% raw %}
+
 ### Example of the basic PrometheusRemoteWrite
 
 ```yaml

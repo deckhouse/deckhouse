@@ -17,7 +17,7 @@ docker:
   ENTRYPOINT: ["/usr/bin/etcd"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg

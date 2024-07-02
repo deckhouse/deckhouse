@@ -109,6 +109,7 @@ bm
 boto
 boto3
 BPF
+BTF
 bpfLBMode
 Buildah
 Burstable

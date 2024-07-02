@@ -48,7 +48,7 @@ jobs:
 
 {!{/* Jobs for each CRI and Kubernetes version */}!}
 {!{- $criName := "Containerd" -}!}
-{!{- $kubernetesVersion := "1.25" -}!}
+{!{- $kubernetesVersion := "1.27" -}!}
 {!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "vCloudDirector" "Static" -}!}
 {!{- if $enableWorkflowOnTestRepos -}!}
 {!{-   $providerNames = slice "AWS" "OpenStack" "Azure" -}!}
