@@ -25,7 +25,7 @@
 # #####################################################################
 ---
 image: {{ $.ModuleName }}/base-cilium-dev
-from: {{ $.Images.BASE_UBUNTU }}
+from: {{ $.Images.BASE_ALT }}
 fromCacheVersion: {{ $fromCacheVersion }}
 mount:
 - fromPath: ~/go-pkg-cache
@@ -34,35 +34,32 @@ shell:
   beforeInstall:
   - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
   - ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
-  - apt-get update && apt-get upgrade -y --no-install-recommends
+  - apt-get update -y
   # apt install
   - |
-    apt-get install -y --no-install-recommends \
-    debian-archive-keyring apt-transport-https apt-src curl \
-    jq tzdata software-properties-common \
-    bash-completion iproute2 iptables ipset kmod ca-certificates \
-    coreutils binutils make cmake ccache automake autoconf ccache patch patchelf \
-    git zip unzip wget \
-    gcc gcc-9 g++ gcc-x86-64-linux-gnu g++-x86-64-linux-gnu \
-    libc6-dev libc6-dev-amd64-cross libelf-dev libmnl-dev \
-    bison flex \
-    build-essential libtool ninja-build pkg-config git-buildpackage \
-    python2 python3 python3-pip virtualenv \
-    libnetfilter-conntrack-dev libnetfilter-conntrack3 libnfnetlink-dev
-  - apt-get satisfy -y --no-install-recommends "debhelper-compat (= 13), libnftnl-dev (>= 1.1.6)"
-  - wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
-  - apt-add-repository -y "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main"
+    apt-get install -y \
+    apt-https curl jq tzdata \
+    ca-certificates bash-completion iproute2 arpd ipset kmod \
+    iptables iptables-ipv6 iptables-nft \
+    coreutils binutils git zip unzip wget mount patch patchelf \
+    make automake autoconf cmake ccache bison flex ninja-build pkg-config \
+    gcc gcc9 gcc-c++ glibc \
+    python python3 python3-module-pip python3-module-virtualenv \
+    build-essential libtool glibc-devel glibc-devel-static \
+    libnetfilter_conntrack libnetfilter_conntrack-devel libnfnetlink-devel \
+    libmnl-devel libnftnl-devel elfutils-devel zlib-devel
+  - apt-get install -y llvm-devel
   # for debug
-  - apt-get install -y --no-install-recommends strace
+  - apt-get install -y strace vim-console
   # apt clean
-  - apt-get purge --auto-remove && apt-get clean
-  - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+  - apt-get autoclean && apt-get clean
   # download-only
   - |
-    apt-get update && apt-get install -y --no-install-recommends --download-only \
-    libcap-dev \
-    python-is-python3 \
-    clang-15 clang-tools-15 lldb-15 lld-15 clang-format-15 libc++-15-dev libc++abi-15-dev
+    apt-get update && apt-get install -y -d \
+    libcap-devel libpcap-devel \
+    clang15.0 clang15.0-tools lldb15.0 lld15.0 llvm15.0-devel \
+    libstdc++-devel libstdc++-devel-static libstdc++10-devel-static \
+    libcxxabi-devel
   install:
   # Install Go
   - curl -sfL https://go.dev/dl/go{{ $goVersion }}.linux-amd64.tar.gz -o go.tar.gz

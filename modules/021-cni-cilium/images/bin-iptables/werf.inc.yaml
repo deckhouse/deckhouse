@@ -1,4 +1,4 @@
-{{- $iptablesVersion := "1.8.8-1" }}
+{{- $version := "1.8.8" }}
 ---
 # #####################################################################
 # Build IPTABLES binaries (based on base-cilium-dev)
@@ -8,15 +8,30 @@
 # and https://github.com/cilium/image-tools/blob/3e6b0f588d788ac0e69f4d126cfb3c55b1513948/images/iptables/Dockerfile
 # and https://github.com/cilium/image-tools/blob/aee704bc3cf922acc4a2a02b0b76f524d4796a14/images/iptables/Dockerfile
 # and https://salsa.debian.org/pkg-netfilter-team/pkg-iptables/-/tree/debian/1.8.8-1
+# and https://git.netfilter.org/iptables/tree/?h=v1.8.8
+# and https://packages.altlinux.org/ru/p10/srpms/iptables/specfiles/2623143627906179825
 # #####################################################################
 ---
 artifact: {{ $.ModuleName }}/iptables-artifact
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 shell:
+  beforeInstall:
+    - apt-get remove --purge -y iptables iptables-ipv6 iptables-nft
+    - apt-get install -y libpcap-devel
+    - apt-get autoclean && apt-get clean
   install:
-  - mkdir /iptables
-  - gbp clone {{ $.SOURCE_REPO }}/pkg-netfilter-team/pkg-iptables.git /iptables/iptables-{{ $iptablesVersion }}
-  - cd /iptables/iptables-{{ $iptablesVersion }}
-  - git checkout debian/{{ $iptablesVersion }}
-  - dpkg-checkbuilddeps /iptables/iptables-{{ $iptablesVersion }}/debian/control
-  - gbp buildpackage --git-ignore-branch --git-ignore-new --git-no-pristine-tar -b -us -uc
+    - git clone -b v{{ $version }} --depth 1  {{ $.SOURCE_REPO }}/netfilter/iptables /src
+  setup:
+    - cd /src
+    - ./autogen.sh
+    - |
+      ./configure \
+      --prefix=/usr \
+      --disable-static \
+      --enable-nftables \
+      --enable-bpf-compiler \
+      --disable-libipq \
+      --sbindir=/sbin \
+      --with-xtlibdir=/lib64/iptables
+    - make
+    - make install DESTDIR=/iptables
