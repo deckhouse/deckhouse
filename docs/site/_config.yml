@@ -119,7 +119,7 @@ defaults:
       type: "pages"
     values:
       d8Revision: ee
-      featureStatus: experimental
+      featureStatus: deprecated
   - scope:
       path: "*/500-operator-trivy"
       type: "pages"

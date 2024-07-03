@@ -596,7 +596,7 @@ entries:
         ru: Доставка
       moduleName: delivery
       d8Revision: ee
-      featureStatus: experimental
+      featureStatus: deprecated
       folders:
         - title:
             en: Description
