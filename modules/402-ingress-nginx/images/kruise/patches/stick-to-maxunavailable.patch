@@ -16,6 +16,6 @@ index 17946a6e..1c9385f6 100644
 +			klog.V(5).Infof("DaemonSet %s/%s wanted to delete more then MaxUnvailable: %d replacements, up to %d unavailable, %d new are unavailable, %d candidates", ds.Namespace, ds.Name, len(allowedReplacementPods), maxUnavailable, numUnavailable, len(candidatePodsToDelete))
  		}
 -		oldPodsToDelete := append(allowedReplacementPods, candidatePodsToDelete[:remainingUnavailable]...)
- 
+
  		// Advanced: update pods in-place first and still delete the others
  		if ds.Spec.UpdateStrategy.RollingUpdate.Type == appsv1alpha1.InplaceRollingUpdateType {
