@@ -389,3 +389,6 @@ build: set-build-envs ## Build Deckhouse images.
 				docker image rmi $$DST || true
     endif
   endif
+
+build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
+	werf config render
