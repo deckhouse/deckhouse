@@ -353,9 +353,10 @@ function prepare_environment() {
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     [ -f "$cwd/resources.tpl.yaml" ] && \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VCD_PASSWORD} ${VCD_SERVER} ${VCD_USERNAME} ${VCD_ORG}' <"$cwd/resources.tpl.yaml" >>"$cwd/resources.yaml"
-
-
+        env VCD_ORG="$LAYOUT_VCD_ORG" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VCD_PASSWORD} ${VCD_SERVER} ${VCD_USERNAME} ${VCD_ORG}' \
+        <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
+        
     ssh_user="ubuntu"
     ;;
 
