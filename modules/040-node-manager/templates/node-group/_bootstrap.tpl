@@ -15,9 +15,9 @@ set -Eeuo pipefail
 BOOTSTRAP_DIR="/var/lib/bashible"
 TMPDIR="/opt/deckhouse/tmp"
 mkdir -p "${BOOTSTRAP_DIR}" "${TMPDIR}"
-  {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
+  # {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 exec >"${TMPDIR}/bootstrap.log" 2>&1
-  {{- end }}
+  # {{- end }}
 
 function detect_bundle() {
   {{- $context.Files.Get "candi/bashible/detect_bundle.sh" | nindent 2 }}
