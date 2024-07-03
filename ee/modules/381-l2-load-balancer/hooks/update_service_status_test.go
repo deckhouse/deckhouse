@@ -92,7 +92,7 @@ status:
 			Expect(svc.Field("status").String()).To(MatchJSON(`{
 "conditions": [
 	{
-		"message": "2 public IPs from 2 were assigned",
+		"message": "2 of 2 public IPs were assigned",
 		"reason": "AllIPsAssigned",
 		"status": "True",
 		"type": "AllPublicIPsAssigned"
@@ -185,7 +185,7 @@ spec:
 			Expect(svc.Field("status").String()).To(MatchJSON(`{
 "conditions": [
 	{
-		"message": "2 public IPs from 3 were assigned",
+		"message": "2 of 3 public IPs were assigned",
 		"reason": "NotAllIPsAssigned",
 		"status": "False",
 		"type": "AllPublicIPsAssigned"
