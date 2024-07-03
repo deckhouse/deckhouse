@@ -238,7 +238,7 @@ spec:
                     mode:
                       descriptions: "Тип сокета, который будет использован."
                     tcp:
-                      descriptions: "Параметры для настройки TCP сокетов."
+                      descriptions: "Параметры для настройки TCP-сокетов."
                       properties:
                         tls:
                           description: Настройки защищенного TLS-соединения.
