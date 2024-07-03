@@ -22,12 +22,18 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 )
 
 func (pc *Checker) CheckPythonAndItsModules() error {
 	if app.PreflightSkipPythonChecks {
 		log.InfoLn("Python installation preflight check was skipped")
 		return nil
+	}
+
+	pythonBinary, err := detectPythonBinary(pc.sshClient)
+	if err != nil {
+		return fmt.Errorf("Detect Python binary name: %w", err)
 	}
 
 	// Each subslice is a Python 3 module name and a python 2 fallback for it
@@ -42,7 +48,7 @@ func (pc *Checker) CheckPythonAndItsModules() error {
 	for _, moduleSet := range requiredPythonModules {
 		atLeastOneModuleFoundForSet := false
 		for _, moduleName := range moduleSet {
-			cmd := pc.sshClient.Command("python", "-c", "import "+moduleName)
+			cmd := pc.sshClient.Command(pythonBinary, "-c", "import "+moduleName)
 			err := cmd.Run()
 			if err != nil {
 				var ee *exec.ExitError
@@ -67,4 +73,24 @@ func (pc *Checker) CheckPythonAndItsModules() error {
 	}
 
 	return nil
+}
+
+func detectPythonBinary(sshCl *ssh.Client) (string, error) {
+	possibleBinaries := []string{"python3", "python2", "python"}
+	for _, binary := range possibleBinaries {
+		err := sshCl.Command("command", "-v", binary).Run()
+		if err == nil {
+			return binary, nil
+		}
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() != 255 {
+			continue
+		}
+		return "", fmt.Errorf("Unexpected error during python binary lookup: %w", err)
+	}
+
+	return "", fmt.Errorf(
+		"Python was not found under any of expected names (%s), please install Python 2 or 3 on the node",
+		strings.Join(possibleBinaries, ", "),
+	)
 }
