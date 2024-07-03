@@ -260,10 +260,10 @@ spec:
                                     Также необходимо указать сертификат в параметре `crtFile`.
                                 keyPass:
                                   description: Закодированный в Base64 пароль для ключа.
-                            verifyHostname:
-                              description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удаленного хоста.
-                            verifyCertificate:
-                              description: Проверка действия TLS-сертификата удаленного хоста.
+                        verifyHostname:
+                          description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удаленного хоста.
+                        verifyCertificate:
+                          description: Проверка действия TLS-сертификата удаленного хоста.
                 vector:
                   properties:
                     endpoint:
