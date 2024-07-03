@@ -34,7 +34,13 @@ import (
 type DefaultClient struct{}
 
 func (c *DefaultClient) GetPackage(ctx context.Context, config *ClientConfig, digest string) (int64, io.ReadCloser, error) {
-	repository, err := name.NewRepository(config.Repository)
+	var nameOptions []name.Option
+
+	if strings.ToLower(config.Scheme) == "http" {
+		nameOptions = append(nameOptions, name.Insecure)
+	}
+
+	repository, err := name.NewRepository(config.Repository, nameOptions...)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -51,12 +57,6 @@ func (c *DefaultClient) GetPackage(ctx context.Context, config *ClientConfig, di
 
 		httpTransport.TLSClientConfig = &tls.Config{
 			RootCAs: certPool,
-		}
-	}
-
-	if strings.ToLower(config.Scheme) == "http" {
-		httpTransport.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true,
 		}
 	}
 
