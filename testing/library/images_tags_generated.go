@@ -432,7 +432,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"staticRoutingManager": map[string]interface{}{
 		"agent": "imageHash-staticRoutingManager-agent",
-	}
+	},
 	"systemRegistry": map[string]interface{}{
 		"dockerAuth":            "imageHash-systemRegistry-dockerAuth",
 		"dockerDistribution":    "imageHash-systemRegistry-dockerDistribution",

@@ -128,7 +128,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-runtime-audit-engine:runtime-audit-engine",
 	"system:serviceaccount:d8-snapshot-controller:snapshot-controller",
 	"system:serviceaccount:d8-static-routing-manager:agent",
-	"system:serviceaccount:d8-system:d8-system-registry-manager",
 	"system:serviceaccount:d8-system:deckhouse",
 	"system:serviceaccount:d8-system:deckhouse-tools",
 	"system:serviceaccount:d8-system:documentation",
