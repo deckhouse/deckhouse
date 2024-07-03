@@ -440,7 +440,7 @@ func (r *deckhouseReleaseReconciler) getReleaseData(ctx context.Context) (update
 func (r *deckhouseReleaseReconciler) isDeckhousePodReady() bool {
 	deckhousePodIP := os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS")
 
-	url := fmt.Sprintf("http://%s:9650/readyz", deckhousePodIP)
+	url := fmt.Sprintf("http://%s:4222/readyz", deckhousePodIP)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		r.logger.Errorf("error getting deckhouse pod readyz status: %s", err)
