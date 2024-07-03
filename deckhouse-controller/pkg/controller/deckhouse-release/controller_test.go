@@ -586,12 +586,11 @@ func (suite *ControllerTestSuite) setupController(filename, values string, mup *
 		Build()
 	dc := dependency.NewDependencyContainer()
 	rec := &deckhouseReleaseReconciler{
-		cl,
-		dc,
-		log.New(),
-		stubModulesManager{},
-		v1alpha1.NewModuleUpdatePolicySpecContainer(mup),
-		new(container[string]),
+		client:        cl,
+		dc:            dc,
+		logger:        log.New(),
+		moduleManager: stubModulesManager{},
+		updatePolicy:  v1alpha1.NewModuleUpdatePolicySpecContainer(mup),
 	}
 
 	suite.ctr = rec

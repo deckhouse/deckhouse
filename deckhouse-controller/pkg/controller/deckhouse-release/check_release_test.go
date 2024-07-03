@@ -170,7 +170,7 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 		}, nil)
 
 		suite.setupController("image-hash-not-changed.yaml", initValues, embeddedMUP)
-		suite.ctr.releaseVersionImageHash.Set("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66857")
+		suite.ctr.releaseVersionImageHash = "sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66857"
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})

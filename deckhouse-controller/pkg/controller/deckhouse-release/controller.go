@@ -57,19 +57,18 @@ type deckhouseReleaseReconciler struct {
 	moduleManager moduleManager
 
 	updatePolicy            *v1alpha1.ModuleUpdatePolicySpecContainer
-	releaseVersionImageHash *container[string]
+	releaseVersionImageHash string
 }
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container, moduleManager moduleManager, updatePolicy *v1alpha1.ModuleUpdatePolicySpecContainer) error {
 	lg := log.WithField("component", "DeckhouseRelease")
 
 	r := &deckhouseReleaseReconciler{
-		mgr.GetClient(),
-		dc,
-		lg,
-		moduleManager,
-		updatePolicy,
-		new(container[string]),
+		client:        mgr.GetClient(),
+		dc:            dc,
+		logger:        lg,
+		moduleManager: moduleManager,
+		updatePolicy:  updatePolicy,
 	}
 
 	go r.checkDeckhouseReleaseLoop(ctx)

@@ -104,9 +104,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		return errors.Wrap(err, "create DeckhouseReleaseChecker failed")
 	}
 
-	previousImageHash := r.releaseVersionImageHash.Get()
-
-	newImageHash, err := releaseChecker.FetchReleaseMetadata(previousImageHash)
+	newImageHash, err := releaseChecker.FetchReleaseMetadata(r.releaseVersionImageHash)
 	if err != nil {
 		return err
 	}
@@ -129,7 +127,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		// TODO: maybe set something like v1.0.0-{meta.Version} for developing purpose
 		return fmt.Errorf("parse semver: %w", err)
 	}
-	r.releaseVersionImageHash.Set(newImageHash)
+	r.releaseVersionImageHash = newImageHash
 
 	var releases v1alpha1.DeckhouseReleaseList
 	err = r.client.List(ctx, &releases)
