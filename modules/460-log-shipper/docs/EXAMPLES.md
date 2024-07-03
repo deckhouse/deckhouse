@@ -304,6 +304,28 @@ spec:
     endpoint: logstash.default:12345
 ```
 
+## Syslog
+
+The following examples sets severity for the syslog messages and uses the socket destination:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: rsyslog
+spec:
+  type: Socket
+  socket:
+    mode: TCP
+    address: 192.168.0.1:3000
+    encoding: 
+      codec: Syslog
+  extraLabels:
+    syslog.severity: "alert"
+    # the request_id field should be present in the log message
+    syslog.message_id: "{{ request_id }}"
+```
+
 ## Collect Kubernetes Events
 
 Kubernetes Events can be collected by log-shipper if `events-exporter` is enabled in the [extended-monitoring](../340-extended-monitoring/) module configuration.
