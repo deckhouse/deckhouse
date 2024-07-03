@@ -139,8 +139,30 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 		return ctrl.Result{}, fmt.Errorf("get release data: %w", err)
 	}
 
+	clusterBootstrapping := true
+	var imagesRegistry string
+	registrySecret, err := r.getRegistrySecret(ctx)
+	if apierrors.IsNotFound(err) {
+		err = nil
+	}
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("get registry secret: %w", err)
+	}
+
+	if registrySecret != nil {
+		clusterBootstrapped, ok := registrySecret.Data["clusterIsBootstrapped"]
+		if ok {
+			clusterBootstrapping = string(clusterBootstrapped) != `"true"`
+		}
+
+		imagesRegistry = string(registrySecret.Data["imagesRegistry"])
+	}
+
 	podReady := r.isDeckhousePodReady()
-	deckhouseUpdater, err := d8updater.NewDeckhouseUpdater(r.logger, r.client, r.dc, discoveryData, r.updatePolicy.Get().Update.Mode, releaseData, podReady, r.moduleManager.GetEnabledModuleNames())
+	deckhouseUpdater, err := d8updater.NewDeckhouseUpdater(
+		r.logger, r.client, r.dc, discoveryData, r.updatePolicy.Get().Update.Mode, releaseData, podReady,
+		clusterBootstrapping, imagesRegistry, r.moduleManager.GetEnabledModuleNames(),
+	)
 
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("initializing deckhouse updater: %w", err)
@@ -247,7 +269,6 @@ func (r *deckhouseReleaseReconciler) getDeckhouseDiscoveryData(ctx context.Conte
 
 	var data = updater.DeckhouseDiscoveryData{
 		ReleaseChannel:         string(secret.Data["releaseChannel"]),
-		ClusterBootstrapping:   true,
 		DisruptionApprovalMode: "Auto",
 		NotificationConfig:     new(updater.NotificationConfig),
 	}
@@ -255,16 +276,6 @@ func (r *deckhouseReleaseReconciler) getDeckhouseDiscoveryData(ctx context.Conte
 	// default case in template
 	if data.ReleaseChannel == "Unknown" {
 		data.ReleaseChannel = ""
-	}
-
-	clusterBootstrapped, ok := secret.Data["clusterIsBootstrapped"]
-	if ok {
-		data.ClusterBootstrapping = string(clusterBootstrapped) != `"true"`
-	}
-
-	imagesRegistry, ok := secret.Data["imagesRegistry"]
-	if ok {
-		data.ImagesRegistry = string(imagesRegistry)
 	}
 
 	if jsonSettings, ok := secret.Data["updateSettings.json"]; ok {

@@ -688,16 +688,25 @@ data:
 {{- if .Values.deckhouse.update }}
   updateSettings.json: {{ .Values.deckhouse.update | toJson | b64enc }}
 {{- end }}
-  clusterIsBootstrapped: {{ .Values.global.clusterIsBootstrapped | quote | b64enc }}
-  imagesRegistry: {{ b64enc .Values.global.modulesImages.registry.base }}
 {{- if $.Values.global.discovery.clusterUUID }}
   clusterUUID: {{ $.Values.global.discovery.clusterUUID | b64enc }}
 {{- end }}
 `
 
+	deckhouseRegistry := `---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deckhouse-registry
+  namespace: d8-system
+data:
+  clusterIsBootstrapped: {{ .Values.global.clusterIsBootstrapped | quote | b64enc }}
+  imagesRegistry: {{ b64enc .Values.global.modulesImages.registry.base }}
+`
+
 	tmpl, err := template.New("manifest").
 		Funcs(sprig.TxtFuncMap()).
-		Parse(string(data) + deckhouseDiscovery)
+		Parse(string(data) + deckhouseDiscovery + deckhouseRegistry)
 	require.NoError(suite.T(), err)
 
 	var values any

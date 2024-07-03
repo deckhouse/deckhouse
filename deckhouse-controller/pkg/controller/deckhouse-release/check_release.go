@@ -38,11 +38,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
@@ -50,19 +48,13 @@ import (
 )
 
 func (r *deckhouseReleaseReconciler) checkDeckhouseReleaseLoop(ctx context.Context) {
-	// Check if Module Manager has been initialized
-	_ = wait.PollUntilContextCancel(ctx, d8utils.SyncedPollPeriod, false,
-		func(context.Context) (bool, error) {
-			return r.moduleManager.AreModulesInited(), nil
-		})
-
 	for {
 		err := r.checkDeckhouseRelease(ctx)
 		if err != nil {
 			r.logger.Errorf("check Deckhouse release: %s", err)
 		}
 
-		time.Sleep(24 * time.Hour)
+		time.Sleep(3 * time.Minute)
 	}
 }
 
@@ -92,7 +84,10 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		return fmt.Errorf("get registry secret: %w", err)
 	}
 
-	var opts []cr.Option
+	var (
+		opts           []cr.Option
+		imagesRegistry string
+	)
 	if registrySecret != nil {
 		opts = []cr.Option{
 			cr.WithCA(string(registrySecret.Data["ca"])),
@@ -100,9 +95,11 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 			cr.WithUserAgent(discoveryData.ClusterUUID),
 			cr.WithAuth(string(registrySecret.Data[".dockerconfigjson"])),
 		}
+
+		imagesRegistry = string(registrySecret.Data["imagesRegistry"])
 	}
 
-	releaseChecker, err := NewDeckhouseReleaseChecker(opts, r.logger, r.dc, r.moduleManager, discoveryData.ImagesRegistry, releaseChannelName)
+	releaseChecker, err := NewDeckhouseReleaseChecker(opts, r.logger, r.dc, r.moduleManager, imagesRegistry, releaseChannelName)
 	if err != nil {
 		return errors.Wrap(err, "create DeckhouseReleaseChecker failed")
 	}

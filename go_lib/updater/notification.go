@@ -32,10 +32,8 @@ import (
 
 type DeckhouseDiscoveryData struct {
 	ReleaseChannel         string
-	ClusterBootstrapping   bool
 	NotificationConfig     *NotificationConfig
 	DisruptionApprovalMode string
-	ImagesRegistry         string
 	ClusterUUID            string
 }
 

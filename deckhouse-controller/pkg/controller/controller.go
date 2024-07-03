@@ -147,6 +147,22 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 						},
 					},
 				},
+				// for DeckhouseRelease controller
+				&corev1.Pod{}: {
+					Namespaces: map[string]cache.Config{
+						namespace: {
+							LabelSelector: labels.SelectorFromSet(map[string]string{"app": "deckhouse"}),
+						},
+					},
+				},
+				// for DeckhouseRelease controller
+				&corev1.ConfigMap{}: {
+					Namespaces: map[string]cache.Config{
+						namespace: {
+							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse"}),
+						},
+					},
+				},
 			},
 		},
 	})

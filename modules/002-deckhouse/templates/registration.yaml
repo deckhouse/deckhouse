@@ -12,8 +12,6 @@ data:
 {{- if .Values.deckhouse.update }}
   updateSettings.json: {{ .Values.deckhouse.update | toJson | b64enc }}
 {{- end }}
-  clusterIsBootstrapped: {{ .Values.global.clusterIsBootstrapped | quote | b64enc }}
-  imagesRegistry: {{ b64enc .Values.global.modulesImages.registry.base }}
 {{- if $.Values.global.discovery.clusterUUID }}
   clusterUUID: {{ $.Values.global.discovery.clusterUUID | b64enc }}
 {{- end }}

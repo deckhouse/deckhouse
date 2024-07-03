@@ -51,8 +51,8 @@ func (r *deckhouseReleaseReconciler) cleanupDeckhouseRelease(ctx context.Context
 	}
 
 	pointerReleases := make([]*v1alpha1.DeckhouseRelease, 0, len(releases.Items))
-	for _, r := range releases.Items {
-		pointerReleases = append(pointerReleases, &r)
+	for _, release := range releases.Items {
+		pointerReleases = append(pointerReleases, &release)
 	}
 	sort.Sort(sort.Reverse(updater.ByVersion[*v1alpha1.DeckhouseRelease](pointerReleases)))
 
