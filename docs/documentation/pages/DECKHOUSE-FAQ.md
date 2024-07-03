@@ -644,24 +644,24 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
 
     ```shell
     usage: deckhouse-controller helper change-registry [<flags>] <new-registry>
-    
+
     Change registry for deckhouse images.
-    
+
     Flags:
-    --help               Show context-sensitive help (also try --help-long and --help-man).
-    --user=USER          User with pull access to registry.
-    --password=PASSWORD  Password/token for registry user.
-    --ca-file=CA-FILE    Path to registry CA.
-    --insecure           Use HTTP while connecting to new registry.
-    --dry-run            Don't change deckhouse resources, only print them.
-    --new-deckhouse-tag=NEW-DECKHOUSE-TAG
-    New tag that will be used for deckhouse deployment image (by default
-    current tag from deckhouse deployment will be used).
-    
+      --help               Show context-sensitive help (also try --help-long and --help-man).
+      --user=USER          User with pull access to registry.
+      --password=PASSWORD  Password/token for registry user.
+      --ca-file=CA-FILE    Path to registry CA.
+      --scheme=SCHEME      Used scheme while connecting to registry, http or https.
+      --dry-run            Don't change deckhouse resources, only print them.
+      --new-deckhouse-tag=NEW-DECKHOUSE-TAG
+                          New tag that will be used for deckhouse deployment image (by default
+                          current tag from deckhouse deployment will be used).
+
     Args:
-    <new-registry>  Registry that will be used for deckhouse images (example:
-    registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need
-    http - provide '--insecure' flag
+      <new-registry>  Registry that will be used for deckhouse images (example:
+                      registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need
+                      http - provide '--scheme' flag with http value
     ```
 
 * Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
