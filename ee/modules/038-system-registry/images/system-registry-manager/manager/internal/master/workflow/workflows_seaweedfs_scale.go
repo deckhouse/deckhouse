@@ -293,7 +293,7 @@ func (w *SeaweedfsScaleWorkflow) scaleDownClusterPerNode(clusterNodes []Registry
 	w.log.Infof("ScaleWorkflow :: scaleDownClusterPerNode :: Deleting node: %s", GetNodeNames([]RegistryNodeManager{clusterNodeToRemove}))
 
 	// Change leader
-	w.log.Infof("scaleDownClusterPerNode :: emoveLeaderStatusForNode)")
+	w.log.Infof("scaleDownClusterPerNode :: RemoveLeaderStatusForNode)")
 	if err := RemoveLeaderStatusForNode(w.ctx, w.log, clusterNodes, clusterNodeToRemove); err != nil {
 		return err
 	}
