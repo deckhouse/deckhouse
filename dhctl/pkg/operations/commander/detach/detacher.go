@@ -54,7 +54,7 @@ func NewDetacher(checker *check.Checker, sshClient *ssh.Client, opts DetacherOpt
 }
 
 func (op *Detacher) Detach(ctx context.Context) error {
-	if err := log.Process("commander/detach", "Check cluster", func() error {
+	err := log.Process("commander/detach", "Check cluster", func() error {
 		checkRes, err := op.Checker.Check(ctx)
 		if err != nil {
 			return fmt.Errorf("check failed: %w", err)
@@ -62,15 +62,16 @@ func (op *Detacher) Detach(ctx context.Context) error {
 
 		if op.OnCheckResult != nil {
 			if err := op.OnCheckResult(checkRes); err != nil {
-				return err
+				return fmt.Errorf("oncheckResult callback failed: %w", err)
 			}
 		}
 		return nil
-	}); err != nil {
+	})
+	if err != nil {
 		return err
 	}
 
-	if err := log.Process("commander/detach", "Create resources", func() error {
+	err = log.Process("commander/detach", "Create resources", func() error {
 		detachResources, err := template.ParseResourcesContent(
 			op.CreateDetachResources.Template,
 			op.CreateDetachResources.Values,
@@ -95,11 +96,12 @@ func (op *Detacher) Detach(ctx context.Context) error {
 		}
 
 		return nil
-	}); err != nil {
+	})
+	if err != nil {
 		return err
 	}
 
-	if err := log.Process("commander/detach", "Remove commander resources", func() error {
+	err = log.Process("commander/detach", "Remove commander resources", func() error {
 		detachResources, err := template.ParseResourcesContent(
 			op.DeleteDetachResources.Template,
 			op.DeleteDetachResources.Values,
@@ -122,7 +124,8 @@ func (op *Detacher) Detach(ctx context.Context) error {
 			return fmt.Errorf("unable to remove commander ConfigMap: %w", err)
 		}
 		return nil
-	}); err != nil {
+	})
+	if err != nil {
 		return err
 	}
 
