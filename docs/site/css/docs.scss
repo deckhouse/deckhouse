@@ -1561,3 +1561,74 @@ select#contact-select {
     }
   }
 }
+
+// alertslist class
+.alertslist {
+  .alertslist__name {
+    font-size: 16px;
+    font-weight: $font-weight-bold;
+  }
+
+  .alertslist__summary-body {
+    margin: 14px 0px;
+  }
+
+  .alertslist__badge {
+    display: inline-flex;
+    vertical-align: middle;
+    font-size: 10px;
+    font-weight: $font-weight-bold;
+    line-height: 16px;
+    letter-spacing: 1px;
+    color: #fff;
+    margin-left: 5px;
+    padding: 0 4px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  .alertslist__badge_edition {
+    background: #0066FF;
+  }
+
+  .alertslist__badge_severity {
+    background: #ff4d00;
+  }
+
+  .alertslist__badge_severity-s1 {
+    background: #ff0000;
+  }
+
+  .alertslist__badge_severity-s2 {
+    background: #ff4c00;
+  }
+
+  .alertslist__badge_severity-s3 {
+    background: #ff7f00;
+  }
+
+  .alertslist__badge_severity-s4 {
+    background: #ffb600;
+  }
+
+  .alertslist__badge_severity-s5 {
+    background: #ffe100;
+  }
+
+  .alertslist__badge_severity-s6 {
+    background: #c9bc5a;
+  }
+
+  .alertslist__badge_severity-s7 {
+    background: #a09d83;
+  }
+
+  .alertslist__badge_severity-s8 {
+    background: #bcbbb1;
+  }
+
+  .alertslist__badge_severity-s9 {
+    background: #ddd;
+    color: $black;
+  }
+}

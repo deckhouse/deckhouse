@@ -98,6 +98,9 @@ common:
   documents_found:
     en: Documents found
     ru: Найдено документов
+  parameters:
+    en: Parameters
+    ru: Параметры
   parameters_found:
     en: Parameters found
     ru: Найдено параметров
@@ -170,9 +173,33 @@ common:
   deckhouse:
     en: deckhouse
     ru: deckhouse
+  module:
+    en: module
+    ru: модуль
   modules:
     en: modules
     ru: модули
+  alert_description_template:
+    en: Alert description template
+    ru: Шаблон описания алерта
+  alert_summary:
+    en: Alert summary
+    ru: Краткое описание
+  alert_severity:
+    en: Alert severity
+    ru: Критичность (severity) алерта
+  alert_edition:
+    en: The minimum DKP edition in which the alert is available
+    ru: Минимальная редакция DKP, в которой доступен алерт
+  module_has_the_following_alerts:
+    en: The following alerts are implemented in the module
+    ru: В модуле реализованы следующие алерты
+  module_has_number_of_alerts:
+    en: The module has [%d alerts](%url).
+    ru: В модуле реализовано [%d алертов](%url).
+  module_alerts_title:
+    en: Alerts
+    ru: Алерты
 
 comparison:
   except_parameters:

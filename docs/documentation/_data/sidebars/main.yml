@@ -82,6 +82,10 @@ entries:
             ru: Настройка ПО безопасности
           url: /security_software_setup.html
         - title:
+            en: Alerts
+            ru: Алерты
+          url: /alerts.html
+        - title:
             en: Network security settings
             ru: Настройка сетевых политик
           url: /network_security_setup.html
