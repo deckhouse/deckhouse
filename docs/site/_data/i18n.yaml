@@ -191,7 +191,7 @@ features:
     ru: Функциональность модуля может измениться, но основные возможности сохранятся. Совместимость с будущими версиями обеспечивается, но может потребовать дополнительных действий по миграции.
   deprecated:
     en: The module is deprecated.
-    ru: Модуль выведен из употребления.
+    ru: Модуль устарел.
   temporaryDeprecated:
     en: The current version of the module is deprecated, a new version will be published soon.
     ru: Текущая версия модуля устарела, скоро будет опубликована новая версия.
