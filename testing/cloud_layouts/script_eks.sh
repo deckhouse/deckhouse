@@ -108,8 +108,8 @@ function bootstrap_eks() {
   >&2 echo "Run terraform to create nodes for EKS cluster ..."
 #  pushd "$cwd"
   cd $cwd
-  /terraform/terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
-  /terraform/terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+  terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
+  terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
 #  popd
 
   if ! cluster_endpoint="$(tail -n5 "$cwd/terraform.log" | grep "cluster_endpoint" | cut -d "=" -f2 | tr -d " \"")" ; then
