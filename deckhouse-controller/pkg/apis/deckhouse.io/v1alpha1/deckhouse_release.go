@@ -24,6 +24,19 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+var (
+	DeckhouseReleaseGVR = schema.GroupVersionResource{
+		Group:    SchemeGroupVersion.Group,
+		Version:  SchemeGroupVersion.Version,
+		Resource: "deckhousereleases",
+	}
+	DeckhouseReleaseGVK = schema.GroupVersionKind{
+		Group:   SchemeGroupVersion.Group,
+		Version: SchemeGroupVersion.Version,
+		Kind:    "DeckhouseRelease",
+	}
+)
+
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen=true
@@ -152,7 +165,7 @@ func (in *DeckhouseReleaseStatus) GetObjectKind() schema.ObjectKind {
 
 func (f *deckhouseReleaseKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
 func (f *deckhouseReleaseKind) GroupVersionKind() schema.GroupVersionKind {
-	return schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "DeckhouseRelease"}
+	return DeckhouseReleaseGVK
 }
 
 // +k8s:deepcopy-gen=true

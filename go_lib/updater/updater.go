@@ -364,6 +364,17 @@ func (du *Updater[R]) checkReleaseDisruptions(rl *R) bool {
 	return true
 }
 
+// SetReleases set and sort releases for updater
+func (du *Updater[R]) SetReleases(releases []R) {
+	if len(releases) == 0 {
+		return
+	}
+
+	sort.Sort(ByVersion[R](releases))
+
+	du.releases = releases
+}
+
 func (du *Updater[R]) ReleasesCount() int {
 	return len(du.releases)
 }
@@ -446,7 +457,7 @@ func (du *Updater[R]) PredictNextRelease() {
 
 	for i, release := range du.releases {
 		switch release.GetPhase() {
-		case PhaseSuperseded, PhaseSuspended:
+		case PhaseSuperseded, PhaseSuspended, PhaseSkipped:
 			// pass
 
 		case PhasePending:
@@ -566,84 +577,6 @@ func (du *Updater[R]) processPendingRelease(index int, release R) {
 
 	// release is predicted to be Deployed
 	du.predictedReleaseIndex = index
-}
-
-func (du *Updater[R]) patchInitialStatus(release R) R {
-	if release.GetPhase() != "" {
-		return release
-	}
-	release.SetApprovedStatus(true)
-
-	err := du.updateStatus(&release, "", PhasePending)
-	if err != nil {
-		du.logger.Error(err)
-	}
-
-	return release
-}
-
-func (du *Updater[R]) patchSuspendedStatus(release R) R {
-	if !release.GetSuspend() {
-		return release
-	}
-
-	err := du.kubeAPI.PatchReleaseAnnotations(release, map[string]any{
-		"release.deckhouse.io/suspended": nil,
-	})
-	if err != nil {
-		du.logger.Error("patch suspended annotation:", err)
-	}
-
-	err = du.updateStatus(&release, "", PhaseSuspended)
-	if err != nil {
-		du.logger.Error(err)
-	}
-
-	return release
-}
-
-// patch manual Pending release if update mode was changed
-func (du *Updater[R]) patchManualRelease(release R) R {
-	if release.GetPhase() != PhasePending {
-		return release
-	}
-
-	if !du.inManualMode {
-		return release
-	}
-
-	if !release.GetManuallyApproved() {
-		release.SetApprovedStatus(false)
-		du.totalPendingManualReleases++
-	} else {
-		release.SetApprovedStatus(true)
-	}
-
-	return release
-}
-
-// PrepareReleases fetches releases from snapshot and then:
-//   - patch releases with empty status (just created)
-//   - handle suspended releases (patch status and remove annotation)
-//   - patch manual releases (change status)
-func (du *Updater[R]) PrepareReleases(releases []R) {
-	if len(releases) == 0 {
-		return
-	}
-
-	for i, release := range releases {
-		release = du.patchInitialStatus(release)
-
-		release = du.patchSuspendedStatus(release)
-
-		release = du.patchManualRelease(release)
-
-		releases[i] = release
-	}
-
-	sort.Sort(ByVersion[R](releases))
-
-	du.releases = releases
 }
 
 func (du *Updater[R]) checkReleaseRequirements(rl *R) bool {

@@ -37,11 +37,11 @@ import (
 )
 
 func NewDeckhouseUpdater(logger logger.Logger, client client.Client, dc dependency.Container,
-	discoveryData updater.DeckhouseDiscoveryData, mode string, releaseData updater.DeckhouseReleaseData,
+	updateSettings *updater.DeckhouseUpdateSettings, releaseData updater.DeckhouseReleaseData,
 	podIsReady, clusterBootstrapping bool, imagesRegistry string, enabledModules []string) (*updater.Updater[*v1alpha1.DeckhouseRelease], error) {
-	return updater.NewUpdater[*v1alpha1.DeckhouseRelease](logger, discoveryData.NotificationConfig, mode, releaseData,
+	return updater.NewUpdater[*v1alpha1.DeckhouseRelease](logger, updateSettings.NotificationConfig, updateSettings.Mode, releaseData,
 		podIsReady, clusterBootstrapping, newKubeAPI(client, dc, imagesRegistry),
-		newMetricsUpdater(), newValueSettings(discoveryData.DisruptionApprovalMode), newWebhookDataGetter(), enabledModules), nil
+		newMetricsUpdater(), newValueSettings(updateSettings.DisruptionApprovalMode), newWebhookDataGetter(), enabledModules), nil
 }
 
 func newWebhookDataGetter() *webhookDataGetter {

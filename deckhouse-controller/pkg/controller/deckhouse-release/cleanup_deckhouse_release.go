@@ -42,7 +42,6 @@ func (r *deckhouseReleaseReconciler) cleanupDeckhouseReleaseLoop(ctx context.Con
 	defer ticker.Stop()
 
 	for {
-		fmt.Println("loop")
 		select {
 		case <-ticker.C:
 			err := r.cleanupDeckhouseRelease(ctx)
@@ -53,7 +52,6 @@ func (r *deckhouseReleaseReconciler) cleanupDeckhouseReleaseLoop(ctx context.Con
 			return
 		}
 	}
-
 }
 
 func (r *deckhouseReleaseReconciler) cleanupDeckhouseRelease(ctx context.Context) error {

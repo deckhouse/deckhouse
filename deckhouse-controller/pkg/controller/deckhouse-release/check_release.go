@@ -70,13 +70,11 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseReleaseLoop(ctx context.Conte
 }
 
 func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) error {
-	discoveryData, err := r.getDeckhouseDiscoveryData(ctx)
-	if err != nil {
-		return fmt.Errorf("get release channel: %w", err)
+	if r.clusterUUID == "" {
+		r.clusterUUID = r.getClusterUUID(ctx)
 	}
 
-	releaseChannelName := discoveryData.ReleaseChannel
-	if releaseChannelName == "" {
+	if r.updateSettings.Get().ReleaseChannel == "" {
 		r.logger.Debug("Release channel does not set.")
 		return nil
 	}
@@ -85,7 +83,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 	// Alpha -> alpha
 	// EarlyAccess -> early-access
 	// etc...
-	releaseChannelName = strcase.ToKebab(releaseChannelName)
+	releaseChannelName := strcase.ToKebab(r.updateSettings.Get().ReleaseChannel)
 
 	registrySecret, err := r.getRegistrySecret(ctx)
 	if apierrors.IsNotFound(err) {
@@ -103,7 +101,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		opts = []cr.Option{
 			cr.WithCA(string(registrySecret.Data["ca"])),
 			cr.WithInsecureSchema(string(registrySecret.Data["scheme"]) == "http"),
-			cr.WithUserAgent(discoveryData.ClusterUUID),
+			cr.WithUserAgent(r.clusterUUID),
 			cr.WithAuth(string(registrySecret.Data[".dockerconfigjson"])),
 		}
 
@@ -229,7 +227,7 @@ releaseLoop:
 		if cooldownUntil != nil && cooldownUntil.After(ts.Time) {
 			ts = *cooldownUntil
 		}
-		applyAfter = releaseChecker.CalculateReleaseDelay(ts, discoveryData.ClusterUUID)
+		applyAfter = releaseChecker.CalculateReleaseDelay(ts, r.clusterUUID)
 	}
 
 	// inherit applyAfter from notified release

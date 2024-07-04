@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 )
 
@@ -89,18 +90,18 @@ type ModuleUpdatePolicySpecContainer struct {
 	lock sync.Mutex
 }
 
-func (c *ModuleUpdatePolicySpecContainer) Set(spec *ModuleUpdatePolicySpec) {
+func (c *ModuleUpdatePolicySpecContainer) Set(settings *helpers.DeckhouseSettings) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.spec.ReleaseChannel = spec.ReleaseChannel
-	c.spec.Update.Mode = spec.Update.Mode
-	c.spec.Update.Windows = spec.Update.Windows
+	c.spec.ReleaseChannel = settings.ReleaseChannel
+	c.spec.Update.Mode = settings.Update.Mode
+	c.spec.Update.Windows = settings.Update.Windows
 }
 
 func (c *ModuleUpdatePolicySpecContainer) Get() *ModuleUpdatePolicySpec {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	return c.spec.DeepCopy()
+	return c.spec
 }

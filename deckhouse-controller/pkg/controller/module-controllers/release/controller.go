@@ -215,7 +215,7 @@ func (c *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, m
 
 		return ctrl.Result{Requeue: true}, nil // process to the next phase
 
-	case v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended:
+	case v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended, v1alpha1.PhaseSkipped:
 		if mr.Labels["status"] != strings.ToLower(mr.Status.Phase) {
 			// update labels
 			addLabels(mr, map[string]string{"status": strings.ToLower(mr.Status.Phase)})
@@ -410,7 +410,8 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	for _, r := range otherReleases.Items {
 		pointerReleases = append(pointerReleases, &r)
 	}
-	releaseUpdater.PrepareReleases(pointerReleases)
+	releaseUpdater.SetReleases(pointerReleases)
+
 	if releaseUpdater.ReleasesCount() == 0 {
 		return ctrl.Result{}, nil
 	}

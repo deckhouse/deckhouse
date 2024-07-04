@@ -30,10 +30,11 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
 )
 
-type DeckhouseDiscoveryData struct {
+type DeckhouseUpdateSettings struct {
 	ReleaseChannel         string
 	NotificationConfig     *NotificationConfig
 	DisruptionApprovalMode string
+	Mode                   string
 	ClusterUUID            string
 }
 

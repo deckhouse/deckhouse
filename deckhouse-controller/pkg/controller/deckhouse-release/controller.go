@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
+	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -37,11 +38,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	d8updater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release/updater"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
@@ -56,25 +59,32 @@ type deckhouseReleaseReconciler struct {
 	logger        logger.Logger
 	moduleManager moduleManager
 
-	updatePolicy            *v1alpha1.ModuleUpdatePolicySpecContainer
+	updateSettings          *helpers.DeckhouseSettingsContainer
+	clusterUUID             string
 	releaseVersionImageHash string
 }
 
-func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container, moduleManager moduleManager, updatePolicy *v1alpha1.ModuleUpdatePolicySpecContainer) error {
+func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container, moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer) error {
 	lg := log.WithField("component", "DeckhouseRelease")
 
 	r := &deckhouseReleaseReconciler{
-		client:        mgr.GetClient(),
-		dc:            dc,
-		logger:        lg,
-		moduleManager: moduleManager,
-		updatePolicy:  updatePolicy,
+		client:         mgr.GetClient(),
+		dc:             dc,
+		logger:         lg,
+		moduleManager:  moduleManager,
+		updateSettings: updateSettings,
 	}
 
-	go r.checkDeckhouseReleaseLoop(ctx)
-	go r.cleanupDeckhouseReleaseLoop(ctx)
+	// wait for cache sync
+	go func() {
+		if ok := mgr.GetCache().WaitForCacheSync(ctx); !ok {
+			r.logger.Fatalf("Sync cache failed")
+		}
+		go r.checkDeckhouseReleaseLoop(ctx)
+		go r.cleanupDeckhouseReleaseLoop(ctx)
+	}()
 
-	ctr, err := controller.New("module-documentation", mgr, controller.Options{
+	ctr, err := controller.New("deckhouse-release", mgr, controller.Options{
 		MaxConcurrentReconciles: 1,
 		CacheSyncTimeout:        15 * time.Minute,
 		NeedLeaderElection:      pointer.Bool(false),
@@ -86,18 +96,46 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.DeckhouseRelease{}).
-		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		WithEventFilter(predicate.And(predicate.GenerationChangedPredicate{}, releasePhasePredicate{})).
 		Complete(ctr)
 }
 
+type releasePhasePredicate struct{}
+
+func (releasePhasePredicate) processPhase(release *v1alpha1.DeckhouseRelease) bool {
+	switch release.Status.Phase {
+	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended, v1alpha1.PhaseDeployed:
+		return false
+	}
+	return true
+}
+
+func (rp releasePhasePredicate) Create(ev event.CreateEvent) bool {
+	return rp.processPhase(ev.Object.(*v1alpha1.DeckhouseRelease))
+}
+
+// Delete returns true if the Delete event should be processed
+func (rp releasePhasePredicate) Delete(_ event.DeleteEvent) bool {
+	return false
+}
+
+// Update returns true if the Update event should be processed
+func (rp releasePhasePredicate) Update(ev event.UpdateEvent) bool {
+	return rp.processPhase(ev.ObjectNew.(*v1alpha1.DeckhouseRelease))
+}
+
+// Generic returns true if the Generic event should be processed
+func (rp releasePhasePredicate) Generic(ev event.GenericEvent) bool {
+	return rp.processPhase(ev.Object.(*v1alpha1.DeckhouseRelease))
+}
+
 func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	var release v1alpha1.DeckhouseRelease
-	err := r.client.Get(ctx, req.NamespacedName, &release)
+	release := new(v1alpha1.DeckhouseRelease)
+	err := r.client.Get(ctx, req.NamespacedName, release)
 	if err != nil {
-		// The ModuleSource resource may no longer exist, in which case we stop
+		// The DeckhouseRelease resource may no longer exist, in which case we stop
 		// processing.
 		if apierrors.IsNotFound(err) {
-			// if source is not exists anymore - drop the checksum cache
 			return ctrl.Result{}, nil
 		}
 
@@ -105,14 +143,79 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	if !release.DeletionTimestamp.IsZero() {
-		// TODO: probably we have to delete documentation but we don't have such http handler atm
 		return ctrl.Result{}, nil
 	}
 
-	return r.createOrUpdateReconcile(ctx)
+	return r.createOrUpdateReconcile(ctx, release)
 }
 
-func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context) (ctrl.Result, error) {
+func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (ctrl.Result, error) {
+	// prepare releases
+	switch dr.Status.Phase {
+	// thees phases should be ignored by predicate, but let's check it
+	case "":
+		// initial state
+		dr.Status.Phase = v1alpha1.PhasePending
+		dr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
+		if e := r.client.Status().Update(ctx, dr); e != nil {
+			return ctrl.Result{Requeue: true}, e
+		}
+
+		return ctrl.Result{Requeue: true}, nil // process to the next phase
+
+	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended:
+		return ctrl.Result{}, nil
+
+	case v1alpha1.PhaseDeployed:
+		// don't think we have to do anything with Deployed release
+		// probably, we have to move the Deployment's image update logic here
+		return ctrl.Result{}, nil
+	}
+
+	// update pending release with suspend annotation
+	err := r.patchSuspendAnnotation(dr)
+	if err != nil {
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
+	}
+
+	r.patchManualRelease(dr)
+
+	return r.pendingReleaseReconcile(ctx)
+}
+
+func (r *deckhouseReleaseReconciler) patchManualRelease(dr *v1alpha1.DeckhouseRelease) {
+	if r.updateSettings.Get().Update.Mode != "Manual" {
+		return
+	}
+
+	if !dr.GetManuallyApproved() {
+		dr.SetApprovedStatus(false)
+		// TODO: don't know yet how to count manual releases
+		// du.totalPendingManualReleases++
+	} else {
+		dr.SetApprovedStatus(true)
+	}
+}
+
+func (r *deckhouseReleaseReconciler) patchSuspendAnnotation(dr *v1alpha1.DeckhouseRelease) error {
+	if !dr.GetSuspend() {
+		return nil
+	}
+
+	ctx := context.Background()
+	patch, _ := json.Marshal(map[string]any{
+		"metadata": map[string]any{
+			"annotations": map[string]any{
+				"release.deckhouse.io/suspended": nil,
+			},
+		},
+	})
+
+	p := client.RawPatch(types.MergePatchType, patch)
+	return r.client.Patch(ctx, dr, p)
+}
+
+func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context) (ctrl.Result, error) {
 	deckhousePods, err := r.getDeckhousePods(ctx)
 	if err != nil {
 		r.logger.Warnf("Error getting deckhouse pods: %s", err)
@@ -123,13 +226,12 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 		r.logger.Warn("Deckhouse pods not found. Skipping update")
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
-
-	discoveryData, err := r.getDeckhouseDiscoveryData(ctx)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("get release channel: %w", err)
+	if r.clusterUUID == "" {
+		r.clusterUUID = r.getClusterUUID(ctx)
 	}
 
-	if len(discoveryData.ReleaseChannel) == 0 {
+	// dev mode
+	if r.updateSettings.Get().ReleaseChannel == "" {
 		return r.tagUpdate(ctx, deckhousePods)
 	}
 
@@ -158,8 +260,16 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 	}
 
 	podReady := r.isDeckhousePodReady()
+	us := r.updateSettings.Get()
+	dus := &updater.DeckhouseUpdateSettings{
+		ReleaseChannel:         us.ReleaseChannel,
+		NotificationConfig:     &us.Update.NotificationConfig,
+		DisruptionApprovalMode: us.Update.DisruptionApprovalMode,
+		Mode:                   us.Update.Mode,
+		ClusterUUID:            r.clusterUUID,
+	}
 	deckhouseUpdater, err := d8updater.NewDeckhouseUpdater(
-		r.logger, r.client, r.dc, discoveryData, r.updatePolicy.Get().Update.Mode, releaseData, podReady,
+		r.logger, r.client, r.dc, dus, releaseData, podReady,
 		clusterBootstrapping, imagesRegistry, r.moduleManager.GetEnabledModuleNames(),
 	)
 
@@ -180,12 +290,13 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 	}
 
 	pointerReleases := make([]*v1alpha1.DeckhouseRelease, 0, len(releases.Items))
-	for _, r := range releases.Items {
-		pointerReleases = append(pointerReleases, &r)
+	for _, rl := range releases.Items {
+		pointerReleases = append(pointerReleases, &rl)
 	}
-	deckhouseUpdater.PrepareReleases(pointerReleases)
+	deckhouseUpdater.SetReleases(pointerReleases)
+
 	if deckhouseUpdater.ReleasesCount() == 0 {
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		return ctrl.Result{}, nil
 	}
 
 	// predict next patch for Deploy
@@ -193,27 +304,33 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 
 	// has already Deployed the latest release
 	if deckhouseUpdater.LastReleaseDeployed() {
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		return ctrl.Result{}, nil
 	}
 
 	// some release is forced, burn everything, apply this patch!
 	if deckhouseUpdater.HasForceRelease() {
 		deckhouseUpdater.ApplyForcedRelease()
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		// TODO: check error??
+		return ctrl.Result{}, nil
 	}
 
 	if deckhouseUpdater.PredictedReleaseIsPatch() {
 		// patch release does not respect update windows or ManualMode
-		deckhouseUpdater.ApplyPredictedRelease(nil)
+		if deckhouseUpdater.ApplyPredictedRelease(nil) {
+			return ctrl.Result{}, nil
+		}
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
 	var windows update.Windows
 	if !deckhouseUpdater.InManualMode() {
-		windows = r.updatePolicy.Get().Update.Windows
+		windows = r.updateSettings.Get().Update.Windows
 	}
 
-	deckhouseUpdater.ApplyPredictedRelease(windows)
+	if deckhouseUpdater.ApplyPredictedRelease(windows) {
+		return ctrl.Result{}, nil
+	}
+
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 }
 
@@ -258,50 +375,20 @@ func (r *deckhouseReleaseReconciler) getDeckhousePods(ctx context.Context) ([]co
 	return filtered, nil
 }
 
-func (r *deckhouseReleaseReconciler) getDeckhouseDiscoveryData(ctx context.Context) (updater.DeckhouseDiscoveryData, error) {
+func (r *deckhouseReleaseReconciler) getClusterUUID(ctx context.Context) string {
 	var secret corev1.Secret
 	key := types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-discovery"}
 	err := r.client.Get(ctx, key, &secret)
 	if err != nil {
-		return updater.DeckhouseDiscoveryData{}, fmt.Errorf("get secret %s: %w", key, err)
-	}
-
-	var data = updater.DeckhouseDiscoveryData{
-		ReleaseChannel:         string(secret.Data["releaseChannel"]),
-		DisruptionApprovalMode: "Auto",
-		NotificationConfig:     new(updater.NotificationConfig),
-	}
-
-	// default case in template
-	if data.ReleaseChannel == "Unknown" {
-		data.ReleaseChannel = ""
-	}
-
-	if jsonSettings, ok := secret.Data["updateSettings.json"]; ok {
-		var settings struct {
-			NotificationConfig     *updater.NotificationConfig `json:"notification"`
-			DisruptionApprovalMode *string                     `json:"disruptionApprovalMode"`
-		}
-
-		err = json.Unmarshal(jsonSettings, &settings)
-		if err != nil {
-			return data, fmt.Errorf("unmarshal json: %w", err)
-		}
-
-		if settings.NotificationConfig != nil {
-			data.NotificationConfig = settings.NotificationConfig
-		}
-
-		if settings.DisruptionApprovalMode != nil {
-			data.DisruptionApprovalMode = *settings.DisruptionApprovalMode
-		}
+		r.logger.Warnf("Read clusterUUID from secret %s failed: %v. Generating random uuid", key, err)
+		return uuid.Must(uuid.NewV4()).String()
 	}
 
 	if clusterUUID, ok := secret.Data["clusterUUID"]; ok {
-		data.ClusterUUID = string(clusterUUID)
+		return string(clusterUUID)
 	}
 
-	return data, nil
+	return uuid.Must(uuid.NewV4()).String()
 }
 
 func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, pods []corev1.Pod) (ctrl.Result, error) {
