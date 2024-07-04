@@ -1,0 +1,18 @@
+- name: d8.cni-cilium.egressgatewaypolicies
+  rules:
+    - alert: CniCiliumOrphanEgressGatewayPolicyFound
+      expr: max by (name, egressgateway) (d8_cni_cilium_orphan_egress_gateway_policy == 1)
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: application
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__istio_irrelevant_external_services: ClusterHasCniCiliumOrphanEgressGatewayPolicies,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__istio_irrelevant_external_services: ClusterHasCniCiliumOrphanEgressGatewayPolicies,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: Found orphan EgressGatewayPolicy with irrelevant EgressGateway name
+        description: |
+          There is orphan EgressGatewayPolicy in the cluster: with the name: `{{$labels.name}}` which has irrelevant EgressGateway name.
+
+          It is recommended to check EgressGateway name in EgressGatewayPolicy resource: egress gateway name: `{{$labels.egressgateway}}`

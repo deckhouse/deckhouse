@@ -7,6 +7,7 @@ package ee
 
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -14,7 +15,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 12},
 	Queue:        "/modules/cni-cilium/egress-policy-discovery",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
@@ -44,7 +45,20 @@ func applyEgressGatewayPolicyFilter(obj *unstructured.Unstructured) (go_hook.Fil
 }
 
 func handleEgressGatewayPolicies(input *go_hook.HookInput) error {
+	input.MetricsCollector.Expire("d8_cni_cilium_egress_gateway_policy")
 	input.Values.Set("cniCilium.internal.egressGatewayPolicies", input.Snapshots["egressgatewaypolicies"])
+
+	egressGatewayMap := input.Values.Get("cniCilium.internal.egressGatewaysMap").Map()
+
+	for _, policySnap := range input.Snapshots["egressgatewaypolicies"] {
+		policy, ok := policySnap.(EgressGatewayPolicyInfo)
+		if !ok {
+			continue
+		}
+		if _, exists := egressGatewayMap[policy.EgressGatewayName]; !exists {
+			input.MetricsCollector.Set("d8_cni_cilium_orphan_egress_gateway_policy", 1, map[string]string{"name": policy.Name, "egressgateway": policy.EgressGatewayName}, metrics.WithGroup("d8_cni_cilium_egress_gateway_policy"))
+		}
+	}
 
 	return nil
 }
