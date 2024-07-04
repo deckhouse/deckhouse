@@ -94,6 +94,16 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/021-cni-cilium/templates/monitoring.yaml
+  to: /deckhouse/modules/021-cni-cilium/templates/monitoring.yaml
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/monitoring/prometheus-rules
+  to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/025-static-routing-manager
   to: /deckhouse/modules/025-static-routing-manager
   stageDependencies:
