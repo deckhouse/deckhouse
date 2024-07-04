@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -44,8 +45,18 @@ var (
 	DefaultKubernetesVersion = "1.27"
 )
 
+func revealWildcardPaths(paths []string) []string {
+	for _, path := range paths {
+		if strings.Contains(path, "*") {
+			revealPaths, _ := filepath.Glob(path)
+			paths = append(paths, revealPaths...)
+		}
+	}
+	return paths
+}
+
 func LoadConfigFromFile(paths []string, opts ...ValidateOption) (*MetaConfig, error) {
-	metaConfig, err := ParseConfig(paths, opts...)
+	metaConfig, err := ParseConfig(revealWildcardPaths(paths), opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +101,11 @@ func numerateManifestLines(manifest []byte) string {
 func ParseConfig(paths []string, opts ...ValidateOption) (*MetaConfig, error) {
 	content := ""
 	for _, path := range paths {
+
+		if strings.Contains(path, "*") {
+			continue // skip wildcard paths, we revealed them in the previous step
+		}
+
 		log.DebugF("Have config file %s\n", path)
 		fileContent, err := os.ReadFile(path)
 		if err != nil {
