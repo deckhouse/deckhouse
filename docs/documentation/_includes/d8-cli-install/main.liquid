@@ -1,0 +1,32 @@
+<a id='tab_installer_linux_x86-64' href="javascript:void(0)" class="tabs__btn tabs__btn_installer active"
+   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer', 'tabs__content_installer', 'block_installer_linux_x86-64');" >
+  Linux x86-64
+</a>
+<a id='tab_installer_macos_x86-64' href="javascript:void(0)" class="tabs__btn tabs__btn_installer"
+   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer', 'tabs__content_installer', 'block_installer_macos_x86-64');" >
+  macOS x86-64
+</a>
+<a id='tab_installer_macos_arm64' href="javascript:void(0)" class="tabs__btn tabs__btn_installer"
+   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer', 'tabs__content_installer', 'block_installer_macos_arm64');" >
+  macOS ARM64
+</a>
+<a id='tab_installer_windows' href="javascript:void(0)" class="tabs__btn tabs__btn_installer"
+   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer', 'tabs__content_installer', 'block_installer_windows');" >
+  Windows
+</a>
+
+<div id='block_installer_linux_x86-64' class="tabs__content tabs__content_installer active" markdown="1">
+  {%  include d8-cli-install/content.liquid os="Linux" arch="x86-64" %}
+</div>
+
+<div id='block_installer_macos_x86-64' class="tabs__content tabs__content_installer" markdown="1">
+  {%  include d8-cli-install/content.liquid os="macOS" arch="x86-64" %}
+</div>
+
+<div id='block_installer_macos_arm64' class="tabs__content tabs__content_installer" markdown="1">
+  {%  include d8-cli-install/content.liquid os="macOS" arch="ARM64" %}
+</div>
+
+<div id='block_installer_windows' class="tabs__content tabs__content_installer" markdown="1">
+  {%  include d8-cli-install/content.liquid os="Windows" arch="ARM64"%}
+</div>

@@ -1,0 +1,48 @@
+{% if include.os == "Windows" %}
+1. {% if page.lang == 'ru' %}Скачайте [архив для {{ include.os }} {{ include.arch }}]{% else %}Download the [archive for {{ include.os }} {{ include.arch }}]{% endif -%}
+({%- if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-{{ include.os | downcase }}-{{ include.arch | downcase }}.tar.gz).
+{% else %}
+1. {% if page.lang == 'ru' %}Скачайте архив для {{ include.os }} {{ include.arch }}{% else %}Download the archive for {{ include.os }} {{ include.arch }}{% endif %}:
+
+   ```shell
+   curl -LO {%- if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-{{ include.os | downcase }}-{{ include.arch | downcase }}.tar.gz
+   ```
+{% endif %}
+
+{% if include.os == "Windows" %}
+{%    if page.lang == 'ru' -%}
+1. Распакуйте архив, переместите файл `d8.exe` в выбранный вами каталог и добавьте каталог в переменную `PATH` операционной системы.
+{%-   else -%}
+1. Extract the archive, move the file `d8.exe` to the directory of your choice, and add the directory to the 'PATH' environment variable of the operating system.
+{%-   endif -%}
+{% else %}
+1. {% if page.lang == 'ru' -%}Распакуйте архив{% else %}Extract the archive{% endif %}:
+
+   ```bash
+   tar -xvf "d8-v{{ site.data.deckhouse-cli.version }}-{{ include.os | downcase }}-{{ include.arch | downcase }}.tar.gz" "{{ include.os | downcase }}-{{ include.arch | downcase }}/d8"
+   ```
+
+1. {% if page.lang == 'ru' -%}
+Переместите файл `d8` в каталог, находящийся в списке в переменной окружения `PATH` операционной системы (например, `/usr/local/bin/`)
+{%- else -%}
+Move the file `d8` to the directory listed in the `PATH` system environment variable (for example, `/usr/local/bin/`)
+{%- endif %}:
+
+   ```bash
+   sudo mv "{{ include.os | downcase }}-{{ include.arch | downcase }}/d8" /usr/local/bin/
+   ```
+
+   > {%- if page.lang == 'ru' -%}
+     Переменная окружения `PATH` содержит список каталогов, в которых ОС будет искать исполняемый файл при вызове команды из терминала. Просмотреть ее можно командой `echo $PATH`.
+     {%- else -%}
+     `PATH` is a system environment variable containing a list of directories with executable files. This is where the OS will look for the binary when a command is run in the terminal. You can view this list with the `echo $PATH` command.
+     {%- endif %}
+{% endif %}
+
+1. {% if page.lang == 'ru' -%}Проверьте, что утилита работает{% else %}Check that the CLI is working{% endif %}:
+
+   ```bash
+   d8 help
+   ```
+
+{% if page.lang == 'ru' -%}Готово, вы установили Deckhouse CLI.{% else %}Congrats, you have successfully installed Deckhouse CLI.{% endif %}
