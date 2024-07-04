@@ -1,4 +1,4 @@
-1930
+1932
 1GB
 2GB
 5XX
@@ -109,7 +109,6 @@ bm
 boto
 boto3
 BPF
-BTF
 bpfLBMode
 Buildah
 Burstable
@@ -342,6 +341,7 @@ dst
 eBPF
 EBS
 ECMP
+EdgeRouter
 ee
 EE
 eg
@@ -904,6 +904,7 @@ PVCs
 PVs
 px
 qa
+QCOW
 QEMU
 QoS
 Qrator

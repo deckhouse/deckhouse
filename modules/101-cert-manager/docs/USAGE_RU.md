@@ -201,7 +201,7 @@ spec:
 
 ## Заказ self-signed-сертификата
 
-Все еще проще, чем с LetsEncypt. Просто меняем `letsencrypt` на `selfsigned`:
+Все еще проще, чем с LetsEncrypt. Просто меняем `letsencrypt` на `selfsigned`:
 
 ```yaml
 apiVersion: cert-manager.io/v1
