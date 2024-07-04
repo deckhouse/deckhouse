@@ -333,7 +333,7 @@ func (dml *DeckhouseController) runEventLoop(moduleEventCh <-chan events.ModuleE
 		case events.ModuleConfigChanged:
 			if d8config.IsServiceInited() {
 				err := dml.updateModuleConfigStatus(event.ModuleName)
-				if err != nil {
+				if err != nil && !errors.IsNotFound(err) {
 					log.Errorf("Error occurred when updating module config %s: %s", event.ModuleName, err)
 				}
 			}

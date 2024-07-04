@@ -277,7 +277,7 @@ func (s stubModulesManager) GetEnabledModuleNames() []string {
 	return nil
 }
 
-func (s stubModulesManager) RunModuleWithNewStaticValues(_, _, _ string) error {
+func (s stubModulesManager) RunModuleWithNewOpenAPISchema(_, _, _ string) error {
 	return nil
 }
 

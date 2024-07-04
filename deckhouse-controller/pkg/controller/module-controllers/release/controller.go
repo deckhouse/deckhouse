@@ -261,7 +261,7 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 	if _, set := mr.GetAnnotations()[RegistrySpecChangedAnnotation]; set {
 		// if module is enabled - push runModule task in the main queue
 		c.logger.Infof("Applying new registry settings to the %s module", mr.Spec.ModuleName)
-		err := c.moduleManager.RunModuleWithNewStaticValues(mr.Spec.ModuleName, mr.ObjectMeta.Labels["source"], filepath.Join(c.externalModulesDir, mr.Spec.ModuleName, fmt.Sprintf("v%s", mr.Spec.Version)))
+		err := c.moduleManager.RunModuleWithNewOpenAPISchema(mr.Spec.ModuleName, mr.ObjectMeta.Labels["source"], filepath.Join(c.externalModulesDir, mr.Spec.ModuleName, fmt.Sprintf("v%s", mr.Spec.Version)))
 		if err != nil {
 			return ctrl.Result{Requeue: true}, err
 		}
@@ -945,7 +945,7 @@ func restoreModuleSymlink(externalModulesDir, symlinkPath, moduleRelativePath st
 type moduleManager interface {
 	DisableModuleHooks(moduleName string)
 	GetModule(moduleName string) *addonmodules.BasicModule
-	RunModuleWithNewStaticValues(moduleName, moduleSource, modulePath string) error
+	RunModuleWithNewOpenAPISchema(moduleName, moduleSource, modulePath string) error
 	GetEnabledModuleNames() []string
 }
 
