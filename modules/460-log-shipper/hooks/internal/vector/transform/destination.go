@@ -39,6 +39,10 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 		}
 	}
 
+	if dest.Spec.Type == v1alpha1.DestSocket && dest.Spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecSyslog {
+		transforms = append(transforms, SyslogEncoding())
+	}
+
 	if dest.Spec.Type == v1alpha1.DestSplunk {
 		transforms = append(transforms, DateTime())
 	}
