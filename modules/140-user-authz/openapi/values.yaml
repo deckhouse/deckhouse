@@ -234,8 +234,6 @@ properties:
           - d8:user-authz:cloud-provider-openstack:user
           - d8:user-authz:ingress-nginx:cluster-editor
           - d8:user-authz:ingress-nginx:editor
-          - d8:user-authz:node-manager:cluster-admin
-          - d8:user-authz:node-manager:cluster-editor
           - d8:user-authz:node-manager:user
           - d8:user-authz:prometheus-metrics-adapter:cluster-editor
           - d8:user-authz:prometheus-metrics-adapter:editor
@@ -249,7 +247,6 @@ properties:
           - d8:user-authz:cloud-provider-openstack:user
           - d8:user-authz:ingress-nginx:cluster-editor
           - d8:user-authz:ingress-nginx:editor
-          - d8:user-authz:node-manager:cluster-editor
           - d8:user-authz:node-manager:user
           - d8:user-authz:prometheus-metrics-adapter:cluster-editor
           - d8:user-authz:prometheus-metrics-adapter:editor
