@@ -1,13 +1,13 @@
-diff --git a/plugins/cilium-cni/cilium-cni.go b/plugins/cilium-cni/cilium-cni.go
-index 5eca17daeb..acdd6722be 100644
---- a/plugins/cilium-cni/cilium-cni.go
-+++ b/plugins/cilium-cni/cilium-cni.go
-@@ -495,7 +495,7 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
+diff --git a/plugins/cilium-cni/main.go b/plugins/cilium-cni/main.go
+index 217981d3a1..78cd95b662 100644
+--- a/plugins/cilium-cni/main.go
++++ b/plugins/cilium-cni/main.go
+@@ -492,7 +492,7 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
  			peer      netlink.Link
  			tmpIfName string
  		)
--		veth, peer, tmpIfName, err = connector.SetupVeth(ep.ContainerID, int(conf.DeviceMTU), ep)
-+		veth, peer, tmpIfName, err = connector.SetupVeth(ep.ContainerID, int(conf.RouteMTU), ep)
+-		veth, peer, tmpIfName, err = connector.SetupVeth(ep.ContainerID, int(conf.DeviceMTU),
++		veth, peer, tmpIfName, err = connector.SetupVeth(ep.ContainerID, int(conf.RouteMTU),
+ 			int(conf.GROMaxSize), int(conf.GSOMaxSize),
+ 			int(conf.GROIPV4MaxSize), int(conf.GSOIPV4MaxSize), ep)
  		if err != nil {
- 			err = fmt.Errorf("unable to set up veth on host side: %s", err)
- 			return err

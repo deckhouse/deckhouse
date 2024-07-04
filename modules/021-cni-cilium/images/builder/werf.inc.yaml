@@ -1,21 +1,21 @@
-{{- $ciliumVersion := "1.12.8" }}
-# https://github.com/cilium/cilium/blob/22161112e06f215a5af9485c05489eba5aa21504/images/runtime/Dockerfile#L8-L11
+{{- $ciliumVersion := "1.14.5" }}
+# https://github.com/cilium/cilium/blob/83f313918cd97dc48c63fda7a0e15b8821a6f0d2/images/runtime/Dockerfile#L8-L10
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
-from: quay.io/cilium/cilium-llvm:3408daa17f6490a464dfc746961e28ae31964c66@sha256:ff13a1a9f973d102c6ac907d2bc38a524c8e1d26c6c1b16ed809a98925206a79
+from: quay.io/cilium/cilium-llvm:a8c542efc076b62ba683e7699c0013adb6955f0f@sha256:38e8941107bd19eb30bdde6e478760a22325f38d1f2771dfd1b9af81d74235e7
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-bpftool-artifact
 from: quay.io/cilium/cilium-bpftool:d3093f6aeefef8270306011109be623a7e80ad1b@sha256:2c28c64195dee20ab596d70a59a4597a11058333c6b35a99da32c339dcd7df56
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iproute2-artifact
-from: quay.io/cilium/cilium-iproute2:f882e3fd516184703eea5ee9b3b915748b5d4ee8@sha256:f22b8aaf01952cf4b2ec959f0b8f4d242b95ce279480fbd73fded606ce0c3fa4
----
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iptables-artifact
 from: quay.io/cilium/iptables:67f517af50e18f64cd12625021f1c39246bb4f92@sha256:d075f03e89aacf51908346ec8ed5d251b8d3ad528ce30a710fcd074cdf91f11d
 ---
-# https://github.com/cilium/cilium/blob/v1.12.8/images/cilium/Dockerfile#L11
+# https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile#L9
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-envoy-artifact
-from: quay.io/cilium/cilium-envoy:04413917ff99e4f6ab51d1c6eb424d4a055f4462@sha256:af076f80818bc8d894f2f4f3104d5f4288112a67be5fb6e1b9a9c78370c7c9c8
+from: quay.io/cilium/cilium-envoy:v1.25.9-e198a2824d309024cb91fb6a984445e73033291d@sha256:52541e1726041b050c5d475b3c527ca4b8da487a0bbb0309f72247e8127af0ec
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-golang-artifact
+from: {{ $.Images.BASE_GOLANG_20_BULLSEYE }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cert-artifact
 from: {{ $.Images.BASE_ALPINE }}
@@ -23,12 +23,58 @@ shell:
   beforeInstall:
     - apk add --no-cache ca-certificates
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
+from: {{ $.Images.BASE_UBUNTU }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iptables-artifact
+  add: /iptables
+  to: /iptables
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
+  add: /usr/local/bin/
+  to: /bin
+  before: install
+  includePaths:
+  - clang
+  - llc
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-bpftool-artifact
+  add: /usr/local/bin/bpftool
+  to: /usr/local/bin/bpftool
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
+  add: /out/linux/amd64/bin/loopback
+  to: /cni/loopback
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
+  add: /out/linux/amd64/bin/gops
+  to: /bin/gops
+  before: install
+shell:
+  beforeInstall:
+  - apt-get update
+  - apt-get upgrade -y
+  - apt-get install -y jq curl
+  - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/install-runtime-deps.sh -o /go/src/github.com/cilium/cilium/images/runtime/install-runtime-deps.sh
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/iptables-wrapper-installer.sh -o /go/src/github.com/cilium/cilium/images/runtime/iptables-wrapper-installer.sh
+  - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
+  install:
+  - cd /go/src/github.com/cilium/cilium/images/runtime
+  - ./install-runtime-deps.sh
+  - dpkg -i /iptables/*.deb
+  - rm -rf /iptables
+  - ./iptables-wrapper-installer.sh --no-sanity-check
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
+fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
   add: /usr/local/bin/llvm-objcopy
   to: /bin
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-golang-artifact
+  add: /usr/local/go
+  to: /usr/local/go
   before: install
 mount:
 - fromPath: ~/go-pkg-cache
@@ -59,11 +105,12 @@ shell:
   - apt-get purge --auto-remove
   - apt-get clean
   - rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-  - mkdir -p chmod +x /go/src/github.com/cilium/cilium/images/builder
+  - mkdir -p /go/src/github.com/cilium/cilium/images/builder
   - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/builder/install-protoc.sh -o /go/src/github.com/cilium/cilium/images/builder/install-protoc.sh
   - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/builder/install-protoplugins.sh -o /go/src/github.com/cilium/cilium/images/builder/install-protoplugins.sh
   - chmod +x /go/src/github.com/cilium/cilium/images/builder/*.sh
   install:
+  - export PATH=$PATH:/usr/local/go/bin
   - cd /go/src/github.com/cilium/cilium/images/builder
   - ./install-protoc.sh
   - ./install-protoplugins.sh
@@ -78,70 +125,14 @@ shell:
   - apt-get update
   - apt-get install -y binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu curl
   - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
-  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/2a518bb669db2de4677acb952a7eef4f269fcb48/images/runtime/build-gops.sh -o /go/src/github.com/cilium/cilium/images/runtime/build-gops.sh
-  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/17a78a2325a18793388428402daf063de7d72100/images/runtime/download-cni.sh -o /go/src/github.com/cilium/cilium/images/runtime/download-cni.sh
-  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/a1046bcc10b75c7130f0579d40d0529c85e1fe56/images/runtime/cni-version.sh -o /go/src/github.com/cilium/cilium/images/runtime/cni-version.sh
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/build-gops.sh -o /go/src/github.com/cilium/cilium/images/runtime/build-gops.sh
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/download-cni.sh -o /go/src/github.com/cilium/cilium/images/runtime/download-cni.sh
+  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/v{{ $ciliumVersion }}/images/runtime/cni-version.sh -o /go/src/github.com/cilium/cilium/images/runtime/cni-version.sh
   - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
   install:
   - cd /go/src/github.com/cilium/cilium/images/runtime
   - ./build-gops.sh
   - ./download-cni.sh
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-runtime-artifact
-from: {{ $.Images.BASE_UBUNTU }}
-import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iptables-artifact
-  add: /iptables
-  to: /iptables
-  before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-llvm-artifact
-  add: /usr/local/bin/
-  to: /bin
-  before: install
-  includePaths:
-  - clang
-  - llc
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-bpftool-artifact
-  add: /usr/local/bin/bpftool
-  to: /usr/local/bin/bpftool
-  before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iproute2-artifact
-  add: /usr/lib
-  to: /usr/lib
-  before: install
-  includePaths:
-  - libbpf*
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-iproute2-artifact
-  add: /usr/local/bin
-  to: /usr/local/bin
-  before: install
-  includePaths:
-  - ip
-  - tc
-  - ss
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
-  add: /out/linux/amd64/bin/loopback
-  to: /cni/loopback
-  before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-gops-artifact
-  add: /out/linux/amd64/bin/gops
-  to: /bin/gops
-  before: install
-shell:
-  beforeInstall:
-  - apt-get update
-  - apt-get upgrade -y
-  - apt-get install -y jq curl
-  - mkdir -p /go/src/github.com/cilium/cilium/images/runtime
-  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/17a78a2325a18793388428402daf063de7d72100/images/runtime/install-runtime-deps.sh -o /go/src/github.com/cilium/cilium/images/runtime/install-runtime-deps.sh
-  - curl -sSfL https://raw.githubusercontent.com/cilium/cilium/369f3f917ec9f2d9bb46dde2e4aaba64934d60a4/images/runtime/iptables-wrapper-installer.sh -o /go/src/github.com/cilium/cilium/images/runtime/iptables-wrapper-installer.sh
-  - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
-  install:
-  - cd /go/src/github.com/cilium/cilium/images/runtime
-  - ./install-runtime-deps.sh
-  - dpkg -i /iptables/*.deb
-  - rm -rf /iptables
-  - ./iptables-wrapper-installer.sh --no-sanity-check
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-hubble-artifact
 fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-artifact

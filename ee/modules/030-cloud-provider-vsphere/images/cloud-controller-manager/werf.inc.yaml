@@ -37,10 +37,10 @@ shell:
   beforeInstall:
   - apk add --no-cache make bash git mercurial patch rsync
   install:
-  - mkdir /src
-  - wget https://github.com/kubernetes/cloud-provider-vsphere/archive/{{ $value.ccm.vsphere }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
+  - git clone https://github.com/kubernetes/cloud-provider-vsphere.git /src
   - cd /src
-  - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile} ; done
+  - git checkout {{ $value.ccm.vsphere }}
+  - git apply /patches/{{ $version }}/*.patch --verbose
   - make build VERSION={{ $value.ccm.vsphere }}
   - chown 64535:64535 /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
   - chmod 0755 /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
