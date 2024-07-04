@@ -255,8 +255,8 @@ function destroy_eks_infra() {
 
 #  pushd "$cwd"
   cd $cwd
-  /terraform/terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
-  /terraform/terraform destroy -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+  terraform init -input=false -plugin-dir=/plugins || return $?
+  terraform destroy -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
 #  popd
 
   return $exitCode
