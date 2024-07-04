@@ -46,6 +46,7 @@ ARG API_GITREPO=https://github.com/LINBIT/linstor-api-py
 ARG API_VERSION=1.19.0
 ARG CLIENT_GITREPO=https://github.com/LINBIT/linstor-client
 ARG CLIENT_VERSION=1.19.0
+ARG LINSTOR_COMMON_SUBMODULE_COMMIT=999c3c0793376f88b891eb7ef3dc8f8bc9aa26ec
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -55,8 +56,11 @@ RUN apt-get update \
 
 RUN git clone --recurse-submodules ${API_GITREPO} /linstor-api-py
 WORKDIR /linstor-api-py
-RUN git checkout v${API_VERSION} \
- && make debrelease \
+RUN git checkout v${API_VERSION}
+WORKDIR /linstor-api-py/linstor-common
+RUN git checkout ${LINSTOR_COMMON_SUBMODULE_COMMIT}
+WORKDIR /linstor-api-py
+RUN make debrelease \
  && mv ./dist/python-linstor-${API_VERSION}.tar.gz ../python-linstor_$(echo ${API_VERSION} | tr '-' '~').orig.tar.gz \
  && tar -C / -xvf /python-linstor_$(echo ${API_VERSION} | tr '-' '~').orig.tar.gz
 WORKDIR /python-linstor-${API_VERSION}
