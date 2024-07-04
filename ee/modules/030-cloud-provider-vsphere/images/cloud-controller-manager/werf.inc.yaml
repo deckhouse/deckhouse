@@ -5,44 +5,44 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-  add: /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
-  to: /bin/vsphere-cloud-controller-manager
-  before: setup
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    add: /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
+    to: /bin/vsphere-cloud-controller-manager
+    before: setup
 docker:
   ENTRYPOINT: ["/bin/vsphere-cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.27" $version }}
+            {{- if semverCompare ">=1.27" $version }}
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
-    {{- else if semverCompare ">=1.25" $version }}
+  {{- else if semverCompare ">=1.25" $version }}
 from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
-    {{- else if semverCompare ">=1.23" $version }}
+  {{- else if semverCompare ">=1.23" $version }}
 from: {{ $.Images.BASE_GOLANG_17_ALPINE }}
-    {{- else if semverCompare "=1.22" $version }}
+  {{- else if semverCompare "=1.22" $version }}
 from: {{ $.Images.BASE_GOLANG_16_ALPINE }}
-    {{- else }}
+  {{- else }}
 from: {{ $.Images.BASE_GOLANG_ALPINE }}
-    {{- end }}
+  {{- end }}
 git:
-- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-      - '**/*'
+  - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache make bash git mercurial patch rsync
+    - apk add --no-cache make bash git mercurial patch rsync
   install:
-  - mkdir /src
-  - wget https://github.com/kubernetes/cloud-provider-vsphere/archive/{{ $value.ccm.vsphere }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
-  - cd /src
-  - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile} ; done
-  - make build VERSION={{ $value.ccm.vsphere }}
-  - chown 64535:64535 /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
-  - chmod 0755 /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
+    - git clone https://github.com/kubernetes/cloud-provider-vsphere.git /src
+    - cd /src
+    - git checkout {{ $value.ccm.vsphere }}
+    - git apply /patches/{{ $version }}/*.patch --verbose
+    - make build VERSION={{ $value.ccm.vsphere }}
+    - chown 64535:64535 /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
+    - chmod 0755 /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
   {{- end }}
-{{- end }}
+  {{- end }}

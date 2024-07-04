@@ -2,7 +2,7 @@
 
 ---
 artifact: kruise
-from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
+from: {{ $.Images.BASE_GOLANG_20_BULLSEYE }}
 git:
   - add: /{{ $.ModulePath }}modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}
     to: /
@@ -11,25 +11,28 @@ git:
         - '**/*'
     includePaths:
       - patches
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
   setup:
-    - export "CGO_ENABLED=0"
-    - export "GOOS=linux"
-    - export "GOARCH=amd64"
+    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/openkruise/kruise.git
     - cd kruise
     - find /patches -name '*.patch' -exec git apply {} \;
-    - GOPROXY={{ $.GOPROXY }} go build -a -mod=vendor -o /tmp/manager main.go
+    - go mod tidy
+    - go mod vendor
+    - go build -a -mod=vendor -o /tmp/manager main.go
     - chown -R 64535:64535 /tmp/manager
     - chmod 0700 /tmp/manager
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
- - artifact: kruise
-   add: /tmp/manager
-   to: /manager
-   before: setup
+  - artifact: kruise
+    add: /tmp/manager
+    to: /manager
+    before: setup
 docker:
   ENTRYPOINT: ["/manager"]
   USER: 64535
