@@ -21,7 +21,7 @@ title: "Модуль l2-load-balancer"
 После чего мы можем создать стандартный ресурс _Service_ с типом `LoadBalancer` и в нем с помощью аннотаций указать:
 
 * Какой _L2LoadBalancer_ использовать. Задав этим набор узлов и адресов.
-* Указать необходимое количетсво IP адресов для L2-анонсирования.
+* Указать необходимое количество IP-адресов для L2-анонсирования.
 
 <div data-presentation="../../presentations/381-l2-load-balancer/basics_l2loadbalancer_new_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1jDqC4Bhg5NMLZWaFM32bIAzqpkUo0hOkAaRzC0yKRxE/ --->
