@@ -1,5 +1,10 @@
 # Changelog v1.60
 
+## [MALFORMED]
+
+
+ - #8429 unknown section "l2-load-balancer"
+
 ## Know before update
 
 
@@ -8,7 +13,6 @@
  - Okagent will update from the Deckhouse Observability platform source and will start sending metrics to DOP for FE installations.
  - The method for configuring network interfaces and routes has changed in OpenStack instances.
  - You can use multiple `--config` flag in bootstrap command for logical separation bootstrap configuration. The `--resources` flag is now deprecated.
- - The experimental `l2-load-balancer` module is not available anymore. A renewed one is coming soon.
 
 ## Features
 
@@ -62,9 +66,7 @@
  - **[deckhouse-controller]** Fix updates to module loading statistics and an error related to concurrent requests for module documentation building. [#8235](https://github.com/deckhouse/deckhouse/pull/8235)
  - **[deckhouse-controller]** Repeated queries with a limited number of attempts to get CRDs and apply conversion strategies. [#7949](https://github.com/deckhouse/deckhouse/pull/7949)
  - **[dhctl]** Fix working with registries on non-standard ports. [#8727](https://github.com/deckhouse/deckhouse/pull/8727)
-    registry-packages-proxy should be restarted
  - **[dhctl]** Fix registry path calculation. [#8646](https://github.com/deckhouse/deckhouse/pull/8646)
-    Registry packages proxy should be restarted.
  - **[dhctl]** Print invalid YAML documents. [#8296](https://github.com/deckhouse/deckhouse/pull/8296)
  - **[dhctl]** Fix preflight ports checking when static cluster is bootstrapping. [#7917](https://github.com/deckhouse/deckhouse/pull/7917)
  - **[docs]** Add a guide for full etcd recovery in the cluster. [#8405](https://github.com/deckhouse/deckhouse/pull/8405)
@@ -89,9 +91,9 @@
  - **[prometheus]** Change `ignore_error` value from `true` to `false` in the aggregation proxy config to prevent caching empty results. [#8415](https://github.com/deckhouse/deckhouse/pull/8415)
  - **[prometheus]** Drop the metrics named `memcached_slab_*` from memcached. [#8342](https://github.com/deckhouse/deckhouse/pull/8342)
  - **[registry-packages-proxy]** Fix working with registries on non-standard ports. [#8727](https://github.com/deckhouse/deckhouse/pull/8727)
-    registry-packages-proxy should be restarted
+    registry-packages-proxy will restart.
  - **[registry-packages-proxy]** Fix registry path calculation. [#8646](https://github.com/deckhouse/deckhouse/pull/8646)
-    Registry packages proxy should be restarted.
+    registry-packages-proxy will restart.
  - **[registry-packages-proxy]** Don't replace the system CA certificates if a custom CA is used. [#8537](https://github.com/deckhouse/deckhouse/pull/8537)
  - **[registry-packages-proxy]** Fix panic when using custom CA. [#8276](https://github.com/deckhouse/deckhouse/pull/8276)
  - **[upmeter]** Fix agent error "cannot add series for probe <probename>: limit reached". [#8304](https://github.com/deckhouse/deckhouse/pull/8304)
@@ -121,7 +123,6 @@
  - **[ingress-nginx]** Fix base image for the Ingress nginx controller v1.6. [#8183](https://github.com/deckhouse/deckhouse/pull/8183)
  - **[ingress-nginx]** Fix the way the number of ingress nginx replicas is counted. [#8155](https://github.com/deckhouse/deckhouse/pull/8155)
     Kruise-controller pod will be recreated.
- - **[l2-load-balancer]** The l2-load-balancer module is cancelled. [#8429](https://github.com/deckhouse/deckhouse/pull/8429)
  - **[prometheus]** Fix URLs to the documentation in the Grafana home panel. [#8072](https://github.com/deckhouse/deckhouse/pull/8072)
  - **[registrypackages]** Update the `d8` registry package version. [#8563](https://github.com/deckhouse/deckhouse/pull/8563)
  - **[registrypackages]** Bump d8 CLI version to v0.1.0. [#8378](https://github.com/deckhouse/deckhouse/pull/8378)
