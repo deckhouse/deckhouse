@@ -2,10 +2,11 @@
 1. {% if page.lang == 'ru' %}Скачайте [архив для {{ include.os }} {{ include.arch }}]{% else %}Download the [archive for {{ include.os }} {{ include.arch }}]{% endif -%}
 ({%- if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-{{ include.os | downcase }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}.tar.gz).
 {% else %}
-1. {% if page.lang == 'ru' %}Скачайте архив для {{ include.os }} {{ include.arch }}{% else %}Download the archive for {{ include.os }} {{ include.arch }}{% endif %}:
+1. {% if page.lang == 'ru' %}Скачайте [архив для {{ include.os }} {{ include.arch }}]{% else %}Download the [archive for {{ include.os }} {{ include.arch }}]{% endif -%}
+({%- if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-{{ include.os | downcase }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}.tar.gz):
 
    ```shell
-   curl -LO {%- if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-{{ include.os | downcase }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}.tar.gz
+   curl -LO {{ site.urls[page.lang] }}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-{{ include.os | downcase }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}.tar.gz
    ```
 {% endif %}
 
