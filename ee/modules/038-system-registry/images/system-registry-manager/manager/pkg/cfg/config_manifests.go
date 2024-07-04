@@ -40,11 +40,11 @@ func getInputManifestsDir() string {
 	return filepath.Join(SystemRegistryManagerLocation, "templates")
 }
 
-func getDestionationDir() string {
+func getDestinationDir() string {
 	if os.Getenv("IS_TEST") == "" {
 		return "/etc/kubernetes"
 	}
-	return filepath.Join(TmpDirForSystemRegistryManagerLocation, "etc_k&s_destionation")
+	return filepath.Join(TmpDirForSystemRegistryManagerLocation, "etc_k&s_destination")
 }
 
 type ManifestSpec struct {
@@ -94,13 +94,13 @@ func NewManifestsSpec() *ManifestsSpec {
 	InputDockerAuthManifestsDir := filepath.Join(InputManifestsDir, "auth_config")
 	InputDockerDistribManifestsDir := filepath.Join(InputManifestsDir, "distribution_config")
 
-	DestionationDir := getDestionationDir()
-	DestinationSystemRegistryDir := filepath.Join(DestionationDir, "system-registry")
+	DestinationDir := getDestinationDir()
+	DestinationSystemRegistryDir := filepath.Join(DestinationDir, "system-registry")
 	DestinationCertsDir := filepath.Join(DestinationSystemRegistryDir, "pki")
-	DestionationDirStaticPodsDir := filepath.Join(DestionationDir, "manifests")
-	DestionationSeaweedManifestsDir := filepath.Join(DestinationSystemRegistryDir, "seaweedfs_config")
-	DestionationDockerAuthManifestsDir := filepath.Join(DestinationSystemRegistryDir, "auth_config")
-	DestionationDockerDistribManifestsDir := filepath.Join(DestinationSystemRegistryDir, "distribution_config")
+	DestinationDirStaticPodsDir := filepath.Join(DestinationDir, "manifests")
+	DestinationSeaweedManifestsDir := filepath.Join(DestinationSystemRegistryDir, "seaweedfs_config")
+	DestinationDockerAuthManifestsDir := filepath.Join(DestinationSystemRegistryDir, "auth_config")
+	DestinationDockerDistribManifestsDir := filepath.Join(DestinationSystemRegistryDir, "distribution_config")
 
 	cfg := GetConfig()
 
@@ -160,25 +160,25 @@ func NewManifestsSpec() *ManifestsSpec {
 		Manifests: []ManifestSpec{
 			{
 				InputPath: filepath.Join(InputDockerDistribManifestsDir, "config.yaml.tpl"),
-				DestPath:  filepath.Join(DestionationDockerDistribManifestsDir, "config.yaml"),
+				DestPath:  filepath.Join(DestinationDockerDistribManifestsDir, "config.yaml"),
 			},
 			{
 				InputPath: filepath.Join(InputDockerAuthManifestsDir, "config.yaml.tpl"),
-				DestPath:  filepath.Join(DestionationDockerAuthManifestsDir, "config.yaml"),
+				DestPath:  filepath.Join(DestinationDockerAuthManifestsDir, "config.yaml"),
 			},
 			{
 				InputPath: filepath.Join(InputSeaweedManifestsDir, "filer.toml.tpl"),
-				DestPath:  filepath.Join(DestionationSeaweedManifestsDir, "filer.toml"),
+				DestPath:  filepath.Join(DestinationSeaweedManifestsDir, "filer.toml"),
 			},
 			{
 				InputPath: filepath.Join(InputSeaweedManifestsDir, "master.toml.tpl"),
-				DestPath:  filepath.Join(DestionationSeaweedManifestsDir, "master.toml"),
+				DestPath:  filepath.Join(DestinationSeaweedManifestsDir, "master.toml"),
 			},
 		},
 		StaticPods: []StaticPodManifestSpec{
 			{
 				InputPath: filepath.Join(InputStaticPodsDir, "system-registry.yaml.tpl"),
-				DestPath:  filepath.Join(DestionationDirStaticPodsDir, "system-registry.yaml"),
+				DestPath:  filepath.Join(DestinationDirStaticPodsDir, "system-registry.yaml"),
 			},
 		},
 	}

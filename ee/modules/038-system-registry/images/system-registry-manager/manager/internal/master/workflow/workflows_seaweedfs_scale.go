@@ -298,13 +298,14 @@ func (w *SeaweedfsScaleWorkflow) scaleDownClusterPerNode(clusterNodes []Registry
 		return err
 	}
 
+	//w.log.Infof("scaleDownClusterPerNode :: !!!! POTENTIAL PROBLEM. GetNewAndUnusedClusterIP\n")
 	// Prepare leader and ips
-	w.log.Infof("scaleDownClusterPerNode :: !!!! POTENTIAL PROBLEM. GetNewAndUnusedClusterIP\n")
 
 	leader, newClusterIPs, unUsedIPs, err := GetNewAndUnusedClusterIP(w.ctx, w.log, clusterNodes, []RegistryNodeManager{clusterNodeToRemove})
 	if err != nil {
 		return err
 	}
+	w.log.Infof("scaleDownClusterPerNode :: GetNewAndUnusedClusterIP\n")
 
 	if pkg_utils.IsEvenNumber(len(clusterNodes)) {
 		return fmt.Errorf("the number of nodes is even")
