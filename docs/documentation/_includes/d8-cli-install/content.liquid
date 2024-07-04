@@ -1,11 +1,11 @@
 {% if include.os == "Windows" %}
 1. {% if page.lang == 'ru' %}Скачайте [архив для {{ include.os }} {{ include.arch }}]{% else %}Download the [archive for {{ include.os }} {{ include.arch }}]{% endif -%}
-({%- if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-{{ include.os | downcase }}-{{ include.arch | downcase }}.tar.gz).
+({%- if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-{{ include.os | downcase }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}.tar.gz).
 {% else %}
 1. {% if page.lang == 'ru' %}Скачайте архив для {{ include.os }} {{ include.arch }}{% else %}Download the archive for {{ include.os }} {{ include.arch }}{% endif %}:
 
    ```shell
-   curl -LO {%- if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-{{ include.os | downcase }}-{{ include.arch | downcase }}.tar.gz
+   curl -LO {%- if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-{{ include.os | downcase }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}.tar.gz
    ```
 {% endif %}
 
@@ -19,7 +19,7 @@
 1. {% if page.lang == 'ru' -%}Распакуйте архив{% else %}Extract the archive{% endif %}:
 
    ```bash
-   tar -xvf "d8-v{{ site.data.deckhouse-cli.version }}-{{ include.os | downcase }}-{{ include.arch | downcase }}.tar.gz" "{{ include.os | downcase }}-{{ include.arch | downcase }}/d8"
+   tar -xvf "d8-v{{ site.data.deckhouse-cli.version }}-{{ include.os | downcase }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}.tar.gz" "{{ include.os | downcase }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}/d8"
    ```
 
 1. {% if page.lang == 'ru' -%}
@@ -29,7 +29,7 @@ Move the file `d8` to the directory listed in the `PATH` system environment vari
 {%- endif %}:
 
    ```bash
-   sudo mv "{{ include.os | downcase }}-{{ include.arch | downcase }}/d8" /usr/local/bin/
+   sudo mv "{{ include.os | downcase }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}/d8" /usr/local/bin/
    ```
 
    > {%- if page.lang == 'ru' -%}
