@@ -127,7 +127,7 @@ func CmpIsRunning(nodeRunningStatus *SeaweedfsNodeRunningStatus) bool {
 	return nodeRunningStatus.IsRunning
 }
 
-func CpmIsLeader(nodeClusterStatus *SeaweedfsNodeClusterStatus) bool {
+func CmpIsLeader(nodeClusterStatus *SeaweedfsNodeClusterStatus) bool {
 	return nodeClusterStatus.IsLeader
 }
 
@@ -186,6 +186,7 @@ func WaitByAllNodes(ctx context.Context, log *logrus.Entry, nodeManagers []Regis
 }
 
 func WaitByAnyNode(ctx context.Context, log *logrus.Entry, nodeManagers []RegistryNodeManager, cmpFuncs ...interface{}) (RegistryNodeManager, bool, error) {
+	log.Infof("WaitByAnyNode :: for nodes: %s", GetNodeNames(nodeManagers))
 	if len(nodeManagers) == 0 {
 		return nil, false, nil
 	}
@@ -212,6 +213,7 @@ func WaitByAnyNode(ctx context.Context, log *logrus.Entry, nodeManagers []Regist
 					switch f := cmpFunc.(type) {
 					case CpmFuncNodeClusterStatus:
 						status, err := nodeManagersCache.GetNodeManagerClusterStatus(nodeManager)
+						log.Infof("WaitByAnyNode :: CpmFuncNodeClusterStatus %s, error: %s, status: %+v", nodeManager.GetNodeName(), err, status)
 						if err != nil || status == nil {
 							isWaited = false
 							break
@@ -219,6 +221,7 @@ func WaitByAnyNode(ctx context.Context, log *logrus.Entry, nodeManagers []Regist
 						isWaited = isWaited && f(status)
 					case CpmFuncNodeRunningStatus:
 						status, err := nodeManagersCache.GetNodeManagerRunningStatus(nodeManager)
+						log.Infof("WaitByAnyNode :: CpmFuncNodeRunningStatus %s, error: %s, status: %+v", nodeManager.GetNodeName(), err, status)
 						if err != nil || status == nil {
 							isWaited = false
 							break
@@ -450,8 +453,8 @@ func RollingUpgradeNodes(ctx context.Context, log *logrus.Entry, allNodes []Regi
 }
 
 func WaitLeaderElectionForNodes(ctx context.Context, log *logrus.Entry, nodes []RegistryNodeManager) (RegistryNodeManager, error) {
-	log.Infof("WaitLeaderElectionForNodes :: WaitByAnyNode (CmpIsRunning, CpmIsLeader) for: %s", GetNodeNames(nodes))
-	leader, wait, err := WaitByAnyNode(ctx, log, nodes, CmpIsRunning, CpmIsLeader)
+	log.Infof("WaitLeaderElectionForNodes :: WaitByAnyNode (CmpIsRunning, CmpIsLeader) for: %s", GetNodeNames(nodes))
+	leader, wait, err := WaitByAnyNode(ctx, log, nodes, CmpIsRunning, CmpIsLeader)
 	if err != nil {
 		return nil, err
 	}

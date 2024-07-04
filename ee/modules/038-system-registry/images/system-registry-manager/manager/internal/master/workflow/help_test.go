@@ -222,7 +222,7 @@ func TestWaitBy(t *testing.T) {
 				mockNodes["node1"],
 			},
 			cmpFuncs: []interface{}{
-				CpmIsLeader,
+				CmpIsLeader,
 			},
 			expResult: true,
 			expError:  nil,
@@ -302,7 +302,7 @@ func TestSelectBy(t *testing.T) {
 				mockNodes["node2"],
 			},
 			cmpFuncs: []interface{}{
-				CpmIsLeader,
+				CmpIsLeader,
 			},
 			expSelected: []RegistryNodeManager{
 				mockNodes["node1"],
@@ -320,7 +320,7 @@ func TestSelectBy(t *testing.T) {
 				mockNodes["node3"],
 			},
 			cmpFuncs: []interface{}{
-				CpmIsLeader,
+				CmpIsLeader,
 				CmpIsRunning,
 			},
 			expSelected: []RegistryNodeManager{
@@ -435,7 +435,7 @@ func TestSortBy(t *testing.T) {
 				mockNodes["node3"],
 			},
 			cmpFuncs: []interface{}{
-				CpmIsLeader,
+				CmpIsLeader,
 			},
 			expSorted: []RegistryNodeManager{
 				mockNodes["node2"],
@@ -465,7 +465,7 @@ func TestSortBy(t *testing.T) {
 				mockNodes["node6"],
 			},
 			cmpFuncs: []interface{}{
-				CpmIsLeader,
+				CmpIsLeader,
 			},
 			expSorted: nil,
 			expError:  fmt.Errorf("Cluster status error"),

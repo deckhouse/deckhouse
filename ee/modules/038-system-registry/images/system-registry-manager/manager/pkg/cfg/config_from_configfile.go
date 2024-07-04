@@ -64,8 +64,8 @@ func GetDefaultConfigVars() []ConfigVar {
 		{Key: "podName", Env: CreateEnv("POD_NAME"), Default: nil},
 		{Key: "cluster.size", Env: nil, Default: CreateDefaultValue(1)},
 		{Key: "manager.workerPort", Env: nil, Default: CreateDefaultValue(8097)},
-		{Key: "manager.leaderElection.leaseDurationSeconds", Env: nil, Default: CreateDefaultValue(1200)},
-		{Key: "manager.leaderElection.renewDeadlineSeconds", Env: nil, Default: CreateDefaultValue(900)},
+		{Key: "manager.leaderElection.leaseDurationSeconds", Env: nil, Default: CreateDefaultValue(20)},
+		{Key: "manager.leaderElection.renewDeadlineSeconds", Env: nil, Default: CreateDefaultValue(10)},
 		{Key: "manager.leaderElection.retryPeriodSeconds", Env: nil, Default: CreateDefaultValue(5)},
 		{Key: "registry.upstreamRegistry.upstreamRegistryCa", Env: nil, Default: CreateDefaultValue("")},
 	}
