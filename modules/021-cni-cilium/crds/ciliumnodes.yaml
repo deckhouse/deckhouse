@@ -4,10 +4,11 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.6.2
+    controller-gen.kubebuilder.io/version: v0.11.4
+  creationTimestamp: null
   labels:
     heritage: deckhouse
-    module: deckhouse
+    module: cni-cilium
   name: ciliumnodes.cilium.io
 spec:
   group: cilium.io
@@ -23,7 +24,20 @@ spec:
     singular: ciliumnode
   scope: Cluster
   versions:
-  - name: v2
+  - additionalPrinterColumns:
+    - description: Cilium internal IP for this node
+      jsonPath: .spec.addresses[?(@.type=="CiliumInternalIP")].ip
+      name: CiliumInternalIP
+      type: string
+    - description: IP of the node
+      jsonPath: .spec.addresses[?(@.type=="InternalIP")].ip
+      name: InternalIP
+      type: string
+    - description: Time duration since creation of Ciliumnode
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v2
     schema:
       openAPIV3Schema:
         description: CiliumNode represents a node managed by Cilium. It contains a
@@ -174,6 +188,11 @@ spec:
                       field is obsolete, please use Spec.IPAM.MinAllocate"
                     minimum: 0
                     type: integer
+                  node-subnet-id:
+                    description: NodeSubnetID is the subnet of the primary ENI the
+                      instance was brought up with. It is used as a sensible default
+                      subnet to create ENIs in.
+                    type: string
                   pre-allocate:
                     description: "PreAllocate defines the number of IP addresses that
                       must be available for allocation in the IPAMspec. It defines
@@ -319,6 +338,69 @@ spec:
                     description: Pool is the list of IPs available to the node for
                       allocation. When an IP is used, the IP will remain on this list
                       but will be added to Status.IPAM.Used
+                    type: object
+                  pools:
+                    description: Pools contains the list of assigned IPAM pools for
+                      this node.
+                    properties:
+                      allocated:
+                        description: Allocated contains the list of pooled CIDR assigned
+                          to this node. The operator will add new pod CIDRs to this
+                          field, whereas the agent will remove CIDRs it has released.
+                        items:
+                          description: IPAMPoolAllocation describes an allocation
+                            of an IPAM pool from the operator to the node. It contains
+                            the assigned PodCIDRs allocated from this pool
+                          properties:
+                            cidrs:
+                              description: CIDRs contains a list of pod CIDRs currently
+                                allocated from this pool
+                              items:
+                                description: IPAMPodCIDR is a pod CIDR
+                                format: cidr
+                                type: string
+                              type: array
+                            pool:
+                              description: Pool is the name of the IPAM pool backing
+                                this allocation
+                              minLength: 1
+                              type: string
+                          required:
+                          - pool
+                          type: object
+                        type: array
+                      requested:
+                        description: Requested contains a list of IPAM pool requests,
+                          i.e. indicates how many addresses this node requests out
+                          of each pool listed here. This field is owned and written
+                          to by cilium-agent and read by the operator.
+                        items:
+                          properties:
+                            needed:
+                              description: Needed indicates how many IPs out of the
+                                above Pool this node requests from the operator. The
+                                operator runs a reconciliation loop to ensure each
+                                node always has enough PodCIDRs allocated in each
+                                pool to fulfill the requested number of IPs here.
+                              properties:
+                                ipv4-addrs:
+                                  description: IPv4Addrs contains the number of requested
+                                    IPv4 addresses out of a given pool
+                                  type: integer
+                                ipv6-addrs:
+                                  description: IPv6Addrs contains the number of requested
+                                    IPv6 addresses out of a given pool
+                                  type: integer
+                              type: object
+                            pool:
+                              description: Pool is the name of the IPAM pool backing
+                                this request
+                              minLength: 1
+                              type: string
+                          required:
+                          - pool
+                          type: object
+                        type: array
                     type: object
                   pre-allocate:
                     description: PreAllocate defines the number of IP addresses that

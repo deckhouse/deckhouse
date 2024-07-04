@@ -39,7 +39,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				MatchNames: []string{"virtualization"},
 			},
 			FilterFunc:          applyVMCIDRsFilter,
-			ExecuteHookOnEvents: pointer.BoolPtr(false),
+			ExecuteHookOnEvents: pointer.Bool(false),
 		},
 	},
 }, applyVMCIDRs)
