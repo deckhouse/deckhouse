@@ -982,10 +982,10 @@ shell:
   - |
     touch digests_full.lst
     # Here we have list of records like "MODULE_IMAGE_DIGEST_moduleName_sha256:imageDigest", which we parse
-    for line in `env | grep MODULE_IMAGE_DIGEST_`
+    for line in `printenv | grep MODULE_IMAGE_DIGEST_ | cut -d "=" -f 1`
     do
-      digestKey=`echo $line | cut -f 4- -d '_' | cut -f 1 -d '='`
-      imageDigest=`echo $line | cut -f 4- -d '_' | cut -f 2 -d '='`
+      digestKey=`echo $line | cut -f 4- -d '_'`
+      imageDigest=`printenv $line | grep -Eo "sha256:[a-f0-9]+"`
       echo $digestKey'='$imageDigest >> digests_full.lst
     done
     cat digests_full.lst | jq -Rn '
