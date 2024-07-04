@@ -340,6 +340,7 @@ dst
 eBPF
 EBS
 ECMP
+EdgeRouter
 ee
 EE
 eg
@@ -902,6 +903,7 @@ PVCs
 PVs
 px
 qa
+QCOW
 QEMU
 QoS
 Qrator
