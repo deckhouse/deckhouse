@@ -302,7 +302,7 @@ func singleDocToManifests(doc []byte) (result []string) {
 func Test_validateModule(t *testing.T) {
 	log.SetOutput(io.Discard)
 
-	f := func(name string, failed bool) {
+	check := func(name string, failed bool) {
 		t.Helper()
 		t.Run(name, func(t *testing.T) {
 			path := filepath.Join("./testdata", name)
@@ -329,8 +329,29 @@ func Test_validateModule(t *testing.T) {
 		})
 	}
 
-	f("module", false)
-	f("module-not-valid", true)
-	f("module-failed", true)
-	f("module-values-failed", true)
+	check("module", false)
+	check("module-not-valid", true)
+	check("module-failed", true)
+	check("module-values-failed", true)
+
+	nillable := func(name string, manager moduleManager, failed bool) {
+		t.Helper()
+		t.Run(name, func(t *testing.T) {
+			err := validateModule(
+				manager,
+				models.DeckhouseModuleDefinition{
+					Name:   name,
+					Weight: 900,
+					Path:   "sdf",
+				},
+			)
+
+			if err != nil && !failed {
+				t.Fatalf("%s: unexpected error: %v", name, err)
+			}
+		})
+	}
+
+	nillable("module_is_nil", mock.NewModuleManager(), true)
+	nillable("manager_is_nil", nil, true)
 }

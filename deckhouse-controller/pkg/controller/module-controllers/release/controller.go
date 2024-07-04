@@ -917,6 +917,10 @@ func validateModule(manager moduleManager, def models.DeckhouseModuleDefinition)
 		return fmt.Errorf("cannot validate module without path. Path is required to load openapi specs")
 	}
 
+	if manager == nil || manager.GetModule(def.Name) == nil {
+		return fmt.Errorf("cannot validate module without a manager or empty module")
+	}
+
 	if err := manager.GetModule(def.Name).Validate(); err != nil {
 		return fmt.Errorf("validate module: %w", err)
 	}
