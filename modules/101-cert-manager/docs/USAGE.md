@@ -201,7 +201,7 @@ Read more in the [cert-manager documentation](https://cert-manager.io/docs/tutor
 
 ## Issuing a self-signed certificate
 
-In this case, the entire process is even more straightforward than that of LetsEncypt. Simply replace the issuer name (`letsencrypt`) with `selfsigned`:
+In this case, the entire process is even more straightforward than that of LetsEncrypt. Simply replace the issuer name (`letsencrypt`) with `selfsigned`:
 
 ```yaml
 apiVersion: cert-manager.io/v1
