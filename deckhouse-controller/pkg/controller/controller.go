@@ -31,6 +31,7 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/go-logr/logr"
 	log "github.com/sirupsen/logrus"
+	appsv1 "k8s.io/api/apps/v1"
 	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -106,7 +107,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 
 	scheme := runtime.NewScheme()
 
-	for _, add := range []func(s *runtime.Scheme) error{corev1.AddToScheme, coordv1.AddToScheme, v1alpha1.AddToScheme} {
+	for _, add := range []func(s *runtime.Scheme) error{corev1.AddToScheme, coordv1.AddToScheme, v1alpha1.AddToScheme, appsv1.AddToScheme} {
 		err = add(scheme)
 		if err != nil {
 			return nil, err
