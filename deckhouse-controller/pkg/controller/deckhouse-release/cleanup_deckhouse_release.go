@@ -33,14 +33,27 @@ import (
 )
 
 func (r *deckhouseReleaseReconciler) cleanupDeckhouseReleaseLoop(ctx context.Context) {
-	for {
-		err := r.cleanupDeckhouseRelease(ctx)
-		if err != nil {
-			r.logger.Errorf("check Deckhouse release: %s", err)
-		}
-
-		time.Sleep(24 * time.Hour)
+	err := r.cleanupDeckhouseRelease(ctx)
+	if err != nil {
+		r.logger.Errorf("check Deckhouse release: %s", err)
 	}
+
+	ticker := time.NewTicker(24 * time.Hour)
+	defer ticker.Stop()
+
+	for {
+		fmt.Println("loop")
+		select {
+		case <-ticker.C:
+			err := r.cleanupDeckhouseRelease(ctx)
+			if err != nil {
+				r.logger.Errorf("check Deckhouse release: %s", err)
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
+
 }
 
 func (r *deckhouseReleaseReconciler) cleanupDeckhouseRelease(ctx context.Context) error {

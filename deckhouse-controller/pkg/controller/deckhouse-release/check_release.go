@@ -48,13 +48,24 @@ import (
 )
 
 func (r *deckhouseReleaseReconciler) checkDeckhouseReleaseLoop(ctx context.Context) {
-	for {
-		err := r.checkDeckhouseRelease(ctx)
-		if err != nil {
-			r.logger.Errorf("check Deckhouse release: %s", err)
-		}
+	err := r.checkDeckhouseRelease(ctx)
+	if err != nil {
+		r.logger.Errorf("check Deckhouse release: %s", err)
+	}
 
-		time.Sleep(3 * time.Minute)
+	ticker := time.NewTicker(3 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			err := r.checkDeckhouseRelease(ctx)
+			if err != nil {
+				r.logger.Errorf("check Deckhouse release: %s", err)
+			}
+		}
 	}
 }
 

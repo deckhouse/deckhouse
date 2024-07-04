@@ -367,10 +367,7 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, pods []corev
 	}
 
 	r.logger.Info("New deckhouse image found. Restarting")
-	now := time.Now().Format(time.RFC3339)
-	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
-		now = time.Date(2021, 01, 01, 13, 30, 00, 00, time.UTC).Format(time.RFC3339)
-	}
+	now := r.dc.GetClock().Now().Format(time.RFC3339)
 
 	annotationsPatch := map[string]interface{}{
 		"spec": map[string]interface{}{
