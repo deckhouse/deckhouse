@@ -37,6 +37,7 @@ On the command line, the utility can be invoked using the `d8` alias. All the co
    * [Linux x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-linux-amd64.tar.gz)
    * [macOS x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-darwin-amd64.tar.gz)
    * [macOS ARM64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-darwin-arm64.tar.gz)
+   * [Windows x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-windows-amd64.tar.gz)
 
 1. Extract the archive:
 
@@ -44,7 +45,7 @@ On the command line, the utility can be invoked using the `d8` alias. All the co
    tar -xvf "d8-v${RELEASE_VERSION}-${OS}-${ARCH}.tar.gz" "${OS}-${ARCH}/d8"
    ```
 
-   > For example, for an archive named `d8-v0.1.2-linux-amd64.tar.gz`, the command would look as follows: `tar -xvf "d8-v0.1.2-linux-amd64.tar.gz" "linux-amd64/d8"`.
+   > For example, for an archive named `d8-v0.2.0-linux-amd64.tar.gz`, the command would look as follows: `tar -xvf "d8-v0.2.0-linux-amd64.tar.gz" "linux-amd64/d8"`.
 
 1. Copy the `d8` file to a directory at the `PATH` variable on your system:
 

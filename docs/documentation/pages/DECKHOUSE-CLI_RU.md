@@ -38,6 +38,7 @@ Deckhouse CLI — это интерфейс командной строки дл
    * [Linux x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-linux-amd64.tar.gz)
    * [macOS x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-darwin-amd64.tar.gz)
    * [macOS ARM64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-darwin-arm64.tar.gz)
+   * [Windows x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-windows-amd64.tar.gz)
 
 1. Распакуйте архив:
 
@@ -45,7 +46,7 @@ Deckhouse CLI — это интерфейс командной строки дл
    tar -xvf "d8-v${RELEASE_VERSION}-${OS}-${ARCH}.tar.gz" "${OS}-${ARCH}/d8"
    ```
 
-   > Например, для архива с названием `d8-v0.1.2-linux-amd64.tar.gz` команда будет выглядеть так: `tar -xvf "d8-v0.1.2-linux-amd64.tar.gz" "linux-amd64/d8"`.
+   > Например, для архива с названием `d8-v0.2.0-linux-amd64.tar.gz` команда будет выглядеть так: `tar -xvf "d8-v0.2.0-linux-amd64.tar.gz" "linux-amd64/d8"`.
 
 1. Переместите файл `d8` в каталог в переменной `PATH` вашей системы:
 
