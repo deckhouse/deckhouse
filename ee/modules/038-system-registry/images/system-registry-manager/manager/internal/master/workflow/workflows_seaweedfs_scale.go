@@ -40,7 +40,7 @@ func (w *SeaweedfsScaleWorkflow) Start() error {
 	}
 	if expectedNodesCount%2 == 0 {
 		expectedNodesCount--
-		w.log.Warnf("Start :: !!!!Expected node count is even, removing one node. new expected node count: %d", expectedNodesCount)
+		w.log.Warnf("🛑 Start :: Expected node count is even, removing one node. new expected node count: %d", expectedNodesCount)
 	}
 
 	nodesWithManager, nodesWithoutManager, err := SelectBy(w.NodeManagers, CmpIsExist)
@@ -82,18 +82,12 @@ func (w *SeaweedfsScaleWorkflow) syncCluster(clusterNodes []RegistryNodeManager)
 	w.log.Infof("ScaleWorkflow :: syncCluster :: Starting syncCluster with nodes: %s", GetNodeNames(clusterNodes))
 
 	// Prepare leader and ips
-	w.log.Infof("syncCluster :: GetNewAndUnusedClusterIP")
 	leader, newClusterIPs, unUsedIPs, err := GetNewAndUnusedClusterIP(w.ctx, w.log, clusterNodes, []RegistryNodeManager{})
-	//w.log.Infof("syncCluster :: RAW!!! error: %v, leaderName: %s, newClusterIPs: %v, unUsedIPs: %v", err, leader.GetNodeName(), newClusterIPs, unUsedIPs)
 	if err != nil {
 		return err
 	}
 
-	//leaderIP, _ := leader.GetNodeIP()
-	//w.log.Infof("syncCluster :: RAW!!! error: %s, leaderIP: %v, newClusterIPs: %v, unUsedIPs: %v", err, leaderIP, newClusterIPs, unUsedIPs)
-	if err != nil {
-		return err
-	}
+	w.log.Infof("syncCluster :: newClusterIPs: %v, unUsedIPs: %v, leader: %s", newClusterIPs, unUsedIPs, leader.GetNodeName())
 
 	// Prepare requests
 	checkRequest := SeaweedfsCheckNodeRequest{
@@ -139,6 +133,7 @@ func (w *SeaweedfsScaleWorkflow) syncCluster(clusterNodes []RegistryNodeManager)
 			return err
 		}
 		if request.NeedSomethingCreateOrUpdate() {
+			w.log.Infof("syncCluster :: Node %s need upgrade", node.GetNodeName())
 			needUpgrade = append(needUpgrade, node)
 		}
 	}
@@ -206,13 +201,6 @@ func (w *SeaweedfsScaleWorkflow) scaleUpCluster(oldClusterNodes, newClusterNodes
 	// Prepare leader and ips
 	w.log.Infof("scaleUpCluster :: GetNewAndUnusedClusterIP")
 	leader, newClusterIPs, unUsedIPs, err := GetNewAndUnusedClusterIP(w.ctx, w.log, append(oldClusterNodes, newClusterNodes...), []RegistryNodeManager{})
-	//w.log.Infof("scaleUpCluster :: RAW!!! error: %v, leaderName: %s, newClusterIPs: %v, unUsedIPs: %v", err, leader.GetNodeName(), newClusterIPs, unUsedIPs)
-	if err != nil {
-		return err
-	}
-
-	//leaderIP, _ := leader.GetNodeIP()
-	//w.log.Infof("scaleUpCluster :: RAW!!! error: %s, leaderIP: %v, newClusterIPs: %v, unUsedIPs: %v", err, leaderIP, newClusterIPs, unUsedIPs)
 	if err != nil {
 		return err
 	}
@@ -351,6 +339,7 @@ func (w *SeaweedfsScaleWorkflow) scaleDownCluster(clusterNodes, clusterNodesToDe
 	}
 
 	for _, nodeToDelete := range clusterNodesToDelete {
+		w.log.Infof("ScaleWorkflow :: scaleDownCluster :: Deleting node %s", nodeToDelete.GetNodeName())
 		if err := nodeToDelete.DeleteNodeManifests(); err != nil {
 			return err
 		}
@@ -362,16 +351,17 @@ func (w *SeaweedfsScaleWorkflow) scaleDownCluster(clusterNodes, clusterNodesToDe
 	}
 
 	if resp.NeedSomethingCreateOrUpdate() {
+		w.log.Infof("ScaleWorkflow :: scaleDownCluster :: Updating node %s", clusterNode.GetNodeName())
 		if err := clusterNode.UpdateNodeManifests(&updateRequest); err != nil {
 			return err
 		}
 	}
 
-	if isWait, err := WaitByAllNodes(w.ctx, w.log, []RegistryNodeManager{clusterNode}, CmpIsExist, CmpIsRunning); err != nil {
+	if isWait, err := WaitByAllNodes(w.ctx, w.log, []RegistryNodeManager{clusterNode}, CmpIsExist, CmpIsRunning, CmpIsLeader); err != nil {
 		return err
 	} else {
 		if !isWait {
-			return fmt.Errorf("!isWait WaitByAllNodes(w.ctx, w.log, []RegistryNodeManager{clusterNode}, CmpIsExist, CmpIsRunning)")
+			return fmt.Errorf("!!isWait WaitByAllNodes(w.ctx, w.log, []RegistryNodeManager{clusterNode}, CmpIsExist, CmpIsRunning)")
 		}
 	}
 	return nil
