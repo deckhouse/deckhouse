@@ -1167,7 +1167,6 @@ shell:
     - git clone --depth 1 --branch v2.2.0 {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-cloudinit.git /src-provider-cloudinit
     - cd /src-provider-cloudinit
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" 
-    - chown 64535:64535 /terraform-provider-aws
     - mv /src-provider-random/terraform-provider-random /terraform-provider-random 
     - mv /src-provider-tls/terraform-provider-tls /terraform-provider-tls 
     - mv /src-provider-cloudinit/terraform-provider-cloudinit /terraform-provider-cloudinit
