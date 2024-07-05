@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"strings"
 	"time"
 
@@ -95,7 +96,10 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.DeckhouseRelease{}).
-		WithEventFilter(releasePhasePredicate{}).
+		WithEventFilter(predicate.And(
+			predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}),
+			releasePhasePredicate{},
+		)).
 		Complete(ctr)
 }
 
