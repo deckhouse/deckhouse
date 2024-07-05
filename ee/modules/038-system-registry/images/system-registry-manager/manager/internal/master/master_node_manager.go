@@ -156,7 +156,7 @@ func (m *NodeManager) RemoveNodeFromCluster(removeNodeIP string) error {
 	f := func(client *seaweedfs_client.Client) error {
 		_, err := client.ClusterRaftRemove(
 			seaweedfs_client.NewClusterRaftRemoveArgs(
-				seaweedfs_client.GenerateIDFromIP(seaweedfs_client.GenerateIDFromIP(removeNodeIP)),
+				seaweedfs_client.GenerateIDFromIP(removeNodeIP),
 			),
 		)
 		return err
