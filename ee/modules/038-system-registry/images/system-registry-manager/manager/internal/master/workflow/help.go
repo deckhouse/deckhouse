@@ -17,8 +17,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type CpmFuncNodeClusterStatus = func(*SeaweedfsNodeClusterStatus) bool
-type CpmFuncNodeRunningStatus = func(*SeaweedfsNodeRunningStatus) bool
+type CmpFuncNodeClusterStatus = func(*SeaweedfsNodeClusterStatus) bool
+type CmpFuncNodeRunningStatus = func(*SeaweedfsNodeRunningStatus) bool
 
 type ClusterMembers struct {
 	Members []RegistryNodeManager
@@ -153,14 +153,14 @@ func WaitByAllNodes(ctx context.Context, log *logrus.Entry, nodeManagers []Regis
 					}
 
 					switch f := cmpFunc.(type) {
-					case CpmFuncNodeClusterStatus:
+					case CmpFuncNodeClusterStatus:
 						status, err := nodeManagersCache.GetNodeManagerClusterStatus(nodeManager)
 						if err != nil || status == nil {
 							isWaited = false
 							break
 						}
 						isWaited = isWaited && f(status)
-					case CpmFuncNodeRunningStatus:
+					case CmpFuncNodeRunningStatus:
 						status, err := nodeManagersCache.GetNodeManagerRunningStatus(nodeManager)
 						if err != nil || status == nil {
 							isWaited = false
@@ -206,17 +206,15 @@ func WaitByAnyNode(ctx context.Context, log *logrus.Entry, nodeManagers []Regist
 					}
 
 					switch f := cmpFunc.(type) {
-					case CpmFuncNodeClusterStatus:
+					case CmpFuncNodeClusterStatus:
 						status, err := nodeManagersCache.GetNodeManagerClusterStatus(nodeManager)
-						log.Infof("WaitByAnyNode :: CpmFuncNodeClusterStatus %s, error: %s, status: %+v", nodeManager.GetNodeName(), err, status)
 						if err != nil || status == nil {
 							isWaited = false
 							break
 						}
 						isWaited = isWaited && f(status)
-					case CpmFuncNodeRunningStatus:
+					case CmpFuncNodeRunningStatus:
 						status, err := nodeManagersCache.GetNodeManagerRunningStatus(nodeManager)
-						log.Infof("WaitByAnyNode :: CpmFuncNodeRunningStatus %s, error: %s, status: %+v", nodeManager.GetNodeName(), err, status)
 						if err != nil || status == nil {
 							isWaited = false
 							break
@@ -249,7 +247,7 @@ func SelectBy(nodeManagers []RegistryNodeManager, cmpFuncs ...interface{}) ([]Re
 
 		for _, cmpFunc := range cmpFuncs {
 			switch f := cmpFunc.(type) {
-			case CpmFuncNodeClusterStatus:
+			case CmpFuncNodeClusterStatus:
 				status, err := nodeManagersCache.GetNodeManagerClusterStatus(nodeManager)
 				if err != nil {
 					return nil, nil, err
@@ -258,7 +256,7 @@ func SelectBy(nodeManagers []RegistryNodeManager, cmpFuncs ...interface{}) ([]Re
 					return nil, nil, fmt.Errorf("empty status")
 				}
 				isSelected = isSelected && f(status)
-			case CpmFuncNodeRunningStatus:
+			case CmpFuncNodeRunningStatus:
 				status, err := nodeManagersCache.GetNodeManagerRunningStatus(nodeManager)
 				if err != nil {
 					return nil, nil, err
@@ -305,7 +303,7 @@ func SortBy(nodeManagers []RegistryNodeManager, cmpFuncs ...interface{}) ([]Regi
 				break
 			}
 			switch f := cmpFunc.(type) {
-			case CpmFuncNodeClusterStatus:
+			case CmpFuncNodeClusterStatus:
 				status, err := nodeManagersStatusCache.GetNodeManagerClusterStatus(nodeManager)
 				if err != nil {
 					return nil, err
@@ -317,7 +315,7 @@ func SortBy(nodeManagers []RegistryNodeManager, cmpFuncs ...interface{}) ([]Regi
 					addedToSorted = true
 					sortedNodesMap[cmpFuncPriority] = append(sortedNodesMap[cmpFuncPriority], nodeManager)
 				}
-			case CpmFuncNodeRunningStatus:
+			case CmpFuncNodeRunningStatus:
 				status, err := nodeManagersStatusCache.GetNodeManagerRunningStatus(nodeManager)
 				if err != nil {
 					return nil, err
@@ -462,7 +460,7 @@ func WaitLeaderElectionForNodes(ctx context.Context, log *logrus.Entry, nodes []
 
 func WaitNodesConnection(ctx context.Context, log *logrus.Entry, leader RegistryNodeManager, nodesIps []string) error {
 	log.Infof("WaitNodesConnection :: Waiting connection for nodes: [%s]", strings.Join(nodesIps, ","))
-	var cmpFunc CpmFuncNodeClusterStatus = func(status *SeaweedfsNodeClusterStatus) bool {
+	var cmpFunc = func(status *SeaweedfsNodeClusterStatus) bool {
 		newIPsInCluster := true
 		for _, ip := range nodesIps {
 			newIPsInCluster = newIPsInCluster && pkg_utils.IsStringInSlice(ip, &status.ClusterNodesIPs)
