@@ -79,5 +79,5 @@ spec:
   - podSelector:
       matchLabels:
         app: backend
-        io.kubernetes.pod.namespace: myns
+        io.kubernetes.pod.namespace: my-ns
 ```
