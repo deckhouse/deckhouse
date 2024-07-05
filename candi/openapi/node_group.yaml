@@ -2087,7 +2087,7 @@ spec:
                       properties:
                         enabled:
                           type: boolean
-                          x-doc-default: false
+                          default: false
                           description: |
                             Enables Topology Management on a node.
                         scope:
