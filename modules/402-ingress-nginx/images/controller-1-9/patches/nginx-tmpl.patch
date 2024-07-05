@@ -101,7 +101,16 @@ index 94dc12412..93b7d2efc 100644
  
          {{ if not ( empty $server.CertificateAuth.MatchCN ) }}
          {{ if gt (len $server.CertificateAuth.MatchCN) 0 }}
-@@ -1223,6 +1247,8 @@ stream {
+@@ -1140,6 +1164,8 @@ stream {
+             proxy_set_header            X-Auth-Request-Redirect $request_uri;
+             {{ end }}
+ 
++            proxy_connect_timeout                   15s;
++
+             {{ if $externalAuth.AuthCacheKey }}
+             proxy_buffering                         "on";
+             {{ else }}
+@@ -1223,6 +1249,8 @@ stream {
              set $location_path  {{ $ing.Path | escapeLiteralDollar | quote }};
              set $global_rate_limit_exceeding n;
  
@@ -110,7 +119,7 @@ index 94dc12412..93b7d2efc 100644
              {{ buildOpentelemetryForLocation $all.Cfg.EnableOpentelemetry $all.Cfg.OpentelemetryTrustIncomingSpan $location }}
  
              {{ if $location.Mirror.Source }}
-@@ -1253,11 +1279,9 @@ stream {
+@@ -1253,11 +1281,9 @@ stream {
  
              log_by_lua_block {
                  balancer.log()
@@ -123,7 +132,7 @@ index 94dc12412..93b7d2efc 100644
              }
  
              {{ if not $location.Logs.Access }}
-@@ -1531,14 +1555,15 @@ stream {
+@@ -1531,14 +1557,15 @@ stream {
  
          {{ if eq $server.Hostname "_" }}
          # health checks in cloud providers require the use of port {{ $all.ListenPorts.HTTP }}
