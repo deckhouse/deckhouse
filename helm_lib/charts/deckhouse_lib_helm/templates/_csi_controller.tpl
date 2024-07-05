@@ -54,7 +54,7 @@ memory: 50Mi
   {{- $resizerWorkers := $config.resizerWorkers | default "10" }}
   {{- $snapshotterWorkers := $config.snapshotterWorkers | default "10" }}
   {{- $additionalControllerEnvs := $config.additionalControllerEnvs }}
-	{{- $additionalSyncerEnvs := $config.additionalSyncerEnvs }}
+  {{- $additionalSyncerEnvs := $config.additionalSyncerEnvs }}
   {{- $additionalControllerArgs := $config.additionalControllerArgs }}
   {{- $additionalControllerVolumes := $config.additionalControllerVolumes }}
   {{- $additionalControllerVolumeMounts := $config.additionalControllerVolumeMounts }}
