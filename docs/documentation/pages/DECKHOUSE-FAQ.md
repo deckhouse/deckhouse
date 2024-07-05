@@ -238,6 +238,30 @@ Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignor
 ![The scheme of using the releaseChannel parameter during Deckhouse installation and operation](images/common/deckhouse-update-process.png)
 {% endofftopic %}
 
+### How to check the job queue in Deckhouse?
+
+To view the list of jobs that are queued for execution in Deckhouse, you need to run the `queue main` command in the `deckhouse-controller` container of the `deckhouse` pod (if the service is running in cluster mode - at the cluster leader)
+
+Querying all jobs in the queue:
+
+```shell
+kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list
+```
+
+Example output when there are still jobs in the queue (`length 38`):
+
+```shell
+# kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list | grep status:
+Queue 'main': length 38, status: 'run first task'
+```
+
+Example output when the queue is empty (`length 0`):
+
+```shell
+# kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list | grep status:
+Queue 'main': length 0, status: 'waiting for task 0s'
+```
+
 ### What do I do if Deckhouse fails to retrieve updates from the release channel?
 
 * Make sure that the desired release channel is [configured](#how-do-i-set-the-desired-release-channel).
@@ -814,25 +838,11 @@ To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
    kubectl -n d8-system delete po -l app=deckhouse
    ```
 
-1. Wait for Deckhouse to restart and to complete all tasks in the queue:
+1. Wait until Deckhouse restarts and [all tasks in the queue are completed](./#how-to-check-the-job-queue-in-deckhouse):
 
-   ```shell
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   ```
-
-   Example of output when there are still jobs in the queue (`length 38`):
-
-   ```console
-   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   Queue 'main': length 38, status: 'run first task'
-   ```
-
-   Example of output when the queue is empty (`length 0`):
-
-   ```console
-   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   Queue 'main': length 0, status: 'waiting for task 0s'
-   ```
+ ```shell
+ kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list
+ ```
 
 1. On the master node, check the application of the new settings.
 
@@ -892,27 +902,12 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
    ```shell
    kubectl -n d8-system delete po -l app=deckhouse
    ```
+   
+1. Wait until Deckhouse restarts and [all tasks in the queue are completed](./#how-to-check-the-job-queue-in-deckhouse):
 
-1. Wait for Deckhouse to restart and to complete all tasks in the queue:
-
-   ```shell
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   ```
-
-   Example of output when there are still jobs in the queue (`length 38`):
-
-   ```console
-   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   Queue 'main': length 38, status: 'run first task'
-   ```
-
-   Example of output when the queue is empty (`length 0`):
-
-   ```console
-   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   Queue 'main': length 0, status: 'waiting for task 0s'
-   ```
-
+ ```shell
+ kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list
+ ```
 1. On the master node, check the application of the new settings.
 
    The message `Configuration is in sync, nothing to do` should appear in the `bashible` systemd service log on the master node.
@@ -948,7 +943,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 In clusters with multiple master nodes Deckhouse runs in high availability mode (in several instances). To access the active Deckhouse controller, you can use the following command (as an example of the command `deckhouse-controller queue list`):
 
 ```shell
-kubectl -n d8-system exec -it $(kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath='{.spec.holderIdentity}' | awk -F'.' '{ print $1 }') -c deckhouse -- deckhouse-controller queue list
+kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list
 ```
 
 ## How do I upgrade the Kubernetes version in a cluster?

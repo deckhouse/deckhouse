@@ -284,6 +284,30 @@ Patch-релизы (например, обновление на версию `1.
 При обращении же на адрес `registry.deckhouse.ru` **из пода** Kubernetes, учитывая параметры `options ndots:5` (используется в Kubernetes по умолчанию) и `search`, система первоначально попробует получить IP-адрес для имени `registry.deckhouse.ru.company.my`. Имя `registry.deckhouse.ru.company.my` разрешится в IP-адрес `10.0.0.100`, так как в DNS-зоне `company.my` настроено разрешение wildcard-записей `*.company.my` в адрес `10.0.0.100`. В результате к хосту `registry.deckhouse.ru` будет невозможно подключиться и скачать информацию о доступных обновлениях Deckhouse.  
 {% endofftopic %}
 
+### Как проверить очередь заданий в Deckhouse?
+
+Для просмотра списка заданий, которые находятся в очереди на выполнение в Deckhouse, требуется выполнить команду `queue main` в контейнере `deckhouse-controller` пода `deckhouse` (в случае, если сервис запущен в кластером режиме - у лидера кластера)
+
+Запрос всех заданий в очереди:
+
+```shell
+kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list
+```
+
+Пример вывода, когда в очереди еще есть задания (`length 38`):
+
+```shell
+# kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list | grep status:
+Queue 'main': length 38, status: 'run first task'
+```
+
+Пример вывода, когда очередь пуста (`length 0`):
+
+```shell
+# kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list | grep status:
+Queue 'main': length 0, status: 'waiting for task 0s'
+```
+
 ## Закрытое окружение, работа через proxy и сторонние registry
 
 ### Как установить Deckhouse из стороннего registry?
@@ -815,26 +839,12 @@ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-control
    ```shell
    kubectl -n d8-system delete po -l app=deckhouse
    ```
+   
+1. Дождитесь перезапуска Deckhouse и [выполнения всех задач в очереди](./#как-проверить-очередь-заданий-в-deckhouse):
 
-1. Дождитесь перезапуска Deckhouse и выполнения всех задач в очереди:
-
-   ```shell
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   ```
-
-   Пример вывода, когда в очереди еще есть задания (`length 38`):
-
-   ```console
-   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   Queue 'main': length 38, status: 'run first task'
-   ```
-
-   Пример вывода, когда очередь пуста (`length 0`):
-
-   ```console
-   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   Queue 'main': length 0, status: 'waiting for task 0s'
-   ```
+  ```shell
+  kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list
+  ```
 
 1. На master-узле проверьте применение новых настроек.
 
@@ -895,26 +905,12 @@ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-control
    kubectl -n d8-system delete po -l app=deckhouse
    ```
 
-1. Дождитесь перезапуска Deckhouse и выполнения всех задач в очереди:
+1. Дождитесь перезапуска Deckhouse и [выполнения всех задач в очереди](./#как-проверить-очередь-заданий-в-deckhouse):
 
-   ```shell
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   ```
-
-   Пример вывода, когда в очереди еще есть задания (`length 38`):
-
-   ```console
-   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   Queue 'main': length 38, status: 'run first task'
-   ```
-
-   Пример вывода, когда очередь пуста (`length 0`):
-
-   ```console
-   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   Queue 'main': length 0, status: 'waiting for task 0s'
-   ```
-
+  ```shell
+  kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list
+  ```
+  
 1. На master-узле проверьте применение новых настроек.
 
    В журнале systemd-сервиса bashible на master-узле должно появиться сообщение `Configuration is in sync, nothing to do`.
@@ -950,7 +946,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-control
 В кластерах с несколькими master-узлами Deckhouse запускается в режиме высокой доступности (в нескольких экземплярах). Для доступа к активному контроллеру Deckhouse можно использовать следующую команду (на примере команды `deckhouse-controller queue list`):
 
 ```shell
-kubectl -n d8-system exec -it $(kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath='{.spec.holderIdentity}' | awk -F'.' '{ print $1 }') -c deckhouse -- deckhouse-controller queue list
+kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list
 ```
 
 ### Как обновить версию Kubernetes в кластере?
