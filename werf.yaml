@@ -1127,13 +1127,13 @@ shell:
   - |
     mkdir /terraform
     mkdir -p /usr/local/share/terraform/plugins
-    cat << EOD > /root/.terraformrc
-    provider_installation {
-      filesystem_mirror {
-        path    = "/usr/local/share/terraform/plugins"
-        include = ["*/*/*"]
-      }
-    }
-    EOD
+    # cat << EOD > /root/.terraformrc
+    # provider_installation {
+    #   filesystem_mirror {
+    #     path    = "/usr/local/share/terraform/plugins"
+    #     include = ["*/*/*"]
+    #   }
+    # }
+    # EOD
     touch /terraform.log
     chmod 755 /terraform.log
