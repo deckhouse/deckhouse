@@ -8,11 +8,9 @@ package workflow
 import (
 	"context"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	pkg_logs "system-registry-manager/pkg/logs"
 	"system-registry-manager/pkg/utils"
-	pkg_utils "system-registry-manager/pkg/utils"
-
-	"github.com/sirupsen/logrus"
 )
 
 type SeaweedfsScaleWorkflow struct {
@@ -55,10 +53,10 @@ func (w *SeaweedfsScaleWorkflow) Start() error {
 		return w.createCluster(clusterNodes)
 	}
 
-	if len(nodesWithManager) == expectedNodesCount {
-		w.log.Infof("Start :: nodesWithManager equal expectedNodesCount, nodesWithManager: %d, expectedNodesCount: %d", len(nodesWithManager), expectedNodesCount)
-		return w.syncCluster(nodesWithManager)
-	}
+	// if len(nodesWithManager) == expectedNodesCount {
+	// 	w.log.Infof("Start :: nodesWithManager equal expectedNodesCount, nodesWithManager: %d, expectedNodesCount: %d", len(nodesWithManager), expectedNodesCount)
+	// 	return w.syncCluster(nodesWithManager)
+	// }
 
 	if len(nodesWithManager) < expectedNodesCount {
 		w.log.Infof("Start :: nodesWithManager less than expectedNodesCount, nodesWithManager: %d, expectedNodesCount: %d", len(nodesWithManager), expectedNodesCount)
@@ -73,7 +71,7 @@ func (w *SeaweedfsScaleWorkflow) Start() error {
 			return err
 		}
 
-		clusterNodes, clusterNodesToDelete := SplitNodesByCount(sortedExistNodes, len(nodesWithManager)-expectedNodesCount)
+		clusterNodes, clusterNodesToDelete := SplitNodesByCount(sortedExistNodes, expectedNodesCount)
 		w.log.Infof("Start :: cluster nodes: %s, Cluster nodes to delete: %s", GetNodeNames(clusterNodes), GetNodeNames(clusterNodesToDelete))
 		return w.scaleDownCluster(clusterNodes, clusterNodesToDelete)
 	}
@@ -306,37 +304,14 @@ func (w *SeaweedfsScaleWorkflow) scaleUpCluster(oldClusterNodes, newClusterNodes
 func (w *SeaweedfsScaleWorkflow) scaleDownCluster(clusterNodes, clusterNodesToDelete []RegistryNodeManager) error {
 	w.log.Infof("ScaleWorkflow :: scaleDownCluster :: Scaling down cluster %s, with nodes: %s", GetNodeNames(append(clusterNodes, clusterNodesToDelete...)), GetNodeNames(clusterNodesToDelete))
 
-	for len(clusterNodesToDelete) > 0 {
-		var deleteNode RegistryNodeManager
-		deleteNode, clusterNodesToDelete = clusterNodesToDelete[0], clusterNodesToDelete[1:]
-		err := w.scaleDownClusterPerNode(append(clusterNodes, clusterNodesToDelete...), deleteNode)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (w *SeaweedfsScaleWorkflow) scaleDownClusterPerNode(clusterNodes []RegistryNodeManager, clusterNodeToRemove RegistryNodeManager) error {
-	w.log.Infof("ScaleWorkflow :: scaleDownClusterPerNode :: Deleting node: %s", GetNodeNames([]RegistryNodeManager{clusterNodeToRemove}))
-
-	// Change leader
-	w.log.Infof("scaleDownClusterPerNode :: RemoveLeaderStatusForNode)")
-	if err := RemoveLeaderStatusForNode(w.ctx, w.log, clusterNodes, clusterNodeToRemove); err != nil {
-		return err
+	if len(clusterNodes) != 1 {
+		return fmt.Errorf("len(clusterNodes) != 1")
 	}
 
-	//w.log.Infof("scaleDownClusterPerNode :: !!!! POTENTIAL PROBLEM. GetNewAndUnusedClusterIP\n")
-	// Prepare leader and ips
-
-	leader, newClusterIPs, unUsedIPs, err := GetNewAndUnusedClusterIP(w.ctx, w.log, clusterNodes, []RegistryNodeManager{clusterNodeToRemove})
+	clusterNode := clusterNodes[0]
+	clusterNodeIP, err := clusterNode.GetNodeIP()
 	if err != nil {
 		return err
-	}
-	w.log.Infof("scaleDownClusterPerNode :: GetNewAndUnusedClusterIP\n")
-
-	if pkg_utils.IsEvenNumber(len(clusterNodes)) {
-		return fmt.Errorf("the number of nodes is even")
 	}
 
 	// Prepare requests
@@ -345,8 +320,8 @@ func (w *SeaweedfsScaleWorkflow) scaleDownClusterPerNode(clusterNodes []Registry
 			MasterPeers     []string "json:\"masterPeers\""
 			IsRaftBootstrap bool     "json:\"isRaftBootstrap\""
 		}{
-			MasterPeers:     newClusterIPs,
-			IsRaftBootstrap: false,
+			MasterPeers:     []string{clusterNodeIP},
+			IsRaftBootstrap: true,
 		},
 		Check: struct {
 			WithMasterPeers     bool "json:\"withMasterPeers\""
@@ -369,42 +344,35 @@ func (w *SeaweedfsScaleWorkflow) scaleDownClusterPerNode(clusterNodes []Registry
 			IsRaftBootstrap bool     "json:\"isRaftBootstrap\""
 			UpdateOrCreate  bool     "json:\"updateOrCreate\""
 		}{
-			MasterPeers:     newClusterIPs,
-			IsRaftBootstrap: false,
+			MasterPeers:     []string{clusterNodeIP},
+			IsRaftBootstrap: true,
 			UpdateOrCreate:  true,
 		},
 	}
 
-	// Remove unused nodes from cluster
-	for _, ip := range unUsedIPs {
-		w.log.Infof("scaleDownClusterPerNode :: Remove unused IP %s from cluster", ip)
-		if err := leader.RemoveNodeFromCluster(ip); err != nil {
-			return err
-		}
-		if _, err := WaitLeaderElectionForNodes(w.ctx, w.log, clusterNodes); err != nil {
+	for _, nodeToDelete := range clusterNodesToDelete {
+		if err := nodeToDelete.DeleteNodeManifests(); err != nil {
 			return err
 		}
 	}
 
-	// RollingUpgrade old nodes
-	needUpgrade := []RegistryNodeManager{}
-	for _, node := range clusterNodes {
-		request, err := node.CheckNodeManifests(&checkRequest)
-		if err != nil {
-			return err
-		}
-		if request.NeedSomethingCreateOrUpdate() {
-			needUpgrade = append(needUpgrade, node)
-		}
-	}
-	w.log.Infof("scaleDownClusterPerNode :: RollingUpgradeNodes: %v, %+v", needUpgrade, updateRequest)
-	err = RollingUpgradeNodes(w.ctx, w.log, clusterNodes, needUpgrade, &updateRequest)
+	resp, err := clusterNode.CheckNodeManifests(&checkRequest)
 	if err != nil {
 		return err
 	}
 
-	if err := DeleteNodes(w.ctx, w.log, []RegistryNodeManager{clusterNodeToRemove}); err != nil {
+	if resp.NeedSomethingCreateOrUpdate() {
+		if err := clusterNode.UpdateNodeManifests(&updateRequest); err != nil {
+			return err
+		}
+	}
+
+	if isWait, err := WaitByAllNodes(w.ctx, w.log, []RegistryNodeManager{clusterNode}, CmpIsExist, CmpIsRunning); err != nil {
 		return err
+	} else {
+		if !isWait {
+			return fmt.Errorf("!isWait WaitByAllNodes(w.ctx, w.log, []RegistryNodeManager{clusterNode}, CmpIsExist, CmpIsRunning)")
+		}
 	}
 	return nil
 }

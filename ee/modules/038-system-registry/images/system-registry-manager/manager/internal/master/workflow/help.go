@@ -635,9 +635,9 @@ func GetNewAndUnusedClusterIP(ctx context.Context, log *logrus.Entry, clusterNod
 	}
 
 	// Check if we have more than one leader, it's an error
-	if len(leaders) > 1 {
-		log.Infof("GetNewAndUnusedClusterIP :: Have more than one cluster leaders")
-		return nil, nil, nil, fmt.Errorf("len(*leaders) > 1")
+	if len(leaders) != 1 {
+		log.Infof("GetNewAndUnusedClusterIP :: len(leaders) != 1")
+		return nil, nil, nil, fmt.Errorf("len(leaders) != 1")
 	}
 
 	leader := leaders[0]
