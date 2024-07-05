@@ -215,22 +215,23 @@ func (r *deckhouseReleaseReconciler) patchSuspendAnnotation(dr *v1alpha1.Deckhou
 }
 
 func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (ctrl.Result, error) {
-	deckhousePods, err := r.getDeckhousePods(ctx)
-	if err != nil {
-		r.logger.Warnf("Error getting deckhouse pods: %s", err)
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-	}
-
-	if len(deckhousePods) == 0 {
-		r.logger.Warn("Deckhouse pods not found. Skipping update")
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-	}
 	if r.clusterUUID == "" {
 		r.clusterUUID = r.getClusterUUID(ctx)
 	}
 
 	// dev mode
 	if r.updateSettings.Get().ReleaseChannel == "" {
+		deckhousePods, err := r.getDeckhousePods(ctx)
+		if err != nil {
+			r.logger.Warnf("Error getting deckhouse pods: %s", err)
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		}
+
+		if len(deckhousePods) == 0 {
+			r.logger.Warn("Deckhouse pods not found. Skipping update")
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		}
+
 		return r.tagUpdate(ctx, deckhousePods)
 	}
 

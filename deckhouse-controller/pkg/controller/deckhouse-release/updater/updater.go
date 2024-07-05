@@ -120,6 +120,17 @@ func (api *kubeAPI) DeployRelease(release *v1alpha1.DeckhouseRelease) error {
 	// dryrun
 	if val, ok := release.GetAnnotations()["dryrun"]; ok && val == "true" {
 		// TODO: write log about dry run
+		var releases v1alpha1.DeckhouseReleaseList
+		err = api.client.List(ctx, &releases)
+		if err != nil {
+			return nil
+		}
+
+		for _, r := range releases.Items {
+			// patch releases to trigger their requeue
+			_ = api.PatchReleaseAnnotations(&r, map[string]any{"triggered_by_dryrun": release.GetName()})
+		}
+
 		return nil
 	}
 
