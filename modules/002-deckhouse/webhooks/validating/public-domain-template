@@ -65,7 +65,7 @@ kubernetes:
       - kube-dns
     jqFilter: |
       {
-        "status": .spec.enabled,
+        "isEnabled": .spec.enabled,
       }
 kubernetesValidating:
 - name: publicdomaintemplate-policy.deckhouse.io
@@ -84,12 +84,13 @@ EOF
 function __main__() {
   mcName=$(context::jq -r '.review.request.object.metadata.name')
   if [[ "$mcName" == "global" ]]; then
-    kubeDNSIsEnabled=$(context::jq -r '.snapshots.["kube-dns-module"][]?.filterResult.["status"]')
+    kubeDNSIsEnabled=$(context::jq -r '.snapshots.["kube-dns-module"][]?.filterResult.["isEnabled"]')
+
     if [[ $kubeDNSIsEnabled == "true" ]]; then
       kubeDNSConf=$(context::jq -r '.snapshots.["d8-kube-dns-cm-wh"][]?.filterResult.["kube-dns-conf"]')
       dnsDomains=$(echo $kubeDNSConf | grep -oP  'kubernetes .*? ip6.arpa')
     else
-      dnsDomains=$(context::jq -r '.snapshots.["cluster-configuration"][]?.filterResult.["clusterDomain"]')
+      dnsDomains=$(context::jq -r '.snapshots.["d8-cluster-configuration"][]?.filterResult.["clusterDomain"]')
     fi
     publicDomainTemplate=$(context::jq -r '.review.request.object.spec.settings.modules.publicDomainTemplate' | sed s/%s.//)
 
