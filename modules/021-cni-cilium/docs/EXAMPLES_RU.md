@@ -74,10 +74,10 @@ metadata:
 spec:
   destinationCIDRs:
   - 0.0.0.0/0
-  egressGatewayName: myegressgw
+  egressGatewayName: my-egressgw
   selectors:
   - podSelector:
       matchLabels:
         app: backend
-        io.kubernetes.pod.namespace: myns
+        io.kubernetes.pod.namespace: my-ns
 ```
