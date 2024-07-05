@@ -185,6 +185,9 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 	}
 
 	md := downloader.NewModuleDownloader(c.dc, c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
+	if err = md.ValidateModule(mo.Name, mo.Spec.ImageTag); err != nil {
+		return ctrl.Result{Requeue: false}, err
+	}
 	newChecksum, moduleDef, err := md.DownloadDevImageTag(mo.Name, mo.Spec.ImageTag, mo.Status.ImageDigest)
 	if err != nil {
 		mo.Status.Message = err.Error()
@@ -409,6 +412,9 @@ func (c *modulePullOverrideReconciler) createModuleSymlink(moduleName, moduleIma
 		// download the module to fs
 		c.logger.Infof("Downloading module %q from registry", moduleName)
 		md := downloader.NewModuleDownloader(c.dc, c.externalModulesDir, moduleSource, utils.GenerateRegistryOptions(moduleSource))
+		if err = md.ValidateModule(moduleName, moduleImageTag); err != nil {
+			return fmt.Errorf("validation module failed: %w", err)
+		}
 		_, _, err := md.DownloadDevImageTag(moduleName, moduleImageTag, "")
 		if err != nil {
 			return fmt.Errorf("couldn't get module %q pull override definition: %s", moduleName, err)

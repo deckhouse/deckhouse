@@ -95,10 +95,6 @@ func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum s
 		return "", nil, nil
 	}
 
-	if err = md.validateModule(moduleName, imageTag); err != nil {
-		return "", nil, err
-	}
-
 	_, err = md.fetchAndCopyModuleByVersion(moduleName, imageTag, moduleStorePath)
 	if err != nil {
 		return "", nil, err
@@ -116,20 +112,19 @@ func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion st
 
 	moduleVersionPath := path.Join(md.externalModulesDir, moduleName, moduleVersion)
 
-	if err := md.validateModule(moduleName, moduleVersion); err != nil {
-		return nil, err
-	}
-
 	return md.fetchAndCopyModuleByVersion(moduleName, moduleVersion, moduleVersionPath)
 }
 
-func (md *ModuleDownloader) validateModule(moduleName, moduleVersion string) error {
+// ValidateModule checked module config files in tmp directory
+func (md *ModuleDownloader) ValidateModule(moduleName, moduleVersion string) error {
+	// get tmp directory
 	tmpDir, err := os.MkdirTemp("", "module*")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(tmpDir)
 
+	// fetch module to tmp directory
 	_, err = md.fetchAndCopyModuleByVersion(moduleName, moduleVersion, tmpDir)
 	if err != nil {
 		return err
@@ -137,14 +132,7 @@ func (md *ModuleDownloader) validateModule(moduleName, moduleVersion string) err
 
 	def := md.fetchModuleDefinitionFromFS(moduleName, tmpDir)
 
-	if err = validateBasicModule(def); err != nil {
-		return fmt.Errorf("validate module: %w", err)
-	}
-
-	return nil
-}
-
-func validateBasicModule(def *models.DeckhouseModuleDefinition) error {
+	// create basic module
 	cb, vb, err := utils.ReadOpenAPIFiles(filepath.Join(def.Path, "openapi"))
 	if err != nil {
 		return fmt.Errorf("read open API files: %w", err)
@@ -155,8 +143,21 @@ func validateBasicModule(def *models.DeckhouseModuleDefinition) error {
 		return fmt.Errorf("new basic module: %w", err)
 	}
 
-	if err = bm.Validate(); err != nil {
-		return err
+	valuesKey := utils.ModuleNameToValuesKey(bm.GetName())
+	restoredName := utils.ModuleNameFromValuesKey(valuesKey)
+
+	if bm.GetName() != restoredName {
+		return fmt.Errorf("'%s' name should be in kebab-case and be restorable from camelCase: consider renaming to '%s'", bm.GetName(), restoredName)
+	}
+
+	err = bm.ValidateValues()
+	if err != nil {
+		return fmt.Errorf("validate values: %w", err)
+	}
+
+	err = bm.ValidateConfigValues()
+	if err != nil {
+		return fmt.Errorf("validate config values: %w", err)
 	}
 
 	return nil

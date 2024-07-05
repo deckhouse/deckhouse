@@ -866,6 +866,9 @@ func (c *moduleReleaseReconciler) createModuleSymlink(moduleName, moduleVersion 
 		c.logger.Infof("Downloading module %q from registry", moduleName)
 		// download the module to fs
 		md := downloader.NewModuleDownloader(c.dc, c.externalModulesDir, moduleSource, utils.GenerateRegistryOptions(moduleSource))
+		if err = md.ValidateModule(moduleName, moduleVersion); err != nil {
+			return fmt.Errorf("validation module failed: %w", err)
+		}
 		_, err = md.DownloadByModuleVersion(moduleName, moduleVersion)
 		if err != nil {
 			return fmt.Errorf("download module %v with version %v failed: %w. Skipping", moduleName, moduleVersion, err)
