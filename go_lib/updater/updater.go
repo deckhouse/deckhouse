@@ -640,6 +640,14 @@ func (du *Updater[R]) GetPredictedReleaseIndex() int {
 	return du.predictedReleaseIndex
 }
 
+func (du *Updater[R]) GetPredictedRelease() R {
+	var release R
+	if du.predictedReleaseIndex == -1 {
+		return release
+	}
+	return du.releases[du.predictedReleaseIndex]
+}
+
 func (du *Updater[R]) GetSkippedPatchesIndexes() []int {
 	return du.skippedPatchesIndexes
 }

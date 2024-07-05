@@ -40,7 +40,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	d8updater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release/updater"
@@ -86,7 +85,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 
 	ctr, err := controller.New("deckhouse-release", mgr, controller.Options{
 		MaxConcurrentReconciles: 1,
-		CacheSyncTimeout:        15 * time.Minute,
+		CacheSyncTimeout:        3 * time.Minute,
 		NeedLeaderElection:      pointer.Bool(false),
 		Reconciler:              r,
 	})
@@ -96,7 +95,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.DeckhouseRelease{}).
-		WithEventFilter(predicate.And(predicate.GenerationChangedPredicate{}, releasePhasePredicate{})).
+		WithEventFilter(releasePhasePredicate{}).
 		Complete(ctr)
 }
 
@@ -180,7 +179,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 
 	r.patchManualRelease(dr)
 
-	return r.pendingReleaseReconcile(ctx)
+	return r.pendingReleaseReconcile(ctx, dr)
 }
 
 func (r *deckhouseReleaseReconciler) patchManualRelease(dr *v1alpha1.DeckhouseRelease) {
@@ -215,7 +214,7 @@ func (r *deckhouseReleaseReconciler) patchSuspendAnnotation(dr *v1alpha1.Deckhou
 	return r.client.Patch(ctx, dr, p)
 }
 
-func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context) (ctrl.Result, error) {
+func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (ctrl.Result, error) {
 	deckhousePods, err := r.getDeckhousePods(ctx)
 	if err != nil {
 		r.logger.Warnf("Error getting deckhouse pods: %s", err)
@@ -316,6 +315,13 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 			if e := r.client.Status().Update(ctx, sk); e != nil {
 				return ctrl.Result{Requeue: true}, e
 			}
+		}
+	}
+
+	if rel := deckhouseUpdater.GetPredictedRelease(); rel != nil {
+		if rel.GetName() != dr.GetName() {
+			// don't requeue releases other than predicted one
+			return ctrl.Result{}, nil
 		}
 	}
 

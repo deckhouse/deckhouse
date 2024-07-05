@@ -85,7 +85,7 @@ func NewModuleSourceController(mgr manager.Manager, dc dependency.Container, emb
 
 	ctr, err := controller.New("module-source", mgr, controller.Options{
 		MaxConcurrentReconciles: 3,
-		CacheSyncTimeout:        15 * time.Minute,
+		CacheSyncTimeout:        3 * time.Minute,
 		NeedLeaderElection:      pointer.Bool(false),
 		Reconciler:              c,
 	})
