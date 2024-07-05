@@ -628,13 +628,12 @@ func (du *Updater[R]) changeNotifiedFlag(fl bool) error {
 }
 
 func (du *Updater[R]) saveReleaseData() error {
-	var release R
-
 	if du.predictedReleaseIndex != -1 {
-		release = du.releases[du.predictedReleaseIndex]
+		release := du.releases[du.predictedReleaseIndex]
+		return du.kubeAPI.SaveReleaseData(release, du.releaseData)
 	}
 
-	return du.kubeAPI.SaveReleaseData(release, du.releaseData)
+	return nil
 }
 
 func (du *Updater[R]) GetPredictedReleaseIndex() int {

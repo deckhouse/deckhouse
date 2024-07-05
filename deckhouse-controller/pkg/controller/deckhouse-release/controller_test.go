@@ -139,7 +139,7 @@ package deckhouse_release
 //		mup.Update.Windows = update.Windows{{From: "8:00", To: "10:00"}}
 //
 //		suite.setupController("update-out-of-window.yaml", initValues, mup)
-//		dr := suite.getDeckhouseRelease(suite.testDRName)
+//		dr := suite.getDeckhouseRelease("v1.26.0")
 //		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 //		require.NoError(suite.T(), err)
 //	})

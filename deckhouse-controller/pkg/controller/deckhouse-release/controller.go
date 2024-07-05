@@ -307,6 +307,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	if len(skipped) > 0 {
 		for _, sk := range skipped {
 			sk.Status.Phase = v1alpha1.PhaseSkipped
+			sk.Status.Message = ""
 			sk.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 			if e := r.client.Status().Update(ctx, sk); e != nil {
 				return ctrl.Result{Requeue: true}, e
