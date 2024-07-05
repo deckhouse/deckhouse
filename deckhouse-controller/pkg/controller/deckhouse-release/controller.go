@@ -154,8 +154,6 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 }
 
 func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (ctrl.Result, error) {
-	fmt.Println("DeckhouseRelease reconcile: ", dr.Name)
-
 	// prepare releases
 	switch dr.Status.Phase {
 	// thees phases should be ignored by predicate, but let's check it
@@ -193,7 +191,6 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 }
 
 func (r *deckhouseReleaseReconciler) patchManualRelease(dr *v1alpha1.DeckhouseRelease) error {
-	fmt.Println("DeckhouseRelease PATCH MANUAL", r.updateSettings.Get().Update.Mode)
 	if r.updateSettings.Get().Update.Mode != "Manual" {
 		return nil
 	}
@@ -203,7 +200,6 @@ func (r *deckhouseReleaseReconciler) patchManualRelease(dr *v1alpha1.DeckhouseRe
 		// TODO: don't know yet how to count manual releases
 		// du.totalPendingManualReleases++
 	} else {
-		fmt.Println("DeckhouseRelease SET UPPROVED")
 		dr.SetApprovedStatus(true)
 	}
 
