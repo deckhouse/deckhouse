@@ -314,17 +314,14 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{}, nil
 	}
 
-	if deckhouseUpdater.PredictedReleaseIsPatch() {
-		// patch release does not respect update windows or ManualMode
-		if deckhouseUpdater.ApplyPredictedRelease(nil) {
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-	}
-
 	var windows update.Windows
-	if !deckhouseUpdater.InManualMode() {
-		windows = r.updateSettings.Get().Update.Windows
+	if deckhouseUpdater.PredictedReleaseIsPatch() {
+		// patch release and ManualMode does not respect update windows
+		windows = nil
+	} else {
+		if !deckhouseUpdater.InManualMode() {
+			windows = r.updateSettings.Get().Update.Windows
+		}
 	}
 
 	if deckhouseUpdater.ApplyPredictedRelease(windows) {
