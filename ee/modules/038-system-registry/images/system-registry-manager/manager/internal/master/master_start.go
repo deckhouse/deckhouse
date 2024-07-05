@@ -25,7 +25,7 @@ type Master struct {
 	log       *logrus.Entry
 }
 
-func New(rootCtx context.Context, rCfg *common.RuntimeConfig) (*Master) {
+func New(rootCtx context.Context, rCfg *common.RuntimeConfig) *Master {
 	rootCtx = pkg_logs.SetLoggerToContext(rootCtx, processName)
 	log := pkg_logs.GetLoggerFromContext(rootCtx)
 

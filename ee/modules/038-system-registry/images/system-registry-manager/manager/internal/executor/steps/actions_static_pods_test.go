@@ -23,17 +23,40 @@ func TestCreateStaticPodBundle(t *testing.T) {
 		Certs:     struct{ UpdateOrCreate bool }{UpdateOrCreate: true},
 		Manifests: struct{ UpdateOrCreate bool }{UpdateOrCreate: true},
 		StaticPods: struct {
-			UpdateOrCreate       bool
-			MasterPeers          []string
-			CheckWithMasterPeers bool
+			UpdateOrCreate bool
+			Options        struct {
+				MasterPeers     []string
+				IsRaftBootstrap bool
+			}
+			Check struct {
+				WithMasterPeers     bool
+				WithIsRaftBootstrap bool
+			}
 		}{
-			UpdateOrCreate:       true,
-			CheckWithMasterPeers: true,
-			MasterPeers:          []string{"123", "321"},
+			UpdateOrCreate: true,
+			Options: struct {
+				MasterPeers     []string
+				IsRaftBootstrap bool
+			}{
+				MasterPeers:     []string{"123", "321"},
+				IsRaftBootstrap: true,
+			},
+			Check: struct {
+				WithMasterPeers     bool
+				WithIsRaftBootstrap bool
+			}{
+				WithMasterPeers:     true,
+				WithIsRaftBootstrap: true,
+			},
 		},
 	}
 
-	renderData, err := pkg_cfg.GetDataForManifestRendering(pkg_cfg.NewExtraDataForManifestRendering(params.StaticPods.MasterPeers))
+	renderData, err := pkg_cfg.GetDataForManifestRendering(
+		pkg_cfg.NewExtraDataForManifestRendering(
+			params.StaticPods.Options.MasterPeers,
+			params.StaticPods.Options.IsRaftBootstrap,
+		),
+	)
 	assert.NoError(t, err)
 
 	for _, staticPod := range manifestsSpec.StaticPods {
@@ -47,11 +70,13 @@ func TestPrepareStaticPodsBeforeCompare(t *testing.T) {
 		name                 string
 		content              []byte
 		CheckWithMasterPeers bool
+		CheckIsRaftBootstrap bool
 		expectedContent      []byte
 	}{
 		{
-			name:                 "CheckWithMasterPeers true",
+			name:                 "CheckWithMasterPeers: true && CheckIsRaftBootstrap: true",
 			CheckWithMasterPeers: true,
+			CheckIsRaftBootstrap: true,
 			content: []byte(`
 apiVersion: v1
 kind: Pod
@@ -66,7 +91,8 @@ spec:
   - name: test
     args:
       - server
-      - -master.peers=.......
+      - -master.raftBootstrap
+      - -master.peers="......."
 `),
 			expectedContent: []byte(`
 apiVersion: v1
@@ -83,12 +109,14 @@ spec:
   - name: test
     args:
       - server
-      - -master.peers=.......
+      - -master.raftBootstrap
+      - -master.peers="......."
 `),
 		},
 		{
-			name:                 "CheckWithMasterPeers false",
-			CheckWithMasterPeers: false,
+			name:                 "CheckWithMasterPeers: true && CheckIsRaftBootstrap: false",
+			CheckWithMasterPeers: true,
+			CheckIsRaftBootstrap: false,
 			content: []byte(`
 apiVersion: v1
 kind: Pod
@@ -103,7 +131,86 @@ spec:
   - name: test
     args:
       - server
-      - -master.peers=.......
+      - -master.raftBootstrap
+      - -master.peers="......."
+`),
+			expectedContent: []byte(`
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  annotations:
+    old-annotation-key: old-annotation-value
+    certschecksum: ""
+    manifestschecksum: ""
+    staticpodschecksum: ""
+spec:
+  containers:
+  - name: test
+    args:
+      - server
+      - -master.peers="......."
+`),
+		},
+		{
+			name:                 "CheckWithMasterPeers: false && CheckIsRaftBootstrap: true",
+			CheckWithMasterPeers: false,
+			CheckIsRaftBootstrap: true,
+			content: []byte(`
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  annotations:
+    old-annotation-key: old-annotation-value
+    certschecksum: abc123
+    manifestschecksum: def456
+spec:
+  containers:
+  - name: test
+    args:
+      - server
+      - -master.raftBootstrap
+      - -master.peers="......."
+`),
+			expectedContent: []byte(`
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  annotations:
+    old-annotation-key: old-annotation-value
+    certschecksum: ""
+    manifestschecksum: ""
+    staticpodschecksum: ""
+spec:
+  containers:
+  - name: test
+    args:
+      - server
+      - -master.raftBootstrap
+`),
+		},
+		{
+			name:                 "CheckWithMasterPeers: false && CheckIsRaftBootstrap: false",
+			CheckWithMasterPeers: false,
+			CheckIsRaftBootstrap: false,
+			content: []byte(`
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  annotations:
+    old-annotation-key: old-annotation-value
+    certschecksum: abc123
+    manifestschecksum: def456
+spec:
+  containers:
+  - name: test
+    args:
+      - server
+      - -master.raftBootstrap
+      - -master.peers="......."
 `),
 			expectedContent: []byte(`
 apiVersion: v1
@@ -128,13 +235,31 @@ spec:
 		t.Run(tt.name, func(t *testing.T) {
 			params := &InputParams{
 				StaticPods: struct {
-					UpdateOrCreate       bool
-					MasterPeers          []string
-					CheckWithMasterPeers bool
+					UpdateOrCreate bool
+					Options        struct {
+						MasterPeers     []string
+						IsRaftBootstrap bool
+					}
+					Check struct {
+						WithMasterPeers     bool
+						WithIsRaftBootstrap bool
+					}
 				}{
-					UpdateOrCreate:       true,
-					MasterPeers:          []string{"123", "321"},
-					CheckWithMasterPeers: tt.CheckWithMasterPeers,
+					UpdateOrCreate: true,
+					Options: struct {
+						MasterPeers     []string
+						IsRaftBootstrap bool
+					}{
+						MasterPeers:     []string{},
+						IsRaftBootstrap: true,
+					},
+					Check: struct {
+						WithMasterPeers     bool
+						WithIsRaftBootstrap bool
+					}{
+						WithMasterPeers:     tt.CheckWithMasterPeers,
+						WithIsRaftBootstrap: tt.CheckIsRaftBootstrap,
+					},
 				},
 			}
 			newContent, err := prepareStaticPodsBeforeCompare(string(tt.content), params)
@@ -142,8 +267,8 @@ spec:
 				t.Errorf("Error preparing static pod manifest: %v", err)
 			}
 
-			if !pkg_utils.EqualYaml([]byte(newContent), tt.expectedContent) {
-				t.Errorf("Expected content:\n%s\n\nActual content:\n%s\n", string(tt.expectedContent), string(newContent))
+			if !pkg_utils.EqualYaml(tt.expectedContent, []byte(newContent)) {
+				t.Errorf("Expected content:\n%s\n\nActual content:\n%s\n", string(tt.expectedContent), newContent)
 			}
 		})
 	}
@@ -217,9 +342,8 @@ spec:
 		t.Run(tt.name, func(t *testing.T) {
 			newManifest := removeLineByParams(string(tt.manifest), tt.params)
 
-			expectedManifest := string(tt.expectedManifest)
-			if newManifest != expectedManifest {
-				t.Errorf("Expected manifest:\n%s\n\nActual manifest:\n%s\n", expectedManifest, newManifest)
+			if !pkg_utils.EqualYaml(tt.expectedManifest, []byte(newManifest)) {
+				t.Errorf("Expected manifest:\n%s\n\nActual manifest:\n%s\n", string(tt.expectedManifest), newManifest)
 			}
 		})
 	}

@@ -21,17 +21,40 @@ func TestCreateManifestBundle(t *testing.T) {
 		Certs:     struct{ UpdateOrCreate bool }{UpdateOrCreate: true},
 		Manifests: struct{ UpdateOrCreate bool }{UpdateOrCreate: true},
 		StaticPods: struct {
-			UpdateOrCreate       bool
-			MasterPeers          []string
-			CheckWithMasterPeers bool
+			UpdateOrCreate bool
+			Options        struct {
+				MasterPeers     []string
+				IsRaftBootstrap bool
+			}
+			Check struct {
+				WithMasterPeers     bool
+				WithIsRaftBootstrap bool
+			}
 		}{
-			UpdateOrCreate:       true,
-			CheckWithMasterPeers: true,
-			MasterPeers:          []string{"123", "321"},
+			UpdateOrCreate: true,
+			Options: struct {
+				MasterPeers     []string
+				IsRaftBootstrap bool
+			}{
+				MasterPeers:     []string{"123", "321"},
+				IsRaftBootstrap: true,
+			},
+			Check: struct {
+				WithMasterPeers     bool
+				WithIsRaftBootstrap bool
+			}{
+				WithMasterPeers:     true,
+				WithIsRaftBootstrap: true,
+			},
 		},
 	}
 
-	renderData, err := pkg_cfg.GetDataForManifestRendering(pkg_cfg.NewExtraDataForManifestRendering(params.StaticPods.MasterPeers))
+	renderData, err := pkg_cfg.GetDataForManifestRendering(
+		pkg_cfg.NewExtraDataForManifestRendering(
+			params.StaticPods.Options.MasterPeers,
+			params.StaticPods.Options.IsRaftBootstrap,
+		),
+	)
 	assert.NoError(t, err)
 
 	for _, manifest := range manifestsSpec.Manifests {

@@ -13,9 +13,15 @@ type InputParams struct {
 		UpdateOrCreate bool
 	}
 	StaticPods struct {
-		UpdateOrCreate       bool
-		MasterPeers          []string
-		CheckWithMasterPeers bool
+		UpdateOrCreate bool
+		Options        struct {
+			MasterPeers     []string
+			IsRaftBootstrap bool
+		}
+		Check struct {
+			WithMasterPeers     bool
+			WithIsRaftBootstrap bool
+		}
 	}
 }
 

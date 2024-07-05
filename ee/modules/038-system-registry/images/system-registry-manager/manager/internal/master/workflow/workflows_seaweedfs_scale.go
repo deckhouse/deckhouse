@@ -99,8 +99,20 @@ func (w *SeaweedfsScaleWorkflow) syncCluster(clusterNodes []RegistryNodeManager)
 
 	// Prepare requests
 	checkRequest := SeaweedfsCheckNodeRequest{
-		MasterPeers:          newClusterIPs,
-		CheckWithMasterPeers: true,
+		Options: struct {
+			MasterPeers     []string "json:\"masterPeers\""
+			IsRaftBootstrap bool     "json:\"isRaftBootstrap\""
+		}{
+			MasterPeers:     newClusterIPs,
+			IsRaftBootstrap: false,
+		},
+		Check: struct {
+			WithMasterPeers     bool "json:\"withMasterPeers\""
+			WithIsRaftBootstrap bool "json:\"withIsRaftBootstrap\""
+		}{
+			WithMasterPeers:     true,
+			WithIsRaftBootstrap: true,
+		},
 	}
 
 	updateRequest := SeaweedfsUpdateNodeRequest{
@@ -111,11 +123,13 @@ func (w *SeaweedfsScaleWorkflow) syncCluster(clusterNodes []RegistryNodeManager)
 			UpdateOrCreate bool `json:"updateOrCreate"`
 		}{true},
 		StaticPods: struct {
-			MasterPeers    []string `json:"masterPeers"`
-			UpdateOrCreate bool     `json:"updateOrCreate"`
+			MasterPeers     []string "json:\"masterPeers\""
+			IsRaftBootstrap bool     "json:\"isRaftBootstrap\""
+			UpdateOrCreate  bool     "json:\"updateOrCreate\""
 		}{
-			MasterPeers:    newClusterIPs,
-			UpdateOrCreate: true,
+			MasterPeers:     newClusterIPs,
+			IsRaftBootstrap: false,
+			UpdateOrCreate:  true,
 		},
 	}
 
@@ -211,8 +225,20 @@ func (w *SeaweedfsScaleWorkflow) scaleUpCluster(oldClusterNodes, newClusterNodes
 	}
 
 	checkRequest := SeaweedfsCheckNodeRequest{
-		MasterPeers:          newClusterIPs,
-		CheckWithMasterPeers: true,
+		Options: struct {
+			MasterPeers     []string "json:\"masterPeers\""
+			IsRaftBootstrap bool     "json:\"isRaftBootstrap\""
+		}{
+			MasterPeers:     newClusterIPs,
+			IsRaftBootstrap: false,
+		},
+		Check: struct {
+			WithMasterPeers     bool "json:\"withMasterPeers\""
+			WithIsRaftBootstrap bool "json:\"withIsRaftBootstrap\""
+		}{
+			WithMasterPeers:     true,
+			WithIsRaftBootstrap: true,
+		},
 	}
 
 	updateRequest := SeaweedfsUpdateNodeRequest{
@@ -223,11 +249,13 @@ func (w *SeaweedfsScaleWorkflow) scaleUpCluster(oldClusterNodes, newClusterNodes
 			UpdateOrCreate bool `json:"updateOrCreate"`
 		}{true},
 		StaticPods: struct {
-			MasterPeers    []string `json:"masterPeers"`
-			UpdateOrCreate bool     `json:"updateOrCreate"`
+			MasterPeers     []string "json:\"masterPeers\""
+			IsRaftBootstrap bool     "json:\"isRaftBootstrap\""
+			UpdateOrCreate  bool     "json:\"updateOrCreate\""
 		}{
-			MasterPeers:    newClusterIPs,
-			UpdateOrCreate: true,
+			MasterPeers:     newClusterIPs,
+			IsRaftBootstrap: false,
+			UpdateOrCreate:  true,
 		},
 	}
 
@@ -313,8 +341,20 @@ func (w *SeaweedfsScaleWorkflow) scaleDownClusterPerNode(clusterNodes []Registry
 
 	// Prepare requests
 	checkRequest := SeaweedfsCheckNodeRequest{
-		MasterPeers:          newClusterIPs,
-		CheckWithMasterPeers: true,
+		Options: struct {
+			MasterPeers     []string "json:\"masterPeers\""
+			IsRaftBootstrap bool     "json:\"isRaftBootstrap\""
+		}{
+			MasterPeers:     newClusterIPs,
+			IsRaftBootstrap: false,
+		},
+		Check: struct {
+			WithMasterPeers     bool "json:\"withMasterPeers\""
+			WithIsRaftBootstrap bool "json:\"withIsRaftBootstrap\""
+		}{
+			WithMasterPeers:     true,
+			WithIsRaftBootstrap: true,
+		},
 	}
 
 	updateRequest := SeaweedfsUpdateNodeRequest{
@@ -325,11 +365,13 @@ func (w *SeaweedfsScaleWorkflow) scaleDownClusterPerNode(clusterNodes []Registry
 			UpdateOrCreate bool `json:"updateOrCreate"`
 		}{true},
 		StaticPods: struct {
-			MasterPeers    []string `json:"masterPeers"`
-			UpdateOrCreate bool     `json:"updateOrCreate"`
+			MasterPeers     []string "json:\"masterPeers\""
+			IsRaftBootstrap bool     "json:\"isRaftBootstrap\""
+			UpdateOrCreate  bool     "json:\"updateOrCreate\""
 		}{
-			MasterPeers:    newClusterIPs,
-			UpdateOrCreate: true,
+			MasterPeers:     newClusterIPs,
+			IsRaftBootstrap: false,
+			UpdateOrCreate:  true,
 		},
 	}
 

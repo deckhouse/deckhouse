@@ -7,14 +7,21 @@ package client
 
 // CheckRegistry (Request + Response)
 type CheckRegistryRequest struct {
-	MasterPeers          []string `json:"masterPeers"`
-	CheckWithMasterPeers bool     `json:"checkWithMasterPeers"`
+	Options struct {
+		MasterPeers     []string `json:"masterPeers"`
+		IsRaftBootstrap bool     `json:"isRaftBootstrap"`
+	} `json:"options"`
+	Check struct {
+		WithMasterPeers     bool `json:"withMasterPeers"`
+		WithIsRaftBootstrap bool `json:"withIsRaftBootstrap"`
+	} `json:"check"`
 }
 
 type UpdateRegistryRequest struct {
 	StaticPods struct {
-		MasterPeers    []string `json:"masterPeers"`
-		UpdateOrCreate bool     `json:"updateOrCreate"`
+		MasterPeers     []string `json:"masterPeers"`
+		IsRaftBootstrap bool     `json:"isRaftBootstrap"`
+		UpdateOrCreate  bool     `json:"updateOrCreate"`
 	} `json:"staticPods"`
 	Certs struct {
 		UpdateOrCreate bool `json:"updateOrCreate"`
@@ -25,7 +32,8 @@ type UpdateRegistryRequest struct {
 }
 
 type CreateRegistryRequest struct {
-	MasterPeers []string `json:"masterPeers"`
+	MasterPeers     []string `json:"masterPeers"`
+	IsRaftBootstrap bool     `json:"isRaftBootstrap"`
 }
 
 // Busy (Request + Response)

@@ -84,8 +84,20 @@ func TestCheckRegistryRequests(t *testing.T) {
 	}
 
 	mockRequest := CheckRegistryRequest{
-		MasterPeers:          []string{"123", "123", "321"},
-		CheckWithMasterPeers: true,
+		Options: struct {
+			MasterPeers     []string "json:\"masterPeers\""
+			IsRaftBootstrap bool     "json:\"isRaftBootstrap\""
+		}{
+			IsRaftBootstrap: true,
+			MasterPeers:     []string{"123", "123", "321"},
+		},
+		Check: struct {
+			WithMasterPeers     bool "json:\"withMasterPeers\""
+			WithIsRaftBootstrap bool "json:\"withIsRaftBootstrap\""
+		}{
+			WithMasterPeers:     true,
+			WithIsRaftBootstrap: true,
+		},
 	}
 
 	// Mock function for checking registry
@@ -116,7 +128,8 @@ func TestCheckRegistryRequests(t *testing.T) {
 
 func TestCreateRegistryRequests(t *testing.T) {
 	mockRequest := CreateRegistryRequest{
-		MasterPeers: []string{"123", "123", "321"},
+		MasterPeers:     []string{"123", "123", "321"},
+		IsRaftBootstrap: true,
 	}
 
 	// Mock function for updating registry
@@ -149,11 +162,13 @@ func TestUpdateRegistryRequests(t *testing.T) {
 			UpdateOrCreate bool "json:\"updateOrCreate\""
 		}{false},
 		StaticPods: struct {
-			MasterPeers    []string "json:\"masterPeers\""
-			UpdateOrCreate bool     "json:\"updateOrCreate\""
+			MasterPeers     []string "json:\"masterPeers\""
+			IsRaftBootstrap bool     "json:\"isRaftBootstrap\""
+			UpdateOrCreate  bool     "json:\"updateOrCreate\""
 		}{
-			MasterPeers:    []string{"123", "123", "321"},
-			UpdateOrCreate: true,
+			MasterPeers:     []string{"123", "123", "321"},
+			IsRaftBootstrap: true,
+			UpdateOrCreate:  true,
 		},
 	}
 
