@@ -66,7 +66,7 @@ func (mc ModuleConfigBackend) handleDeckhouseConfig(moduleName string, val utils
 
 func (mc *ModuleConfigBackend) GetEventsChannel() chan events.ModuleEvent {
 	if mc.moduleEventC == nil {
-		mc.moduleEventC = make(chan events.ModuleEvent, 50)
+		mc.moduleEventC = make(chan events.ModuleEvent, 350)
 	}
 
 	return mc.moduleEventC
