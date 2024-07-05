@@ -908,21 +908,13 @@ func (c *moduleReleaseReconciler) parseNotificationConfig(ctx context.Context) (
 	return settings.NotificationConfig, nil
 }
 
-func validateModule(manager moduleManager, def models.DeckhouseModuleDefinition) error {
+func validateModule(def models.DeckhouseModuleDefinition) error {
 	if def.Weight < 900 || def.Weight > 999 {
 		return fmt.Errorf("external module weight must be between 900 and 999")
 	}
 
 	if def.Path == "" {
 		return fmt.Errorf("cannot validate module without path. Path is required to load openapi specs")
-	}
-
-	if manager == nil || manager.GetModule(def.Name) == nil {
-		return fmt.Errorf("cannot validate module without a manager or empty module")
-	}
-
-	if err := manager.GetModule(def.Name).Validate(); err != nil {
-		return fmt.Errorf("validate module: %w", err)
 	}
 
 	return nil

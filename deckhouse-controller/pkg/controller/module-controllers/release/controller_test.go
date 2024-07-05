@@ -37,7 +37,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
@@ -45,7 +44,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/module-manager/test/mock"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
@@ -306,16 +304,7 @@ func Test_validateModule(t *testing.T) {
 		t.Helper()
 		t.Run(name, func(t *testing.T) {
 			path := filepath.Join("./testdata", name)
-			m, err := mock.NewModule(name, path, pointer.Bool(true))
-			if err != nil && failed {
-				return
-			}
-			if err != nil && !failed {
-				t.Fatalf("%s: unexpected error: %v", name, err)
-			}
-
-			err = validateModule(
-				mock.NewModuleManager(m),
+			err := validateModule(
 				models.DeckhouseModuleDefinition{
 					Name:   name,
 					Weight: 900,
@@ -333,25 +322,4 @@ func Test_validateModule(t *testing.T) {
 	check("module-not-valid", true)
 	check("module-failed", true)
 	check("module-values-failed", true)
-
-	nillable := func(name string, manager moduleManager, failed bool) {
-		t.Helper()
-		t.Run(name, func(t *testing.T) {
-			err := validateModule(
-				manager,
-				models.DeckhouseModuleDefinition{
-					Name:   name,
-					Weight: 900,
-					Path:   "sdf",
-				},
-			)
-
-			if err != nil && !failed {
-				t.Fatalf("%s: unexpected error: %v", name, err)
-			}
-		})
-	}
-
-	nillable("module_is_nil", mock.NewModuleManager(), true)
-	nillable("manager_is_nil", nil, true)
 }

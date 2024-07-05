@@ -28,6 +28,8 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/shell-operator/pkg/utils/measure"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
@@ -93,6 +95,10 @@ func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum s
 		return "", nil, nil
 	}
 
+	if err = md.validateModule(moduleName, imageTag); err != nil {
+		return "", nil, err
+	}
+
 	_, err = md.fetchAndCopyModuleByVersion(moduleName, imageTag, moduleStorePath)
 	if err != nil {
 		return "", nil, err
@@ -110,7 +116,50 @@ func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion st
 
 	moduleVersionPath := path.Join(md.externalModulesDir, moduleName, moduleVersion)
 
+	if err := md.validateModule(moduleName, moduleVersion); err != nil {
+		return nil, err
+	}
+
 	return md.fetchAndCopyModuleByVersion(moduleName, moduleVersion, moduleVersionPath)
+}
+
+func (md *ModuleDownloader) validateModule(moduleName, moduleVersion string) error {
+	tmpDir, err := os.MkdirTemp("", "module*")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmpDir)
+
+	_, err = md.fetchAndCopyModuleByVersion(moduleName, moduleVersion, tmpDir)
+	if err != nil {
+		return err
+	}
+
+	def := md.fetchModuleDefinitionFromFS(moduleName, tmpDir)
+
+	if err = validateBasicModule(def); err != nil {
+		return fmt.Errorf("validate module: %w", err)
+	}
+
+	return nil
+}
+
+func validateBasicModule(def *models.DeckhouseModuleDefinition) error {
+	cb, vb, err := utils.ReadOpenAPIFiles(filepath.Join(def.Path, "openapi"))
+	if err != nil {
+		return fmt.Errorf("read open API files: %w", err)
+	}
+
+	bm, err := addonmodules.NewBasicModule(def.Name, def.Path, def.Weight, nil, cb, vb)
+	if err != nil {
+		return fmt.Errorf("new basic module: %w", err)
+	}
+
+	if err = bm.Validate(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // DownloadMetadataFromReleaseChannel downloads only module release image with metadata: version.json, checksum.json(soon)
