@@ -10,6 +10,6 @@ import (
 )
 
 var (
-	_ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/ee/modules/025-static-routing-manager/crds/*.yaml")
-	_ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/ee/modules/025-static-routing-manager/crds/internal/*.yaml")
+	_ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/025-static-routing-manager/crds/*.yaml")
+	_ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/025-static-routing-manager/crds/internal/*.yaml")
 )
