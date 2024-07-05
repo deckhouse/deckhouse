@@ -184,15 +184,18 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
 	}
 
-	r.patchManualRelease(dr)
+	err = r.patchManualRelease(dr)
+	if err != nil {
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
+	}
 
 	return r.pendingReleaseReconcile(ctx, dr)
 }
 
-func (r *deckhouseReleaseReconciler) patchManualRelease(dr *v1alpha1.DeckhouseRelease) {
+func (r *deckhouseReleaseReconciler) patchManualRelease(dr *v1alpha1.DeckhouseRelease) error {
 	fmt.Println("DeckhouseRelease PATCH MANUAL", r.updateSettings.Get().Update.Mode)
 	if r.updateSettings.Get().Update.Mode != "Manual" {
-		return
+		return nil
 	}
 
 	if !dr.GetManuallyApproved() {
@@ -203,6 +206,8 @@ func (r *deckhouseReleaseReconciler) patchManualRelease(dr *v1alpha1.DeckhouseRe
 		fmt.Println("DeckhouseRelease SET UPPROVED")
 		dr.SetApprovedStatus(true)
 	}
+
+	return r.client.Status().Update(context.Background(), dr)
 }
 
 func (r *deckhouseReleaseReconciler) patchSuspendAnnotation(dr *v1alpha1.DeckhouseRelease) error {
