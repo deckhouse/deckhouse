@@ -34,12 +34,17 @@ func applyEgressGatewayPolicyFilter(obj *unstructured.Unstructured) (go_hook.Fil
 		return nil, err
 	}
 
+	excludeCIDRs := []string{}
+	if len(egp.Spec.ExcludedCIDRs) > 0 {
+		excludeCIDRs = egp.Spec.ExcludedCIDRs
+	}
+
 	return EgressGatewayPolicyInfo{
 		Name:              egp.Name,
 		EgressGatewayName: egp.Spec.EgressGatewayName,
 		Selectors:         egp.Spec.Selectors,
 		DestinationCIDRs:  egp.Spec.DestinationCIDRs,
-		ExcludedCIDRs:     egp.Spec.ExcludedCIDRs,
+		ExcludedCIDRs:     excludeCIDRs,
 	}, err
 }
 
