@@ -149,6 +149,8 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 }
 
 func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (ctrl.Result, error) {
+	fmt.Println("DeckhouseRelease reconcile: ", dr.Name)
+
 	// prepare releases
 	switch dr.Status.Phase {
 	// thees phases should be ignored by predicate, but let's check it
