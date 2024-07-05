@@ -70,7 +70,7 @@ spec:
 apiVersion: network.deckhouse.io/v1alpha1
 kind: EgressGatewayPolicy
 metadata:
-  name: 
+  name: my-egressgw-policy
 spec:
   destinationCIDRs:
   - 0.0.0.0/0
