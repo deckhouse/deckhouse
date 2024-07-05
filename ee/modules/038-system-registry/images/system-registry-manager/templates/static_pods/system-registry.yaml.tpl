@@ -48,6 +48,9 @@ spec:
       - -volume.max=0
       - -master.volumeSizeLimitMB=1024
       - -master.raftHashicorp
+      {{- if .isRaftBootstrap }}
+      - -master.raftBootstrap
+      {{- end }}
       - -metricsPort=9324
       - -volume.readMode=redirect
       - -s3.allowDeleteBucketNotEmpty=true
