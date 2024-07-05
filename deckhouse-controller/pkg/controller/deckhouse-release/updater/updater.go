@@ -121,7 +121,7 @@ func (api *kubeAPI) DeployRelease(release *v1alpha1.DeckhouseRelease) error {
 	if val, ok := release.GetAnnotations()["dryrun"]; ok && val == "true" {
 		// TODO: write log about dry run
 		go func() {
-			time.Sleep(1 * time.Second)
+			time.Sleep(3 * time.Second)
 			var releases v1alpha1.DeckhouseReleaseList
 			err = api.client.List(ctx, &releases)
 			if err != nil {

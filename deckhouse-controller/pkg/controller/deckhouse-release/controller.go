@@ -22,9 +22,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"strings"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/gofrs/uuid/v5"
@@ -189,6 +190,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 }
 
 func (r *deckhouseReleaseReconciler) patchManualRelease(dr *v1alpha1.DeckhouseRelease) {
+	fmt.Println("DeckhouseRelease PATCH MANUAL", r.updateSettings.Get().Update.Mode)
 	if r.updateSettings.Get().Update.Mode != "Manual" {
 		return
 	}
@@ -198,6 +200,7 @@ func (r *deckhouseReleaseReconciler) patchManualRelease(dr *v1alpha1.DeckhouseRe
 		// TODO: don't know yet how to count manual releases
 		// du.totalPendingManualReleases++
 	} else {
+		fmt.Println("DeckhouseRelease SET UPPROVED")
 		dr.SetApprovedStatus(true)
 	}
 }

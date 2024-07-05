@@ -124,6 +124,10 @@ func (in *DeckhouseRelease) GetSuspend() bool {
 }
 
 func (in *DeckhouseRelease) GetManuallyApproved() bool {
+	if in.Approved {
+		return true
+	}
+
 	v, ok := in.Annotations["release.deckhouse.io/approved"]
 	if ok {
 		return v == "true"
