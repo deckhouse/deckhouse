@@ -102,16 +102,8 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 
 type releasePhasePredicate struct{}
 
-func (releasePhasePredicate) processPhase(release *v1alpha1.DeckhouseRelease) bool {
-	switch release.Status.Phase {
-	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended, v1alpha1.PhaseDeployed:
-		return false
-	}
-	return true
-}
-
 func (rp releasePhasePredicate) Create(ev event.CreateEvent) bool {
-	return rp.processPhase(ev.Object.(*v1alpha1.DeckhouseRelease))
+	return ev.Object.(*v1alpha1.DeckhouseRelease).Status.Phase == ""
 }
 
 // Delete returns true if the Delete event should be processed
@@ -121,12 +113,16 @@ func (rp releasePhasePredicate) Delete(_ event.DeleteEvent) bool {
 
 // Update returns true if the Update event should be processed
 func (rp releasePhasePredicate) Update(ev event.UpdateEvent) bool {
-	return rp.processPhase(ev.ObjectNew.(*v1alpha1.DeckhouseRelease))
+	switch ev.ObjectNew.(*v1alpha1.DeckhouseRelease).Status.Phase {
+	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended, v1alpha1.PhaseDeployed:
+		return false
+	}
+	return true
 }
 
 // Generic returns true if the Generic event should be processed
-func (rp releasePhasePredicate) Generic(ev event.GenericEvent) bool {
-	return rp.processPhase(ev.Object.(*v1alpha1.DeckhouseRelease))
+func (rp releasePhasePredicate) Generic(_ event.GenericEvent) bool {
+	return true
 }
 
 func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
