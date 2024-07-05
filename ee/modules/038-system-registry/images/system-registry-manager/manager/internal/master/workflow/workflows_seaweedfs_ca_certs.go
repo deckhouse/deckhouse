@@ -51,11 +51,13 @@ func (w *SeaweedfsCertsWorkflow) Start() error {
 			UpdateOrCreate bool "json:\"updateOrCreate\""
 		}{false},
 		StaticPods: struct {
-			MasterPeers    []string "json:\"masterPeers\""
-			UpdateOrCreate bool     "json:\"updateOrCreate\""
+			MasterPeers     []string "json:\"masterPeers\""
+			IsRaftBootstrap bool     "json:\"isRaftBootstrap\""
+			UpdateOrCreate  bool     "json:\"updateOrCreate\""
 		}{
-			MasterPeers:    []string{},
-			UpdateOrCreate: false,
+			MasterPeers:     []string{},
+			IsRaftBootstrap: false,
+			UpdateOrCreate:  false,
 		},
 	}
 

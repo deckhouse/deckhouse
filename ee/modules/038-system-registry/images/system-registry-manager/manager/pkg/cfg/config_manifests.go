@@ -190,14 +190,16 @@ func NewManifestsSpecForTest() *ManifestsSpec {
 	return NewManifestsSpec()
 }
 
-func NewExtraDataForManifestRendering(masterPeers []string) *ExtraDataForManifestRendering {
+func NewExtraDataForManifestRendering(masterPeers []string, isRaftBootstrap bool) *ExtraDataForManifestRendering {
 	return &ExtraDataForManifestRendering{
-		MasterPeers: masterPeers,
+		MasterPeers:     masterPeers,
+		IsRaftBootstrap: isRaftBootstrap,
 	}
 }
 
 type ExtraDataForManifestRendering struct {
-	MasterPeers []string `mapstructure:"masterPeers"`
+	MasterPeers     []string `mapstructure:"masterPeers"`
+	IsRaftBootstrap bool     `mapstructure:"isRaftBootstrap"`
 }
 
 func (ext *ExtraDataForManifestRendering) DecodeToMapstructure() (map[string]interface{}, error) {

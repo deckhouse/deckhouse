@@ -22,6 +22,7 @@ const (
 	manifestsCheckSumAnnotation  = "manifestschecksum"
 	staticPodsCheckSumAnnotation = "staticpodschecksum"
 	masterPeersLineContent       = "master.peers"
+	isRaftBootstrapLineContent   = "master.raftBootstrap"
 )
 
 // CreateStaticPodBundle reads the static pod manifest template, renders it with the provided data, and returns a StaticPodBundle.
@@ -156,8 +157,11 @@ func DeleteStaticPodDest(ctx context.Context, staticPodManifestSpec *pkg_cfg.Sta
 
 // prepareStaticPodsBeforeCompare prepares the static pod manifest content for comparison by removing specific lines and annotations.
 func prepareStaticPodsBeforeCompare(content string, params *InputParams) (string, error) {
-	if !params.StaticPods.CheckWithMasterPeers {
+	if !params.StaticPods.Check.WithMasterPeers {
 		content = removeLineByParams(content, []string{masterPeersLineContent})
+	}
+	if !params.StaticPods.Check.WithIsRaftBootstrap {
+		content = removeLineByParams(content, []string{isRaftBootstrapLineContent})
 	}
 
 	annotations := map[string]string{

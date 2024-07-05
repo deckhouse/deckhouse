@@ -21,7 +21,12 @@ func CreateBundle(ctx context.Context, manifestsSpec *pkg_cfg.ManifestsSpec, par
 		bundle.Certs = append(bundle.Certs, *certBundle)
 	}
 
-	renderData, err := pkg_cfg.GetDataForManifestRendering(pkg_cfg.NewExtraDataForManifestRendering(params.StaticPods.MasterPeers))
+	renderData, err := pkg_cfg.GetDataForManifestRendering(
+		pkg_cfg.NewExtraDataForManifestRendering(
+			params.StaticPods.Options.MasterPeers,
+			params.StaticPods.Options.IsRaftBootstrap,
+		),
+	)
 	if err != nil {
 		return nil, err
 	}

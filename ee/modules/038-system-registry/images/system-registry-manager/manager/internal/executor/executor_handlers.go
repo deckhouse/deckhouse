@@ -80,13 +80,31 @@ func checkRegistryHandlerFunc(executorData *ExecutorData, request *executor_clie
 		Certs:     struct{ UpdateOrCreate bool }{UpdateOrCreate: true},
 		Manifests: struct{ UpdateOrCreate bool }{UpdateOrCreate: true},
 		StaticPods: struct {
-			UpdateOrCreate       bool
-			MasterPeers          []string
-			CheckWithMasterPeers bool
+			UpdateOrCreate bool
+			Options        struct {
+				MasterPeers     []string
+				IsRaftBootstrap bool
+			}
+			Check struct {
+				WithMasterPeers     bool
+				WithIsRaftBootstrap bool
+			}
 		}{
-			UpdateOrCreate:       true,
-			CheckWithMasterPeers: request.CheckWithMasterPeers,
-			MasterPeers:          request.MasterPeers,
+			UpdateOrCreate: true,
+			Options: struct {
+				MasterPeers     []string
+				IsRaftBootstrap bool
+			}{
+				MasterPeers:     request.Options.MasterPeers,
+				IsRaftBootstrap: request.Options.IsRaftBootstrap,
+			},
+			Check: struct {
+				WithMasterPeers     bool
+				WithIsRaftBootstrap bool
+			}{
+				WithMasterPeers:     request.Check.WithMasterPeers,
+				WithIsRaftBootstrap: request.Check.WithIsRaftBootstrap,
+			},
 		},
 	}
 
@@ -137,13 +155,31 @@ func updateRegistryHandlerFunc(executorData *ExecutorData, request *executor_cli
 		Certs:     struct{ UpdateOrCreate bool }{UpdateOrCreate: request.Certs.UpdateOrCreate},
 		Manifests: struct{ UpdateOrCreate bool }{UpdateOrCreate: request.Manifests.UpdateOrCreate},
 		StaticPods: struct {
-			UpdateOrCreate       bool
-			MasterPeers          []string
-			CheckWithMasterPeers bool
+			UpdateOrCreate bool
+			Options        struct {
+				MasterPeers     []string
+				IsRaftBootstrap bool
+			}
+			Check struct {
+				WithMasterPeers     bool
+				WithIsRaftBootstrap bool
+			}
 		}{
-			UpdateOrCreate:       request.StaticPods.UpdateOrCreate,
-			CheckWithMasterPeers: true,
-			MasterPeers:          request.StaticPods.MasterPeers,
+			UpdateOrCreate: request.StaticPods.UpdateOrCreate,
+			Options: struct {
+				MasterPeers     []string
+				IsRaftBootstrap bool
+			}{
+				MasterPeers:     request.StaticPods.MasterPeers,
+				IsRaftBootstrap: request.StaticPods.IsRaftBootstrap,
+			},
+			Check: struct {
+				WithMasterPeers     bool
+				WithIsRaftBootstrap bool
+			}{
+				WithMasterPeers:     true,
+				WithIsRaftBootstrap: true,
+			},
 		},
 	}
 
@@ -175,13 +211,31 @@ func createRegistryHandlerFunc(executorData *ExecutorData, request *executor_cli
 		Certs:     struct{ UpdateOrCreate bool }{UpdateOrCreate: true},
 		Manifests: struct{ UpdateOrCreate bool }{UpdateOrCreate: true},
 		StaticPods: struct {
-			UpdateOrCreate       bool
-			MasterPeers          []string
-			CheckWithMasterPeers bool
+			UpdateOrCreate bool
+			Options        struct {
+				MasterPeers     []string
+				IsRaftBootstrap bool
+			}
+			Check struct {
+				WithMasterPeers     bool
+				WithIsRaftBootstrap bool
+			}
 		}{
-			UpdateOrCreate:       true,
-			CheckWithMasterPeers: true,
-			MasterPeers:          request.MasterPeers,
+			UpdateOrCreate: true,
+			Options: struct {
+				MasterPeers     []string
+				IsRaftBootstrap bool
+			}{
+				MasterPeers:     request.MasterPeers,
+				IsRaftBootstrap: request.IsRaftBootstrap,
+			},
+			Check: struct {
+				WithMasterPeers     bool
+				WithIsRaftBootstrap bool
+			}{
+				WithMasterPeers:     true,
+				WithIsRaftBootstrap: true,
+			},
 		},
 	}
 

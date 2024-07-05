@@ -95,8 +95,20 @@ func (m *NodeManager) GetNodeRunningStatus() (*master_workflow.SeaweedfsNodeRunn
 		var err error
 		resp, err = client.RequestCheckRegistry(
 			&executer_client.CheckRegistryRequest{
-				CheckWithMasterPeers: false,
-				MasterPeers:          []string{},
+				Options: struct {
+					MasterPeers     []string "json:\"masterPeers\""
+					IsRaftBootstrap bool     "json:\"isRaftBootstrap\""
+				}{
+					MasterPeers:     []string{},
+					IsRaftBootstrap: false,
+				},
+				Check: struct {
+					WithMasterPeers     bool "json:\"withMasterPeers\""
+					WithIsRaftBootstrap bool "json:\"withIsRaftBootstrap\""
+				}{
+					WithMasterPeers:     false,
+					WithIsRaftBootstrap: false,
+				},
 			},
 		)
 		return err
