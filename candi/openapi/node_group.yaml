@@ -2092,7 +2092,7 @@ spec:
                             Enables Topology Management on a node.
                         scope:
                           type: string
-                          x-doc-default: Container
+                          default: Container
                           description: |
                             Defines granularity with which resources are aligned:
                             - `Container`. The preferred resources are computed for a container. The computation does not take into account that multiple containers may belong to the same pod.
