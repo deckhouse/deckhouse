@@ -103,7 +103,11 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 type releasePhasePredicate struct{}
 
 func (rp releasePhasePredicate) Create(ev event.CreateEvent) bool {
-	return ev.Object.(*v1alpha1.DeckhouseRelease).Status.Phase == ""
+	switch ev.Object.(*v1alpha1.DeckhouseRelease).Status.Phase {
+	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended, v1alpha1.PhaseDeployed:
+		return false
+	}
+	return true
 }
 
 // Delete returns true if the Delete event should be processed
