@@ -28,6 +28,8 @@ import (
 	"sort"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -48,25 +50,12 @@ import (
 )
 
 func (r *deckhouseReleaseReconciler) checkDeckhouseReleaseLoop(ctx context.Context) {
-	err := r.checkDeckhouseRelease(ctx)
-	if err != nil {
-		r.logger.Errorf("check Deckhouse release: %s", err)
-	}
-
-	ticker := time.NewTicker(3 * time.Minute)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			err := r.checkDeckhouseRelease(ctx)
-			if err != nil {
-				r.logger.Errorf("check Deckhouse release: %s", err)
-			}
+	wait.UntilWithContext(ctx, func(ctx context.Context) {
+		err := r.checkDeckhouseRelease(ctx)
+		if err != nil {
+			r.logger.Errorf("check Deckhouse release: %s", err)
 		}
-	}
+	}, 3*time.Minute)
 }
 
 func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) error {

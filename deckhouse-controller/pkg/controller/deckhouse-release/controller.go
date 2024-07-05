@@ -307,11 +307,24 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{}, nil
 	}
 
+	skipped := deckhouseUpdater.GetSkippedPatchReleases()
+	if len(skipped) > 0 {
+		for _, sk := range skipped {
+			sk.Status.Phase = v1alpha1.PhaseSkipped
+			sk.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
+			if e := r.client.Status().Update(ctx, sk); e != nil {
+				return ctrl.Result{Requeue: true}, e
+			}
+		}
+	}
+
 	// some release is forced, burn everything, apply this patch!
 	if deckhouseUpdater.HasForceRelease() {
-		deckhouseUpdater.ApplyForcedRelease()
-		// TODO: check error??
-		return ctrl.Result{}, nil
+		if deckhouseUpdater.ApplyForcedRelease() {
+			return ctrl.Result{}, nil
+
+		}
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
 	var windows update.Windows

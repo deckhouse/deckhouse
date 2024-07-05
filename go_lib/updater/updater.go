@@ -485,9 +485,9 @@ func (du *Updater[R]) HasForceRelease() bool {
 }
 
 // ApplyForcedRelease deploys forced release without any checks (windows, requirements, approvals and so on)
-func (du *Updater[R]) ApplyForcedRelease() {
+func (du *Updater[R]) ApplyForcedRelease() bool {
 	if du.forcedReleaseIndex == -1 {
-		return
+		return true
 	}
 	forcedRelease := &(du.releases[du.forcedReleaseIndex])
 	var currentRelease *R
@@ -497,7 +497,7 @@ func (du *Updater[R]) ApplyForcedRelease() {
 
 	du.logger.Warnf("Forcing release %s", (*forcedRelease).GetName())
 
-	du.runReleaseDeploy(forcedRelease, currentRelease)
+	result := du.runReleaseDeploy(forcedRelease, currentRelease)
 
 	// remove annotation
 	err := du.kubeAPI.PatchReleaseAnnotations(*forcedRelease, map[string]any{
@@ -516,6 +516,8 @@ func (du *Updater[R]) ApplyForcedRelease() {
 			}
 		}
 	}
+
+	return result
 }
 
 // PredictedReleaseIsPatch shows if the predicted release is a patch with respect to the Deployed one
@@ -641,4 +643,16 @@ func (du *Updater[R]) GetPredictedReleaseIndex() int {
 
 func (du *Updater[R]) GetSkippedPatchesIndexes() []int {
 	return du.skippedPatchesIndexes
+}
+
+func (du *Updater[R]) GetSkippedPatchReleases() []R {
+	if len(du.skippedPatchesIndexes) == 0 {
+		return nil
+	}
+
+	skippedPatches := make([]R, 0, len(du.skippedPatchesIndexes))
+	for _, index := range du.skippedPatchesIndexes {
+		skippedPatches = append(skippedPatches, du.releases[index])
+	}
+	return skippedPatches
 }

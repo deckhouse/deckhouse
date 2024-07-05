@@ -23,6 +23,8 @@ import (
 	"sort"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,25 +35,12 @@ import (
 )
 
 func (r *deckhouseReleaseReconciler) cleanupDeckhouseReleaseLoop(ctx context.Context) {
-	err := r.cleanupDeckhouseRelease(ctx)
-	if err != nil {
-		r.logger.Errorf("check Deckhouse release: %s", err)
-	}
-
-	ticker := time.NewTicker(24 * time.Hour)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			err := r.cleanupDeckhouseRelease(ctx)
-			if err != nil {
-				r.logger.Errorf("check Deckhouse release: %s", err)
-			}
-		case <-ctx.Done():
-			return
+	wait.UntilWithContext(ctx, func(ctx context.Context) {
+		err := r.cleanupDeckhouseRelease(ctx)
+		if err != nil {
+			r.logger.Errorf("check Deckhouse release: %s", err)
 		}
-	}
+	}, 24*time.Hour)
 }
 
 func (r *deckhouseReleaseReconciler) cleanupDeckhouseRelease(ctx context.Context) error {

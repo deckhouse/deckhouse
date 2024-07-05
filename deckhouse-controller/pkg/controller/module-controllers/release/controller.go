@@ -893,6 +893,7 @@ func (c *moduleReleaseReconciler) parseNotificationConfig(ctx context.Context) (
 		return nil, fmt.Errorf("get secret: %w", err)
 	}
 
+	// TODO: remove this dependency
 	jsonSettings, ok := secret.Data["updateSettings.json"]
 	if !ok {
 		return new(updater.NotificationConfig), nil

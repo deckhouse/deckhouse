@@ -116,6 +116,13 @@ func (api *kubeAPI) DeployRelease(release *v1alpha1.DeckhouseRelease) error {
 	// patch deckhouse deployment is faster than set internal values and then upgrade by helm
 	// we can set "deckhouse.internal.currentReleaseImageName" value but lets left it this way
 	depl.Spec.Template.Spec.Containers[0].Image = api.imagesRegistry + ":" + release.Spec.Version
+
+	// dryrun
+	if val, ok := release.GetAnnotations()["dryrun"]; ok && val == "true" {
+		// TODO: write log about dry run
+		return nil
+	}
+
 	return api.client.Update(ctx, &depl)
 }
 
