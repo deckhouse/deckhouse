@@ -11,15 +11,10 @@ import (
 	"sort"
 	"strings"
 	pkg_cfg "system-registry-manager/pkg/cfg"
-	"system-registry-manager/pkg/utils"
 	pkg_utils "system-registry-manager/pkg/utils"
 	"time"
 
 	"github.com/sirupsen/logrus"
-)
-
-const (
-	IpForEvenNodesNumber = "192.0.2.1"
 )
 
 type CpmFuncNodeClusterStatus = func(*SeaweedfsNodeClusterStatus) bool
@@ -506,26 +501,15 @@ func RemoveLeaderStatusForNode(ctx context.Context, log *logrus.Entry, clusterNo
 		return err
 	}
 
-	// Remove IpForEvenNodesNumber from cluster
-	if err := clusterNode.RemoveNodeFromCluster(IpForEvenNodesNumber); err != nil {
-		return err
-	}
-	if _, err := WaitLeaderElectionForNodes(ctx, log, clusterNodes); err != nil {
-		return err
-	}
-
 	// Remove node from cluster
 	if err := clusterNode.RemoveNodeFromCluster(removedLeaderNodeIp); err != nil {
 		return err
 	}
+
 	if _, err := WaitLeaderElectionForNodes(ctx, log, clusterNodes); err != nil {
 		return err
 	}
 
-	// Add nodes to cluster
-	if utils.IsEvenNumber(len(clusterNodes) + 1) {
-		clusterNode.AddNodeToCluster(IpForEvenNodesNumber)
-	}
 	if err := clusterNode.AddNodeToCluster(removedLeaderNodeIp); err != nil {
 		return err
 	}

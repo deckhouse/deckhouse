@@ -34,7 +34,7 @@ func NewSeaweedfsScaleWorkflow(ctx context.Context, nodeManagers []RegistryNodeM
 
 func (w *SeaweedfsScaleWorkflow) Start() error {
 	expectedNodesCount := GetExpectedNodeCount(len(w.NodeManagers), w.ExpectedNodeCount)
-	w.log.Infof("ScaleWorkflow :: Start :: Starting with expected node count: %d", expectedNodesCount)
+	w.log.Infof("▶️ ScaleWorkflow :: Start :: Starting with expected node count: %d", expectedNodesCount)
 
 	if expectedNodesCount == 0 {
 		w.log.Info("Start :: Expected node count is 0, deleting all nodes.")
@@ -86,13 +86,13 @@ func (w *SeaweedfsScaleWorkflow) syncCluster(clusterNodes []RegistryNodeManager)
 	// Prepare leader and ips
 	w.log.Infof("syncCluster :: GetNewAndUnusedClusterIP")
 	leader, newClusterIPs, unUsedIPs, err := GetNewAndUnusedClusterIP(w.ctx, w.log, clusterNodes, []RegistryNodeManager{})
-	w.log.Infof("syncCluster :: RAW!!! error: %v, leaderName: %s, newClusterIPs: %v, unUsedIPs: %v", err, leader.GetNodeName(), newClusterIPs, unUsedIPs)
+	//w.log.Infof("syncCluster :: RAW!!! error: %v, leaderName: %s, newClusterIPs: %v, unUsedIPs: %v", err, leader.GetNodeName(), newClusterIPs, unUsedIPs)
 	if err != nil {
 		return err
 	}
 
-	leaderIP, _ := leader.GetNodeIP()
-	w.log.Infof("syncCluster :: RAW!!! error: %s, leaderIP: %v, newClusterIPs: %v, unUsedIPs: %v", err, leaderIP, newClusterIPs, unUsedIPs)
+	//leaderIP, _ := leader.GetNodeIP()
+	//w.log.Infof("syncCluster :: RAW!!! error: %s, leaderIP: %v, newClusterIPs: %v, unUsedIPs: %v", err, leaderIP, newClusterIPs, unUsedIPs)
 	if err != nil {
 		return err
 	}
@@ -194,13 +194,13 @@ func (w *SeaweedfsScaleWorkflow) scaleUpCluster(oldClusterNodes, newClusterNodes
 	// Prepare leader and ips
 	w.log.Infof("scaleUpCluster :: GetNewAndUnusedClusterIP")
 	leader, newClusterIPs, unUsedIPs, err := GetNewAndUnusedClusterIP(w.ctx, w.log, append(oldClusterNodes, newClusterNodes...), []RegistryNodeManager{})
-	w.log.Infof("scaleUpCluster :: RAW!!! error: %v, leaderName: %s, newClusterIPs: %v, unUsedIPs: %v", err, leader.GetNodeName(), newClusterIPs, unUsedIPs)
+	//w.log.Infof("scaleUpCluster :: RAW!!! error: %v, leaderName: %s, newClusterIPs: %v, unUsedIPs: %v", err, leader.GetNodeName(), newClusterIPs, unUsedIPs)
 	if err != nil {
 		return err
 	}
 
-	leaderIP, _ := leader.GetNodeIP()
-	w.log.Infof("scaleUpCluster :: RAW!!! error: %s, leaderIP: %v, newClusterIPs: %v, unUsedIPs: %v", err, leaderIP, newClusterIPs, unUsedIPs)
+	//leaderIP, _ := leader.GetNodeIP()
+	//w.log.Infof("scaleUpCluster :: RAW!!! error: %s, leaderIP: %v, newClusterIPs: %v, unUsedIPs: %v", err, leaderIP, newClusterIPs, unUsedIPs)
 	if err != nil {
 		return err
 	}
