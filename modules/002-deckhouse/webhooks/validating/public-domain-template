@@ -55,7 +55,7 @@ kubernetes:
       }
   - name: kube-dns-module
     apiVersion: deckhouse.io/v1alpha1
-    kind: ModuleConfig
+    kind: Module
     group: main
     executeHookOnEvent: []
     executeHookOnSynchronization: false
@@ -65,12 +65,12 @@ kubernetes:
       - kube-dns
     jqFilter: |
       {
-        "isEnabled": .spec.enabled,
+        "status": .status.status,
       }
 kubernetesValidating:
 - name: publicdomaintemplate-policy.deckhouse.io
   group: main
-  includeSnapshotsFrom: ["d8-kube-dns-cm-wh"]
+  includeSnapshotsFrom: ["d8-kube-dns-cm-wh", "d8-cluster-configuration", "kube-dns-module"]
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
@@ -84,9 +84,9 @@ EOF
 function __main__() {
   mcName=$(context::jq -r '.review.request.object.metadata.name')
   if [[ "$mcName" == "global" ]]; then
-    kubeDNSIsEnabled=$(context::jq -r '.snapshots.["kube-dns-module"][]?.filterResult.["isEnabled"]')
+    moduleKubeDNS=$(context::jq -r '.snapshots.["kube-dns-module"][]?.filterResult.["status"]')
 
-    if [[ $kubeDNSIsEnabled == "true" ]]; then
+    if [[ $moduleKubeDNS == "Ready" ]]; then
       kubeDNSConf=$(context::jq -r '.snapshots.["d8-kube-dns-cm-wh"][]?.filterResult.["kube-dns-conf"]')
       dnsDomains=$(echo $kubeDNSConf | grep -oP  'kubernetes .*? ip6.arpa')
     else
