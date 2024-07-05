@@ -839,7 +839,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-control
    ```shell
    kubectl -n d8-system delete po -l app=deckhouse
    ```
-   
+
 1. Дождитесь перезапуска Deckhouse и [выполнения всех задач в очереди](./#как-проверить-очередь-заданий-в-deckhouse):
 
   ```shell

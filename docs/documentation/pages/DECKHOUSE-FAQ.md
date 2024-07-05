@@ -902,12 +902,13 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
    ```shell
    kubectl -n d8-system delete po -l app=deckhouse
    ```
-   
+
 1. Wait until Deckhouse restarts and [all tasks in the queue are completed](./#how-to-check-the-job-queue-in-deckhouse):
 
- ```shell
- kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list
- ```
+   ```shell
+   kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list
+   ```
+
 1. On the master node, check the application of the new settings.
 
    The message `Configuration is in sync, nothing to do` should appear in the `bashible` systemd service log on the master node.
