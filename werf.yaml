@@ -1121,15 +1121,19 @@ import:
   {{- end }}
   - artifact: e2e-eks-terraform-plugins
     add: /terraform-provider-random
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/ramdom/3.6.2/linux_amd64/terraform-provider-random_v3.6.2_x5
+    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/random/3.6.2/linux_amd64/terraform-provider-random_v3.6.2_x5
     before: setup
   - artifact: e2e-eks-terraform-plugins
     add: /terraform-provider-tls
-    to: /usr/local/share/terraform/plugins/registry.terraform.io//hashicorp/tls/4.0.5/linux_amd64/terraform-provider-tls_v4.0.5_x5
+    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/tls/4.0.5/linux_amd64/terraform-provider-tls_v4.0.5_x5
     before: setup
   - artifact: e2e-eks-terraform-plugins
     add: /terraform-provider-cloudinit
-    to: /usr/local/share/terraform/plugins/registry.terraform.io//hashicorp/cloudinit/2.2.0/linux_amd64/terraform-provider-cloudinit_v2.2.0_x5
+    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/cloudinit/2.2.0/linux_amd64/terraform-provider-cloudinit_v2.2.0_x5
+    before: setup
+  - artifact: e2e-eks-terraform-plugins
+    add: /terraform-provider-kubernetes
+    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/kubernetes/2.31.0/linux_amd64/terraform-provider-kubernetes_v2.31.0_x5
     before: setup
 shell:
   beforeInstall:
@@ -1167,8 +1171,12 @@ shell:
     - git clone --depth 1 --branch v2.2.0 {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-cloudinit.git /src-provider-cloudinit
     - cd /src-provider-cloudinit
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" 
+    - git clone --depth 1 --branch v2.31.0 {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-kubernetes.git /src-provider-kubernetes
+    - cd /src-provider-kubernetes
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" 
     - mv /src-provider-random/terraform-provider-random /terraform-provider-random 
     - mv /src-provider-tls/terraform-provider-tls /terraform-provider-tls 
     - mv /src-provider-cloudinit/terraform-provider-cloudinit /terraform-provider-cloudinit
+    - mv /src-provider-kubernetes/terraform-provider-kubernetes /terraform-provider-kubernetes
     - chmod 755 /terraform-provider-*
     - chown 64535:64535 /terraform-provider-*
