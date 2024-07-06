@@ -125,7 +125,13 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 
 	md := downloader.NewModuleDownloader(k.dc, k.externalModulesDir, &ms, utils.GenerateRegistryOptions(&ms))
 	if err = md.ValidateModule(release.Spec.ModuleName, release.Spec.Version.String()); err != nil {
-		return fmt.Errorf("validation module failed: %w", err)
+		k.logger.Errorf("Module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
+		release.Status.Phase = v1alpha1.PhaseSuspended
+		if e := k.UpdateReleaseStatus(release, "validation failed: "+err.Error(), release.Status.Phase); e != nil {
+			return e
+		}
+
+		return nil
 	}
 	ds, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
 	if err != nil {
