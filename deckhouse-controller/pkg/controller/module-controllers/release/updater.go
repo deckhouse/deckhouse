@@ -30,7 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -143,25 +142,8 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 		return fmt.Errorf("update module release download statistic: %w", err)
 	}
 
-	moduleVersionPath := path.Join(k.externalModulesDir, moduleName, "v"+release.Spec.Version.String())
 	relativeModulePath := generateModulePath(moduleName, release.Spec.Version.String())
 	newModuleSymlink := path.Join(k.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, moduleName))
-
-	def := models.DeckhouseModuleDefinition{
-		Name:   moduleName,
-		Weight: release.Spec.Weight,
-		Path:   moduleVersionPath,
-	}
-	err = validateModule(def)
-	if err != nil {
-		k.logger.Errorf("Module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
-		release.Status.Phase = v1alpha1.PhaseSuspended
-		if e := k.UpdateReleaseStatus(release, "validation failed: "+err.Error(), release.Status.Phase); e != nil {
-			return e
-		}
-
-		return nil
-	}
 
 	// search symlink for module by regexp
 	// module weight for a new version of the module may be different from the old one,

@@ -26,7 +26,6 @@ import (
 	"time"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	operator "github.com/flant/addon-operator/pkg/utils"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	log "github.com/sirupsen/logrus"
@@ -42,7 +41,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
@@ -273,9 +271,8 @@ func (s stubModulesManager) DisableModuleHooks(_ string) {
 
 }
 
-func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
-	m, _ := addonmodules.NewBasicModule(name, "", 900, operator.Values{}, nil, nil)
-	return m
+func (s stubModulesManager) GetModule(_ string) *addonmodules.BasicModule {
+	return nil
 }
 
 func (s stubModulesManager) GetEnabledModuleNames() []string {
@@ -295,31 +292,4 @@ func singleDocToManifests(doc []byte) (result []string) {
 		}
 	}
 	return
-}
-
-func Test_validateModule(t *testing.T) {
-	log.SetOutput(io.Discard)
-
-	check := func(name string, failed bool) {
-		t.Helper()
-		t.Run(name, func(t *testing.T) {
-			path := filepath.Join("./testdata", name)
-			err := validateModule(
-				models.DeckhouseModuleDefinition{
-					Name:   name,
-					Weight: 900,
-					Path:   path,
-				},
-			)
-
-			if err != nil && !failed {
-				t.Fatalf("%s: unexpected error: %v", name, err)
-			}
-		})
-	}
-
-	check("module", false)
-	check("module-not-valid", true)
-	check("module-failed", true)
-	check("module-values-failed", true)
 }

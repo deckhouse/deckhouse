@@ -186,8 +186,12 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 
 	md := downloader.NewModuleDownloader(c.dc, c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
 	if err = md.ValidateModule(mo.Name, mo.Spec.ImageTag); err != nil {
-		c.logger.Errorf("Failed to validate module `%q`: %v", mo.Name, err)
-		return ctrl.Result{Requeue: false}, err
+		mo.Status.Message = fmt.Sprintf("validation failed: %s", err)
+		if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
+			return ctrl.Result{Requeue: true}, e
+		}
+
+		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
 	}
 	newChecksum, moduleDef, err := md.DownloadDevImageTag(mo.Name, mo.Spec.ImageTag, mo.Status.ImageDigest)
 	if err != nil {
@@ -212,16 +216,6 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 
 	if moduleDef == nil {
 		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, fmt.Errorf("got an empty module definition for %s module pull override", mo.Name)
-	}
-
-	err = validateModule(*moduleDef)
-	if err != nil {
-		mo.Status.Message = fmt.Sprintf("validation failed: %s", err)
-		if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
-			return ctrl.Result{Requeue: true}, e
-		}
-
-		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
 	}
 
 	symlinkPath := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", moduleDef.Weight, mo.Name))
@@ -413,10 +407,6 @@ func (c *modulePullOverrideReconciler) createModuleSymlink(moduleName, moduleIma
 		// download the module to fs
 		c.logger.Infof("Downloading module %q from registry", moduleName)
 		md := downloader.NewModuleDownloader(c.dc, c.externalModulesDir, moduleSource, utils.GenerateRegistryOptions(moduleSource))
-		if err = md.ValidateModule(moduleName, moduleImageTag); err != nil {
-			c.logger.Errorf("Failed to validate module `%q`: %v", moduleName, err)
-			return fmt.Errorf("validation module failed: %w", err)
-		}
 		_, _, err := md.DownloadDevImageTag(moduleName, moduleImageTag, "")
 		if err != nil {
 			return fmt.Errorf("couldn't get module %q pull override definition: %s", moduleName, err)

@@ -311,7 +311,7 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 
 	suite.Run("Old deployed-on annotation", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{}}}, nil
+			return []v1.Layer{&utils.FakeLayer{}}, nil
 		}}, nil)
 		d := moduleDirDescriptor{
 			dir:     moduleDir,

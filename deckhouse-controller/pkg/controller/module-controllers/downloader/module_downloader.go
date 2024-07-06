@@ -132,6 +132,14 @@ func (md *ModuleDownloader) ValidateModule(moduleName, moduleVersion string) err
 
 	def := md.fetchModuleDefinitionFromFS(moduleName, tmpDir)
 
+	if def.Weight < 900 || def.Weight > 999 {
+		return fmt.Errorf("external module weight must be between 900 and 999")
+	}
+
+	if def.Path == "" {
+		return fmt.Errorf("cannot validate module without path. Path is required to load openapi specs")
+	}
+
 	// create basic module
 	cb, vb, err := utils.ReadOpenAPIFiles(filepath.Join(def.Path, "openapi"))
 	if err != nil {

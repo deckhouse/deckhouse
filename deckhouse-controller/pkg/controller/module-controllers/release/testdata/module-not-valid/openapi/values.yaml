@@ -1,5 +1,0 @@
-type: object
-x-extend:
-  schema: config-values.yaml
-property
-  registry:

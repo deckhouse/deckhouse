@@ -49,7 +49,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
@@ -866,10 +865,6 @@ func (c *moduleReleaseReconciler) createModuleSymlink(moduleName, moduleVersion 
 		c.logger.Infof("Downloading module %q from registry", moduleName)
 		// download the module to fs
 		md := downloader.NewModuleDownloader(c.dc, c.externalModulesDir, moduleSource, utils.GenerateRegistryOptions(moduleSource))
-		if err = md.ValidateModule(moduleName, moduleVersion); err != nil {
-			c.logger.Errorf("Failed to validate module `%q`: %v", moduleName, err)
-			return fmt.Errorf("validation module failed: %w", err)
-		}
 		_, err = md.DownloadByModuleVersion(moduleName, moduleVersion)
 		if err != nil {
 			return fmt.Errorf("download module %v with version %v failed: %w. Skipping", moduleName, moduleVersion, err)
@@ -910,18 +905,6 @@ func (c *moduleReleaseReconciler) parseNotificationConfig(ctx context.Context) (
 	}
 
 	return settings.NotificationConfig, nil
-}
-
-func validateModule(def models.DeckhouseModuleDefinition) error {
-	if def.Weight < 900 || def.Weight > 999 {
-		return fmt.Errorf("external module weight must be between 900 and 999")
-	}
-
-	if def.Path == "" {
-		return fmt.Errorf("cannot validate module without path. Path is required to load openapi specs")
-	}
-
-	return nil
 }
 
 func restoreModuleSymlink(externalModulesDir, symlinkPath, moduleRelativePath string) error {
