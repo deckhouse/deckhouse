@@ -55,5 +55,5 @@ status:
   message: ""
   phase: Deployed
   pullDuration: 9m15s
-  size: 3
+  size: 12
   transitionTime: "2019-10-17T15:33:00Z"
