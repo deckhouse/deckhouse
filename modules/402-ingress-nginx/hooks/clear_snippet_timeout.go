@@ -77,7 +77,7 @@ func clearSnippetTimeout(input *go_hook.HookInput) error {
 			annotationPatch := map[string]any{
 				"metadata": map[string]any{
 					"annotations": map[string]any{
-						"nginx.ingress.kubernetes.io/auth-snippet": strings.Replace(parsed.annotation, "proxy_connect_timeout", "#proxy_connect_timeout", -1),
+						"nginx.ingress.kubernetes.io/auth-snippet": strings.ReplaceAll(parsed.annotation, "proxy_connect_timeout", "#proxy_connect_timeout"),
 					},
 				},
 			}
