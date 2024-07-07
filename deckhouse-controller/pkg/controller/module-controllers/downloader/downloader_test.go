@@ -17,8 +17,11 @@ limitations under the License.
 package downloader
 
 import (
+	"io"
+	"path/filepath"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -85,4 +88,24 @@ properties:
         type: array
     type: object
 `, string(data))
+}
+
+func Test_checkModuleConfig(t *testing.T) {
+	log.SetOutput(io.Discard)
+
+	check := func(name string, failed bool) {
+		t.Helper()
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join("./testdata", name)
+			err := checkModuleConfigFromFS(path)
+			if err != nil && !failed {
+				t.Fatalf("%s: unexpected error: %v", name, err)
+			}
+		})
+	}
+
+	check("module", false)
+	check("module-not-valid", true)
+	check("module-failed", true)
+	check("module-values-failed", true)
 }

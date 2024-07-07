@@ -100,7 +100,7 @@ func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum s
 		return "", nil, err
 	}
 
-	def := md.fetchModuleDefinitionFromFS(moduleName, moduleStorePath)
+	def := fetchModuleDefinitionFromFS(moduleName, moduleStorePath)
 
 	return digest.String(), def, nil
 }
@@ -113,62 +113,6 @@ func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion st
 	moduleVersionPath := path.Join(md.externalModulesDir, moduleName, moduleVersion)
 
 	return md.fetchAndCopyModuleByVersion(moduleName, moduleVersion, moduleVersionPath)
-}
-
-// ValidateModule checked module config files in tmp directory
-func (md *ModuleDownloader) ValidateModule(moduleName, moduleVersion string) error {
-	// get tmp directory
-	tmpDir, err := os.MkdirTemp("", "module*")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(tmpDir)
-
-	// fetch module to tmp directory
-	_, err = md.fetchAndCopyModuleByVersion(moduleName, moduleVersion, tmpDir)
-	if err != nil {
-		return err
-	}
-
-	def := md.fetchModuleDefinitionFromFS(moduleName, tmpDir)
-
-	if def.Weight < 900 || def.Weight > 999 {
-		return fmt.Errorf("external module weight must be between 900 and 999")
-	}
-
-	if def.Path == "" {
-		return fmt.Errorf("cannot validate module without path. Path is required to load openapi specs")
-	}
-
-	// create basic module
-	cb, vb, err := utils.ReadOpenAPIFiles(filepath.Join(def.Path, "openapi"))
-	if err != nil {
-		return fmt.Errorf("read open API files: %w", err)
-	}
-
-	bm, err := addonmodules.NewBasicModule(def.Name, def.Path, def.Weight, nil, cb, vb)
-	if err != nil {
-		return fmt.Errorf("new basic module: %w", err)
-	}
-
-	valuesKey := utils.ModuleNameToValuesKey(bm.GetName())
-	restoredName := utils.ModuleNameFromValuesKey(valuesKey)
-
-	if bm.GetName() != restoredName {
-		return fmt.Errorf("'%s' name should be in kebab-case and be restorable from camelCase: consider renaming to '%s'", bm.GetName(), restoredName)
-	}
-
-	err = bm.ValidateValues()
-	if err != nil {
-		return fmt.Errorf("validate values: %w", err)
-	}
-
-	err = bm.ValidateConfigValues()
-	if err != nil {
-		return fmt.Errorf("validate config values: %w", err)
-	}
-
-	return nil
 }
 
 // DownloadMetadataFromReleaseChannel downloads only module release image with metadata: version.json, checksum.json(soon)
@@ -239,6 +183,10 @@ func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (v1.Image, e
 }
 
 func (md *ModuleDownloader) storeModule(moduleStorePath string, img v1.Image) (*DownloadStatistic, error) {
+	if err := md.checkModuleConfig(img); err != nil {
+		return nil, fmt.Errorf("check module config error: %v", err)
+	}
+
 	_ = os.RemoveAll(moduleStorePath)
 
 	ds, err := md.copyModuleToFS(moduleStorePath, img)
@@ -253,6 +201,63 @@ func (md *ModuleDownloader) storeModule(moduleStorePath string, img v1.Image) (*
 	}
 
 	return ds, nil
+}
+
+func (md *ModuleDownloader) checkModuleConfig(img v1.Image) error {
+	// get tmp directory
+	tmpDir, err := os.MkdirTemp("", "module*")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmpDir)
+
+	if checkModuleConfigFromFS(tmpDir) != nil {
+		return fmt.Errorf("validate image error: %v", err)
+	}
+
+	return nil
+}
+
+func checkModuleConfigFromFS(tmpDir string) error {
+	def := fetchModuleDefinitionFromFS("module-name", tmpDir)
+
+	if def.Weight < 900 || def.Weight > 999 {
+		return fmt.Errorf("external module weight must be between 900 and 999")
+	}
+
+	if def.Path == "" {
+		return fmt.Errorf("cannot validate module without path. Path is required to load openapi specs")
+	}
+
+	// create basic module
+	cb, vb, err := utils.ReadOpenAPIFiles(filepath.Join(tmpDir, "openapi"))
+	if err != nil {
+		return fmt.Errorf("read open API files: %w", err)
+	}
+
+	bm, err := addonmodules.NewBasicModule(def.Name, def.Path, def.Weight, nil, cb, vb)
+	if err != nil {
+		return fmt.Errorf("new basic module: %w", err)
+	}
+
+	valuesKey := utils.ModuleNameToValuesKey(bm.GetName())
+	restoredName := utils.ModuleNameFromValuesKey(valuesKey)
+
+	if bm.GetName() != restoredName {
+		return fmt.Errorf("'%s' name should be in kebab-case and be restorable from camelCase: consider renaming to '%s'", bm.GetName(), restoredName)
+	}
+
+	err = bm.ValidateValues()
+	if err != nil {
+		return fmt.Errorf("validate values: %w", err)
+	}
+
+	err = bm.ValidateConfigValues()
+	if err != nil {
+		return fmt.Errorf("validate config values: %w", err)
+	}
+
+	return nil
 }
 
 func (md *ModuleDownloader) fetchAndCopyModuleByVersion(moduleName, moduleVersion, moduleVersionPath string) (*DownloadStatistic, error) {
@@ -379,33 +384,6 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleN
 	return "v" + moduleMetadata.Version.String(), digest.String(), moduleMetadata.Changelog, nil
 }
 
-func (md *ModuleDownloader) fetchModuleDefinitionFromFS(moduleName, moduleVersionPath string) *models.DeckhouseModuleDefinition {
-	def := &models.DeckhouseModuleDefinition{
-		Name:   moduleName,
-		Weight: defaultModuleWeight,
-		Path:   moduleVersionPath,
-	}
-
-	moduleDefFile := path.Join(moduleVersionPath, models.ModuleDefinitionFile)
-
-	if _, err := os.Stat(moduleDefFile); err != nil {
-		return def
-	}
-
-	f, err := os.Open(moduleDefFile)
-	if err != nil {
-		return def
-	}
-	defer f.Close()
-
-	err = yaml.NewDecoder(f).Decode(&def)
-	if err != nil {
-		return def
-	}
-
-	return def
-}
-
 func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, img v1.Image) (*models.DeckhouseModuleDefinition, error) {
 	def := &models.DeckhouseModuleDefinition{
 		Name:   moduleName,
@@ -468,6 +446,33 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(img v1.Image) (moduleRele
 	}
 
 	return meta, err
+}
+
+func fetchModuleDefinitionFromFS(moduleName, moduleVersionPath string) *models.DeckhouseModuleDefinition {
+	def := &models.DeckhouseModuleDefinition{
+		Name:   moduleName,
+		Weight: defaultModuleWeight,
+		Path:   moduleVersionPath,
+	}
+
+	moduleDefFile := path.Join(moduleVersionPath, models.ModuleDefinitionFile)
+
+	if _, err := os.Stat(moduleDefFile); err != nil {
+		return def
+	}
+
+	f, err := os.Open(moduleDefFile)
+	if err != nil {
+		return def
+	}
+	defer f.Close()
+
+	err = yaml.NewDecoder(f).Decode(&def)
+	if err != nil {
+		return def
+	}
+
+	return def
 }
 
 func untarModuleDefinition(rc io.ReadCloser, rw io.Writer) error {

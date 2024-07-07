@@ -185,14 +185,6 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 	}
 
 	md := downloader.NewModuleDownloader(c.dc, c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
-	if err = md.ValidateModule(mo.Name, mo.Spec.ImageTag); err != nil {
-		mo.Status.Message = fmt.Sprintf("validation failed: %s", err)
-		if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
-			return ctrl.Result{Requeue: true}, e
-		}
-
-		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
-	}
 	newChecksum, moduleDef, err := md.DownloadDevImageTag(mo.Name, mo.Spec.ImageTag, mo.Status.ImageDigest)
 	if err != nil {
 		mo.Status.Message = err.Error()
