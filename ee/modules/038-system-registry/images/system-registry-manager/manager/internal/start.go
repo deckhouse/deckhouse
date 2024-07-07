@@ -14,23 +14,17 @@ import (
 	pkg_logs "system-registry-manager/pkg/logs"
 )
 
-const (
-	mainProcessName = "main"
-)
-
-func updateMainManageContext(ctx context.Context) context.Context {
-	ctx = pkg_logs.SetLoggerToContext(ctx, mainProcessName)
-	return ctx
-}
+const mainProcessName = "main"
 
 func StartManager() {
-	rootCtx, rootCtxcancel := context.WithCancel(context.Background())
-	defer rootCtxcancel()
+	rootCtx, rootCtxCancel := context.WithCancel(context.Background())
+	defer rootCtxCancel()
 
-	rootCtx = updateMainManageContext(rootCtx)
+	// Set logger to context
+	rootCtx = pkg_logs.SetLoggerToContext(rootCtx, mainProcessName)
 	log := pkg_logs.GetLoggerFromContext(rootCtx)
 
-	cfg := common_config.NewRuntimeConfig(&rootCtxcancel)
+	cfg := common_config.NewRuntimeConfig(&rootCtxCancel)
 	executor := executor.New(rootCtx, cfg)
 	master := master.New(rootCtx, cfg)
 
