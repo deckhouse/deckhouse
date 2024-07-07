@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+// TODO(ipaqsa): Can be deleted after v1.65
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Queue:        "/modules/ingress-nginx/set-auth-timeouts",
@@ -55,7 +56,9 @@ func filterIngress(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	}
 	var found bool
 	for annotation, val := range ingress.ObjectMeta.GetAnnotations() {
-		if annotation == "nginx.ingress.kubernetes.io/auth-snippet" && strings.Contains(val, "proxy_connect_timeout") {
+		if annotation == "nginx.ingress.kubernetes.io/auth-snippet" &&
+			strings.Contains(val, "proxy_connect_timeout") &&
+			!strings.Contains(val, "#proxy_connect_timeout") {
 			found = true
 			break
 		}
