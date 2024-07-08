@@ -149,6 +149,9 @@ spec:
         - name: DEBUG
           value: "true"
         {{- end }}
+        ports:
+        - name: webhook
+          containerPort: 9680
         livenessProbe:
           httpGet:
             path: /sidekick/ping

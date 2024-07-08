@@ -8,6 +8,6 @@ spec:
   ports:
     - name: tcp-redis
       port: 6379
-      targetPort: 6379
+      targetPort: redis-port
   selector:
     app.kubernetes.io/name: argocd-redis

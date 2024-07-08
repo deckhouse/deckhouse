@@ -82,7 +82,8 @@ spec:
         - --config=/etc/adapter/config.yaml
         - --client-ca-file=/var/run/apiserver-proxy-client/ca.crt
         ports:
-        - containerPort: 6443
+          - name: metrics-adapter-port
+            containerPort: 6443
         livenessProbe:
           httpGet:
             path: /healthz

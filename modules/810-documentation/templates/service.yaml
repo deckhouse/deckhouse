@@ -10,7 +10,7 @@ spec:
   ports:
   - name: http
     port: 80
-    targetPort: 8080
+    targetPort: http
     protocol: TCP
   selector:
     app: documentation
@@ -26,7 +26,7 @@ spec:
   ports:
     - name: builder-http
       port: 8081
-      targetPort: 8081
+      targetPort: http-probe
       protocol: TCP
   selector:
     app: documentation

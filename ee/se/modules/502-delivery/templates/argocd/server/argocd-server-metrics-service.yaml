@@ -9,6 +9,6 @@ spec:
     - name: metrics
       port: 8083
       protocol: TCP
-      targetPort: 8083
+      targetPort: argocd-metrics-port
   selector:
     app.kubernetes.io/name: argocd-server

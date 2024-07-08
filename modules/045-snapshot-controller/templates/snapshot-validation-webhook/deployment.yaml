@@ -77,7 +77,8 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "snapshotValidationWebhook") }}
         imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 4443
+        - name: tcp-webhook
+          containerPort: 4443
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}

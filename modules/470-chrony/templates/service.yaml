@@ -12,3 +12,4 @@ spec:
     - protocol: UDP
       port: 123
       name: ntp
+      targetPort: ntp

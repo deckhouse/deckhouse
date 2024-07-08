@@ -77,7 +77,8 @@ spec:
             mountPath: "/etc/tls-certs"
             readOnly: true
         ports:
-        - containerPort: 8000
+          - name: admission-controller-port
+            containerPort: 8000
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
@@ -98,6 +99,6 @@ metadata:
 spec:
   ports:
     - port: 443
-      targetPort: 8000
+      targetPort: admission-controller-port
   selector:
     app: vpa-admission-controller
