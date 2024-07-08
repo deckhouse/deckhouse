@@ -102,6 +102,7 @@ bb-package-fetch-blobs() {
     do
       retries=$(( retries+1 )) 
       bb-package-fetch-blob "${PACKAGE_DIGEST}" "${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar.gz" && break
+			sleep 2
     done
   done
 }
