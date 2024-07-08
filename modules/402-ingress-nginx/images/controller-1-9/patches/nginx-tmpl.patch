@@ -105,7 +105,7 @@ index 94dc12412..93b7d2efc 100644
              proxy_set_header            X-Auth-Request-Redirect $request_uri;
              {{ end }}
  
-+            {{ if not contains $externalAuth.AuthSnippet "proxy_connect_timeout" }}
++            {{ if not (contains $externalAuth.AuthSnippet "proxy_connect_timeout") }}
 +            proxy_connect_timeout                   15s;
 +            {{ end }}
 +
