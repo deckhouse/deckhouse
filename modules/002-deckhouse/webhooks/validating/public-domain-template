@@ -88,7 +88,7 @@ function __main__() {
 
     if [[ $moduleKubeDNS == "Ready" ]]; then
       kubeDNSConf=$(context::jq -r '.snapshots.["d8-kube-dns-cm-wh"][]?.filterResult.["kube-dns-conf"]')
-      dnsDomains=$(echo $kubeDNSConf | grep -oP '(?<=kubernetes )(.*?)(?=ip6.arpa)'
+      dnsDomains=$(echo $kubeDNSConf | grep -oP '(?<=kubernetes )(.*?)(?=ip6.arpa)')
     else
       dnsDomains=$(context::jq -r '.snapshots.["d8-cluster-configuration"][]?.filterResult.["clusterDomain"]')
     fi
