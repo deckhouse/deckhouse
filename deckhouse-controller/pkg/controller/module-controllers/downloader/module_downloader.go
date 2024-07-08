@@ -211,6 +211,11 @@ func (md *ModuleDownloader) checkModuleConfig(img v1.Image) error {
 	}
 	defer os.RemoveAll(tmpDir)
 
+	_, err = md.copyModuleToFS(tmpDir, img)
+	if err != nil {
+		return fmt.Errorf("copy module error: %v", err)
+	}
+
 	if checkModuleConfigFromFS(tmpDir) != nil {
 		return fmt.Errorf("validate image error: %v", err)
 	}
