@@ -59,6 +59,7 @@ import (
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/extenders/deckhouseversion"
 )
 
 const (
@@ -85,8 +86,9 @@ type DeckhouseController struct {
 
 	deckhouseModules map[string]*models.DeckhouseModule
 	// <module-name>: <module-source>
-	sourceModules           map[string]string
-	embeddedDeckhousePolicy *v1alpha1.ModuleUpdatePolicySpec
+	sourceModules            map[string]string
+	embeddedDeckhousePolicy  *v1alpha1.ModuleUpdatePolicySpec
+	deckhouseVersionExtender *deckhouseversion.Extender
 }
 
 func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager, metricStorage *metric_storage.MetricStorage) (*DeckhouseController, error) {
@@ -153,6 +155,15 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		return nil, err
 	}
 
+	deckhouseVersionExtender, err := deckhouseversion.New()
+	if err != nil {
+		return nil, err
+	}
+
+	if err = mm.AddExtender(deckhouseVersionExtender); err != nil {
+		return nil, err
+	}
+
 	err = source.NewModuleSourceController(mgr, dc, embeddedDeckhousePolicy)
 	if err != nil {
 		return nil, err
@@ -183,10 +194,11 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		mgr:                mgr,
 		preflightCountDown: &preflightCountDown,
 
-		deckhouseModules:        make(map[string]*models.DeckhouseModule),
-		sourceModules:           make(map[string]string),
-		embeddedDeckhousePolicy: embeddedDeckhousePolicy,
-		metricStorage:           metricStorage,
+		deckhouseModules:         make(map[string]*models.DeckhouseModule),
+		sourceModules:            make(map[string]string),
+		embeddedDeckhousePolicy:  embeddedDeckhousePolicy,
+		metricStorage:            metricStorage,
+		deckhouseVersionExtender: deckhouseVersionExtender,
 	}, nil
 }
 

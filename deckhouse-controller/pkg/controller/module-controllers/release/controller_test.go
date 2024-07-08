@@ -25,6 +25,7 @@ import (
 	"time"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	log "github.com/sirupsen/logrus"
@@ -279,6 +280,10 @@ func (s stubModulesManager) GetEnabledModuleNames() []string {
 
 func (s stubModulesManager) RunModuleWithNewOpenAPISchema(_, _, _ string) error {
 	return nil
+}
+
+func (s stubModulesManager) FilterModuleByExtender(_ extenders.ExtenderName, _ string, _ map[string]string) (*bool, error) {
+	return nil, nil
 }
 
 func singleDocToManifests(doc []byte) (result []string) {

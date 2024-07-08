@@ -30,6 +30,7 @@ import (
 	"time"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/shell-operator/pkg/metric_storage"
@@ -55,6 +56,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/extenders/deckhouseversion"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
@@ -339,8 +341,16 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	moduleName := mr.Spec.ModuleName
 
+	passed, err := c.moduleManager.FilterModuleByExtender(deckhouseversion.Name, mr.GetName(), nil)
+	if err != nil {
+		return ctrl.Result{Requeue: true}, err
+	}
+	if passed != nil && !*passed {
+		return ctrl.Result{Requeue: false}, deckhouseversion.NewError(mr.GetName())
+	}
+
 	otherReleases := new(v1alpha1.ModuleReleaseList)
-	err := c.client.List(ctx, otherReleases, client.MatchingLabels{"module": moduleName})
+	err = c.client.List(ctx, otherReleases, client.MatchingLabels{"module": moduleName})
 	if err != nil {
 		return ctrl.Result{Requeue: true}, err
 	}
@@ -947,6 +957,7 @@ type moduleManager interface {
 	GetModule(moduleName string) *addonmodules.BasicModule
 	RunModuleWithNewOpenAPISchema(moduleName, moduleSource, modulePath string) error
 	GetEnabledModuleNames() []string
+	FilterModuleByExtender(name extenders.ExtenderName, moduleName string, logsLabel map[string]string) (*bool, error)
 }
 
 func (c *moduleReleaseReconciler) updateModuleReleaseDownloadStatistic(ctx context.Context, release *v1alpha1.ModuleRelease,
