@@ -26,7 +26,7 @@ for volume in ${volume_names}
 do
   symlink="$(nvme id-ctrl -v "${volume}" | ( grep '^0000:' || true ) | sed -E 's/.*"(\/dev\/)?([a-z0-9]+)\.+"$/\/dev\/\2/')"
   if [ -z "${symlink}" ]; then
-    symlink="$(nvme id-ctrl  --output binary "${volume}" | tr -d '\0' |grep -aoP '/dev/.*')"
+    symlink="$(nvme id-ctrl  --output binary "${volume}" | tr -d '\0' |grep -aoP '/dev/\S*')"
   fi
   
   if [ ! -z "${symlink}" ] && [ ! -e "${symlink}" ]; then
