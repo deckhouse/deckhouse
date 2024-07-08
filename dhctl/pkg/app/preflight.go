@@ -27,7 +27,6 @@ var (
 	PreflightSkipSSHCredentialsCheck       = false
 	PreflightSkipRegistryCredentials       = false
 	PreflightSkipContainerdExistCheck      = false
-	PreflightSkipMasterHostname            = false
 	PreflightSkipPythonChecks              = false
 	PreflightSkipSudoIsAllowedForUserCheck = false
 	PreflightSkipOneSSHHost                = false
