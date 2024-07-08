@@ -44,3 +44,5 @@ metadata:
 spec:
   version: "v1.26.0"
 approved: true
+status:
+  phase: Pending

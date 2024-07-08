@@ -18,6 +18,8 @@ metadata:
   name: v1.27.0
 spec:
   version: v1.27.0
+status:
+  phase: Pending
 ---
 apiVersion: v1
 kind: Pod
