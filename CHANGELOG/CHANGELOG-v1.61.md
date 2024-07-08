@@ -38,6 +38,10 @@
  - **[candi]** Set `LC_NUMERIC` in configure kubelet. [#8383](https://github.com/deckhouse/deckhouse/pull/8383)
  - **[cloud-provider-vcd]** Support catalog in instance class template [#8539](https://github.com/deckhouse/deckhouse/pull/8539)
  - **[cloud-provider-yandex]** Fix typo in label key in discoverer. [#8792](https://github.com/deckhouse/deckhouse/pull/8792)
+ - **[cni-cilium]** Fix trouble with empty `excludedCIDRs` field in `EgressGatewayPolicy`. [#8930](https://github.com/deckhouse/deckhouse/pull/8930)
+ - **[deckhouse-controller]** Fix kubectl version detection in `kubectl_wrapper.sh`. [#8829](https://github.com/deckhouse/deckhouse/pull/8829)
+ - **[dhctl]** Fix registry preflight check for anonymous docker registries. [#8940](https://github.com/deckhouse/deckhouse/pull/8940)
+ - **[dhctl]** Fix SSH tunneling preflight check not triggering when TCP forwarding is disabled. [#8857](https://github.com/deckhouse/deckhouse/pull/8857)
  - **[dhctl]** Fix working with registries on non-standard ports. [#8809](https://github.com/deckhouse/deckhouse/pull/8809)
  - **[dhctl]** Fix registry path calculation. [#8802](https://github.com/deckhouse/deckhouse/pull/8802)
  - **[dhctl]** Fix bootstrap cluster. [#8787](https://github.com/deckhouse/deckhouse/pull/8787)
@@ -56,6 +60,7 @@
     registry-packages-proxy will restart.
  - **[registry-packages-proxy]** Fix registry path calculation. [#8802](https://github.com/deckhouse/deckhouse/pull/8802)
     registry-packages-proxy will restart.
+ - **[static-routing-manager]** Fixed CRDs path in `ensure_crds` hook. [#8928](https://github.com/deckhouse/deckhouse/pull/8928)
  - **[user-authn]** Fix crowd basic auth proxy migration. [#8704](https://github.com/deckhouse/deckhouse/pull/8704)
  - **[user-authn]** Replace the `enable` option with the `enabled` in the `publishAPI` field. [#8441](https://github.com/deckhouse/deckhouse/pull/8441)
 
