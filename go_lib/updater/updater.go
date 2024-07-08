@@ -24,9 +24,11 @@ import (
 	"time"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	"github.com/deckhouse/deckhouse/go_lib/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
@@ -121,9 +123,14 @@ func (du *Updater[R]) checkPatchReleaseConditions(predictedRelease *R) bool {
 }
 
 func (du *Updater[R]) checkReleaseNotification(predictedRelease *R, updateWindows update.Windows) bool {
+	helpers.Infof("updater: checkReleaseNotification: predictedRelease: %v", *predictedRelease)
+	helpers.Infof("updater: checkReleaseNotification: du.releaseData.Notified: %v", du.releaseData.Notified)
+
 	if du.releaseData.Notified {
 		return true
 	}
+
+	log.Infof("updater: checkReleaseNotification: not notified")
 
 	var applyTimeChanged bool
 	predictedReleaseApplyTime := du.predictedReleaseApplyTime(predictedRelease)
@@ -137,6 +144,8 @@ func (du *Updater[R]) checkReleaseNotification(predictedRelease *R, updateWindow
 		}
 	}
 	releaseApplyTime := updateWindows.NextAllowedTime(predictedReleaseApplyTime)
+
+	helpers.Infof("updater: checkReleaseNotification after predictedReleaseApplyTime: predictedRelease: %v", *predictedRelease)
 
 	predictedReleaseVersion := (*predictedRelease).GetVersion()
 	if du.notificationConfig.WebhookURL != "" {
@@ -155,11 +164,16 @@ func (du *Updater[R]) checkReleaseNotification(predictedRelease *R, updateWindow
 		}
 	}
 
+	helpers.Infof("updater: checkReleaseNotification after webhook process: predictedRelease: %v", *predictedRelease)
+
+	helpers.Infof("updater: checkReleaseNotification after webhook process: du.releases: %s", du.releases)
 	err := du.changeNotifiedFlag(true)
 	if err != nil {
 		du.logger.Error("change notified flag: %s", err.Error())
 		return false
 	}
+
+	helpers.Infof("updater: checkReleaseNotification after changeNotifiedFlag: predictedRelease: %v", *predictedRelease)
 
 	if applyTimeChanged && !(*predictedRelease).GetApplyNow() {
 		err = du.kubeAPI.PatchReleaseApplyAfter(*predictedRelease, releaseApplyTime)
@@ -168,6 +182,8 @@ func (du *Updater[R]) checkReleaseNotification(predictedRelease *R, updateWindow
 		}
 		return false
 	}
+
+	helpers.Infof("updater: checkReleaseNotification: predictedRelease: %v", *predictedRelease)
 
 	return true
 }
@@ -181,6 +197,7 @@ func (du *Updater[R]) checkReleaseNotification(predictedRelease *R, updateWindow
 // - Update windows or manual approval
 // - Deckhouse pod is ready
 func (du *Updater[R]) checkMinorReleaseConditions(predictedRelease *R, updateWindows update.Windows) bool {
+	helpers.Infof("updater/checkMinorReleaseConditions: predictedRelease: %s", *predictedRelease)
 	// check: release requirements (hard lock)
 	passed := du.checkReleaseRequirements(predictedRelease)
 	if !passed {
@@ -189,6 +206,7 @@ func (du *Updater[R]) checkMinorReleaseConditions(predictedRelease *R, updateWin
 		return false
 	}
 
+	helpers.Infof("updater/checkMinorReleaseConditions after checkReleaseRequirements: predictedRelease: %s", *predictedRelease)
 	// check: release disruptions (hard lock)
 	passed = du.checkReleaseDisruptions(predictedRelease)
 	if !passed {
@@ -196,6 +214,7 @@ func (du *Updater[R]) checkMinorReleaseConditions(predictedRelease *R, updateWin
 		du.logger.Warnf("Release %s disruption approval required", (*predictedRelease).GetName())
 		return false
 	}
+	helpers.Infof("updater/checkMinorReleaseConditions after checkReleaseDisruptions: predictedRelease: %s", *predictedRelease)
 
 	// check: Notification
 	if du.notificationConfig != nil {
@@ -204,6 +223,7 @@ func (du *Updater[R]) checkMinorReleaseConditions(predictedRelease *R, updateWin
 			return false
 		}
 	}
+	helpers.Infof("updater/checkMinorReleaseConditions after checkReleaseNotification: predictedRelease: %s", *predictedRelease)
 
 	// call tine checks, only if release does not have the `release.deckhouse.io/apply-now="true"` annotation
 	if !(*predictedRelease).GetApplyNow() {
@@ -233,6 +253,7 @@ func (du *Updater[R]) checkMinorReleaseConditions(predictedRelease *R, updateWin
 
 		if du.inManualMode {
 			// check: release is approved in Manual mode
+			helpers.Infof("updater/checkMinorReleaseConditions manual mode: predictedRelease: %s", *predictedRelease)
 			if !(*predictedRelease).GetApprovedStatus() {
 				du.logger.Infof("Release %s is waiting for manual approval", (*predictedRelease).GetName())
 				du.metricsUpdater.WaitingManual((*predictedRelease).GetName(), float64(du.totalPendingManualReleases))
@@ -278,6 +299,8 @@ func (du *Updater[R]) checkMinorReleaseConditions(predictedRelease *R, updateWin
 //   - Manual approving
 //   - Release requirements
 func (du *Updater[R]) ApplyPredictedRelease(updateWindows update.Windows) bool {
+	helpers.Infof("updater du.releases: %s", du.releases)
+
 	if du.predictedReleaseIndex == -1 {
 		return false // has no predicted release
 	}
@@ -286,6 +309,7 @@ func (du *Updater[R]) ApplyPredictedRelease(updateWindows update.Windows) bool {
 
 	predictedRelease := &(du.releases[du.predictedReleaseIndex])
 
+	helpers.Infof("updater: predictedRelease: %s", *predictedRelease)
 	if du.currentDeployedReleaseIndex != -1 {
 		currentRelease = &(du.releases[du.currentDeployedReleaseIndex])
 	}
@@ -293,6 +317,7 @@ func (du *Updater[R]) ApplyPredictedRelease(updateWindows update.Windows) bool {
 	// if deckhouse pod has bootstrap image -> apply first release
 	// doesn't matter which is update mode
 	if du.deckhouseIsBootstrapping && len(du.releases) == 1 {
+		log.Infof("runReleaseDeploy")
 		return du.runReleaseDeploy(predictedRelease, currentRelease)
 	}
 
@@ -300,10 +325,13 @@ func (du *Updater[R]) ApplyPredictedRelease(updateWindows update.Windows) bool {
 
 	if du.PredictedReleaseIsPatch() {
 		readyForDeploy = du.checkPatchReleaseConditions(predictedRelease)
+		log.Infof("PatchRelease")
 	} else {
 		readyForDeploy = du.checkMinorReleaseConditions(predictedRelease, updateWindows)
+		log.Infof("MinorRelease")
 	}
 
+	log.Infof("updater: readyForDeploy: %#v", readyForDeploy)
 	if !readyForDeploy {
 		return false
 	}
@@ -613,11 +641,15 @@ func (du *Updater[R]) patchManualRelease(release R) R {
 	}
 
 	if !release.GetManuallyApproved() {
+		log.Infof("Not approved branch")
 		release.SetApprovedStatus(false)
 		du.totalPendingManualReleases++
 	} else {
+		log.Infof("Approved branch")
 		release.SetApprovedStatus(true)
 	}
+
+	_ = du.kubeAPI.UpdateReleaseStatus(release, release.GetMessage(), release.GetPhase())
 
 	return release
 }
@@ -644,6 +676,9 @@ func (du *Updater[R]) PrepareReleases(releases []R) {
 	sort.Sort(ByVersion[R](releases))
 
 	du.releases = releases
+
+	helpers.Infof("=== Releases: %s", releases)
+	helpers.Infof("=== Updater.Releases: %s", du.releases)
 }
 
 func (du *Updater[R]) checkReleaseRequirements(rl *R) bool {
@@ -695,9 +730,14 @@ func (du *Updater[R]) changeNotifiedFlag(fl bool) error {
 func (du *Updater[R]) saveReleaseData() error {
 	var release R
 
+	helpers.Infof("updater: saveReleaseData: du.releases: %v", du.releases)
+	helpers.Infof("updater: saveReleaseData: release: %v", release)
+	helpers.Infof("updater: saveReleaseData: predictedReleaseIndex: %v", du.GetPredictedReleaseIndex())
+
 	if du.predictedReleaseIndex != -1 {
 		release = du.releases[du.predictedReleaseIndex]
 	}
+	helpers.Infof("updater: saveReleaseData: release: %v", release)
 
 	return du.kubeAPI.SaveReleaseData(release, du.releaseData)
 }

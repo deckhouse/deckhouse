@@ -55,6 +55,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
@@ -339,6 +340,8 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	moduleName := mr.Spec.ModuleName
 
+	log.Infof("controller: Reconciling pending release for module %q", mr.Spec.ModuleName)
+
 	otherReleases := new(v1alpha1.ModuleReleaseList)
 	err := c.client.List(ctx, otherReleases, client.MatchingLabels{"module": moduleName})
 	if err != nil {
@@ -410,13 +413,15 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	for _, r := range otherReleases.Items {
 		pointerReleases = append(pointerReleases, &r)
 	}
+	helpers.Infof("controller: reconcilePendingRelease pointerReleases: %v", pointerReleases)
 	releaseUpdater.PrepareReleases(pointerReleases)
+	helpers.Infof("controller: reconcilePendingRelease pointerReleases after Prepare: %v", pointerReleases)
 	if releaseUpdater.ReleasesCount() == 0 {
 		return ctrl.Result{}, nil
 	}
 
 	releaseUpdater.PredictNextRelease()
-
+	helpers.Infof("controller: reconcilePendingRelease releaseUpdater: %v", releaseUpdater)
 	if releaseUpdater.LastReleaseDeployed() {
 		// latest release deployed
 		deployedRelease := otherReleases.Items[releaseUpdater.GetCurrentDeployedReleaseIndex()]

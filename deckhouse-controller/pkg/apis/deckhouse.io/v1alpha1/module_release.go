@@ -24,6 +24,10 @@ import (
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/deckhouse/deckhouse/go_lib/helpers"
 )
 
 const (
@@ -117,6 +121,7 @@ func (mr *ModuleRelease) GetApplyNow() bool {
 }
 
 func (mr *ModuleRelease) SetApprovedStatus(val bool) {
+	helpers.Infof("setting approved status to %v", val)
 	mr.Status.Approved = val
 }
 
@@ -125,12 +130,17 @@ func (mr *ModuleRelease) GetSuspend() bool {
 }
 
 func (mr *ModuleRelease) GetManuallyApproved() bool {
-	if approved, found := mr.ObjectMeta.Annotations[approvalAnnotation]; found {
+	log.Infof("GetManuallyApproved checking approve")
+	helpers.Infof("GetManuallyApproved ModuleRelease: %#v", *mr)
+	if approved, found := mr.GetObjectMeta().GetAnnotations()[approvalAnnotation]; found {
+		log.Infof("GetManuallyApproved approval found")
 		value, err := strconv.ParseBool(approved)
 		if err != nil {
+			log.Errorf("failed to parse approval value: %s", err)
 			return false
 		}
 
+		helpers.Infof("GetManuallyApproved approval value: %v", value)
 		return value
 	}
 
