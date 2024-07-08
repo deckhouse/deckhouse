@@ -140,7 +140,6 @@ func (api *kubeAPI) DeployRelease(release *v1alpha1.DeckhouseRelease) error {
 			}
 		}()
 		return nil
-
 	}
 
 	return api.client.Update(ctx, &depl)
