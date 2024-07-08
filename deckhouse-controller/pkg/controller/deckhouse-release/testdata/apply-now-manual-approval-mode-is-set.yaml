@@ -45,3 +45,5 @@ metadata:
     release.deckhouse.io/apply-now: "true"
 spec:
   version: "v1.26.0"
+status:
+  phase: Pending

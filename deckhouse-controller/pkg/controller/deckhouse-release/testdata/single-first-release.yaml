@@ -34,3 +34,5 @@ metadata:
   name: v1.25.1
 spec:
   version: "v1.25.1"
+status:
+  phase: Pending

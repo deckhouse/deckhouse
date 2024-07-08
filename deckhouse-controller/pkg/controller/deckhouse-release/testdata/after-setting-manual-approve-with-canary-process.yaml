@@ -45,3 +45,5 @@ metadata:
 spec:
   version: "v1.36.0"
   applyAfter: "2222-11-11T23:23:23Z"
+status:
+  phase: Pending

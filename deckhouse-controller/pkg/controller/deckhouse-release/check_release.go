@@ -635,5 +635,4 @@ func buildSuspendAnnotation(suspend bool) []byte {
 
 type moduleManager interface {
 	GetEnabledModuleNames() []string
-	AreModulesInited() bool
 }
