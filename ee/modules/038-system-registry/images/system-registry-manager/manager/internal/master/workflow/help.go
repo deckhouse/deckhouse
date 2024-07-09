@@ -522,7 +522,7 @@ func GetClustersMembers(nodeManagers []RegistryNodeManager) ([]ClusterMembers, e
 	for _, node := range nodeManagers {
 		clusterStatus, err := cache.GetNodeManagerClusterStatus(node)
 		if err != nil {
-			// Рафт не работает, возможно узел не добавлен в кластер, пропустить узел
+			// Skip if raft not work
 			continue
 		}
 
