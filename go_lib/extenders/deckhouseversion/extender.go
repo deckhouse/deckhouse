@@ -69,11 +69,10 @@ func (e *Extender) Filter(moduleName string, _ map[string]string) (*bool, error)
 	if !ok {
 		return nil, nil
 	}
-	valid, errs := constraint.Validate(e.currentVersion)
-	if len(errs) != 0 {
+	if _, errs := constraint.Validate(e.currentVersion); len(errs) != 0 {
 		return pointer.Bool(false), fmt.Errorf("requirements of module %s are not satisfied: current deckhouse version is not suitable: %s", moduleName, errs[0].Error())
 	}
-	return pointer.Bool(valid), nil
+	return pointer.Bool(true), nil
 }
 
 func (e *Extender) IsTerminator() {
