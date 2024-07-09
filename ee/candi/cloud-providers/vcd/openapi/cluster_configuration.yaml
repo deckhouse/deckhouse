@@ -93,14 +93,14 @@ apiVersions:
                 placementPolicy:
                   description: |
                     PlacementPolicy is the placement policy to be used on this machine.
-                    
+
                     If no placement policy is specified, default placement policy will be used to create the nodes.
                   type: string
                   example: Hypervisor1
                 sizingPolicy:
                   description: |
                     SizingPolicy is the sizing policy to be used on this machine.
-                    
+
                     If no sizing policy is specified, default sizing policy will be used to create the nodes.
                   type: string
                   example: 4Cpu8Memory
@@ -111,9 +111,11 @@ apiVersions:
                   example: ssd
                 template:
                   description: |
-                    Path of the template OVA that is to be used. Consists of catalog and template path.
+                    Path of the template OVA that is to be used. Consists of organization(optionally), catalog and template path.
                   type: string
-                  example: Linux/ubuntu2204-cloud-ova
+                  x-examples:
+                    - Linux/ubuntu2204-cloud-ova
+                    - MyOrg/Linux/ubuntu2204-cloud-ova
                 mainNetworkIPAddresses:
                   type: array
                   description: |
@@ -201,14 +203,14 @@ apiVersions:
                   placementPolicy:
                     description: |
                       PlacementPolicy is the placement policy to be used on this machine.
-                      
+
                       If no placement policy is specified, default placement policy will be used to create the nodes.
                     type: string
                     example: Hypervisor1
                   sizingPolicy:
                     description: |
                       SizingPolicy is the sizing policy to be used on this machine.
-                      
+
                       If no sizing policy is specified, default sizing policy will be used to create the nodes.
                     type: string
                     example: 4Cpu8Memory
@@ -219,9 +221,11 @@ apiVersions:
                     example: ssd
                   template:
                     description: |
-                      Path of the template OVA that is to be used. Consists of catalog and template path.
+                      Path of the template OVA that is to be used. Consists of organization(optionally), catalog and template path.
                     type: string
-                    example: Linux/ubuntu2204-cloud-ova
+                    x-examples:
+                      - Linux/ubuntu2204-cloud-ova
+                      - MyOrg/Linux/ubuntu2204-cloud-ova
                   mainNetworkIPAddresses:
                     type: array
                     description: |

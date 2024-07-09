@@ -3,18 +3,22 @@
 
 
 locals {
-  catalog  = split("/", local.master_instance_class.template)[0]
-  template = split("/", local.master_instance_class.template)[1]
+  template_path = split("/", local.master_instance_class.template)
+  org = length(local.template_path) == 3 ? local.template_path[0] : ""
+  catalog = length(local.template_path) == 2 ? local.template_path[0] : local.template_path[1]
+  template = length(local.template_path) == 2 ? local.template_path[1] : local.template_path[2]
   ip_address  = length(local.main_ip_addresses) > 0 ? element(local.main_ip_addresses, var.nodeIndex) : null
   placement_policy = lookup(local.master_instance_class, "placementPolicy", "")
 }
 
 
 data "vcd_catalog" "catalog" {
+  org = local.org
   name = local.catalog
 }
 
 data "vcd_catalog_vapp_template" "template" {
+  org = local.org
   catalog_id = data.vcd_catalog.catalog.id
   name       = local.template
 }
