@@ -341,12 +341,12 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	moduleName := mr.Spec.ModuleName
 
-	passed, err := c.moduleManager.FilterModuleByExtender(deckhouseversion.Name, mr.GetName(), nil)
+	passed, err := c.moduleManager.FilterModuleByExtender(deckhouseversion.Name, mr.GetModuleName(), nil)
 	if err != nil {
 		return ctrl.Result{Requeue: true}, err
 	}
 	if passed != nil && !*passed {
-		return ctrl.Result{Requeue: false}, deckhouseversion.NewError(mr.GetName())
+		return ctrl.Result{Requeue: false}, deckhouseversion.NewError(mr.GetModuleName())
 	}
 
 	otherReleases := new(v1alpha1.ModuleReleaseList)

@@ -76,6 +76,10 @@ func (e *Extender) Filter(moduleName string, _ map[string]string) (*bool, error)
 	return pointer.Bool(valid), nil
 }
 
+func (e *Extender) IsTerminator() {
+
+}
+
 func NewError(moduleName string) error {
 	return fmt.Errorf("requirements of module %s are not satisfied: current deckhouse version is not suitable", moduleName)
 }
