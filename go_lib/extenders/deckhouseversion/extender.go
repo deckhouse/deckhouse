@@ -18,6 +18,7 @@ package deckhouseversion
 
 import (
 	"errors"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"os"
 
@@ -83,4 +84,8 @@ func (e *Extender) Filter(moduleName string, _ map[string]string) (*bool, error)
 
 func (e *Extender) IsTerminator() {
 
+}
+
+func NewError(moduleName string) error {
+	return fmt.Errorf("requirements of module %s are not satisfied: current deckhouse version is not suitable", moduleName)
 }
