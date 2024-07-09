@@ -22,11 +22,16 @@ if [ -f /var/lib/bashible/kubernetes-data-device-installed ]; then
 fi
 
 volume_names="$(find /dev | grep -i 'nvme[0-21]n1$' || true)"
+
+if [ ! -z "${volume_names}" ]
+  bb-rp-install "ebsnvme-id:{{ .images.registrypackages.amazonEc2Utils220 }}"
+fi
+
 for volume in ${volume_names}
 do
   symlink="$(nvme id-ctrl -v "${volume}" | ( grep '^0000:' || true ) | sed -E 's/.*"(\/dev\/)?([a-z0-9]+)\.+"$/\/dev\/\2/')"
   if [ -z "${symlink}" ]; then
-    symlink="$(nvme id-ctrl  --output binary "${volume}" | tr -d '\0' |grep -aoP '/dev/\S*')"
+    symlink="$(/opt/deckhouse/bin/ebsnvme-id "${volume}" | sed -n '2p' )"
   fi
   
   if [ ! -z "${symlink}" ] && [ ! -e "${symlink}" ]; then
