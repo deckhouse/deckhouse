@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -34,7 +35,7 @@ import (
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
-	controller "caps-controller-manager/internal/controller/infrastructure"
+	"caps-controller-manager/internal/controller"
 	"caps-controller-manager/internal/event"
 	"caps-controller-manager/internal/providerid"
 	"caps-controller-manager/internal/scope"
@@ -225,6 +226,15 @@ func (r *StaticInstanceReconciler) adoptBootstrappedStaticInstance(ctx context.C
 		return ctrl.Result{}, errors.Errorf("no valid StaticMachine found for adoption")
 	}
 
+	machineScope, ok, err := controller.NewMachineScope(ctx, r.Client, r.Config, machine)
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to create a machine scope")
+	}
+	if !ok {
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+	}
+
+	instanceScope.MachineScope = machineScope
 	instanceScope.Instance.Status.MachineRef = &corev1.ObjectReference{
 		Kind:       machine.Kind,
 		Namespace:  machine.Namespace,
@@ -237,16 +247,15 @@ func (r *StaticInstanceReconciler) adoptBootstrappedStaticInstance(ctx context.C
 	conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceBootstrapSucceededCondition)
 	conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceAddedToNodeGroupCondition)
 	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning)
-	err := instanceScope.Patch(ctx)
-	if err != nil {
+	if err = instanceScope.Patch(ctx); err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "failed to set StaticInstance phase to Running")
 	}
 
-	originalMachine := machine.DeepCopy()
 	machine.Spec.ProviderID = providerid.GenerateProviderID(instanceScope.Instance.Name)
 	machine.Status.Ready = true
 	conditions.MarkTrue(machine, infrav1.StaticMachineStaticInstanceReadyCondition)
-	if err = r.Client.Patch(ctx, machine, client.MergeFrom(originalMachine)); err != nil {
+	instanceScope.MachineScope.StaticMachine = machine
+	if err = instanceScope.MachineScope.Patch(ctx); err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "failed to patch StaticMachine's provider ID")
 	}
 
