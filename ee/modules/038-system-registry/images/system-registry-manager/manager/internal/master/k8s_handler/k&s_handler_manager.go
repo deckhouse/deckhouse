@@ -33,7 +33,6 @@ package k8shandler
 // 	ctxCancel context.CancelFunc
 // }
 
-// // NewKubernetesResourcesHandler создает новый KubernetesResourcesHandler
 // func NewKubernetesResourcesHandler(
 // 	ctx context.Context,
 // 	clientSet *kubernetes.Clientset,
@@ -51,7 +50,6 @@ package k8shandler
 // 	}
 // }
 
-// // Subscribe добавляет новую функцию обновления и фильтрации для обработки событий
 // func (k *KubernetesResourcesHandler) Subscribe(resource Resource) error {
 // 	k.sharedInformerFactory.Admissionregistration()
 
@@ -71,12 +69,10 @@ package k8shandler
 // 	return nil
 // }
 
-// // Start запускает информатор и тикер
 // func (k *KubernetesResourcesHandler) Start() {
 // 	go k.sharedInformerFactory.Start(k.ctx.Done())
 // }
 
-// // Stop останавливает информатор и тикер
 // func (k *KubernetesResourcesHandler) Stop() {
 // 	k.sharedInformerFactory.Shutdown()
 // 	defer k.ctxCancel()

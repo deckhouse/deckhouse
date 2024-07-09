@@ -9,9 +9,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	pkg_cfg "system-registry-manager/pkg/cfg"
 	pkg_utils "system-registry-manager/pkg/utils"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateStaticPodBundle(t *testing.T) {
@@ -295,7 +296,7 @@ metadata:
     manifests-checksum: def456
     static-pods-checksum: xyz789
 spec:
-  # Спецификация пода
+  # pod specification
 `),
 			expectedManifest: []byte(`
 apiVersion: v1
@@ -305,7 +306,7 @@ metadata:
   annotations:
     old-annotation-key: old-annotation-value
 spec:
-  # Спецификация пода
+  # pod specification
 `),
 		},
 		{
@@ -322,7 +323,7 @@ metadata:
     manifests-checksum: def456
     static-pods-checksum: xyz789
 spec:
-  # Спецификация пода
+  # pod specification
 `),
 			expectedManifest: []byte(`
 metadata:
@@ -333,7 +334,7 @@ metadata:
     manifests-checksum: def456
     static-pods-checksum: xyz789
 spec:
-  # Спецификация пода
+  # pod specification
 `),
 		},
 	}
