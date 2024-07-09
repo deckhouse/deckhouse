@@ -2,43 +2,40 @@
 
 set -e
 
-# Входные параметры:
+# Input parameters:
 DECKHOUSE_PATH="/deckhouse/"
 IMG_PREFIX="$USER"
 DOCKER_REGISTRY="cr.yandex/crp8n201pre28pm81udl/sys/deckhouse-oss"
 PATCH_MODULE_CONFIG_BY_IMAGE_AMD64_NAME_DIGEST=true
 
-
-
 IMG_NAME="$DOCKER_REGISTRY/$IMG_PREFIX-manager"
 IMG_NAME_LATEST="$IMG_NAME:latest"
 
-
-# Функция для нахождения и перехода в директорию, где находится скрипт
+# Function to find and switch to the directory where the script is located
 cd_script_dir() {
-  # Определим путь к директории скрипта
+  # Determine the path to the script directory
   local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-  # Перейдем в эту директорию
+  # Switch to this directory
   cd "$script_dir" || exit
 
-  # Сообщим пользователю, в какую директорию мы перешли
-  echo "Перешли в директорию скрипта: $script_dir"
+  # Inform the user which directory we have switched to
+  echo "Switched to script directory: $script_dir"
 }
 
-# Функция для применения патча
+# Function to apply a patch
 kubectl_patch_module_config() {
   local args="$1"
   local patch="$2"
 
-  # Применение патча
+  # Apply the patch
   kubectl patch $args --type='json' -p "$patch"
 
-  # Проверка результата выполнения
+  # Check the result of the execution
   if [ $? -eq 0 ]; then
-    echo "Патч успешно применен!"
+    echo "Patch applied successfully!"
   else
-    echo "Ошибка применения патча!"
+    echo "Error applying patch!"
     exit 1
   fi
 }
@@ -46,12 +43,13 @@ kubectl_patch_module_config() {
 cd_script_dir
 
 if ! docker buildx inspect mybuilder > /dev/null 2>&1; then
-    # Если не существует, создаем его
+    # If it does not exist, create it
     docker buildx create --name mybuilder --driver docker-container --use
 else
-    # Если существует, просто переключаемся на него
+    # If it exists, just switch to it
     docker buildx use mybuilder
 fi
+
 docker buildx build $DECKHOUSE_PATH \
     -f Manager.Dockerfile \
     --platform linux/amd64 \
@@ -59,20 +57,20 @@ docker buildx build $DECKHOUSE_PATH \
     --push
 
 echo "------------------------------------------------------------------------------------------"
-echo "Образ успешно собран и запушен, полное имя образа: '$IMG_NAME_LATEST'"
+echo "Image successfully built and pushed, full image name: '$IMG_NAME_LATEST'"
 echo "------------------------------------------------------------------------------------------"
 
 IMAGE_AMD64_DIGEST=$(docker buildx imagetools inspect $IMG_NAME_LATEST --raw | jq -r '.manifests[] | select(.platform.architecture == "amd64").digest')
 IMAGE_AMD64_NAME_DIGEST="$IMG_NAME@$IMAGE_AMD64_DIGEST"
 echo "------------------------------------------------------------------------------------------"
-echo "Дайджест образа: '$IMAGE_AMD64_NAME_DIGEST'"
+echo "Image digest: '$IMAGE_AMD64_NAME_DIGEST'"
 echo "------------------------------------------------------------------------------------------"
 
 if [ "$PATCH_MODULE_CONFIG_BY_IMAGE_AMD64_NAME_DIGEST" = "true" ]; then
     ################################################
-    #       Обновление образа в ConfigModule       #
+    #        Updating the image in ConfigModule    #
     ################################################
-    echo "Обновление образа registry manager"
+    echo "Updating registry manager image"
     PATCH=$(cat <<EOF
 [
   {

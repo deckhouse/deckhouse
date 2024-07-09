@@ -1,15 +1,15 @@
 #!/bin/bash
 
-# Функция для нахождения и перехода в директорию, где находится скрипт
+# Function to find and switch to the directory where the script is located
 cd_script_dir() {
-  # Определим путь к директории скрипта
+  # Determine the path to the script directory
   local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-  # Перейдем в эту директорию
+  # Switch to this directory
   cd "$script_dir" || exit
 
-  # Сообщим пользователю, в какую директорию мы перешли
-  echo "Перешли в директорию скрипта: $script_dir"
+  # Inform the user which directory we have switched to
+  echo "Switched to script directory: $script_dir"
 }
 
 run_ansible_playbook() {
@@ -17,26 +17,26 @@ run_ansible_playbook() {
   local playbook_file="$2"
   local ansible_options="$3"
 
-  # Проверим, существует ли файл инвентаря
+  # Check if the inventory file exists
   if [ ! -f "$inventory_file" ]; then
-    echo "Ошибка: Файл инвентаря '$inventory_file' не найден!"
+    echo "Error: Inventory file '$inventory_file' not found!"
     exit 1
   fi
 
-  # Проверим, существует ли playbook
+  # Check if the playbook exists
   if [ ! -f "$playbook_file" ]; then
-    echo "Ошибка: Playbook '$playbook_file' не найден!"
+    echo "Error: Playbook '$playbook_file' not found!"
     exit 1
   fi
 
-  # Запуск Ansible playbook
+  # Run the Ansible playbook
   ansible-playbook -i "$inventory_file" $ansible_options "$playbook_file"
 
-  # Проверка результата выполнения
+  # Check the result of the execution
   if [ $? -eq 0 ]; then
-    echo "Playbook успешно выполнен!"
+    echo "Playbook executed successfully!"
   else
-    echo "Ошибка выполнения playbook!"
+    echo "Error executing playbook!"
     exit 1
   fi
 }
@@ -48,28 +48,28 @@ wait_for_pods_inactive() {
 
   while true; do
     if kubectl get pods -n "$namespace" -l="$label_selector" 2>&1 | grep -q "No resources found"; then
-      echo "Все поды неактивны."
+      echo "All pods are inactive."
       break
     else
-      echo "Поды все еще активны. Ждем..."
+      echo "Pods are still active. Waiting..."
       sleep "$sleep_interval"
     fi
   done
 }
 
-# Функция для применения патча
+# Function to apply a patch
 kubectl_patch_module_config() {
   local args="$1"
   local patch="$2"
 
-  # Применение патча
+  # Apply the patch
   kubectl patch $args --type='json' -p "$patch"
 
-  # Проверка результата выполнения
+  # Check the result of the execution
   if [ $? -eq 0 ]; then
-    echo "Патч успешно применен!"
+    echo "Patch applied successfully!"
   else
-    echo "Ошибка применения патча!"
+    echo "Error applying patch!"
     exit 1
   fi
 }
@@ -77,9 +77,9 @@ kubectl_patch_module_config() {
 
 cd_script_dir
 ################################################
-#             Остановка manager-а              #
+#              Stopping manager                #
 ################################################
-echo "Удаление system registry manager"
+echo "Removing system registry manager"
 PATCH=$(cat <<EOF
 [
   {
@@ -99,31 +99,31 @@ kubectl_patch_module_config "ModuleConfig system-registry" "$PATCH"
 wait_for_pods_inactive "d8-system" "app=system-registry-manager" 10
 
 ################################################
-#             Остановка registry               #
+#               Stopping registry              #
 ################################################
 
-echo "Удаление system registry"
+echo "Removing system registry"
 run_ansible_playbook "inventory.yaml" "ansible-delete-registry.yaml" "--tags static-pods"
 wait_for_pods_inactive "d8-system" "component=system-registry,tier=control-plane" 10
 run_ansible_playbook "inventory.yaml" "ansible-delete-registry.yaml" "--tags data"
 
 ################################################
-#           Удаление данных из etcd            #
+#            Removing data from etcd           #
 ################################################
-echo "Очистка etcd"
+echo "Clearing etcd"
 
 etcd_pod_name=$(kubectl get pods -n kube-system -l=component=etcd,tier=control-plane -o jsonpath='{.items[0].metadata.name}')
 
 if [ -z "$etcd_pod_name" ]; then
-  echo "Ошибка: Под с etcd не найден!"
+  echo "Error: Pod with etcd not found!"
   exit 1
 fi
 
-# Получаем endpoint etcd с использованием jsonpath
+# Get the etcd endpoint using jsonpath
 etcd_endpoint=$(kubectl get pod "$etcd_pod_name" -n kube-system -o jsonpath='{.status.podIP}')
 
 if [ -z "$etcd_endpoint" ]; then
-  echo "Ошибка: Не удалось получить endpoint etcd!"
+  echo "Error: Failed to get etcd endpoint!"
   exit 1
 fi
 
@@ -134,10 +134,10 @@ kubectl exec -it pod/"$etcd_pod_name" -n kube-system etcd -- etcdctl \
 --key=/etc/kubernetes/pki/etcd/server.key \
 del seaweedfs_meta. --prefix
 
-# Проверка результата выполнения
+# Check the result of the execution
 if [ $? -eq 0 ]; then
-  echo "Etcd успешно отчищен!"
+  echo "Etcd cleared successfully!"
 else
-  echo "Ошибка отчистки etcd!"
+  echo "Error clearing etcd!"
   exit 1
 fi
