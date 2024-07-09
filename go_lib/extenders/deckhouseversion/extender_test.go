@@ -71,7 +71,7 @@ func TestExtender(t *testing.T) {
 func test(t *testing.T, tc testCase) {
 	currentVersion, err := semver.NewVersion(tc.currentVersion)
 	require.NoError(t, err)
-	extender := Extender{currentVersion: currentVersion, modulesConstraints: make(map[string]*semver.Constraints)}
+	extender := Extender{currentVersion: currentVersion, constraints: make(map[string]*semver.Constraints)}
 	err = extender.AddConstraint(tc.moduleName, tc.constraint)
 	if tc.addingError {
 		require.Error(t, err)

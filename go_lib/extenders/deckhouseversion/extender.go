@@ -35,14 +35,14 @@ const (
 var _ extenders.Extender = &Extender{}
 
 type Extender struct {
-	logger             logger.Logger
-	currentVersion     *semver.Version
-	modulesConstraints map[string]*semver.Constraints
+	logger         logger.Logger
+	currentVersion *semver.Version
+	constraints    map[string]*semver.Constraints
 }
 
 func New() (*Extender, error) {
 	version := semver.MustParse("v0.0.0")
-	if raw, err := os.ReadFile("/deckouse/version"); err != nil {
+	if raw, err := os.ReadFile("/deckhouse/version"); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
@@ -51,17 +51,21 @@ func New() (*Extender, error) {
 			version = parsed
 		}
 	}
-	return &Extender{currentVersion: version, modulesConstraints: make(map[string]*semver.Constraints), logger: log.WithField("extender", Name)}, nil
+	return &Extender{
+		currentVersion: version,
+		constraints:    make(map[string]*semver.Constraints),
+		logger:         log.WithField("extender", Name),
+	}, nil
 }
 
-func (e *Extender) AddConstraint(moduleName, moduleDefConstraint string) error {
-	constraint, err := semver.NewConstraint(moduleDefConstraint)
+func (e *Extender) AddConstraint(name, rawConstraint string) error {
+	constraint, err := semver.NewConstraint(rawConstraint)
 	if err != nil {
-		e.logger.Errorf("adding deckhouseVersion constraint for %q module failed: %v", moduleName, err)
+		e.logger.Errorf("adding deckhouseVersion constraint for %q failed: %v", name, err)
 		return err
 	}
-	e.logger.Debugf("adding constraint for %q module", moduleName)
-	e.modulesConstraints[moduleName] = constraint
+	e.logger.Debugf("constraint for %q is added", name)
+	e.constraints[name] = constraint
 	return nil
 }
 
@@ -69,16 +73,16 @@ func (e *Extender) Name() extenders.ExtenderName {
 	return Name
 }
 
-func (e *Extender) Filter(moduleName string, _ map[string]string) (*bool, error) {
-	constraint, ok := e.modulesConstraints[moduleName]
+func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
+	constraint, ok := e.constraints[name]
 	if !ok {
 		return nil, nil
 	}
 	if _, errs := constraint.Validate(e.currentVersion); len(errs) != 0 {
-		e.logger.Errorf("requirements of module %s are not satisfied: current deckhouse version is not suitable: %s", moduleName, errs[0].Error())
+		e.logger.Errorf("requirements of %s are not satisfied: current deckhouse version is not suitable: %s", name, errs[0].Error())
 		return pointer.Bool(false), nil
 	}
-	e.logger.Debugf("requirements of module %s are satisfied", moduleName)
+	e.logger.Debugf("requirements of %s are satisfied", name)
 	return pointer.Bool(true), nil
 }
 
@@ -87,5 +91,5 @@ func (e *Extender) IsTerminator() {
 }
 
 func NewError(moduleName string) error {
-	return fmt.Errorf("requirements of module %s are not satisfied: current deckhouse version is not suitable", moduleName)
+	return fmt.Errorf("requirements of %s are not satisfied: current deckhouse version is not suitable", moduleName)
 }

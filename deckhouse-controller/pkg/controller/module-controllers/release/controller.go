@@ -77,9 +77,10 @@ type moduleReleaseReconciler struct {
 
 	preflightCountDown *sync.WaitGroup
 
-	m             sync.Mutex
-	delayTimer    *time.Timer
-	restartReason string
+	m                        sync.Mutex
+	delayTimer               *time.Timer
+	restartReason            string
+	deckhouseVersionExtender *deckhouseversion.Extender
 }
 
 const (
@@ -103,16 +104,22 @@ func NewModuleReleaseController(
 ) error {
 	lg := log.WithField("component", "ModuleReleaseController")
 
+	deckhouseVersionExtender, err := deckhouseversion.New()
+	if err != nil {
+		return err
+	}
+
 	c := &moduleReleaseReconciler{
 		client:             mgr.GetClient(),
 		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
 		dc:                 dc,
 		logger:             lg,
 
-		metricStorage:           metricStorage,
-		moduleManager:           mm,
-		symlinksDir:             filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
-		deckhouseEmbeddedPolicy: embeddedPolicy,
+		metricStorage:            metricStorage,
+		moduleManager:            mm,
+		symlinksDir:              filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
+		deckhouseEmbeddedPolicy:  embeddedPolicy,
+		deckhouseVersionExtender: deckhouseVersionExtender,
 
 		delayTimer: time.NewTimer(3 * time.Second),
 
@@ -120,7 +127,7 @@ func NewModuleReleaseController(
 	}
 
 	// Add Preflight Check
-	err := mgr.Add(manager.RunnableFunc(c.PreflightCheck))
+	err = mgr.Add(manager.RunnableFunc(c.PreflightCheck))
 	if err != nil {
 		return err
 	}
@@ -341,12 +348,16 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	moduleName := mr.Spec.ModuleName
 
-	passed, _ := c.moduleManager.FilterModuleByExtender(deckhouseversion.Name, moduleName, nil)
-	if passed != nil && !*passed {
-		if err := c.updateModuleReleaseStatusMessage(ctx, mr, deckhouseversion.NewError(moduleName).Error()); err != nil {
-			return ctrl.Result{Requeue: true}, err
+	if len(mr.Spec.Requirements["deckhouse"]) > 0 {
+		if err := c.deckhouseVersionExtender.AddConstraint(mr.GetName(), mr.Spec.Requirements["deckhouse"]); err != nil {
+			return ctrl.Result{Requeue: false}, err
 		}
-		return ctrl.Result{Requeue: false}, nil
+		if passed, _ := c.deckhouseVersionExtender.Filter(mr.GetName(), nil); passed != nil && !*passed {
+			if err := c.updateModuleReleaseStatusMessage(ctx, mr, deckhouseversion.NewError(mr.GetName()).Error()); err != nil {
+				return ctrl.Result{Requeue: true}, err
+			}
+			return ctrl.Result{Requeue: false}, nil
+		}
 	}
 
 	otherReleases := new(v1alpha1.ModuleReleaseList)
