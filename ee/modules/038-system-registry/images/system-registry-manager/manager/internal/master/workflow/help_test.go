@@ -24,7 +24,7 @@ type MockNodeForHelper struct {
 	RunningStatusError error
 }
 
-func СreateMockNode(ip string, clusterStatus *SeaweedfsNodeClusterStatus, runningStatus *SeaweedfsNodeRunningStatus, clusterStatusError error, runningStatusError error) *MockNodeForHelper {
+func CreateMockNode(ip string, clusterStatus *SeaweedfsNodeClusterStatus, runningStatus *SeaweedfsNodeRunningStatus, clusterStatusError error, runningStatusError error) *MockNodeForHelper {
 	return &MockNodeForHelper{
 		NodeName:           fmt.Sprintf("Node-%s", ip),
 		NodeIP:             ip,
@@ -77,7 +77,7 @@ func (m *MockNodeForHelper) DeleteNodeManifests() error {
 
 func TestGetClustersMembers(t *testing.T) {
 	mockNodes := map[string]*MockNodeForHelper{
-		"node1": СreateMockNode(
+		"node1": CreateMockNode(
 			"192.168.1.1",
 			&SeaweedfsNodeClusterStatus{
 				IsLeader:        true,
@@ -87,7 +87,7 @@ func TestGetClustersMembers(t *testing.T) {
 			nil,
 			nil,
 		),
-		"node2": СreateMockNode(
+		"node2": CreateMockNode(
 			"192.168.1.2",
 			&SeaweedfsNodeClusterStatus{
 				IsLeader:        false,
@@ -97,7 +97,7 @@ func TestGetClustersMembers(t *testing.T) {
 			nil,
 			nil,
 		),
-		"node3": СreateMockNode(
+		"node3": CreateMockNode(
 			"192.168.1.3",
 			&SeaweedfsNodeClusterStatus{
 				IsLeader:        false,
@@ -107,7 +107,7 @@ func TestGetClustersMembers(t *testing.T) {
 			nil,
 			nil,
 		),
-		"node4": СreateMockNode(
+		"node4": CreateMockNode(
 			"192.168.1.4",
 			&SeaweedfsNodeClusterStatus{
 				IsLeader:        false,
@@ -190,7 +190,7 @@ func TestGetClustersMembers(t *testing.T) {
 
 func TestWaitBy(t *testing.T) {
 	mockNodes := map[string]*MockNodeForHelper{
-		"node1": СreateMockNode(
+		"node1": CreateMockNode(
 			"192.168.1.1",
 			&SeaweedfsNodeClusterStatus{
 				IsLeader: true,
@@ -199,7 +199,7 @@ func TestWaitBy(t *testing.T) {
 			nil,
 			nil,
 		),
-		"node2": СreateMockNode(
+		"node2": CreateMockNode(
 			"192.168.1.2",
 			nil,
 			&SeaweedfsNodeRunningStatus{
@@ -252,7 +252,7 @@ func TestWaitBy(t *testing.T) {
 
 func TestSelectBy(t *testing.T) {
 	mockNodes := map[string]*MockNodeForHelper{
-		"node1": СreateMockNode(
+		"node1": CreateMockNode(
 			"192.168.1.1",
 			&SeaweedfsNodeClusterStatus{
 				IsLeader: true,
@@ -263,7 +263,7 @@ func TestSelectBy(t *testing.T) {
 			nil,
 			nil,
 		),
-		"node2": СreateMockNode(
+		"node2": CreateMockNode(
 			"192.168.1.2",
 			&SeaweedfsNodeClusterStatus{
 				IsLeader: false,
@@ -274,7 +274,7 @@ func TestSelectBy(t *testing.T) {
 			nil,
 			nil,
 		),
-		"node3": СreateMockNode(
+		"node3": CreateMockNode(
 			"192.168.1.3",
 			&SeaweedfsNodeClusterStatus{
 				IsLeader: true,
@@ -352,7 +352,7 @@ func TestSelectBy(t *testing.T) {
 func TestSortBy(t *testing.T) {
 	mockNodes := map[string]*MockNodeForHelper{
 		// Test 1
-		"node1": СreateMockNode(
+		"node1": CreateMockNode(
 			"192.168.1.2",
 			&SeaweedfsNodeClusterStatus{
 				IsLeader: false,
@@ -363,7 +363,7 @@ func TestSortBy(t *testing.T) {
 			nil,
 			nil,
 		),
-		"node2": СreateMockNode(
+		"node2": CreateMockNode(
 			"192.168.1.1",
 			&SeaweedfsNodeClusterStatus{
 				IsLeader: true,
@@ -374,7 +374,7 @@ func TestSortBy(t *testing.T) {
 			nil,
 			nil,
 		),
-		"node3": СreateMockNode(
+		"node3": CreateMockNode(
 			"192.168.1.3",
 			&SeaweedfsNodeClusterStatus{
 				IsLeader: false,
@@ -387,7 +387,7 @@ func TestSortBy(t *testing.T) {
 		),
 
 		// Test 2
-		"node4": СreateMockNode(
+		"node4": CreateMockNode(
 			"192.168.1.2",
 			&SeaweedfsNodeClusterStatus{
 				IsLeader: true,
@@ -398,7 +398,7 @@ func TestSortBy(t *testing.T) {
 			nil,
 			nil,
 		),
-		"node5": СreateMockNode(
+		"node5": CreateMockNode(
 			"192.168.1.1",
 			&SeaweedfsNodeClusterStatus{
 				IsLeader: true,
@@ -411,7 +411,7 @@ func TestSortBy(t *testing.T) {
 		),
 
 		// Test 3
-		"node6": СreateMockNode(
+		"node6": CreateMockNode(
 			"192.168.1.2",
 			nil,
 			nil,
@@ -506,12 +506,12 @@ func TestSortBy(t *testing.T) {
 
 func TestGetNodeNames(t *testing.T) {
 	mockNodes := map[string]*MockNodeForHelper{
-		"node1": СreateMockNode("192.168.1.1", nil, nil, nil, nil),
-		"node2": СreateMockNode("192.168.1.2", nil, nil, nil, nil),
-		"node3": СreateMockNode("192.168.1.3", nil, nil, nil, nil),
-		"node4": СreateMockNode("192.168.1.4", nil, nil, nil, nil),
-		"node5": СreateMockNode("192.168.1.5", nil, nil, nil, nil),
-		"node6": СreateMockNode("192.168.1.6", nil, nil, nil, nil),
+		"node1": CreateMockNode("192.168.1.1", nil, nil, nil, nil),
+		"node2": CreateMockNode("192.168.1.2", nil, nil, nil, nil),
+		"node3": CreateMockNode("192.168.1.3", nil, nil, nil, nil),
+		"node4": CreateMockNode("192.168.1.4", nil, nil, nil, nil),
+		"node5": CreateMockNode("192.168.1.5", nil, nil, nil, nil),
+		"node6": CreateMockNode("192.168.1.6", nil, nil, nil, nil),
 	}
 	tests := []struct {
 		nodes     []RegistryNodeManager
