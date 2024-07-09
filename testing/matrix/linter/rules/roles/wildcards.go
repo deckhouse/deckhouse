@@ -58,9 +58,6 @@ var skipCheckWildcards = map[string][]string{
 	"cloud-provider-yandex/templates/cloud-controller-manager/rbac-for-us.yaml": {
 		"d8:cloud-provider-yandex:cloud-controller-manager",
 	},
-	"local-path-provisioner/templates/rbac-for-us.yaml": {
-		"d8:local-path-provisioner",
-	},
 	"istio/templates/kiali/rbac-for-us.yaml": {
 		"d8:istio:kiali",
 	},
