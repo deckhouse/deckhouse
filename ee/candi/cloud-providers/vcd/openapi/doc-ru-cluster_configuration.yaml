@@ -147,5 +147,10 @@ apiVersions:
               description: Имя пользователя с полными правами на проект.
             password:
               description: Пароль пользователя.
+            apiToken:
+              description: |
+                Токен для аутентификации.
+
+                > **Внимание!** При использовании `apiToken` необходимо оставить `username` и `password` пустыми.
             insecure:
               description:  Устанавливается в `true`, VCD имеет self-signed-сертификат.

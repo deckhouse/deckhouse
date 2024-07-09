@@ -104,11 +104,19 @@ spec:
             secretKeyRef:
               key: username
               name: vcd-credentials
+              optional: true
         - name: VCD_PASSWORD
           valueFrom:
             secretKeyRef:
               key: password
               name: vcd-credentials
+              optional: true
+        - name: VCD_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: refreshToken
+              name: vcd-credentials
+              optional: true
         livenessProbe:
           httpGet:
             path: /healthz
