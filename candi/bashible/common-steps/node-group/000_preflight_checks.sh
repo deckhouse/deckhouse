@@ -1,4 +1,3 @@
-{{- /*
 # Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,10 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-*/}}
 
-if command -v containerd >/dev/null 2>&1; then
-  echo "containerd exist"
-  exit 1
+{{- if eq .cri "Containerd" }}
+if [[ "$FIRST_BASHIBLE_RUN" == "yes" ]]; then
+  if command -v containerd >/dev/null 2>&1; then
+    bb-log-error "containerd is detected on $HOSTNAME. Deckhouse does not support pre-provisioned containerd installations. Please uninstall containerd and try again."
+    exit 1
+  fi
 fi
-
+{{- end }}
