@@ -18,11 +18,12 @@ package deckhouseversion
 
 import (
 	"errors"
-	"fmt"
+	log "github.com/sirupsen/logrus"
 	"os"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
+	"github.com/flant/addon-operator/pkg/utils/logger"
 	"k8s.io/utils/pointer"
 )
 
@@ -33,6 +34,7 @@ const (
 var _ extenders.Extender = &Extender{}
 
 type Extender struct {
+	logger             logger.Logger
 	currentVersion     *semver.Version
 	modulesConstraints map[string]*semver.Constraints
 }
@@ -48,14 +50,16 @@ func New() (*Extender, error) {
 			version = parsed
 		}
 	}
-	return &Extender{currentVersion: version, modulesConstraints: make(map[string]*semver.Constraints)}, nil
+	return &Extender{currentVersion: version, modulesConstraints: make(map[string]*semver.Constraints), logger: log.WithField("extender", Name)}, nil
 }
 
 func (e *Extender) AddConstraint(moduleName, moduleDefConstraint string) error {
 	constraint, err := semver.NewConstraint(moduleDefConstraint)
 	if err != nil {
+		e.logger.Errorf("adding deckhouseVersion constraint for %q module failed: %v", moduleName, err)
 		return err
 	}
+	e.logger.Debugf("adding constraint for %q module", moduleName)
 	e.modulesConstraints[moduleName] = constraint
 	return nil
 }
@@ -70,8 +74,10 @@ func (e *Extender) Filter(moduleName string, _ map[string]string) (*bool, error)
 		return nil, nil
 	}
 	if _, errs := constraint.Validate(e.currentVersion); len(errs) != 0 {
-		return pointer.Bool(false), fmt.Errorf("requirements of module %s are not satisfied: current deckhouse version is not suitable: %s", moduleName, errs[0].Error())
+		e.logger.Errorf("requirements of module %s are not satisfied: current deckhouse version is not suitable: %s", moduleName, errs[0].Error())
+		return pointer.Bool(false), nil
 	}
+	e.logger.Debugf("requirements of module %s are satisfied", moduleName)
 	return pointer.Bool(true), nil
 }
 

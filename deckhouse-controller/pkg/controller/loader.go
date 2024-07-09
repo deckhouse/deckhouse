@@ -119,12 +119,8 @@ func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModu
 
 	if len(def.Requirements["deckhouse"]) > 0 {
 		if err = dml.deckhouseVersionExtender.AddConstraint(def.Name, def.Requirements["deckhouse"]); err != nil {
-			log.Debugf("adding deckhouseVersion constraint for %q module failed", valuesModuleName)
 			return nil, err
 		}
-		log.Debugf("added deckhouseVersion constraint for %q module", valuesModuleName)
-	} else {
-		log.Debugf("deckhouseVersion constraint for %q module not found", valuesModuleName)
 	}
 
 	dm, err := models.NewDeckhouseModule(def, moduleStaticValues, cb, vb)
