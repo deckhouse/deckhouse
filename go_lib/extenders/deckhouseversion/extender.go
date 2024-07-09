@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"os"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	"github.com/flant/addon-operator/pkg/utils/logger"
