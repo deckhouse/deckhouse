@@ -133,6 +133,8 @@ spec:
           image: "{{ .Values.deckhouse.internal.currentReleaseImageName }}"
           imagePullPolicy: Always
           env:
+            - name: ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS
+              value: "DeckhouseVersion,Static,DynamicallyEnabled,KubeConfig,ScriptEnabled"
 # KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make Deckhouse work without kube-proxy
 {{- if not .Values.global.clusterIsBootstrapped }}
             - name: KUBERNETES_SERVICE_HOST
