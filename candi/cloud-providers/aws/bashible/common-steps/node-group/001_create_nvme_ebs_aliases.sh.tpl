@@ -23,7 +23,7 @@ fi
 
 volume_names="$(find /dev | grep -i 'nvme[0-21]n1$' || true)"
 
-if [ ! -z "${volume_names}" ]
+if [ ! -z "${volume_names}" ]; then
   bb-rp-install "ebsnvme-id:{{ .images.registrypackages.amazonEc2Utils220 }}"
 fi
 
