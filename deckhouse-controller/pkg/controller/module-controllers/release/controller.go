@@ -104,6 +104,7 @@ func NewModuleReleaseController(
 ) error {
 	lg := log.WithField("component", "ModuleReleaseController")
 
+	// extender for moduleReleaseController, it checks modules deckhouse version requirement in moduleReleases
 	deckhouseVersionExtender, err := deckhouseversion.New()
 	if err != nil {
 		return err
@@ -352,8 +353,8 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		if err := c.deckhouseVersionExtender.AddConstraint(mr.GetName(), mr.Spec.Requirements["deckhouse"]); err != nil {
 			return ctrl.Result{Requeue: false}, err
 		}
-		if passed, _ := c.deckhouseVersionExtender.Filter(mr.GetName(), nil); passed != nil && !*passed {
-			if err := c.updateModuleReleaseStatusMessage(ctx, mr, deckhouseversion.NewError(mr.GetName()).Error()); err != nil {
+		if _, err := c.deckhouseVersionExtender.Filter(mr.GetName(), nil); err != nil {
+			if err = c.updateModuleReleaseStatusMessage(ctx, mr, err.Error()); err != nil {
 				return ctrl.Result{Requeue: true}, err
 			}
 			return ctrl.Result{Requeue: false}, nil

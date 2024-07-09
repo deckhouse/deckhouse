@@ -79,17 +79,13 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 		return nil, nil
 	}
 	if _, errs := constraint.Validate(e.currentVersion); len(errs) != 0 {
-		e.logger.Errorf("requirements of %s are not satisfied: current deckhouse version is not suitable: %s", name, errs[0].Error())
-		return pointer.Bool(false), nil
+		e.logger.Error("requirements of %s are not satisfied: current deckhouse version is not suitable: %s", name, errs[0].Error())
+		return pointer.Bool(false), fmt.Errorf("requirements are not satisfied: current deckhouse version is not suitable: %s", errs[0].Error())
 	}
 	e.logger.Debugf("requirements of %s are satisfied", name)
 	return pointer.Bool(true), nil
 }
 
-func (e *Extender) IsTerminator() {
-
-}
-
-func NewError(moduleName string) error {
-	return fmt.Errorf("requirements of %s are not satisfied: current deckhouse version is not suitable", moduleName)
+func (e *Extender) IsTerminator() bool {
+	return true
 }
