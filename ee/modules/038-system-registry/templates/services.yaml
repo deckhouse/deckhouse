@@ -37,34 +37,6 @@ spec:
     port: 9324
   selector:
     component: system-registry
----
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: system-registry
-  namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry")) | nindent 2 }}
-spec:
-  jobLabel: app
-  sampleLimit: 1500
-  endpoints:
-  - port: http-seaweed-metrics
-    scheme: http
-    path: /metrics
-    honorLabels: true
-    tlsConfig:
-      insecureSkipVerify: true
-    relabelings:
-    - action: replace
-      replacement: cluster
-      targetLabel: tier
-  namespaceSelector:
-    matchNames:
-    - d8-system
-  selector:
-    matchLabels:
-      app: system-registry
-
 
 ##### For specific registryMode
 {{- end }}
