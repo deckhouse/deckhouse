@@ -1,0 +1,11 @@
+monitoring-kubernetes:
+  features:
+    - summary: Add ConfigMap labels assembly.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8630
+node-manager:
+  fixes:
+    - summary: >-
+        Create `status.errors` object for all _NodeUsers_ (migration) and add a conversion webhook
+        for the same logic.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8962
+
