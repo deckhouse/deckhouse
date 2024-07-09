@@ -11,6 +11,7 @@ metadata:
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-manager")) | nindent 2 }}
 spec:
+  type: ClusterIP
   clusterIP: None
   ports:
   - name: http
@@ -19,6 +20,51 @@ spec:
     port: 8097
   selector:
     app: system-registry-manager
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: system-registry
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: http-seaweed-metrics
+    protocol: TCP
+    targetPort: 9324
+    port: 9324
+  selector:
+    component: system-registry
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: system-registry
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry")) | nindent 2 }}
+spec:
+  jobLabel: app
+  sampleLimit: 1500
+  endpoints:
+  - port: http-seaweed-metrics
+    scheme: http
+    path: /metrics
+    honorLabels: true
+    tlsConfig:
+      insecureSkipVerify: true
+    relabelings:
+    - action: replace
+      replacement: cluster
+      targetLabel: tier
+  namespaceSelector:
+    matchNames:
+    - d8-system
+  selector:
+    matchLabels:
+      app: system-registry
+
 
 ##### For specific registryMode
 {{- end }}
