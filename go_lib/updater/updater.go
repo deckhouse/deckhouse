@@ -619,6 +619,8 @@ func (du *Updater[R]) patchManualRelease(release R) R {
 		release.SetApprovedStatus(true)
 	}
 
+	_ = du.kubeAPI.UpdateReleaseStatus(release, release.GetMessage(), release.GetPhase())
+
 	return release
 }
 
