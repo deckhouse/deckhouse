@@ -66,6 +66,8 @@ func Instance() *Extender {
 			if parsed, err := semver.NewVersion(string(raw)); err == nil {
 				instance.logger.Debugf("setting deckhouse version to %s", parsed.String())
 				instance.versionMatcher.SetBaseVersion(parsed)
+			} else {
+				instance.logger.Warn("failed to parse deckhouse version, v0.0.0 will be used")
 			}
 		} else {
 			instance.logger.Warn("failed to read deckhouse version from /deckhouse/version, v0.0.0 will be used")
