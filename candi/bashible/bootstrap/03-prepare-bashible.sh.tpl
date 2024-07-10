@@ -1,4 +1,23 @@
 #!/usr/bin/env bash
+{{- /*
+# Copyright 2024 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+*/}}
+
+function detect_bundle() {
+  {{- .Files.Get "/deckhouse/candi/bashible/detect_bundle.sh" | nindent 2 }}
+}
 
 function get_bundle() {
   resource="$1"
@@ -19,10 +38,6 @@ function get_bundle() {
   done
 }
 
-function basic_bootstrap_{{ .bundle }} {
-  {{- tpl (.Files.Get (printf "/deckhouse/candi/bashible/bundles/%s/bootstrap.sh.tpl" .bundle)) . }}
-}
-
 set -Eeuo pipefail
 shopt -s failglob
 
@@ -34,7 +49,7 @@ mkdir -p "$BOOTSTRAP_DIR" "$TMPDIR"
 chmod 0700 $BOOTSTRAP_DIR
 
 # Detect bundle
-BUNDLE="{{ .bundle }}"
+BUNDLE="$(detect_bundle)"
 
 # set proxy env variables
 {{- if .proxy }}
@@ -58,9 +73,6 @@ export D8_NODE_HOSTNAME=$(hostname -s)
 {{- else }}
 export D8_NODE_HOSTNAME=$(hostname)
 {{- end }}
-
-# Install necessary packages.
-basic_bootstrap_${BUNDLE}
 
 {{- if or (eq .nodeGroup.nodeType "CloudEphemeral") (hasKey .nodeGroup "staticInstances") }}
 # Put bootstrap log information to Machine resource status if it is a cloud installation or cluster-api static machine
@@ -115,7 +127,6 @@ while [ "$patch_pending" = true ] ; do
 done
 {{- end }}
 
-# IMPORTANT !!! Centos/Redhat put jq in /usr/local/bin but it is not in PATH.
 export PATH="/opt/deckhouse/bin:$PATH"
 # Get bashible script from secret
 get_bundle bashible "${BUNDLE}.{{ .nodeGroup.name }}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible.sh

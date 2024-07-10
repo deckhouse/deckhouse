@@ -1,5 +1,5 @@
 {{- /*
-# Copyright 2023 Flant JSC
+# Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 */}}
+#!/bin/bash
+set -Eeo pipefail
+
+export PATH="/opt/deckhouse/bin:$PATH"
+export LANG=C
+export REPOSITORY=""
+export BB_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages"
+export TMPDIR="/opt/deckhouse/tmp"
+export BB_FETCHED_PACKAGES_STORE="/${TMPDIR}/registrypackages"
+{{- if .proxy }}
+  {{- if .proxy.httpProxy }}
+export HTTP_PROXY={{ .proxy.httpProxy | quote }}
+export http_proxy=${HTTP_PROXY}
+  {{- end }}
+  {{- if .proxy.httpsProxy }}
+export HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
+export https_proxy=${HTTPS_PROXY}
+  {{- end }}
+  {{- if .proxy.noProxy }}
+export NO_PROXY={{ .proxy.noProxy | join "," | quote }}
+export no_proxy=${NO_PROXY}
+  {{- end }}
+{{- else }}
+unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
+{{- end }}
+{{- if .packagesProxy }}
+export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
+export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
+{{- end }}
 
 function check_python() {
   for pybin in python3 python2 python; do
@@ -67,56 +96,52 @@ bb-package-fetch-blobs() {
   for PACKAGE_DIGEST in "${!PACKAGES_MAP[@]}"; do
     local PACKAGE_DIR="${BB_FETCHED_PACKAGES_STORE}/${PACKAGES_MAP[$PACKAGE_DIGEST]}"
     mkdir -p "${PACKAGE_DIR}"
-    bb-package-fetch-blob "${PACKAGE_DIGEST}" "${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar.gz"
+
+    retries=0
+    while [ "$retries" -lt 3 ]
+    do
+      retries=$(( retries+1 )) 
+      bb-package-fetch-blob "${PACKAGE_DIGEST}" "${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar.gz" && break
+			sleep 2
+    done
   done
 }
+
 bb-package-fetch-blob() {
   check_python
 
-  cat - <<EOF | $python_binary
+  cat - <<EOFILE | $python_binary
 import random
 import ssl
 try:
-    from urllib.request import urlopen, Request
-except ImportError as e:
-    from urllib2 import urlopen, Request
-# Choose a random endpoint to increase fault tolerance and reduce load on a single endpoint.
+  from urllib.request import urlopen, Request, HTTPError
+except ImportError:
+  from urllib2 import urlopen, Request, HTTPError
 endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
-endpoint = random.choice(endpoints)
+# Choose a random endpoint to increase fault tolerance and reduce load on a single endpoint.
+random.shuffle(endpoints)
 ssl._create_default_https_context = ssl._create_unverified_context
-url = 'https://{}/package?digest=$1&repository=${REPOSITORY}'.format(endpoint)
-request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
-response = urlopen(request, timeout=300)
+for ep in endpoints:
+  url = 'https://{}/package?digest=$1&repository=${REPOSITORY}'.format(ep)
+  request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
+  try:
+    response = urlopen(request, timeout=300)
+  except HTTPError as e:
+    print("Access to {} return HTTP Error {}: {}".format(url, e.getcode(), e.read()[:255]))
+    continue
+  except Exception as e:
+    print("Access to {} return Error: {}".format(url, e))
+    continue
+  break
 with open('$2', 'wb') as f:
     f.write(response.read())
-EOF
+EOFILE
 }
 
-export PATH="/opt/deckhouse/bin:$PATH"
-export LANG=C
-export REPOSITORY=""
-export BB_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages"
-export BB_FETCHED_PACKAGES_STORE="/${TMPDIR}/registrypackages"
-{{- if .proxy }}
-  {{- if .proxy.httpProxy }}
-export HTTP_PROXY={{ .proxy.httpProxy | quote }}
-export http_proxy=${HTTP_PROXY}
-  {{- end }}
-  {{- if .proxy.httpsProxy }}
-export HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
-export https_proxy=${HTTPS_PROXY}
-  {{- end }}
-  {{- if .proxy.noProxy }}
-export NO_PROXY={{ .proxy.noProxy | join "," | quote }}
-export no_proxy=${NO_PROXY}
-  {{- end }}
-{{- else }}
-  unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
+{{ with .images.registrypackages }}
+bb-package-install "jq:{{ .jq16 }}" "curl:{{ .d8Curl821 }}" "netcat:{{ .netcat110481 }}"
+{{ if eq $.provider "aws" }}
+bb-package-install "ec2DescribeTags:{{ .ec2DescribeTagsV001Flant2 }}" 
 {{- end }}
-{{- if .packagesProxy }}
-export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
-export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
 {{- end }}
-bb-package-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl821 }}" "netcat:{{ .images.registrypackages.netcat110481 }}"
-
 mkdir -p /var/lib/bashible/
