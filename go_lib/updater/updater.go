@@ -19,6 +19,7 @@ package updater
 import (
 	"errors"
 	"fmt"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"os"
 	"slices"
 	"sort"
@@ -651,7 +652,7 @@ func (du *Updater[R]) PrepareReleases(releases []R) {
 func (du *Updater[R]) checkReleaseRequirements(rl *R) bool {
 	for key, value := range (*rl).GetRequirements() {
 		// these fields are checked by extenders in module release controller
-		if slices.Contains([]string{deckhouseversion.RequirementsField}, key) {
+		if slices.Contains([]string{deckhouseversion.RequirementsField, kubernetesversion.RequirementsField}, key) {
 			continue
 		}
 		passed, err := requirements.CheckRequirement(key, value, du.enabledModules)

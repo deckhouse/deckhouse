@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"math/rand"
 	"os"
 	"strconv"
@@ -156,6 +157,10 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 
 	// extender for module manager scheduler, it checks modules deckhouse version requirement on FS
 	if err = mm.AddExtender(deckhouseversion.Instance()); err != nil {
+		return nil, err
+	}
+	// extender for module manager scheduler, it checks modules kubernetes version requirement on FS
+	if err = mm.AddExtender(kubernetesversion.Instance()); err != nil {
 		return nil, err
 	}
 

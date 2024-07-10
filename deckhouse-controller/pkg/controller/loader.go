@@ -19,6 +19,7 @@ package controller
 import (
 	"errors"
 	"fmt"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -120,6 +121,11 @@ func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModu
 
 	if len(def.Requirements[deckhouseversion.RequirementsField]) > 0 {
 		if err = deckhouseversion.Instance().AddConstraint(def.Name, def.Requirements[deckhouseversion.RequirementsField]); err != nil {
+			return nil, err
+		}
+	}
+	if len(def.Requirements[kubernetesversion.RequirementsField]) > 0 {
+		if err = kubernetesversion.Instance().AddConstraint(def.Name, def.Requirements[kubernetesversion.RequirementsField]); err != nil {
 			return nil, err
 		}
 	}
