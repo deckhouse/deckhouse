@@ -409,6 +409,7 @@ spec:
 		})
 	})
 
+	// TODO: rewrite this test
 	// For releases that require manual confirmation, we check the presence of
 	// an annotation every time. And if the annotation appears, we update the
 	// status. As a result, with each update we have a status update, and the
