@@ -8,13 +8,14 @@ package resources
 import (
 	"encoding/base64"
 	"fmt"
+	"strings"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/flant/addon-operator/sdk"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
-	"strings"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
 // Init secret
