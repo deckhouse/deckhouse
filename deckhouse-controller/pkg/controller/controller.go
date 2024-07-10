@@ -155,7 +155,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	}
 
 	// extender for module manager scheduler, it checks modules deckhouse version requirement on FS
-	if err = mm.AddExtender(deckhouseversion.GetExtender()); err != nil {
+	if err = mm.AddExtender(deckhouseversion.Instance()); err != nil {
 		return nil, err
 	}
 

@@ -341,10 +341,10 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	moduleName := mr.Spec.ModuleName
 
 	if len(mr.Spec.Requirements[deckhouseversion.RequirementsField]) > 0 {
-		if err := deckhouseversion.GetExtender().AddConstraint(mr.GetName(), mr.Spec.Requirements[deckhouseversion.RequirementsField]); err != nil {
+		if err := deckhouseversion.Instance().AddConstraint(mr.GetName(), mr.Spec.Requirements[deckhouseversion.RequirementsField]); err != nil {
 			return ctrl.Result{Requeue: false}, err
 		}
-		if _, err := deckhouseversion.GetExtender().Filter(mr.GetName(), nil); err != nil {
+		if _, err := deckhouseversion.Instance().Filter(mr.GetName(), nil); err != nil {
 			if err = c.updateModuleReleaseStatusMessage(ctx, mr, err.Error()); err != nil {
 				return ctrl.Result{Requeue: true}, err
 			}

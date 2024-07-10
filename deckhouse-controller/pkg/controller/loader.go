@@ -119,7 +119,7 @@ func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModu
 	}
 
 	if len(def.Requirements[deckhouseversion.RequirementsField]) > 0 {
-		if err = deckhouseversion.GetExtender().AddConstraint(def.Name, def.Requirements[deckhouseversion.RequirementsField]); err != nil {
+		if err = deckhouseversion.Instance().AddConstraint(def.Name, def.Requirements[deckhouseversion.RequirementsField]); err != nil {
 			return nil, err
 		}
 	}

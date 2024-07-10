@@ -46,7 +46,7 @@ type Extender struct {
 	constraints    map[string]*semver.Constraints
 }
 
-func GetExtender() *Extender {
+func Instance() *Extender {
 	once.Do(func() {
 		lgr := log.WithField("extender", Name)
 		version := semver.MustParse("v0.0.0")

@@ -116,9 +116,6 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 				mr := suite.getModuleRelease(suite.testMRName)
 				_, err = suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
 				require.NoError(suite.T(), err)
-				// marshaled, err := yaml.Marshal(mr)
-				// require.NoError(suite.T(), err)
-				// os.WriteFile("./testdata/"+en.Name(), marshaled, 0666)
 			})
 		}
 	})
