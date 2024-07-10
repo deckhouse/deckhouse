@@ -389,7 +389,7 @@ func (c *modulePullOverrideReconciler) restoreAbsentModulesFromOverrides(ctx con
 
 		// sync registry spec
 		if err := syncModuleRegistrySpec(c.externalModulesDir, moduleName, downloader.DefaultDevVersion, ms); err != nil {
-			return fmt.Errorf("couldn't sync the %s module's registry settings with the %s module source: %w", moduleName, ms.Name, err)
+			c.logger.Errorf("couldn't sync the %s module's registry settings with the %s module source: %w", moduleName, ms.Name, err)
 		}
 		c.logger.Infof("Resynced the %s module's registry settings with the %s module source", moduleName, ms.Name)
 	}
