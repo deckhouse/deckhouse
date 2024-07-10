@@ -32,7 +32,6 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/450-network-gateway/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/500-operator-trivy/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/650-runtime-audit-engine/hooks"
-	_ "github.com/deckhouse/deckhouse/ee/se/modules/380-metallb/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/se/modules/502-delivery/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/se/modules/502-delivery/hooks/https"
 	_ "github.com/deckhouse/deckhouse/ee/se/modules/502-delivery/hooks/werf_sources"
