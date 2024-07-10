@@ -1,0 +1,259 @@
+candi:
+  features:
+    - summary: Added support for Rosa Server OS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8666
+    - summary: Build image for standalone run of Deckhouse installer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8613
+    - summary: >-
+        Added function to create user and group with specified IDs, logging warnings if they already
+        exist or IDs are taken.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8595
+      impact: Ensures consistent user and group creation across different environments.
+    - summary: Add Kubernetes 1.30 support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8525
+      impact: All control plane components will restart.
+    - summary: Remove support Kubernetes 1.25.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8525
+      impact: The minimum supported Kubernetes version is 1.26.
+    - summary: Remove deprecated `ru-central1-c` zone from terraform.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8442
+      impact: >-
+        Yandex Cloud `ru-central1-c` zone has been removed from terraform. If you still use
+        `ru-central1-c` zone in Yandex Cloud, you need to manually run `dhctl converge` command to
+        remove subnets from the cloud.
+    - summary: Use statically linked binaries for most common package-dependencies of cluster components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8241
+      impact: kubelet and kube-proxy will restart.
+  fixes:
+    - summary: Fix AWS identity for a EBS device.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8951
+      impact: low
+    - summary: Fix 001_create_nvme_ebs_aliases.sh step for cases without requirements symlinks.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8876
+    - summary: Fix regex pattern for `httpProxy` to allow using reserved characters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8794
+    - summary: >-
+        Updated  `bootstrap-network` script to determine the primary network interface from the
+        `50-cloud-init.yaml` file, with fallback to regex matching if MAC address is missing.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8755
+      impact: Ensures correct network interface identification and configuration in all scenarios.
+    - summary: Clean up units created by registry packages install scripts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8701
+    - summary: >-
+        Disable `systemd-gpt-auto-generator`, which automatically detects swap partition in GPT and
+        activates it.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8680
+    - summary: Fix bootstrap steps with static binaries.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8672
+    - summary: Fix patch application for all Kubernetes versions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8525
+      impact: Components that use _kube-rbac-proxy_ will restart.
+    - summary: >-
+        Set `wait_for_guest_net_routable` to `false` by default in the vSphere provider to prevent
+        unnecessary timeouts in environments without a default gateway.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8417
+      impact: >-
+        VMs in isolated environments without a default gateway will no longer cause Terraform to
+        wait for 5 minutes and timeout.
+ci:
+  features:
+    - summary: Run build tasks closer to the registry. Reduce matrix test cpu usage
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8717
+    - summary: Change secondary repo flag to cache repo (werf).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8695
+    - summary: Add Kubernetes 1.30 e2e tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8512
+  fixes:
+    - summary: Fix path for e2e EKS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8927
+    - summary: Fix possible error in werf digest output.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8911
+    - summary: Fix error in the Makefile.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8872
+cloud-provider-aws:
+  fixes:
+    - summary: Fix patch application for Kubernetes 1.29.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8525
+cloud-provider-openstack:
+  features:
+    - summary: >-
+        Add support for the
+        [ConfigDrive](https://deckhouse.io/documentation/v1.62/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-configdrive)
+        parameter in mcm and `SimpleWithInternalNetwork` layout.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8733
+  fixes:
+    - summary: Add the `--tls-cipher-suites` option to the cloud-controller-manager deployment.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8820
+cloud-provider-vsphere:
+  features:
+    - summary: Update CSI version.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8525
+    - summary: Disable root reservation for PVC.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8525
+  fixes:
+    - summary: Fix bootstrap to existing folder.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8478
+cloud-provider-yandex:
+  features:
+    - summary: Update CSI driver to disable root reservation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8761
+  fixes:
+    - summary: Change default root disk size for master and cloud permanent nodes to 50 GB
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8421
+cni-cilium:
+  fixes:
+    - summary: Add `CiliumAgentMetricNotFound` Prometheus alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8751
+control-plane-manager:
+  features:
+    - summary: >-
+        Specify `service-account-jwks-uri` flag in kubernetes-apiserver if a custom issuer is
+        provided.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8712
+deckhouse:
+  features:
+    - summary: Restrict creating system namespaces.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8696
+    - summary: Set `clusterDomain` from `global.clusterConfiguration.clusterDomain`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8671
+  fixes:
+    - summary: 'Clarify `ValidatingAdmissionPolicy` for objects with label `heritage: deckhouse`.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8819
+    - summary: registry-packages-proxy revision.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8796
+    - summary: 'Fix ValidatingAdmissionPolicy for objects with the label `heritage: deckhouse`.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8778
+deckhouse-controller:
+  features:
+    - summary: Add a convenient way of resolving which _deckhouse_ pod is a current leader.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8720
+    - summary: Add user-agent for the registry client.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8641
+    - summary: Hide some sensitive data in debug output.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8612
+  fixes:
+    - summary: do not reveal aws secrets in logs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8759
+dhctl:
+  features:
+    - summary: >-
+        dhctl will now check if required python modules are installed on the node before
+        bootstrapping.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8867
+    - summary: Add new commander/detach operation, add commander-uuid option for all commander operations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8746
+    - summary: Build image for standalone run of Deckhouse installer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8613
+  fixes:
+    - summary: Fix a preflight check for python breaking without `python` symlink installed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8890
+    - summary: Set right path for terrafrom plugins.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8831
+    - summary: Hide raw terraform plan and destructive changes from check result
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8628
+    - summary: Fix spelling in preflight checks.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8623
+    - summary: Fixed bootstrap on systems with umask `027/077`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8622
+    - summary: Fix incorrect error handling.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8506
+docs:
+  fixes:
+    - summary: >-
+        The outdated `--resources` flag has been replaced by `--config` in the Getting Started.
+        Update kind-d8.sh to use newer KIND and Kubectl versions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8775
+    - summary: Update page about installation of Deckhouse CLI.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8754
+    - summary: Added usage example for Nexus docker repository.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8684
+go_lib:
+  fixes:
+    - summary: Fix working registry packages proxy with insecure registries(HTTP).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8891
+ingress-nginx:
+  features:
+    - summary: Bump nginx to `v1.25.5` in Ingress controller `v1.10`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8675
+      impact: Ingress controller v1.10 will restart.
+log-shipper:
+  features:
+    - summary: |-
+        Add an ability to send logs via socket (TCP/UDP). 
+        Messages can be formatted as text, JSON, CEF, or Syslog.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8870
+  fixes:
+    - summary: Delete lock files before sending a signal to vector to update the configuration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8730
+monitoring-kubernetes:
+  fixes:
+    - summary: Fix false-positive results in precomputed metric `oom_kills:normalized`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8592
+multitenancy-manager:
+  fixes:
+    - summary: Replace special characters in a AuthorizationRule `metadata.name`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8665
+node-manager:
+  features:
+    - summary: Exclude machines from balancing after drain-delay.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8617
+    - summary: Build image for standalone run of Deckhouse installer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8613
+operator-trivy:
+  fixes:
+    - summary: Set `node.collector.imagePullSecret` to `deckhouse-registry`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8679
+prometheus:
+  features:
+    - summary: System-independent Probes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8771
+  fixes:
+    - summary: Fix missing _kube-rbac-proxy_ CA in aggregating proxy deployment.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8789
+    - summary: Fix copying of Grafana v10 custom certificate.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8749
+    - summary: Expose Grafana v10 metrics.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8723
+    - summary: Add beforeHelm binding for `alertmanager_crds` hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8669
+    - summary: Update documentation. Remove the patch for Grafana 10.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8580
+registrypackages:
+  fixes:
+    - summary: Fix install binary iptables for OS with kernel older then 3.14.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8672
+runtime-audit-engine:
+  features:
+    - summary: Add VPA settings.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8703
+terraform-manager:
+  features:
+    - summary: Build image for standalone run of Deckhouse installer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8613
+  fixes:
+    - summary: Rebuild with dev base-image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8876
+testing:
+  features:
+    - summary: Matrix tests to check roles for wildcards.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8811
+    - summary: Build image for standalone run of Deckhouse installer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8613
+  fixes:
+    - summary: Use CentOS 9 stream image in AWS e2e.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8876
+    - summary: Update AWS AMI for CentOS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8831
+    - summary: fix e2e cloud tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8823
+tools:
+  features:
+    - summary: Build image for standalone run of Deckhouse installer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8613
+user-authn:
+  features:
+    - summary: Added examples for Blitz OIDC.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8697
+    - summary: Update dex to `v2.40.0`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8686
+
