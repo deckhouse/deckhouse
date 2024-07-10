@@ -10,6 +10,7 @@
   <a href="https://releases.deckhouse.io"><img src="https://img.shields.io/badge/releases-releases.deckhouse.io-blueviolet" alt="Releases"></a>
 </p>
 
+
 [Deckhouse](https://deckhouse.io/) is an Open Source platform for managing Kubernetes clusters in a fully automatic and uniform fashion. It allows you to create homogeneous Kubernetes clusters anywhere and fully manages them. It supplies all the add-ons you need for auto-scaling, observability, security, and service mesh. It comes in Enterprise Edition (EE) and Community Edition (CE).
 
 # Main features
