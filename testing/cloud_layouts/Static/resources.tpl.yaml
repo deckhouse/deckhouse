@@ -52,3 +52,13 @@ spec:
     - effect: NoExecute
       key: dedicated
       value: worker
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: L2LoadBalancer
+metadata:
+  name: ingress
+spec:
+  nodeSelector:
+    dedicated.worker: ""
+  addressPool:
+    - 192.168.2.100-192.168.2.150
