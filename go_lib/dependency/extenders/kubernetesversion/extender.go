@@ -56,7 +56,10 @@ func Instance() *Extender {
 		instance = &Extender{logger: log.WithField("extender", Name), versionMatcher: versionmatcher.New()}
 		appliedExtenders := os.Getenv("ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS")
 		if appliedExtenders != "" && strings.Contains(appliedExtenders, string(Name)) {
+			instance.logger.Debug("extender is enabled")
 			instance.enabled = true
+		} else {
+			instance.logger.Debugf("extender is disabled, applied extenders: %s", appliedExtenders)
 		}
 		instance.fetchKubernetesVersion()
 	})
@@ -85,6 +88,7 @@ func (e *Extender) fetchKubernetesVersion() {
 			e.logger.Errorf("error parsing kubernetes version: %v", err)
 			return
 		}
+		e.logger.Debugf("setting kubernetes version to %s", kubeVersion.String())
 		e.versionMatcher.SetBaseVersion(kubeVersion)
 		return
 	}

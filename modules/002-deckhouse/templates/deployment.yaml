@@ -167,6 +167,8 @@ spec:
                   fieldPath: spec.nodeName
             - name: HELM_HOST
               value: "127.0.0.1:44434"
+            - name: ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS
+              value: "DeckhouseVersion,KubernetesVersion,Static,DynamicallyEnabled,KubeConfig,ScriptEnabled"
             - name: ADDON_OPERATOR_LISTEN_PORT
               value: "4222"
             - name: ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT
@@ -255,8 +257,6 @@ spec:
           - "--stale-cache-interval=1h30m"
           - "--livez-path=/livez"
           env:
-          - name: ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS
-            value: "DeckhouseVersion,KubernetesVersion,Static,DynamicallyEnabled,KubeConfig,ScriptEnabled"
           - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
             valueFrom:
               fieldRef:
