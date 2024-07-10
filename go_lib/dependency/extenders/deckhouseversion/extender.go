@@ -57,10 +57,14 @@ func Instance() *Extender {
 		}
 		appliedExtenders := os.Getenv("ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS")
 		if appliedExtenders != "" && strings.Contains(appliedExtenders, string(Name)) {
+			instance.logger.Debug("extender is enabled")
 			instance.enabled = true
+		} else {
+			instance.logger.Debugf("extender is disabled, applied extenders: %s", appliedExtenders)
 		}
 		if raw, err := os.ReadFile("/deckhouse/version"); err == nil {
 			if parsed, err := semver.NewVersion(string(raw)); err == nil {
+				instance.logger.Debugf("setting deckhouse version to %s", parsed.String())
 				instance.versionMatcher.SetBaseVersion(parsed)
 			}
 		} else {
