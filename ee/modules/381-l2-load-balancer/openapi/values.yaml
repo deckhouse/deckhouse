@@ -1,0 +1,75 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+x-required-for-helm: []
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      l2loadbalancers:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            addressPool:
+              type: array
+              items:
+                type: string
+            interfaces:
+              type: array
+              items:
+                type: string
+            nodeSelector:
+              additionalProperties:
+                type: string
+              type: object
+      l2lbservices:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            namespace:
+              type: string
+            serviceName:
+              type: string
+            serviceNamespace:
+              type: string
+            loadBalancerClass:
+              type: string
+            clusterIP:
+              type: string
+            preferredNode:
+              type: string
+            selector:
+              additionalProperties:
+                type: string
+              type: object
+            ports:
+              items:
+                properties:
+                  appProtocol:
+                    type: string
+                  name:
+                    type: string
+                  nodePort:
+                    format: int32
+                    type: integer
+                  port:
+                    format: int32
+                    type: integer
+                  protocol:
+                    default: TCP
+                    type: string
+                  targetPort:
+                    anyOf:
+                      - type: integer
+                      - type: string
+                required:
+                  - port
+                type: object
+              type: array

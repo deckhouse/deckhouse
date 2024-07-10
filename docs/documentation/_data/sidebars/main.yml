@@ -1327,6 +1327,27 @@ entries:
                   url: /modules/450-keepalived/cr.html
             - title: FAQ
               url: /modules/450-keepalived/faq.html
+        - title: l2-load-balancer
+          d8Revision: ee
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/381-l2-load-balancer/
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/381-l2-load-balancer/examples.html
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/381-l2-load-balancer/configuration.html
+                - title: Custom Resources
+                  url: /modules/381-l2-load-balancer/cr.html
         - title: metallb
           d8Revision: ee
           folders:
