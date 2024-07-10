@@ -61,11 +61,11 @@ func Instance() *Extender {
 		} else {
 			instance.logger.Debugf("extender is disabled, applied extenders: %s", appliedExtenders)
 		}
-		instance.fetchKubernetesVersion()
 	})
 	return instance
 }
-func (e *Extender) fetchKubernetesVersion() {
+
+func (e *Extender) FetchKubernetesVersion() {
 	debugAddress := os.Getenv("DEBUG_HTTP_SERVER_ADDR")
 	if debugAddress == "" {
 		e.logger.Errorf("env DEBUG_HTTP_SERVER_ADDDR is not set")
@@ -74,25 +74,25 @@ func (e *Extender) fetchKubernetesVersion() {
 	// TODO(ipaqsa): add retry
 	resp, err := http.Get(fmt.Sprintf("http://%s/requirements", debugAddress))
 	if err != nil || resp.StatusCode != http.StatusOK {
-		e.logger.Errorf("error fetching kubernetes version: %v", err)
+		e.logger.Errorf("error fetching kubernetes version: %v, v0.0.0 will be used", err)
 		return
 	}
 	values := map[string]interface{}{}
 	if err = json.NewDecoder(resp.Body).Decode(&values); err != nil {
-		e.logger.Errorf("error parsing requirements: %v", err)
+		e.logger.Errorf("error parsing requirements: %v, v0.0.0 will be used", err)
 		return
 	}
 	if len(values["global.discovery.kubernetesVersion"].(string)) > 0 {
 		kubeVersion, err := semver.NewVersion(values["global.discovery.kubernetesVersion"].(string))
 		if err != nil {
-			e.logger.Errorf("error parsing kubernetes version: %v", err)
+			e.logger.Errorf("error parsing kubernetes version: %v, v0.0.0 will be used", err)
 			return
 		}
 		e.logger.Debugf("setting kubernetes version to %s", kubeVersion.String())
 		e.versionMatcher.SetBaseVersion(kubeVersion)
 		return
 	}
-	e.logger.Errorf("kubernetes version not found in requirements")
+	e.logger.Errorf("kubernetes version not found in requirements, v0.0.0 will be used")
 }
 
 func IsEnabled() bool {
