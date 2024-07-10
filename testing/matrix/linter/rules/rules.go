@@ -569,7 +569,7 @@ func objectSecurityContext(object storage.StoreObject) errors.LintRuleError {
 }
 
 func skipServiceTargetPort(o *storage.StoreObject, port int32) bool {
-	// Deployment istiod is defined by its developers so there is no way to specify a named Target Port.
+	// istiod is being deployed by istio-operator and ports are hardcoded.
 	if o.Unstructured.GetName() == "istiod" && o.Unstructured.GetNamespace() == "d8-istio" &&
 		(port == 15010 || port == 15012 || port == 15014 || port == 15017) {
 		return true
