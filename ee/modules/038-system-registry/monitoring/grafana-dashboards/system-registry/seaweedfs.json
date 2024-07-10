@@ -24,8 +24,8 @@
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 47,
-  "iteration": 1720605459627,
+  "id": 56,
+  "iteration": 1720611581004,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -101,7 +101,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum by (pod) (SeaweedFS_master_is_leader{namespace=~\"$namespace\", pod=~\"$pod\"})",
+          "expr": "sum by (pod) (SeaweedFS_master_is_leader{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"})",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -196,7 +196,7 @@
             "uid": "${ds_prometheus}"
           },
           "exemplar": true,
-          "expr": "sum by (pod) (SeaweedFS_master_leader_changes{namespace=~\"$namespace\", pod=~\"$pod\", type=~\".+\"})",
+          "expr": "sum by (pod) (SeaweedFS_master_leader_changes{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\", type=~\".+\"})",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -291,7 +291,7 @@
             "uid": "${ds_prometheus}"
           },
           "exemplar": true,
-          "expr": "sum by (type) (increase(SeaweedFS_master_received_heartbeats{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval]))",
+          "expr": "sum by (type) (increase(SeaweedFS_master_received_heartbeats{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -386,7 +386,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum (SeaweedFS_master_replica_placement_mismatch{namespace=~\"$namespace\", pod=~\"$pod\"} > 0) by (pod)",
+          "expr": "sum (SeaweedFS_master_replica_placement_mismatch{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"} > 0) by (pod)",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -482,7 +482,7 @@
             "uid": "${ds_prometheus}"
           },
           "exemplar": true,
-          "expr": "sum (SeaweedFS_master_is_leader{namespace=~\"$namespace\", pod=~\"$pod\"})",
+          "expr": "sum (SeaweedFS_master_is_leader{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"})",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -555,7 +555,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "SeaweedFS_master_admin_lock{namespace=~\"$namespace\", pod=~\"$pod\"}",
+          "expr": "SeaweedFS_master_admin_lock{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -639,7 +639,7 @@
             "h": 7,
             "w": 8,
             "x": 0,
-            "y": 2
+            "y": 14
           },
           "id": 66,
           "links": [],
@@ -661,7 +661,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_filer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_filer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -674,7 +674,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_filer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le, type))",
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_filer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le, type))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -746,7 +746,7 @@
             "h": 7,
             "w": 8,
             "x": 8,
-            "y": 2
+            "y": 14
           },
           "id": 68,
           "links": [],
@@ -768,7 +768,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_filer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_filer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -781,7 +781,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_filer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le, type))",
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_filer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le, type))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -853,7 +853,7 @@
             "h": 7,
             "w": 8,
             "x": 16,
-            "y": 2
+            "y": 14
           },
           "id": 70,
           "links": [],
@@ -875,7 +875,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_filer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_filer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -888,7 +888,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_filer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le, type))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_filer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le, type))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -973,7 +973,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 9
+            "y": 21
           },
           "id": 32,
           "links": [],
@@ -999,7 +999,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "rate(SeaweedFS_filer_request_total{namespace=~\"$namespace\", pod=~\"$pod\"}[1m]) * 5",
+              "expr": "rate(SeaweedFS_filer_request_total{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[1m]) * 5",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{type}}",
@@ -1084,7 +1084,7 @@
             "h": 7,
             "w": 8,
             "x": 0,
-            "y": 3
+            "y": 29
           },
           "id": 34,
           "links": [],
@@ -1107,7 +1107,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1121,7 +1121,7 @@
                 "uid": "${ds_prometheus}"
               },
               "editorMode": "code",
-              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le, type, bucket))",
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le, type, bucket))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1194,7 +1194,7 @@
             "h": 7,
             "w": 8,
             "x": 8,
-            "y": 3
+            "y": 29
           },
           "id": 36,
           "links": [],
@@ -1217,7 +1217,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1231,7 +1231,7 @@
                 "uid": "${ds_prometheus}"
               },
               "editorMode": "code",
-              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le, type, bucket))",
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le, type, bucket))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1304,7 +1304,7 @@
             "h": 7,
             "w": 8,
             "x": 16,
-            "y": 3
+            "y": 29
           },
           "id": 38,
           "links": [],
@@ -1327,7 +1327,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1342,7 +1342,7 @@
               },
               "editorMode": "code",
               "exemplar": true,
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le, type, bucket))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le, type, bucket))",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -1416,7 +1416,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 10
+            "y": 36
           },
           "id": 40,
           "links": [],
@@ -1440,7 +1440,7 @@
                 "uid": "${ds_prometheus}"
               },
               "exemplar": true,
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -1456,7 +1456,7 @@
               },
               "editorMode": "code",
               "exemplar": true,
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le, type, bucket, pod))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le, type, bucket, pod))",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -1543,7 +1543,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 17
+            "y": 43
           },
           "id": 44,
           "links": [],
@@ -1570,7 +1570,7 @@
                 "uid": "${ds_prometheus}"
               },
               "editorMode": "code",
-              "expr": "sum (rate(SeaweedFS_s3_request_total{namespace=~\"$namespace\", pod=~\"$pod\"}[1m]) * 5) by (bucket, type)",
+              "expr": "sum (rate(SeaweedFS_s3_request_total{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[1m]) * 5) by (bucket, type)",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{bucket}} {{type}}",
@@ -1656,7 +1656,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 4
+            "y": 51
           },
           "id": 48,
           "links": [],
@@ -1679,7 +1679,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le, exported_instance))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le, exported_instance))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1691,7 +1691,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "average",
@@ -1760,7 +1760,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 4
+            "y": 51
           },
           "id": 84,
           "links": [],
@@ -1784,7 +1784,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(rate(SeaweedFS_volumeServer_request_total{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (type)",
+              "expr": "sum(rate(SeaweedFS_volumeServer_request_total{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (type)",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{type}}",
@@ -1854,7 +1854,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 11
+            "y": 58
           },
           "id": 50,
           "links": [],
@@ -1877,7 +1877,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(SeaweedFS_volumeServer_volumes{namespace=~\"$namespace\", pod=~\"$pod\"}) by (collection, type)",
+              "expr": "sum(SeaweedFS_volumeServer_volumes{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}) by (collection, type)",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1889,7 +1889,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(SeaweedFS_volumeServer_volumes{namespace=~\"$namespace\", pod=~\"$pod\"})",
+              "expr": "sum(SeaweedFS_volumeServer_volumes{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"})",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "Total",
@@ -1958,7 +1958,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 18
+            "y": 65
           },
           "id": 52,
           "links": [],
@@ -1981,7 +1981,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(SeaweedFS_volumeServer_total_disk_size{namespace=~\"$namespace\", pod=~\"$pod\"}) by (collection, type)",
+              "expr": "sum(SeaweedFS_volumeServer_total_disk_size{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}) by (collection, type)",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1993,7 +1993,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(SeaweedFS_volumeServer_total_disk_size{namespace=~\"$namespace\", pod=~\"$pod\"})",
+              "expr": "sum(SeaweedFS_volumeServer_total_disk_size{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"})",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "Total",
@@ -2062,7 +2062,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 25
+            "y": 72
           },
           "id": 54,
           "links": [],
@@ -2085,7 +2085,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(SeaweedFS_volumeServer_total_disk_size{namespace=~\"$namespace\", pod=~\"$pod\"}) by (exported_instance)",
+              "expr": "sum(SeaweedFS_volumeServer_total_disk_size{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}) by (exported_instance)",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -2170,7 +2170,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 5
+            "y": 80
           },
           "id": 56,
           "links": [],
@@ -2193,7 +2193,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_filerStore_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le, type))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_filerStore_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le, type))",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{type}}",
@@ -2263,7 +2263,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 12
+            "y": 87
           },
           "id": 58,
           "links": [],
@@ -2289,7 +2289,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(rate(SeaweedFS_filerStore_request_total{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (type)",
+              "expr": "sum(rate(SeaweedFS_filerStore_request_total{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (type)",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{type}}",
@@ -2385,7 +2385,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 6
+            "y": 95
           },
           "id": 102,
           "links": [],
@@ -2411,7 +2411,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "process_resident_memory_bytes{namespace=~\"$namespace\",pod=~\"$pod\"}",
+              "expr": "process_resident_memory_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}} - resident",
@@ -2424,7 +2424,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "process_virtual_memory_bytes{namespace=~\"$namespace\",pod=~\"$pod\"}",
+              "expr": "process_virtual_memory_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}} - virtual",
@@ -2495,7 +2495,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 6
+            "y": 95
           },
           "id": 104,
           "links": [],
@@ -2521,7 +2521,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "rate(process_resident_memory_bytes{namespace=~\"$namespace\",pod=~\"$pod\"}[$__interval])",
+              "expr": "rate(process_resident_memory_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}} - resident",
@@ -2534,7 +2534,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "deriv(process_virtual_memory_bytes{namespace=~\"$namespace\",pod=~\"$pod\"}[$__interval])",
+              "expr": "deriv(process_virtual_memory_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}} - virtual",
@@ -2618,7 +2618,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 14
+            "y": 103
           },
           "id": 106,
           "links": [],
@@ -2644,7 +2644,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "go_memstats_alloc_bytes{namespace=~\"$namespace\",pod=~\"$pod\"}",
+              "expr": "go_memstats_alloc_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}} - bytes allocated",
@@ -2657,7 +2657,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "rate(go_memstats_alloc_bytes_total{namespace=~\"$namespace\",pod=~\"$pod\"}[30s])",
+              "expr": "rate(go_memstats_alloc_bytes_total{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}[30s])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}} - alloc rate",
@@ -2670,7 +2670,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "go_memstats_stack_inuse_bytes{namespace=~\"$namespace\",pod=~\"$pod\"}",
+              "expr": "go_memstats_stack_inuse_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}} - stack inuse",
@@ -2683,7 +2683,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "go_memstats_heap_inuse_bytes{namespace=~\"$namespace\",pod=~\"$pod\"}",
+              "expr": "go_memstats_heap_inuse_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -2768,7 +2768,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 14
+            "y": 103
           },
           "id": 108,
           "links": [],
@@ -2794,7 +2794,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "deriv(go_memstats_alloc_bytes{namespace=~\"$namespace\",pod=~\"$pod\"}[$__interval])",
+              "expr": "deriv(go_memstats_alloc_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}} - bytes allocated",
@@ -2807,7 +2807,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "rate(go_memstats_alloc_bytes_total{namespace=~\"$namespace\",pod=~\"$pod\"}[$__interval])",
+              "expr": "rate(go_memstats_alloc_bytes_total{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}} - alloc rate",
@@ -2820,7 +2820,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "deriv(go_memstats_stack_inuse_bytes{namespace=~\"$namespace\",pod=~\"$pod\"}[$__interval])",
+              "expr": "deriv(go_memstats_stack_inuse_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}} - stack inuse",
@@ -2833,7 +2833,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "deriv(go_memstats_heap_inuse_bytes{namespace=~\"$namespace\",pod=~\"$pod\"}[$__interval])",
+              "expr": "deriv(go_memstats_heap_inuse_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -2905,7 +2905,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 21
+            "y": 110
           },
           "id": 110,
           "links": [],
@@ -2931,7 +2931,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "process_open_fds{namespace=~\"$namespace\",pod=~\"$pod\"}",
+              "expr": "process_open_fds{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}}",
@@ -3002,7 +3002,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 21
+            "y": 110
           },
           "id": 112,
           "links": [],
@@ -3028,7 +3028,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "deriv(process_open_fds{namespace=~\"$namespace\",pod=~\"$pod\"}[$__interval])",
+              "expr": "deriv(process_open_fds{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}}",
@@ -3099,7 +3099,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 28
+            "y": 117
           },
           "id": 114,
           "links": [],
@@ -3125,7 +3125,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "go_goroutines{namespace=~\"$namespace\",pod=~\"$pod\"}",
+              "expr": "go_goroutines{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}}",
@@ -3196,7 +3196,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 28
+            "y": 117
           },
           "id": 116,
           "links": [],
@@ -3222,7 +3222,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "go_gc_duration_seconds{namespace=~\"$namespace\",pod=~\"$pod\"}",
+              "expr": "go_gc_duration_seconds{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}}: {{quantile}}",
@@ -3239,18 +3239,14 @@
       "type": "row"
     }
   ],
-  "refresh": "10s",
+  "refresh": "30s",
   "schemaVersion": 36,
   "style": "dark",
   "tags": [],
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": false,
-          "text": "default",
-          "value": "default"
-        },
+        "current": {},
         "hide": 0,
         "includeAll": false,
         "label": "Prometheus",
@@ -3309,11 +3305,34 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${ds_prometheus}"
+        },
+        "definition": "label_values(SeaweedFS_master_is_leader{namespace=~\"$namespace\", pod=~\"$pod\"}, endpoint)",
+        "hide": 2,
+        "includeAll": true,
+        "label": "Endpoint",
+        "multi": true,
+        "name": "endpoint",
+        "options": [],
+        "query": {
+          "query": "label_values(SeaweedFS_master_is_leader{namespace=~\"$namespace\", pod=~\"$pod\"}, endpoint)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
       }
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -3322,6 +3341,6 @@
   "timezone": "",
   "title": "Seaweedfs",
   "uid": "V7nS6t_Ik",
-  "version": 9,
+  "version": 4,
   "weekStart": ""
 }
