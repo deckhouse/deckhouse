@@ -26,7 +26,7 @@ RUN cd / && \
     && luarocks-5.1 install lua-iconv-7-3.src.rock
 
 # Build ingress controller, debug tool and pre-stop hook
-FROM $BASE_GOLANG_21_BULLSEYE_DEV as controller-builder
+FROM $BASE_GOLANG_22_BULLSEYE_DEV as controller-builder
 ARG CONTROLLER_BRANCH
 ENV CONTROLLER_BRANCH=${CONTROLLER_BRANCH}
 ARG SOURCE_REPO
