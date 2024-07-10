@@ -26,6 +26,8 @@ import (
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/utils/pointer"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/versionmatcher"
 )
 
 const (
@@ -42,38 +44,32 @@ var _ extenders.Extender = &Extender{}
 
 type Extender struct {
 	logger         logger.Logger
-	currentVersion *semver.Version
-	constraints    map[string]*semver.Constraints
+	versionMatcher *versionmatcher.Matcher
 }
 
 func Instance() *Extender {
 	once.Do(func() {
-		lgr := log.WithField("extender", Name)
-		version := semver.MustParse("v0.0.0")
+		instance = &Extender{
+			logger:         log.WithField("extender", Name),
+			versionMatcher: versionmatcher.New(),
+		}
 		if raw, err := os.ReadFile("/deckhouse/version"); err == nil {
 			if parsed, err := semver.NewVersion(string(raw)); err == nil {
-				version = parsed
+				instance.versionMatcher.SetBaseVersion(parsed)
 			}
 		} else {
-			lgr.Warn("failed to read deckhouse version from /deckhouse/version, v0.0.0 will be used")
-		}
-		instance = &Extender{
-			logger:         lgr,
-			currentVersion: version,
-			constraints:    make(map[string]*semver.Constraints),
+			instance.logger.Warn("failed to read deckhouse version from /deckhouse/version, v0.0.0 will be used")
 		}
 	})
 	return instance
 }
 
 func (e *Extender) AddConstraint(name, rawConstraint string) error {
-	constraint, err := semver.NewConstraint(rawConstraint)
-	if err != nil {
-		e.logger.Errorf("adding deckhouseVersion constraint for %q failed: %v", name, err)
+	if err := e.versionMatcher.AddConstraint(name, rawConstraint); err != nil {
+		e.logger.Debugf("adding constraint for %q failed", name)
 		return err
 	}
 	e.logger.Debugf("constraint for %q is added", name)
-	e.constraints[name] = constraint
 	return nil
 }
 
@@ -82,13 +78,9 @@ func (e *Extender) Name() extenders.ExtenderName {
 }
 
 func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
-	constraint, ok := e.constraints[name]
-	if !ok {
-		return nil, nil
-	}
-	if _, errs := constraint.Validate(e.currentVersion); len(errs) != 0 {
-		e.logger.Error("requirements of %s are not satisfied: current deckhouse version is not suitable: %s", name, errs[0].Error())
-		return pointer.Bool(false), fmt.Errorf("requirements are not satisfied: current deckhouse version is not suitable: %s", errs[0].Error())
+	if err := e.versionMatcher.Validate(name); err != nil {
+		e.logger.Errorf("requirements of %s are not satisfied: current deckhouse version is not suitable: %s", name, err.Error())
+		return pointer.Bool(false), fmt.Errorf("requirements are not satisfied: current deckhouse version is not suitable: %s", err.Error())
 	}
 	e.logger.Debugf("requirements of %s are satisfied", name)
 	return pointer.Bool(true), nil
