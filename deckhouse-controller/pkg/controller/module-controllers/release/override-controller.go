@@ -188,6 +188,7 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("cannot create tmp directory: %w", err)
 	}
+	defer os.RemoveAll(tmpDir)
 	md := downloader.NewModuleDownloader(c.dc, tmpDir, ms, utils.GenerateRegistryOptions(ms))
 	newChecksum, moduleDef, err := md.DownloadDevImageTag(mo.Name, mo.Spec.ImageTag, mo.Status.ImageDigest)
 	if err != nil {

@@ -127,6 +127,7 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 	if err != nil {
 		return fmt.Errorf("cannot create tmp directory: %w", err)
 	}
+	defer os.RemoveAll(tmpDir)
 	md := downloader.NewModuleDownloader(k.dc, tmpDir, &ms, utils.GenerateRegistryOptions(&ms))
 	ds, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
 	if err != nil {
