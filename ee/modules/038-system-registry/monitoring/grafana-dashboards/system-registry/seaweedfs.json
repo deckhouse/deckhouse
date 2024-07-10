@@ -24,8 +24,8 @@
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 46,
-  "iteration": 1720602024433,
+  "id": 47,
+  "iteration": 1720605459627,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -623,8 +623,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -731,8 +730,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -839,8 +837,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -947,8 +944,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1072,8 +1068,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1096,7 +1091,7 @@
           "options": {
             "legend": {
               "calcs": [],
-              "displayMode": "list",
+              "displayMode": "table",
               "placement": "bottom",
               "showLegend": true
             },
@@ -1125,11 +1120,13 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le, type))",
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le, type, bucket))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
-              "legendFormat": "{{type}}",
+              "legendFormat": "{{bucket}} {{type}}",
+              "range": true,
               "refId": "B",
               "step": 60
             }
@@ -1181,8 +1178,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1205,7 +1201,7 @@
           "options": {
             "legend": {
               "calcs": [],
-              "displayMode": "list",
+              "displayMode": "table",
               "placement": "bottom",
               "showLegend": true
             },
@@ -1234,11 +1230,13 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le, type))",
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le, type, bucket))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
-              "legendFormat": "{{type}}",
+              "legendFormat": "{{bucket}} {{type}}",
+              "range": true,
               "refId": "B",
               "step": 60
             }
@@ -1290,8 +1288,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1314,7 +1311,7 @@
           "options": {
             "legend": {
               "calcs": [],
-              "displayMode": "list",
+              "displayMode": "table",
               "placement": "bottom",
               "showLegend": true
             },
@@ -1343,13 +1340,15 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le, type))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le, type, bucket))",
               "format": "time_series",
               "hide": false,
               "interval": "",
               "intervalFactor": 2,
-              "legendFormat": "{{type}}",
+              "legendFormat": "{{bucket}} {{type}}",
+              "range": true,
               "refId": "B",
               "step": 60
             }
@@ -1401,8 +1400,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1456,13 +1454,15 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le, type, pod))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval])) by (le, type, bucket, pod))",
               "format": "time_series",
               "hide": false,
               "interval": "",
               "intervalFactor": 2,
-              "legendFormat": "{{type}}-{{pod}}",
+              "legendFormat": "{{bucket}} {{type}} {{pod}}",
+              "range": true,
               "refId": "B",
               "step": 60
             }
@@ -1514,8 +1514,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1570,10 +1569,12 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "rate(SeaweedFS_s3_request_total{namespace=~\"$namespace\", pod=~\"$pod\"}[1m]) * 5",
+              "editorMode": "code",
+              "expr": "sum (rate(SeaweedFS_s3_request_total{namespace=~\"$namespace\", pod=~\"$pod\"}[1m]) * 5) by (bucket, type)",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "{{type}}",
+              "legendFormat": "{{bucket}} {{type}}",
+              "range": true,
               "refId": "A",
               "step": 30
             }
@@ -1639,8 +1640,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1744,8 +1744,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1839,8 +1838,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1944,8 +1942,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2049,8 +2046,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2158,8 +2154,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2252,8 +2247,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2362,8 +2356,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2486,8 +2479,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2597,8 +2589,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2748,8 +2739,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2899,8 +2889,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2997,8 +2986,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -3095,8 +3083,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -3193,8 +3180,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -3336,6 +3322,6 @@
   "timezone": "",
   "title": "Seaweedfs",
   "uid": "V7nS6t_Ik",
-  "version": 13,
+  "version": 9,
   "weekStart": ""
 }
