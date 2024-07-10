@@ -35,12 +35,6 @@ func (client *Client) getHeaders() map[string]string {
 	return map[string]string{}
 }
 
-func (client *Client) RequestMasterInfo() (*MasterInfoResponse, error) {
-	var response MasterInfoResponse
-	err := RequestMasterInfo(client.logger, client.client, client.getUrl(), client.getHeaders(), &response)
-	return &response, err
-}
-
 func (client *Client) RequestCheckRegistry(request *CheckRegistryRequest) (*CheckRegistryResponse, error) {
 	var response CheckRegistryResponse
 	err := RequestCheckRegistry(client.logger, client.client, client.getUrl(), client.getHeaders(), request, &response)

@@ -12,17 +12,12 @@ import (
 )
 
 const (
-	MasterInfoUrlPattern     = "/master_info"
 	CheckRegistryUrlPattern  = "/check_registry"
 	UpdateRegistryUrlPattern = "/update_registry"
 	CreateRegistryUrlPattern = "/create_registry"
 	DeleteRegistryUrlPattern = "/delete_registry"
 	IsBusyUrlPattern         = "/is_busy"
 )
-
-func RequestMasterInfo(logger *logrus.Entry, client *http.Client, url string, headers map[string]string, response *MasterInfoResponse) error {
-	return makeRequestWithResponse(logger, client, http.MethodPost, url+MasterInfoUrlPattern, headers, nil, response)
-}
 
 func RequestCheckRegistry(logger *logrus.Entry, client *http.Client, url string, headers map[string]string, request *CheckRegistryRequest, response *CheckRegistryResponse) error {
 	return makeRequestWithResponse(logger, client, http.MethodPost, url+CheckRegistryUrlPattern, headers, request, response)
@@ -42,27 +37,6 @@ func RequestDeleteRegistry(logger *logrus.Entry, client *http.Client, url string
 
 func RequestIsBusy(logger *logrus.Entry, client *http.Client, url string, headers map[string]string, request *IsBusyRequest, response *IsBusyResponse) error {
 	return makeRequestWithResponse(logger, client, http.MethodPost, url+IsBusyUrlPattern, headers, request, response)
-}
-
-func CreateMasterInfoHandlerFunc(f func() (*MasterInfoResponse, error)) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		masterInfo, err := f()
-		if err != nil {
-			http.Error(w, "Failed to retrieve master info", http.StatusInternalServerError)
-			return
-		}
-
-		jsonResponse, err := json.Marshal(masterInfo)
-		if err != nil {
-			http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		w.Write(jsonResponse)
-	}
 }
 
 func CreateCheckRegistryHandlerFunc(f func(*CheckRegistryRequest) (*CheckRegistryResponse, error)) http.HandlerFunc {

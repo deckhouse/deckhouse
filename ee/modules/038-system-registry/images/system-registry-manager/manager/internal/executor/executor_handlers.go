@@ -18,10 +18,6 @@ func createServer(executorData *ExecutorData) *http.Server {
 		Addr: fmt.Sprintf("0.0.0.0:%d", (*pkg_cfg.GetConfig()).Manager.ExecutorPort),
 	}
 
-	masterInfo := func() (*executor_client.MasterInfoResponse, error) {
-		return masterInfoHandlerFunc(executorData)
-	}
-
 	checkRegistry := func(requestBody *executor_client.CheckRegistryRequest) (*executor_client.CheckRegistryResponse, error) {
 		return checkRegistryHandlerFunc(executorData, requestBody)
 	}
@@ -40,7 +36,6 @@ func createServer(executorData *ExecutorData) *http.Server {
 
 	http.HandleFunc("/healthz", healthzHandler)
 	http.HandleFunc("/readyz", readyzHandler)
-	http.HandleFunc(executor_client.MasterInfoUrlPattern, executor_client.CreateMasterInfoHandlerFunc(masterInfo))
 	http.HandleFunc(executor_client.IsBusyUrlPattern, executor_client.CreateIsBusyHandlerFunc(executorData.singleRequestCfg))
 	http.HandleFunc(executor_client.CheckRegistryUrlPattern, executor_client.CreateCheckRegistryHandlerFunc(checkRegistry))
 	http.Handle(executor_client.CreateRegistryUrlPattern, executor_client.CreateCreateRegistryHandler(createRegistry, executorData.singleRequestCfg))
@@ -55,21 +50,6 @@ func healthzHandler(w http.ResponseWriter, _ *http.Request) {
 
 func readyzHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
-}
-
-func masterInfoHandlerFunc(executorData *ExecutorData) (*executor_client.MasterInfoResponse, error) {
-	masterInfo := executor_client.MasterInfoResponse{
-		Data: struct {
-			IsMaster          bool   `json:"isMaster"`
-			MasterName        string `json:"masterName"`
-			CurrentMasterName string `json:"currentMasterName"`
-		}{
-			IsMaster:          executorData.commonCfg.IsMaster(),
-			MasterName:        executorData.commonCfg.MasterName(),
-			CurrentMasterName: executorData.commonCfg.CurrentMasterName(),
-		},
-	}
-	return &masterInfo, nil
 }
 
 func checkRegistryHandlerFunc(executorData *ExecutorData, request *executor_client.CheckRegistryRequest) (*executor_client.CheckRegistryResponse, error) {

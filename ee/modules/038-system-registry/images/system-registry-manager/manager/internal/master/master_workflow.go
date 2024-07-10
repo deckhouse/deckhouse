@@ -61,5 +61,12 @@ func masterWorkflow(ctx context.Context, m *Master) error {
 	if err != nil {
 		return err
 	}
+
+	seaweedfsSyncWorkflow := workflow.NewSeaweedfsSyncWorkflow(ctx, registryNodeManagers, pkg_cfg.GetConfig().Cluster.Size)
+	err = seaweedfsSyncWorkflow.Start()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

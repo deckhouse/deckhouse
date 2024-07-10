@@ -10,11 +10,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	common_config "system-registry-manager/internal/common"
 	pkg_logs "system-registry-manager/pkg/logs"
 )
 
-func StartOsSignalHandler(rootCtx context.Context, rCfg *common_config.RuntimeConfig, stopFuncs ...func()) {
+func StartOsSignalHandler(rootCtx context.Context, cancel context.CancelFunc, stopFuncs ...func()) {
 	log := pkg_logs.GetLoggerFromContext(rootCtx)
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
@@ -22,7 +21,7 @@ func StartOsSignalHandler(rootCtx context.Context, rCfg *common_config.RuntimeCo
 	select {
 	case sig := <-signalCh:
 		log.Infof("Received signal: %v", sig)
-		rCfg.StopManager()
+		cancel()
 	case <-rootCtx.Done():
 		log.Error("Root context cancelled")
 	}

@@ -8,7 +8,6 @@ package internal
 import (
 	"context"
 	"sync"
-	common_config "system-registry-manager/internal/common"
 	"system-registry-manager/internal/executor"
 	"system-registry-manager/internal/master"
 	pkg_logs "system-registry-manager/pkg/logs"
@@ -24,9 +23,8 @@ func StartManager() {
 	rootCtx = pkg_logs.SetLoggerToContext(rootCtx, mainProcessName)
 	log := pkg_logs.GetLoggerFromContext(rootCtx)
 
-	cfg := common_config.NewRuntimeConfig(&rootCtxCancel)
-	executor := executor.New(rootCtx, cfg)
-	master := master.New(rootCtx, cfg)
+	executor := executor.New(rootCtx, rootCtxCancel)
+	master := master.New(rootCtx, rootCtxCancel)
 
 	var wg sync.WaitGroup
 	wg.Add(3) // Changed the value to 2 since we have only two executor goroutines
@@ -35,7 +33,7 @@ func StartManager() {
 	go func() {
 		defer wg.Done()
 		log.Info("Starting os signal handler...")
-		StartOsSignalHandler(rootCtx, cfg, executor.Stop)
+		StartOsSignalHandler(rootCtx, rootCtxCancel, executor.Stop)
 	}()
 
 	// Start executor goroutine

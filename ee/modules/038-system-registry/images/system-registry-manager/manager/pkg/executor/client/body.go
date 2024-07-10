@@ -60,15 +60,6 @@ func (resp *CheckRegistryResponse) NeedSomethingCreateOrUpdate() bool {
 		(resp.Data.RegistryFilesState.CertificatesWaitToUpdate || !resp.Data.RegistryFilesState.CertificateIsExist)
 }
 
-// MasterInfo (Request + Response)
-type MasterInfoResponse struct {
-	Data struct {
-		IsMaster          bool   `json:"isMaster"`
-		MasterName        string `json:"masterName"`
-		CurrentMasterName string `json:"currentMasterName"`
-	} `json:"data,omitempty"`
-}
-
 type IsBusyResponse struct {
 	Data struct {
 		IsBusy bool `json:"isBusy"`
