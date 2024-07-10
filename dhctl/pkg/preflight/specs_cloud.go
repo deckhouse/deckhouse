@@ -110,7 +110,7 @@ func validateIntegerPropertyAtPath(configObject map[string]any, propertyPath []s
 	if !found && externalDefault == 0 {
 		return fmt.Errorf("malformed provider cluster configuration: reading reading .%s: no such property", strings.Join(propertyPath, "."))
 	}
-	if propertyValue.(int) < minimalValue {
+	if propertyValue != nil && propertyValue.(int) < minimalValue {
 		return fmt.Errorf("expected at least %d, but %d is configured", minimalValue, propertyValue)
 	}
 
