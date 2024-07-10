@@ -640,6 +640,14 @@ func skipHostNetworkPorts(o *storage.StoreObject, c *v1.Container, p *v1.Contain
 		}
 	}
 
+	// Temporary exception on port 9680/tcp of the runtime-audit-engine module .
+	if o.Unstructured.GetKind() == "DaemonSet" && o.Unstructured.GetName() == "runtime-audit-engine" &&
+		o.Unstructured.GetNamespace() == "d8-runtime-audit-engine" && c.Name == "falcosidekick" {
+		if (hostNetworkUsed && p.ContainerPort == 9680) || p.HostPort == 9680 {
+			return true
+		}
+	}
+
 	return false
 }
 
