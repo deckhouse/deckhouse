@@ -17,9 +17,9 @@ limitations under the License.
 package deckhouseversion
 
 import (
-	"errors"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
@@ -29,7 +29,13 @@ import (
 )
 
 const (
-	Name extenders.ExtenderName = "DeckhouseVersion"
+	Name              extenders.ExtenderName = "DeckhouseVersion"
+	RequirementsField string                 = "deckhouse"
+)
+
+var (
+	instance *Extender
+	once     sync.Once
 )
 
 var _ extenders.Extender = &Extender{}
@@ -40,22 +46,24 @@ type Extender struct {
 	constraints    map[string]*semver.Constraints
 }
 
-func New() (*Extender, error) {
-	version := semver.MustParse("v0.0.0")
-	if raw, err := os.ReadFile("/deckhouse/version"); err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return nil, err
+func GetExtender() *Extender {
+	once.Do(func() {
+		lgr := log.WithField("extender", Name)
+		version := semver.MustParse("v0.0.0")
+		if raw, err := os.ReadFile("/deckhouse/version"); err == nil {
+			if parsed, err := semver.NewVersion(string(raw)); err == nil {
+				version = parsed
+			}
+		} else {
+			lgr.Warn("failed to read deckhouse version from /deckhouse/version, v0.0.0 will be used")
 		}
-	} else {
-		if parsed, err := semver.NewVersion(string(raw)); err == nil {
-			version = parsed
+		instance = &Extender{
+			logger:         lgr,
+			currentVersion: version,
+			constraints:    make(map[string]*semver.Constraints),
 		}
-	}
-	return &Extender{
-		currentVersion: version,
-		constraints:    make(map[string]*semver.Constraints),
-		logger:         log.WithField("extender", Name),
-	}, nil
+	})
+	return instance
 }
 
 func (e *Extender) AddConstraint(name, rawConstraint string) error {

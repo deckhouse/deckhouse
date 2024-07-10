@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"time"
 
@@ -27,6 +28,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	"github.com/deckhouse/deckhouse/go_lib/extenders/deckhouseversion"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
@@ -648,6 +650,10 @@ func (du *Updater[R]) PrepareReleases(releases []R) {
 
 func (du *Updater[R]) checkReleaseRequirements(rl *R) bool {
 	for key, value := range (*rl).GetRequirements() {
+		// these fields are checked by extenders in module release controller
+		if slices.Contains([]string{deckhouseversion.RequirementsField}, key) {
+			continue
+		}
 		passed, err := requirements.CheckRequirement(key, value, du.enabledModules)
 		if !passed {
 			msg := fmt.Sprintf("%q requirement for DeckhouseRelease %q not met: %s", key, (*rl).GetVersion(), err)

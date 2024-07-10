@@ -33,6 +33,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
+	"github.com/deckhouse/deckhouse/go_lib/extenders/deckhouseversion"
 )
 
 var (
@@ -117,8 +118,8 @@ func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModu
 		log.Debugf("conversions for %q module not found", valuesModuleName)
 	}
 
-	if len(def.Requirements["deckhouse"]) > 0 {
-		if err = dml.deckhouseVersionExtender.AddConstraint(def.Name, def.Requirements["deckhouse"]); err != nil {
+	if len(def.Requirements[deckhouseversion.RequirementsField]) > 0 {
+		if err = deckhouseversion.GetExtender().AddConstraint(def.Name, def.Requirements[deckhouseversion.RequirementsField]); err != nil {
 			return nil, err
 		}
 	}

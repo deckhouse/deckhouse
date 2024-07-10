@@ -86,9 +86,8 @@ type DeckhouseController struct {
 
 	deckhouseModules map[string]*models.DeckhouseModule
 	// <module-name>: <module-source>
-	sourceModules            map[string]string
-	embeddedDeckhousePolicy  *v1alpha1.ModuleUpdatePolicySpec
-	deckhouseVersionExtender *deckhouseversion.Extender
+	sourceModules           map[string]string
+	embeddedDeckhousePolicy *v1alpha1.ModuleUpdatePolicySpec
 }
 
 func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager, metricStorage *metric_storage.MetricStorage) (*DeckhouseController, error) {
@@ -156,12 +155,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	}
 
 	// extender for module manager scheduler, it checks modules deckhouse version requirement on FS
-	deckhouseVersionExtender, err := deckhouseversion.New()
-	if err != nil {
-		return nil, err
-	}
-
-	if err = mm.AddExtender(deckhouseVersionExtender); err != nil {
+	if err = mm.AddExtender(deckhouseversion.GetExtender()); err != nil {
 		return nil, err
 	}
 
@@ -195,11 +189,10 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		mgr:                mgr,
 		preflightCountDown: &preflightCountDown,
 
-		deckhouseModules:         make(map[string]*models.DeckhouseModule),
-		sourceModules:            make(map[string]string),
-		embeddedDeckhousePolicy:  embeddedDeckhousePolicy,
-		metricStorage:            metricStorage,
-		deckhouseVersionExtender: deckhouseVersionExtender,
+		deckhouseModules:        make(map[string]*models.DeckhouseModule),
+		sourceModules:           make(map[string]string),
+		embeddedDeckhousePolicy: embeddedDeckhousePolicy,
+		metricStorage:           metricStorage,
 	}, nil
 }
 

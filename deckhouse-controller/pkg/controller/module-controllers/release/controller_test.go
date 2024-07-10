@@ -25,7 +25,6 @@ import (
 	"time"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	log "github.com/sirupsen/logrus"
@@ -115,8 +114,11 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			suite.Run(en.Name(), func() {
 				suite.setupReleaseController(string(suite.fetchTestFileData(en.Name())))
 				mr := suite.getModuleRelease(suite.testMRName)
-				_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+				_, err = suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
 				require.NoError(suite.T(), err)
+				// marshaled, err := yaml.Marshal(mr)
+				// require.NoError(suite.T(), err)
+				// os.WriteFile("./testdata/"+en.Name(), marshaled, 0666)
 			})
 		}
 	})
@@ -280,10 +282,6 @@ func (s stubModulesManager) GetEnabledModuleNames() []string {
 
 func (s stubModulesManager) RunModuleWithNewOpenAPISchema(_, _, _ string) error {
 	return nil
-}
-
-func (s stubModulesManager) FilterModuleByExtender(_ extenders.ExtenderName, _ string, _ map[string]string) (*bool, error) {
-	return nil, nil
 }
 
 func singleDocToManifests(doc []byte) (result []string) {

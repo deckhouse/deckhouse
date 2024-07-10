@@ -30,7 +30,6 @@ import (
 	"time"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/shell-operator/pkg/metric_storage"
@@ -77,10 +76,9 @@ type moduleReleaseReconciler struct {
 
 	preflightCountDown *sync.WaitGroup
 
-	m                        sync.Mutex
-	delayTimer               *time.Timer
-	restartReason            string
-	deckhouseVersionExtender *deckhouseversion.Extender
+	m             sync.Mutex
+	delayTimer    *time.Timer
+	restartReason string
 }
 
 const (
@@ -104,23 +102,16 @@ func NewModuleReleaseController(
 ) error {
 	lg := log.WithField("component", "ModuleReleaseController")
 
-	// extender for moduleReleaseController, it checks modules deckhouse version requirement in moduleReleases
-	deckhouseVersionExtender, err := deckhouseversion.New()
-	if err != nil {
-		return err
-	}
-
 	c := &moduleReleaseReconciler{
 		client:             mgr.GetClient(),
 		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
 		dc:                 dc,
 		logger:             lg,
 
-		metricStorage:            metricStorage,
-		moduleManager:            mm,
-		symlinksDir:              filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
-		deckhouseEmbeddedPolicy:  embeddedPolicy,
-		deckhouseVersionExtender: deckhouseVersionExtender,
+		metricStorage:           metricStorage,
+		moduleManager:           mm,
+		symlinksDir:             filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
+		deckhouseEmbeddedPolicy: embeddedPolicy,
 
 		delayTimer: time.NewTimer(3 * time.Second),
 
@@ -128,7 +119,7 @@ func NewModuleReleaseController(
 	}
 
 	// Add Preflight Check
-	err = mgr.Add(manager.RunnableFunc(c.PreflightCheck))
+	err := mgr.Add(manager.RunnableFunc(c.PreflightCheck))
 	if err != nil {
 		return err
 	}
@@ -349,11 +340,11 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	moduleName := mr.Spec.ModuleName
 
-	if len(mr.Spec.Requirements["deckhouse"]) > 0 {
-		if err := c.deckhouseVersionExtender.AddConstraint(mr.GetName(), mr.Spec.Requirements["deckhouse"]); err != nil {
+	if len(mr.Spec.Requirements[deckhouseversion.RequirementsField]) > 0 {
+		if err := deckhouseversion.GetExtender().AddConstraint(mr.GetName(), mr.Spec.Requirements[deckhouseversion.RequirementsField]); err != nil {
 			return ctrl.Result{Requeue: false}, err
 		}
-		if _, err := c.deckhouseVersionExtender.Filter(mr.GetName(), nil); err != nil {
+		if _, err := deckhouseversion.GetExtender().Filter(mr.GetName(), nil); err != nil {
 			if err = c.updateModuleReleaseStatusMessage(ctx, mr, err.Error()); err != nil {
 				return ctrl.Result{Requeue: true}, err
 			}
@@ -969,7 +960,6 @@ type moduleManager interface {
 	GetModule(moduleName string) *addonmodules.BasicModule
 	RunModuleWithNewOpenAPISchema(moduleName, moduleSource, modulePath string) error
 	GetEnabledModuleNames() []string
-	FilterModuleByExtender(name extenders.ExtenderName, moduleName string, logsLabel map[string]string) (*bool, error)
 }
 
 func (c *moduleReleaseReconciler) updateModuleReleaseDownloadStatistic(ctx context.Context, release *v1alpha1.ModuleRelease,
