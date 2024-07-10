@@ -1,72 +1,58 @@
-/*
-Copyright 2024 Flant JSC
-Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
-*/
-
 package master
 
 import (
 	"context"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/leaderelection"
-	common "system-registry-manager/internal/common"
-	// k8s_handler "system-registry-manager/internal/master/k8s_handler"
-	kube_actions "system-registry-manager/pkg/kubernetes/actions"
-	pkg_logs "system-registry-manager/pkg/logs"
+	kubeactions "system-registry-manager/pkg/kubernetes/actions"
+	pkglogs "system-registry-manager/pkg/logs"
 )
 
-const (
-	processName = "leader"
-)
+const processName = "leader"
 
 type Master struct {
-	commonCfg *common.RuntimeConfig
-	rootCtx   context.Context
-	log       *logrus.Entry
+	rootCtx    context.Context
+	cancelFunc context.CancelFunc
+	log        *logrus.Entry
 }
 
-func New(rootCtx context.Context, rCfg *common.RuntimeConfig) *Master {
-	rootCtx = pkg_logs.SetLoggerToContext(rootCtx, processName)
-	log := pkg_logs.GetLoggerFromContext(rootCtx)
+func New(rootCtx context.Context, cancel context.CancelFunc) *Master {
+	rootCtx = pkglogs.SetLoggerToContext(rootCtx, processName)
+	log := pkglogs.GetLoggerFromContext(rootCtx)
 
-	master := &Master{
-		commonCfg: rCfg,
-		rootCtx:   rootCtx,
-		log:       log,
+	return &Master{
+		rootCtx:    rootCtx,
+		cancelFunc: cancel,
+		log:        log,
 	}
-	return master
 }
 
 func (m *Master) Start() {
 	defer m.log.Info("Master shutdown")
 
-	recorder := kube_actions.NewLeaderElectionRecorder(m.log)
-	identity, err := kube_actions.NewIdentityForLeaderElection()
+	recorder := kubeactions.NewLeaderElectionRecorder(m.log)
+	identity, err := kubeactions.NewIdentityForLeaderElection()
 	if err != nil {
-		defer m.commonCfg.StopManager()
-		m.log.Errorf("Failed to start master election: %v", err)
+		m.logAndStopManager("Failed to start master election", err)
 		return
 	}
 
 	leaderCallbacks := leaderelection.LeaderCallbacks{
 		OnStartedLeading: func(ctx context.Context) {
-			m.commonCfg.IsMasterUpdate(true)
-			m.commonCfg.CurrentMasterNameUpdate(identity)
-			defer m.commonCfg.IsMasterUpdate(false)
 			startMasterWorkflow(ctx, m)
 		},
 		OnStoppedLeading: func() {
-			m.commonCfg.IsMasterUpdate(false)
-			m.commonCfg.StopManager()
-		},
-		OnNewLeader: func(identity string) {
-			m.commonCfg.CurrentMasterNameUpdate(identity)
+			m.logAndStopManager("Lost leadership, stopping manager", err) // TODO don't need to stop all application
 		},
 	}
 
-	err = kube_actions.StartLeaderElection(m.rootCtx, recorder, leaderCallbacks, identity)
+	err = kubeactions.StartLeaderElection(m.rootCtx, recorder, leaderCallbacks, identity)
 	if err != nil {
-		defer m.commonCfg.StopManager()
-		m.log.Errorf("Failed to start master election: %v", err)
+		m.logAndStopManager("Failed to start master election", err)
 	}
+}
+
+func (m *Master) logAndStopManager(message string, err error) {
+	defer m.cancelFunc()
+	m.log.Errorf("%s: %v", message, err)
 }

@@ -15,43 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMasterInfoRequests(t *testing.T) {
-	// Expected master info response
-	mockResponse := MasterInfoResponse{
-		Data: struct {
-			IsMaster          bool   `json:"isMaster"`
-			MasterName        string `json:"masterName"`
-			CurrentMasterName string `json:"currentMasterName"`
-		}{
-			IsMaster:          true,
-			MasterName:        "TestMaster",
-			CurrentMasterName: "OtherTestMaster",
-		},
-	}
-
-	// Mock function for fetching master info
-	mockMasterInfoFunc := func() (*MasterInfoResponse, error) {
-		return &mockResponse, nil
-	}
-
-	// Create test handler function using the mockMasterInfoFunc
-	handlerFunc := CreateMasterInfoHandlerFunc(mockMasterInfoFunc)
-
-	// Create a mock HTTP server using the handler function
-	mockServer := httptest.NewServer(http.HandlerFunc(handlerFunc))
-	defer mockServer.Close()
-
-	// Make a request to the mock server
-	var response MasterInfoResponse
-	err := RequestMasterInfo(logrus.NewEntry(logrus.New()), &http.Client{}, mockServer.URL, map[string]string{}, &response)
-	assert.NoError(t, err)
-
-	// Compare received master info with expected
-	if !reflect.DeepEqual(mockResponse, response) {
-		t.Errorf("expected response body %v, got %v", mockResponse, response)
-	}
-}
-
 func TestCheckRegistryRequests(t *testing.T) {
 	// Expected check registry response
 	mockResponse := CheckRegistryResponse{

@@ -9,7 +9,6 @@ import (
 	"context"
 	"github.com/sirupsen/logrus"
 	"net/http"
-	common "system-registry-manager/internal/common"
 	executor_client "system-registry-manager/pkg/executor/client"
 	pkg_logs "system-registry-manager/pkg/logs"
 	"time"
@@ -26,8 +25,8 @@ type Executor struct {
 }
 
 type ExecutorData struct {
-	commonCfg        *common.RuntimeConfig
 	rootCtx          context.Context
+	cancelFunc       context.CancelFunc
 	log              *logrus.Entry
 	singleRequestCfg *executor_client.SingleRequestConfig
 }
@@ -35,14 +34,14 @@ type ExecutorServer struct {
 	server *http.Server
 }
 
-func New(rootCtx context.Context, rCfg *common.RuntimeConfig) *Executor {
+func New(rootCtx context.Context, cancel context.CancelFunc) *Executor {
 	rootCtx = pkg_logs.SetLoggerToContext(rootCtx, processName)
 	log := pkg_logs.GetLoggerFromContext(rootCtx)
 
 	executor := &Executor{
 		ExecutorData{
-			commonCfg:        rCfg,
 			rootCtx:          rootCtx,
+			cancelFunc:       cancel,
 			log:              log,
 			singleRequestCfg: executor_client.CreateSingleRequestConfig(),
 		},
@@ -58,7 +57,7 @@ func New(rootCtx context.Context, rCfg *common.RuntimeConfig) *Executor {
 func (m *Executor) Start() {
 	m.log.Info("Executor starting...")
 	if err := m.server.ListenAndServe(); err != nil {
-		defer m.commonCfg.StopManager()
+		defer m.cancelFunc()
 		if err != http.ErrServerClosed {
 			m.log.Errorf("error starting server: %v", err)
 		} else {

@@ -29,7 +29,7 @@ func NewSeaweedfsCertsWorkflow(ctx context.Context, nodeManagers []RegistryNodeM
 }
 
 func (w *SeaweedfsCertsWorkflow) Start() error {
-	w.log.Info("CertsWorkflow :: Start")
+	w.log.Info("▶️ CertsWorkflow :: Start")
 
 	w.log.Info("Start :: Selecting nodes that exist and need certificate updates")
 	existAndNeedUpdateCert, _, err := SelectBy(w.NodeManagers, CmpIsExist, CmpIsNeedUpdateCerts)
