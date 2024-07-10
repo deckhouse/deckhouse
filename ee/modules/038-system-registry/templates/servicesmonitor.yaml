@@ -25,6 +25,16 @@ spec:
     - action: replace
       replacement: cluster
       targetLabel: tier
+  - port: http-distrib-metrics
+    scheme: http
+    path: /metrics
+    honorLabels: true
+    tlsConfig:
+      insecureSkipVerify: true
+    relabelings:
+    - action: replace
+      replacement: cluster
+      targetLabel: tier
   namespaceSelector:
     matchNames:
     - d8-system

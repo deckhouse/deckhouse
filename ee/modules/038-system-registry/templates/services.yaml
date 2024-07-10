@@ -35,6 +35,10 @@ spec:
     protocol: TCP
     targetPort: 9324
     port: 9324
+  - name: http-distrib-metrics
+    protocol: TCP
+    targetPort: 5002
+    port: 5002
   selector:
     component: system-registry
 
