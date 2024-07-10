@@ -15,4 +15,4 @@
         description: |
           There is orphan EgressGatewayPolicy in the cluster: with the name: `{{$labels.name}}` which has irrelevant EgressGateway name.
 
-          It is recommended to check EgressGateway name in EgressGatewayPolicy resource: egress gateway name: `{{$labels.egressgateway}}`
+          It is recommended to check EgressGateway name in EgressGatewayPolicy resource: `{{$labels.egressgateway}}`

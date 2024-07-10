@@ -15,7 +15,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 12},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 12}, // to run after egressgateways_discovery.go
 	Queue:        "/modules/cni-cilium/egress-policy-discovery",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
