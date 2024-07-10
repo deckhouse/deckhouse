@@ -630,6 +630,22 @@ func ClusterUUIDConfigMap(uuid string) *apiv1.ConfigMap {
 	}
 }
 
+const (
+	CommanderUUIDCmKey       = "commander-uuid"
+	CommanderUUIDCm          = "d8-commander-uuid"
+	CommanderUUIDCmNamespace = "kube-system"
+)
+
+func CommanderUUIDConfigMap(uuid string) *apiv1.ConfigMap {
+	return &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      CommanderUUIDCm,
+			Namespace: CommanderUUIDCmNamespace,
+		},
+		Data: map[string]string{CommanderUUIDCmKey: uuid},
+	}
+}
+
 func KubeDNSService(ipAddress string) *apiv1.Service {
 	return &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{

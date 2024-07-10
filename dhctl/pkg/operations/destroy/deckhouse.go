@@ -21,10 +21,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/google/uuid"
 )
 
 type DeckhouseDestroyerOptions struct {
 	CommanderMode bool
+	CommanderUUID uuid.UUID
 }
 
 type DeckhouseDestroyer struct {

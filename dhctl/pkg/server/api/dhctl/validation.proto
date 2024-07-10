@@ -1,0 +1,95 @@
+// Copyright 2024 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+option go_package = "pb/dhctl";
+
+package dhctl;
+
+message ValidateOptions {
+  bool commander_mode = 1;
+  bool strict_unmarshal = 2;
+  bool validate_extensions = 3;
+  bool required_ssh_host = 4;
+}
+
+message ValidateResourcesRequest {
+  string config = 1;
+  ValidateOptions opts = 2;
+}
+
+message ValidateResourcesResponse {
+  string err = 1;
+}
+
+message ValidateInitConfigRequest {
+  string config = 1;
+  ValidateOptions opts = 2;
+}
+
+message ValidateInitConfigResponse {
+  string err = 1;
+}
+
+message ValidateClusterConfigRequest {
+  string config = 1;
+  ValidateOptions opts = 2;
+}
+
+message ValidateClusterConfigResponse {
+  string cluster_config = 1;
+  string err = 2;
+}
+
+message ValidateStaticClusterConfigRequest {
+  string config = 1;
+  ValidateOptions opts = 2;
+}
+
+message ValidateStaticClusterConfigResponse {
+  string err = 1;
+}
+
+message ValidateProviderSpecificClusterConfigRequest {
+  string config = 1;
+  string cluster_config = 2;
+  ValidateOptions opts = 3;
+}
+
+message ValidateProviderSpecificClusterConfigResponse {
+  string err = 1;
+}
+
+message ValidateChangesRequest {
+  string phase = 1;
+  string old_config = 2;
+  string new_config = 3;
+  ValidateOptions opts = 4;
+}
+
+message ValidateChangesResponse {
+  string err = 1;
+}
+
+message ParseConnectionConfigRequest {
+  string config = 1;
+  ValidateOptions opts = 2;
+}
+
+message ParseConnectionConfigResponse {
+  string connection_config = 1;
+  string err = 2;
+}
+
