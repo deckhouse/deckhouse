@@ -123,7 +123,11 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 		return fmt.Errorf("get module source: %w", err)
 	}
 
-	md := downloader.NewModuleDownloader(k.dc, k.externalModulesDir, &ms, utils.GenerateRegistryOptions(&ms))
+	tmpDir, err := os.MkdirTemp("", "module*")
+	if err != nil {
+		return fmt.Errorf("cannot create tmp directory: %w", err)
+	}
+	md := downloader.NewModuleDownloader(k.dc, tmpDir, &ms, utils.GenerateRegistryOptions(&ms))
 	ds, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
 	if err != nil {
 		return fmt.Errorf("download module: %w", err)
@@ -134,7 +138,7 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 		return fmt.Errorf("update module release download statistic: %w", err)
 	}
 
-	moduleVersionPath := path.Join(k.externalModulesDir, moduleName, "v"+release.Spec.Version.String())
+	moduleVersionPath := path.Join(tmpDir, moduleName, "v"+release.Spec.Version.String())
 	relativeModulePath := generateModulePath(moduleName, release.Spec.Version.String())
 	newModuleSymlink := path.Join(k.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, moduleName))
 
@@ -152,6 +156,14 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 		}
 
 		return nil
+	}
+
+	moduleVersionPath = path.Join(k.externalModulesDir, moduleName, "v"+release.Spec.Version.String())
+	if err = os.RemoveAll(moduleVersionPath); err != nil {
+		return fmt.Errorf("cannot remove old module dir %q: %w", moduleVersionPath, err)
+	}
+	if err = copyDirectory(tmpDir, moduleVersionPath); err != nil {
+		return fmt.Errorf("copy module dir: %w", err)
 	}
 
 	// search symlink for module by regexp

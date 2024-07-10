@@ -918,12 +918,16 @@ func validateModule(def models.DeckhouseModuleDefinition) error {
 		return fmt.Errorf("cannot validate module without path. Path is required to load openapi specs")
 	}
 
-	dm, err := models.NewDeckhouseModule(def, addonutils.Values{}, nil, nil)
+	cb, vb, err := addonutils.ReadOpenAPIFiles(filepath.Join(def.Path, "openapi"))
+	if err != nil {
+		return fmt.Errorf("read open API files: %w", err)
+	}
+	dm, err := addonmodules.NewBasicModule(def.Name, def.Path, def.Weight, nil, cb, vb)
 	if err != nil {
 		return fmt.Errorf("new deckhouse module: %w", err)
 	}
 
-	err = dm.GetBasicModule().Validate()
+	err = dm.Validate()
 	if err != nil {
 		return fmt.Errorf("validate module: %w", err)
 	}
