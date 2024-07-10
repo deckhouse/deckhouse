@@ -267,9 +267,9 @@ spec:
           name: argocd-server
           ports:
             - containerPort: 8080
-              name: argocd-server-port
+              name: server
             - containerPort: 8083
-              name: argocd-metrics-port
+              name: metrics
           resources:
             requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 14 }}

@@ -77,7 +77,7 @@ spec:
             mountPath: "/etc/tls-certs"
             readOnly: true
         ports:
-          - name: admission-controller-port
+          - name: controller
             containerPort: 8000
         resources:
           requests:
@@ -99,6 +99,6 @@ metadata:
 spec:
   ports:
     - port: 443
-      targetPort: admission-controller-port
+      targetPort: controller
   selector:
     app: vpa-admission-controller

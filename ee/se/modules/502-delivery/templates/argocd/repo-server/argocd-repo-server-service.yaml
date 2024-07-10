@@ -9,10 +9,10 @@ spec:
     - name: server
       port: 8081
       protocol: TCP
-      targetPort: server-port
+      targetPort: server
     - name: metrics
       port: 8084
       protocol: TCP
-      targetPort: metrics-port
+      targetPort: metrics
   selector:
     app.kubernetes.io/name: argocd-repo-server
