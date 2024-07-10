@@ -335,10 +335,11 @@ func (c *moduleSourceReconciler) createModuleRelease(ctx context.Context, ms *v1
 			},
 		},
 		Spec: v1alpha1.ModuleReleaseSpec{
-			ModuleName: moduleName,
-			Version:    semver.MustParse(result.ModuleVersion),
-			Weight:     result.ModuleWeight,
-			Changelog:  v1alpha1.Changelog(result.Changelog),
+			ModuleName:   moduleName,
+			Version:      semver.MustParse(result.ModuleVersion),
+			Weight:       result.ModuleWeight,
+			Changelog:    v1alpha1.Changelog(result.Changelog),
+			Requirements: result.ModuleDefinition.Requirements,
 		},
 	}
 

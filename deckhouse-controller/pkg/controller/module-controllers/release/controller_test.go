@@ -100,7 +100,9 @@ func (suite *ReleaseControllerTestSuite) TearDownSubTest() {
 func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	entries, err := os.ReadDir("./testdata/releaseController")
 	require.NoError(suite.T(), err)
-
+	if err = os.Setenv("ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS", "[DeckhouseVersion, KubernetesVersion]"); err != nil {
+		require.NoError(suite.T(), err)
+	}
 	suite.Run("testdata cases", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
 			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}}"}}}, nil
@@ -114,7 +116,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			suite.Run(en.Name(), func() {
 				suite.setupReleaseController(string(suite.fetchTestFileData(en.Name())))
 				mr := suite.getModuleRelease(suite.testMRName)
-				_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+				_, err = suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
 				require.NoError(suite.T(), err)
 			})
 		}
