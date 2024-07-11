@@ -960,6 +960,7 @@ spec:
                             - AzureInstanceClass
                             - VCDInstanceClass
                             - ZvirtInstanceClass
+                            - DynamixInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -1750,6 +1751,7 @@ spec:
                             - AzureInstanceClass
                             - VCDInstanceClass
                             - ZvirtInstanceClass
+                            - DynamixInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
