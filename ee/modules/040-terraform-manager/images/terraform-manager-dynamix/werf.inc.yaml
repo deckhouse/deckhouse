@@ -1,12 +1,12 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: {{ .ModuleName }}/base-terraform-manager
 git:
-  - add: /{{ .ModulePath }}candi/cloud-providers/zvirt
-    to: /deckhouse/candi/cloud-providers/zvirt
+  - add: /{{ .ModulePath }}candi/cloud-providers/dynamix
+    to: /deckhouse/candi/cloud-providers/dynamix
 import:
-  - artifact: terraform-provider-dynamix
-    add: /terraform-provider-dynamix
-    to: /plugins/registry.terraform.io/{{ .TF.dynamix.namespace }}/{{ .TF.dynamix.type }}/{{ .TF.dynamix.version }}/linux_amd64/terraform-provider-decort
+  - artifact: terraform-provider-decort
+    add: /terraform-provider-decort
+    to: /plugins/registry.terraform.io/{{ .TF.decort.namespace }}/{{ .TF.decort.type }}/{{ .TF.decort.version }}/linux_amd64/terraform-provider-decort
     before: setup
 ---
 artifact: terraform-provider-decort
@@ -18,7 +18,7 @@ shell:
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
-    - git clone --depth 1 --branch {{ .TF.dynamix.version }} {{ $.SOURCE_REPO }}/BASIS/terraform-provider-decort.git /src
+    - git clone --depth 1 --branch {{ .TF.decort.version }} {{ $.SOURCE_REPO }}/BASIS/terraform-provider-decort.git /src
     - cd /src
     - go mod tidy
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X main.version={{ .TF.dynamix.version }} -X main.commit=00000000" -o terraform-provider-decort ./cmd/decort/
