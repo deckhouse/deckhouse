@@ -56,10 +56,10 @@ func Instance() *Extender {
 		if appliedExtenders != "" && strings.Contains(appliedExtenders, string(Name)) {
 			instance.logger.Debug("extender is enabled")
 			instance.enabled = true
+			go instance.watchForKubernetesVersion()
 		} else {
 			instance.logger.Debugf("extender is disabled, applied extenders: %s", appliedExtenders)
 		}
-		go instance.watchForKubernetesVersion()
 	})
 	return instance
 }
