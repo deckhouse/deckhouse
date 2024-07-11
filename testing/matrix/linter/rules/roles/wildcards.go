@@ -70,9 +70,6 @@ var skipCheckWildcards = map[string][]string{
 	"ingress-nginx/templates/kruise/rbac-for-us.yaml": {
 		"d8:ingress-nginx:kruise-role",
 	},
-	"cilium-hubble/templates/ui/rbac-for-us.yaml": {
-		"d8:cilium-hubble:ui:reader",
-	},
 	"okmeter/templates/rbac-for-us.yaml": {
 		"d8:okmeter",
 	},
