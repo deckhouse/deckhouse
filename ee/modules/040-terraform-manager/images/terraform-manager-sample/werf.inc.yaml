@@ -1,0 +1,27 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: {{ .ModuleName }}/base-terraform-manager
+git:
+  - add: /{{ .ModulePath }}candi/cloud-providers/sample
+    to: /deckhouse/candi/cloud-providers/sample
+import:
+  - artifact: terraform-provider-sample
+    add: /terraform-provider-sample
+    to: /plugins/registry.terraform.io/{{ .TF.sample.namespace }}/{{ .TF.sample.type }}/{{ .TF.sample.version }}/linux_amd64/terraform-provider-sample
+    before: setup
+---
+artifact: terraform-provider-sample
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - mkdir /src
+    - export GOPROXY={{ $.GOPROXY }}
+    - git clone --depth 1 --branch {{ .TF.sample.version }} {{ $.SOURCE_REPO }}/BASIS/terraform-provider-sample.git /src
+    - cd /src
+    - go mod tidy
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X main.version={{ .TF.sample.version }} -X main.commit=00000000" -o terraform-provider-sample ./cmd/sample/
+    - mv /src/terraform-provider-sample /terraform-provider-sample
+    - chmod -R 755 /terraform-provider-sample
+    - chown 64535:64535 /terraform-provider-sample

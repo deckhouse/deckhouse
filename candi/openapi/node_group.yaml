@@ -316,6 +316,7 @@ spec:
                             The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
                           type: string
                           enum:
+                            - SampleInstanceClass
                             - OpenStackInstanceClass
                             - GCPInstanceClass
                             - VsphereInstanceClass
@@ -959,6 +960,7 @@ spec:
                             - AzureInstanceClass
                             - VCDInstanceClass
                             - ZvirtInstanceClass
+                            - SampleInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -1749,6 +1751,7 @@ spec:
                             - AzureInstanceClass
                             - VCDInstanceClass
                             - ZvirtInstanceClass
+                            - SampleInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).

@@ -47,6 +47,8 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 
 	var coreCountPropertyPath, ramAmountPropertyPath, rootDiskPropertyPath []string
 	switch configKind {
+	case "SampleClusterConfiguration":
+		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSizeGb"}
 	case "AWSClusterConfiguration", "GCPClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "diskSizeGb"}
 

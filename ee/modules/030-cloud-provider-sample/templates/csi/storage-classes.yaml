@@ -1,0 +1,17 @@
+{{- $providerClusterConfiguration := .Values.cloudProviderSample.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
+{{- range $index, $storageClass := .Values.cloudProviderSample.internal.storageClasses }}
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
+  {{- include "helm_lib_module_storage_class_annotations" (list $ $index $storageClass.name) | nindent 2 }}
+  name: {{ $storageClass.name | quote }}
+provisioner: sample.deckhouse.io
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+parameters:
+  storageProfile: {{ $storageClass.storageProfile | quote }}
+  allowVolumeExpansion: {{ $storageClass.allowVolumeExpansion | toString | quote }}
+{{- end }}

@@ -1,0 +1,26 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+docker:
+  ENTRYPOINT: ["/capsa-controller-manager"]
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /capsa-controller-manager
+  to: /capsa-controller-manager
+  before: setup
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - export VERSION="v0.0.1"
+    - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/sample/capsa-controller-manager.git /src
+    - cd /src
+    - export GOPROXY={{ $.GOPROXY }}
+    - go mod download
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /capsa-controller-manager cmd/main.go
+    - chown 64535:64535 /capsa-controller-manager
+    - chmod 0700 /capsa-controller-manager

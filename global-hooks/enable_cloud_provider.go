@@ -27,6 +27,7 @@ import (
 
 var (
 	cloudProviderNameToModule = map[string]string{
+		"Sample":    "cloudProviderSample",
 		"OpenStack": "cloudProviderOpenstack",
 		"AWS":       "cloudProviderAws",
 		"GCP":       "cloudProviderGcp",
