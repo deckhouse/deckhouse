@@ -167,6 +167,8 @@ github.com/flant/addon-operator v1.4.1 h1:e5lAN2y4wPzSWXIukCYxermJibtr1/vVRX+vSt
 github.com/flant/addon-operator v1.4.1/go.mod h1:CbitgIV/9NRBKOmts6bbkfXARjYyXEsNexwqNM7DPbg=
 github.com/flant/addon-operator v1.4.2-0.20240709133951-746f6f280f89 h1:uT+nMQK6dsnvoTDLF+ZwLNHjhQ4RsrngsAXLUW61Kfs=
 github.com/flant/addon-operator v1.4.2-0.20240709133951-746f6f280f89/go.mod h1:CbitgIV/9NRBKOmts6bbkfXARjYyXEsNexwqNM7DPbg=
+github.com/flant/addon-operator v1.4.2-0.20240711112415-c537d28c994e h1:iXGNKL9QwuOUQzzj8TKPsiURyy4m/x6AH35+zYAnkgQ=
+github.com/flant/addon-operator v1.4.2-0.20240711112415-c537d28c994e/go.mod h1:CbitgIV/9NRBKOmts6bbkfXARjYyXEsNexwqNM7DPbg=
 github.com/flant/go-openapi-validate v0.19.12-flant.1 h1:GuB9XEfiLHq3M7fafRLq1AWkndSY/+/5MX7ad1xJ/8A=
 github.com/flant/go-openapi-validate v0.19.12-flant.1/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/gogost/v5 v5.13.0 h1:xU60PYSePgtvS7Z1zP9jeT/7e0KsLlFZ/VAn6m+kAJc=

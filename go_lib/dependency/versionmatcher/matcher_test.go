@@ -60,8 +60,8 @@ func TestExtender(t *testing.T) {
 func test(t *testing.T, tc testCase) {
 	currentVersion, err := semver.NewVersion(tc.baseVersion)
 	require.NoError(t, err)
-	matcher := New()
-	matcher.SetBaseVersion(currentVersion)
+	matcher := New(false)
+	matcher.ChangeBaseVersion(currentVersion)
 	err = matcher.AddConstraint(tc.name, tc.constraint)
 	if err != nil {
 		require.NoError(t, err)

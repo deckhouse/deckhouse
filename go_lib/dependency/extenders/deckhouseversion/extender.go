@@ -53,7 +53,7 @@ func Instance() *Extender {
 	once.Do(func() {
 		instance = &Extender{
 			logger:         log.WithField("extender", Name),
-			versionMatcher: versionmatcher.New(),
+			versionMatcher: versionmatcher.New(false),
 		}
 		appliedExtenders := os.Getenv("ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS")
 		if appliedExtenders != "" && strings.Contains(appliedExtenders, string(Name)) {
@@ -65,7 +65,7 @@ func Instance() *Extender {
 		if raw, err := os.ReadFile("/deckhouse/version"); err == nil {
 			if parsed, err := semver.NewVersion(string(raw)); err == nil {
 				instance.logger.Debugf("setting deckhouse version to %s", parsed.String())
-				instance.versionMatcher.SetBaseVersion(parsed)
+				instance.versionMatcher.ChangeBaseVersion(parsed)
 			} else {
 				instance.logger.Warn("failed to parse deckhouse version, v0.0.0 will be used")
 			}
