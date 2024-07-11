@@ -215,14 +215,14 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, fmt.Errorf("got an empty module definition for %s module pull override", mo.Name)
 	}
 
-	err = validateModule(*moduleDef)
+	err = validateModule(moduleDef)
 	if err != nil {
 		mo.Status.Message = fmt.Sprintf("validation failed: %s", err)
 		if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
-			return ctrl.Result{Requeue: true}, e
+			return ctrl.Result{}, e
 		}
 
-		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
+		return ctrl.Result{}, fmt.Errorf("validation failed: %w", err)
 	}
 
 	if err = os.RemoveAll(c.externalModulesDir); err != nil {

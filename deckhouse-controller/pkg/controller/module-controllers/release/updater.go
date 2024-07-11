@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/helpers"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -114,6 +115,7 @@ func (k *kubeAPI) PatchReleaseApplyAfter(release *v1alpha1.ModuleRelease, applyT
 }
 
 func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
+	helpers.Infof("=== Deploy release", release)
 	moduleName := release.Spec.ModuleName
 
 	// download desired module version
@@ -139,31 +141,32 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 		return fmt.Errorf("update module release download statistic: %w", err)
 	}
 
-	moduleVersionPath := path.Join(tmpDir, moduleName, "v"+release.Spec.Version.String())
+	tmpModuleVersionPath := path.Join(tmpDir, moduleName, "v"+release.Spec.Version.String())
 	relativeModulePath := generateModulePath(moduleName, release.Spec.Version.String())
-	newModuleSymlink := path.Join(k.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, moduleName))
 
-	def := models.DeckhouseModuleDefinition{
+	def := &models.DeckhouseModuleDefinition{
 		Name:   moduleName,
 		Weight: release.Spec.Weight,
-		Path:   moduleVersionPath,
+		Path:   tmpModuleVersionPath,
 	}
+	helpers.Infof("=== def", def)
 	err = validateModule(def)
 	if err != nil {
-		k.logger.Errorf("Module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
 		release.Status.Phase = v1alpha1.PhaseSuspended
 		if e := k.UpdateReleaseStatus(release, "validation failed: "+err.Error(), release.Status.Phase); e != nil {
+			k.logger.Errorf("update status failed: %s", e)
 			return e
 		}
 
-		return nil
+		return fmt.Errorf("module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
 	}
-
-	moduleVersionPath = path.Join(k.externalModulesDir, moduleName, "v"+release.Spec.Version.String())
+	helpers.Infof("=== def after validate", def)
+	newModuleSymlink := path.Join(k.symlinksDir, fmt.Sprintf("%d-%s", def.Weight, moduleName))
+	moduleVersionPath := path.Join(k.externalModulesDir, moduleName, "v"+release.Spec.Version.String())
 	if err = os.RemoveAll(moduleVersionPath); err != nil {
 		return fmt.Errorf("cannot remove old module dir %q: %w", moduleVersionPath, err)
 	}
-	if err = copyDirectory(tmpDir, moduleVersionPath); err != nil {
+	if err = copyDirectory(tmpModuleVersionPath, moduleVersionPath); err != nil {
 		return fmt.Errorf("copy module dir: %w", err)
 	}
 

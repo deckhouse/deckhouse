@@ -26,6 +26,7 @@ import (
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	"k8s.io/utils/pointer"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -278,6 +279,7 @@ func (du *Updater[R]) checkMinorReleaseConditions(predictedRelease *R, updateWin
 //   - Manual approving
 //   - Release requirements
 func (du *Updater[R]) ApplyPredictedRelease(updateWindows update.Windows) bool {
+	helpers.Infof("=== ApplyPredictedRelease", struct{}{})
 	if du.predictedReleaseIndex == -1 {
 		return false // has no predicted release
 	}
@@ -286,6 +288,7 @@ func (du *Updater[R]) ApplyPredictedRelease(updateWindows update.Windows) bool {
 
 	predictedRelease := &(du.releases[du.predictedReleaseIndex])
 
+	helpers.Infof("=== predictedRelease", predictedRelease)
 	if du.currentDeployedReleaseIndex != -1 {
 		currentRelease = &(du.releases[du.currentDeployedReleaseIndex])
 	}
@@ -299,8 +302,10 @@ func (du *Updater[R]) ApplyPredictedRelease(updateWindows update.Windows) bool {
 	var readyForDeploy bool
 
 	if du.PredictedReleaseIsPatch() {
+		helpers.Infof("=== du.PredictedReleaseIsPatch()", struct{}{})
 		readyForDeploy = du.checkPatchReleaseConditions(predictedRelease)
 	} else {
+		helpers.Infof("=== !!!du.PredictedReleaseIsPatch()", struct{}{})
 		readyForDeploy = du.checkMinorReleaseConditions(predictedRelease, updateWindows)
 	}
 
@@ -310,6 +315,7 @@ func (du *Updater[R]) ApplyPredictedRelease(updateWindows update.Windows) bool {
 
 	// all checks are passed, deploy release
 
+	helpers.Infof("=== before du.runReleaseDeploy", struct{}{})
 	return du.runReleaseDeploy(predictedRelease, currentRelease)
 }
 
@@ -631,6 +637,7 @@ func (du *Updater[R]) PrepareReleases(releases []R) {
 		return
 	}
 
+	helpers.Infof("=== PrepareReleases", releases)
 	for i, release := range releases {
 		release = du.patchInitialStatus(release)
 
@@ -642,6 +649,8 @@ func (du *Updater[R]) PrepareReleases(releases []R) {
 	}
 
 	sort.Sort(ByVersion[R](releases))
+
+	helpers.Infof("=== PrepareReleases", releases)
 
 	du.releases = releases
 }

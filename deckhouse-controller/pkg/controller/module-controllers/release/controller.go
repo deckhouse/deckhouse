@@ -50,6 +50,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/helpers"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -345,6 +346,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		return ctrl.Result{Requeue: true}, err
 	}
 
+	helpers.Infof("=== otherReleases", otherReleases)
 	// search symlink for module by regexp
 	// module weight for a new version of the module may be different from the old one,
 	// we need to find a symlink that contains the module name without looking at the weight prefix.
@@ -355,6 +357,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 
 	var modulesChangedReason string
 	defer func() {
+		helpers.Infof("=== modulesChangedReason", modulesChangedReason)
 		if modulesChangedReason != "" {
 			c.emitRestart(modulesChangedReason)
 		}
@@ -410,12 +413,15 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	for _, r := range otherReleases.Items {
 		pointerReleases = append(pointerReleases, &r)
 	}
+	helpers.Infof("=== pointerReleases", pointerReleases)
 	releaseUpdater.PrepareReleases(pointerReleases)
 	if releaseUpdater.ReleasesCount() == 0 {
 		return ctrl.Result{}, nil
 	}
 
 	releaseUpdater.PredictNextRelease()
+
+	helpers.Infof("=== ReleaseUpdater", releaseUpdater)
 
 	if releaseUpdater.LastReleaseDeployed() {
 		// latest release deployed
@@ -459,6 +465,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	}
 
 	if releaseUpdater.PredictedReleaseIsPatch() {
+		helpers.Infof("=== releaseUpdater.PredictedReleaseIsPatch()", struct{}{})
 		// patch release does not respect update windows or ManualMode
 		if !releaseUpdater.ApplyPredictedRelease(nil) {
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
@@ -473,6 +480,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		windows = policy.Spec.Update.Windows
 	}
 
+	helpers.Infof("=== !releaseUpdater.ApplyPredictedRelease(windows)", struct{}{})
 	if !releaseUpdater.ApplyPredictedRelease(windows) {
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
@@ -909,10 +917,8 @@ func (c *moduleReleaseReconciler) parseNotificationConfig(ctx context.Context) (
 	return settings.NotificationConfig, nil
 }
 
-func validateModule(def models.DeckhouseModuleDefinition) error {
-	if def.Weight < 900 || def.Weight > 999 {
-		return fmt.Errorf("external module weight must be between 900 and 999")
-	}
+func validateModule(def *models.DeckhouseModuleDefinition) error {
+	helpers.Infof("=== Validating module", def)
 
 	if def.Path == "" {
 		return fmt.Errorf("cannot validate module without path. Path is required to load openapi specs")

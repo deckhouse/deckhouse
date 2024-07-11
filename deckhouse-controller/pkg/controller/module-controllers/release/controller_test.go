@@ -302,7 +302,7 @@ func Test_validateModule(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			path := filepath.Join("./testdata", name)
 			err := validateModule(
-				models.DeckhouseModuleDefinition{
+				&models.DeckhouseModuleDefinition{
 					Name:   name,
 					Weight: 900,
 					Path:   path,
