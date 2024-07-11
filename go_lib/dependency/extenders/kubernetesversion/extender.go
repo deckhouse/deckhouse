@@ -77,13 +77,14 @@ func (e *Extender) FetchKubernetesVersion() {
 		e.logger.Errorf("error fetching kubernetes version: %v, v0.0.0 will be used", err)
 		return
 	}
-	values := map[string]interface{}{}
+	values := make(map[string]interface{})
 	if err = json.NewDecoder(resp.Body).Decode(&values); err != nil {
 		e.logger.Errorf("error parsing requirements: %v, v0.0.0 will be used", err)
 		return
 	}
-	if len(values["global.discovery.kubernetesVersion"].(string)) > 0 {
-		kubeVersion, err := semver.NewVersion(values["global.discovery.kubernetesVersion"].(string))
+	if val, ok := values["global.discovery.kubernetesVersion"]; ok {
+		rawVersion := val.(string)
+		kubeVersion, err := semver.NewVersion(rawVersion)
 		if err != nil {
 			e.logger.Errorf("error parsing kubernetes version: %v, v0.0.0 will be used", err)
 			return
