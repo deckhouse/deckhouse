@@ -21,7 +21,7 @@ shell:
     - git clone --depth 1 --branch {{ .TF.decort.version }} {{ $.SOURCE_REPO }}/BASIS/terraform-provider-decort.git /src
     - cd /src
     - go mod tidy
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X main.version={{ .TF.dynamix.version }} -X main.commit=00000000" -o terraform-provider-decort ./cmd/decort/
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X main.version={{ .TF.decort.version }} -X main.commit=00000000" -o terraform-provider-decort ./cmd/decort/
     - mv /src/terraform-provider-decort /terraform-provider-decort
     - chmod -R 755 /terraform-provider-decort
     - chown 64535:64535 /terraform-provider-decort
