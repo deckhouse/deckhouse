@@ -52,6 +52,7 @@ editions:
 - name: EE
   modulesDir: "ee/modules"
   terraformProviders:
+    - sample
     - openstack
     - vsphere
     - vcd

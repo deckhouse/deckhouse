@@ -259,6 +259,19 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/modules/030-cloud-provider-sample
+  to: /deckhouse/modules/030-cloud-provider-sample
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/modules/030-cloud-provider-vcd
   to: /deckhouse/modules/030-cloud-provider-vcd
   excludePaths:
@@ -313,6 +326,19 @@
     - .build.yaml
 - add: /ee/modules/040-node-manager/cloud-providers/vsphere
   to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/040-node-manager/capi/sample
+  to: /deckhouse/modules/040-node-manager/capi/sample
   excludePaths:
     - docs
     - README.md

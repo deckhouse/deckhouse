@@ -13,6 +13,8 @@
   to: /deckhouse/candi/bashible/bundles/rosa
 - add: /ee/be/candi/bashible/detect_bundle.sh
   to: /deckhouse/candi/bashible/detect_bundle.sh
+- add: /ee/candi/cloud-providers/sample
+  to: /deckhouse/candi/cloud-providers/sample
 - add: /ee/candi/cloud-providers/openstack
   to: /deckhouse/candi/cloud-providers/openstack
 - add: /ee/candi/cloud-providers/vsphere

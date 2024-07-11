@@ -108,6 +108,9 @@ rules:
       - zvirtclusters
       - zvirtmachines
       - zvirtmachinetemplates
+      - sampleclusters
+      - samplemachines
+      - samplemachinetemplates
     verbs:
       - create
       - delete

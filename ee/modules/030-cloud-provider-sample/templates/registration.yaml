@@ -1,0 +1,31 @@
+{{- $providerClusterConfiguration := .Values.cloudProviderSample.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-node-manager-cloud-provider
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+type: Opaque
+data:
+  type: {{ b64enc "sample" | quote }}
+  # Sample does not contain meaning regions and zones
+  # but out machinery use them. we use default as region and as one zone
+  region: {{ b64enc "default" | quote }}
+  zones: {{ .Values.cloudProviderSample.internal.providerDiscoveryData.zones | toJson | b64enc | quote }}
+  instanceClassKind: {{ b64enc "SampleInstanceClass" | quote }}
+  machineClassKind: {{ b64enc "" | quote }}
+  capiClusterKind: {{ b64enc "SampleCluster" | quote }}
+  capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
+  capiClusterName: {{ b64enc "sample" | quote }}
+  capiMachineTemplateKind: {{ b64enc "SampleMachineTemplate" | quote }}
+  capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
+
+  {{- $sampleValues := dict }}
+
+  {{- $_ := set $sampleValues "server" $providerClusterConfiguration.provider.server }}
+  {{- $_ := set $sampleValues "username" $providerClusterConfiguration.provider.username }}
+  {{- $_ := set $sampleValues "password" $providerClusterConfiguration.provider.password }}
+  {{- $_ := set $sampleValues "insecure" $providerClusterConfiguration.provider.insecure }}
+
+  sample: {{ $sampleValues | toJson | b64enc | quote }}
