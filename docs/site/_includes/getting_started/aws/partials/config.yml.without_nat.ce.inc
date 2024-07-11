@@ -91,7 +91,6 @@ spec:
         mode: Global
         global:
           kubeconfigGeneratorMasterCA: ""
-
 ---
 # [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cluster_configuration.html
