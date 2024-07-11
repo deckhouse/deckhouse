@@ -149,7 +149,7 @@ masterNodeGroup:
     # [<ru>] <availability zone>: <volume type>
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    ME1: high-iops
+    DP1: dp1-high-iops
   instanceClass:
     # [<en>] Flavor in use.
     # [<ru>] Используемый flavor.
