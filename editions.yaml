@@ -56,6 +56,7 @@ editions:
     - vsphere
     - vcd
     - ovirt
+    - decort
 
 - name: FE
   modulesDir: "ee/fe/modules"
