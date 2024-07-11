@@ -21,3 +21,5 @@
   to: /deckhouse/candi/cloud-providers/vcd
 - add: /ee/candi/cloud-providers/zvirt
   to: /deckhouse/candi/cloud-providers/zvirt
+- add: /ee/candi/cloud-providers/dynamix
+  to: /deckhouse/candi/cloud-providers/dynamix
