@@ -4,7 +4,7 @@
 provider "decort" {
   authenticator        = "decs3o"
   controller_url       = var.providerClusterConfiguration.provider.controllerUrl
-  oauth2_url           = var.providerClusterConfiguration.provider.oauth2Url
+  oauth2_url           = var.providerClusterConfiguration.provider.oAuth2Url
   allow_unverified_ssl = lookup(var.providerClusterConfiguration.provider, "insecure", false)
   app_id               = var.providerClusterConfiguration.provider.appId
   app_secret           = var.providerClusterConfiguration.provider.appSecret

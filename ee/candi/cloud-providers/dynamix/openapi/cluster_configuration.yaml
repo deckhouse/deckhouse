@@ -43,7 +43,7 @@ apiVersions:
           username: '<USERNAME>'
           password: '<PASSWORD>'
           insecure: true
-    required: [apiVersion, kind, sshPublicKey, grid, masterNodeGroup, layout, provider]
+    required: [apiVersion, kind, sshPublicKey, location, account, masterNodeGroup, nodeNetworkCIDR, layout, provider]
     properties:
       apiVersion:
         type: string
@@ -54,10 +54,12 @@ apiVersions:
       sshPublicKey:
         type: string
         description: a public key for accessing nodes.
-      grid:
-        type: integer
-        minimum: 1
-        description: Grid (platform) ID.
+      location:
+        type: string
+        description: The name of the location to install the cluster.
+      account:
+        type: string
+        description: Account name.
       masterNodeGroup:
         type: object
         additionalProperties: false
@@ -77,7 +79,7 @@ apiVersions:
           instanceClass:
             type: object
             additionalProperties: false
-            required: [numCPUs, memory, osImageId, pool, externalNetworkID, virtualNetworkID]
+            required: [numCPUs, memory, imageName, storageEndpoint, pool, externalNetwork]
             description: |
               Partial contents of the fields of the [DynamixInstanceClass](cr.html#dynamixinstanceclass).
             properties: &instanceClassProperties
@@ -105,26 +107,26 @@ apiVersions:
                 example: 15
                 default: 15
                 type: integer
-              osImageId:
-                type: integer
+              imageName:
+                type: string
                 description: |
-                  OS image id to use for VM deployment.
+                  OS image name to use for VM deployment.
                 example: 1
+              storageEndpoint:
+                type: string
+                description: |
+                  Storage name.
+                example: SharedTatlin_G1_SEP
               pool:
                 type: string
                 description: |
                   Storage pool name.
                 example: pool_a
-              externalNetworkID:
-                type: integer
+              externalNetwork:
+                type: string
                 description: |
-                  External network ID.
-                example: 1
-              virtualNetworkID:
-                type: integer
-                description: |
-                  Internal network ID.
-                example: 1
+                  External network name.
+                example: extnet_vlan_1700
       nodeGroups:
         type: array
         description: |
@@ -187,11 +189,24 @@ apiVersions:
             instanceClass:
               type: object
               additionalProperties: false
-              required: [numCPUs, memory, osImageId, pool, externalNetworkID, virtualNetworkID]
+              required: [numCPUs, memory, imageName, externalNetwork]
               description: |
                 Partial contents of the fields of the.
               properties:
                 <<: *instanceClassProperties
+      nodeNetworkCIDR:
+        type: string
+        description: |
+          IP CIDR to be assigned to the internal segment of this ViNS.
+        x-unsafe: true
+      nameservers:
+        type: array
+        description: |
+          A list of IP addresses of the DNS servers.
+        items:
+          type: string
+        default: []
+        x-unsafe: true
       layout:
         type: string
         description: |
@@ -204,10 +219,10 @@ apiVersions:
         additionalProperties: false
         description: Parameters for connecting to the Dynamix.
         properties:
-          controllerURL:
+          controllerUrl:
             type: string
             description: The URL to the Dynamix API endpoint.
-          oauth2Url:
+          oAuth2Url:
             type: string
             description: The URL to the SSO Dynamix API endpoint.
           appId:
@@ -216,17 +231,14 @@ apiVersions:
           appSecret:
             type: string
             description: App Secret.
-          accountId:
-            type: string
-            description: Account Id.
           insecure:
             type: boolean
             description:  Set to `true` if Dynamix has a self-signed certificate.
             default: false
             x-doc-default: false
         required:
-        - controllerURL
-        - oauth2Url
+        - controllerUrl
+        - oAuth2Url
         - appId
         - appSecret
     oneOf:
@@ -235,4 +247,5 @@ apiVersions:
         layout:
           enum:
           - Standard
+          - StandardWithInternalNetwork
           type: string
