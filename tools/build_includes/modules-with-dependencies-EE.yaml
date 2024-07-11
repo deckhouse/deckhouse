@@ -436,6 +436,52 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/021-cni-cilium/templates/monitoring.yaml
+  to: /deckhouse/modules/021-cni-cilium/templates/monitoring.yaml
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/monitoring/prometheus-rules
+  to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/025-static-routing-manager
   to: /deckhouse/modules/025-static-routing-manager
   excludePaths:
