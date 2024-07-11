@@ -77,8 +77,8 @@ spec:
             mountPath: "/etc/tls-certs"
             readOnly: true
         ports:
-          - name: controller
-            containerPort: 8000
+        - name: controller
+          containerPort: 8000
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
