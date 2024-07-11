@@ -10,7 +10,7 @@ spec:
   - name: http
     protocol: TCP
     port: 20001
-    targetPort: api-port
+    targetPort: api
   - name: http-metrics
     protocol: TCP
     port: 9090
