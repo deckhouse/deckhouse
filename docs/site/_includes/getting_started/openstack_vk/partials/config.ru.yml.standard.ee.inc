@@ -167,13 +167,17 @@ masterNodeGroup:
     # [<ru>] Возможно, захотите изменить.
     ME1: high-iops
   instanceClass:
-    # [<en>] Flavor in use.
-    # [<ru>] Используемый flavor.
+    # [<en>] Flavor in use, you can view the list using the command:
+    # [<en>] openstack flavor list
+    # [<ru>] Используемый flavor, посмотреть список можно командой:
+    # [<ru>] openstack flavor list
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
     flavorName: Standard-4-8-80
-    # [<en>] VM image in use.
-    # [<ru>] Используемый образ виртуальной машины.
+    # [<en>] VM image in use, you can view the list of images using the command:
+    # [<en>] openstack image list
+    # [<ru>] Используемый образ виртуальной машины, посмотреть список образов можно командой:
+    # [<ru>] openstack image list
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
     imageName: ubuntu-22-202404160933.gitd6495fe9
