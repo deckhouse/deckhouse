@@ -69,3 +69,12 @@ yandex:
   artifact: terraform-provider-yandex
   artifactBinary: terraform-provider-yandex
   destinationBinary: terraform-provider-yandex
+
+sample:
+  namespace: terraform-provider-sample
+  type: sample
+  version: 0.0.1
+  artifact: terraform-provider-sample
+  artifactBinary: terraform-provider-sample
+  destinationBinary: terraform-provider-sample
+

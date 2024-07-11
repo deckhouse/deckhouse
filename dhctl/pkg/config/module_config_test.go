@@ -154,6 +154,19 @@ func TestCheckOrSetupArbitaryCNIModuleConfig(t *testing.T) {
 
 	testCases := []testProvider{
 		{
+			cloudProvider:  "Sample",
+			podNetworkMode: "",
+			result: result{
+				cniName: "cni-cilium",
+				enabled: true,
+				version: 1,
+				settings: map[string]interface{}{
+					"tunnelMode":     "VXLAN",
+					"masqueradeMode": "BPF",
+				},
+			},
+		},
+		{
 			cloudProvider:  "AWS",
 			podNetworkMode: "",
 			result: result{
