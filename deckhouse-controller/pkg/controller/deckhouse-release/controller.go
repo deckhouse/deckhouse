@@ -207,6 +207,7 @@ func (r *deckhouseReleaseReconciler) patchManualRelease(dr *v1alpha1.DeckhouseRe
 	} else {
 		dr.SetApprovedStatus(true)
 	}
+	dr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 
 	return r.client.Status().Update(context.Background(), dr)
 }
@@ -261,7 +262,6 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	podReady := r.isDeckhousePodReady()
 	us := r.updateSettings.Get()
 	dus := &updater.DeckhouseUpdateSettings{
-		ReleaseChannel:         us.ReleaseChannel,
 		NotificationConfig:     &us.Update.NotificationConfig,
 		DisruptionApprovalMode: us.Update.DisruptionApprovalMode,
 		Mode:                   us.Update.Mode,

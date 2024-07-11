@@ -1,4 +1,19 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.26.0
+  resourceVersion: "999"
+spec:
+  version: v1.26.0
+status:
+  approved: false
+  message: ""
+  phase: Pending
+  transitionTime: null
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -37,7 +52,7 @@ spec:
   template:
     metadata:
       annotations:
-        kubectl.kubernetes.io/restartedAt: "2021-01-01T13:30:00Z"
+        kubectl.kubernetes.io/restartedAt: "2019-10-17T15:33:00Z"
       creationTimestamp: null
     spec:
       containers:

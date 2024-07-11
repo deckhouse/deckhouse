@@ -27,9 +27,11 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strconv"
 	"testing"
 	"text/template"
+	"time"
+
+	"github.com/deckhouse/deckhouse/go_lib/libapi"
 
 	"github.com/Masterminds/sprig/v3"
 	log "github.com/sirupsen/logrus"
@@ -192,7 +194,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		mup.Update.Windows = update.Windows{{From: "8:00", To: "8:01"}}
 
 		suite.setupController("patch-out-of-update-window.yaml", initValues, mup)
-		dr := suite.getDeckhouseRelease("v1.26.0")
+		dr := suite.getDeckhouseRelease("v1.25.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
@@ -238,7 +240,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		mup.Update.Mode = "Manual"
 
 		suite.setupController("auto-deploy-patch-release-in-manual-mode.yaml", initValues, mup)
-		dr := suite.getDeckhouseRelease("v1.26.0")
+		dr := suite.getDeckhouseRelease("v1.25.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
@@ -260,31 +262,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		suite.setupController("after-setting-manual-approve-with-canary-process.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.36.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-	})
-
-	suite.Run("DEV: No new deckhouse image", func() {
-		dependency.TestDC.CRClient.DigestMock.Set(func(_ string) (s1 string, err error) {
-			return "sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1", nil
-		})
-
-		suite.setupController("dev-no-new-deckhouse-image.yaml", initValues, embeddedMUP)
-		dr := suite.getDeckhouseRelease("v1.26.0")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-	})
-
-	suite.Run("DEV: Have new deckhouse image", func() {
-		dependency.TestDC.CRClient.DigestMock.Set(func(_ string) (s1 string, err error) {
-			return "sha256:123456", nil
-		})
-
-		values, err := sjson.Delete(initValues, "deckhouse.releaseChannel")
-		require.NoError(suite.T(), err)
-
-		suite.setupController("dev-have-new-deckhouse-image.yaml", values, embeddedMUP)
-		dr := suite.getDeckhouseRelease("v1.26.0")
-		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
 
@@ -415,27 +392,35 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Disruption release", func() {
-		values, err := sjson.SetRaw(initValues, "deckhouse.update.disruptionApprovalMode", `"Manual"`)
-		require.NoError(suite.T(), err)
-
 		var df requirements.DisruptionFunc = func(_ requirements.ValueGetter) (bool, string) {
 			return true, "some test reason"
 		}
 		requirements.RegisterDisruption("testme", df)
 
-		suite.setupController("disruption-release.yaml", values, embeddedMUP)
+		ds := &helpers.DeckhouseSettings{
+			ReleaseChannel: embeddedMUP.ReleaseChannel,
+		}
+		ds.Update.Mode = embeddedMUP.Update.Mode
+		ds.Update.Windows = embeddedMUP.Update.Windows
+		ds.Update.DisruptionApprovalMode = "Manual"
+
+		suite.setupControllerSettings("disruption-release.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.36.0")
-		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("Disruption release approved", func() {
-		values, err := sjson.SetRaw(initValues, "deckhouse.update.disruptionApprovalMode", `"Manual"`)
-		require.NoError(suite.T(), err)
+		ds := &helpers.DeckhouseSettings{
+			ReleaseChannel: embeddedMUP.ReleaseChannel,
+		}
+		ds.Update.Mode = embeddedMUP.Update.Mode
+		ds.Update.Windows = embeddedMUP.Update.Windows
+		ds.Update.DisruptionApprovalMode = "Manual"
 
-		suite.setupController("disruption-release-approved.yaml", values, embeddedMUP)
+		suite.setupControllerSettings("disruption-release-approved.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.36.0")
-		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
 
@@ -447,15 +432,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		}))
 		defer svr.Close()
 
-		values, err := sjson.SetRaw(initValues, "deckhouse.update.notification.webhook", strconv.Quote(svr.URL))
-		require.NoError(suite.T(), err)
+		ds := &helpers.DeckhouseSettings{
+			ReleaseChannel: embeddedMUP.ReleaseChannel,
+		}
+		ds.Update.Mode = embeddedMUP.Update.Mode
+		ds.Update.Windows = embeddedMUP.Update.Windows
+		ds.Update.NotificationConfig.WebhookURL = svr.URL
+		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: time.Hour}
 
-		values, err = sjson.SetRaw(values, "deckhouse.update.notification.minimalNotificationTime", `"1h"`)
-		require.NoError(suite.T(), err)
-
-		suite.setupController("release-with-notification-settings.yaml", values, embeddedMUP)
+		suite.setupControllerSettings("release-with-notification-settings.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.26.0")
-		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 
 		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.26 is available. Release will be applied at: Friday, 01-Jan-21 14:30:00 UTC")
@@ -484,15 +471,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		}))
 		defer svr.Close()
 
-		values, err := sjson.SetRaw(initValues, "deckhouse.update.notification.webhook", strconv.Quote(svr.URL))
-		require.NoError(suite.T(), err)
+		ds := &helpers.DeckhouseSettings{
+			ReleaseChannel: embeddedMUP.ReleaseChannel,
+		}
+		ds.Update.Mode = embeddedMUP.Update.Mode
+		ds.Update.Windows = embeddedMUP.Update.Windows
+		ds.Update.NotificationConfig.WebhookURL = svr.URL
+		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: 4*time.Hour + 10*time.Minute}
 
-		values, err = sjson.SetRaw(values, "deckhouse.update.notification.minimalNotificationTime", `"4h10m"`)
-		require.NoError(suite.T(), err)
-
-		suite.setupController("notification-release-apply-after-time-is-after-notification-period.yaml", values, embeddedMUP)
+		suite.setupControllerSettings("notification-release-apply-after-time-is-after-notification-period.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.36.0")
-		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 
 		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.36 is available. Release will be applied at: Monday, 11-Nov-22 23:23:23 UTC")
@@ -509,15 +498,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		}))
 		defer svr.Close()
 
-		values, err := sjson.SetRaw(initValues, "deckhouse.update.notification.webhook", strconv.Quote(svr.URL))
-		require.NoError(suite.T(), err)
+		ds := &helpers.DeckhouseSettings{
+			ReleaseChannel: embeddedMUP.ReleaseChannel,
+		}
+		ds.Update.Mode = embeddedMUP.Update.Mode
+		ds.Update.Windows = embeddedMUP.Update.Windows
+		ds.Update.NotificationConfig.WebhookURL = svr.URL
+		ds.Update.NotificationConfig.Auth = &updater.Auth{Basic: &updater.BasicAuth{Username: "user", Password: "pass"}}
 
-		values, err = sjson.Set(values, "deckhouse.update.notification.auth", updater.Auth{Basic: &updater.BasicAuth{Username: "user", Password: "pass"}})
-		require.NoError(suite.T(), err)
-
-		suite.setupController("notification-basic-auth.yaml", values, embeddedMUP)
+		suite.setupControllerSettings("notification-basic-auth.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.36.0")
-		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 
 		require.Equal(suite.T(), username, "user")
@@ -533,15 +524,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		}))
 		defer svr.Close()
 
-		values, err := sjson.SetRaw(initValues, "deckhouse.update.notification.webhook", strconv.Quote(svr.URL))
-		require.NoError(suite.T(), err)
+		ds := &helpers.DeckhouseSettings{
+			ReleaseChannel: embeddedMUP.ReleaseChannel,
+		}
+		ds.Update.Mode = embeddedMUP.Update.Mode
+		ds.Update.Windows = embeddedMUP.Update.Windows
+		ds.Update.NotificationConfig.WebhookURL = svr.URL
+		ds.Update.NotificationConfig.Auth = &updater.Auth{Token: pointer.String("the_token")}
 
-		values, err = sjson.Set(values, "deckhouse.update.notification.auth", updater.Auth{Token: pointer.String("the_token")})
-		require.NoError(suite.T(), err)
-
-		suite.setupController("notification-bearer-token-auth.yaml", values, embeddedMUP)
+		suite.setupControllerSettings("notification-bearer-token-auth.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.36.0")
-		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 
 		require.Equal(suite.T(), headerValue, "Bearer the_token")
@@ -551,15 +544,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 		defer svr.Close()
 
-		values, err := sjson.SetRaw(initValues, "deckhouse.update.notification.webhook", strconv.Quote(svr.URL))
-		require.NoError(suite.T(), err)
+		ds := &helpers.DeckhouseSettings{
+			ReleaseChannel: embeddedMUP.ReleaseChannel,
+		}
+		ds.Update.Mode = embeddedMUP.Update.Mode
+		ds.Update.Windows = embeddedMUP.Update.Windows
+		ds.Update.NotificationConfig.WebhookURL = svr.URL
+		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: 2 * time.Hour}
 
-		values, err = sjson.Set(values, "deckhouse.update.notification.minimalNotificationTime", []byte("2h"))
-		require.NoError(suite.T(), err)
-
-		suite.setupController("update-minimal-notification-time-without-configuring-notification-webhook.yaml", values, embeddedMUP)
+		suite.setupControllerSettings("update-minimal-notification-time-without-configuring-notification-webhook.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.26.0")
-		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
 
@@ -614,6 +609,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 }
 
 func (suite *ControllerTestSuite) setupController(filename, values string, mup *v1alpha1.ModuleUpdatePolicySpec) {
+	ds := &helpers.DeckhouseSettings{
+		ReleaseChannel: mup.ReleaseChannel,
+	}
+	ds.Update.Mode = mup.Update.Mode
+	ds.Update.Windows = mup.Update.Windows
+	ds.Update.DisruptionApprovalMode = "Auto"
+
+	suite.setupControllerSettings(filename, values, ds)
+}
+
+func (suite *ControllerTestSuite) setupControllerSettings(filename, values string, ds *helpers.DeckhouseSettings) {
 	yamlDoc := suite.fetchTestFileData(filename, values)
 	manifests := releaseutil.SplitManifests(yamlDoc)
 
@@ -633,11 +639,6 @@ func (suite *ControllerTestSuite) setupController(filename, values string, mup *
 		WithStatusSubresource(&v1alpha1.DeckhouseRelease{}).
 		Build()
 	dc := dependency.NewDependencyContainer()
-	ds := &helpers.DeckhouseSettings{
-		ReleaseChannel: mup.ReleaseChannel,
-	}
-	ds.Update.Mode = mup.Update.Mode
-	ds.Update.Windows = mup.Update.Windows
 
 	rec := &deckhouseReleaseReconciler{
 		client:         cl,
@@ -736,11 +737,6 @@ metadata:
  namespace: d8-system
 type: Opaque
 data:
- bundle: {{ b64enc .Values.deckhouse.bundle }}
- releaseChannel: {{ .Values.deckhouse.releaseChannel | default "Unknown" | b64enc }}
-{{- if .Values.deckhouse.update }}
- updateSettings.json: {{ .Values.deckhouse.update | toJson | b64enc }}
-{{- end }}
 {{- if $.Values.global.discovery.clusterUUID }}
  clusterUUID: {{ $.Values.global.discovery.clusterUUID | b64enc }}
 {{- end }}

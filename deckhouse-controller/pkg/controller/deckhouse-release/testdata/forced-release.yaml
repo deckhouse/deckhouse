@@ -47,4 +47,4 @@ metadata:
 spec:
   version: "v1.31.1"
 status:
-  phase: Suspended
+  phase: Pending

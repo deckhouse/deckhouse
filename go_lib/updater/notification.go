@@ -31,7 +31,6 @@ import (
 )
 
 type DeckhouseUpdateSettings struct {
-	ReleaseChannel         string
 	NotificationConfig     *NotificationConfig
 	DisruptionApprovalMode string
 	Mode                   string

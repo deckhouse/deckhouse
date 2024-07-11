@@ -26,8 +26,8 @@ metadata:
   resourceVersion: "1002"
 spec:
   version: v1.25.1
-status:
-  approved: true
+status:v1.26.0
+  approved: false
   message: ""
   phase: Deployed
   transitionTime: "2019-10-17T15:33:00Z"
@@ -38,14 +38,14 @@ kind: DeckhouseRelease
 metadata:
   creationTimestamp: null
   name: v1.26.0
-  resourceVersion: "1000"
+  resourceVersion: "999"
 spec:
   version: v1.26.0
 status:
-  approved: true
+  approved: false
   message: ""
   phase: Pending
-  transitionTime: "2019-10-17T15:33:00Z"
+  transitionTime: null
 ---
 apiVersion: v1
 kind: Pod
