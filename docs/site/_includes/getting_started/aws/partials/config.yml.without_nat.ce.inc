@@ -91,26 +91,7 @@ spec:
         mode: Global
         global:
           kubeconfigGeneratorMasterCA: ""
----
-# [<en>] cni-cilium module settings.
-# [<en>] https://deckhouse.io/documentation/v1/modules/021-cni-cilium/configuration.html
-# [<ru>] Настройки модуля cni-cilium.
-# [<ru>] https://deckhouse.ru/documentation/v1/modules/021-cni-cilium/configuration.html
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: cni-cilium
-spec:
-  version: 1
-  # [<en>] Enable cni-cilium module
-  # [<ru>] Включить модуль cni-cilium
-  enabled: true
-  settings:
-    # [<en>] cni-cilium module settings
-    # [<en>] https://deckhouse.io/documentation/v1/modules/021-cni-cilium/configuration.html
-    # [<ru>] Настройки модуля cni-cilium
-    # [<ru>] https://deckhouse.ru/documentation/v1/modules/021-cni-cilium/configuration.html
-    tunnelMode: VXLAN
+
 ---
 # [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cluster_configuration.html
