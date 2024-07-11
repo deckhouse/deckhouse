@@ -69,6 +69,7 @@ apiVersions:
             - "Azure"
             - "VCD"
             - "Zvirt"
+            - "Dynamix"
           prefix:
             type: string
             description: |
