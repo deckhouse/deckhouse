@@ -169,15 +169,19 @@ masterNodeGroup:
   instanceClass:
     # [<en>] Flavor in use, you can view the list using the command:
     # [<en>] openstack flavor list
+    # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-flavorname
     # [<ru>] Используемый flavor, посмотреть список можно командой:
     # [<ru>] openstack flavor list
+    # [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-flavorname
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
     flavorName: Standard-4-8-80
     # [<en>] VM image in use, you can view the list of images using the command:
     # [<en>] openstack image list
+    # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-imagename
     # [<ru>] Используемый образ виртуальной машины, посмотреть список образов можно командой:
     # [<ru>] openstack image list
+    # [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-imagename
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
     imageName: ubuntu-22-202404160933.gitd6495fe9
