@@ -28,7 +28,7 @@ import (
 const (
 	minimumRequiredCPUCores       = 4
 	minimumRequiredMemoryMB       = 8192 - reservedMemoryThresholdMB
-	minimumRequiredRootDiskSizeGB = 30
+	minimumRequiredRootDiskSizeGB = 50
 
 	reservedMemoryThresholdMB = 512
 )
