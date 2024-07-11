@@ -31,8 +31,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/deckhouse/deckhouse/go_lib/libapi"
-
 	"github.com/Masterminds/sprig/v3"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -55,6 +53,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
+	"github.com/deckhouse/deckhouse/go_lib/libapi"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 

@@ -58,5 +58,4 @@ func (suite *ControllerTestSuite) TestUpdateByImageHash() {
 		err = suite.ctr.tagUpdate(ctx, pods)
 		require.NoError(suite.T(), err)
 	})
-
 }
