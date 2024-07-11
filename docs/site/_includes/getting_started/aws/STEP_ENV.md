@@ -146,7 +146,7 @@ EOF
 Create a new Policy based on the specification created above with `D8CloudProviderAWS` as a policy name:
 {% snippetcut %}
 ```shell
-aws iam create-policy --policy-name D8Policy --policy-document file://policy.json
+aws iam create-policy --policy-name D8CloudProviderAWS --policy-document file://policy.json
 ```
 {% endsnippetcut %}
 
@@ -154,9 +154,9 @@ aws iam create-policy --policy-name D8Policy --policy-document file://policy.jso
 > ```yaml
   {
       "Policy": {
-          "PolicyName": "D8Policy",
+          "PolicyName": "D8CloudProviderAWS",
           "PolicyId": "AAA",
-          "Arn": "arn:aws:iam::123:policy/D8Policy",
+          "Arn": "arn:aws:iam::123:policy/D8CloudProviderAWS",
           "Path": "/",
           "DefaultVersionId": "v1",
           "AttachmentCount": 0,
@@ -211,6 +211,6 @@ aws iam create-access-key --user-name deckhouse
 Attach the specified `Policy` to the specified `User`:
 {% snippetcut %}
 ```shell
-aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8Policy
+aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8CloudProviderAWS
 ```
 {% endsnippetcut %}
