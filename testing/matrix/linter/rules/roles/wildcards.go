@@ -58,12 +58,6 @@ var skipCheckWildcards = map[string][]string{
 	"cloud-provider-yandex/templates/cloud-controller-manager/rbac-for-us.yaml": {
 		"d8:cloud-provider-yandex:cloud-controller-manager",
 	},
-	"istio/templates/kiali/rbac-for-us.yaml": {
-		"d8:istio:kiali",
-	},
-	"istio/templates/operator/rbac-for-us.yaml": {
-		"d8:istio:operator",
-	},
 	"operator-prometheus/templates/rbac-for-us.yaml": {
 		"d8:operator-prometheus",
 	},

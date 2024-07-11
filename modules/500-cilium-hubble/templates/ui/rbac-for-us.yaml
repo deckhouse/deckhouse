@@ -43,7 +43,40 @@ rules:
   - apiGroups:
       - cilium.io
     resources:
-      - "*"
+      - ciliumbgppeeringpolicies
+      - ciliumbgppeeringpolicies/status
+      - ciliumcidrgroups
+      - ciliumcidrgroups/status
+      - ciliumclusterwideenvoyconfigs
+      - ciliumclusterwideenvoyconfigs/status
+      - ciliumclusterwidenetworkpolicies
+      - ciliumclusterwidenetworkpolicies/status
+      - ciliumegressgatewaypolicies
+      - ciliumegressgatewaypolicies/status
+      - ciliumendpoints
+      - ciliumendpoints/status
+      - ciliumendpointslices
+      - ciliumendpointslices/status
+      - ciliumenvoyconfigs
+      - ciliumenvoyconfigs/status
+      - ciliumexternalworkloads
+      - ciliumexternalworkloads/status
+      - ciliumidentities
+      - ciliumidentities/status
+      - ciliuml2announcementpolicies
+      - ciliuml2announcementpolicies/status
+      - ciliumloadbalancerippools
+      - ciliumloadbalancerippools/status
+      - ciliumlocalredirectpolicies
+      - ciliumlocalredirectpolicies/status
+      - ciliumnetworkpolicies
+      - ciliumnetworkpolicies/status
+      - ciliumnodeconfigs
+      - ciliumnodeconfigs/status
+      - ciliumnodes
+      - ciliumnodes/status
+      - ciliumpodippools
+      - ciliumpodippools/status
     verbs:
       - get
       - list
