@@ -18,7 +18,6 @@ package kubernetesversion
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -27,7 +26,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	log "github.com/sirupsen/logrus"
-	"github.com/square/go-jose/v3/json"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/versionmatcher"
@@ -53,7 +51,7 @@ type Extender struct {
 
 func Instance() *Extender {
 	once.Do(func() {
-		instance = &Extender{logger: log.WithField("extender", Name), versionMatcher: versionmatcher.New()}
+		instance = &Extender{logger: log.WithField("extender", Name), versionMatcher: versionmatcher.New(true)}
 		appliedExtenders := os.Getenv("ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS")
 		if appliedExtenders != "" && strings.Contains(appliedExtenders, string(Name)) {
 			instance.logger.Debug("extender is enabled")
@@ -61,39 +59,25 @@ func Instance() *Extender {
 		} else {
 			instance.logger.Debugf("extender is disabled, applied extenders: %s", appliedExtenders)
 		}
+		go instance.watchForKubernetesVersion()
 	})
 	return instance
 }
 
-func (e *Extender) FetchKubernetesVersion() {
-	debugAddress := os.Getenv("DEBUG_HTTP_SERVER_ADDR")
-	if debugAddress == "" {
-		e.logger.Errorf("env DEBUG_HTTP_SERVER_ADDDR is not set")
-		return
-	}
-	// TODO(ipaqsa): add retry
-	resp, err := http.Get(fmt.Sprintf("http://%s/requirements", debugAddress))
-	if err != nil || resp.StatusCode != http.StatusOK {
-		e.logger.Errorf("error fetching kubernetes version: %v, v0.0.0 will be used", err)
-		return
-	}
-	values := make(map[string]interface{})
-	if err = json.NewDecoder(resp.Body).Decode(&values); err != nil {
-		e.logger.Errorf("error parsing requirements: %v, v0.0.0 will be used", err)
-		return
-	}
-	if val, ok := values["global.discovery.kubernetesVersion"]; ok {
-		rawVersion := val.(string)
-		kubeVersion, err := semver.NewVersion(rawVersion)
-		if err != nil {
-			e.logger.Errorf("error parsing kubernetes version: %v, v0.0.0 will be used", err)
+func (e *Extender) watchForKubernetesVersion() {
+	versionCh := make(chan *semver.Version)
+	watcher := &versionWatcher{ch: versionCh}
+	go func() {
+		if err := watcher.watch("/tmp/kubectl_version"); err != nil {
+			e.logger.Errorf("failed to watch /tmp/kubectl_version: %v", err)
+			e.enabled = false
 			return
 		}
-		e.logger.Debugf("setting kubernetes version to %s", kubeVersion.String())
-		e.versionMatcher.SetBaseVersion(kubeVersion)
-		return
+	}()
+	for version := range versionCh {
+		e.logger.Debugf("new kubernetes version: %s", version.String())
+		e.versionMatcher.ChangeBaseVersion(version)
 	}
-	e.logger.Errorf("kubernetes version not found in requirements, v0.0.0 will be used")
 }
 
 func IsEnabled() bool {

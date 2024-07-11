@@ -43,7 +43,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 )
 
 const (
@@ -207,8 +206,6 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 	}
 
 	debugserver.RegisterRoutes(operator.DebugServer)
-
-	kubernetesversion.Instance().FetchKubernetesVersion()
 
 	// Block main thread by waiting signals from OS.
 	utils_signal.WaitForProcessInterruption(func() {

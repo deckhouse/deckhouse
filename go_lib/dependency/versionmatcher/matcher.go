@@ -17,21 +17,25 @@ limitations under the License.
 package versionmatcher
 
 import (
+	"sync"
+
 	"github.com/Masterminds/semver/v3"
 )
 
 type Matcher struct {
-	baseVersion *semver.Version
-	constraints map[string]*semver.Constraints
+	withBaseVersionLock bool
+	mtx                 sync.Mutex
+	baseVersion         *semver.Version
+	constraints         map[string]*semver.Constraints
 }
 
-func New() *Matcher {
+func New(withBaseVersionLock bool) *Matcher {
 	baseVersion, _ := semver.NewVersion("0.0.0")
-	return &Matcher{baseVersion: baseVersion, constraints: make(map[string]*semver.Constraints)}
-}
-
-func (m *Matcher) SetBaseVersion(baseVersion *semver.Version) {
-	m.baseVersion = baseVersion
+	return &Matcher{
+		withBaseVersionLock: withBaseVersionLock,
+		baseVersion:         baseVersion,
+		constraints:         make(map[string]*semver.Constraints),
+	}
 }
 
 func (m *Matcher) AddConstraint(name, rawConstraint string) error {
@@ -48,6 +52,10 @@ func (m *Matcher) ValidateByName(name string) error {
 	if !ok {
 		return nil
 	}
+	if m.withBaseVersionLock {
+		m.mtx.Lock()
+		defer m.mtx.Unlock()
+	}
 	if _, errs := constraint.Validate(m.baseVersion); len(errs) != 0 {
 		return errs[0]
 	}
@@ -59,8 +67,20 @@ func (m *Matcher) ValidateConstraint(rawConstraint string) error {
 	if err != nil {
 		return err
 	}
+	if m.withBaseVersionLock {
+		m.mtx.Lock()
+		defer m.mtx.Unlock()
+	}
 	if _, errs := constraint.Validate(m.baseVersion); len(errs) != 0 {
 		return errs[0]
 	}
 	return nil
+}
+
+func (m *Matcher) ChangeBaseVersion(version *semver.Version) {
+	if m.withBaseVersionLock {
+		m.mtx.Lock()
+		defer m.mtx.Unlock()
+	}
+	m.baseVersion = version
 }
