@@ -30,7 +30,7 @@ shell:
   - yarn build
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
-from: {{ $.Images.BASE_GOLANG_22_BULLSEYE }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
