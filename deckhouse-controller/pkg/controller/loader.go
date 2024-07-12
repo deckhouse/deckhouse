@@ -33,8 +33,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 )
 
 var (
@@ -119,15 +118,9 @@ func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModu
 		log.Debugf("conversions for %q module not found", valuesModuleName)
 	}
 
-	if len(def.Requirements[deckhouseversion.RequirementsField]) > 0 && deckhouseversion.IsEnabled() {
-		if err = deckhouseversion.Instance().AddConstraint(def.Name, def.Requirements[deckhouseversion.RequirementsField]); err != nil {
-			return nil, err
-		}
-	}
-	if len(def.Requirements[kubernetesversion.RequirementsField]) > 0 && kubernetesversion.IsEnabled() {
-		if err = kubernetesversion.Instance().AddConstraint(def.Name, def.Requirements[kubernetesversion.RequirementsField]); err != nil {
-			return nil, err
-		}
+	// Load constrains
+	if err = extenders.AddConstraints(def.Name, def.Requirements); err != nil {
+		return nil, err
 	}
 
 	dm, err := models.NewDeckhouseModule(def, moduleStaticValues, cb, vb)

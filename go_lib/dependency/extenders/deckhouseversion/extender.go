@@ -19,7 +19,6 @@ package deckhouseversion
 import (
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
@@ -44,7 +43,6 @@ var (
 var _ extenders.Extender = &Extender{}
 
 type Extender struct {
-	enabled        bool
 	logger         logger.Logger
 	versionMatcher *versionmatcher.Matcher
 }
@@ -54,13 +52,6 @@ func Instance() *Extender {
 		instance = &Extender{
 			logger:         log.WithField("extender", Name),
 			versionMatcher: versionmatcher.New(false),
-		}
-		appliedExtenders := os.Getenv("ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS")
-		if appliedExtenders != "" && strings.Contains(appliedExtenders, string(Name)) {
-			instance.logger.Debug("extender is enabled")
-			instance.enabled = true
-		} else {
-			instance.logger.Debugf("extender is disabled, applied extenders: %s", appliedExtenders)
 		}
 		if raw, err := os.ReadFile("/deckhouse/version"); err == nil {
 			if parsed, err := semver.NewVersion(string(raw)); err == nil {
@@ -74,13 +65,6 @@ func Instance() *Extender {
 		}
 	})
 	return instance
-}
-
-func IsEnabled() bool {
-	if instance == nil {
-		Instance()
-	}
-	return instance.enabled
 }
 
 func (e *Extender) AddConstraint(name, rawConstraint string) error {

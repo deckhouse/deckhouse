@@ -18,8 +18,6 @@ package kubernetesversion
 
 import (
 	"fmt"
-	"os"
-	"strings"
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
@@ -44,7 +42,6 @@ var (
 var _ extenders.Extender = &Extender{}
 
 type Extender struct {
-	enabled        bool
 	logger         logger.Logger
 	versionMatcher *versionmatcher.Matcher
 }
@@ -52,14 +49,7 @@ type Extender struct {
 func Instance() *Extender {
 	once.Do(func() {
 		instance = &Extender{logger: log.WithField("extender", Name), versionMatcher: versionmatcher.New(true)}
-		appliedExtenders := os.Getenv("ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS")
-		if appliedExtenders != "" && strings.Contains(appliedExtenders, string(Name)) {
-			instance.logger.Debug("extender is enabled")
-			instance.enabled = true
-			go instance.watchForKubernetesVersion()
-		} else {
-			instance.logger.Debugf("extender is disabled, applied extenders: %s", appliedExtenders)
-		}
+		go instance.watchForKubernetesVersion()
 	})
 	return instance
 }
@@ -76,13 +66,6 @@ func (e *Extender) watchForKubernetesVersion() {
 		e.logger.Debugf("new kubernetes version: %s", version.String())
 		e.versionMatcher.ChangeBaseVersion(version)
 	}
-}
-
-func IsEnabled() bool {
-	if instance == nil {
-		Instance()
-	}
-	return instance.enabled
 }
 
 func (e *Extender) AddConstraint(name, rawConstraint string) error {

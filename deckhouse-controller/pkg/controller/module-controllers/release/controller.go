@@ -55,8 +55,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
@@ -341,23 +340,11 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	moduleName := mr.Spec.ModuleName
 
-	if len(mr.Spec.Requirements[deckhouseversion.RequirementsField]) > 0 && deckhouseversion.IsEnabled() {
-		constraint := mr.Spec.Requirements[deckhouseversion.RequirementsField]
-		if err := deckhouseversion.Instance().ValidateConstraint(mr.GetName(), constraint); err != nil {
-			if err = c.updateModuleReleaseStatusMessage(ctx, mr, err.Error()); err != nil {
-				return ctrl.Result{Requeue: true}, err
-			}
-			return ctrl.Result{Requeue: false}, nil
+	if err := extenders.CheckRequirements(mr.GetName(), mr.Spec.Requirements); err != nil {
+		if err = c.updateModuleReleaseStatusMessage(ctx, mr, err.Error()); err != nil {
+			return ctrl.Result{Requeue: true}, err
 		}
-	}
-	if len(mr.Spec.Requirements[kubernetesversion.RequirementsField]) > 0 && kubernetesversion.IsEnabled() {
-		constraint := mr.Spec.Requirements[kubernetesversion.RequirementsField]
-		if err := kubernetesversion.Instance().ValidateConstraint(mr.GetName(), constraint); err != nil {
-			if err = c.updateModuleReleaseStatusMessage(ctx, mr, err.Error()); err != nil {
-				return ctrl.Result{Requeue: true}, err
-			}
-			return ctrl.Result{Requeue: false}, nil
-		}
+		return ctrl.Result{Requeue: false}, nil
 	}
 
 	otherReleases := new(v1alpha1.ModuleReleaseList)
