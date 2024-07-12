@@ -21,6 +21,7 @@ data:
     {{ else if (eq .NTPRole "sink") }}
     local stratum 9
     allow 127/8
+    allow {{ .HostIP }}/32
     pool {{ .ChronyMastersService }} iburst
     {{ end }}
 
