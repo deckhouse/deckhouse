@@ -12,6 +12,7 @@
 {{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
 {{- $hostPort := $crd.spec.hostPort | default dict }}
 {{- $hostPortWithProxyProtocol := $crd.spec.hostPortWithProxyProtocol | default dict }}
+{{- $hostPortWithSSLPassthrough := $crd.spec.hostPortWithSSLPassthrough | default dict }}
 {{- $gracePeriod := 0 }}
 {{- $defaultGracePeriod := 60 }}
 {{- if $loadBalancer }}
@@ -230,6 +231,9 @@ spec:
     {{- end }}
         - --healthz-host=127.0.0.1
         - --election-id={{ printf "ingress-controller-leader-%s" $crd.spec.ingressClass }}
+        {{- if or (eq $crd.spec.inlet "HostPortWithSSLPassthrough") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough")}}
+        - --enable-ssl-passthrough
+        {{- end }}
         lifecycle:
           preStop:
             exec:
@@ -263,6 +267,11 @@ spec:
   {{- if eq $crd.spec.inlet "HostPort"}}
     {{- if $hostPort.httpsPort }}
           hostPort: {{ $hostPort.httpsPort }}
+    {{- end }}
+  {{- end }}
+  {{- if eq $crd.spec.inlet "HostPortWithSSLPassthrough"}}
+    {{- if $hostPortWithSSLPassthrough.httpsPort }}
+          hostPort: {{ $hostPortWithSSLPassthrough.httpsPort }}
     {{- end }}
   {{- end }}
   {{- if eq $crd.spec.inlet "HostPortWithProxyProtocol"}}
