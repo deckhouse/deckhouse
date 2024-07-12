@@ -43,7 +43,7 @@ shell:
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
   - cd /usr/src/app
-  - go install github.com/google/wire/cmd/wire@v0.5.0
+  - go install github.com/google/wire/cmd/wire@v0.6.0
   - /go/bin/wire gen -tags oss ./pkg/server
   - go build -ldflags -w -ldflags "-X main.version={{ $grafanaVersion }} -linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana ./pkg/cmd/grafana
 ---
