@@ -15,19 +15,8 @@
 # limitations under the License.
 */}}
 
-python_binary=""
-
-for pybin in python3 python2 python; do
-  if command -v "$pybin" >/dev/null 2>&1; then
-    python_binary="$pybin"
-    break
-  fi
-done
-
-if [ -z "$python_binary" ]; then
-  echo "Python binary not found"
-  exit 1
-fi
+{{- $python_discovery := .Files.Get "deckhouse/candi/bashible/utils/python_discovery.sh.tpl" }}
+{{- tpl ( $python_discovery ) . | nindent 0 }}
 
 cat - <<EOF | $python_binary
 import pwd
@@ -103,7 +92,7 @@ if __name__ == '__main__':
         print('Port not fount')
         exit(0)
     try:
-        os.kill(int(pid), signal.SIGTERM)
+        os.kill(int(pid), signal.SIGKILL)
     except Exeption as e:
         print(e)
 

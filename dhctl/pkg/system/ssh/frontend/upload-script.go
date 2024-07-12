@@ -138,7 +138,9 @@ func (u *UploadScript) pathWithEnv(path string) string {
 	return fmt.Sprintf("%s %s", envs, path)
 }
 
-func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte, err error, timeout bool) {
+var ErrBashibleTimeout = errors.New("Timeout bashible step running")
+
+func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte, err error) {
 	bundleName := fmt.Sprintf("bundle-%s.tar", time.Now().Format("20060102-150405"))
 	bundleLocalFilepath := filepath.Join(app.TmpDirName, bundleName)
 
@@ -146,7 +148,7 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 	tarCmd := exec.Command("tar", "cpf", bundleLocalFilepath, "-C", parentDir, bundleDir)
 	err = tarCmd.Run()
 	if err != nil {
-		return nil, fmt.Errorf("tar bundle: %v", err), false
+		return nil, fmt.Errorf("tar bundle: %v", err)
 	}
 
 	tomb.RegisterOnShutdown(
@@ -157,7 +159,7 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 	// upload to node's deckhouse tmp directory
 	err = NewFile(u.Session).Upload(bundleLocalFilepath, app.DeckhouseNodeTmpPath)
 	if err != nil {
-		return nil, fmt.Errorf("upload: %v", err), false
+		return nil, fmt.Errorf("upload: %v", err)
 	}
 
 	// sudo:
@@ -198,7 +200,12 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 	} else {
 		processLogger.LogProcessEnd()
 	}
-	return bundleCmd.StdoutBytes(), err, isBashibleTimeout
+
+	if isBashibleTimeout {
+		return bundleCmd.StdoutBytes(), ErrBashibleTimeout
+	}
+
+	return bundleCmd.StdoutBytes(), err
 }
 
 var stepHeaderRegexp = regexp.MustCompile("^=== Step: /var/lib/bashible/bundle_steps/(.*)$")

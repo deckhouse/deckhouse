@@ -15,19 +15,8 @@
 # limitations under the License.
 */}}
 
-python_binary=""
-
-for pybin in python3 python2 python; do
-  if command -v "$pybin" >/dev/null 2>&1; then
-    python_binary="$pybin"
-    break
-  fi
-done
-
-if [ -z "$python_binary" ]; then
-  echo "Python binary not found"
-  exit 1
-fi
+{{- $python_discovery := .Files.Get "deckhouse/candi/bashible/utils/python_discovery.sh.tpl" }}
+{{- tpl ( $python_discovery ) . | nindent 0 }}
 
 cat - <<EOF | $python_binary
 import ssl
@@ -37,8 +26,7 @@ except ImportError as e:
     from urllib2 import urlopen, Request
 
 ssl._create_default_https_context = ssl._create_unverified_context
-url = '{{.url}}'
-request = Request(url)
+request = Request('{{.url}}')
 res = False
 try:
     response = urlopen(request, timeout=5)

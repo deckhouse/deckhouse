@@ -17,10 +17,10 @@ package template
 import "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 
 var (
-	checkPortsScriptPath              = candiBashibleDir + "/preflight/check_ports.sh"
-	checkLocalhostScriptPath          = candiBashibleDir + "/preflight/check_localhost.sh"
-	checkProxyRevTunnelOpenScriptPath = candiBashibleDir + "/preflight/check_reverse_tunnel_open.sh"
-	kilReverseTunnelPath              = candiBashibleDir + "/preflight/kill_reverse_tunnel.sh"
+	checkPortsScriptPath              = candiBashibleDir + "/preflight/check_ports.sh.tpl"
+	checkLocalhostScriptPath          = candiBashibleDir + "/preflight/check_localhost.sh.tpl"
+	checkProxyRevTunnelOpenScriptPath = candiBashibleDir + "/preflight/check_reverse_tunnel_open.sh.tpl"
+	killReverseTunnelPath             = candiBashibleDir + "/preflight/kill_reverse_tunnel.sh.tpl"
 	preflightScriptDirPath            = candiBashibleDir + "/preflight/"
 )
 
@@ -57,7 +57,7 @@ func RenderAndSaveKillReverseTunnelScript(host, port string) (string, error) {
 
 	return RenderAndSaveTemplate(
 		"kill_reverse_tunnel.sh",
-		kilReverseTunnelPath,
+		killReverseTunnelPath,
 		map[string]interface{}{
 			"host": host,
 			"port": port,

@@ -68,7 +68,7 @@ func BootstrapMaster(sshClient *ssh.Client, controller *template.Controller) err
 		for _, bootstrapScript := range []string{"01-network-scripts.sh", "02-base-pkgs.sh"} {
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
 
-			err := retry.NewLoop(fmt.Sprintf("Execure %s", bootstrapScript), 30, 5*time.Second).
+			err := retry.NewLoop(fmt.Sprintf("Execute %s", bootstrapScript), 30, 5*time.Second).
 				Run(func() error {
 					if _, err := os.Stat(scriptPath); err != nil {
 						if os.IsNotExist(err) {
@@ -105,17 +105,12 @@ func PrepareBashibleBundle(bundleName, nodeIP, devicePath string, metaConfig *co
 	})
 }
 
-var ErrBashibleTimeout = errors.New("Timeout bashible step running")
-
 func ExecuteBashibleBundle(sshClient *ssh.Client, tmpDir string) error {
 	bundleCmd := sshClient.UploadScript("bashible.sh", "--local").Sudo()
 	parentDir := tmpDir + "/var/lib"
 	bundleDir := "bashible"
 
-	_, err, isBashibleTimeout := bundleCmd.ExecuteBundle(parentDir, bundleDir)
-	if isBashibleTimeout {
-		return ErrBashibleTimeout
-	}
+	_, err := bundleCmd.ExecuteBundle(parentDir, bundleDir)
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
@@ -167,9 +162,9 @@ func getBashiblePIDs(sshClient *ssh.Client) ([]string, error) {
 			if ee.ExitCode() == 255 {
 				return nil, err
 			}
-
-			return nil, err
 		}
+
+		return nil, err
 	}
 
 	var res []string

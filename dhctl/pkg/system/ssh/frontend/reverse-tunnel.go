@@ -16,7 +16,7 @@ package frontend
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"os/exec"
 	"sync"
@@ -157,7 +157,7 @@ func (t *ReverseTunnel) StartHealthMonitor(checker ReverseTunnelChecker, killer 
 	}
 
 	go func() {
-		log.InfoLn("Start health monitor")
+		log.DebugLn("Start health monitor")
 		// we need chan for restarting because between restarting we can get stop signal
 		restartCh := make(chan int, 1024)
 		id := -1
