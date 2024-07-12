@@ -29,12 +29,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 )
 
 func kubernetesVersionHandler() http.Handler {
-	validator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
+	validator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		if kubernetesversion.IsEnabled() {
 			secret, ok := obj.(*v1.Secret)
 			if !ok {
@@ -66,7 +65,7 @@ func kubernetesVersionHandler() http.Handler {
 		ID:        "kubernetes-version-validator",
 		Validator: validator,
 		Logger:    nil,
-		Obj:       &v1alpha1.Module{},
+		Obj:       &v1.Secret{},
 	})
 
 	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
