@@ -29,7 +29,7 @@ locals{
   master_etcd_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "etcdDiskSizeGb", 15)
   account_id = lookup(var.providerClusterConfiguration.provider, "accountId", null)
   os_image_id = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "osImageId", null)
-  resource_group_name = join("-", [local.resource_name_prefix, "rg"]
+  resource_group_name = join("-", [local.resource_name_prefix, "rg"])
   kubernetes_data_disk_name = join("-", [local.master_node_name, "kubernetes-data"])
   grid = lookup(var.providerClusterConfiguration, "grid", null)
   pool = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "pool", null)
