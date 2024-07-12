@@ -217,7 +217,7 @@ apiVersions:
             type: string
             description: App Secret.
           accountId:
-            type: string
+            type: integer
             description: Account Id.
           insecure:
             type: boolean
