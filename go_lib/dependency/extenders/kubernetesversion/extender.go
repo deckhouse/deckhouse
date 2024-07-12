@@ -119,7 +119,7 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 func (e *Extender) ValidateBaseVersion(baseVersion string) error {
 	if name, err := e.versionMatcher.ReverseValidate(baseVersion); err != nil {
 		e.logger.Errorf("requirements of %s are not satisfied: %s kubernetes version is not suitable: %s", name, baseVersion, err.Error())
-		return fmt.Errorf("requirements are not satisfied: %s kubernetes version is not suitable: %s", baseVersion, err.Error())
+		return fmt.Errorf("requirements of %s are not satisfied: %s kubernetes version is not suitable: %s", name, baseVersion, err.Error())
 	}
 	e.logger.Debugf("requirements for %s are satisfied", baseVersion)
 	return nil
