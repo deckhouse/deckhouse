@@ -77,7 +77,7 @@ apiVersions:
           instanceClass:
             type: object
             additionalProperties: false
-            required: [numCPUs, memory, osImageId, pool, externalNetworkID, virtualNetworkID]
+            required: [numCPUs, memory, osImageId, pool, externalNetworkId, vinsNetworkId]
             description: |
               Partial contents of the fields of the [DynamixInstanceClass](cr.html#dynamixinstanceclass).
             properties: &instanceClassProperties
@@ -115,12 +115,12 @@ apiVersions:
                 description: |
                   Storage pool name.
                 example: pool_a
-              externalNetworkID:
+              externalNetworkId:
                 type: integer
                 description: |
                   External network ID.
                 example: 1
-              virtualNetworkID:
+              vinsNetworkId:
                 type: integer
                 description: |
                   Internal network ID.
@@ -225,7 +225,7 @@ apiVersions:
             default: false
             x-doc-default: false
         required:
-        - controllerURL
+        - controllerUrl
         - oauth2Url
         - appId
         - appSecret

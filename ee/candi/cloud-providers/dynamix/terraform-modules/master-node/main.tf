@@ -21,6 +21,7 @@ resource "decort_disk" "kubernetes_data_disk" {
    gid = local.grid
    size_max = local.master_etcd_disk_size
    type = "D"    # disk type, always use "D" for extra disks
+   sep_id = data.decort_image.os_image.sep_id
    pool = local.pool
 }
 
