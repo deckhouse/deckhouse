@@ -35,6 +35,7 @@ resource "decort_cb_kvmvm" "master_vm" {
   image_id = data.decort_image.os_image.image_id
   pool = local.pool
   extra_disks = [ decort_disk.kubernetes_data_disk.id ]
+  cloud_init = local.master_cloud_init_script
 
   network {
     net_type = local.net_type_extnet
