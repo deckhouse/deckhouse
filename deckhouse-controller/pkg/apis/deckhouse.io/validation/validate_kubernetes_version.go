@@ -41,7 +41,7 @@ func kubernetesVersionHandler() http.Handler {
 			}
 			val, ok := secret.Data["cluster-configuration.yaml"]
 			if !ok {
-				return nil, fmt.Errorf("expected field 'deckhouseDefaultKubernetesVersion' not found in secret %s", secret.Name)
+				return nil, fmt.Errorf("expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
 			}
 			var clusterConfigurationRaw = make([]byte, base64.StdEncoding.DecodedLen(len(val)))
 			if _, err := base64.StdEncoding.Decode(clusterConfigurationRaw, val); err != nil {
@@ -53,7 +53,7 @@ func kubernetesVersionHandler() http.Handler {
 			if err := yaml.Unmarshal(clusterConfigurationRaw, &clusterConf); err != nil {
 				return nil, err
 			}
-			if err := kubernetesversion.Instance().ReverseValidate(clusterConf.KubernetesVersion); err != nil {
+			if err := kubernetesversion.Instance().ValidateBaseVersion(clusterConf.KubernetesVersion); err != nil {
 				return rejectResult(err.Error())
 			}
 		}
