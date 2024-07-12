@@ -112,6 +112,15 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 	return pointer.Bool(true), nil
 }
 
+func (e *Extender) ValidateBaseVersion(baseVersion string) error {
+	if name, err := e.versionMatcher.ReverseValidate(baseVersion); err != nil {
+		e.logger.Errorf("requirements of %s are not satisfied: %s deckhouse version is not suitable: %s", name, baseVersion, err.Error())
+		return fmt.Errorf("requirements are not satisfied: %s deckhouse version is not suitable: %s", baseVersion, err.Error())
+	}
+	e.logger.Debugf("requirements for %s are satisfied", baseVersion)
+	return nil
+}
+
 func (e *Extender) ValidateConstraint(name, rawConstraint string) error {
 	if err := e.versionMatcher.ValidateConstraint(rawConstraint); err != nil {
 		e.logger.Errorf("requirements of %s are not satisfied: current deckhouse version is not suitable: %s", name, err.Error())
