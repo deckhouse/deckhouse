@@ -59,8 +59,7 @@ import (
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 )
 
 const (
@@ -155,13 +154,11 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		return nil, err
 	}
 
-	// extender for module manager scheduler, it checks modules deckhouse version requirement on FS
-	if err = mm.AddExtender(deckhouseversion.Instance()); err != nil {
-		return nil, err
-	}
-	// extender for module manager scheduler, it checks modules kubernetes version requirement on FS
-	if err = mm.AddExtender(kubernetesversion.Instance()); err != nil {
-		return nil, err
+	// register extenders
+	for _, extender := range extenders.Extenders() {
+		if err = mm.AddExtender(extender); err != nil {
+			return nil, err
+		}
 	}
 
 	err = source.NewModuleSourceController(mgr, dc, embeddedDeckhousePolicy)

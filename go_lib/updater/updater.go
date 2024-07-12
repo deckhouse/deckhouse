@@ -20,15 +20,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"slices"
 	"sort"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	"k8s.io/utils/pointer"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -652,7 +650,7 @@ func (du *Updater[R]) PrepareReleases(releases []R) {
 func (du *Updater[R]) checkReleaseRequirements(rl *R) bool {
 	for key, value := range (*rl).GetRequirements() {
 		// these fields are checked by extenders in module release controller
-		if slices.Contains([]string{deckhouseversion.RequirementsField, kubernetesversion.RequirementsField}, key) {
+		if extenders.IsExtendersField(key) {
 			continue
 		}
 		passed, err := requirements.CheckRequirement(key, value, du.enabledModules)

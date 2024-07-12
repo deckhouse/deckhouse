@@ -113,7 +113,7 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 }
 
 func (e *Extender) ValidateBaseVersion(baseVersion string) error {
-	if name, err := e.versionMatcher.ReverseValidate(baseVersion); err != nil {
+	if name, err := e.versionMatcher.ValidateBaseVersion(baseVersion); err != nil {
 		e.logger.Errorf("requirements of %s are not satisfied: %s deckhouse version is not suitable: %s", name, baseVersion, err.Error())
 		return fmt.Errorf("requirements of %s are not satisfied: %s deckhouse version is not suitable: %s", name, baseVersion, err.Error())
 	}

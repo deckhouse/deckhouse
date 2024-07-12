@@ -69,9 +69,7 @@ func (e *Extender) watchForKubernetesVersion() {
 	watcher := &versionWatcher{ch: versionCh}
 	go func() {
 		if err := watcher.watch("/tmp/kubectl_version"); err != nil {
-			e.logger.Errorf("failed to watch /tmp/kubectl_version: %v", err)
-			e.enabled = false
-			return
+			panic(err)
 		}
 	}()
 	for version := range versionCh {
@@ -117,7 +115,7 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 }
 
 func (e *Extender) ValidateBaseVersion(baseVersion string) error {
-	if name, err := e.versionMatcher.ReverseValidate(baseVersion); err != nil {
+	if name, err := e.versionMatcher.ValidateBaseVersion(baseVersion); err != nil {
 		e.logger.Errorf("requirements of %s are not satisfied: %s kubernetes version is not suitable: %s", name, baseVersion, err.Error())
 		return fmt.Errorf("requirements of %s are not satisfied: %s kubernetes version is not suitable: %s", name, baseVersion, err.Error())
 	}
