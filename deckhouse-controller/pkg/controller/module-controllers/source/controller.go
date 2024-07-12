@@ -335,12 +335,14 @@ func (c *moduleSourceReconciler) createModuleRelease(ctx context.Context, ms *v1
 			},
 		},
 		Spec: v1alpha1.ModuleReleaseSpec{
-			ModuleName:   moduleName,
-			Version:      semver.MustParse(result.ModuleVersion),
-			Weight:       result.ModuleWeight,
-			Changelog:    v1alpha1.Changelog(result.Changelog),
-			Requirements: result.ModuleDefinition.Requirements,
+			ModuleName: moduleName,
+			Version:    semver.MustParse(result.ModuleVersion),
+			Weight:     result.ModuleWeight,
+			Changelog:  v1alpha1.Changelog(result.Changelog),
 		},
+	}
+	if result.ModuleDefinition != nil {
+		rl.Spec.Requirements = result.ModuleDefinition.Requirements
 	}
 
 	err := c.client.Create(ctx, rl)

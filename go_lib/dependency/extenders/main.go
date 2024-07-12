@@ -19,3 +19,28 @@ func Extenders() []extenders.Extender {
 		deckhouseversion.Instance(),
 	}
 }
+
+func AddConstraints(module string, requirements map[string]string) error {
+	if len(requirements[deckhouseversion.RequirementsField]) > 0 {
+		if err := deckhouseversion.Instance().AddConstraint(module, requirements[deckhouseversion.RequirementsField]); err != nil {
+			return err
+		}
+	}
+	if len(requirements[kubernetesversion.RequirementsField]) > 0 {
+		if err := kubernetesversion.Instance().AddConstraint(module, requirements[kubernetesversion.RequirementsField]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func CheckRequirements(moduleRelease string, requirements map[string]string) error {
+	for _, field := range []string{deckhouseversion.RequirementsField, kubernetesversion.RequirementsField} {
+		if len(requirements[field]) > 0 {
+			if err := deckhouseversion.Instance().ValidateConstraint(moduleRelease, requirements[field]); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}

@@ -33,24 +33,22 @@ import (
 
 func kubernetesVersionHandler() http.Handler {
 	validator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-		if kubernetesversion.IsEnabled() {
-			secret, ok := obj.(*v1.Secret)
-			if !ok {
-				return nil, fmt.Errorf("expect Secret as unstructured, got %T", obj)
-			}
-			clusterConfigurationRaw, ok := secret.Data["cluster-configuration.yaml"]
-			if !ok {
-				return nil, fmt.Errorf("expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
-			}
-			var clusterConf struct {
-				KubernetesVersion string `json:"kubernetesVersion"`
-			}
-			if err := yaml.Unmarshal(clusterConfigurationRaw, &clusterConf); err != nil {
-				return nil, err
-			}
-			if err := kubernetesversion.Instance().ValidateBaseVersion(clusterConf.KubernetesVersion); err != nil {
-				return rejectResult(err.Error())
-			}
+		secret, ok := obj.(*v1.Secret)
+		if !ok {
+			return nil, fmt.Errorf("expect Secret as unstructured, got %T", obj)
+		}
+		clusterConfigurationRaw, ok := secret.Data["cluster-configuration.yaml"]
+		if !ok {
+			return nil, fmt.Errorf("expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
+		}
+		var clusterConf struct {
+			KubernetesVersion string `json:"kubernetesVersion"`
+		}
+		if err := yaml.Unmarshal(clusterConfigurationRaw, &clusterConf); err != nil {
+			return nil, err
+		}
+		if err := kubernetesversion.Instance().ValidateBaseVersion(clusterConf.KubernetesVersion); err != nil {
+			return rejectResult(err.Error())
 		}
 		return allowResult("")
 	})
