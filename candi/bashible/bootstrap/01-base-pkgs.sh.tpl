@@ -100,7 +100,7 @@ bb-package-fetch-blobs() {
     retries=0
     while [ "$retries" -lt 3 ]
     do
-      retries=$(( retries+1 )) 
+      retries=$(( retries+1 ))
       bb-package-fetch-blob "${PACKAGE_DIGEST}" "${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar.gz" && break
 			sleep 2
     done
@@ -128,6 +128,7 @@ for ep in endpoints:
     response = urlopen(request, timeout=300)
   except HTTPError as e:
     print("Access to {} return HTTP Error {}: {}".format(url, e.getcode(), e.read()[:255]))
+    print('You can check via curl -v -k -H "Authorization: Bearer ${PACKAGES_PROXY_TOKEN}" "{}" > /dev/null'.format(url))
     continue
   except Exception as e:
     print("Access to {} return Error: {}".format(url, e))
@@ -141,7 +142,7 @@ EOFILE
 {{ with .images.registrypackages }}
 bb-package-install "jq:{{ .jq16 }}" "curl:{{ .d8Curl821 }}" "netcat:{{ .netcat110481 }}"
 {{ if eq $.provider "aws" }}
-bb-package-install "ec2DescribeTags:{{ .ec2DescribeTagsV001Flant2 }}" 
+bb-package-install "ec2DescribeTags:{{ .ec2DescribeTagsV001Flant2 }}"
 {{- end }}
 {{- end }}
 mkdir -p /var/lib/bashible/
