@@ -2106,7 +2106,7 @@ spec:
                             - Pod
                         policy:
                           type: string
-                          x-doc-default: None
+                          default: None
                           description: |
                             Resource/topology alignment policy to use when scheduling a pod.
 
