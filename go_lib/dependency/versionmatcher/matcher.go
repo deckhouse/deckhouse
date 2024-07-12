@@ -62,6 +62,19 @@ func (m *Matcher) ValidateByName(name string) error {
 	return nil
 }
 
+func (m *Matcher) ReverseValidate(baseVersion string) (string, error) {
+	parsed, err := semver.NewVersion(baseVersion)
+	if err != nil {
+		return "", err
+	}
+	for name, constraint := range m.constraints {
+		if _, errs := constraint.Validate(parsed); len(errs) != 0 {
+			return name, errs[0]
+		}
+	}
+	return "", nil
+}
+
 func (m *Matcher) ValidateConstraint(rawConstraint string) error {
 	constraint, err := semver.NewConstraint(rawConstraint)
 	if err != nil {
