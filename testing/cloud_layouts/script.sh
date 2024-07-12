@@ -810,6 +810,40 @@ function wait_cluster_ready() {
 
   test_failed=
 
+  testNodeUserScript=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_nodeuser.sh")
+
+  testRunAttempts=5
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testNodeUserScript}"; then
+        test_failed=""
+        break
+    else
+      test_failed="true"
+      >&2 echo "Run test NodeUser script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds.."
+      sleep 30
+    fi
+  done
+
+  if [[ $test_failed == "true" ]] ; then
+    return 1
+  fi
+
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "user-e2e@$master_ip" whoami; then
+        >&2 echo "Connection via NodeUser SSH successful."
+        test_failed=""
+        break
+    else
+      test_failed="true"
+      >&2 echo "Connection via NodeUser SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds.."
+      sleep 30
+    fi
+  done
+
+  if [[ $test_failed == "true" ]] ; then
+    return 1
+  fi
+
   testScript=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
 
   testRunAttempts=5
