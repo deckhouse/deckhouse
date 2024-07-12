@@ -139,31 +139,26 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 		return fmt.Errorf("update module release download statistic: %w", err)
 	}
 
-	moduleVersionPath := path.Join(tmpDir, moduleName, "v"+release.Spec.Version.String())
+	tmpModuleVersionPath := path.Join(tmpDir, moduleName, "v"+release.Spec.Version.String())
 	relativeModulePath := generateModulePath(moduleName, release.Spec.Version.String())
-	newModuleSymlink := path.Join(k.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, moduleName))
 
 	def := models.DeckhouseModuleDefinition{
 		Name:   moduleName,
 		Weight: release.Spec.Weight,
-		Path:   moduleVersionPath,
+		Path:   tmpModuleVersionPath,
 	}
 	err = validateModule(def)
 	if err != nil {
-		k.logger.Errorf("Module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
 		release.Status.Phase = v1alpha1.PhaseSuspended
-		if e := k.UpdateReleaseStatus(release, "validation failed: "+err.Error(), release.Status.Phase); e != nil {
-			return e
-		}
-
-		return nil
+		_ = k.UpdateReleaseStatus(release, "validation failed: "+err.Error(), release.Status.Phase)
+		return fmt.Errorf("module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
 	}
 
-	moduleVersionPath = path.Join(k.externalModulesDir, moduleName, "v"+release.Spec.Version.String())
+	moduleVersionPath := path.Join(k.externalModulesDir, moduleName, "v"+release.Spec.Version.String())
 	if err = os.RemoveAll(moduleVersionPath); err != nil {
 		return fmt.Errorf("cannot remove old module dir %q: %w", moduleVersionPath, err)
 	}
-	if err = copyDirectory(tmpDir, moduleVersionPath); err != nil {
+	if err = copyDirectory(tmpModuleVersionPath, moduleVersionPath); err != nil {
 		return fmt.Errorf("copy module dir: %w", err)
 	}
 
@@ -171,6 +166,7 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 	// module weight for a new version of the module may be different from the old one,
 	// we need to find a symlink that contains the module name without looking at the weight prefix.
 	currentModuleSymlink, err := findExistingModuleSymlink(k.symlinksDir, moduleName)
+	newModuleSymlink := path.Join(k.symlinksDir, fmt.Sprintf("%d-%s", def.Weight, moduleName))
 	if err != nil {
 		currentModuleSymlink = "900-" + moduleName // fallback
 	}
