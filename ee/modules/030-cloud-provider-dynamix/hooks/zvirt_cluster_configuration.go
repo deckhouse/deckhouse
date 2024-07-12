@@ -19,7 +19,7 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	if !secretFound {
 		return fmt.Errorf("kube-system/d8-provider-cluster-configuration secret not found")
 	}
-	input.Values.Set("cloudProviderZvirt.internal.providerClusterConfiguration", metaCfg.ProviderClusterConfig)
-	input.Values.Set("cloudProviderZvirt.internal.providerDiscoveryData", providerDiscoveryData.Object)
+	input.Values.Set("cloudProviderDynamix.internal.providerClusterConfiguration", metaCfg.ProviderClusterConfig)
+	input.Values.Set("cloudProviderDynamix.internal.providerDiscoveryData", providerDiscoveryData.Object)
 	return nil
 })
