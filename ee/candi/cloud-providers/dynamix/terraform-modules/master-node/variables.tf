@@ -39,11 +39,11 @@ locals{
   net_type_vins = "VINS"
   net_type_extnet = "EXTNET"
 
-  master_cloud_init_script = merge({
+  master_cloud_init_script = yamlencode(merge({
     "hostname": local.master_node_name,
     "create_hostname_file": true,
     "ssh_deletekeys": true,
     "ssh_genkeytypes": ["rsa", "ecdsa", "ed25519"],
     "ssh_authorized_keys" : [local.ssh_pubkey]
-  }, length(var.cloudConfig) > 0 ? base64decode(var.cloudConfig) : tomap({}))
+  }, length(var.cloudConfig) > 0 ? yamldecode(base64decode(var.cloudConfig)) : tomap({})))
 }
