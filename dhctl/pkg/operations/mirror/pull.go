@@ -35,6 +35,7 @@ func PullInstallers(mirrorCtx *Context, layouts *ImageLayouts) error {
 		mirrorCtx.RegistryAuth,
 		layouts.Install,
 		layouts.InstallImages,
+		layouts.TagsResolver.GetTagDigest,
 		mirrorCtx.Insecure,
 		mirrorCtx.SkipTLSVerification,
 		false,
@@ -51,9 +52,10 @@ func PullDeckhouseReleaseChannels(mirrorCtx *Context, layouts *ImageLayouts) err
 		mirrorCtx.RegistryAuth,
 		layouts.ReleaseChannel,
 		layouts.ReleaseChannelImages,
+		layouts.TagsResolver.GetTagDigest,
 		mirrorCtx.Insecure,
 		mirrorCtx.SkipTLSVerification,
-		false,
+		mirrorCtx.SpecificVersion != nil,
 	); err != nil {
 		return err
 	}
@@ -67,6 +69,7 @@ func PullDeckhouseImages(mirrorCtx *Context, layouts *ImageLayouts) error {
 		mirrorCtx.RegistryAuth,
 		layouts.Deckhouse,
 		layouts.DeckhouseImages,
+		layouts.TagsResolver.GetTagDigest,
 		mirrorCtx.Insecure,
 		mirrorCtx.SkipTLSVerification,
 		false,
@@ -77,30 +80,44 @@ func PullDeckhouseImages(mirrorCtx *Context, layouts *ImageLayouts) error {
 	return nil
 }
 
+type TagToDigestMappingFunc func(imageRef string) *v1.Hash
+
 func PullImageSet(
 	authProvider authn.Authenticator,
 	targetLayout layout.Path,
 	imageSet map[string]struct{},
+	tagToDigestMappingFunc TagToDigestMappingFunc,
 	insecure, skipVerifyTLS, allowMissingTags bool,
 ) error {
+	pullOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS)
+
 	pullCount := 1
 	totalCount := len(imageSet)
-	for imageTag := range imageSet {
-		pullOpts, remoteOpts := MakeRemoteRegistryRequestOptions(authProvider, insecure, skipVerifyTLS)
-		ref, err := name.ParseReference(imageTag, pullOpts...)
+	for imageReferenceString := range imageSet {
+		imageRepo := imageReferenceString[:strings.LastIndex(imageReferenceString, ":")]
+		imageTag := imageReferenceString[strings.LastIndex(imageReferenceString, ":")+1:]
+
+		// If we already know the digest of the tagged image, we should pull it by this digest instead of pulling by tag
+		// to avoid race-conditions between mirror and releases
+		pullReference := imageReferenceString
+		if mapping := tagToDigestMappingFunc(imageReferenceString); mapping != nil {
+			pullReference = imageRepo + "@" + mapping.String()
+		}
+
+		ref, err := name.ParseReference(pullReference, pullOpts...)
 		if err != nil {
-			return fmt.Errorf("parse image reference %q: %w", imageTag, err)
+			return fmt.Errorf("parse image reference %q: %w", pullReference, err)
 		}
 
 		err = retry.NewLoop(
-			fmt.Sprintf("[%d / %d] Pulling %s...", pullCount, totalCount, imageTag),
+			fmt.Sprintf("[%d / %d] Pulling %s...", pullCount, totalCount, imageReferenceString),
 			6,
 			10*time.Second,
 		).Run(func() error {
 			img, err := remote.Image(ref, remoteOpts...)
 			if err != nil {
 				if isImageNotFoundError(err) && allowMissingTags {
-					log.WarnLn("⚠️ Not found in registry")
+					log.WarnLn("⚠️ Not found in registry, skipping pull")
 					return nil
 				}
 
@@ -110,8 +127,8 @@ func PullImageSet(
 			err = targetLayout.AppendImage(img,
 				layout.WithPlatform(v1.Platform{Architecture: "amd64", OS: "linux"}),
 				layout.WithAnnotations(map[string]string{
-					"org.opencontainers.image.ref.name": imageTag,
-					"io.deckhouse.image.short_tag":      imageTag[strings.LastIndex(imageTag, ":")+1:],
+					"org.opencontainers.image.ref.name": imageReferenceString,
+					"io.deckhouse.image.short_tag":      imageTag,
 				}),
 			)
 			if err != nil {
@@ -121,7 +138,7 @@ func PullImageSet(
 			return nil
 		})
 		if err != nil {
-			return fmt.Errorf("pull image %q: %w", imageTag, err)
+			return fmt.Errorf("pull image %q: %w", imageReferenceString, err)
 		}
 		pullCount++
 	}
@@ -131,10 +148,26 @@ func PullImageSet(
 func PullModules(mirrorCtx *Context, layouts *ImageLayouts) error {
 	log.InfoLn("Beginning to pull Deckhouse modules")
 	for moduleName, moduleData := range layouts.Modules {
-		if err := PullImageSet(mirrorCtx.RegistryAuth, moduleData.ModuleLayout, moduleData.ModuleImages, mirrorCtx.Insecure, mirrorCtx.SkipTLSVerification, false); err != nil {
+		if err := PullImageSet(
+			mirrorCtx.RegistryAuth,
+			moduleData.ModuleLayout,
+			moduleData.ModuleImages,
+			layouts.TagsResolver.GetTagDigest,
+			mirrorCtx.Insecure,
+			mirrorCtx.SkipTLSVerification,
+			false,
+		); err != nil {
 			return fmt.Errorf("pull %q module: %w", moduleName, err)
 		}
-		if err := PullImageSet(mirrorCtx.RegistryAuth, moduleData.ReleasesLayout, moduleData.ReleaseImages, mirrorCtx.Insecure, mirrorCtx.SkipTLSVerification, true); err != nil {
+		if err := PullImageSet(
+			mirrorCtx.RegistryAuth,
+			moduleData.ReleasesLayout,
+			moduleData.ReleaseImages,
+			layouts.TagsResolver.GetTagDigest,
+			mirrorCtx.Insecure,
+			mirrorCtx.SkipTLSVerification,
+			true,
+		); err != nil {
 			return fmt.Errorf("pull %q module release information: %w", moduleName, err)
 		}
 	}

@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -32,12 +33,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -156,11 +159,42 @@ func UnlockDeckhouseQueueAfterCreatingModuleConfigs(kubeCl *client.KubernetesCli
 	})
 }
 
-func AddReleaseChannelToDeckhouseModuleConfig(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
+func ConfigureReleaseChannel(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
+	// if we have correct semver version we should create Deckhouse Release for prevent rollback on previous version
+	// if installer version > version in release channel
+	if tag, found := config.ReadVersionTagFromInstallerContainer(); found {
+		deckhouseRelease := unstructured.Unstructured{}
+		deckhouseRelease.SetUnstructuredContent(map[string]interface{}{
+			"apiVersion": "deckhouse.io/v1alpha1",
+			"kind":       "DeckhouseRelease",
+			"metadata": map[string]interface{}{
+				"name": tag,
+			},
+			"spec": map[string]interface{}{
+				"version": tag,
+			},
+		})
+
+		err := retry.NewLoop(fmt.Sprintf("Create deckhouse release for version %s", tag), 15, 5*time.Second).
+			BreakIf(apierrors.IsAlreadyExists).
+			Run(func() error {
+				_, err := kubeCl.Dynamic().Resource(v1alpha1.DeckhouseReleaseGVR).Create(context.TODO(), &deckhouseRelease, metav1.CreateOptions{})
+				if err != nil {
+					return err
+				}
+
+				return nil
+			})
+		if err != nil {
+			return err
+		}
+	}
+
 	if cfg.ReleaseChannel == "" {
 		return nil
 	}
-	return retry.NewLoop("Set release channel", 15, 5*time.Second).
+	// save release channel into module config we do not set it in Deckhouse mc because we want to install deckhouse only one release
+	return retry.NewLoop("Set release channel to deckhouse module config", 15, 5*time.Second).
 		BreakIf(apierrors.IsNotFound).
 		Run(func() error {
 			cm, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Get(context.TODO(), "deckhouse", metav1.GetOptions{})
@@ -397,6 +431,10 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 		})
 	}
 
+	if cfg.CommanderMode && cfg.CommanderUUID != uuid.Nil {
+		tasks = append(tasks, commander.ConstructManagedByCommanderConfigMapTask(cfg.CommanderUUID, kubeCl))
+	}
+
 	if cfg.KubeDNSAddress != "" {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `Service "kube-dns"`,
@@ -456,7 +494,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 					_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
 						Create(context.TODO(), manifest.(*unstructured.Unstructured), metav1.CreateOptions{})
 					if err != nil {
-						log.InfoF("Do not create mc: %v\n", err)
+						log.DebugF("Do not create mc: %v\n", err)
 					}
 
 					return err
@@ -523,12 +561,14 @@ func WaitForReadinessNotOnNode(kubeCl *client.KubernetesClient, excludeNode stri
 	return log.Process("default", "Waiting for Deckhouse to become Ready", func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), app.DeckhouseTimeout)
 		defer cancel()
+
 		for {
 			select {
 			case <-ctx.Done():
 				return ErrTimedOut
 			default:
 				ok, err := NewLogPrinter(kubeCl).
+					WithLeaderElectionAwarenessMode(types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-leader-election"}).
 					WaitPodBecomeReady().
 					WithExcludeNode(excludeNode).
 					Print(ctx)
@@ -558,13 +598,24 @@ func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *config.Deck
 }
 
 func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.DeckhouseDeploymentParams {
+	// TODO remove this after integrating external-module-manager into deckhouse-controller
+	externalModuleManagerEnabled := strings.ToLower(cfg.Bundle) != "minimal"
+	for _, mc := range cfg.ModuleConfigs {
+		if mc != nil && mc.GetName() == "external-module-manager" {
+			if mc.Spec.Enabled != nil {
+				externalModuleManagerEnabled = *mc.Spec.Enabled
+			}
+		}
+	}
+
 	return manifests.DeckhouseDeploymentParams{
-		Registry:           cfg.GetImage(true),
-		LogLevel:           cfg.LogLevel,
-		Bundle:             cfg.Bundle,
-		IsSecureRegistry:   cfg.IsRegistryAccessRequired(),
-		KubeadmBootstrap:   cfg.KubeadmBootstrap,
-		MasterNodeSelector: cfg.MasterNodeSelector,
+		Registry:               cfg.GetImage(true),
+		LogLevel:               cfg.LogLevel,
+		Bundle:                 cfg.Bundle,
+		IsSecureRegistry:       cfg.IsRegistryAccessRequired(),
+		KubeadmBootstrap:       cfg.KubeadmBootstrap,
+		MasterNodeSelector:     cfg.MasterNodeSelector,
+		ExternalModulesEnabled: externalModuleManagerEnabled,
 	}
 }
 

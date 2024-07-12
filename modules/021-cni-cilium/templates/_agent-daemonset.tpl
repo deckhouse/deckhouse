@@ -35,7 +35,7 @@ spec:
       - name: deckhouse-registry
       containers:
       - name: cilium-agent
-        image: {{ include "helm_lib_module_image" (list $context "cilium") }}
+        image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         command:
         - cilium-agent
         args:
@@ -98,11 +98,6 @@ spec:
             exec:
               command:
               - /cni-uninstall.sh
-        ports:
-        - name: prometheus
-          containerPort: 9092
-          hostPort: 9092
-          protocol: TCP
         securityContext:
           privileged: false
           seLinuxOptions:
@@ -176,7 +171,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $context | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $context "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9734"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4241"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -199,7 +194,7 @@ spec:
                   subresource: prometheus-metrics
                   name: agent
         ports:
-        - containerPort: 9734
+        - containerPort: 4241
           name: https-metrics
         resources:
           requests:
@@ -212,7 +207,7 @@ spec:
       initContainers:
       {{- include "module_init_container_check_linux_kernel" (tuple $context ">= 4.9.17") | nindent 6 }}
       - name: mount-cgroup
-        image: {{ include "helm_lib_module_image" (list $context "cilium") }}
+        image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         env:
         - name: CGROUP_ROOT
           value: "/run/cilium/cgroupv2"
@@ -249,7 +244,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: apply-sysctl-overwrites
-        image: {{ include "helm_lib_module_image" (list $context "cilium") }}
+        image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         env:
         - name: BIN_PATH
           value: /opt/cni/bin
@@ -282,7 +277,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: mount-bpf-fs
-        image: {{ include "helm_lib_module_image" (list $context "cilium") }}
+        image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         args:
         - 'mount | grep "/sys/fs/bpf type bpf" || mount -t bpf bpf /sys/fs/bpf'
         command:
@@ -300,7 +295,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: clean-cilium-state
-        image: {{ include "helm_lib_module_image" (list $context "cilium") }}
+        image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         command:
         - /init-container.sh
         env:
@@ -361,7 +356,7 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       # Install the CNI binaries in an InitContainer so we don't have a writable host mount in the agent
       - name: install-cni-binaries
-        image: {{ include "helm_lib_module_image" (list $context "cilium") }}
+        image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         command:
           - "/install-plugin.sh"
         resources:

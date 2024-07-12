@@ -29,8 +29,88 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/se/modules/380-metallb
+  to: /deckhouse/modules/380-metallb
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/se/modules/502-delivery
+  to: /deckhouse/modules/502-delivery
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/010-metallb-crd
+  to: /deckhouse/modules/010-metallb-crd
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
   to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/crds/doc-ru-egressgateways.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgateways.yaml
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/crds/egressgatewaypolicies.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/egressgatewaypolicies.yaml
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/crds/egressgateways.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/egressgateways.yaml
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/crds/internal
+  to: /deckhouse/modules/021-cni-cilium/crds/internal
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/hooks/ee
+  to: /deckhouse/modules/021-cni-cilium/hooks/ee
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/images/egress-gateway-agent
+  to: /deckhouse/modules/021-cni-cilium/images/egress-gateway-agent
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/templates/egress-gateway-agent
+  to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-agent
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/templates/egress-gateway-instance
+  to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-instance
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/templates/egress-policy
+  to: /deckhouse/modules/021-cni-cilium/templates/egress-policy
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/templates/monitoring.yaml
+  to: /deckhouse/modules/021-cni-cilium/templates/monitoring.yaml
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/021-cni-cilium/monitoring/prometheus-rules
+  to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/025-static-routing-manager
+  to: /deckhouse/modules/025-static-routing-manager
   stageDependencies:
     setup:
         - '**/*.go'
@@ -49,6 +129,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/030-cloud-provider-zvirt
+  to: /deckhouse/modules/030-cloud-provider-zvirt
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/040-node-manager/cloud-providers/openstack
   to: /deckhouse/modules/040-node-manager/cloud-providers/openstack
   stageDependencies:
@@ -61,6 +146,11 @@
         - '**/*.go'
 - add: /ee/modules/040-node-manager/capi/vcd
   to: /deckhouse/modules/040-node-manager/capi/vcd
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/040-node-manager/capi/zvirt
+  to: /deckhouse/modules/040-node-manager/capi/zvirt
   stageDependencies:
     setup:
         - '**/*.go'
@@ -159,8 +249,8 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/380-metallb
-  to: /deckhouse/modules/380-metallb
+- add: /ee/modules/381-l2-load-balancer
+  to: /deckhouse/modules/381-l2-load-balancer
   stageDependencies:
     setup:
         - '**/*.go'
@@ -176,11 +266,6 @@
         - '**/*.go'
 - add: /ee/modules/500-operator-trivy
   to: /deckhouse/modules/500-operator-trivy
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/502-delivery
-  to: /deckhouse/modules/502-delivery
   stageDependencies:
     setup:
         - '**/*.go'

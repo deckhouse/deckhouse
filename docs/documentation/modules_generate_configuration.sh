@@ -44,7 +44,11 @@ if [ -d /src/global ]; then
   cp -f /src/global/static_cluster_configuration.yaml _data/schemas/global/static_cluster_configuration.yaml
   echo -e "\ni18n:\n  ru:" >>_data/schemas/global/static_cluster_configuration.yaml
   cat /src/global/doc-ru-static_cluster_configuration.yaml | sed 's/^/    /' >>_data/schemas/global/static_cluster_configuration.yaml
-  # "Global" CRDS (from the deckhouse-controller/crds)
+  # DeckhouseRelease CRD
+  cp -f /src/global/crds/deckhouse-release.yaml _data/schemas/global/crds/deckhouse-release.yaml
+  echo -e "\ni18n:\n  ru:" >>_data/schemas/global/crds/deckhouse-release.yaml
+  cat /src/global/crds/doc-ru-deckhouse-release.yaml | sed 's/^/    /' >>_data/schemas/global/crds/deckhouse-release.yaml
+  # module CRDS
   cp /src/global/crds/module* /srv/jekyll-data/documentation/_data/schemas/global/crds
   for i in /src/global/crds/module* ; do
     cp -v $i /srv/jekyll-data/documentation/_data/schemas/global/crds/

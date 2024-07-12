@@ -3,6 +3,8 @@ project: deckhouse
 configVersion: 1
 gitWorktree:
   forceShallowClone: true
+cleanup:
+  disableGitHistoryBasedPolicy: {{ env "WERF_DISABLE_META_TAGS" "false" }}
 ---
 # revisions settings
 {{- $editionsSettings := (.Files.Get "editions.yaml" | fromYaml) }}
@@ -137,7 +139,7 @@ shell:
   add: /usr/local/bin/semver
   to: /usr/local/bin/semver
   before: setup
-  {{- range $k8sVersion := tuple "1.25" "1.28" }}
+  {{- range $k8sVersion := tuple "1.27" "1.30"}}
     {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
 - artifact: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubectl
@@ -237,6 +239,11 @@ import:
   {{- include "base components imports" . }}
 ansible:
   beforeInstall:
+{{/*  TODO: Move it to the dev image */}}
+  - name: "Install golang for deckhouse-controller,dhctl and testing image build"
+    shell: |
+      rm -rf /usr/local/go
+      curl -sSfL https://go.dev/dl/go1.22.2.linux-amd64.tar.gz -o - | tar -C /usr/local -zxvf -
   {{- include "base components" . | nindent 2 }}
 
 ---
@@ -264,15 +271,15 @@ artifact: dev-alt-artifact
 from: {{ .Images.BASE_ALT_DEV }}
 shell:
   install:
-  - /binary_replace.sh -i "/usr/bin/ssh /usr/bin/ssh-agent /usr/bin/ssh-add /usr/bin/scp /usr/bin/envsubst" -o /relocate
+  - /binary_replace.sh -i "/usr/bin/envsubst" -o /relocate
 
 ---
 artifact: golangci-lint-artifact
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
 shell:
   install:
   - export GOPROXY={{ .GOPROXY }}
-  - git clone --depth 1 {{ .SOURCE_REPO }}/golangci/golangci-lint --branch v1.55.2
+  - git clone --depth 1 {{ .SOURCE_REPO }}/golangci/golangci-lint --branch v1.58.0
   - cd golangci-lint/
   - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /usr/local/bin/golangci-lint cmd/golangci-lint/main.go
 
@@ -282,6 +289,9 @@ fromImage: common-base
 git:
 - add: /
   to: /deckhouse
+  stageDependencies:
+    setup:
+      - '**/*'
   includePaths:
   - candi
   - modules
@@ -488,8 +498,11 @@ git:
     - global-hooks/**/*.go
     - go_lib/**/*.go
     - modules/**/*.go
-    - go_lib/cloud-data/go.mod
-    - go_lib/cloud-data/go.sum
+    - ee/modules/021-cni-cilium/images/egress-gateway-agent/**/*.go
+    - ee/modules/021-cni-cilium/images/egress-gateway-agent/go.mod
+    - ee/modules/021-cni-cilium/images/egress-gateway-agent/go.sum
+    - go_lib/**/go.mod
+    - go_lib/**/go.sum
     - go.mod
     - go.sum
     - tools
@@ -513,8 +526,8 @@ git:
       - deckhouse-controller/go-build.sh
       - global-hooks/**/*.go
       - go_lib/**/*.go
-      - go_lib/cloud-data/go.mod
-      - go_lib/cloud-data/go.sum
+      - go_lib/**/go.mod
+      - go_lib/**/go.sum
       - modules/**/*.go
       - editions.yaml
 {{ .Files.Get (printf "tools/build_includes/modules-with-dependencies-%s.yaml" .Env) }}
@@ -556,19 +569,34 @@ git:
     setup:
     - "**/*.go"
     - Makefile
+- add: /go_lib/registry-packages-proxy
+  to: /go_lib/registry-packages-proxy
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+    setup:
+      - "**/*.go"
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
-ansible:
+shell:
   install:
-  - shell: go mod download
-    args:
-      chdir: /dhctl
-
+    - cd /dhctl && go mod download
   setup:
-  - command: make build
-    args:
-      chdir: /dhctl
+    - cd /dhctl && D8_VERSION={{- env "CI_COMMIT_TAG" | default "dev" }} make build
+
+---
+artifact: ssh-static
+from: {{ .Images.BASE_ALPINE_DEV }}
+shell:
+  install:
+  - mkdir /src
+  - cd /src
+  - git clone -b V_9_7_P1 --single-branch --depth=1 {{ $.SOURCE_REPO }}/openssh/openssh-portable .
+  - autoreconf
+  - ./configure LDFLAGS="-static $(LDFLAGS)" --prefix /ssh
+  - make install
 
 ---
 image: dev/install
@@ -595,26 +623,33 @@ import:
   add: /terraform/terraform
   to: /bin/terraform
   before: setup
-- artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
-  add: /root/.terraformrc
-  to: /etc/terraformrc
-  before: setup
 {{- range $_, $edition := $.Editions }}
   {{- if $edition.terraformProviders }}
     {{- range $_, $tfProvider := $edition.terraformProviders }}
       {{- $tf := index $.TF $tfProvider }}
-
 - artifact: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ $tf.artifactBinary }}
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
+  to: /plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
   before: setup
-
     {{- end }}
   {{- end }}
   {{- if eq $.Env $edition.name }}
     {{- break -}}
   {{- end }}
 {{- end }}
+- artifact: dev-alt-artifact
+  add: /relocate
+  to: /
+  before: setup
+- artifact: ssh-static
+  add: /ssh/bin
+  to: /bin
+  before: setup
+  includePaths:
+  - ssh
+  - ssh-add
+  - ssh-agent
+  - scp
 - image: images-digests
   add: /images_digests.json
   to: /deckhouse/candi/images_digests.json
@@ -640,14 +675,9 @@ import:
   - etc/bashrc.d/bash_completion.sh
   - usr/share/bash-completion
   - usr/bin/vim-console
-- artifact: dev-alt-artifact
-  add: /relocate
-  to: /
-  before: setup
 docker:
   ENV:
     EDITOR: vim
-    TF_CLI_CONFIG_FILE: /etc/terraformrc
 shell:
   setup:
   - |
@@ -675,8 +705,83 @@ shell:
     EOD
 
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
-
     echo '{{- env "CI_COMMIT_TAG" | default "dev" }}' > /deckhouse/version
+
+---
+artifact: install-standalone-builder
+from: {{ .Images.BASE_ALPINE }}
+git:
+- add: /
+  to: /image/deckhouse
+  includePaths:
+  - candi
+  {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
+import:
+- artifact: dhctl
+  add: /dhctl/bin/dhctl
+  to: /image/dhctl
+  before: setup
+- image: dev-prebuild
+  add: /deckhouse
+  to: /image/deckhouse
+  includePaths:
+    - modules/*/openapi/config-values.yaml
+    - global-hooks/openapi/config-values.yaml
+  before: setup
+- artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+  add: /terraform/terraform
+  to: /image/bin/terraform
+  before: setup
+  {{- range $_, $edition := $.Editions }}
+    {{- if $edition.terraformProviders }}
+      {{- range $_, $tfProvider := $edition.terraformProviders }}
+        {{- $tf := index $.TF $tfProvider }}
+- artifact: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+  add: /{{ $tf.artifactBinary }}
+  to: /image/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
+  before: setup
+    {{- end }}
+  {{- end }}
+  {{- if eq $.Env $edition.name }}
+    {{- break -}}
+  {{- end }}
+{{- end }}
+
+- image: images-digests
+  add: /images_digests.json
+  to: /image/deckhouse/candi/images_digests.json
+  before: setup
+- artifact: version-map-artifact
+  add: /version_map_{{ $.Env }}.yml
+  to: /image/deckhouse/candi/version_map.yml
+  before: setup
+- image: deckhouse-image-hash
+  add: /deckhouse_digest.txt
+  to: /image/deckhouse/image_digest
+  before: setup
+- artifact: ssh-static
+  add: /ssh/bin
+  to: /image/bin
+  before: setup
+  includePaths:
+    - ssh
+    - ssh-add
+    - ssh-agent
+    - scp
+shell:
+  setup:
+  - echo '{{- env "CI_COMMIT_TAG" | default "dev" }}' > /image/deckhouse/version
+  - cd /image
+  - tar -czf /dhctl-{{- env "CI_COMMIT_TAG" | default "dev" }}.x86_64.tar.gz *
+
+---
+image: dev/install-standalone
+from: {{ .Images.BASE_SCRATCH }}
+import:
+  - artifact: install-standalone-builder
+    add: /dhctl-{{- env "CI_COMMIT_TAG" | default "dev" }}.x86_64.tar.gz
+    to: /
+    before: setup
 
 ---
 image: release-channel-version-prebuild
@@ -760,6 +865,9 @@ args:
   BASE_GOLANG_21_ALPINE_DEV: {{ .Images.BASE_GOLANG_21_ALPINE_DEV }}
   BASE_GOLANG_21_BULLSEYE: {{ .Images.BASE_GOLANG_21_BULLSEYE }}
   BASE_GOLANG_21_BULLSEYE_DEV: {{ .Images.BASE_GOLANG_21_BULLSEYE_DEV }}
+  BASE_GOLANG_22_ALPINE: {{ .Images.BASE_GOLANG_22_ALPINE }}
+  BASE_GOLANG_22_ALPINE_DEV: {{ .Images.BASE_GOLANG_22_ALPINE_DEV }}
+  BASE_GOLANG_22_BULLSEYE: {{ .Images.BASE_GOLANG_22_BULLSEYE }}
   BASE_NGINX_ALPINE:  {{ .Images.BASE_NGINX_ALPINE }}
   BASE_NGINX_ALPINE_DEV:  {{ .Images.BASE_NGINX_ALPINE_DEV }}
   BASE_NODE_16_ALPINE: {{ .Images.BASE_NODE_16_ALPINE }}
@@ -820,7 +928,7 @@ dependencies:
   {{- else }}
   {{- $_ := set $ctx "ImageInstructionType" "Dockerfile" }}
   {{- end }}
-  {{- $ImageData := regexReplaceAll "^(.*)modules/([0-9]+)-([a-z-]+)/images/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path "${1}#${2}#${3}#${4}" | split "#" }}
+  {{- $ImageData := regexReplaceAll "^(.*)modules/([0-9]+)-([a-z0-9-]+)/images/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path "${1}#${2}#${3}#${4}" | split "#" }}
   {{- $moduleName := $ImageData._2 }}
   # exclude modules and images from editions
   {{- if hasKey $ExcludedModulesDict $moduleName }}
@@ -874,10 +982,10 @@ shell:
   - |
     touch digests_full.lst
     # Here we have list of records like "MODULE_IMAGE_DIGEST_moduleName_sha256:imageDigest", which we parse
-    for line in `env | grep MODULE_IMAGE_DIGEST_`
+    for line in `printenv | grep MODULE_IMAGE_DIGEST_ | cut -d "=" -f 1`
     do
-      digestKey=`echo $line | cut -f 4- -d '_' | cut -f 1 -d '='`
-      imageDigest=`echo $line | cut -f 4- -d '_' | cut -f 2 -d '='`
+      digestKey=`echo $line | cut -f 4- -d '_'`
+      imageDigest=`printenv $line | grep -Eo "sha256:[a-f0-9]+"`
       echo $digestKey'='$imageDigest >> digests_full.lst
     done
     cat digests_full.lst | jq -Rn '
@@ -986,19 +1094,55 @@ image: e2e-terraform
 # we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
 # current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
 from: {{ .Images.BASE_UBUNTU }}
+import:
+  {{- $k8sVersion := "1.27"}}
+  {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
+  - artifact: common/kubernetes-artifact-{{ $image_version }}
+    add: /src/_output/bin/kubectl
+    to: /usr/local/bin/kubectl
+    before: setup
+  - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+    add: /terraform/terraform
+    to: /image/bin/terraform
+    before: setup
+    {{- range $_, $edition := $.Editions }}
+      {{- if $edition.terraformProviders }}
+        {{- range $_, $tfProvider := $edition.terraformProviders }}
+          {{- $tf := index $.TF $tfProvider }}
+  - artifact: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+    add: /{{ $tf.artifactBinary }}
+    to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}//linux_amd64/{{ $tf.destinationBinary }}
+    before: setup
+      {{- end }}
+    {{- end }}
+    {{- if eq $.Env $edition.name }}
+      {{- break -}}
+    {{- end }}
+  {{- end }}
+  - artifact: e2e-eks-terraform-plugins
+    add: /terraform-provider-random
+    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/random/3.4.3/linux_amd64/terraform-provider-random_v3.4.3_x5
+    before: setup
+  - artifact: e2e-eks-terraform-plugins
+    add: /terraform-provider-tls
+    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/tls/4.0.5/linux_amd64/terraform-provider-tls_v4.0.5_x5
+    before: setup
+  - artifact: e2e-eks-terraform-plugins
+    add: /terraform-provider-cloudinit
+    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/cloudinit/2.2.0/linux_amd64/terraform-provider-cloudinit_v2.2.0_x5
+    before: setup
+  - artifact: e2e-eks-terraform-plugins
+    add: /terraform-provider-kubernetes
+    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/kubernetes/2.31.0/linux_amd64/terraform-provider-kubernetes_v2.31.0_x5
+    before: setup
 shell:
   beforeInstall:
   - apt-get update
   - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends wget unzip git python3 python3-pip jq curl gettext-base bsdextrautils
   - pip3 install awscli
-  - curl -LO https://dl.k8s.io/release/v1.26.0/bin/linux/amd64/kubectl
-  - install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
   - |
     mkdir /terraform
     mkdir -p /usr/local/share/terraform/plugins
-    wget https://releases.hashicorp.com/terraform/1.4.0/terraform_1.4.0_linux_amd64.zip -O /terraform.zip
-    unzip -d /terraform /terraform.zip
-    chmod 755 /terraform/terraform
     cat << EOD > /root/.terraformrc
     provider_installation {
       filesystem_mirror {
@@ -1007,24 +1151,32 @@ shell:
       }
     }
     EOD
-
-    tf_providers=$(cat <<EOF
-    aws 4.47.0 https://releases.hashicorp.com/terraform-provider-aws/4.47.0/terraform-provider-aws_4.47.0_linux_amd64.zip
-    tls 4.0.4 https://releases.hashicorp.com/terraform-provider-tls/4.0.4/terraform-provider-tls_4.0.4_linux_amd64.zip
-    kubernetes 2.10.0 https://releases.hashicorp.com/terraform-provider-kubernetes/2.10.0/terraform-provider-kubernetes_2.10.0_linux_amd64.zip
-    cloudinit 2.2.0 https://releases.hashicorp.com/terraform-provider-cloudinit/2.2.0/terraform-provider-cloudinit_2.2.0_linux_amd64.zip
-    random 3.4.3 https://releases.hashicorp.com/terraform-provider-random/3.4.3/terraform-provider-random_3.4.3_linux_amd64.zip
-    EOF
-    )
-
-    echo "$tf_providers" | while read name ver url ; do
-
-    dir=/usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/${name}/${ver}/linux_amd64
-    mkdir -p $dir
-    wget -q $url -O /terraform-provider-${name}.zip
-    unzip -d $dir /terraform-provider-${name}.zip
-    chmod -R 755 $dir
-    done
-
     touch /terraform.log
     chmod 755 /terraform.log
+---
+artifact: e2e-eks-terraform-plugins
+from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - export GOPROXY={{ $.GOPROXY }}
+    - git clone --depth 1 --branch v3.4.3 {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-random.git /src-provider-random
+    - cd /src-provider-random
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" 
+    - git clone --depth 1 --branch v4.0.4 {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-tls.git /src-provider-tls
+    - cd /src-provider-tls
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" 
+    - git clone --depth 1 --branch v2.2.0 {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-cloudinit.git /src-provider-cloudinit
+    - cd /src-provider-cloudinit
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" 
+    - git clone --depth 1 --branch v2.31.0 {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-kubernetes.git /src-provider-kubernetes
+    - cd /src-provider-kubernetes
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" 
+    - mv /src-provider-random/terraform-provider-random /terraform-provider-random 
+    - mv /src-provider-tls/terraform-provider-tls /terraform-provider-tls 
+    - mv /src-provider-cloudinit/terraform-provider-cloudinit /terraform-provider-cloudinit
+    - mv /src-provider-kubernetes/terraform-provider-kubernetes /terraform-provider-kubernetes
+    - chmod 755 /terraform-provider-*
+    - chown 64535:64535 /terraform-provider-*

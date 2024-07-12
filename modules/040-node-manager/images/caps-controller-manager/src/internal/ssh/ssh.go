@@ -23,7 +23,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -32,24 +31,41 @@ import (
 )
 
 // ExecSSHCommand executes a command on the StaticInstance.
-func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout io.Writer) error {
+func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout io.Writer) (err error) {
 	privateSSHKey, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.PrivateSSHKey)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode private ssh key")
 	}
 
-	dir := os.TempDir()
-	sshKey := filepath.Join(dir, "ssh-key")
+	privateSSHKey = append(bytes.TrimSpace(privateSSHKey), '\n')
 
-	err = os.WriteFile(sshKey, privateSSHKey, 0600)
+	sshKey, err := os.CreateTemp("", "ssh-key-")
 	if err != nil {
-		return errors.Wrap(err, "failed to write private ssh key to temporary file")
+		return errors.Wrap(err, "failed to create a temporary file for private ssh key")
+	}
+	defer func() {
+		err = sshKey.Close()
+		if err != nil {
+			err = errors.Wrapf(err, "failed to close temporary file '%s' with private ssh key", sshKey.Name())
+			return
+		}
+
+		err = os.Remove(sshKey.Name())
+		if err != nil {
+			err = errors.Wrapf(err, "failed to remove temporary file '%s' with private ssh key", sshKey.Name())
+			return
+		}
+	}()
+
+	_, err = io.Copy(sshKey, bytes.NewReader(privateSSHKey))
+	if err != nil {
+		return errors.Wrapf(err, "failed to write private ssh key to temporary file '%s'", sshKey.Name())
 	}
 
 	args := []string{
 		"-qv",
 		"-i",
-		sshKey,
+		sshKey.Name(),
 		"-o",
 		"StrictHostKeyChecking=no",
 		fmt.Sprintf("-p %d", instanceScope.Credentials.Spec.SSHPort),

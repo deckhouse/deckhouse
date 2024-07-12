@@ -30,7 +30,8 @@ import (
 )
 
 var kindToVersion = map[string]string{
-	"vcdinstanceclass": "deckhouse.io/v1",
+	"vcdinstanceclass":   "deckhouse.io/v1",
+	"zvirtinstanceclass": "deckhouse.io/v1",
 }
 
 var setInstanceClassNGUsageConfig = &go_hook.HookConfig{

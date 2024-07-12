@@ -9,7 +9,7 @@ memory: 150Mi
 
 {{- define "cluster_autoscaler_provider" }}
   {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
-    {{- if hasKey $.Values.nodeManager.internal.cloudProvider "vcd" }}
+    {{- if or (hasKey $.Values.nodeManager.internal.cloudProvider "vcd") (hasKey $.Values.nodeManager.internal.cloudProvider "zvirt") }}
 - --cloud-provider=clusterapi
     {{- else }}
 - --cloud-provider=mcm

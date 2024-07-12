@@ -22,7 +22,7 @@
         background: $color-inverse;
         border: 2px solid $color-inverse;
     }
-    &:not(.button_disabled):not(.button_card):not(.button--primary):hover {
+    &:not(.button_disabled):not(.button_card):not(.button--primary):not(.gdpr__button):hover {
         color: $color-inverse !important;
         background: $color-main;
         border: 2px solid $color-main;

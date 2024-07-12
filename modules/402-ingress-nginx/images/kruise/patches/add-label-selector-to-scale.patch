@@ -38,15 +38,6 @@ index f5e7bbc1..9f2ccbbb 100644
  	if err != nil {
  		return fmt.Errorf("error storing status for DaemonSet %v: %v", ds.Name, err)
  	}
-@@ -630,7 +636,7 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetReplicas(ds *appsv1alpha1.DaemonSe
- 				klog.Infof("Updating relevant PodDisruptionBudget %s/%s", ds.Namespace, ds.Name)
- 				toUpdate.Status.ExpectedPods = newScale.Spec.Replicas
- 
--				_, err = policyClient.UpdateStatus(context.TODO(), toUpdate, metav1.UpdateOptions{}) 
-+				_, err = policyClient.UpdateStatus(context.TODO(), toUpdate, metav1.UpdateOptions{})
- 				if err != nil {
- 					klog.Errorf("Couldn't update relevant PodDisruptionBudget status for DaemonSet %s/%s: %v", ds.Namespace, ds.Name, err)
- 					return err
 @@ -643,7 +649,7 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetReplicas(ds *appsv1alpha1.DaemonSe
  	})
  }

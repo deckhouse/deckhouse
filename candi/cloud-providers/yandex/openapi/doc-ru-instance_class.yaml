@@ -100,6 +100,8 @@ spec:
                     Тип диска у виртуальных машин.
 
                     Подробнее о возможных типах дисков можно узнать в [документации провайдера](https://cloud.yandex.com/docs/compute/concepts/disk#disks_types).
+
+                    Размер дисков `network-ssd-nonreplicated` и `network-ssd-io-m3` должен быть кратен 93 GB.
                 diskSizeGB:
                   description: |
                     Размер диска у виртуальных машин. Значение указывается в `ГиБ`.

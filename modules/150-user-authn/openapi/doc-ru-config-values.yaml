@@ -3,7 +3,7 @@ properties:
   publishAPI:
     description: 'Настройки публикации API-сервера Kubernetes через Ingress для обеспечения его публичного доступа.'
     properties:
-      enable:
+      enabled:
         description: 'Если указать `true`, в namespace `d8-user-authn` кластера будет создан Ingress-ресурс, который откроет публичный доступ к API-серверу.'
       ingressClass:
         description: 'Ingress-класс, который будет использован для публикации API Kubernetes через Ingress.'

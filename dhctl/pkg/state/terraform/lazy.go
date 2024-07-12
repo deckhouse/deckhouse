@@ -18,12 +18,12 @@ import (
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
 type StateLoader interface {
 	PopulateMetaConfig() (*config.MetaConfig, error)
-	PopulateClusterState() ([]byte, map[string]converge.NodeGroupTerraformState, error)
+	PopulateClusterState() ([]byte, map[string]state.NodeGroupTerraformState, error)
 }
 
 type LazyTerraStateLoader struct {
@@ -31,7 +31,7 @@ type LazyTerraStateLoader struct {
 
 	lock            sync.Mutex
 	clusterState    []byte
-	nodesTerraState map[string]converge.NodeGroupTerraformState
+	nodesTerraState map[string]state.NodeGroupTerraformState
 	metaConfig      *config.MetaConfig
 }
 
@@ -57,7 +57,7 @@ func (l *LazyTerraStateLoader) PopulateMetaConfig() (*config.MetaConfig, error) 
 	return l.metaConfig, nil
 }
 
-func (l *LazyTerraStateLoader) PopulateClusterState() ([]byte, map[string]converge.NodeGroupTerraformState, error) {
+func (l *LazyTerraStateLoader) PopulateClusterState() ([]byte, map[string]state.NodeGroupTerraformState, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 

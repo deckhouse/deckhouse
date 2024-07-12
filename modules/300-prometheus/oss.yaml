@@ -16,4 +16,21 @@
   logo: https://raw.githubusercontent.com/trickstercache/trickster/master/docs/images/logos/trickster-logo.svg
   licence: Apache License 2.0
 
+- name: Mimir
+  link: https://github.com/grafana/mimir
+  description: A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.
+  logo: https://grafana.com/static/img/logos/logo-mimir.svg
+  licence: AGPL-3.0 license
+
+- name: Promxy
+  link: https://github.com/jacksontj/promxy
+  logo: /images/logos/prometheus-icon-color.svg
+  description: Promxy is a prometheus proxy that makes many shards of prometheus appear as a single API endpoint to the user. This significantly simplifies operations and use of prometheus at scale (when you have more than one prometheus host).
+  licence: MIT License
+
+- name: Memcached
+  link: https://github.com/memcached/memcached
+  logo: /images/logos/memcached-icon.svg
+  description: High performance multithreaded event-based key/value cache store intended to be used in a distributed system.
+  licence: BSD-3-Clause license
 

@@ -78,6 +78,19 @@ var _ = Describe("Global hooks :: calculate_resources_requests", func() {
 		})
 	})
 
+	Context("Cluster with one master node, but without set global modules resourcesRequests for control-plane and little oscillations from maximum", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "3930m", memory: "7717366089760m"}})))
+			f.RunHook()
+		})
+
+		It(fmt.Sprintf("Hook should run, control-plane resource values should be equal %d%% of (master-node resources - resources for components working on every node)", controlPlanePercent), func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64((4000 - configEveryNodeMilliCPU) * controlPlanePercent / 100)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64((8192*1024*1024 - configEveryNodeMemory) * controlPlanePercent / 100)))
+		})
+	})
+
 	Context("Cluster with master node, with set global modules resourcesRequests for control-plane", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "4", memory: "8Gi"}})))
@@ -119,4 +132,11 @@ var _ = Describe("Global hooks :: calculate_resources_requests", func() {
 
 	})
 
+	Context("absDiff", func() {
+		It("Correct calc", func() {
+			Expect(absDiff(2, 1)).To(Equal(int64(1)))
+			Expect(absDiff(1, 2)).To(Equal(int64(1)))
+			Expect(absDiff(1, 1)).To(Equal(int64(0)))
+		})
+	})
 })

@@ -30,7 +30,7 @@ type Logstash struct {
 
 	Mode string `json:"mode"`
 
-	TLS CommonTLS `json:"tls,omitempty"`
+	TLS CommonTLS `json:"tls"`
 
 	Keepalive LogstashKeepalive `json:"keepalive,omitempty"`
 }

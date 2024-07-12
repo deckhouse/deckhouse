@@ -56,7 +56,7 @@ func waitNodeApproval() error {
 		if _, ok := node.Annotations[approvedAnnotation]; ok {
 			return nil
 		}
-		time.Sleep(10 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 	return fmt.Errorf("can't get annotation %s from our node %s", approvedAnnotation, config.NodeName)
 }

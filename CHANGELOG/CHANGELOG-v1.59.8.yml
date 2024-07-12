@@ -1,0 +1,5 @@
+l2-load-balancer:
+  fixes:
+    - summary: Module is declared as experimental.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8236
+

@@ -30,9 +30,10 @@ import (
 )
 
 type Discoverer struct {
-	logger   *log.Entry
-	folderID string
-	sdk      *ycsdk.SDK
+	logger      *log.Entry
+	folderID    string
+	clusterUUID string
+	sdk         *ycsdk.SDK
 }
 
 func NewDiscoverer(logger *log.Entry) *Discoverer {
@@ -44,6 +45,11 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 	saKeyJSON := os.Getenv("YC_SA_KEY_JSON")
 	if saKeyJSON == "" {
 		logger.Fatal("Cannot get YC_SA_KEY_JSON env")
+	}
+
+	clusterUUID := os.Getenv("CLUSTER_UUID")
+	if clusterUUID == "" {
+		logger.Fatal("Cannot get CLUSTER_UUID env")
 	}
 
 	saKeyJSONBytes := []byte(saKeyJSON)
@@ -65,9 +71,10 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 	}
 
 	return &Discoverer{
-		logger:   logger,
-		folderID: folderID,
-		sdk:      sdk,
+		logger:      logger,
+		folderID:    folderID,
+		clusterUUID: clusterUUID,
+		sdk:         sdk,
 	}
 }
 
@@ -108,7 +115,7 @@ func (d *Discoverer) getDisksCreatedByCSIDriver(ctx context.Context) ([]*compute
 	disksCreatedByCSIDriver := make([]*compute.Disk, 0, len(disks))
 
 	for _, disk := range disks {
-		if disk.Description == "Created by Yandex CSI driver" {
+		if disk.Labels["cluster_uuid"] == d.clusterUUID {
 			disksCreatedByCSIDriver = append(disksCreatedByCSIDriver, disk)
 		}
 	}

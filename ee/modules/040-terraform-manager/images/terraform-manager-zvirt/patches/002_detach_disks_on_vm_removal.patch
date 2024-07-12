@@ -1,0 +1,68 @@
+Subject: [PATCH] Detach disks from VM before deleting it
+---
+Index: internal/ovirt/resource_ovirt_vm.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/internal/ovirt/resource_ovirt_vm.go b/internal/ovirt/resource_ovirt_vm.go
+--- a/internal/ovirt/resource_ovirt_vm.go	(revision eb82784548e140d2948a9600ac0b52c938151ba6)
++++ b/internal/ovirt/resource_ovirt_vm.go	(date 1711713686988)
+@@ -748,7 +748,56 @@
+ 
+ func (p *provider) vmDelete(ctx context.Context, data *schema.ResourceData, _ interface{}) diag.Diagnostics {
+ 	client := p.client.WithContext(ctx)
+-	if err := client.RemoveVM(ovirtclient.VMID(data.Id())); err != nil {
++	vmid := ovirtclient.VMID(data.Id())
++
++	if err := client.ShutdownVM(vmid, false); err != nil {
++		return diag.Diagnostics{
++			diag.Diagnostic{
++				Severity: diag.Error,
++				Summary:  fmt.Sprintf("Failed to shutdown VM %s", data.Id()),
++				Detail:   err.Error(),
++			},
++		}
++	}
++
++	if _, err := client.WaitForVMStatus(vmid, ovirtclient.VMStatusDown); err != nil {
++		return diag.Diagnostics{
++			diag.Diagnostic{
++				Severity: diag.Error,
++				Summary:  fmt.Sprintf("Failed to shutdown VM %s", data.Id()),
++				Detail:   err.Error(),
++			},
++		}
++	}
++
++	disks, err := client.ListDiskAttachments(vmid)
++	if err != nil {
++		return diag.Diagnostics{
++			diag.Diagnostic{
++				Severity: diag.Error,
++				Summary:  fmt.Sprintf("Failed to list VM disks %s", data.Id()),
++				Detail:   err.Error(),
++			},
++		}
++	}
++
++	for _, diskAttachment := range disks {
++		if diskAttachment.Bootable() {
++			continue
++		}
++
++		if err = diskAttachment.Remove(); err != nil {
++			return diag.Diagnostics{
++				diag.Diagnostic{
++					Severity: diag.Error,
++					Summary:  fmt.Sprintf("Failed to detach disk from VM %s", data.Id()),
++					Detail:   err.Error(),
++				},
++			}
++		}
++	}
++
++	if err = client.RemoveVM(vmid); err != nil {
+ 		if isNotFound(err) {
+ 			data.SetId("")
+ 			return nil

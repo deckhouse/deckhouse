@@ -21,7 +21,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- bash
 * Запуск на конкретном узле, например на control-plane:
 
   ```shell
-  curl -s https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml | yq r - -j | jq '.spec.template.spec.tolerations=[{"operator": "Exists"}] | .spec.template.spec.nodeSelector={"node-role.kubernetes.io/control-plane": ""}' | kubectl create -f -
+  curl -s https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml | kubectl apply -f - --dry-run=client -o json | jq '.spec.template.spec.tolerations=[{"operator": "Exists"}] | .spec.template.spec.nodeSelector={"node-role.kubernetes.io/control-plane": ""}' | kubectl create -f -
   ```
 
 Далее можно проверить результат выполнения:
@@ -46,7 +46,7 @@ kubectl logs job.batch/kube-bench
 
 Данные, которые будут собраны:
 * состояние очереди Deckhouse;
-* Deckhouse values (без каких-либо конфиденциальных данных);
+* Deckhouse values;
 * список включенных модулей;
 * `events` из всех пространств имен;
 * манифесты controller'ов и подов из всех пространств имен Deckhouse;

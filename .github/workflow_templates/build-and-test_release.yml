@@ -101,6 +101,19 @@ jobs:
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.build_ee) | strings.Indent 6 }!}
 
+{!{ $jobNames = coll.Merge $jobNames (dict "build_se" "Build SE") }!}
+  build_se:
+    name: {!{ $jobNames.build_se }!}
+    needs:
+      - git_info
+      - go_generate
+      - workflow_render
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    env:
+      WERF_ENV: "SE"
+{!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.build_se) | strings.Indent 6 }!}
+
 {!{ $jobNames = coll.Merge $jobNames (dict "build_be" "Build BE") }!}
   build_be:
     name: {!{ $jobNames.build_be }!}
@@ -130,6 +143,7 @@ jobs:
 {!{ $jobNames = coll.Merge $jobNames (dict "doc_web_build" "Doc web build") }!}
   doc_web_build:
     name: {!{ $jobNames.doc_web_build }!}
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
     # Wait for success build of modules.
     needs:
       - git_info
@@ -139,6 +153,7 @@ jobs:
 {!{ $jobNames = coll.Merge $jobNames (dict "main_web_build" "Main web build") }!}
   main_web_build:
     name: {!{ $jobNames.main_web_build }!}
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
     # Wait for success build of modules.
     needs:
       - git_info
@@ -191,7 +206,7 @@ jobs:
 {!{ $jobNames = coll.Merge $jobNames (dict "web_links_test" "Web links test") }!}
   web_links_test:
     name: {!{ $jobNames.web_links_test }!}
-    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
     needs:
       - git_info
       - doc_web_build
@@ -255,6 +270,7 @@ jobs:
       - build_ee
       - build_ce
       - build_be
+      - build_se
       - doc_web_build
       - main_web_build
       - deploy_latest_web_site_prod_sel
@@ -264,7 +280,6 @@ jobs:
       - dhctl_tests
       - golangci_lint
       - openapi_test_cases
-      - web_links_test
       - validators
     if: ${{ always() }}
     runs-on: ubuntu-latest

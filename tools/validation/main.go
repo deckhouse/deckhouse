@@ -64,6 +64,8 @@ func main() {
 		exitCode = RunDocChangesValidation(diffInfo)
 	case "grafana-dashboard":
 		exitCode = RunGrafanaDashboardValidation(diffInfo)
+	case "release-requirements":
+		exitCode = RunReleaseRequirementsValidation(diffInfo)
 	case "dump":
 		fmt.Printf("%s\n", diffInfo.Dump())
 	default:

@@ -1,0 +1,5 @@
+flant-integration:
+  fixes:
+    - summary: Remove python tests from the image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8321
+

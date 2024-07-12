@@ -15,12 +15,14 @@
 package terraform
 
 import (
+	"crypto/md5"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -35,10 +37,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
+var cloudProvidersDir = "/deckhouse/candi/cloud-providers/"
+
 const (
 	deckhouseClusterStateSuffix = "-dhctl.*.tfstate"
 	deckhousePlanSuffix         = "-dhctl.*.tfplan"
-	cloudProvidersDir           = "/deckhouse/candi/cloud-providers/"
 	varFileName                 = "cluster-config.auto.*.tfvars.json"
 
 	terraformHasChangesExitCode = 2
@@ -78,8 +81,9 @@ type Runner struct {
 
 	changeSettings ChangeActionSettings
 
-	allowedCachedState bool
-	changesInPlan      int
+	allowedCachedState     bool
+	changesInPlan          int
+	planDestructiveChanges *PlanDestructiveChanges
 
 	stateCache state.Cache
 
@@ -213,6 +217,13 @@ func (r *Runner) WithAdditionalStateSaverDestination(destinations ...SaverDestin
 	return r
 }
 
+func (r *Runner) WithSingleShotMode(enabled bool) RunnerInterface {
+	if enabled {
+		return NewSingleShotRunner(r)
+	}
+	return r
+}
+
 func (r *Runner) withTerraformExecutor(t Executor) *Runner {
 	r.terraformExecutor = t
 	return r
@@ -286,10 +297,10 @@ func (r *Runner) Init() error {
 	return log.Process("default", "terraform init ...", func() error {
 		args := []string{
 			"init",
+			fmt.Sprintf("-plugin-dir=%s/plugins", strings.TrimRight(os.Getenv("PWD"), "/")),
 			"-get-plugins=false",
 			"-no-color",
 			"-input=false",
-			fmt.Sprintf("-var-file=%s", r.variablesPath),
 			r.workingDir,
 		}
 
@@ -414,7 +425,7 @@ func (r *Runner) Apply() error {
 	})
 }
 
-func (r *Runner) Plan() error {
+func (r *Runner) Plan(opts PlanOptions) error {
 	if r.stopped {
 		return ErrRunnerStopped
 	}
@@ -435,23 +446,28 @@ func (r *Runner) Plan() error {
 			fmt.Sprintf("-out=%s", tmpFile.Name()),
 		}
 
+		if opts.Destroy {
+			args = append(args, "-destroy")
+		}
 		args = append(args, r.workingDir)
 
 		exitCode, err := r.execTerraform(args...)
 		if exitCode == terraformHasChangesExitCode {
 			r.changesInPlan = PlanHasChanges
-			hasDestructiveChanges, err := r.checkPlanDestructiveChanges(tmpFile.Name())
+			destructiveChanges, err := r.getPlanDestructiveChanges(tmpFile.Name())
 			if err != nil {
 				return err
 			}
-			if hasDestructiveChanges {
+			if destructiveChanges != nil {
 				r.changesInPlan = PlanHasDestructiveChanges
+				r.planDestructiveChanges = destructiveChanges
 			}
 		} else if err != nil {
 			return err
 		}
 
 		r.planPath = tmpFile.Name()
+
 		return nil
 	})
 }
@@ -474,7 +490,8 @@ func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {
 
 	result, err := r.terraformExecutor.Output(args...)
 	if err != nil {
-		if ee, ok := err.(*exec.ExitError); ok {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
 		return nil, fmt.Errorf("can't get terraform output for %q\n%v", output, err)
@@ -561,8 +578,28 @@ func (r *Runner) ResourcesQuantityInState() int {
 	return len(st.Resources)
 }
 
-func (r *Runner) getState() ([]byte, error) {
+func (r *Runner) GetState() ([]byte, error) {
 	return os.ReadFile(r.statePath)
+}
+
+func (r *Runner) GetStep() string {
+	return r.step
+}
+
+func (r *Runner) GetChangesInPlan() int {
+	return r.changesInPlan
+}
+
+func (r *Runner) GetPlanDestructiveChanges() *PlanDestructiveChanges {
+	return r.planDestructiveChanges
+}
+
+func (r *Runner) GetPlanPath() string {
+	return r.planPath
+}
+
+func (r *Runner) GetTerraformExecutor() Executor {
+	return r.terraformExecutor
 }
 
 // Stop interrupts the current runner command and sets
@@ -597,7 +634,19 @@ func (r *Runner) execTerraform(args ...string) (int, error) {
 	return exitCode, err
 }
 
-func (r *Runner) checkPlanDestructiveChanges(planFile string) (bool, error) {
+type TerraformPlan map[string]any
+
+type PlanDestructiveChanges struct {
+	ResourcesDeleted   []ValueChange `json:"resources_deleted,omitempty"`
+	ResourcesRecreated []ValueChange `json:"resourced_recreated,omitempty"`
+}
+
+type ValueChange struct {
+	CurrentValue interface{} `json:"current_value,omitempty"`
+	NextValue    interface{} `json:"next_value,omitempty"`
+}
+
+func (r *Runner) getPlanDestructiveChanges(planFile string) (*PlanDestructiveChanges, error) {
 	args := []string{
 		"show",
 		"-json",
@@ -607,36 +656,69 @@ func (r *Runner) checkPlanDestructiveChanges(planFile string) (bool, error) {
 	result, err := r.terraformExecutor.Output(args...)
 	if err != nil {
 		var ee *exec.ExitError
-		if ok := errors.As(err, &ee); ok {
+		if errors.As(err, &ee) {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
-		return false, fmt.Errorf("can't get terraform plan for %q\n%v", planFile, err)
+		return nil, fmt.Errorf("can't get terraform plan for %q\n%v", planFile, err)
 	}
+
+	os.WriteFile(fmt.Sprintf("/%x.json", md5.Sum([]byte(planFile))), result, os.ModePerm)
 
 	var changes struct {
 		ResourcesChanges []struct {
 			Change struct {
-				Actions []string `json:"actions"`
+				Actions []string               `json:"actions"`
+				Before  map[string]interface{} `json:"before,omitempty"`
+				After   map[string]interface{} `json:"after,omitempty"`
 			} `json:"change"`
 		} `json:"resource_changes"`
 	}
 
 	err = json.Unmarshal(result, &changes)
 	if err != nil {
-		return false, err
+		return nil, err
+	}
+
+	var destructiveChanges *PlanDestructiveChanges
+	getOrCreateDestructiveChanges := func() *PlanDestructiveChanges {
+		if destructiveChanges == nil {
+			destructiveChanges = &PlanDestructiveChanges{}
+		}
+		return destructiveChanges
 	}
 
 	for _, resource := range changes.ResourcesChanges {
-		for _, action := range resource.Change.Actions {
-			if action == "delete" {
-				return true, nil
+		if hasAction(resource.Change.Actions, "delete") {
+			if hasAction(resource.Change.Actions, "create") {
+				// recreate
+				getOrCreateDestructiveChanges().ResourcesRecreated = append(getOrCreateDestructiveChanges().ResourcesRecreated, ValueChange{
+					CurrentValue: resource.Change.Before,
+					NextValue:    resource.Change.After,
+				})
+			} else {
+				getOrCreateDestructiveChanges().ResourcesDeleted = append(getOrCreateDestructiveChanges().ResourcesDeleted, ValueChange{
+					CurrentValue: resource.Change.Before,
+				})
 			}
 		}
 	}
 
-	return false, nil
+	return destructiveChanges, nil
+}
+
+func hasAction(actions []string, findAction string) bool {
+	for _, action := range actions {
+		if action == findAction {
+			return true
+		}
+	}
+	return false
 }
 
 func buildTerraformPath(provider, layout, step string) string {
 	return filepath.Join(cloudProvidersDir, provider, "layouts", layout, step)
+}
+
+func InitGlobalVars(pwd string) {
+	cloudProvidersDir = pwd + "/deckhouse/candi/cloud-providers/"
 }

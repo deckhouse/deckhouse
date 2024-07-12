@@ -80,7 +80,7 @@ kind: ModuleConfig
 metadata:
   creationTimestamp: "2022-11-22T09:12:26Z"
   generation: 1
-  name: helm
+  name: common
   resourceVersion: "826312837"
   uid: b275a253-dcb5-4321-b0ef-8881fdc8a2a8
 spec:
@@ -98,7 +98,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: helm
+  name: common
 spec:
   enabled: false
 `,

@@ -76,7 +76,7 @@ func WithEnvSetToFilePath(envName string) EnvOption {
 }
 
 func WithSourceDirectory(fromPath string, toPath string) SandboxOption {
-	return func(conf sandboxConfig) error {
+	return func(_ sandboxConfig) error {
 		return copy.Copy(fromPath, toPath)
 	}
 }

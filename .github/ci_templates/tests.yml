@@ -91,7 +91,7 @@ steps:
 {!{ tmpl.Exec "login_rw_registry_step"  $ctx | strings.Indent 2 }!}
   - name: Run tests
     env:
-      TESTS_IMAGE_NAME: {!{ printf "%s%s" (datasource "image_versions").REGISTRY_PATH (datasource "image_versions").BASE_GOLANG_21_BULLSEYE | quote }!}
+      TESTS_IMAGE_NAME: {!{ printf "%s%s" (datasource "image_versions").REGISTRY_PATH (datasource "image_versions").BASE_GOLANG_22_BULLSEYE | quote }!}
     run: |
       # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
       echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'

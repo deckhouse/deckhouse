@@ -17,9 +17,9 @@ rules:
   verbs: ["create", "list", "update"]
 - apiGroups: ["apiextensions.k8s.io"]
   resources: ["customresourcedefinitions"]
-  verbs: ["list", "update"]
+  verbs: ["get", "list", "update"]
 - apiGroups: ["deckhouse.io"]
-  resources: ["*"]
+  resources: ["*"] # We want to read all resources from the deckhouse.io group
   verbs: ["get","list","watch"]
 - apiGroups: [""]
   resources: ["secrets","endpoints","configmaps","namespaces"]

@@ -4,7 +4,7 @@ FORMATTING_BEGIN_YELLOW = \033[0;33m
 FORMATTING_BEGIN_BLUE = \033[36m
 FORMATTING_END = \033[0m
 
-FOCUS=""
+FOCUS =
 
 MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476
 
@@ -48,8 +48,8 @@ else ifeq ($(PLATFORM_NAME), arm64)
 endif
 
 # Set testing path for tests-modules
-ifeq ($(FOCUS),"")
-	TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/... ./ee/be/modules/...
+ifeq ($(FOCUS),)
+	TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/... ./ee/be/modules/... ./ee/se/modules/...
 else
 	CE_MODULES = $(shell find ./modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
 	ifneq ($(CE_MODULES),)
@@ -64,10 +64,14 @@ else
 		FE_MODULES_RECURSE = ${FE_MODULES}/...
 	endif
 	BE_MODULES = $(shell find ./ee/be/modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
-  ifneq ($(FE_MODULES),)
-    BE_MODULES_RECURSE = ${BE_MODULES}/...
-  endif
-	TESTS_PATH = ${CE_MODULES_RECURSE} ${EE_MODULES_RECURSE} ${FE_MODULES_RECURSE} ${BE_MODULES_RECURSE}
+	ifneq ($(FE_MODULES),)
+		BE_MODULES_RECURSE = ${BE_MODULES}/...
+	endif
+	SE_MODULES = $(shell find ./ee/se/modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
+	ifneq ($(FE_MODULES),)
+		SE_MODULES_RECURSE = ${SE_MODULES}/...
+	endif
+	TESTS_PATH = ${CE_MODULES_RECURSE} ${EE_MODULES_RECURSE} ${FE_MODULES_RECURSE} ${BE_MODULES_RECURSE} ${SE_MODULES_RECURSE}
 endif
 
 # Set host arch & OS for golang-based programs, e.g. Prometheus
@@ -127,14 +131,14 @@ bin/gator: bin/gator-${GATOR_VERSION}/gator
 	rm -f bin/gator
 	ln -s /deckhouse/bin/gator-${GATOR_VERSION}/gator bin/gator
 
-.PHONY: tests-modules tests-matrix tests-openapi tests-prometheus tests-controller
+.PHONY: tests-modules tests-matrix tests-openapi tests-controller
 tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
 tests-matrix: bin/promtool bin/gator ## Test how helm templates are rendered with different input values generated from values examples.
   ##~ Options: FOCUS=module-name
-	go test ./testing/matrix/ -v
+	go test -timeout=${TESTS_TIMEOUT} ./testing/matrix/ -v
 
 tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -vet=off ./testing/openapi_cases/
@@ -221,7 +225,7 @@ cve-base-images: bin/trivy bin/jq ## Check CVE in our base images.
 ##@ Documentation
 
 .PHONY: docs
-docs: ## Run containers with the documentation (werf is required to build the containers).
+docs: ## Run containers with the documentation.
 	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
 	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --env local
 	cd docs/site/; werf compose up --docker-compose-command-options='-d' --env local
@@ -237,6 +241,30 @@ docs-dev: ## Run containers with the documentation in the dev mode (allow uncomm
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)
 	docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 documentation 2>/dev/null; docker network rm deckhouse
+
+.PHONY: docs-spellcheck
+docs-spellcheck: ## Check the spelling in the documentation.
+  ##~ Options: file="path/to/file" (Specify a path to a specific file)
+	cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- /app/spell_check.sh -f $(file)
+
+lint-doc-spellcheck-pr:
+	@cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=bash" -- /app/check_diff.sh
+
+.PHONY: docs-spellcheck-generate-dictionary
+docs-spellcheck-generate-dictionary: ## Generate a dictionary (run it after adding new words to the tools/spelling/wordlist file).
+	@echo "Sorting wordlist..."
+	@sort ./tools/spelling/wordlist -o ./tools/spelling/wordlist
+	@echo "Generating dictionary..."
+	@test -f ./tools/spelling/dictionaries/dev_OPS.dic && rm ./tools/spelling/dictionaries/dev_OPS.dic
+	@touch ./tools/spelling/dictionaries/dev_OPS.dic
+	@cat ./tools/spelling/wordlist | wc -l | sed 's/^[ \t]*//g' > ./tools/spelling/dictionaries/dev_OPS.dic
+	@sort ./tools/spelling/wordlist >> ./tools/spelling/dictionaries/dev_OPS.dic
+	@echo "Don't forget to commit changes and push it!"
+	@git diff --stat
+
+.PHONY: docs-spellcheck-get-typos-list
+docs-spellcheck-get-typos-list: ## Print out a list of all the terms in all pages that were considered as a typo.
+	@cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- "/app/spell_check.sh" 2>/dev/null | sed "1,/Spell-checking the documentation/ d; /^Possible typos/d" | sort -u
 
 ##@ Update kubernetes control-plane patchversions
 
@@ -270,6 +298,92 @@ update-k8s-patch-versions: ## Run update-patchversion script to generate new ver
 
 ##@ Lib helm
 .PHONY: update-lib-helm
-update-lib-helm: ## Update lib-helm
+update-lib-helm: ## Update lib-helm.
 	##~ Options: version=MAJOR.MINOR.PATCH
 	cd helm_lib/ && yq -i '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*
+
+##@ Build
+.PHONY: build
+set-build-envs:
+  ifeq ($(WERF_ENV),)
+  	export WERF_ENV=FE
+  endif
+  ifeq ($(WERF_CHANNEL),)
+ 		export WERF_CHANNEL=ea
+  endif
+  ifeq ($(DEV_REGISTRY_PATH),)
+ 		export DEV_REGISTRY_PATH=dev-registry.deckhouse.io/sys/deckhouse-oss
+  endif
+  ifeq ($(SOURCE_REPO),)
+ 		export SOURCE_REPO=https://github.com
+  endif
+  ifeq ($(GOPROXY),)
+ 		export GOPROXY=https://proxy.golang.org/
+  endif
+  ifeq ($(CI_COMMIT_TAG),)
+ 		export CI_COMMIT_TAG=$(shell git describe --abbrev=0 2>/dev/null)
+  endif
+  ifeq ($(CI_COMMIT_BRANCH),)
+ 		export CI_COMMIT_BRANCH=$(shell git branch --show-current)
+  endif
+  ifeq ($(CI_COMMIT_REF_NAME),)
+ 		export CI_COMMIT_REF_NAME=$(shell git rev-parse --abbrev-ref HEAD)
+ 	else
+		ifeq ($(CI_COMMIT_TAG),)
+			export CI_COMMIT_REF_NAME=$(CI_COMMIT_BRANCH)
+		else
+			export CI_COMMIT_REF_NAME=$(CI_COMMIT_TAG)
+		endif
+ 	endif
+  ifeq ($(CI_COMMIT_REF_SLUG),)
+ 		export CI_COMMIT_REF_SLUG=$(shell echo $(CI_COMMIT_BRANCH) | cut -c -63 | sed -E 's/[^a-z0-9-]+/-/g' | sed -E 's/^-*([a-z0-9-]+[a-z0-9])-*$$/\1/g')
+ 	endif
+  ifeq ($(DECKHOUSE_REGISTRY_HOST),)
+ 		export DECKHOUSE_REGISTRY_HOST=registry.deckhouse.io
+  endif
+	export WERF_REPO=$(DEV_REGISTRY_PATH)
+	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
+	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
+
+build: set-build-envs ## Build Deckhouse images.
+	##~ Options: FOCUS=image-name
+	werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --report-path images_tags_werf.json $(SECONDARY_REPO) $(FOCUS)
+  ifeq ($(FOCUS),)
+    ifneq ($(CI_COMMIT_BRANCH),)
+				@# By default in the Github CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+				@# But in the local build we cannot know pr number. So, to move local build process close to the github ci build,
+				@# we need to set CI_COMMIT_REF_SLUG env manually. If CI_COMMIT_REF_SLUG is not set, it will be set to branch name.
+				SRC=$(shell jq -r '.Images."dev".DockerImageName' images_tags_werf.json) && \
+				DST=$(DEV_REGISTRY_PATH):$(CI_COMMIT_REF_SLUG) && \
+				echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '$(CI_COMMIT_BRANCH)' and edition '$(WERF_ENV)' using tag '$(CI_COMMIT_REF_SLUG)' ..." && \
+				echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to dev-registry using tag '$(CI_COMMIT_REF_SLUG)'" && \
+				docker pull $$SRC && \
+				docker image tag $$SRC $$DST && \
+				docker image push $$DST && \
+				docker image rmi $$DST || true
+
+				SRC=$(shell jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json) && \
+  			DST=$(DEV_REGISTRY_PATH)/install:$(CI_COMMIT_REF_SLUG) && \
+  			echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to dev-registry using tag '$(CI_COMMIT_REF_SLUG)'" && \
+				docker pull $$SRC && \
+				docker image tag $$SRC $$DST && \
+				docker image push $$DST && \
+				docker image rmi $$DST || true
+
+				SRC=$(shell jq -r '.Images."dev/install-standalone".DockerImageName' images_tags_werf.json) && \
+				DST=$(DEV_REGISTRY_PATH)/install-standalone:$(CI_COMMIT_REF_SLUG) && \
+				echo "⚓️ 💫 [$(date -u)] Publish 'dev/install-standalone' image to dev-registry using tag '$(CI_COMMIT_REF_SLUG)'" && \
+				docker pull $$SRC && \
+				docker image tag $$SRC $$DST && \
+				docker image push $$DST && \
+				docker image rmi $$DST || true
+
+				SRC="$(shell jq -r '.Images."e2e-terraform".DockerImageName' images_tags_werf.json)" && \
+				DST="$(DEV_REGISTRY_PATH)/e2e-terraform:$(CI_COMMIT_REF_SLUG)" && \
+				echo "⚓️ 💫 [$(date -u)] Publish 'e2e-terraform' image to dev-registry using tag '$(CI_COMMIT_REF_SLUG)'" && \
+				docker pull $$SRC && \
+				docker image tag $$SRC $$DST && \
+				docker image push $$DST && \
+				docker image rmi $$DST || true
+    endif
+  endif

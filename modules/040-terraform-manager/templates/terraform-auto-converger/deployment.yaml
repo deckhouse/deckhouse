@@ -64,6 +64,7 @@ spec:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: false
         args:
+        - "--do-not-write-debug-log-file"
         - "converge-periodical"
         - "--logger-type=json"
         - --converge-interval={{.Values.terraformManager.autoConvergerPeriod}}

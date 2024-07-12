@@ -67,7 +67,7 @@ properties:
         description: |
           Deckhouse release update disruption mode:
           - `Auto` — approves release with disruptions (potentially dangerous changes) automatically.
-          - `Manual` — requires manual release confirmation (set annotation `release.deckhouse.io/disruption-approved=true`).
+          - `Manual` — requires manual release confirmation (set the `release.deckhouse.io/disruption-approved=true` annotation on the appropriate [DeckhouseRelease](cr.html#deckhouserelease) resource to apply the update).
       windows:
         type: array
         description: |

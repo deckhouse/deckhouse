@@ -24,7 +24,6 @@ import (
 	"strings"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/kube-client/manifest/releaseutil"
 	"github.com/iancoleman/strcase"
 	. "github.com/onsi/ginkgo"
@@ -45,7 +44,7 @@ type Config struct {
 	objectStore     object_store.ObjectStore
 	values          *values_store.ValuesStore
 	RenderError     error
-	ValuesValidator *validation.ValuesValidator
+	ValuesValidator *values_validation.ValuesValidator
 }
 
 func (hec Config) ValuesGet(path string) library.KubeResult {
@@ -105,9 +104,8 @@ func SetupHelmConfig(values string) *Config {
 		os.Exit(1)
 	}
 
-	// Populate the validator with OpenAPI schema
-	validator := validation.NewValuesValidator()
-	if err := values_validation.LoadOpenAPISchemas(validator, moduleName, modulePath); err != nil {
+	valueValidator, err := values_validation.NewValuesValidator(moduleName, modulePath)
+	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
@@ -116,7 +114,7 @@ func SetupHelmConfig(values string) *Config {
 	config := new(Config)
 	config.modulePath = modulePath
 	config.moduleName = moduleName
-	config.ValuesValidator = validator
+	config.ValuesValidator = valueValidator
 
 	BeforeEach(func() {
 		config.values = values_store.NewStoreFromRawJSON(initialValuesJSON)
@@ -171,7 +169,7 @@ func (hec *Config) HelmRender(options ...Option) {
 	hec.values.SetByPathFromYAML("global.modules.placement", []byte("{}"))
 
 	// Validate Helm values
-	err := values_validation.ValidateHelmValues(hec.ValuesValidator, hec.moduleName, string(hec.values.JSONRepr))
+	err := hec.ValuesValidator.ValidateHelmValues(hec.moduleName, string(hec.values.JSONRepr))
 	Expect(err).To(Not(HaveOccurred()), "Helm values should conform to the contract in openapi/values.yaml")
 
 	hec.objectStore = make(object_store.ObjectStore)

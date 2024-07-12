@@ -1,0 +1,151 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: sdninternalnoderoutingtables.internal.network.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: static-routing-manager
+spec:
+  group: internal.network.deckhouse.io
+  scope: Cluster
+  names:
+    plural: sdninternalnoderoutingtables
+    singular: sdninternalnoderoutingtable
+    kind: SDNInternalNodeRoutingTable
+  preserveUnknownFields: false
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+      - jsonPath: .status.conditions[?(@.type=="Ready")].status
+        name: Ready
+        type: string
+      - jsonPath: .spec.nodeName
+        name: nodeName
+        type: string
+      - jsonPath: .metadata.ownerReferences[?(@.kind=="RoutingTable")].name
+        name: routingTableName
+        type: string
+      - jsonPath: .spec.ipRoutingTableID
+        name: routingTableID
+        type: integer
+      - jsonPath: .metadata.creationTimestamp
+        name: Age
+        type: date
+    schema: &schema
+      openAPIV3Schema:
+        type: object
+        description: |
+          A resource describing the desired routing table and the routes it contains on specific node.
+        required:
+        - spec
+        properties:
+          spec:
+            type: object
+            required:
+            - nodeName
+            - ipRoutingTableID
+            - routes
+            properties:
+              nodeName:
+                type: string
+                x-kubernetes-validations:
+                  - message: nodeName is immutable field
+                    rule: self == oldSelf
+                description: |
+                  The name of the node for which this CR is intended.
+              ipRoutingTableID:
+                type: integer
+                x-kubernetes-validations:
+                - message: ipRoutingTableID is immutable field
+                  rule: self == oldSelf
+                minimum: 1
+                maximum: 4294967295
+                description: |
+                  ID of the desired routing table.
+
+                  If the value is not explicitly specified, it will be generated automatically.
+
+                  Once a resource is created, you can only change the routing table ID by recreating the resource.
+              routes:
+                type: array
+                minItems: 1
+                items:
+                  type: object
+                  description: |
+                    Desired routes.
+                  required:
+                    - destination
+                    - gateway
+                  properties:
+                    destination:
+                      type: string
+                      format: cidr
+                      description: |
+                        Destination network.
+                    gateway:
+                      type: string
+                      format: ipv4
+                      description: |
+                        Nexthop.
+          status:
+            type: object
+            properties:
+              observedGeneration:
+                description: ObservedGeneration is the latest generation observed
+                    by the controller.
+                format: int64
+                type: integer
+              appliedRoutes:
+                type: array
+                items:
+                  type: object
+                  description: |
+                    Applied routes.
+                  required:
+                    - destination
+                    - gateway
+                  properties:
+                    destination:
+                      type: string
+                      format: cidr
+                      description: |
+                        Description network.
+                    gateway:
+                      type: string
+                      format: ipv4
+                      description: |
+                        Nexthop.
+              conditions:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - type
+                    - status
+                    - reason
+                  properties:
+                    type:
+                      description: Type of node group condition.
+                      type: string
+                    lastHeartbeatTime:
+                      type: string
+                      format: date-time
+                      description: Last time the routes were checked.
+                    status:
+                      description: Status of the condition, one of True, False.
+                      type: string
+                    lastTransitionTime:
+                      type: string
+                      format: date-time
+                      description: Last time the condition transit from one status to another.
+                    reason:
+                      description: The reason for the condition's last transition
+                        in CamelCase.
+                      type: string
+                    message:
+                      description: Human readable message indicating details about last transition.
+                      type: string

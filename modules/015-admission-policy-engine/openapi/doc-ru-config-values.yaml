@@ -20,7 +20,7 @@ properties:
           - Dryrun — отсутствие действия. Применяется при отладке. Информацию о событии можно посмотреть в Grafana или консоли с помощью kubectl;
           - Warn — аналогично `Dryrun`, но дополнительно к информации о событии будет выведена информация о том, из-за какого ограничения (constraint) был бы запрет действия, если бы вместо `Warn` использовался `Deny`.
       policies:
-        description: "Определяет дополнительные парамерты политик"
+        description: "Определяет дополнительные параметры политик"
         properties:
           hostPorts:
             description: "Настройки ограничения HostPort."
@@ -34,6 +34,11 @@ properties:
 
       Trivy-провайдер запрещает создание `Pod`/`Deployment`/`StatefulSet`/`DaemonSet` с образами, которые имеют уязвимости в пространствах имен с лейблом `security.deckhouse.io/trivy-provider: ""`.
     properties:
+      storageClass:
+        description: |
+          Имя StorageClass для использования `trivy_provider`.
+
+          `false` — принудительное использование `emptyDir`. После установки необходимо вручную удалить старый PVC и перезапустить под.
       enabled:
         description: "Включить trivy-провайдер."
       registrySecrets:

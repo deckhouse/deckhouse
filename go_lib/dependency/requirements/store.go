@@ -47,3 +47,13 @@ func (m *MemoryValuesStore) Get(key string) (interface{}, bool) {
 	v, ok := m.values[key]
 	return v, ok
 }
+
+func (m *MemoryValuesStore) GetAll() map[string]interface{} {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	var resp = make(map[string]interface{}, len(m.values))
+	for k, v := range m.values {
+		resp[k] = v
+	}
+	return resp
+}

@@ -1,4 +1,4 @@
-{{- if eq $.Values.istio.internal.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
+{{- if eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
 ---
 apiVersion: v1
 kind: ServiceAccount

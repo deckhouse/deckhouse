@@ -17,12 +17,18 @@ package app
 import "gopkg.in/alecthomas/kingpin.v2"
 
 var (
-	PreflightSkipAll                   = false
-	PreflightSkipSSHForword            = false
-	PreflightSkipAvailabilityPorts     = false
-	PreflightSkipResolvingLocalhost    = false
-	PreflightSkipDeckhouseVersionCheck = false
-	PreflightSkipRegistryThroughProxy  = false
+	PreflightSkipAll                       = false
+	PreflightSkipSSHForword                = false
+	PreflightSkipAvailabilityPorts         = false
+	PreflightSkipResolvingLocalhost        = false
+	PreflightSkipDeckhouseVersionCheck     = false
+	PreflightSkipRegistryThroughProxy      = false
+	PreflightSkipPublicDomainTemplateCheck = false
+	PreflightSkipSSHCredentialsCheck       = false
+	PreflightSkipRegistryCredentials       = false
+	PreflightSkipContainerdExistCheck      = false
+	PreflightSkipPythonChecks              = false
+	PreflightSkipSudoIsAllowedForUserCheck = false
 )
 
 const (
@@ -31,6 +37,12 @@ const (
 	ResolvingLocalhostArgName        = "preflight-skip-resolving-localhost-check"
 	DeckhouseVersionCheckArgName     = "preflight-skip-deckhouse-version-check"
 	RegistryThroughProxyCheckArgName = "preflight-skip-registry-through-proxy"
+	PublicDomainTemplateCheckArgName = "preflight-skip-public-domain-template-check"
+	SSHCredentialsCheckArgName       = "preflight-skip-ssh-credentials-check"
+	RegistryCredentialsCheckArgName  = "preflight-skip-registry-credential"
+	ContainerdExistCheckArgName      = "preflight-skip-containerd-exist"
+	PythonChecksArgName              = "preflight-skip-python-checks"
+	SudoAllowedCheckArgName          = "preflight-skip-sudo-allowed"
 )
 
 func DefinePreflight(cmd *kingpin.CmdClause) {
@@ -52,4 +64,22 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(RegistryThroughProxyCheckArgName, "Skip verifying deckhouse version").
 		Envar(configEnvName("PREFLIGHT_SKIP_REGISTRY_THROUGH_PROXY")).
 		BoolVar(&PreflightSkipRegistryThroughProxy)
+	cmd.Flag(PublicDomainTemplateCheckArgName, "Skip verifying PublicDomainTemplate check").
+		Envar(configEnvName("PREFLIGHT_SKIP_PUBLIC_DOMAIN_TEMPLATE")).
+		BoolVar(&PreflightSkipPublicDomainTemplateCheck)
+	cmd.Flag(SSHCredentialsCheckArgName, "Skip verifying PublicDomainTemplate check").
+		Envar(configEnvName("PREFLIGHT_SKIP_SSH_CREDENTIAL_CHECK")).
+		BoolVar(&PreflightSkipSSHCredentialsCheck)
+	cmd.Flag(RegistryCredentialsCheckArgName, "Skip verifying registry credentials").
+		Envar(configEnvName("PREFLIGHT_SKIP_REGISTRY_CREDENTIALS")).
+		BoolVar(&PreflightSkipRegistryCredentials)
+	cmd.Flag(ContainerdExistCheckArgName, "Skip verifying contanerd exist").
+		Envar(configEnvName("PREFLIGHT_SKIP_CONTAINERD_EXIST")).
+		BoolVar(&PreflightSkipContainerdExistCheck)
+	cmd.Flag(PythonChecksArgName, "Skip verifying python installation").
+		Envar(configEnvName("PREFLIGHT_SKIP_PYTHON_CHECKS")).
+		BoolVar(&PreflightSkipPythonChecks)
+	cmd.Flag(SudoAllowedCheckArgName, "Skip verifying sudo is allowed for user").
+		Envar(configEnvName("PREFLIGHT_SKIP_SUDO_ALLOWED_CHECK")).
+		BoolVar(&PreflightSkipSudoIsAllowedForUserCheck)
 }

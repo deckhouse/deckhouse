@@ -523,7 +523,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "rate(phpfpm_accepted_connections_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\"}[$__interval_sx4])",
+          "expr": "rate(phpfpm_accepted_connections_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\"}[$__rate_interval])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,

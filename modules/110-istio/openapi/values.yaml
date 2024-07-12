@@ -29,7 +29,6 @@ properties:
       istioToK8sCompatibilityMap:
         type: object
         default:
-          "1.13": ["1.20", "1.21", "1.22", "1.23"]
           "1.16": ["1.22", "1.23", "1.24", "1.25"]
           "1.19": ["1.25", "1.26", "1.27", "1.28"]
         additionalProperties:
@@ -39,23 +38,6 @@ properties:
       deployDexAuthenticator:
         type: boolean
         x-examples: [true]
-      dataPlane:
-        type: object
-        default: {}
-        properties:
-          trafficRedirectionSetupMode:
-            type: string
-            description: |
-              Managing application traffic redirection modes using Istio in the Pod Network.
-              - `InitContainer` — the classic mode, in which `sidecar-injector` adds an init container to application pods, configuring traffic redirection at the start of the pod. This mode requires superuser rights and does not work if one of the strict modes is enabled in the `admission-policy-engine` module.
-              - `CNIPlugin` — In this mode, the CNI plugin, which runs on each cluster node and does not require privileges at the pod manifest level, is responsible for configuring the pod network environment.
-              There is CNIPlugin trafficRedirectionSetupMode in Istio module by default
-              To change this mode to InitContainer we should create secret
-              d8-istio-configuration in d8-istio namespace with trafficRedirectionSetupMode key
-              kubectl -n d8-istio create secret generic d8-istio-configuration --from-literal=trafficRedirectionSetupMode=InitContainer
-            default: "CNIPlugin"
-            enum: ["CNIPlugin", "InitContainer"]
-            x-examples: ["CNIPlugin", "InitContainer"]
       ca:
         type: object
         default: {}
@@ -145,12 +127,8 @@ properties:
               minimum: 1
               maximum: 9
         default:
-          - version: "1.13"
-            alertSeverity: 4
           - version: "1.16"
-            alertSeverity: 6
-        x-examples:
-          - [{version: "1.13", alertSeverity: 4}, {version: "1.16", alertSeverity: 6}]
+            alertSeverity: 4
       globalVersion:
         type: string
         x-examples: ["1.19"] # must be real

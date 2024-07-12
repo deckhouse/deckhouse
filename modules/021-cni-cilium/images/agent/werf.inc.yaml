@@ -1,0 +1,201 @@
+{{- $fromCacheVersion := "16" }}
+# #####################################################################
+# Final image of cilium-agent (used in helm-templates)
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/install-runtime-deps.sh
+# and https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile (release stage)
+---
+# #####################################################################
+# List of binary files used by agent
+# from base install script
+{{ $binaries := "/etc/localtime /usr/bin/jq /usr/bin/curl" }}
+# clang and dependencies
+{{ $binaries := cat $binaries "/usr/local/bin/clang /usr/local/bin/llc" }}
+{{ $binaries := cat $binaries "/usr/lib/x86_64-linux-gnu/libstdc++.so.6" }}
+# bpftool and dependencies
+{{ $binaries := cat $binaries "/usr/local/bin/bpftool" }}
+# cni-loopback and dependencies
+{{ $binaries := cat $binaries "/cni/loopback" }}
+# gops and dependencies
+{{ $binaries := cat $binaries "/bin/gops" }}
+# shell-scripts dependencies
+{{ $binaries := cat $binaries "/bin/bash /bin/sh /bin/echo /bin/printf /bin/sed /bin/awk /bin/nsenter /bin/mount /bin/mkdir /bin/basename" }}
+{{ $binaries := cat $binaries "/bin/cat /bin/head /bin/cut /bin/od /bin/grep /bin/cp /bin/mv /bin/rm /bin/ln /bin/wc /bin/find" }}
+# kmod and dependencies
+{{ $binaries := cat $binaries "/bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }}
+# iproute2 and dependencies
+{{ $binaries := cat $binaries "/bin/ip /bin/ss /sbin/ip /sbin/bridge /sbin/dcb /sbin/devlink /sbin/rtacct /sbin/rtmon /sbin/tc /sbin/tipc /sbin/vdpa /usr/bin/lnstat" }}
+{{ $binaries := cat $binaries "/usr/bin/nstat /usr/bin/rdma /usr/bin/routef /usr/bin/routel /usr/bin/ctstat /usr/bin/rtstat /usr/sbin/arpd /usr/sbin/genl" }}
+# iptables and dependencies
+{{ $binaries := cat $binaries "/usr/sbin/xtables* /usr/sbin/arptables* /usr/sbin/ebtables* /usr/sbin/ip6tables* /usr/sbin/iptables* /usr/sbin/ipset* /usr/bin/iptables-xml" }}
+{{ $binaries := cat $binaries "/usr/sbin/nfnl_osf" }}
+{{ $binaries := cat $binaries "/usr/lib/x86_64-linux-gnu/xtables/*" }}
+# bash-completion
+{{ $binaries := cat $binaries "/etc/profile.d/bash_completion.sh /usr/share/bash-completion/bash_completion" }}
+# groups
+{{ $binaries := cat $binaries "/usr/bin/groups" }}
+# for debug
+{{ $binaries := cat $binaries "/usr/bin/sleep /usr/bin/strace /bin/ls" }}
+# hubble and dependencies
+{{ $binaries := cat $binaries "/usr/bin/hubble /etc/bash_completion.d/hubble" }}
+# cilium-envoy and dependencies
+{{ $binaries := cat $binaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
+# cilium and dependencies
+{{ $binaries := cat $binaries "/cni-uninstall.sh /init-container.sh /install-plugin.sh" }}
+{{ $binaries := cat $binaries "/LICENSE.all /etc/bash_completion.d/cilium" }}
+{{ $binaries := cat $binaries "/opt/cni/bin/cilium-cni /usr/bin/cilium*" }}
+# for prepull
+{{ $binaries := cat $binaries "/pause /usr/bin/true" }}
+---
+# #####################################################################
+# Binaries artifact for distroless agent (based on Ubuntu)
+---
+artifact: {{ $.ModuleName }}/agent-binaries-artifact
+fromImage: {{ $.ModuleName }}/base-cilium-dev
+fromCacheVersion: {{ $fromCacheVersion }}
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  to: /
+  includePaths:
+  - binary_replace.sh
+  stageDependencies:
+    install:
+    - binary_replace.sh
+import:
+- artifact: {{ $.ModuleName }}/llvm-artifact
+  add: /usr/local/bin/
+  to: /usr/local/bin
+  before: install
+  includePaths:
+  - clang
+  - llc
+- artifact: {{ $.ModuleName }}/bpftool-artifact
+  add: /usr/local/bin/bpftool
+  to: /usr/local/bin/bpftool
+  before: install
+- artifact: {{ $.ModuleName }}/cni-plugins-artifact
+  add: /out/linux/amd64/bin/loopback
+  to: /cni/loopback
+  before: install
+- artifact: {{ $.ModuleName }}/gops-artifact
+  add: /out/linux/amd64/bin/gops
+  to: /bin/gops
+  before: install
+- artifact: {{ $.ModuleName }}/iptables-artifact
+  add: /iptables
+  to: /iptables
+  before: install
+- artifact: {{ $.ModuleName }}/cilium-artifact
+  add: /go/src/github.com/cilium/cilium/images/runtime/orig/
+  to: /go/src/github.com/cilium/cilium/images/runtime
+  before: install
+  includePaths:
+  - iptables-wrapper-installer.sh
+- artifact: {{ $.ModuleName }}/cilium-artifact
+  add: /tmp/install
+  to: /
+  before: install
+  includePaths:
+  - cni-uninstall.sh
+  - init-container.sh
+  - install-plugin.sh
+  - LICENSE.all
+  - etc/bash_completion.d/cilium
+  - opt/cni/bin/cilium-cni
+  - usr/bin/cilium*
+  - var/lib/cilium/bpf
+- artifact: {{ $.ModuleName }}/cilium-envoy-artifact
+  add: /tmp/install/usr
+  to: /usr
+  before: install
+  includePaths:
+  - bin/cilium-envoy
+  - lib/libcilium.so
+- artifact: {{ $.ModuleName }}/hubble-artifact
+  add: /hubble
+  to: /usr/bin/hubble
+  before: install
+- artifact: {{ $.ModuleName }}/hubble-artifact
+  add: /bash_completion
+  to: /etc/bash_completion.d/hubble
+  before: install
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: install
+- image: common/distroless
+  add: /etc/group
+  to: /from_common_distroless/group
+  before: setup
+shell:
+  install:
+  # from runtime
+  - dpkg -i /iptables/*.deb
+  - rm -rf /iptables
+  - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
+  - cd /go/src/github.com/cilium/cilium/images/runtime
+  - ./iptables-wrapper-installer.sh --no-sanity-check
+  beforeSetup:
+  # common relocate
+  - chmod +x /binary_replace.sh
+  - mkdir -p /relocate
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+  # additional relocate from runtime
+  - |
+    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+      rm -f "/relocate/usr/sbin/${cmd}"
+      ln -f -s /usr/sbin/iptables-wrapper "/relocate/usr/sbin/${cmd}"
+    done
+    # broken symlinks are not imported from the artifact
+    touch /usr/sbin/iptables-wrapper
+  # additional relocate from cilium
+  - mkdir -p /relocate/var/lib/cilium
+  - cp -a /var/lib/cilium/bpf /relocate/var/lib/cilium
+  - echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc
+  - cp -a /etc/bash.bashrc /relocate/etc
+  setup:
+  # prepare final fs
+  - mkdir -p /relocate/usr/bin
+  - cp -a /relocate/bin/* /relocate/usr/bin/ && rm -rf /relocate/bin
+  - ln -f -s usr/bin "/relocate/bin"
+  - mkdir -p /relocate/usr/lib
+  - cp -a /relocate/lib/* /relocate/usr/lib/ && rm -rf /relocate/lib
+  - ln -f -s usr/lib "/relocate/lib"
+  - mkdir -p /relocate/usr/lib32
+  - cp -a /relocate/lib32/* /relocate/usr/lib32/ && rm -rf /relocate/lib32
+  - ln -f -s usr/lib32 "/relocate/lib32"
+  - mkdir -p /relocate/usr/lib64
+  - cp -a /relocate/lib64/* /relocate/usr/lib64/ && rm -rf /relocate/lib64
+  - ln -f -s usr/lib64 "/relocate/lib64"
+  - mkdir -p /relocate/usr/libx32
+  - cp -a /relocate/libx32/* /relocate/usr/libx32/ && rm -rf /relocate/libx32
+  - ln -f -s usr/libx32 "/relocate/libx32"
+  #
+  - mkdir -p /relocate/var /relocate/run /relocate/run/lock
+  - ln -f -s /run "/relocate/var/run"
+  - ln -f -s /run/lock "/relocate/var/lock"
+  #
+  - mkdir -p /relocate/home/cilium
+  - mkdir -p /relocate/etc
+  - cp -a /from_common_distroless/group /relocate/etc/group
+  - echo "cilium:x:1000:" >> /relocate/etc/group
+---
+# #####################################################################
+# New Main Agent Image (Distroless)
+---
+image: {{ $.ModuleName }}/agent-distroless
+fromImage: common/distroless
+fromCacheVersion: {{ $fromCacheVersion }}
+import:
+- artifact: {{ $.ModuleName }}/agent-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+docker:
+  ENV:
+    HUBBLE_SERVER: "unix:///var/run/cilium/hubble.sock"
+    INITSYSTEM: SYSTEMD
+    HUBBLE_COMPAT: legacy-json-output
+    PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  WORKDIR: "/home/cilium"
+  CMD: ["/usr/bin/cilium"]

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 rm -rf /var/lib/bashible/kubeadm
-bb-rp-remove kubeadm
+bb-package-remove kubeadm
 
 rm -f /tmp/bootstrap.sh
 rm -rf /tmp/candi-bundle*

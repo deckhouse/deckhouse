@@ -74,7 +74,7 @@ spec:
         name: node-exporter
         {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "SYS_TIME")) | nindent 8 }}
         args:
-        - '--web.listen-address=127.0.0.1:9101'
+        - '--web.listen-address=127.0.0.1:4206'
         - '--path.rootfs=/host/root'
         - '--collector.ntp'
         - '--no-collector.wifi'
@@ -143,7 +143,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9101"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4206"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -155,7 +155,7 @@ spec:
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             upstreams:
-            - upstream: http://127.0.0.1:9101/metrics
+            - upstream: http://127.0.0.1:4206/metrics
               path: /metrics
               authorization:
                 resourceAttributes:
@@ -166,7 +166,7 @@ spec:
                   subresource: prometheus-metrics
                   name: node-exporter
         ports:
-        - containerPort: 9101
+        - containerPort: 4206
           name: https-metrics
         resources:
           requests:

@@ -43,7 +43,7 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 		hec.ValuesSet("userAuthn.internal.selfSignedCA.cert", "test")
 		hec.ValuesSet("userAuthn.internal.selfSignedCA.key", "test")
 
-		hec.ValuesSet("userAuthn.publishAPI.enable", true)
+		hec.ValuesSet("userAuthn.publishAPI.enabled", true)
 		hec.ValuesSet("userAuthn.publishAPI.addKubeconfigGeneratorEntry", true)
 	})
 
@@ -123,10 +123,10 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 		})
 	})
 
-	Context("With crowd provider with enableBasicAuth option", func() {
+	Context("With provider with enableBasicAuth option", func() {
 		BeforeEach(func() {
-			hec.ValuesSet("userAuthn.internal.crowdProxyCert", "dGVzdA==")
-			hec.ValuesSet("userAuthn.internal.crowdProxyKey", "dGVzdA==")
+			hec.ValuesSet("userAuthn.internal.basicAuthProxyCert", "dGVzdA==")
+			hec.ValuesSet("userAuthn.internal.basicAuthProxyKey", "dGVzdA==")
 			hec.ValuesSetFromYaml("userAuthn.internal.providers", `
 - id: crowdNexID
   displayName: crowdNextName
@@ -143,8 +143,10 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 			hec.HelmRender()
 		})
 		It("Should deploy basic auth proxy deployment and ingress", func() {
-			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "crowd-basic-auth-proxy").Exists()).To(BeTrue())
-			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "crowd-basic-auth-proxy").Exists()).To(BeTrue())
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+
+			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeTrue())
 
 			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "kubeconfig-generator").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "kubernetes-api").Field(

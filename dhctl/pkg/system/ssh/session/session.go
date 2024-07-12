@@ -33,10 +33,15 @@ type Input struct {
 }
 
 type AgentSettings struct {
-	PrivateKeys []string
+	PrivateKeys []AgentPrivateKey
 
 	// runtime
 	AuthSock string
+}
+
+type AgentPrivateKey struct {
+	Key        string
+	Passphrase string
 }
 
 func (s *AgentSettings) AuthSockEnv() string {
@@ -49,7 +54,7 @@ func (s *AgentSettings) AuthSockEnv() string {
 func (s *AgentSettings) Clone() *AgentSettings {
 	return &AgentSettings{
 		AuthSock:    s.AuthSock,
-		PrivateKeys: append(make([]string, 0), s.PrivateKeys...),
+		PrivateKeys: append(make([]AgentPrivateKey, 0), s.PrivateKeys...),
 	}
 }
 

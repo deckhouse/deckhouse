@@ -1,0 +1,159 @@
+{{- define "zvirt_cloud_data_discoverer_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: cloud-data-discoverer
+  namespace: d8-cloud-provider-zvirt
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-data-discoverer" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: cloud-data-discoverer
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "cloud-data-discoverer"
+      minAllowed:
+        {{- include "zvirt_cloud_data_discoverer_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cloud-data-discoverer
+  namespace: d8-cloud-provider-zvirt
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-data-discoverer")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: cloud-data-discoverer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-data-discoverer
+  namespace: d8-cloud-provider-zvirt
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-data-discoverer")) | nindent 2 }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: cloud-data-discoverer
+  template:
+    metadata:
+      labels:
+        app: cloud-data-discoverer
+      annotations:
+        kubectl.kubernetes.io/default-exec-container: cloud-data-discoverer
+        kubectl.kubernetes.io/default-logs-container: cloud-data-discoverer
+        checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/cloud-data-discoverer/secret.yaml") . | toString) (include (print $.Template.BasePath "/secret.yaml") . | toString) | sha256sum }}
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      serviceAccountName: cloud-data-discoverer
+      containers:
+      - name: cloud-data-discoverer
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "cloudDataDiscoverer") }}
+        args:
+        - --discovery-period=1h
+        - --listen-address=127.0.0.1:8081
+        env:
+          - name: ZVIRT_API_URL
+            valueFrom:
+              secretKeyRef:
+                name: cdd-zvirt-credentials
+                key: server
+          - name: ZVIRT_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: cdd-zvirt-credentials
+                key: username
+          - name: ZVIRT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: cdd-zvirt-credentials
+                key: password
+          - name: ZVIRT_INSECURE
+            valueFrom:
+              secretKeyRef:
+                name: cdd-zvirt-credentials
+                key: insecure
+          - name: ZVIRT_CA_BUNDLE
+            valueFrom:
+              secretKeyRef:
+                name: cdd-zvirt-credentials
+                key: caBundle
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "zvirt_cloud_data_discoverer_resources" . | nindent 12 }}
+          {{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8080"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+        ports:
+          - containerPort: 8080
+            name: https-metrics
+        env:
+          - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              excludePaths:
+              - /healthz
+              upstreams:
+              - upstream: http://127.0.0.1:8081/
+                path: /
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-cloud-provider-zvirt
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: prometheus-metrics
+                    name: cloud-data-discoverer
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+          {{- end }}

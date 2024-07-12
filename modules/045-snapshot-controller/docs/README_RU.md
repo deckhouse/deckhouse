@@ -11,4 +11,5 @@ CSI-драйверы в Deckhouse, которые поддерживают сн�
 - [cloud-provider-aws](../030-cloud-provider-aws/);
 - [cloud-provider-azure](../030-cloud-provider-azure/);
 - [cloud-provider-gcp](../030-cloud-provider-gcp/);
-- [sds-replicated-volume](https://deckhouse.ru/modules/sds-replicated-volume/stable/).
+- [sds-replicated-volume](https://deckhouse.ru/modules/sds-replicated-volume/stable/)
+- [csi-nfs](https://deckhouse.ru/modules/csi-nfs/stable/).

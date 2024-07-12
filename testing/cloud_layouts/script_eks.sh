@@ -14,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-sex -x
-
 usage=$(cat <<EOF
 Usage:
   ./script.sh [command]
@@ -105,13 +103,13 @@ function prepare_environment() {
 
 
 function bootstrap_eks() {
-  set -x
+  # set -x
 
   >&2 echo "Run terraform to create nodes for EKS cluster ..."
 #  pushd "$cwd"
   cd $cwd
-  /terraform/terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
-  /terraform/terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+  /image/bin/terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
+  /image/bin/terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
 #  popd
 
   if ! cluster_endpoint="$(tail -n5 "$cwd/terraform.log" | grep "cluster_endpoint" | cut -d "=" -f2 | tr -d " \"")" ; then
@@ -257,8 +255,8 @@ function destroy_eks_infra() {
 
 #  pushd "$cwd"
   cd $cwd
-  /terraform/terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
-  /terraform/terraform destroy -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+  /image/bin/terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
+  /image/bin/terraform destroy -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
 #  popd
 
   return $exitCode

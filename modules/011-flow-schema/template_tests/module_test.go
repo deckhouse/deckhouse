@@ -31,19 +31,18 @@ func Test(t *testing.T) {
 }
 
 const (
-	globalValuesK8s121 = `
-discovery:
-  kubernetesVersion: "1.21.8"
-`
-
-	globalValuesK8s123 = `
-discovery:
-  kubernetesVersion: "1.23.5"
-`
-
 	globalValuesK8s126 = `
 discovery:
   kubernetesVersion: "1.26.1"
+`
+
+	globalValuesK8s127 = `
+discovery:
+  kubernetesVersion: "1.27.5"
+`
+	globalValuesK8s128 = `
+discovery:
+  kubernetesVersion: "1.28.1"
 `
 
 	globalValuesK8s129 = `
@@ -72,9 +71,9 @@ internal:
 var _ = Describe("Module :: flow-schema :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
-	Context("Cluster without deckhouse namespaces, kubernetes 1.23", func() {
+	Context("Cluster without deckhouse namespaces, kubernetes 1.27", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValuesK8s123)
+			f.ValuesSetFromYaml("global", globalValuesK8s127)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("flowSchema", moduleEmptyValuesForFlowSchemaModule)
 			f.HelmRender()
@@ -89,9 +88,9 @@ var _ = Describe("Module :: flow-schema :: helm template ::", func() {
 		})
 	})
 
-	Context("Cluster with deckhouse namespaces, kubernetes 1.21", func() {
+	Context("Cluster with deckhouse namespaces, kubernetes 1.28", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValuesK8s121)
+			f.ValuesSetFromYaml("global", globalValuesK8s128)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("flowSchema", moduleValuesForFlowSchemaModule)
 			f.HelmRender()
@@ -103,7 +102,7 @@ var _ = Describe("Module :: flow-schema :: helm template ::", func() {
 			pl := f.KubernetesResource("PriorityLevelConfiguration", "", "d8-serviceaccounts")
 			Expect(fs.Exists()).To(BeTrue())
 			Expect(pl.Exists()).To(BeTrue())
-			Expect(fs.Field("apiVersion").String()).To(Equal("flowcontrol.apiserver.k8s.io/v1beta1"))
+			Expect(fs.Field("apiVersion").String()).To(Equal("flowcontrol.apiserver.k8s.io/v1beta3"))
 			Expect(fs.Field("spec.rules.0.subjects").String()).To(MatchYAML(`
 - kind: ServiceAccount
   serviceAccount:
@@ -114,14 +113,14 @@ var _ = Describe("Module :: flow-schema :: helm template ::", func() {
     name: '*'
     namespace: test2
 `))
-			Expect(pl.Field("apiVersion").String()).To(Equal("flowcontrol.apiserver.k8s.io/v1beta1"))
-			Expect(pl.Field("spec.limited.assuredConcurrencyShares").String()).To(Equal("5"))
+			Expect(pl.Field("apiVersion").String()).To(Equal("flowcontrol.apiserver.k8s.io/v1beta3"))
+			Expect(pl.Field("spec.limited.nominalConcurrencyShares").String()).To(Equal("5"))
 		})
 	})
 
-	Context("Cluster with deckhouse namespaces, kubernetes 1.23", func() {
+	Context("Cluster with deckhouse namespaces, kubernetes 1.27", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValuesK8s123)
+			f.ValuesSetFromYaml("global", globalValuesK8s127)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("flowSchema", moduleValuesForFlowSchemaModule)
 			f.HelmRender()
@@ -133,7 +132,7 @@ var _ = Describe("Module :: flow-schema :: helm template ::", func() {
 			pl := f.KubernetesResource("PriorityLevelConfiguration", "", "d8-serviceaccounts")
 			Expect(fs.Exists()).To(BeTrue())
 			Expect(pl.Exists()).To(BeTrue())
-			Expect(fs.Field("apiVersion").String()).To(Equal("flowcontrol.apiserver.k8s.io/v1beta1"))
+			Expect(fs.Field("apiVersion").String()).To(Equal("flowcontrol.apiserver.k8s.io/v1beta3"))
 			Expect(fs.Field("spec.rules.0.subjects").String()).To(MatchYAML(`
 - kind: ServiceAccount
   serviceAccount:
@@ -144,8 +143,8 @@ var _ = Describe("Module :: flow-schema :: helm template ::", func() {
     name: '*'
     namespace: test2
 `))
-			Expect(pl.Field("apiVersion").String()).To(Equal("flowcontrol.apiserver.k8s.io/v1beta1"))
-			Expect(pl.Field("spec.limited.assuredConcurrencyShares").String()).To(Equal("5"))
+			Expect(pl.Field("apiVersion").String()).To(Equal("flowcontrol.apiserver.k8s.io/v1beta3"))
+			Expect(pl.Field("spec.limited.nominalConcurrencyShares").String()).To(Equal("5"))
 		})
 	})
 

@@ -221,13 +221,6 @@ function reserved_memory {
 }
 {{- end }}
 
-# CIS becnhmark purposes
-tls_params=""
-if [ -f /var/lib/kubelet/pki/kubelet-server-current.pem ]; then
-  tls_params="tlsCertFile: /var/lib/kubelet/pki/kubelet-server-current.pem
-tlsPrivateKeyFile: /var/lib/kubelet/pki/kubelet-server-current.pem"
-fi
-
 bb-sync-file /var/lib/kubelet/config.yaml - << EOF
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
@@ -292,7 +285,6 @@ tlsCipherSuites: ["TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_
 # serverTLSBootstrap flag should be enable after bootstrap of first master.
 # This flag affects logs from kubelet, for period of time between kubelet start and certificate request approve by Deckhouse hook.
 serverTLSBootstrap: true
-${tls_params}
 {{- end }}
 {{/*
 RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be explicitly enabled

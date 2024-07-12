@@ -14,6 +14,36 @@
 
 package input
 
-import "regexp"
+import (
+	"regexp"
+	"strings"
+)
 
 var YAMLSplitRegexp = regexp.MustCompile(`(?:^|\s*\n)---\s*`)
+
+func CombineYAMLs(yamls ...string) string {
+	var res string
+	for _, yaml := range yamls {
+		if yaml == "" {
+			continue
+		}
+
+		docs := YAMLSplitRegexp.Split(strings.TrimSpace(yaml), -1)
+
+		for _, doc := range docs {
+			trimmedDoc := strings.TrimSpace(doc)
+
+			if trimmedDoc == "" || trimmedDoc == "---" {
+				continue
+			}
+
+			if res != "" {
+				res += "---\n"
+			}
+
+			res = res + trimmedDoc + "\n"
+		}
+	}
+
+	return res
+}

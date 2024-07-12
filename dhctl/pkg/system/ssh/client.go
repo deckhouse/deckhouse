@@ -28,8 +28,13 @@ var (
 	agentInstance          *frontend.Agent
 )
 
+type SSHLoopHandler func(s *Client) error
+
 // initializeNewInstance disables singleton logic
-func initAgentInstance(privateKeys []string, initializeNewInstance bool) (*frontend.Agent, error) {
+func initAgentInstance(
+	privateKeys []session.AgentPrivateKey,
+	initializeNewInstance bool,
+) (*frontend.Agent, error) {
 	var err error
 
 	if initializeNewInstance {
@@ -69,7 +74,7 @@ func initAgentInstance(privateKeys []string, initializeNewInstance bool) (*front
 	return agentInstance, err
 }
 
-func NewClient(session *session.Session, privKeys []string) *Client {
+func NewClient(session *session.Session, privKeys []session.AgentPrivateKey) *Client {
 	return &Client{
 		Settings:    session,
 		PrivateKeys: privKeys,
@@ -83,7 +88,7 @@ type Client struct {
 	Settings *session.Session
 	Agent    *frontend.Agent
 
-	PrivateKeys        []string
+	PrivateKeys        []session.AgentPrivateKey
 	InitializeNewAgent bool
 
 	kubeProxies []*frontend.KubeProxy
@@ -109,6 +114,11 @@ func (s *Client) Start() (*Client, error) {
 // Tunnel is used to open local (L) and remote (R) tunnels
 func (s *Client) Tunnel(ttype, address string) *frontend.Tunnel {
 	return frontend.NewTunnel(s.Settings, ttype, address)
+}
+
+// ReverseTunnel is used to open remote (R) tunnel
+func (s *Client) ReverseTunnel(address string) *frontend.ReverseTunnel {
+	return frontend.NewReverseTunnel(s.Settings, address)
 }
 
 // Command is used to run commands on remote server
@@ -151,4 +161,26 @@ func (s *Client) Stop() {
 		p.StopAll()
 	}
 	s.kubeProxies = nil
+}
+
+// Loop Looping all available hosts
+func (s *Client) Loop(fn SSHLoopHandler) error {
+	var err error
+
+	resetSession := func() {
+		s.Settings = s.Settings.Copy()
+		s.Settings.ChoiceNewHost()
+	}
+	defer resetSession()
+	resetSession()
+
+	for range s.Settings.AvailableHosts() {
+		err = fn(s)
+		if err != nil {
+			return err
+		}
+		s.Settings.ChoiceNewHost()
+	}
+
+	return nil
 }

@@ -1,0 +1,22 @@
+{{- if .Values.global.modules.publicDomainTemplate }}
+  {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: grafana
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "grafana")) | nindent 2 }}
+spec:
+  certificateOwnerRef: false
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  {{ include "helm_lib_module_generate_common_name" (list . "grafana") | nindent 2 }}
+  dnsNames:
+    - {{ include "helm_lib_module_public_domain" (list . "grafana-v10") }}
+    - {{ include "helm_lib_module_public_domain" (list . "grafana") }}
+    - {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
+  issuerRef:
+    name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+    kind: ClusterIssuer
+  {{- end }}
+{{- end }}

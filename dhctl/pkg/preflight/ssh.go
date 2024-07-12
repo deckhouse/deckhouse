@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -27,6 +28,8 @@ const (
 	DefaultTunnelLocalPort  = 22322
 	DefaultTunnelRemotePort = 22322
 )
+
+var ErrAuthFailed = errors.New("authentication failed")
 
 func (pc *Checker) CheckSSHTunnel() error {
 	if app.PreflightSkipSSHForword {
@@ -41,7 +44,7 @@ func (pc *Checker) CheckSSHTunnel() error {
 	builder.WriteString(":localhost:")
 	builder.WriteString(strconv.Itoa(DefaultTunnelRemotePort))
 
-	tun := pc.sshClient.Tunnel("L", builder.String())
+	tun := pc.sshClient.Tunnel("R", builder.String())
 	err := tun.Up()
 	if err != nil {
 		return fmt.Errorf(`Cannot setup tunnel to control-plane host: %w.
@@ -49,5 +52,19 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	}
 
 	tun.Stop()
+	return nil
+}
+
+func (pc *Checker) CheckSSHCredential() error {
+	if app.PreflightSkipSSHCredentialsCheck {
+		log.InfoLn("SSH credentials preflight check was skipped")
+		return nil
+	}
+
+	sshCheck := pc.sshClient.Check()
+	err := sshCheck.CheckAvailability()
+	if err != nil {
+		return fmt.Errorf("ssh %w. Please check ssh credential and try again", ErrAuthFailed)
+	}
 	return nil
 }

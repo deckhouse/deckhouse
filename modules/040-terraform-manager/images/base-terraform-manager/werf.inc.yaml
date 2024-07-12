@@ -14,10 +14,6 @@ import:
   add: /terraform/terraform
   to: /root/terraform
   before: setup
-- artifact: terraform
-  add: /root/.terraformrc
-  to: /root/.terraformrc
-  before: setup
 git:
 - add: /{{ .ModulePath }}
   to: /deckhouse
@@ -28,13 +24,11 @@ git:
 artifact: terraform
 # we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
 # current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
-  beforeInstall:
-    - apk add --no-cache make patch git bash
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
@@ -42,12 +36,3 @@ shell:
     - cd /src
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /terraform/terraform .
     - chmod 755 /terraform/terraform
-    - |
-      cat << EOD > /root/.terraformrc
-      provider_installation {
-        filesystem_mirror {
-          path    = "/usr/local/share/terraform/plugins"
-          include = ["*/*/*"]
-        }
-      }
-      EOD

@@ -1,7 +1,7 @@
 # https://github.com/golangci/golangci-lint
-GOLANGCI_LINT_VERSION=1.50.1
+GOLANGCI_LINT_VERSION=1.58.0
 # https://github.com/mvdan/gofumpt
-GOFUMPT_VERSION=0.4.0
+GOFUMPT_VERSION=0.6.0
 
 ARCH_NAME := $(shell uname -m)
 OS_NAME := $(shell uname)

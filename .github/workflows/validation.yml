@@ -39,7 +39,7 @@ concurrency:
 jobs:
   close_dependabot_prs_for_forks:
     name: Autoclose Dependabot PRs for forks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ github.actor == 'dependabot[bot]' && github.repository != 'deckhouse/deckhouse' }}
     env:
       ENABLE_DEPENDABOT_IN_FORKS: ${{ secrets.ENABLE_DEPENDABOT_IN_FORKS }}
@@ -216,6 +216,7 @@ jobs:
             const hasEE = pr.labels.some((l) => l.name === 'edition/ee');
             const hasCE = pr.labels.some((l) => l.name === 'edition/ce');
             const hasBE = pr.labels.some((l) => l.name === 'edition/be');
+            const hasSE = pr.labels.some((l) => l.name === 'edition/se');
             let edition = defaultEdition;
             if (hasCE) {
               edition = 'CE';
@@ -223,8 +224,10 @@ jobs:
               edition = 'EE';
             } else if (hasBE) {
               edition = 'BE';
+            } else if (hasSE) {
+              edition = 'SE';
             }
-            core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}, 'edition/be':${hasBE}`);
+            core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}, 'edition/be':${hasBE}, 'edition/se':${hasSE}`);
             core.notice(`Enable '${edition}' edition for '${context.eventName}' trigger.`);
 
             // Construct head commit ref using pr number.
@@ -302,7 +305,7 @@ jobs:
     name: Prepare input for validation scripts
     needs:
       - pull_request_info
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       run_no_cyrillic: ${{ steps.check_labels.outputs.run_no_cyrillic }}
       label_no_cyrillic: ${{ steps.check_labels.outputs.label_no_cyrillic }}
@@ -314,6 +317,8 @@ jobs:
       label_markdown: ${{ steps.check_labels.outputs.label_markdown }}
       run_grafana_dashboard: ${{ steps.check_labels.outputs.run_grafana_dashboard }}
       label_grafana_dashboard: ${{ steps.check_labels.outputs.label_grafana_dashboard }}
+      run_release_requirements: ${{ steps.check_labels.outputs.run_release_requirements }}
+      label_release_requirements: ${{ steps.check_labels.outputs.label_release_requirements }}
     steps:
 
       # <template: checkout_step>
@@ -358,7 +363,7 @@ jobs:
       - discover
       - pull_request_info
     if: needs.discover.outputs.run_no_cyrillic == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
 
       # <template: checkout_step>
@@ -381,13 +386,13 @@ jobs:
           ./.github/scripts/validation_run.sh ./testing/validate_no_cyrillic.sh
 
   doc_validation:
-    name: Documentation Validation
+    name: Docs Validation (base)
 
     needs:
       - discover
       - pull_request_info
     if: needs.discover.outputs.run_doc_changes == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
 
       # <template: checkout_step>
@@ -409,6 +414,56 @@ jobs:
         run: |
           ./.github/scripts/validation_run.sh ./testing/validate_doc_changes.sh
 
+  doc_spell_check:
+    name: Docs Validation (spellcheck)
+    needs:
+      - discover
+      - pull_request_info
+    if: ${{ needs.discover.outputs.run_doc_changes == 'true' && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: ubuntu-24.04
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: pr_diff
+
+       # <template: spellcheck_template>
+      - name: Install werf
+        uses: werf/actions/install@v1.2
+
+      - name: Spell check
+        run: |
+          make lint-doc-spellcheck-pr
+       # </template: spellcheck_template>
+
   copyright_validation:
     name: Copyright Validation
 
@@ -416,7 +471,7 @@ jobs:
       - discover
       - pull_request_info
     if: needs.discover.outputs.run_copyright == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
 
       # <template: checkout_step>
@@ -445,7 +500,7 @@ jobs:
       - discover
       - pull_request_info
     if: needs.discover.outputs.run_grafana_dashboard == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
 
       # <template: checkout_step>
@@ -474,7 +529,7 @@ jobs:
       - discover
       - pull_request_info
     if: needs.discover.outputs.run_markdown == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
 
       # <template: checkout_step>
@@ -495,4 +550,34 @@ jobs:
           SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_markdown }}
         run: |
           make lint-markdown
+
+  release_requirements_validation:
+    name: Release Requirements Validation
+
+    needs:
+      - discover
+      - pull_request_info
+    if: needs.discover.outputs.run_release_requirements == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: pr_diff
+
+      - name: Run check
+        env:
+          DIFF_PATH: ./pr.diff
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_release_requirements }}
+        run: |
+          ./.github/scripts/validation_run.sh ./testing/validate_release_requirements.sh
+
 

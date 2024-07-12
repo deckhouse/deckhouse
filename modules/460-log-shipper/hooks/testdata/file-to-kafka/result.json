@@ -40,6 +40,7 @@
         "timestamp_format": "rfc3339"
       },
       "topic": "logs",
+      "key_field": "host",
       "compression": "gzip",
       "tls": {
         "verify_hostname": true,

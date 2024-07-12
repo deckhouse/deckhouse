@@ -58,6 +58,12 @@ spec:
                 status:
                   type: string
                   description: "Module state explanation, version warning or last error"
+                message:
+                  type: string
+                  description: "Additional information"
+                hooksState:
+                  type: string
+                  description: "Hooks status report"
       subresources:
         status: {}
       additionalPrinterColumns:
@@ -81,3 +87,8 @@ spec:
           type: string
           description: "Module state explanation or last error"
           jsonPath: .status.status
+        - name: Message
+          type: string
+          description: "Additional information"
+          jsonPath: .status.message
+          priority: 1

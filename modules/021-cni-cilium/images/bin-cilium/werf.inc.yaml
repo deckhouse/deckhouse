@@ -1,0 +1,67 @@
+{{- $ciliumVersion := "1.14.5" }}
+{{- $fromCacheVersion := "16" }}
+---
+# #####################################################################
+# Build cilium-agent binaries
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile (builder stage)
+---
+artifact: {{ $.ModuleName }}/cilium-artifact
+fromImage: {{ $.ModuleName }}/base-cilium-dev
+fromCacheVersion: {{ $fromCacheVersion }}
+git:
+- add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+import:
+- artifact: {{ $.ModuleName }}/llvm-artifact
+  add: /usr/local/bin/
+  to: /usr/local/bin
+  before: install
+  includePaths:
+  - clang
+  - llc
+  - llvm-objcopy
+- artifact: {{ $.ModuleName }}/bpftool-artifact
+  add: /usr/local/bin/bpftool
+  to: /usr/local/bin/bpftool
+  before: install
+- artifact: {{ $.ModuleName }}/cni-plugins-artifact
+  add: /out/linux/amd64/bin/loopback
+  to: /cni/loopback
+  before: install
+- artifact: {{ $.ModuleName }}/gops-artifact
+  add: /out/linux/amd64/bin/gops
+  to: /bin/gops
+  before: install
+- artifact: {{ $.ModuleName }}/iptables-artifact
+  add: /iptables
+  to: /iptables
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - mkdir -p /go/src/github.com/cilium/cilium
+  - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
+  install:
+  - dpkg -i /iptables/*.deb
+  - rm -rf /iptables
+  - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
+  - cd /go/src/github.com/cilium/cilium/images/runtime
+  - mkdir -p orig && cp -a iptables-wrapper-installer.sh orig/
+  - ./iptables-wrapper-installer.sh --no-sanity-check
+  setup:
+  - export GOROOT=/usr/local/go GOPATH=/go
+  - export PATH=${GOROOT}/bin:${GOPATH}/bin:${PATH}
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /go/src/github.com/cilium/cilium
+  - find /patches -name '*.patch' | xargs git apply --verbose
+  - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
+  - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-bash-completion licenses-all
+  - mv LICENSE.all /tmp/install/LICENSE.all
+  - cp -t /tmp/install images/cilium/init-container.sh plugins/cilium-cni/install-plugin.sh plugins/cilium-cni/cni-uninstall.sh
+---

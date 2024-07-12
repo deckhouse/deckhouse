@@ -113,7 +113,7 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 	if minVersion == nil {
 		requirements.RemoveValue(minVersionValuesKey)
 	} else {
-		requirements.SaveValue(minVersionValuesKey, minVersion.String())
+		requirements.SaveValue(minVersionValuesKey, fmt.Sprintf("%d.%d", minVersion.Major(), minVersion.Minor()))
 	}
 
 	return nil

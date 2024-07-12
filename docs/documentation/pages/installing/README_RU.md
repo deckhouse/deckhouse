@@ -278,7 +278,7 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
 ```
 
 где:
-- `<DECKHOUSE_REVISION>` — редакция Deckhouse: `ee` — для Enterprise Edition и `ce` — для Community Edition.
+- `<DECKHOUSE_REVISION>` — [редакция](../revision-comparison.html) Deckhouse (например `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
 - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как:
   - SSH-ключи доступа;
   - файл конфигурации;
@@ -311,7 +311,7 @@ docker run -it --pull=always \
 ```shell
 dhctl bootstrap \
   --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-  --config=/config.yml --resources=/resources.yml
+  --config=/config.yml --config=/resources.yml
 ```
 
 где:

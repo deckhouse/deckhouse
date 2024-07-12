@@ -39,6 +39,15 @@ const (
 	PhaseOutdated = "Outdated"
 )
 
+var (
+	// ModuleConfigGVR GroupVersionResource
+	DeckhouseReleaseGVR = schema.GroupVersionResource{
+		Group:    "deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "deckhousereleases",
+	}
+)
+
 // +k8s:deepcopy-gen=false
 
 // DeckhouseRelease is a deckhouse release object.

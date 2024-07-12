@@ -64,7 +64,7 @@ spec:
         - "--telemetry-host=127.0.0.1"
         - "--telemetry-port=8082"
         - "--resources=certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,limitranges,namespaces,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,verticalpodautoscalers"
-        - "--metric-labels-allowlist=cronjobs=[*],deployments=[*],daemonsets=[*],ingresses=[*],jobs=[*],namespaces=[*],nodes=[*],pods=[*],persistentvolumes=[*],secrets=[*],services=[*],statefulsets=[*],storageclasses=[*]" # TODO(nabokihms): try =*=[*] https://github.com/kubernetes/kube-state-metrics/pull/1823
+        - "--metric-labels-allowlist=configmaps=[*],cronjobs=[*],deployments=[*],daemonsets=[*],ingresses=[*],jobs=[*],namespaces=[*],nodes=[*],pods=[*],persistentvolumes=[*],secrets=[*],services=[*],statefulsets=[*],storageclasses=[*]" # TODO(nabokihms): try =*=[*] https://github.com/kubernetes/kube-state-metrics/pull/1823
         - "--metric-denylist=^.*_annotations" # reduce metrics quantity because we do not provide allowed annotations list
         - "--use-apiserver-cache"
         livenessProbe:

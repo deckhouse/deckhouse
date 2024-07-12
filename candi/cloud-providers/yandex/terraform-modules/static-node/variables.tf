@@ -53,7 +53,7 @@ locals {
   cores             = local.instance_class.cores
   core_fraction     = lookup(local.instance_class, "coreFraction", null)
   memory            = local.instance_class.memory / 1024
-  disk_size_gb      = lookup(local.instance_class, "diskSizeGB", 20)
+  disk_size_gb      = lookup(local.instance_class, "diskSizeGB", 50)
   image_id          = local.instance_class.imageID
   node_network_cidr = var.providerClusterConfiguration.nodeNetworkCIDR
   ssh_public_key    = var.providerClusterConfiguration.sshPublicKey

@@ -22,25 +22,26 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 type NodeGroupTerraformController struct {
-	metaConfig    *config.MetaConfig
-	stateCache    state.Cache
-	nodeGroupName string
+	metaConfig       *config.MetaConfig
+	stateCache       state.Cache
+	terraformContext *terraform.TerraformContext
+	nodeGroupName    string
 }
 
-func NewNodesController(clusterMetaConfig *config.MetaConfig, stateCache state.Cache, nodeGroupName string, settings []byte) (*NodeGroupTerraformController, error) {
+func NewNodesController(clusterMetaConfig *config.MetaConfig, stateCache state.Cache, nodeGroupName string, settings []byte, terraformContext *terraform.TerraformContext) (*NodeGroupTerraformController, error) {
 	ngMetaConfig, err := getNgMetaConfig(clusterMetaConfig, settings)
 	if err != nil {
 		return nil, err
 	}
 
 	return &NodeGroupTerraformController{
-		metaConfig:    ngMetaConfig,
-		stateCache:    stateCache,
-		nodeGroupName: nodeGroupName,
+		metaConfig:       ngMetaConfig,
+		stateCache:       stateCache,
+		terraformContext: terraformContext,
+		nodeGroupName:    nodeGroupName,
 	}, nil
 }
 
@@ -78,13 +79,13 @@ func (r *NodeGroupTerraformController) DestroyNode(name string, nodeState []byte
 		return nil
 	}
 
-	nodeRunner := terraform.NewRunnerFromConfig(r.metaConfig, step, r.stateCache).
-		WithVariables(r.metaConfig.NodeGroupConfig(r.nodeGroupName, nodeIndex, "")).
-		WithName(name).
-		WithAllowedCachedState(true).
-		WithAutoApprove(autoApprove)
-
-	tomb.RegisterOnShutdown(name, nodeRunner.Stop)
+	nodeRunner := r.terraformContext.GetDestroyNodeRunner(r.metaConfig, r.stateCache, terraform.DestroyNodeRunnerOptions{
+		AutoApprove:   autoApprove,
+		NodeName:      name,
+		NodeGroupName: r.nodeGroupName,
+		NodeGroupStep: step,
+		NodeIndex:     nodeIndex,
+	})
 
 	if err := terraform.DestroyPipeline(nodeRunner, name); err != nil {
 		return fmt.Errorf("destroing of node %s failed: %v", name, err)

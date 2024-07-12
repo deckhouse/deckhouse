@@ -65,7 +65,8 @@ var distrolessImagesPrefix = map[string][]string{
 
 func skipDistrolessImageCheckIfNeeded(image string) bool {
 	switch image {
-	case "builder/werf.inc.yaml",
+	case "base-cilium-dev/werf.inc.yaml",
+		"cilium-envoy/werf.inc.yaml",
 		"drbd-reactor/Dockerfile",
 		"linstor-affinity-controller/Dockerfile",
 		"linstor-csi/Dockerfile",
@@ -135,7 +136,7 @@ func checkImageNamesInDockerAndWerfFiles(
 		return
 	}
 
-	err := filepath.Walk(imagesPath, func(fullPath string, info os.FileInfo, err error) error {
+	err := filepath.Walk(imagesPath, func(fullPath string, _ os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

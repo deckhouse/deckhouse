@@ -52,7 +52,7 @@ func extractDocumentation(rc io.ReadCloser, output io.Writer) error {
 			return fmt.Errorf("tar reader next: %w", err)
 		}
 
-		if !isDocsPath(filepath.Clean(hdr.Name)) {
+		if !IsDocsPath(filepath.Clean(hdr.Name)) {
 			continue
 		}
 
@@ -74,7 +74,7 @@ func extractDocumentation(rc io.ReadCloser, output io.Writer) error {
 	return nil
 }
 
-func isDocsPath(path string) bool {
+func IsDocsPath(path string) bool {
 	return strings.HasPrefix(path, "docs") ||
 		strings.HasPrefix(path, "crds") ||
 		strings.HasPrefix(path, "openapi")

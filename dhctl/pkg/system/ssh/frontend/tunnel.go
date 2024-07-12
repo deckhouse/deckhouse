@@ -63,20 +63,20 @@ func (t *Tunnel) Up() error {
 
 	stdoutReadPipe, stdoutWritePipe, err := os.Pipe()
 	if err != nil {
-		return fmt.Errorf("unable to create os pipe for stdout: %s", err)
+		return fmt.Errorf("unable to create os pipe for stdout: %w", err)
 	}
 	t.sshCmd.Stdout = stdoutWritePipe
 
 	// Create separate stdin pipe to prevent reading from main process Stdin
 	stdinReadPipe, _, err := os.Pipe()
 	if err != nil {
-		return fmt.Errorf("unable to create os pipe for stdin: %s", err)
+		return fmt.Errorf("unable to create os pipe for stdin: %w", err)
 	}
 	t.sshCmd.Stdin = stdinReadPipe
 
 	err = t.sshCmd.Start()
 	if err != nil {
-		return fmt.Errorf("tunnel up: %v", err)
+		return fmt.Errorf("tunnel up: %w", err)
 	}
 
 	tunnelReadyCh := make(chan struct{}, 1)
@@ -96,7 +96,7 @@ func (t *Tunnel) Up() error {
 
 	select {
 	case err = <-t.errorCh:
-		return fmt.Errorf("cannot open tunnel '%s': %v", t.String(), err)
+		return fmt.Errorf("cannot open tunnel '%s': %w", t.String(), err)
 	case <-tunnelReadyCh:
 	}
 

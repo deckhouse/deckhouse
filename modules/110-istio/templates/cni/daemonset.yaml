@@ -3,7 +3,7 @@ cpu: 100m
 memory: 100Mi
 {{- end }}
 
-{{- if eq $.Values.istio.internal.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
+{{- if eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
 {{- $version := $.Values.istio.internal.globalVersion }}
 {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
 {{- $imageSuffix := get $versionInfo "imageSuffix" }}

@@ -10,6 +10,10 @@ metadata:
   name: {{ $bootstrap_secret_name }}
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
+  annotations:
+    # todo using for keep machine template after rollout
+    # see this https://github.com/kubernetes-sigs/cluster-api/issues/6588#issuecomment-1925433449
+    helm.sh/resource-policy: keep
 type: Opaque
 data:
   format: {{ "cloud-config" | b64enc}}
@@ -28,6 +32,7 @@ data:
 {{- $_ := set $tpl_context "Values" $context.Values }}
 {{- $_ := set $tpl_context "vcd" $context.Values.nodeManager.internal.cloudProvider.vcd }}
 {{- $_ := set $tpl_context "clusterName" $context.Values.nodeManager.internal.cloudProvider.capiClusterName }}
+{{- $_ := set $tpl_context "zvirt" $context.Values.nodeManager.internal.cloudProvider.zvirt }}
 ---
 {{- $f := $context.Files.Get (printf "capi/%s/cluster.yaml" $context.Values.nodeManager.internal.cloudProvider.type)}}
 {{ tpl ($f) $tpl_context }}

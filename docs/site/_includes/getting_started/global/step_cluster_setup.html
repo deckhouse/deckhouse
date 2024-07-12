@@ -76,7 +76,7 @@
 
   <div class="form__row">
     <label class="label" title="List of IP addresses and domain names for which the proxy server is not used">
-        A comma-separated list of IP addresses and domain names for which a proxy server is not used. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com". (e.g. — <code>127.0.0.1, 192.168.0.0/24, example.com, ".example.com"</code>)
+        A comma-separated list of IP addresses and domain names for which a proxy server is not used. Also specify here the subnet of the cluster nodes. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com". (e.g. — <code>127.0.0.1, 192.168.0.0/24, example.com, ".example.com"</code>)
     </label>
     <input
       class="textfield"
@@ -86,7 +86,7 @@
     <span class="info invalid-message invalid-message-main">The addresses must match the templates <code>127.0.0.1</code>, <code>192.168.0.0/24</code>, <code>example.com</code> and <code>".example.com"</code>.</span>
     <span class="info invalid-message invalid-message-example-com">Please don't use the <code>example.com</code> domain name.</span>
       <span class="info">
-         Specify a list of IP addresses, networks, and domain names that can be accessed directly without using a proxy server. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com". Leave it blank if there are no such exceptions.
+         Specify a list of IP addresses, networks, and domain names that can be accessed directly without using a proxy server. Also specify here the subnet of the cluster nodes. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com".
       </span>
   </div>
 

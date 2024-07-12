@@ -15,6 +15,7 @@
 package terraform
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
@@ -145,14 +146,18 @@ func TestCheckBaseInfrastructurePipeline(t *testing.T) {
 				WithStatePath("./mocks/pipeline/empty_state.json").
 				withTerraformExecutor(executor)
 
-			res, err := CheckBaseInfrastructurePipeline(runner, "test")
+			res, plan, _, err := CheckBaseInfrastructurePipeline(runner, "test")
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
 				require.NoError(t, err)
 			}
 
+			var expectedPlan TerraformPlan
+			require.NoError(t, json.Unmarshal(tc.showResp.resp, &expectedPlan))
+
 			require.Equal(t, tc.expectedRes, res)
+			require.Equal(t, expectedPlan, plan)
 		})
 	}
 }

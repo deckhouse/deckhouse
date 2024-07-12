@@ -41,6 +41,7 @@ import (
 	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
+	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 )
 
@@ -77,6 +78,7 @@ func start(_ *kingpin.ParseContext) error {
 }
 
 func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator) {
+	var identity string
 	podName := os.Getenv("DECKHOUSE_POD")
 	if len(podName) == 0 {
 		log.Info("DECKHOUSE_POD env not set or empty")
@@ -93,7 +95,14 @@ func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator) {
 	if len(podNs) == 0 {
 		podNs = defaultNamespace
 	}
-	identity := fmt.Sprintf("%s.%s.%s.pod", podName, strings.ReplaceAll(podIP, ".", "-"), podNs)
+
+	clusterDomain := os.Getenv("KUBERNETES_CLUSTER_DOMAIN")
+	if len(clusterDomain) == 0 {
+		log.Warn("KUBERNETES_CLUSTER_DOMAIN env not set or empty - it's value won't be used for the leader election")
+		identity = fmt.Sprintf("%s.%s.%s.pod", podName, strings.ReplaceAll(podIP, ".", "-"), podNs)
+	} else {
+		identity = fmt.Sprintf("%s.%s.%s.pod.%s", podName, strings.ReplaceAll(podIP, ".", "-"), podNs, clusterDomain)
+	}
 
 	err := operator.WithLeaderElector(&leaderelection.LeaderElectionConfig{
 		// Create a leaderElectionConfig for leader election
@@ -157,7 +166,10 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 
 	deckhouseConfigC := make(chan utils.Values, 1)
 
-	operator.SetupKubeConfigManager(backend.New(operator.KubeClient().RestConfig(), deckhouseConfigC, log.StandardLogger().WithField("KubeConfigManagerBackend", "ModuleConfig")))
+	kubeConfigBackend := backend.New(operator.KubeClient().RestConfig(), deckhouseConfigC, log.StandardLogger().WithField("KubeConfigManagerBackend", "ModuleConfig"))
+	kubeConfigChannel := kubeConfigBackend.GetEventsChannel()
+
+	operator.SetupKubeConfigManager(kubeConfigBackend)
 	validation.RegisterAdmissionHandlers(operator)
 
 	err = operator.Setup()
@@ -170,22 +182,30 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 		return err
 	}
 
-	err = dController.Start(operator.ModuleManager.GetModuleEventsChannel(), deckhouseConfigC)
-	if err != nil {
-		return err
-	}
+	operator.ModuleManager.SetModuleEventsChannel(kubeConfigChannel)
 
 	operator.ModuleManager.SetModuleLoader(dController)
 
-	err = operator.Start()
+	// Init deckhouse-config service with ModuleManager instance.
+	d8config.InitService(operator.ModuleManager)
+
+	// Runs preflight checks first (restore the modules' file system)
+	if os.Getenv("EXTERNAL_MODULES_DIR") != "" {
+		dController.StartPluggableModulesControllers(ctx)
+	}
+
+	// Loads deckhouse modules from the fs and Starts main event lop
+	err = dController.DiscoverDeckhouseModules(ctx, operator.ModuleManager.GetModuleEventsChannel(), deckhouseConfigC)
 	if err != nil {
 		return err
 	}
 
-	dController.RunControllers()
+	err = operator.Start(ctx)
+	if err != nil {
+		return err
+	}
 
-	// Init deckhouse-config service with ModuleManager instance.
-	d8config.InitService(operator.ModuleManager)
+	debugserver.RegisterRoutes(operator.DebugServer)
 
 	// Block main thread by waiting signals from OS.
 	utils_signal.WaitForProcessInterruption(func() {

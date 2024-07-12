@@ -20,6 +20,7 @@ limitations under the License.
 package openapi_validation
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -98,5 +99,15 @@ func TestCRDValidators(t *testing.T) {
 
 		// we can't guarantee order here, thats why test contains
 		assert.Contains(t, res.validationError.Error(), "file validation error: wrong property")
+	}
+}
+
+func TestModulesVersionsValidation(t *testing.T) {
+	mv, err := modulesVersions(deckhousePath)
+	require.NoError(t, err)
+	for m, v := range mv {
+		message := fmt.Sprintf("conversions version(%d) and spec version(%d) for module %s are not equal",
+			v.conversionsVersion, v.specVersion, m)
+		assert.Equal(t, true, v.conversionsVersion == v.specVersion, message)
 	}
 }

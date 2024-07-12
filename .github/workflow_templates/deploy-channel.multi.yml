@@ -62,7 +62,7 @@ on:
         description: 'Id of comment in issue where to put workflow run status'
         required: false
       editions:
-        description: 'Comma separated editions to deploy. Example: ee,fe,ce,be'
+        description: 'Comma separated editions to deploy. Example: ee,fe,ce,be,se'
         required: false
       cooldown:
         description: 'Postpone release until specified datetime (YYYY-MM-DD HH:MM) UTC only. Example: 2026-06-06 16:16'
@@ -83,6 +83,7 @@ jobs:
       DEPLOY_EE: ${{steps.detect_editions.outputs.DEPLOY_EE}}
       DEPLOY_FE: ${{steps.detect_editions.outputs.DEPLOY_FE}}
       DEPLOY_BE: ${{steps.detect_editions.outputs.DEPLOY_BE}}
+      DEPLOY_SE: ${{steps.detect_editions.outputs.DEPLOY_SE}}
     steps:
       - name: Detect editions
         id: detect_editions
@@ -93,7 +94,7 @@ jobs:
 
           RESTRICTED=no
 
-          for edition in CE EE FE BE ; do
+          for edition in CE EE FE BE SE ; do
             if grep -i ",${edition}," <<<",${EDITIONS}," 2>/dev/null 1>&2 ; then
               echo "  - enable deploy of ${edition} edition."
               echo "DEPLOY_${edition}=true" >> $GITHUB_OUTPUT
@@ -103,7 +104,7 @@ jobs:
 
           if [[ $RESTRICTED == "no" ]] ; then
             echo "No restrictions. Enable deploy to all editions."
-            for edition in CE EE FE BE ; do
+            for edition in CE EE FE BE SE ; do
               echo "DEPLOY_${edition}=true" >> $GITHUB_OUTPUT
             done
           fi
@@ -111,7 +112,7 @@ jobs:
 {!{/*
 Jobs for visual control allowed editions when approving deploy to environments.
 */}!}
-{!{ range $werfEnv := slice "CE" "EE" "FE" "BE" }!}
+{!{ range $werfEnv := slice "CE" "EE" "FE" "BE" "SE" }!}
   enable_{!{$werfEnv}!}:
     if: ${{ needs.detect_editions.outputs.DEPLOY_{!{$werfEnv}!} == 'true' }}
     name: Enable {!{$werfEnv}!}
@@ -151,7 +152,7 @@ Jobs for visual control allowed editions when approving deploy to environments.
             echo "enable=true" >> $GITHUB_OUTPUT
           fi
 
-      {!{ range $werfEnv := slice "CE" "EE" "FE" "BE" }!}
+      {!{ range $werfEnv := slice "CE" "EE" "FE" "BE" "SE" }!}
       - name: Set cooldown for release ({!{ $werfEnv }!})
         if: ${{ github.event.inputs.cooldown }}
         env:
@@ -192,7 +193,7 @@ Registries:
 Job supports running from forked or copied repo: 'ghcr.io/owner/repo'
 is used if DECKHOUSE_REGISTRY_HOST is not set.
 */}!}
-{!{ range $werfEnv := slice "CE" "EE" "FE" "BE" }!}
+{!{ range $werfEnv := slice "CE" "EE" "FE" "BE" "SE" }!}
       - name: Publish release images for {!{ $werfEnv }!}
         if: ${{ needs.detect_editions.outputs.DEPLOY_{!{ $werfEnv }!} == 'true' }}
         env:

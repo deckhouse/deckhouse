@@ -1,0 +1,28 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /snapshot-validation-webhook
+    to: /snapshot-validation-webhook
+    before: setup
+docker:
+  ENTRYPOINT: ["/snapshot-validation-webhook"]
+
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - mkdir -p /go/src/github.com/kubernetes-csi/external-snapshotter
+    - |
+      git clone --depth 1 --branch v5.0.1 \
+        {{ $.SOURCE_REPO }}/kubernetes-csi/external-snapshotter.git \
+        /go/src/github.com/kubernetes-csi/external-snapshotter
+    - cd /go/src/github.com/kubernetes-csi/external-snapshotter/cmd/snapshot-validation-webhook
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /snapshot-validation-webhook

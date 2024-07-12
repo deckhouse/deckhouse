@@ -31,7 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
-	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/updater"
+	"github.com/deckhouse/deckhouse/go_lib/updater"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -298,7 +298,7 @@ spec:
 
 	Context("DEV: No new deckhouse image", func() {
 		BeforeEach(func() {
-			dependency.TestDC.CRClient.DigestMock.Set(func(tag string) (s1 string, err error) {
+			dependency.TestDC.CRClient.DigestMock.Set(func(_ string) (s1 string, err error) {
 				return "sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1", nil
 			})
 			f.KubeStateSet(deckhousePodYaml + deckhouseReleases)
@@ -313,7 +313,7 @@ spec:
 
 	Context("DEV: Have new deckhouse image", func() {
 		BeforeEach(func() {
-			dependency.TestDC.CRClient.DigestMock.Set(func(tag string) (s1 string, err error) {
+			dependency.TestDC.CRClient.DigestMock.Set(func(_ string) (s1 string, err error) {
 				return "sha256:123456", nil
 			})
 			f.KubeStateSet(deckhousePodYaml)
@@ -528,7 +528,7 @@ status:
 		})
 	})
 
-	Context("Release with not met requirements", func() {
+	Context("Release with not met requirements and module is enabled", func() {
 		BeforeEach(func() {
 			requirements.RegisterCheck("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 				v, _ := getter.Get("global.discovery.kubernetesVersion")
@@ -540,6 +540,7 @@ status:
 			})
 			requirements.SaveValue("global.discovery.kubernetesVersion", "1.16.0")
 			f.KubeStateSet(deckhousePodYaml + releaseWithRequirements)
+			f.ValuesSet("global.enabledModules", []string{"deckhouse"})
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
 		})
@@ -574,13 +575,41 @@ status:
 
 	})
 
+	Context("Release with not met requirements and module is disabled", func() {
+		BeforeEach(func() {
+			requirements.RegisterCheck("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+				v, _ := getter.Get("global.discovery.kubernetesVersion")
+				if v != requirementValue {
+					return false, errors.New("min k8s version failed")
+				}
+
+				return true, nil
+			})
+			requirements.SaveValue("global.discovery.kubernetesVersion", "1.16.0")
+			f.KubeStateSet(deckhousePodYaml + releaseWithRequirements)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+			f.RunHook()
+		})
+
+		Context("Release requirements passed", func() {
+			It("Should update deckhouse deployment", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				r130 := f.KubernetesGlobalResource("DeckhouseRelease", "v1.30.0")
+				Expect(r130.Field("status.phase").String()).To(Equal("Deployed"))
+				Expect(r130.Field("status.message").String()).To(Equal(``))
+				dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+				Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.30.0"))
+			})
+		})
+	})
+
 	Context("Disruption release", func() {
 		BeforeEach(func() {
 			f.ValuesSet("deckhouse.update.disruptionApprovalMode", "Manual")
 			f.KubeStateSet(deckhousePodYaml + disruptionRelease)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 
-			var df requirements.DisruptionFunc = func(getter requirements.ValueGetter) (bool, string) {
+			var df requirements.DisruptionFunc = func(_ requirements.ValueGetter) (bool, string) {
 				return true, "some test reason"
 			}
 			requirements.RegisterDisruption("testme", df)
@@ -615,7 +644,7 @@ status:
 
 	Context("Notification: release with notification settings", func() {
 		var httpBody string
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 			data, _ := io.ReadAll(r.Body)
 			httpBody = string(data)
 		}))
@@ -731,7 +760,7 @@ metadata:
 
 	Context("Notification: release applyAfter time is after notification period", func() {
 		var httpBody string
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 			data, _ := io.ReadAll(r.Body)
 			httpBody = string(data)
 		}))
@@ -767,7 +796,7 @@ metadata:
 			username string
 			password string
 		)
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 			username, password, _ = r.BasicAuth()
 		}))
 		AfterEach(func() {
@@ -795,7 +824,7 @@ metadata:
 		var (
 			headerValue string
 		)
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 			headerValue = r.Header.Get("Authorization")
 		}))
 		AfterEach(func() {
@@ -819,7 +848,7 @@ metadata:
 	})
 
 	Context("Update minimal notification time without configuring notification webhook", func() {
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 		AfterEach(func() {
 			defer svr.Close()
 		})

@@ -6,7 +6,7 @@ properties:
     description: |
       Cilium создает идентификаторы безопасности основываясь на лейблах сущностей k8s, чем больше лейблов участвует в этом процессе - тем более детализированно можно настроить доступы.
       Но в кластерах больших объёмов излишняя детализация может создать большую нагрузку, и при помощи опции labelsRegex можно более явно указать - какие лейблы будут использоваться для политик безопасности,
-      а какими следут пренебречь. Подробнее об уменьшении количества создаваемых identity можно прочитать в [документации](https://docs.cilium.io/en/stable/operations/performance/scalability/identity-relevant-labels/#limiting-identity-relevant-labels)
+      а какими следует пренебречь. Подробнее об уменьшении количества создаваемых identity можно прочитать в [документации](https://docs.cilium.io/en/stable/operations/performance/scalability/identity-relevant-labels/#limiting-identity-relevant-labels)
 
       Каждый лейбл должен задаваться RegExp-выражением в формате YAML quoted string с экранированием спецсимволов.
   createNodeRoutes:

@@ -38,13 +38,14 @@ const (
     kind: ClusterConfiguration
     clusterType: Static
     clusterDomain: "cluster.local"
-    kubernetesVersion: "1.25"
+    kubernetesVersion: "1.27"
     serviceSubnetCIDR: "10.222.0.0/16"
     podSubnetCIDR: "10.111.0.0/16"
   modules:
     placement: {}
   discovery:
     kubernetesVersion: 1.24.5
+    clusterDomain: "cluster.local"
     d8SpecificNodeCountByRole:
       worker: 3
       master: 3

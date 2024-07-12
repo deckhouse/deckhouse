@@ -23,7 +23,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
-	"github.com/flant/addon-operator/pkg/values/validation"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -34,13 +33,11 @@ var (
 	EnabledByScript  = pointer.Bool(true)
 	DisabledByBundle = pointer.Bool(false)
 	DisabledByScript = pointer.Bool(false)
-
-	valuesValidator = validation.NewValuesValidator()
 )
 
 // NewModuleManager returns mocked ModuleManager to test hooks
 // without running values validations.
-func NewModuleManager(mods ...ModuleMock) *ModuleManagerMock {
+func NewModuleManager(mods ...*ModuleMock) *ModuleManagerMock {
 	// Index input list of modules.
 	modulesMap := map[string]*modules.BasicModule{}
 	enabledModules := set.New()
@@ -53,17 +50,15 @@ func NewModuleManager(mods ...ModuleMock) *ModuleManagerMock {
 	}
 
 	return &ModuleManagerMock{
-		modules:         modulesMap,
-		enabledModules:  enabledModules,
-		valuesValidator: valuesValidator,
+		modules:        modulesMap,
+		enabledModules: enabledModules,
 	}
 }
 
 type ModuleManagerMock struct {
 	module_manager.ModuleManager
-	modules         map[string]*modules.BasicModule
-	enabledModules  set.Set
-	valuesValidator *validation.ValuesValidator
+	modules        map[string]*modules.BasicModule
+	enabledModules set.Set
 }
 
 func (m *ModuleManagerMock) IsModuleEnabled(name string) bool {
@@ -86,50 +81,24 @@ func (m *ModuleManagerMock) GetModuleNames() []string {
 	return names
 }
 
-func (m *ModuleManagerMock) GetValuesValidator() *validation.ValuesValidator {
-	return m.valuesValidator
-}
-
-func (m *ModuleManagerMock) AddOpenAPISchemas(modName string, modPath string) error {
-	if m.valuesValidator == nil {
-		m.valuesValidator = validation.NewValuesValidator()
-	}
-	return AddOpenAPISchemas(m.valuesValidator, modName, modPath)
-}
-
 type ModuleMock struct {
 	module  *modules.BasicModule
 	enabled *bool
 }
 
-func NewModule(name string, _ *bool, enabledByScript *bool) ModuleMock {
-	bm := modules.NewBasicModule(name, "mockpath", 100, nil, valuesValidator)
-	return ModuleMock{
+func NewModule(name, path string, enabledByScript *bool) (*ModuleMock, error) {
+	cb, vb, err := utils.ReadOpenAPIFiles(filepath.Join(path, "openapi"))
+	if err != nil {
+		return nil, fmt.Errorf("read open API files: %w", err)
+	}
+
+	bm, err := modules.NewBasicModule(name, "mockpath", 100, nil, cb, vb)
+	if err != nil {
+		return nil, fmt.Errorf("new basic module: %w", err)
+	}
+
+	return &ModuleMock{
 		module:  bm,
 		enabled: enabledByScript,
-	}
-}
-
-func AddOpenAPISchemas(v *validation.ValuesValidator, modName string, modPath string) error {
-	openAPIPath := filepath.Join(modPath, "openapi")
-	configBytes, valuesBytes, err := utils.ReadOpenAPIFiles(openAPIPath)
-	if err != nil {
-		return fmt.Errorf("read openAPI schemas for '%s': %v", modName, err)
-	}
-
-	valuesKey := utils.ModuleNameToValuesKey(modName)
-	if modName == "global" {
-		err = v.SchemaStorage.AddGlobalValuesSchemas(configBytes, valuesBytes)
-	} else {
-		err = v.SchemaStorage.AddModuleValuesSchemas(
-			valuesKey,
-			configBytes,
-			valuesBytes,
-		)
-	}
-
-	if err != nil {
-		return fmt.Errorf("add module '%s' schemas: %v", modName, err)
-	}
-	return nil
+	}, nil
 }

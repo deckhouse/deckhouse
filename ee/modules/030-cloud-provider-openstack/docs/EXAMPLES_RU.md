@@ -32,7 +32,7 @@ spec:
       tenantName: default
       username: jamie
       password: nein
-      region: HetznerFinland
+      region: SomeRegion
     externalNetworkNames:
     - public
     internalNetworkNames:

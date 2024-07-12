@@ -36,23 +36,27 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/module"
 )
 
 const (
 	defaultModuleWeight = 900
+	DefaultDevVersion   = "dev"
 )
 
 type ModuleDownloader struct {
+	dc                 dependency.Container
 	externalModulesDir string
 
 	ms              *v1alpha1.ModuleSource
 	registryOptions []cr.Option
 }
 
-func NewModuleDownloader(externalModulesDir string, ms *v1alpha1.ModuleSource, registryOptions []cr.Option) *ModuleDownloader {
+func NewModuleDownloader(dc dependency.Container, externalModulesDir string, ms *v1alpha1.ModuleSource, registryOptions []cr.Option) *ModuleDownloader {
 	return &ModuleDownloader{
+		dc:                 dc,
 		externalModulesDir: externalModulesDir,
 		ms:                 ms,
 		registryOptions:    registryOptions,
@@ -72,7 +76,7 @@ type ModuleDownloadResult struct {
 // if checksum is equal to a module image digest - do nothing
 // otherwise return new digest
 func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum string) (string, *models.DeckhouseModuleDefinition, error) {
-	moduleStorePath := path.Join(md.externalModulesDir, moduleName, "dev")
+	moduleStorePath := path.Join(md.externalModulesDir, moduleName, DefaultDevVersion)
 
 	img, err := md.fetchImage(moduleName, imageTag)
 	if err != nil {
@@ -144,6 +148,16 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(moduleName, relea
 	return res, nil
 }
 
+// DownloadModuleDefinitionByVersion returns a module definition from the repo by the module's name and version(tag)
+func (md *ModuleDownloader) DownloadModuleDefinitionByVersion(moduleName, moduleVersion string) (*models.DeckhouseModuleDefinition, error) {
+	img, err := md.fetchImage(moduleName, moduleVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	return md.fetchModuleDefinitionFromImage(moduleName, img)
+}
+
 func (md *ModuleDownloader) GetDocumentationArchive(moduleName, moduleVersion string) (io.ReadCloser, error) {
 	if !strings.HasPrefix(moduleVersion, "v") {
 		moduleVersion = "v" + moduleVersion
@@ -158,7 +172,7 @@ func (md *ModuleDownloader) GetDocumentationArchive(moduleName, moduleVersion st
 }
 
 func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (v1.Image, error) {
-	regCli, err := cr.NewClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
+	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("fetch module error: %v", err)
 	}
@@ -210,6 +224,9 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 	ds := new(DownloadStatistic)
 	defer measure.Duration(func(d time.Duration) {
 		ds.PullDuration = d
+		if os.Getenv("D8_IS_TESTS_ENVIRONMENT") == "true" {
+			ds.PullDuration, _ = time.ParseDuration("555s")
+		}
 	})()
 
 	if err := os.MkdirAll(rootPath, 0o700); err != nil {
@@ -277,7 +294,7 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 
 func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum string) (
 	/* moduleVersion */ string /*newChecksum*/, string /*changelog*/, map[string]any, error) {
-	regCli, err := cr.NewClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
+	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
 	if err != nil {
 		return "", "", nil, fmt.Errorf("fetch release image error: %v", err)
 	}
@@ -467,6 +484,7 @@ func mutateOpenapiSchema(sourceValuesData []byte, moduleSource *v1alpha1.ModuleS
 	reg.SetBase(moduleSource.Spec.Registry.Repo)
 	reg.SetDockercfg(moduleSource.Spec.Registry.DockerCFG)
 	reg.SetScheme(moduleSource.Spec.Registry.Scheme)
+	reg.SetCA(moduleSource.Spec.Registry.CA)
 
 	var yamlData injectedValues
 
@@ -503,6 +521,10 @@ type registrySchemaForValues struct {
 			Type    string `yaml:"type"`
 			Default string `yaml:"default"`
 		} `yaml:"scheme"`
+		CA struct {
+			Type    string `yaml:"type"`
+			Default string `yaml:"default,omitempty"`
+		} `yaml:"ca"`
 	} `yaml:"properties"`
 }
 
@@ -510,6 +532,7 @@ func (rsv *registrySchemaForValues) fillTypes() {
 	rsv.Properties.Base.Type = "string"
 	rsv.Properties.Dockercfg.Type = "string"
 	rsv.Properties.Scheme.Type = "string"
+	rsv.Properties.CA.Type = "string"
 	rsv.Type = "object"
 }
 
@@ -529,6 +552,10 @@ func (rsv *registrySchemaForValues) SetDockercfg(dockercfg string) {
 
 func (rsv *registrySchemaForValues) SetScheme(scheme string) {
 	rsv.Properties.Scheme.Default = scheme
+}
+
+func (rsv *registrySchemaForValues) SetCA(ca string) {
+	rsv.Properties.CA.Default = ca
 }
 
 type injectedValues struct {

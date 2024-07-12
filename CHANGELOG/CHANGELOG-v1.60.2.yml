@@ -1,0 +1,24 @@
+cloud-provider-vcd:
+  features:
+    - summary: Support multiple VCD API versions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8451
+  fixes:
+    - summary: Remove required from discoveryData property.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8541
+dhctl:
+  features:
+    - summary: Add bootstrap, converge, destroy, abort, import gRPC services.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8455
+documentation:
+  fixes:
+    - summary: Fix search. Fix version badge.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8520
+kube-dns:
+  fixes:
+    - summary: Fix empty array error in domain alias validation webhook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8503
+registry-packages-proxy:
+  fixes:
+    - summary: Don't replace the system CA certificates if a custom CA is used.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8537
+

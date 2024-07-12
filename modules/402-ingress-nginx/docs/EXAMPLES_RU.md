@@ -91,7 +91,7 @@ spec:
     behindL7Proxy: true
 ```
 
-## Пример для bare metal (балансировщик MetalLB)
+## Пример для bare metal (балансировщик MetalLB в режиме BGP)
 
 Модуль `metallb` на текущий момент доступен только в редакции Enterprise Edition Deckhouse.
 

@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +37,23 @@ import (
 
 func renewKubeconfigs() error {
 	log.Info("phase: renew kubeconfigs")
-	for _, v := range []string{"admin", "controller-manager", "scheduler"} {
+
+	kubeconfigs := []string{"admin", "controller-manager", "scheduler"}
+
+	c, err := semver.NewConstraint(">= 1.29")
+	if err != nil {
+		return fmt.Errorf("constraint not being parsable: %s", err.Error())
+	}
+	v, err := semver.NewVersion(config.KubernetesVersion)
+	if err != nil {
+		return fmt.Errorf("version not being parsable: %s", err.Error())
+	}
+	// if KubernetesVersion >= 1.29
+	if c.Check(v) {
+		kubeconfigs = []string{"super-admin", "admin", "controller-manager", "scheduler"}
+	}
+
+	for _, v := range kubeconfigs {
 		if err := renewKubeconfig(v); err != nil {
 			return err
 		}

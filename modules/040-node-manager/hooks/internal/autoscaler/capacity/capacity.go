@@ -217,6 +217,31 @@ func (aic *vcdInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*v1
 	return catalog.Get(aic)
 }
 
+type zvirtInstanceClass struct {
+	Cores  int `json:"cores"`
+	Memory int `json:"memory"`
+}
+
+func (zic zvirtInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+	cpuStr := strconv.FormatInt(int64(zic.Cores), 10)
+	memStr := strconv.FormatInt(int64(zic.Memory), 10)
+
+	cpuRes, err := resource.ParseQuantity(cpuStr)
+	if err != nil {
+		return nil, err
+	}
+	memRes, err := resource.ParseQuantity(memStr + "Mi")
+	if err != nil {
+		return nil, err
+	}
+
+	return &v1alpha1.InstanceType{
+		CPU:      cpuRes,
+		Memory:   memRes,
+		RootDisk: resource.MustParse("0"),
+	}, nil
+}
+
 type testInstanceClass struct {
 	Capacity *Capacity `json:"capacity,omitempty"`
 	Type     string    `json:"type,omitempty"`
@@ -275,6 +300,10 @@ func CalculateNodeTemplateCapacity(instanceClassName string, instanceClassSpec i
 
 	case "VCDInstanceClass":
 		var spec vcdInstanceClass
+		extractor = &spec
+
+	case "ZvirtInstanceClass":
+		var spec zvirtInstanceClass
 		extractor = &spec
 
 	case "D8TestInstanceClass":

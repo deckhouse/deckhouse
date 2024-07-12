@@ -35,7 +35,7 @@ import (
 const (
 	waitingApprovalAnnotation = `control-plane-manager.deckhouse.io/waiting-for-approval`
 	approvedAnnotation        = `control-plane-manager.deckhouse.io/approved`
-	maxRetries                = 42
+	maxRetries                = 120
 	namespace                 = `kube-system`
 	kubernetesConfigPath      = `/etc/kubernetes`
 	manifestsPath             = kubernetesConfigPath + `/manifests`

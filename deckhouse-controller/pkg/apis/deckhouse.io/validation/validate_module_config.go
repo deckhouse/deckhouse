@@ -33,7 +33,7 @@ import (
 
 // moduleConfigValidationHandler validations for ModuleConfig creation
 func moduleConfigValidationHandler() http.Handler {
-	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *model.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
+	vf := kwhvalidating.ValidatorFunc(func(_ context.Context, review *model.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
 		switch review.Operation {
 		case kwhmodel.OperationDelete:
 			// Always allow deletion.

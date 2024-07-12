@@ -11,6 +11,20 @@ bb-is-redos-version?() {
   fi
 }
 
+bb-is-rosa-version?() {
+  local ROSA_VERSION=$1
+  source /etc/os-release
+
+  local VERSION_KEY="${VERSION}" # different version key for Cobalt and Chrome releases
+  [[ "${VERSION_ID}" == "7.9" ]] && VERSION_KEY="${VERSION_ID}"
+  
+  if [[ "${VERSION_KEY}" =~ ^${ROSA_VERSION}.*$ ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 bb-is-astra-version?() {
   local ASTRA_VERSION=$1
   source /etc/os-release

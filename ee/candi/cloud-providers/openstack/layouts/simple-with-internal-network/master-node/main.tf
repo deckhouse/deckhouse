@@ -13,6 +13,7 @@ locals {
   root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "")
   etcd_volume_size = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb
   additional_tags = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
+  server_group = lookup(var.providerClusterConfiguration.masterNodeGroup, "serverGroup", {})
 }
 
 module "volume_zone" {
@@ -34,10 +35,12 @@ module "master" {
   network_port_ids = list(local.network_security ? openstack_networking_port_v2.master_internal_with_security[0].id : openstack_networking_port_v2.master_internal_without_security[0].id)
   internal_network_cidr = data.openstack_networking_subnet_v2.internal.cidr
   floating_ip_network = local.external_network_floating_ip ? local.external_network_name : ""
+  config_drive = !local.external_network_dhcp
   tags = local.tags
   zone = local.zone
   volume_type = local.volume_type
   volume_zone = module.volume_zone.zone
+  server_group = local.server_group
 }
 
 module "kubernetes_data" {

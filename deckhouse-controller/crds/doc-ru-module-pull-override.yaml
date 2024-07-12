@@ -29,3 +29,6 @@ spec:
                 imageDigest:
                   type: string
                   description: "Контрольная сумма образа контейнера."
+                weight:
+                  type: integer
+                  description: "_Вес_ (приоритет) модуля."

@@ -12,7 +12,7 @@ Deckhouse implements a conservative approach to organizing the network based on 
 
 The `NetworkPolicy` implementation in Deckhouse is also solid and straightforward. It is based on `kube-router` in the *Network Policy Controller* mode (`--run-firewall`). In this case, `kube-router` transforms `NetworkPolicy` network policies into `iptables` rules. The latter, in turn, work with any installations (regardless of the cloud or the CNI used).
 
-The `network-policy-engine` module deploys a `d8-system` Daemonset in the namespace with [kube-router](https://github.com/cloudnativelabs/kube-router) in the [Network Policy Controller](https://kubernetes.io/docs/concepts/services-networking/network-policies/) mode. As a result, the Kubernetes cluster fully supports Network Policies.
+The `network-policy-engine` module deploys a `d8-system` DaemonSet in the namespace with [kube-router](https://github.com/cloudnativelabs/kube-router) in the [Network Policy Controller](https://kubernetes.io/docs/concepts/services-networking/network-policies/) mode. As a result, the Kubernetes cluster fully supports Network Policies.
 
 The following policy description formats are supported:
 - *networking.k8s.io/NetworkPolicy API*

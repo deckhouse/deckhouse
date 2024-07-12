@@ -199,7 +199,7 @@ spec:
       {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
 
     istio_cni:
-      enabled: {{ eq $.Values.istio.internal.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
+      enabled: {{ eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
 
     pilot:
       autoscaleEnabled: false
@@ -241,7 +241,7 @@ spec:
       templates:
         d8-seccomp: |
           spec:
-            {{- if eq $.Values.istio.internal.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
+            {{- if eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
             initContainers:
             - name: istio-validation
               securityContext:

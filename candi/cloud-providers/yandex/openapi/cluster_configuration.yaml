@@ -74,6 +74,7 @@ apiVersions:
           > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
         additionalProperties: false
         required: [replicas, instanceClass]
+        x-unsafe-rules: [updateMasterImage]
         properties:
           replicas:
             description: |
@@ -90,7 +91,6 @@ apiVersions:
               enum:
               - ru-central1-a
               - ru-central1-b
-              - ru-central1-c
               - ru-central1-d
             uniqueItems: true
           instanceClass:
@@ -123,8 +123,15 @@ apiVersions:
                 type: integer
                 description: |
                   Yandex Compute Instance disk size in gibibytes.
-                example: 20
+                example: network-ssd
                 x-doc-default: 50
+              diskType: &instanceClassDiskType
+                type: string
+                description: |
+                  Yandex Compute Instance disk type.
+                example: network-ssd-io-m3
+                x-doc-default: network-ssd
+                enum: [ network-ssd, network-ssd-io-m3, network-ssd-nonreplicated ]
               etcdDiskSizeGb:
                 type: integer
                 description: |
@@ -202,7 +209,6 @@ apiVersions:
                 enum:
                 - ru-central1-a
                 - ru-central1-b
-                - ru-central1-c
                 - ru-central1-d
               uniqueItems: true
             nodeTemplate:
@@ -270,6 +276,7 @@ apiVersions:
                 memory: *instanceClassMemory
                 imageID: *instanceClassImageID
                 diskSizeGB: *instanceClassDiskSizeGB
+                diskType: *instanceClassDiskType
                 externalIPAddresses: *instanceClassExternalIPAddresses
                 externalSubnetID: *instanceClassExternalSubnetID
                 externalSubnetIDs: *instanceClassExternalSubnetIDs
@@ -302,7 +309,6 @@ apiVersions:
         x-examples:
           - ru-central1-a: e2lu8r1tbbtryhdpa9ro
             ru-central1-b: e2lu8r1tbbtryhdpa9ro
-            ru-central1-c: e2lu8r1tbbtryhdpa9ro
             ru-central1-d: e2lu8r1tbbtryhdpa9ro
         additionalProperties:
           type: string
@@ -439,7 +445,6 @@ apiVersions:
           enum:
             - ru-central1-a
             - ru-central1-b
-            - ru-central1-c
             - ru-central1-d
         uniqueItems: true
     oneOf:

@@ -1,0 +1,41 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: registry-packages-proxy
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main" "app" "registry-packages-proxy")) | nindent 2 }}
+spec:
+  jobLabel: app
+  selector:
+    matchLabels:
+      app: registry-packages-proxy
+  namespaceSelector:
+    matchNames:
+    - d8-cloud-instance-manager
+  podMetricsEndpoints:
+  - port: https
+    scheme: https
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    tlsConfig:
+      insecureSkipVerify: true
+    relabelings:
+    - regex: endpoint|namespace|pod|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
+    metricRelabelings:
+    # Vector has a problem with internal metrics registry grows unbounded.
+    # Drop metrics with high cardinality labels here to avoid overloading Prometheus instances.
+    # https://github.com/vectordotdev/vector/issues/11995
+    - regex: file
+      action: labeldrop
+{{- end }}

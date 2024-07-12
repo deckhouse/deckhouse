@@ -56,6 +56,9 @@ var _ = Describe("Global hooks :: discovery :: modules_images_tags ", func() {
 	"basicAuth": {
 	  "nginx": "valid-digest"
 	},
+	"double": {
+          "srv": "sourced-module-digest"
+        },
 	"testLocal": {
 	  "test": "valid-digest"
 	},
@@ -108,6 +111,34 @@ var _ = Describe("Global hooks :: discovery :: modules_images_tags ", func() {
 
 			It("Should return error", func() {
 				Expect(f).NotTo(ExecuteSuccessfully())
+			})
+		})
+
+		Context("Should save the embedded module's digest, not the sourced one", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.GenerateOnStartupContext())
+
+				const content = `{"double": {"srv": "embedded-module-digest"}}`
+				err := writeTagsTMPFile(content)
+				Expect(err).To(BeNil())
+				f.RunHook()
+			})
+
+			It("Should set tags files content as object into 'global.modulesImages.digests'", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				tag := f.ValuesGet("global.modulesImages.digests").String()
+				Expect(tag).To(MatchJSON(`
+{
+	"double": {
+          "srv": "embedded-module-digest"
+        },
+	"testLocal": {
+	  "test": "valid-digest"
+	},
+	"testTest": {
+	  "test": "valid-digest"
+	}
+}`))
 			})
 		})
 

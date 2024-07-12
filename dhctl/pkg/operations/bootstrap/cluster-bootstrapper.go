@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -37,7 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 const (
@@ -72,20 +72,19 @@ If you are confident in your actions, you can use the flag "--yes-i-am-sane-and-
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
+	SSHClient                  *ssh.Client
 	InitialState               phases.DhctlState
 	ResetInitialState          bool
 	DisableBootstrapClearCache bool
-	OnPhaseFunc                phases.OnPhaseFunc
+	OnPhaseFunc                phases.DefaultOnPhaseFunc
 	CommanderMode              bool
+	CommanderUUID              uuid.UUID
+	TerraformContext           *terraform.TerraformContext
 
-	ConfigPath              string
+	ConfigPaths             []string
 	ResourcesPath           string
-	ResourcesTimeout        string
+	ResourcesTimeout        time.Duration
 	DeckhouseTimeout        time.Duration
-	SSHUser                 string
-	SSHBastionUser          string
-	SSHAgentPrivateKeys     []string
-	SSHHosts                []string
 	PostBootstrapScriptPath string
 	UseTfCache              *bool
 	AutoApprove             *bool
@@ -95,9 +94,9 @@ type Params struct {
 
 type ClusterBootstrapper struct {
 	*Params
-	*phases.PhasedExecutionContext
-	initializeNewAgent bool
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 
+	initializeNewAgent bool
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
 	lastState phases.DhctlState
 }
@@ -105,7 +104,7 @@ type ClusterBootstrapper struct {
 func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
 	return &ClusterBootstrapper{
 		Params:                 params,
-		PhasedExecutionContext: phases.NewPhasedExecutionContext(params.OnPhaseFunc),
+		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(params.OnPhaseFunc),
 		lastState:              params.InitialState,
 	}
 }
@@ -123,38 +122,17 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 		}
 	}
 
-	if b.ConfigPath != "" {
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ConfigPath, b.ConfigPath))
+	if len(b.ConfigPaths) > 0 {
+		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ConfigPaths, b.ConfigPaths))
 	}
 	if b.ResourcesPath != "" {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ResourcesPath, b.ResourcesPath))
 	}
-	if b.ResourcesTimeout != "" {
+	if b.ResourcesTimeout != 0 {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ResourcesTimeout, b.ResourcesTimeout))
 	}
 	if b.DeckhouseTimeout != 0 {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.DeckhouseTimeout, b.DeckhouseTimeout))
-	}
-	if b.SSHUser != "" {
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.SSHUser, b.SSHUser))
-	}
-	if b.SSHBastionUser != "" {
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.SSHBastionUser, b.SSHBastionUser))
-	}
-	if b.SSHAgentPrivateKeys != nil {
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.SSHAgentPrivateKeys, b.SSHAgentPrivateKeys))
-
-		privKeys, err := app.ParseSSHPrivateKeyPaths(b.SSHAgentPrivateKeys)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing ssh agent private keys %v: %w", b.SSHAgentPrivateKeys, err)
-		}
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.SSHPrivateKeys, privKeys))
-
-		// NOTICE: disable "ssh-agent is singleton" logic
-		b.initializeNewAgent = true
-	}
-	if b.SSHHosts != nil {
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.SSHHosts, b.SSHHosts))
 	}
 	if b.PostBootstrapScriptPath != "" {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.PostBootstrapScriptPath, b.PostBootstrapScriptPath))
@@ -189,23 +167,24 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	masterAddressesForSSH := make(map[string]string)
 
 	if app.PostBootstrapScriptPath != "" {
+		log.DebugF("Have post bootstrap script: %s\n", app.PostBootstrapScriptPath)
 		if err := ValidateScriptFile(app.PostBootstrapScriptPath); err != nil {
 			return err
 		}
 	}
 
+	if app.ResourcesPath != "" {
+		log.WarnLn("--resources flag is deprecated. Please use --config flag multiple repeatedly for logical resources separation")
+		app.ConfigPaths = append(app.ConfigPaths, app.ResourcesPath)
+	}
+
 	// first, parse and check cluster config
-	metaConfig, err := config.LoadConfigFromFile(app.ConfigPath)
+	metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths)
 	if err != nil {
 		return err
 	}
 
-	if app.ResourcesPath != "" {
-		err := template.OnlyModulesFromSourcesConfigsInResources(app.ResourcesPath)
-		if err != nil {
-			return err
-		}
-	}
+	log.DebugLn("MetaConfig was loaded")
 
 	// next init cache
 	cachePath := metaConfig.CachePath()
@@ -216,9 +195,12 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 
 	stateCache := cache.Global()
 
+	log.InfoF("State directory: %s\n", stateCache.Dir())
+
 	if app.DropCache {
 		stateCache.Clean()
 		stateCache.Delete(state.TombstoneKey)
+		log.DebugLn("Cache was dropped")
 	}
 
 	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
@@ -227,16 +209,6 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
 	b.lastState = nil
 	defer b.PhasedExecutionContext.Finalize(stateCache)
-
-	sshClient := ssh.NewClientFromFlags()
-	sshClient.InitializeNewAgent = b.initializeNewAgent
-	// after verifying configs and cache ask password
-	if _, err := sshClient.Start(); err != nil {
-		return fmt.Errorf("unable to start ssh client: %w", err)
-	}
-	if b.initializeNewAgent {
-		defer sshClient.Stop()
-	}
 
 	err = terminal.AskBecomePassword()
 	if err != nil {
@@ -256,11 +228,20 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 
+	if b.CommanderMode {
+		// FIXME(dhctl-for-commander): commander uuid currently optional, make it required later
+		//if b.CommanderUUID == uuid.Nil {
+		//	panic("CommanderUUID required for bootstrap operation in commander mode!")
+		//}
+		deckhouseInstallConfig.CommanderMode = b.CommanderMode
+		deckhouseInstallConfig.CommanderUUID = b.CommanderUUID
+	}
+
 	// During full bootstrap we use the "kubeadm and deckhouse on master nodes" hack
 	deckhouseInstallConfig.KubeadmBootstrap = true
 	deckhouseInstallConfig.MasterNodeSelector = true
 
-	preflightChecker := preflight.NewChecker(sshClient, deckhouseInstallConfig, metaConfig)
+	preflightChecker := preflight.NewChecker(b.SSHClient, deckhouseInstallConfig, metaConfig)
 	if err := preflightChecker.Global(); err != nil {
 		return err
 	}
@@ -283,15 +264,14 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			return err
 		}
 		err = log.Process("bootstrap", "Cloud infrastructure", func() error {
-			baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure", stateCache).
-				WithVariables(metaConfig.MarshalConfig()).
-				WithAutoApprove(true)
-			tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)
+			baseRunner := b.TerraformContext.GetBootstrapBaseInfraRunner(metaConfig, stateCache)
 
 			baseOutputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 			if err != nil {
 				return err
 			}
+
+			log.DebugLn("Base infrastructure was created")
 
 			var cloudDiscoveryData map[string]interface{}
 			err = json.Unmarshal(baseOutputs.CloudDiscovery, &cloudDiscoveryData)
@@ -304,27 +284,31 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			}
 
 			masterNodeName := fmt.Sprintf("%s-master-0", metaConfig.ClusterPrefix)
-			masterRunner := terraform.NewRunnerFromConfig(metaConfig, "master-node", stateCache).
-				WithVariables(metaConfig.NodeGroupConfig("master", 0, "")).
-				WithName(masterNodeName).
-				WithAutoApprove(true)
-			tomb.RegisterOnShutdown(masterNodeName, masterRunner.Stop)
+			masterRunner := b.Params.TerraformContext.GetBootstrapNodeRunner(metaConfig, stateCache, terraform.BootstrapNodeRunnerOptions{
+				AutoApprove:     true,
+				NodeName:        masterNodeName,
+				NodeGroupStep:   "master-node",
+				NodeGroupName:   "master",
+				NodeIndex:       0,
+				NodeCloudConfig: "",
+			})
 
 			masterOutputs, err := terraform.ApplyPipeline(masterRunner, masterNodeName, terraform.GetMasterNodeResult)
 			if err != nil {
 				return err
 			}
 
+			log.DebugLn("First control-plane node was created")
+
 			deckhouseInstallConfig.CloudDiscovery = baseOutputs.CloudDiscovery
 			deckhouseInstallConfig.TerraformState = baseOutputs.TerraformState
 
 			if baseOutputs.BastionHost != "" {
-				setBastionHost(baseOutputs.BastionHost, sshClient)
+				b.SSHClient.Settings.BastionHost = baseOutputs.BastionHost
 				SaveBastionHostToCache(baseOutputs.BastionHost)
 			}
 
-			app.SSHHosts = []string{masterOutputs.MasterIPForSSH}
-			sshClient.Settings.SetAvailableHosts(app.SSHHosts)
+			b.SSHClient.Settings.SetAvailableHosts([]string{masterOutputs.MasterIPForSSH})
 
 			nodeIP = masterOutputs.NodeInternalIP
 			devicePath = masterOutputs.KubeDataDevicePath
@@ -350,12 +334,12 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		_ = json.Unmarshal(metaConfig.ClusterConfig["static"], &static)
 		nodeIP = static.NodeIP
 
-		if sshClient.Settings.BastionHost != "" {
-			SaveBastionHostToCache(sshClient.Settings.BastionHost)
+		if b.SSHClient.Settings.BastionHost != "" {
+			SaveBastionHostToCache(b.SSHClient.Settings.BastionHost)
 		}
 
 		SaveMasterHostsToCache(map[string]string{
-			"first-master": sshClient.Settings.Host(),
+			"first-master": b.SSHClient.Settings.Host(),
 		})
 	}
 
@@ -363,8 +347,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	// do it after bootstrap cloud because resources can be template
 	// and we want to fail immediately if template has errors
 	var resourcesToCreate template.Resources
-	if app.ResourcesPath != "" {
-		parsedResources, err := template.ParseResources(app.ResourcesPath, resourcesTemplateData)
+	if metaConfig.ResourcesYAML != "" {
+		parsedResources, err := template.ParseResourcesContent(metaConfig.ResourcesYAML, resourcesTemplateData)
 		if err != nil {
 			return err
 		}
@@ -372,26 +356,69 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		resourcesToCreate = parsedResources
 	}
 
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecuteBashibleBundlePhase, false, stateCache); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.RegistryPackagesProxyPhase, false, stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
 	}
 
-	if err := WaitForSSHConnectionOnMaster(sshClient); err != nil {
-		return err
-	}
-	if err := RunBashiblePipeline(sshClient, metaConfig, nodeIP, devicePath); err != nil {
+	var clusterDomain string
+	err = json.Unmarshal(metaConfig.ClusterConfig["clusterDomain"], &clusterDomain)
+	if err != nil {
 		return err
 	}
 
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.InstallDeckhousePhase, false, stateCache); err != nil {
+	// we need clusterDomain to generate proper certificate for packages proxy
+	err = StartRegistryPackagesProxy(metaConfig.Registry, clusterDomain)
+	if err != nil {
+		return fmt.Errorf("failed to start registry packages proxy: %v", err)
+	}
+
+	if err := WaitForSSHConnectionOnMaster(b.SSHClient); err != nil {
+		return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
+	}
+
+	// need closure for registry packages tunnel
+	runBashible := func() error {
+		tun, err := SetupSSHTunnelToRegistryPackagesProxy(b.SSHClient)
+		if err != nil {
+			return fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
+		}
+		defer func() {
+			err := tun.Stop()
+			if err != nil {
+				log.DebugF("Cannot stop SSH tunnel to registry packages proxy: %v\n", err)
+			}
+		}()
+
+		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecuteBashibleBundlePhase, false, stateCache, nil); err != nil {
+			return err
+		} else if shouldStop {
+			return nil
+		}
+
+		if err := RunBashiblePipeline(b.SSHClient, metaConfig, nodeIP, devicePath); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	if err := runBashible(); err != nil {
+		return err
+	}
+
+	if err := RebootMaster(b.SSHClient); err != nil {
+		return err
+	}
+
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.InstallDeckhousePhase, false, stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
 	}
 
-	kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
+	kubeCl, err := operations.ConnectToKubernetesAPI(b.SSHClient)
 	if err != nil {
 		return err
 	}
@@ -400,24 +427,35 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	if metaConfig.ClusterType == config.CloudClusterType {
-		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.InstallAdditionalMastersAndStaticNodes, true, stateCache); err != nil {
+		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.InstallAdditionalMastersAndStaticNodes, true, stateCache, nil); err != nil {
 			return err
 		} else if shouldStop {
 			return nil
 		}
 
-		err := converge.NewInLockLocalRunner(kubeCl, "local-bootstraper").Run(func() error {
-			return bootstrapAdditionalNodesForCloudCluster(kubeCl, metaConfig, masterAddressesForSSH)
+		localBootstraper := func(f func() error) error {
+			if b.CommanderMode {
+				return f()
+			}
+			return converge.NewInLockLocalRunner(kubeCl, "local-bootstraper").Run(f)
+		}
+
+		err := localBootstraper(func() error {
+			return bootstrapAdditionalNodesForCloudCluster(kubeCl, metaConfig, masterAddressesForSSH, b.TerraformContext)
 		})
 		if err != nil {
 			return err
 		}
 	}
 
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.CreateResourcesPhase, false, stateCache); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.CreateResourcesPhase, false, stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
+	}
+
+	if err := controlplane.NewManagerReadinessChecker(kubeCl).IsReadyAll(); err != nil {
+		return err
 	}
 
 	err = createResources(kubeCl, resourcesToCreate, metaConfig)
@@ -425,14 +463,14 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecPostBootstrapPhase, false, stateCache); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecPostBootstrapPhase, false, stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
 	}
 
 	if app.PostBootstrapScriptPath != "" {
-		postScriptExecutor := NewPostBootstrapScriptExecutor(sshClient, app.PostBootstrapScriptPath, bootstrapState).
+		postScriptExecutor := NewPostBootstrapScriptExecutor(b.SSHClient, app.PostBootstrapScriptPath, bootstrapState).
 			WithTimeout(app.PostBootstrapScriptTimeout)
 
 		if err := postScriptExecutor.Execute(); err != nil {
@@ -440,13 +478,13 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		}
 	}
 
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.FinalizationPhase, false, stateCache); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.FinalizationPhase, false, stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
 	}
 
-	if err := deckhouse.AddReleaseChannelToDeckhouseModuleConfig(kubeCl, deckhouseInstallConfig); err != nil {
+	if err := deckhouse.ConfigureReleaseChannel(kubeCl, deckhouseInstallConfig); err != nil {
 		return err
 	}
 
@@ -468,7 +506,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	if metaConfig.ClusterType == config.CloudClusterType {
 		_ = log.Process("common", "Kubernetes Master Node addresses for SSH", func() error {
 			for nodeName, address := range masterAddressesForSSH {
-				fakeSession := sshClient.Settings.Copy()
+				fakeSession := b.SSHClient.Settings.Copy()
 				fakeSession.SetAvailableHosts([]string{address})
 				log.InfoF("%s | %s\n", nodeName, fakeSession.String())
 			}
@@ -477,7 +515,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		})
 	}
 
-	return b.PhasedExecutionContext.CompletePhaseAndPipeline(stateCache)
+	return b.PhasedExecutionContext.CompletePhaseAndPipeline(stateCache, nil)
 }
 
 // TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this method will be unneeded then
@@ -526,13 +564,13 @@ func generateClusterUUID(stateCache state.Cache) (string, error) {
 	return clusterUUID, err
 }
 
-func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string) error {
-	if err := BootstrapAdditionalMasterNodes(kubeCl, metaConfig, masterAddressesForSSH); err != nil {
+func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string, terraformContext *terraform.TerraformContext) error {
+	if err := BootstrapAdditionalMasterNodes(kubeCl, metaConfig, masterAddressesForSSH, terraformContext); err != nil {
 		return err
 	}
 
 	terraNodeGroups := metaConfig.GetTerraNodeGroups()
-	if err := BootstrapTerraNodes(kubeCl, metaConfig, terraNodeGroups); err != nil {
+	if err := BootstrapTerraNodes(kubeCl, metaConfig, terraNodeGroups, terraformContext); err != nil {
 		return err
 	}
 
@@ -547,24 +585,6 @@ func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, me
 		}
 		return nil
 	})
-}
-
-func setBastionHost(host string, sshClient *ssh.Client) {
-	app.SSHBastionHost = host
-
-	if app.SSHBastionUser == "" {
-		app.SSHBastionUser = app.SSHUser
-	}
-
-	if app.SSHBastionPort == "" {
-		app.SSHBastionPort = app.SSHPort
-	}
-
-	if sshClient != nil {
-		sshClient.Settings.BastionHost = app.SSHBastionHost
-		sshClient.Settings.BastionUser = app.SSHBastionUser
-		sshClient.Settings.BastionPort = app.SSHBastionPort
-	}
 }
 
 func createResources(kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig) error {
@@ -585,7 +605,7 @@ func createResources(kubeCl *client.KubernetesClient, resourcesToCreate template
 }
 
 func setWithRestore[T any](target *T, newValue T) func() {
-	var oldValue = *target
+	oldValue := *target
 	*target = newValue
 	return func() {
 		*target = oldValue

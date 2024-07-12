@@ -16,13 +16,14 @@ package release
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
-	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -31,217 +32,122 @@ import (
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/logger"
-	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/time/rate"
+	"gopkg.in/yaml.v3"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
-	coordinationv1 "k8s.io/client-go/listers/coordination/v1"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
-	d8informers "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions/deckhouse.io/v1alpha1"
-	d8listers "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
-	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
+	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
-// Controller is the controller implementation for ModuleRelease resources
-type Controller struct {
-	// kubeclientset is a standard kubernetes clientset
-	kubeclientset kubernetes.Interface
+// moduleReleaseReconciler is the controller implementation for ModuleRelease resources
+type moduleReleaseReconciler struct {
+	client client.Client
 
-	// d8ClientSet is a clientset for our own API group
-	d8ClientSet versioned.Interface
+	dc            dependency.Container
+	metricStorage *metric_storage.MetricStorage
+	logger        logger.Logger
 
-	docsBuilder *docs_builder.Client
-
-	moduleReleasesLister       d8listers.ModuleReleaseLister
-	moduleReleasesSynced       cache.InformerSynced
-	moduleSourcesLister        d8listers.ModuleSourceLister
-	moduleSourcesSynced        cache.InformerSynced
-	moduleUpdatePoliciesLister d8listers.ModuleUpdatePolicyLister
-	moduleUpdatePoliciesSynced cache.InformerSynced
-	modulePullOverridesLister  d8listers.ModulePullOverrideLister
-	modulePullOverridesSynced  cache.InformerSynced
-	leaseLister                coordinationv1.LeaseLister
-	leaseInformer              cache.SharedIndexInformer
-	metricStorage              *metric_storage.MetricStorage
-
-	// workqueue is a rate limited work queue. This is used to queue work to be
-	// processed instead of performing it as soon as a change happens. This
-	// means we can ensure we only process a fixed amount of resources at a
-	// time, and makes it easy to ensure we are never processing the same item
-	// simultaneously in two different workers.
-	workqueue      workqueue.RateLimitingInterface
-	leaseWorkqueue workqueue.RateLimitingInterface
-
-	logger logger.Logger
-
-	// <module-name>: <module-source>
-	sourceModules map[string]string
-
-	modulesValidator   moduleValidator
+	moduleManager      moduleManager
 	externalModulesDir string
 	symlinksDir        string
 
 	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpec
 
+	preflightCountDown *sync.WaitGroup
+
 	m             sync.Mutex
 	delayTimer    *time.Timer
 	restartReason string
-	httpClient    d8http.Client
 }
 
 const (
-	UpdatePolicyLabel = "modules.deckhouse.io/update-policy"
+	RegistrySpecChangedAnnotation = "modules.deckhouse.io/registry-spec-changed"
+	UpdatePolicyLabel             = "modules.deckhouse.io/update-policy"
+	deckhouseNodeNameAnnotation   = "modules.deckhouse.io/deployed-on"
 
 	defaultCheckInterval   = 15 * time.Second
-	approvalAnnotation     = "modules.deckhouse.io/approved"
 	fsReleaseFinalizer     = "modules.deckhouse.io/exist-on-fs"
 	sourceReleaseFinalizer = "modules.deckhouse.io/release-exists"
-	manualApprovalRequired = `Waiting for manual approval (annotation modules.deckhouse.io/approved="true" required)`
 	disabledByIgnorePolicy = `Update disabled by 'Ignore' update policy`
-	waitingForWindow       = "Release is waiting for the update window: %s"
-	docsLeaseLabel         = "deckhouse.io/documentation-builder-sync"
-	namespace              = "d8-system"
 )
 
-// NewController returns a new sample controller
-func NewController(ks kubernetes.Interface,
-	d8ClientSet versioned.Interface,
-	moduleReleaseInformer d8informers.ModuleReleaseInformer,
-	moduleSourceInformer d8informers.ModuleSourceInformer,
-	moduleUpdatePolicyInformer d8informers.ModuleUpdatePolicyInformer,
-	modulePullOverridesInformer d8informers.ModulePullOverrideInformer,
-	mv moduleValidator,
-	httpClient d8http.Client,
-	metricStorage *metric_storage.MetricStorage,
+func NewModuleReleaseController(
+	mgr manager.Manager,
+	dc dependency.Container,
 	embeddedPolicy *v1alpha1.ModuleUpdatePolicySpec,
-) *Controller {
-	ratelimiter := workqueue.NewMaxOfRateLimiter(
-		workqueue.NewItemExponentialFailureRateLimiter(500*time.Millisecond, 1000*time.Second),
-		&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(50), 300)},
-	)
-
+	mm moduleManager,
+	metricStorage *metric_storage.MetricStorage,
+	preflightCountDown *sync.WaitGroup,
+) error {
 	lg := log.WithField("component", "ModuleReleaseController")
 
-	factory := informers.NewSharedInformerFactoryWithOptions(
-		ks,
-		15*time.Minute,
-		informers.WithNamespace(namespace),
-		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
-			options.LabelSelector = docsLeaseLabel
-		}),
-	)
-	leaseInformerFactory := factory.Coordination().V1().Leases()
-	leaseLister := leaseInformerFactory.Lister()
-	leaseInformer := leaseInformerFactory.Informer()
+	c := &moduleReleaseReconciler{
+		client:             mgr.GetClient(),
+		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
+		dc:                 dc,
+		logger:             lg,
 
-	controller := &Controller{
-		kubeclientset:              ks,
-		d8ClientSet:                d8ClientSet,
-		docsBuilder:                docs_builder.NewClient(httpClient),
-		moduleReleasesLister:       moduleReleaseInformer.Lister(),
-		moduleReleasesSynced:       moduleReleaseInformer.Informer().HasSynced,
-		moduleSourcesLister:        moduleSourceInformer.Lister(),
-		moduleSourcesSynced:        moduleSourceInformer.Informer().HasSynced,
-		moduleUpdatePoliciesLister: moduleUpdatePolicyInformer.Lister(),
-		moduleUpdatePoliciesSynced: moduleUpdatePolicyInformer.Informer().HasSynced,
-		modulePullOverridesLister:  modulePullOverridesInformer.Lister(),
-		modulePullOverridesSynced:  modulePullOverridesInformer.Informer().HasSynced,
-		leaseLister:                leaseLister,
-		leaseInformer:              leaseInformer,
-		metricStorage:              metricStorage,
-		workqueue:                  workqueue.NewRateLimitingQueue(ratelimiter),
-		leaseWorkqueue:             workqueue.NewRateLimitingQueue(ratelimiter),
-		logger:                     lg,
-
-		sourceModules: make(map[string]string),
-
-		modulesValidator:        mv,
-		externalModulesDir:      os.Getenv("EXTERNAL_MODULES_DIR"),
+		metricStorage:           metricStorage,
+		moduleManager:           mm,
 		symlinksDir:             filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
 		deckhouseEmbeddedPolicy: embeddedPolicy,
 
 		delayTimer: time.NewTimer(3 * time.Second),
+
+		preflightCountDown: preflightCountDown,
 	}
 
-	// Set up an event handler for when ModuleRelease resources change
-	_, err := moduleReleaseInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: controller.enqueueModuleRelease,
-		UpdateFunc: func(old, new interface{}) {
-			newMS := new.(*v1alpha1.ModuleRelease)
-			oldMS := old.(*v1alpha1.ModuleRelease)
+	// Add Preflight Check
+	err := mgr.Add(manager.RunnableFunc(c.PreflightCheck))
+	if err != nil {
+		return err
+	}
+	c.preflightCountDown.Add(1)
 
-			if newMS.ResourceVersion == oldMS.ResourceVersion {
-				// Periodic resync will send update events for all known ModuleRelease.
-				return
-			}
-
-			controller.enqueueModuleRelease(new)
-		},
-		DeleteFunc: controller.enqueueModuleRelease,
+	ctr, err := controller.New("module-release", mgr, controller.Options{
+		MaxConcurrentReconciles: 3,
+		CacheSyncTimeout:        15 * time.Minute,
+		NeedLeaderElection:      pointer.Bool(false),
+		Reconciler:              c,
 	})
 	if err != nil {
-		log.Fatalf("add event handler failed: %s", err)
+		return err
 	}
 
-	_, err = leaseInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: controller.enqueueLease,
-	})
-	if err != nil {
-		log.Fatalf("add event handler failed: %s", err)
-	}
-
-	return controller
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&v1alpha1.ModuleRelease{}).
+		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
+		Complete(ctr)
 }
 
-func (c *Controller) enqueueModuleRelease(obj interface{}) {
-	var key string
-	var err error
-	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
-		utilruntime.HandleError(err)
-		return
-	}
-	c.logger.Debugf("enqueue ModuleRelease: %s", key)
-	c.workqueue.Add(key)
-}
-
-func (c *Controller) enqueueLease(obj interface{}) {
-	var key cache.ObjectName
-	var err error
-	if key, err = cache.ObjectToName(obj); err != nil {
-		utilruntime.HandleError(err)
-		return
-	}
-	c.logger.Debugf("enqueue Lease: %s", key)
-	c.leaseWorkqueue.Add(key)
-}
-
-func (c *Controller) emitRestart(msg string) {
+func (c *moduleReleaseReconciler) emitRestart(msg string) {
 	c.m.Lock()
 	c.delayTimer.Reset(3 * time.Second)
 	c.restartReason = msg
 	c.m.Unlock()
 }
 
-func (c *Controller) restartLoop(ctx context.Context) {
+func (c *moduleReleaseReconciler) restartLoop(ctx context.Context) {
 	for {
 		c.m.Lock()
 		select {
@@ -264,143 +170,33 @@ func (c *Controller) restartLoop(ctx context.Context) {
 	}
 }
 
-func (c *Controller) Run(ctx context.Context, workers int) {
-	if c.externalModulesDir == "" {
-		c.logger.Info("env: 'EXTERNAL_MODULES_DIR' is empty, we are not going to work with source modules")
-		return
-	}
-
-	defer utilruntime.HandleCrash()
-	defer c.workqueue.ShutDown()
-	defer c.leaseWorkqueue.ShutDown()
-
-	// Check if controller's dependencies have been initialized
-	_ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
-		func(context.Context) (bool, error) {
-			// TODO: add modulemanager initialization check c.modulesValidator.AreModulesInited() (required for reloading modules without restarting deckhouse)
-			return deckhouseconfig.IsServiceInited(), nil
-		})
-
-	// Start the informer factories to begin populating the informer caches
-	c.logger.Info("Starting ModuleRelease controller")
-
-	// Wait for the caches to be synced before starting workers
-	c.logger.Debug("Waiting for ModuleReleaseInformer caches to sync")
-
-	go c.restartLoop(ctx)
-
-	go c.leaseInformer.Run(ctx.Done())
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleReleasesSynced, c.moduleSourcesSynced,
-		c.moduleUpdatePoliciesSynced, c.modulePullOverridesSynced, c.leaseInformer.HasSynced); !ok {
-		c.logger.Fatal("failed to wait for caches to sync")
-	}
-
-	err := c.registerMetrics()
-	if err != nil {
-		c.logger.Errorf("register metrics: %v", err)
-	}
-
-	c.logger.Infof("Starting workers count: %d", workers)
-	for i := 0; i < workers; i++ {
-		go wait.UntilWithContext(ctx, c.runWorker, time.Second)
-		go wait.UntilWithContext(ctx, c.runLeaseWorker, time.Second)
-	}
-
-	<-ctx.Done()
-	c.logger.Info("Shutting down workers")
-}
-
-func (c *Controller) runWorker(ctx context.Context) {
-	for c.processNextWorkItem(ctx) {
-	}
-}
-
-func (c *Controller) runLeaseWorker(ctx context.Context) {
-	for c.processNextLease(ctx) {
-	}
-}
-
-func (c *Controller) processNextWorkItem(ctx context.Context) bool {
-	obj, shutdown := c.workqueue.Get()
-	if shutdown {
-		return false
-	}
-
-	// We wrap this block in a func so we can defer c.workqueue.Done.
-	err := func(obj interface{}) error {
-		// We call Done here so the workqueue knows we have finished
-		// processing this item. We also must remember to call Forget if we
-		// do not want this work item being re-queued. For example, we do
-		// not call Forget if a transient error occurs, instead the item is
-		// put back on the workqueue and attempted again after a back-off
-		// period.
-		defer c.workqueue.Done(obj)
-		var key string
-		var ok bool
-		// We expect strings to come off the workqueue. These are of the
-		// form namespace/name. We do this as the delayed nature of the
-		// workqueue means the items in the informer cache may actually be
-		// more up to date that when the item was initially put onto the
-		// workqueue.
-		if key, ok = obj.(string); !ok {
-			// As the item in the workqueue is actually invalid, we call
-			// Forget here else we'd go into a loop of attempting to
-			// process a work item that is invalid.
-			c.workqueue.Forget(obj)
-			c.logger.Errorf("expected string in workqueue but got %#v", obj)
-			return nil
-		}
-
-		// run reconcile loop
-		result, err := c.Reconcile(ctx, key)
-		switch {
-		case result.RequeueAfter != 0:
-			c.workqueue.AddAfter(key, result.RequeueAfter)
-
-		case result.Requeue:
-			// Put the item back on the workqueue to handle any transient errors.
-			c.workqueue.AddRateLimited(key)
-
-		default:
-			c.workqueue.Forget(key)
-		}
-
-		return err
-	}(obj)
-	if err != nil {
-		c.logger.Errorf("ModuleRelease reconcile error: %s", err.Error())
-		return true
-	}
-
-	return true
-}
-
 // only ModuleRelease with active finalizer can get here, we have to remove the module on filesystem and remove the finalizer
-func (c *Controller) deleteReconcile(ctx context.Context, roMR *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+func (c *moduleReleaseReconciler) deleteReconcile(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	// deleted release
 	// also cleanup the filesystem
-	modulePath := path.Join(c.externalModulesDir, roMR.Spec.ModuleName, "v"+roMR.Spec.Version.String())
+	modulePath := path.Join(c.externalModulesDir, mr.Spec.ModuleName, "v"+mr.Spec.Version.String())
 
 	err := os.RemoveAll(modulePath)
 	if err != nil {
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	if roMR.Status.Phase == v1alpha1.PhaseDeployed {
-		symlinkPath := filepath.Join(c.externalModulesDir, "modules", fmt.Sprintf("%d-%s", roMR.Spec.Weight, roMR.Spec.ModuleName))
+	if mr.Status.Phase == v1alpha1.PhaseDeployed {
+		symlinkPath := filepath.Join(c.externalModulesDir, "modules", fmt.Sprintf("%d-%s", mr.Spec.Weight, mr.Spec.ModuleName))
 		err := os.RemoveAll(symlinkPath)
 		if err != nil {
 			return ctrl.Result{Requeue: true}, err
 		}
+		// TODO(yalosev): we have to disable module here somehow.
+		// otherwise, hooks from file system will fail
 	}
 
-	if !controllerutil.ContainsFinalizer(roMR, fsReleaseFinalizer) {
+	if !controllerutil.ContainsFinalizer(mr, fsReleaseFinalizer) {
 		return ctrl.Result{}, nil
 	}
 
-	mr := roMR.DeepCopy()
 	controllerutil.RemoveFinalizer(mr, fsReleaseFinalizer)
-	_, err = c.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().Update(ctx, mr, metav1.UpdateOptions{})
+	err = c.client.Update(ctx, mr)
 	if err != nil {
 		return ctrl.Result{Requeue: true}, err
 	}
@@ -408,66 +204,34 @@ func (c *Controller) deleteReconcile(ctx context.Context, roMR *v1alpha1.ModuleR
 	return ctrl.Result{}, nil
 }
 
-func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMR *v1alpha1.ModuleRelease) (ctrl.Result, error) {
-	// NEVER modify objects from the store. It's a read-only, local cache.
-	// You can use DeepCopy() to make a deep copy of original object and modify this copy
-	// Or create a copy manually for better performance
-	mr := roMR.DeepCopy()
-
+func (c *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	switch mr.Status.Phase {
 	case "":
 		mr.Status.Phase = v1alpha1.PhasePending
-		mr.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
-		if e := c.updateModuleReleaseStatus(ctx, mr); e != nil {
+		mr.Status.TransitionTime = metav1.NewTime(c.dc.GetClock().Now().UTC())
+		if e := c.client.Status().Update(ctx, mr); e != nil {
 			return ctrl.Result{Requeue: true}, e
 		}
 
-		return ctrl.Result{}, nil
+		return ctrl.Result{Requeue: true}, nil // process to the next phase
 
 	case v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended:
-		// update labels
-		addLabels(mr, map[string]string{"status": strings.ToLower(mr.Status.Phase)})
-		if err := c.updateModuleRelease(ctx, mr); err != nil {
-			return ctrl.Result{Requeue: true}, err
-		}
-		return ctrl.Result{}, nil
-
-	case v1alpha1.PhaseDeployed:
-		err := c.sendDocumentation(ctx, mr)
-		if err != nil {
-			return ctrl.Result{Requeue: true}, fmt.Errorf("send documentation: %w", err)
-		}
-
-		// add finalizer and status label
-		if !controllerutil.ContainsFinalizer(mr, fsReleaseFinalizer) {
-			controllerutil.AddFinalizer(mr, fsReleaseFinalizer)
-		}
-
-		addLabels(mr, map[string]string{"status": strings.ToLower(v1alpha1.PhaseDeployed)})
-		if e := c.updateModuleRelease(ctx, mr); e != nil {
-			return ctrl.Result{Requeue: true}, c.updateModuleRelease(ctx, mr)
-		}
-
-		// at least one release for module source is deployed, add finalizer to prevent module source deletion
-		ms, err := c.moduleSourcesLister.Get(mr.GetModuleSource())
-		if err != nil {
-			return ctrl.Result{Requeue: true}, err
-		}
-
-		if !controllerutil.ContainsFinalizer(ms, sourceReleaseFinalizer) {
-			ms = ms.DeepCopy()
-			controllerutil.AddFinalizer(ms, sourceReleaseFinalizer)
-			_, err = c.d8ClientSet.DeckhouseV1alpha1().ModuleSources().Update(ctx, ms, metav1.UpdateOptions{})
-			if err != nil {
+		if mr.Labels["status"] != strings.ToLower(mr.Status.Phase) {
+			// update labels
+			addLabels(mr, map[string]string{"status": strings.ToLower(mr.Status.Phase)})
+			if err := c.client.Update(ctx, mr); err != nil {
 				return ctrl.Result{Requeue: true}, err
 			}
 		}
 
 		return ctrl.Result{}, nil
+
+	case v1alpha1.PhaseDeployed:
+		return c.reconcileDeployedRelease(ctx, mr)
 	}
 
 	// if ModulePullOverride is set, don't process pending release, to avoid fs override
-	exists, err := c.isModulePullOverrideExists(mr.GetModuleSource(), mr.Spec.ModuleName)
+	exists, err := c.isModulePullOverrideExists(ctx, mr.GetModuleSource(), mr.Spec.ModuleName)
 	if err != nil {
 		return ctrl.Result{Requeue: true}, err
 	}
@@ -481,27 +245,105 @@ func (c *Controller) createOrUpdateReconcile(ctx context.Context, roMR *v1alpha1
 	return c.reconcilePendingRelease(ctx, mr)
 }
 
-func (c *Controller) isModulePullOverrideExists(sourceName, moduleName string) (bool, error) {
-	res, err := c.modulePullOverridesLister.List(labels.SelectorFromValidatedSet(map[string]string{"source": sourceName, "module": moduleName}))
+func (c *moduleReleaseReconciler) isModulePullOverrideExists(ctx context.Context, sourceName, moduleName string) (bool, error) {
+	var res v1alpha1.ModulePullOverrideList
+	err := c.client.List(ctx, &res, client.MatchingLabels{"source": sourceName, "module": moduleName}, client.Limit(1))
 	if err != nil {
 		return false, err
 	}
 
-	return len(res) > 0, nil
+	return len(res.Items) > 0, nil
 }
 
-func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
-	moduleName := mr.Spec.ModuleName
+func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	var metaUpdateRequired bool
+	// check if RegistrySpecChangedAnnotation annotation is set and processes it
+	if _, set := mr.GetAnnotations()[RegistrySpecChangedAnnotation]; set {
+		// if module is enabled - push runModule task in the main queue
+		c.logger.Infof("Applying new registry settings to the %s module", mr.Spec.ModuleName)
+		err := c.moduleManager.RunModuleWithNewOpenAPISchema(mr.Spec.ModuleName, mr.ObjectMeta.Labels["source"], filepath.Join(c.externalModulesDir, mr.Spec.ModuleName, fmt.Sprintf("v%s", mr.Spec.Version)))
+		if err != nil {
+			return ctrl.Result{Requeue: true}, err
+		}
+		// delete annotation and requeue
+		delete(mr.ObjectMeta.Annotations, RegistrySpecChangedAnnotation)
+		metaUpdateRequired = true
+	}
 
-	otherReleases, err := c.moduleReleasesLister.List(labels.SelectorFromValidatedSet(map[string]string{"module": moduleName}))
+	// add finalizer and status label
+	if !controllerutil.ContainsFinalizer(mr, fsReleaseFinalizer) {
+		controllerutil.AddFinalizer(mr, fsReleaseFinalizer)
+		metaUpdateRequired = true
+	}
+
+	if mr.Labels["status"] != strings.ToLower(v1alpha1.PhaseDeployed) {
+		addLabels(mr, map[string]string{"status": strings.ToLower(v1alpha1.PhaseDeployed)})
+		metaUpdateRequired = true
+	}
+
+	if metaUpdateRequired {
+		return ctrl.Result{Requeue: true}, c.client.Update(ctx, mr)
+	}
+
+	// at least one release for module source is deployed, add finalizer to prevent module source deletion
+	ms := new(v1alpha1.ModuleSource)
+	err := c.client.Get(ctx, types.NamespacedName{Name: mr.GetModuleSource()}, ms)
 	if err != nil {
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	sort.Sort(byVersion(otherReleases))
-	pred := newReleasePredictor(otherReleases)
+	if !controllerutil.ContainsFinalizer(ms, sourceReleaseFinalizer) {
+		controllerutil.AddFinalizer(ms, sourceReleaseFinalizer)
+		err = c.client.Update(ctx, ms)
+		if err != nil {
+			return ctrl.Result{Requeue: true}, err
+		}
+	}
 
-	pred.calculateRelease()
+	// checks if the modulerelease is overridden by modulepulloverride
+	mpo := new(v1alpha1.ModulePullOverride)
+	err = c.client.Get(ctx, types.NamespacedName{Name: mr.GetModuleName()}, mpo)
+	// mpo has been found and mpo version must be used as the source of the documentation
+	if err == nil {
+		return ctrl.Result{}, nil
+	}
+
+	// some other error apart from IsNotFound
+	if err != nil && !apierrors.IsNotFound(err) {
+		return ctrl.Result{Requeue: true}, err
+	}
+
+	// mpo not found - update the docs from the module release version
+	modulePath := fmt.Sprintf("/%s/v%s", mr.GetModuleName(), mr.Spec.Version.String())
+	moduleVersion := "v" + mr.Spec.Version.String()
+	checksum := mr.Labels["release-checksum"]
+	if checksum == "" {
+		checksum = fmt.Sprintf("%x", md5.Sum([]byte(moduleVersion)))
+	}
+	ownerRef := metav1.OwnerReference{
+		APIVersion: v1alpha1.ModuleReleaseGVK.GroupVersion().String(),
+		Kind:       v1alpha1.ModuleReleaseGVK.Kind,
+		Name:       mr.GetName(),
+		UID:        mr.GetUID(),
+		Controller: pointer.Bool(true),
+	}
+
+	err = createOrUpdateModuleDocumentationCR(ctx, c.client, mr.GetModuleName(), moduleVersion, checksum, modulePath, mr.GetModuleSource(), ownerRef)
+	if err != nil {
+		return ctrl.Result{Requeue: true}, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	moduleName := mr.Spec.ModuleName
+
+	otherReleases := new(v1alpha1.ModuleReleaseList)
+	err := c.client.List(ctx, otherReleases, client.MatchingLabels{"module": moduleName})
+	if err != nil {
+		return ctrl.Result{Requeue: true}, err
+	}
 
 	// search symlink for module by regexp
 	// module weight for a new version of the module may be different from the old one,
@@ -512,12 +354,73 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 	}
 
 	var modulesChangedReason string
+	defer func() {
+		if modulesChangedReason != "" {
+			c.emitRestart(modulesChangedReason)
+		}
+	}()
 
-	if pred.currentReleaseIndex == len(pred.releases)-1 {
+	nConfig, err := c.parseNotificationConfig(ctx)
+	if err != nil {
+		return ctrl.Result{Requeue: true}, fmt.Errorf("parse notification config: %w", err)
+	}
+
+	policy := new(v1alpha1.ModuleUpdatePolicy)
+	// if release has associated update policy
+	if policyName, found := mr.ObjectMeta.Labels[UpdatePolicyLabel]; found {
+		if policyName == "" {
+			policy = &v1alpha1.ModuleUpdatePolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
+					APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "",
+				},
+				Spec: *c.deckhouseEmbeddedPolicy,
+			}
+		} else {
+			// get policy spec
+			err = c.client.Get(ctx, types.NamespacedName{Name: policyName}, policy)
+			if err != nil {
+				if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy %s not found", policyName)); e != nil {
+					return ctrl.Result{Requeue: true}, e
+				}
+				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+			}
+		}
+
+		if policy.Spec.Update.Mode == "Ignore" {
+			if e := c.updateModuleReleaseStatusMessage(ctx, mr, disabledByIgnorePolicy); e != nil {
+				return ctrl.Result{Requeue: true}, e
+			}
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		}
+	} else {
+		if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy not set. Create a ModuleUpdatePolicy object and label the release '%s=<policy_name>'", UpdatePolicyLabel)); e != nil {
+			return ctrl.Result{Requeue: true}, e
+		}
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	kubeAPI := newKubeAPI(ctx, c.logger, c.client, c.externalModulesDir, c.symlinksDir, c.moduleManager, c.dc)
+	releaseUpdater := newModuleUpdater(c.logger, nConfig, policy.Spec.Update.Mode, kubeAPI, c.moduleManager.GetEnabledModuleNames())
+
+	pointerReleases := make([]*v1alpha1.ModuleRelease, 0, len(otherReleases.Items))
+	for _, r := range otherReleases.Items {
+		pointerReleases = append(pointerReleases, &r)
+	}
+	releaseUpdater.PrepareReleases(pointerReleases)
+	if releaseUpdater.ReleasesCount() == 0 {
+		return ctrl.Result{}, nil
+	}
+
+	releaseUpdater.PredictNextRelease()
+
+	if releaseUpdater.LastReleaseDeployed() {
 		// latest release deployed
-		deployedRelease := pred.releases[pred.currentReleaseIndex]
+		deployedRelease := otherReleases.Items[releaseUpdater.GetCurrentDeployedReleaseIndex()]
 		deckhouseconfig.Service().AddModuleNameToSource(deployedRelease.Spec.ModuleName, deployedRelease.GetModuleSource())
-		c.sourceModules[deployedRelease.Spec.ModuleName] = deployedRelease.GetModuleSource()
 
 		// check symlink exists on FS, relative symlink
 		modulePath := generateModulePath(moduleName, deployedRelease.Spec.Version.String())
@@ -527,7 +430,7 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 			err = enableModule(c.externalModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
 			if err != nil {
 				c.logger.Errorf("Module restore failed: %v", err)
-				if e := c.suspendModuleVersionForRelease(ctx, deployedRelease, err); e != nil {
+				if e := c.suspendModuleVersionForRelease(ctx, &deployedRelease, err); e != nil {
 					return ctrl.Result{Requeue: true}, e
 				}
 
@@ -535,219 +438,53 @@ func (c *Controller) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.M
 			}
 			// defer restart
 			modulesChangedReason = "one of modules is not enabled"
-			defer c.emitRestart(modulesChangedReason)
 		}
-	}
 
-	if len(pred.skippedPatchesIndexes) > 0 {
-		for _, index := range pred.skippedPatchesIndexes {
-			release := pred.releases[index]
+		for _, index := range releaseUpdater.GetSkippedPatchesIndexes() {
+			release := otherReleases.Items[index]
 
 			release.Status.Phase = v1alpha1.PhaseSuperseded
 			release.Status.Message = ""
-			release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
-			if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
+			release.Status.TransitionTime = metav1.NewTime(c.dc.GetClock().Now().UTC())
+			if e := c.client.Status().Update(ctx, &release); e != nil {
 				return ctrl.Result{Requeue: true}, e
 			}
 		}
+
+		return ctrl.Result{}, nil
 	}
 
-	if pred.desiredReleaseIndex >= 0 {
-		release := pred.releases[pred.desiredReleaseIndex]
-		ts := time.Now().UTC()
-		// if release has associated update policy
-		if policyName, found := release.ObjectMeta.Labels[UpdatePolicyLabel]; found {
-			var policy *v1alpha1.ModuleUpdatePolicy
-			if policyName == "" {
-				policy = &v1alpha1.ModuleUpdatePolicy{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
-						APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "",
-					},
-					Spec: *c.deckhouseEmbeddedPolicy,
-				}
-			} else {
-				// get policy spec
-				policy, err = c.moduleUpdatePoliciesLister.Get(policyName)
-				if err != nil {
-					if e := c.updateModuleReleaseStatusMessage(ctx, release, fmt.Sprintf("Update policy %s not found", policyName)); e != nil {
-						return ctrl.Result{Requeue: true}, e
-					}
-					return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-				}
-			}
+	if releaseUpdater.GetPredictedReleaseIndex() == -1 {
+		return ctrl.Result{}, nil
+	}
 
-			switch policy.Spec.Update.Mode {
-			case "Ignore":
-				if e := c.updateModuleReleaseStatusMessage(ctx, release, disabledByIgnorePolicy); e != nil {
-					return ctrl.Result{Requeue: true}, e
-				}
-				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-
-			case "Manual":
-				if !isReleaseApproved(release) {
-					if e := c.updateModuleReleaseStatusMessage(ctx, release, manualApprovalRequired); e != nil {
-						return ctrl.Result{Requeue: true}, e
-					}
-					return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-				}
-				release.Status.Approved = true
-
-			case "Auto":
-				if !policy.Spec.Update.Windows.IsAllowed(ts) {
-					if e := c.updateModuleReleaseStatusMessage(ctx, release, fmt.Sprintf(waitingForWindow, policy.Spec.Update.Windows.NextAllowedTime(ts))); e != nil {
-						return ctrl.Result{Requeue: true}, e
-					}
-					return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-				}
-			}
-
-			// download desired module version
-			ms, err := c.moduleSourcesLister.Get(mr.GetModuleSource())
-			if err != nil {
-				return ctrl.Result{Requeue: true}, err
-			}
-
-			md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
-			ds, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
-			if err != nil {
-				return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
-			}
-
-			release, err = c.updateModuleReleaseDownloadStatistic(ctx, release, ds)
-			if err != nil {
-				return ctrl.Result{Requeue: true}, fmt.Errorf("update module release download statistic: %w", err)
-			}
-
-			moduleVersionPath := path.Join(c.externalModulesDir, moduleName, "v"+release.Spec.Version.String())
-			relativeModulePath := generateModulePath(moduleName, release.Spec.Version.String())
-			newModuleSymlink := path.Join(c.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, moduleName))
-
-			def := models.DeckhouseModuleDefinition{
-				Name:   moduleName,
-				Weight: release.Spec.Weight,
-				Path:   moduleVersionPath,
-			}
-			err = validateModule(c.modulesValidator, def)
-			if err != nil {
-				c.logger.Errorf("Module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
-				release.Status.Phase = v1alpha1.PhaseSuspended
-				if e := c.updateModuleReleaseStatusMessage(ctx, release, "validation failed: "+err.Error()); e != nil {
-					return ctrl.Result{Requeue: true}, e
-				}
-
-				return ctrl.Result{}, nil
-			}
-
-			err = enableModule(c.externalModulesDir, currentModuleSymlink, newModuleSymlink, relativeModulePath)
-			if err != nil {
-				c.logger.Errorf("Module deploy failed: %v", err)
-				if e := c.suspendModuleVersionForRelease(ctx, release, err); e != nil {
-					return ctrl.Result{Requeue: true}, e
-				}
-			}
-			// disable target module hooks so as not to invoke them before restart
-			if c.modulesValidator.GetModule(moduleName) != nil {
-				c.modulesValidator.DisableModuleHooks(moduleName)
-			}
-			// after deploying a new release, mark previous one (if any) as superseded
-			if pred.currentReleaseIndex >= 0 {
-				release := pred.releases[pred.currentReleaseIndex]
-				release.Status.Phase = v1alpha1.PhaseSuperseded
-				release.Status.Message = ""
-				release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
-				if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
-					return ctrl.Result{Requeue: true}, e
-				}
-			}
-
-			// defer restart
-			if modulesChangedReason == "" {
-				modulesChangedReason = "a new module release found"
-				defer c.emitRestart(modulesChangedReason)
-			}
-
-			release.Status.Phase = v1alpha1.PhaseDeployed
-			release.Status.Message = ""
-			release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
-			if e := c.updateModuleReleaseStatus(ctx, release); e != nil {
-				return ctrl.Result{Requeue: true}, e
-			}
-		} else {
-			if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy not set. Create a ModuleUpdatePolicy object and label the release '%s=<policy_name>'", UpdatePolicyLabel)); e != nil {
-				return ctrl.Result{Requeue: true}, e
-			}
+	if releaseUpdater.PredictedReleaseIsPatch() {
+		// patch release does not respect update windows or ManualMode
+		if !releaseUpdater.ApplyPredictedRelease(nil) {
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
+
+		modulesChangedReason = "a new module release found"
+		return ctrl.Result{}, nil
 	}
 
+	var windows update.Windows
+	if !releaseUpdater.InManualMode() {
+		windows = policy.Spec.Update.Windows
+	}
+
+	if !releaseUpdater.ApplyPredictedRelease(windows) {
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	modulesChangedReason = "a new module release found"
 	return ctrl.Result{}, nil
 }
 
-func (c *Controller) processNextLease(ctx context.Context) bool {
-	obj, shutdown := c.leaseWorkqueue.Get()
-	if shutdown {
-		return false
-	}
-
-	err := func(obj interface{}) error {
-		defer c.leaseWorkqueue.Done(obj)
-		var key cache.ObjectName
-		var ok bool
-		var req ctrl.Request
-
-		if key, ok = obj.(cache.ObjectName); !ok {
-			c.leaseWorkqueue.Forget(obj)
-			c.logger.Errorf("expected cache.ObjectName in workqueue but got %#v", obj)
-			return nil
-		}
-
-		req.Namespace, req.Name = key.Parts()
-		result, err := c.leaseCreateReconcile(ctx, req)
-		switch {
-		case result.RequeueAfter != 0:
-			c.leaseWorkqueue.AddAfter(key, result.RequeueAfter)
-
-		case result.Requeue:
-			c.leaseWorkqueue.AddRateLimited(key)
-
-		default:
-			c.leaseWorkqueue.Forget(key)
-		}
-
-		return err
-	}(obj)
-	if err != nil {
-		c.logger.Errorf("Lease reconcile error: %s", err.Error())
-		return true
-	}
-
-	return true
-}
-
-func (c *Controller) leaseCreateReconcile(_ context.Context, _ ctrl.Request) (ctrl.Result, error) {
-	releases, err := c.moduleReleasesLister.List(labels.Everything())
-	if err != nil {
-		return ctrl.Result{Requeue: true}, fmt.Errorf("fetch ModuleReleases failed: %w", err)
-	}
-
-	for _, release := range releases {
-		if release.Status.Phase != v1alpha1.PhaseDeployed {
-			continue
-		}
-
-		c.enqueueModuleRelease(release)
-	}
-
-	return ctrl.Result{}, nil
-}
-
-func (c *Controller) Reconcile(ctx context.Context, releaseName string) (ctrl.Result, error) {
+func (c *moduleReleaseReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	// Get the ModuleRelease resource with this name
-	mr, err := c.moduleReleasesLister.Get(releaseName)
+	mr := new(v1alpha1.ModuleRelease)
+	err := c.client.Get(ctx, types.NamespacedName{Name: request.Name}, mr)
 	if err != nil {
 		// The ModuleRelease resource may no longer exist, in which case we stop
 		// processing.
@@ -765,16 +502,16 @@ func (c *Controller) Reconcile(ctx context.Context, releaseName string) (ctrl.Re
 	return c.createOrUpdateReconcile(ctx, mr)
 }
 
-func (c *Controller) suspendModuleVersionForRelease(ctx context.Context, release *v1alpha1.ModuleRelease, err error) error {
+func (c *moduleReleaseReconciler) suspendModuleVersionForRelease(ctx context.Context, release *v1alpha1.ModuleRelease, err error) error {
 	if os.IsNotExist(err) {
 		err = errors.New("not found")
 	}
 
 	release.Status.Phase = v1alpha1.PhaseSuspended
 	release.Status.Message = fmt.Sprintf("Desired version of the module met problems: %s", err)
-	release.Status.TransitionTime = metav1.NewTime(time.Now().UTC())
+	release.Status.TransitionTime = metav1.NewTime(c.dc.GetClock().Now().UTC())
 
-	return c.updateModuleReleaseStatus(ctx, release)
+	return c.client.Status().Update(ctx, release)
 }
 
 func enableModule(externalModulesDir, oldSymlinkPath, newSymlinkPath, modulePath string) error {
@@ -808,7 +545,7 @@ func findExistingModuleSymlink(rootPath, moduleName string) (string, error) {
 	var symlinkPath string
 
 	moduleRegexp := regexp.MustCompile(`^(([0-9]+)-)?(` + moduleName + `)$`)
-	walkDir := func(path string, d os.DirEntry, err error) error {
+	walkDir := func(path string, d os.DirEntry, _ error) error {
 		if !moduleRegexp.MatchString(d.Name()) {
 			return nil
 		}
@@ -854,14 +591,14 @@ func addLabels(mr *v1alpha1.ModuleRelease, labels map[string]string) {
 }
 
 // updateModuleReleaseStatusMessage updates module release's `.status.message field
-func (c *Controller) updateModuleReleaseStatusMessage(ctx context.Context, mrCopy *v1alpha1.ModuleRelease, message string) error {
-	if mrCopy.Status.Message == message {
+func (c *moduleReleaseReconciler) updateModuleReleaseStatusMessage(ctx context.Context, mr *v1alpha1.ModuleRelease, message string) error {
+	if mr.Status.Message == message {
 		return nil
 	}
 
-	mrCopy.Status.Message = message
+	mr.Status.Message = message
 
-	err := c.updateModuleReleaseStatus(ctx, mrCopy)
+	err := c.client.Status().Update(ctx, mr)
 	if err != nil {
 		return err
 	}
@@ -869,47 +606,41 @@ func (c *Controller) updateModuleReleaseStatusMessage(ctx context.Context, mrCop
 	return nil
 }
 
-func (c *Controller) updateModuleReleaseStatus(ctx context.Context, mrCopy *v1alpha1.ModuleRelease) error {
-	// NEVER modify objects from the store. It's a read-only, local cache.
-	// You can use DeepCopy() to make a deep copy of original object and modify this copy
-	// Or create a copy manually for better performance
-	_, err := c.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, mrCopy, metav1.UpdateOptions{})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *Controller) updateModuleRelease(ctx context.Context, mrCopy *v1alpha1.ModuleRelease) error {
-	// NEVER modify objects from the store. It's a read-only, local cache.
-	// You can use DeepCopy() to make a deep copy of original object and modify this copy
-	// Or create a copy manually for better performance
-	_, err := c.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().Update(ctx, mrCopy, metav1.UpdateOptions{})
-	return err
-}
-
-// RunPreflightCheck start a few checks and synchronize deckhouse filesystem with ModuleReleases
+// PreflightCheck start a few checks and synchronize deckhouse filesystem with ModuleReleases
 //   - Download modules, which have status=deployed on ModuleRelease but have no files on Filesystem
 //   - Delete modules, that don't have ModuleRelease presented in the cluster
-func (c *Controller) RunPreflightCheck(ctx context.Context) error {
+func (c *moduleReleaseReconciler) PreflightCheck(ctx context.Context) (err error) {
+	defer func() {
+		if err == nil {
+			c.preflightCountDown.Done()
+		}
+	}()
 	if c.externalModulesDir == "" {
 		return nil
 	}
 
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleReleasesSynced, c.moduleSourcesSynced, c.moduleUpdatePoliciesSynced, c.modulePullOverridesSynced); !ok {
-		c.logger.Fatal("failed to wait for caches to sync")
-	}
+	// Check if controller's dependencies have been initialized
+	_ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
+		func(context.Context) (bool, error) {
+			// TODO: add modulemanager initialization check c.moduleManager.AreModulesInited() (required for reloading modules without restarting deckhouse)
+			return deckhouseconfig.IsServiceInited(), nil
+		})
 
-	err := c.restoreAbsentSourceModules()
+	go c.restartLoop(ctx)
+	err = c.restoreAbsentModulesFromReleases(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("modules restoration from releases failed: %w", err)
 	}
 
-	return c.deleteModulesWithAbsentRelease()
+	err = c.deleteModulesWithAbsentRelease(ctx)
+	if err != nil {
+		return fmt.Errorf("absent modules cleanup failed: %w", err)
+	}
+
+	return c.registerMetrics(ctx)
 }
 
-func (c *Controller) deleteModulesWithAbsentRelease() error {
+func (c *moduleReleaseReconciler) deleteModulesWithAbsentRelease(ctx context.Context) error {
 	symlinksDir := filepath.Join(c.externalModulesDir, "modules")
 
 	fsModulesLinks, err := c.readModulesFromFS(symlinksDir)
@@ -917,20 +648,22 @@ func (c *Controller) deleteModulesWithAbsentRelease() error {
 		return fmt.Errorf("read source modules from the filesystem failed: %w", err)
 	}
 
-	releases, err := c.moduleReleasesLister.List(labels.Everything())
+	var releasesList v1alpha1.ModuleReleaseList
+	err = c.client.List(ctx, &releasesList)
 	if err != nil {
 		return fmt.Errorf("fetch ModuleReleases failed: %w", err)
 	}
+	releases := releasesList.Items
 
 	c.logger.Debugf("%d ModuleReleases found", len(releases))
 
 	for _, release := range releases {
-		c.sourceModules[release.Spec.ModuleName] = release.GetModuleSource()
 		delete(fsModulesLinks, release.Spec.ModuleName)
 	}
 
 	for module, moduleLinkPath := range fsModulesLinks {
-		_, err = c.modulePullOverridesLister.Get(module)
+		var mpo v1alpha1.ModulePullOverride
+		err = c.client.Get(ctx, types.NamespacedName{Name: module}, &mpo)
 		if err != nil && apierrors.IsNotFound(err) {
 			c.logger.Warnf("Module %q has neither ModuleRelease nor ModuleOverride. Purging from FS", module)
 			_ = os.RemoveAll(moduleLinkPath)
@@ -940,11 +673,7 @@ func (c *Controller) deleteModulesWithAbsentRelease() error {
 	return nil
 }
 
-func (c *Controller) GetModuleSources() map[string]string {
-	return c.sourceModules
-}
-
-func (c *Controller) readModulesFromFS(dir string) (map[string]string, error) {
+func (c *moduleReleaseReconciler) readModulesFromFS(dir string) (map[string]string, error) {
 	moduleLinks, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
@@ -965,9 +694,10 @@ func (c *Controller) readModulesFromFS(dir string) (map[string]string, error) {
 	return modules, nil
 }
 
-// restoreAbsentSourceModules checks ModuleReleases with Deployed status and restore them on the FS
-func (c *Controller) restoreAbsentSourceModules() error {
-	releaseList, err := c.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().List(context.TODO(), metav1.ListOptions{})
+// restoreAbsentModulesFromReleases checks ModuleReleases with Deployed status and restore them on the FS
+func (c *moduleReleaseReconciler) restoreAbsentModulesFromReleases(ctx context.Context) error {
+	var releaseList v1alpha1.ModuleReleaseList
+	err := c.client.List(ctx, &releaseList)
 	if err != nil {
 		return err
 	}
@@ -978,13 +708,18 @@ func (c *Controller) restoreAbsentSourceModules() error {
 			continue
 		}
 
+		// ignore deleted Releases
+		if !item.ObjectMeta.DeletionTimestamp.IsZero() {
+			continue
+		}
+
 		moduleWeight := item.Spec.Weight
 		moduleVersion := "v" + item.Spec.Version.String()
 		moduleName := item.Spec.ModuleName
 		moduleSource := item.GetModuleSource()
 
 		// if ModulePullOverride is set, don't check and restore overridden release
-		exists, err := c.isModulePullOverrideExists(moduleSource, moduleName)
+		exists, err := c.isModulePullOverrideExists(ctx, moduleSource, moduleName)
 		if err != nil {
 			c.logger.Errorf("Couldn't check module pull override for module %s: %s", moduleName, err)
 		}
@@ -994,138 +729,148 @@ func (c *Controller) restoreAbsentSourceModules() error {
 			continue
 		}
 
-		moduleDir := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", item.Spec.Weight, item.Spec.ModuleName))
-		_, err = os.Stat(moduleDir)
+		// get relevant module source
+		ms := new(v1alpha1.ModuleSource)
+		err = c.client.Get(ctx, types.NamespacedName{Name: moduleSource}, ms)
 		if err != nil {
-			// module dir not found
+			return fmt.Errorf("ModuleSource %v for ModuleRelease/%s/%s got an error: %w", moduleSource, moduleName, moduleVersion, err)
+		}
+
+		moduleSymLink := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", item.Spec.Weight, item.Spec.ModuleName))
+		_, err = os.Stat(moduleSymLink)
+		if err != nil {
+			// module symlink not found
+			c.logger.Infof("Module %q symlink is absent on file system. Restoring it", moduleName)
 			if os.IsNotExist(err) {
-				err := c.createModuleSymlink(moduleName, moduleVersion, moduleSource, moduleWeight)
+				err := c.createModuleSymlink(moduleName, moduleVersion, ms, moduleWeight)
 				if err != nil {
-					c.logger.Warnf("Couldn't create module symlink: %s", err)
-					continue
+					return fmt.Errorf("couldn't create module symlink: %s", err)
 				}
 				// some other error
 			} else {
-				c.logger.Errorf("Module %s check error: %s", moduleName, err)
-				continue
+				return fmt.Errorf("module %s check error: %s", moduleName, err)
 			}
-			// check if module versions is up to date
+			// check if module symlink leads to current version
 		} else {
-			dstDir, err := filepath.EvalSymlinks(moduleDir)
+			dstDir, err := filepath.EvalSymlinks(moduleSymLink)
 			if err != nil {
-				c.logger.Errorf("Couldn't evaluate module %s symlink %s: %s", moduleName, moduleDir, err)
-				continue
+				return fmt.Errorf("couldn't evaluate module %s symlink %s: %s", moduleName, moduleSymLink, err)
 			}
 
-			// module version on file system doesn't equal to the deployed module release
+			// module symlink leads to some other version.
+			// also, if dstDir doesn't exist, its Base evaluates to .
 			if filepath.Base(dstDir) != moduleVersion {
-				if err := os.Remove(moduleDir); err != nil {
-					c.logger.Warnf("Couldn't delete stale symlink %s for module %s: err", moduleDir, moduleName, err)
-					continue
-				}
-				if err := c.createModuleSymlink(moduleName, moduleVersion, moduleSource, moduleWeight); err != nil {
-					c.logger.Warnf("Couldn't create module symlink: %s", err)
-					continue
+				c.logger.Infof("Module %q symlink is incorrect. Restoring it", moduleName)
+				if err := c.createModuleSymlink(moduleName, moduleVersion, ms, moduleWeight); err != nil {
+					return fmt.Errorf("couldn't create module symlink: %s", err)
 				}
 			}
 		}
-	}
 
-	// restoring modules from MPO
-	mpoList, err := c.d8ClientSet.DeckhouseV1alpha1().ModulePullOverrides().List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-
-	for _, item := range mpoList.Items {
-		moduleName := item.Name
-		moduleSource := item.Spec.Source
-		moduleImageTag := item.Spec.ImageTag
-
-		ms, err := c.moduleSourcesLister.Get(moduleSource)
-		if err != nil {
-			c.logger.Warnf("ModuleSource %s is absent. Skipping restoration of the module %s with pull override", moduleSource, moduleName)
-			continue
+		// sync registry spec
+		if err := syncModuleRegistrySpec(c.externalModulesDir, moduleName, moduleVersion, ms); err != nil {
+			return fmt.Errorf("couldn't sync the %s module's registry settings with the %s module source: %w", moduleName, ms.Name, err)
 		}
-
-		md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
-		_, moduleDef, err := md.DownloadDevImageTag(moduleName, moduleImageTag, "")
-		if err != nil {
-			c.logger.Warnf("Couldn't get module %s pull override definition: %s", moduleName, err)
-			continue
-		}
-
-		if moduleDef == nil {
-			c.logger.Warnf("Module definition for module %s pull override is nil. Ignore", moduleName)
-			continue
-		}
-
-		moduleWeight := moduleDef.Weight
-		moduleDir := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", moduleWeight, moduleName))
-		_, err = os.Stat(moduleDir)
-		if err != nil {
-			// module dir not found
-			if os.IsNotExist(err) {
-				err := c.deleteStaleSymlink(moduleName)
-				if err != nil {
-					c.logger.Warnf("%s", err)
-				}
-
-				// restore symlink
-				moduleRelativePath := filepath.Join("../", moduleName, "dev")
-				symlinkPath := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", moduleWeight, moduleName))
-				err = restoreModuleSymlink(c.externalModulesDir, symlinkPath, moduleRelativePath)
-				if err != nil {
-					c.logger.Warnf("Create symlink for module %s failed: %s", moduleName, err)
-					continue
-				}
-
-				log.Infof("Module %s with pull override restored", moduleName)
-				// some other error
-			} else {
-				c.logger.Errorf("Module %s with pull override check error: %s", moduleName, err)
-				continue
-			}
-		}
+		c.logger.Infof("Resynced the %s module's registry settings with the %s module source", moduleName, ms.Name)
 	}
 	return nil
 }
 
-// deleteStaleSymlink checks if there is a symlink for the module with different weight in the symlink folder
-// and deletes it
-func (c *Controller) deleteStaleSymlink(moduleName string) error {
-	anotherModuleSymlink, err := findExistingModuleSymlink(c.symlinksDir, moduleName)
+type moduleOpenAPISpec struct {
+	Properties struct {
+		Registry struct {
+			Properties struct {
+				Base struct {
+					Default string `yaml:"default"`
+				} `yaml:"base"`
+				DockerCFG struct {
+					Default string `yaml:"default"`
+				} `yaml:"dockercfg"`
+				Scheme struct {
+					Default string `yaml:"default"`
+				} `yaml:"scheme"`
+				CA struct {
+					Default string `yaml:"default"`
+				} `yaml:"ca"`
+			} `yaml:"properties"`
+		} `yaml:"registry,omitempty"`
+	} `yaml:"properties,omitempty"`
+}
+
+// syncModulesRegistrySpec compares and updates current registry settings of a deployed module (in the ./openapi/values.yaml file)
+// and the registry settings set in the related module source
+func syncModuleRegistrySpec(externalModulesDir, moduleName, moduleVersion string, moduleSource *v1alpha1.ModuleSource) error {
+	var openAPISpec moduleOpenAPISpec
+
+	openAPIFile, err := os.Open(filepath.Join(externalModulesDir, moduleName, moduleVersion, "openapi/values.yaml"))
 	if err != nil {
-		return fmt.Errorf("Couldn't check if there are any other symlinks for module %v: %w", moduleName, err)
+		return fmt.Errorf("couldn't open the %s module's openapi values: %w", moduleName, err)
 	}
-	if len(anotherModuleSymlink) > 0 {
-		if err := os.Remove(anotherModuleSymlink); err != nil {
-			return fmt.Errorf("Couldn't delete stale symlink %v for module %v: %w", anotherModuleSymlink, moduleName, err)
-		}
+	defer openAPIFile.Close()
+
+	b, err := io.ReadAll(openAPIFile)
+	if err != nil {
+		return fmt.Errorf("couldn't read from the %s module's openapi values: %w", moduleName, err)
 	}
 
+	err = yaml.Unmarshal(b, &openAPISpec)
+	if err != nil {
+		return fmt.Errorf("couldn't unmarshal the %s module's registry spec: %w", moduleName, err)
+	}
+
+	registrySpec := openAPISpec.Properties.Registry.Properties
+
+	if moduleSource.Spec.Registry.CA != registrySpec.CA.Default || moduleSource.Spec.Registry.DockerCFG != registrySpec.DockerCFG.Default || moduleSource.Spec.Registry.Repo != registrySpec.Base.Default || moduleSource.Spec.Registry.Scheme != registrySpec.Scheme.Default {
+		err = downloader.InjectRegistryToModuleValues(filepath.Join(externalModulesDir, moduleName, moduleVersion), moduleSource)
+	}
+
+	return err
+}
+
+// wipeModuleSymlinks checks if there are symlinks for the module with different weight in the symlink folder
+func wipeModuleSymlinks(symlinksDir, moduleName string) error {
+	// delete all module's symlinks in a loop
+	for {
+		anotherModuleSymlink, err := findExistingModuleSymlink(symlinksDir, moduleName)
+		if err != nil {
+			return fmt.Errorf("couldn't check if there are any other symlinks for module %v: %w", moduleName, err)
+		}
+
+		if len(anotherModuleSymlink) > 0 {
+			if err := os.Remove(anotherModuleSymlink); err != nil {
+				return fmt.Errorf("couldn't delete stale symlink %v for module %v: %w", anotherModuleSymlink, moduleName, err)
+			}
+			// go for another spin
+			continue
+		}
+
+		// no more symlinks found
+		break
+	}
 	return nil
 }
 
-// createModuleSymlink checks if there is a stale symlink for a module in the symlink dir and deletes it before
+// createModuleSymlink checks if there are any other symlinks for a module in the symlink dir and deletes them before
 // attempting to download current version of the module and creating correct symlink
-func (c *Controller) createModuleSymlink(moduleName, moduleVersion, moduleSource string, moduleWeight uint32) error {
-	log.Infof("Module %q is absent on file system. Restoring it from source %q", moduleName, moduleSource)
+func (c *moduleReleaseReconciler) createModuleSymlink(moduleName, moduleVersion string, moduleSource *v1alpha1.ModuleSource, moduleWeight uint32) error {
+	c.logger.Infof("Module %q is absent on file system. Restoring it from source %q", moduleName, moduleSource.Name)
 
-	err := c.deleteStaleSymlink(moduleName)
+	// removing possible symlink doubles
+	err := wipeModuleSymlinks(c.symlinksDir, moduleName)
 	if err != nil {
 		return err
 	}
 
-	ms, err := c.moduleSourcesLister.Get(moduleSource)
-	if err != nil {
-		return fmt.Errorf("ModuleSource %v is absent. Skipping restoration of the module %v", moduleSource, moduleName)
-	}
-
-	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
-	_, err = md.DownloadByModuleVersion(moduleName, moduleVersion)
-	if err != nil {
-		return fmt.Errorf("Download module %v with version %v failed: %w. Skipping", moduleName, moduleVersion, err)
+	// check if module's directory exists on fs
+	info, err := os.Stat(path.Join(c.externalModulesDir, moduleName, moduleVersion))
+	if err != nil || !info.IsDir() {
+		c.logger.Infof("Downloading module %q from registry", moduleName)
+		// download the module to fs
+		md := downloader.NewModuleDownloader(c.dc, c.externalModulesDir, moduleSource, utils.GenerateRegistryOptions(moduleSource))
+		_, err = md.DownloadByModuleVersion(moduleName, moduleVersion)
+		if err != nil {
+			return fmt.Errorf("download module %v with version %v failed: %w. Skipping", moduleName, moduleVersion, err)
+		}
 	}
 
 	// restore symlink
@@ -1133,14 +878,38 @@ func (c *Controller) createModuleSymlink(moduleName, moduleVersion, moduleSource
 	symlinkPath := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", moduleWeight, moduleName))
 	err = restoreModuleSymlink(c.externalModulesDir, symlinkPath, moduleRelativePath)
 	if err != nil {
-		return fmt.Errorf("Create symlink for module %v failed: %w", moduleName, err)
+		return fmt.Errorf("creating symlink for module %v failed: %w", moduleName, err)
 	}
-	log.Infof("Module %s:%s restored", moduleName, moduleVersion)
+	c.logger.Infof("Module %s:%s restored to %s", moduleName, moduleVersion, moduleRelativePath)
 
 	return nil
 }
 
-func validateModule(validator moduleValidator, def models.DeckhouseModuleDefinition) error {
+func (c *moduleReleaseReconciler) parseNotificationConfig(ctx context.Context) (*updater.NotificationConfig, error) {
+	var secret corev1.Secret
+	err := c.client.Get(ctx, types.NamespacedName{Name: "deckhouse-discovery", Namespace: "d8-system"}, &secret)
+	if err != nil {
+		return nil, fmt.Errorf("get secret: %w", err)
+	}
+
+	jsonSettings, ok := secret.Data["updateSettings.json"]
+	if !ok {
+		return new(updater.NotificationConfig), nil
+	}
+
+	var settings struct {
+		NotificationConfig *updater.NotificationConfig `json:"notification"`
+	}
+
+	err = json.Unmarshal(jsonSettings, &settings)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal json: %w", err)
+	}
+
+	return settings.NotificationConfig, nil
+}
+
+func validateModule(def models.DeckhouseModuleDefinition) error {
 	if def.Weight < 900 || def.Weight > 999 {
 		return fmt.Errorf("external module weight must be between 900 and 999")
 	}
@@ -1149,10 +918,14 @@ func validateModule(validator moduleValidator, def models.DeckhouseModuleDefinit
 		return fmt.Errorf("cannot validate module without path. Path is required to load openapi specs")
 	}
 
-	dm := models.NewDeckhouseModule(def, addonutils.Values{}, validator.GetValuesValidator())
-	err := validator.ValidateModule(dm.GetBasicModule())
+	dm, err := models.NewDeckhouseModule(def, addonutils.Values{}, nil, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("new deckhouse module: %w", err)
+	}
+
+	err = dm.GetBasicModule().Validate()
+	if err != nil {
+		return fmt.Errorf("validate module: %w", err)
 	}
 
 	return nil
@@ -1169,116 +942,29 @@ func restoreModuleSymlink(externalModulesDir, symlinkPath, moduleRelativePath st
 	return os.Symlink(moduleRelativePath, symlinkPath)
 }
 
-type byVersion []*v1alpha1.ModuleRelease
-
-func (b byVersion) Len() int {
-	return len(b)
-}
-
-func (b byVersion) Swap(i, j int) {
-	b[i], b[j] = b[j], b[i]
-}
-
-func (b byVersion) Less(i, j int) bool {
-	return b[i].Spec.Version.LessThan(b[j].Spec.Version)
-}
-
-func isReleaseApproved(release *v1alpha1.ModuleRelease) bool {
-	if approved, found := release.ObjectMeta.Annotations[approvalAnnotation]; found {
-		value, err := strconv.ParseBool(approved)
-		if err != nil {
-			return false
-		}
-		return value
-	}
-	return false
-}
-
-type moduleValidator interface {
-	ValidateModule(m *addonmodules.BasicModule) error
-	GetValuesValidator() *validation.ValuesValidator
+type moduleManager interface {
 	DisableModuleHooks(moduleName string)
 	GetModule(moduleName string) *addonmodules.BasicModule
+	RunModuleWithNewOpenAPISchema(moduleName, moduleSource, modulePath string) error
+	GetEnabledModuleNames() []string
 }
 
-func (c *Controller) sendDocumentation(ctx context.Context, mr *v1alpha1.ModuleRelease) error {
-	addrs, err := c.getDocsBuilderAddresses(ctx)
-	if err != nil {
-		return fmt.Errorf("get docs builder addresses: %w", err)
-	}
-
-	if len(addrs) == 0 {
-		return nil
-	}
-
-	ms, err := c.moduleSourcesLister.Get(mr.GetModuleSource())
-	if err != nil {
-		return fmt.Errorf("get module source: %w", err)
-	}
-
-	md := downloader.NewModuleDownloader(c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
-	for _, addr := range addrs {
-		err := c.buildDocumentation(addr, md, mr.Spec.ModuleName, "v"+mr.Spec.Version.String())
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (c *Controller) getDocsBuilderAddresses(ctx context.Context) (addresses []string, err error) {
-	list, err := c.kubeclientset.CoordinationV1().Leases("d8-system").List(ctx, metav1.ListOptions{LabelSelector: docsLeaseLabel})
-	if err != nil {
-		return nil, fmt.Errorf("list leases: %w", err)
-	}
-
-	for _, lease := range list.Items {
-		if lease.Spec.HolderIdentity == nil {
-			continue
-		}
-
-		addresses = append(addresses, "http://"+*lease.Spec.HolderIdentity)
-	}
-
-	return
-}
-
-func (c *Controller) buildDocumentation(baseAddr string, md *downloader.ModuleDownloader, moduleName, moduleVersion string) error {
-	docsArchive, err := md.GetDocumentationArchive(moduleName, moduleVersion)
-	if err != nil {
-		return fmt.Errorf("get documentation archive: %w", err)
-	}
-	defer docsArchive.Close()
-
-	err = c.docsBuilder.SendDocumentation(baseAddr, moduleName, moduleVersion, docsArchive)
-	if err != nil {
-		return fmt.Errorf("send documentation: %w", err)
-	}
-
-	err = c.docsBuilder.BuildDocumentation(baseAddr)
-	if err != nil {
-		return fmt.Errorf("build documentation: %w", err)
-	}
-
-	return nil
-}
-
-func (c *Controller) updateModuleReleaseDownloadStatistic(ctx context.Context, release *v1alpha1.ModuleRelease,
+func (c *moduleReleaseReconciler) updateModuleReleaseDownloadStatistic(ctx context.Context, release *v1alpha1.ModuleRelease,
 	ds *downloader.DownloadStatistic) (*v1alpha1.ModuleRelease, error) {
 	release.Status.Size = ds.Size
 	release.Status.PullDuration = metav1.Duration{Duration: ds.PullDuration}
 
-	return c.d8ClientSet.DeckhouseV1alpha1().ModuleReleases().UpdateStatus(ctx, release, metav1.UpdateOptions{})
+	return release, c.client.Status().Update(ctx, release)
 }
 
-func (c *Controller) registerMetrics() error {
-	releases, err := c.moduleReleasesLister.List(labels.Everything())
+func (c *moduleReleaseReconciler) registerMetrics(ctx context.Context) error {
+	var releasesList v1alpha1.ModuleReleaseList
+	err := c.client.List(ctx, &releasesList)
 	if err != nil {
 		return fmt.Errorf("list module releases: %w", err)
 	}
 
-	for _, release := range releases {
+	for _, release := range releasesList.Items {
 		l := map[string]string{
 			"version": release.Spec.Version.String(),
 			"module":  release.Spec.ModuleName,
@@ -1286,6 +972,60 @@ func (c *Controller) registerMetrics() error {
 
 		c.metricStorage.GaugeSet("{PREFIX}module_pull_seconds_total", release.Status.PullDuration.Seconds(), l)
 		c.metricStorage.GaugeSet("{PREFIX}module_size_bytes_total", float64(release.Status.Size), l)
+	}
+
+	return nil
+}
+
+func createOrUpdateModuleDocumentationCR(
+	ctx context.Context,
+	client client.Client,
+	moduleName, moduleVersion, moduleChecksum, modulePath, moduleSource string,
+	ownerRef metav1.OwnerReference,
+) error {
+	var md v1alpha1.ModuleDocumentation
+	err := client.Get(ctx, types.NamespacedName{Name: moduleName}, &md)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// just create
+			md = v1alpha1.ModuleDocumentation{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.ModuleDocumentationGVK.Kind,
+					APIVersion: v1alpha1.ModuleDocumentationGVK.GroupVersion().String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: moduleName,
+					Labels: map[string]string{
+						"module": moduleName,
+						"source": moduleSource,
+					},
+					OwnerReferences: []metav1.OwnerReference{ownerRef},
+				},
+				Spec: v1alpha1.ModuleDocumentationSpec{
+					Version:  moduleVersion,
+					Path:     modulePath,
+					Checksum: moduleChecksum,
+				},
+			}
+			err = client.Create(ctx, &md)
+			if err != nil {
+				return err
+			}
+		}
+		return err
+	}
+
+	if md.Spec.Version != moduleVersion || md.Spec.Checksum != moduleChecksum {
+		// update CR
+		md.Spec.Path = modulePath
+		md.Spec.Version = moduleVersion
+		md.Spec.Checksum = moduleChecksum
+		md.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
+
+		err = client.Update(ctx, &md)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

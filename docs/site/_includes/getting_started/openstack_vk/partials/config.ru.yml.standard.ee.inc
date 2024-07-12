@@ -96,6 +96,20 @@ spec:
         global:
           kubeconfigGeneratorMasterCA: ""
 ---
+# [<en>] cloud-provider-openstack module settings.
+# [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/configuration.html
+# [<ru>] Настройки модуля cloud-provider-openstack.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-openstack
+spec:
+  version: 1
+  enabled: true
+  settings:
+    ignoreVolumeMicroversion: true
+---
 # [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html
 # [<ru>] Настройки облачного провайдера.
@@ -162,7 +176,7 @@ masterNodeGroup:
     # [<ru>] Используемый образ виртуальной машины.
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    imageName: Ubuntu-22.04-202208
+    imageName: ubuntu-22-202404160933.gitd6495fe9
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
     rootDiskSize: 40

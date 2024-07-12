@@ -20,33 +20,43 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-const (
-	candiDir          = "/deckhouse/candi"
-	modulesDir        = "/deckhouse/modules"
-	globalHooksModule = "/deckhouse/global-hooks"
-	// don't forget to update the version in release requirements (release.yaml)
-	DefaultKubernetesVersion = "1.25"
+var (
+	deckhouseDir      = "/deckhouse"
+	candiDir          = deckhouseDir + "/candi"
+	modulesDir        = deckhouseDir + "/modules"
+	globalHooksModule = deckhouseDir + "/global-hooks"
+	versionMap        = candiDir + "/version_map.yml"
+	imagesDigestsJSON = candiDir + "/images_digests.json"
+
+	// don't forget to update the version in release requirements (release.yaml) 'autoK8sVersion' key
+	DefaultKubernetesVersion = "1.27"
 )
 
-const (
-	versionMap        = "/deckhouse/candi/version_map.yml"
-	imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
-)
+func revealWildcardPaths(paths []string) []string {
+	for _, path := range paths {
+		if strings.Contains(path, "*") {
+			revealPaths, _ := filepath.Glob(path)
+			paths = append(paths, revealPaths...)
+		}
+	}
+	return paths
+}
 
-func LoadConfigFromFile(path string) (*MetaConfig, error) {
-	metaConfig, err := ParseConfig(path)
+func LoadConfigFromFile(paths []string, opts ...ValidateOption) (*MetaConfig, error) {
+	metaConfig, err := ParseConfig(revealWildcardPaths(paths), opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -88,13 +98,23 @@ func numerateManifestLines(manifest []byte) string {
 	return builder.String()
 }
 
-func ParseConfig(path string) (*MetaConfig, error) {
-	fileContent, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("loading config file: %v", err)
+func ParseConfig(paths []string, opts ...ValidateOption) (*MetaConfig, error) {
+	content := ""
+	for _, path := range paths {
+
+		if strings.Contains(path, "*") {
+			continue // skip wildcard paths, we revealed them in the previous step
+		}
+
+		log.DebugF("Have config file %s\n", path)
+		fileContent, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("loading config file: %v", err)
+		}
+		content = content + "\n\n---\n\n" + string(fileContent)
 	}
 
-	return ParseConfigFromData(string(fileContent))
+	return ParseConfigFromData(content, opts...)
 }
 
 func ParseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) {
@@ -176,10 +196,21 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 	return metaConfig.Prepare()
 }
 
-func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore) error {
+// parseDocument
+//
+// parse and validate one document of
+//
+//		InitConfiguration
+//		ClusterConfiguration
+//		StaticClusterConfiguration
+//		ClusterConfiguration
+//	    ModuleConfig
+//
+// if validation schema for ModuleConfig or another resources not found returns ErrSchemaNotFound error
+func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore, opts ...ValidateOption) (bool, error) {
 	doc = strings.TrimSpace(doc)
 	if doc == "" {
-		return nil
+		return false, nil
 	}
 
 	docData := []byte(doc)
@@ -187,61 +218,87 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore)
 	var index SchemaIndex
 	err := yaml.Unmarshal(docData, &index)
 	if err != nil {
-		return err
+		return false, fmt.Errorf("Config document unmarshal failed: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
 
 	if index.Kind == ModuleConfigKind {
 		moduleConfig := ModuleConfig{}
 		err = yaml.Unmarshal(docData, &moduleConfig)
 		if err != nil {
-			return err
+			return false, fmt.Errorf("Module config document unmarshal failed: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
 
-		_, err = schemaStore.Validate(&docData)
+		log.DebugF("Found ModuleConfig in config file %s\n", moduleConfig.Name)
+
+		_, err = schemaStore.Validate(&docData, opts...)
 		if err != nil {
-			return fmt.Errorf("module config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+			if errors.Is(err, ErrSchemaNotFound) {
+				return false, nil
+			}
+			return false, fmt.Errorf("Module config validation failed: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
 
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, &moduleConfig)
-		return nil
+		return true, nil
 	}
 
-	_, err = schemaStore.Validate(&docData)
+	_, err = schemaStore.Validate(&docData, opts...)
 	if err != nil {
-		return fmt.Errorf("config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+		if errors.Is(err, ErrSchemaNotFound) {
+			return false, nil
+		}
+		return false, fmt.Errorf("Config document validation failed: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
 
 	var data map[string]json.RawMessage
 	if err = yaml.Unmarshal(docData, &data); err != nil {
-		return fmt.Errorf("config unmarshal: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
+		return false, fmt.Errorf("Config document unmarshal failed: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
 
+	found := false
 	switch {
 	case index.Kind == "InitConfiguration":
+		log.DebugLn("Found InitConfiguration")
 		metaConfig.InitClusterConfig = data
+		found = true
 	case index.Kind == "ClusterConfiguration":
+		log.DebugLn("Found ClusterConfiguration")
 		metaConfig.ClusterConfig = data
+		found = true
 	case index.Kind == "StaticClusterConfiguration":
+		log.DebugLn("Found StaticClusterConfiguration")
 		metaConfig.StaticClusterConfig = data
+		found = true
 	case strings.HasSuffix(index.Kind, "ClusterConfiguration"):
+		log.DebugF("Found %s\n", index.Kind)
 		metaConfig.ProviderClusterConfig = data
+		found = true
 	}
 
-	return nil
+	return found, nil
 }
 
-func ParseConfigFromData(configData string) (*MetaConfig, error) {
+func ParseConfigFromData(configData string, opts ...ValidateOption) (*MetaConfig, error) {
 	schemaStore := NewSchemaStore()
 
 	bigFileTmp := strings.TrimSpace(configData)
 	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
 
+	resourcesDocs := make([]string, 0, len(docs))
+
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
-		if err := parseDocument(doc, &metaConfig, schemaStore); err != nil {
+		found, err := parseDocument(doc, &metaConfig, schemaStore, opts...)
+		if err != nil {
 			return nil, err
 		}
+		if !found && strings.TrimSpace(doc) != "" {
+			resourcesDocs = append(resourcesDocs, doc)
+		}
 	}
+
+	metaConfig.ResourcesYAML = strings.TrimSpace(strings.Join(resourcesDocs, "\n\n---\n\n"))
+	log.DebugF("Collected ResourcesYAML:\n%s\n\n", metaConfig.ResourcesYAML)
 
 	// init configuration can be empty, but we need default from openapi spec
 	if len(metaConfig.InitClusterConfig) == 0 {
@@ -250,37 +307,24 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse: {}
 `
-		if err := parseDocument(doc, &metaConfig, schemaStore); err != nil {
+		log.DebugF("Init configuration not found use empty: %s", doc)
+		found, err := parseDocument(doc, &metaConfig, schemaStore, opts...)
+		if err != nil {
 			return nil, err
+		}
+		if !found {
+			return nil, fmt.Errorf("init configuration index not found")
 		}
 	}
 
 	return metaConfig.Prepare()
 }
 
-// ValidateClusterSettings parses and validates cluster configuration and resources.
-// It checks the cluster configuration yamls for compliance with the yaml format and schema.
-// Non-config resources are checked only for compliance with the yaml format and the validity of apiVersion and kind fields.
-// It can be used as an imported functionality in external modules.
-func ValidateClusterSettings(configData string) error {
-	schemaStore := NewSchemaStore()
-
-	bigFileTmp := strings.TrimSpace(configData)
-	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
-
-	metaConfig := MetaConfig{}
-	for _, doc := range docs {
-		err := parseDocument(doc, &metaConfig, schemaStore)
-		// Cluster resources are not stored in the dhctl cache, there is no need to check them for compliance with the schema: just check the index and yaml format.
-		if err != nil && !errors.Is(err, ErrSchemaNotFound) {
-			return err
-		}
-	}
-
-	_, err := metaConfig.Prepare()
-	if err != nil {
-		return err
-	}
-
-	return nil
+func InitGlobalVars(pwd string) {
+	deckhouseDir = pwd + "/deckhouse"
+	candiDir = deckhouseDir + "/candi"
+	modulesDir = deckhouseDir + "/modules"
+	globalHooksModule = deckhouseDir + "/global-hooks"
+	versionMap = candiDir + "/version_map.yml"
+	imagesDigestsJSON = candiDir + "/images_digests.json"
 }

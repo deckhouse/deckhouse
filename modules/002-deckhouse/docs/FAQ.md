@@ -21,7 +21,7 @@ Then you have to select which node you want to run kube-bench.
 * Run on specific node, e.g. control-plane node:
 
   ```shell
-  curl -s https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml | yq r - -j | jq '.spec.template.spec.tolerations=[{"operator": "Exists"}] | .spec.template.spec.nodeSelector={"node-role.kubernetes.io/control-plane": ""}' | kubectl create -f -
+  curl -s https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml | kubectl apply -f - --dry-run=client -o json | jq '.spec.template.spec.tolerations=[{"operator": "Exists"}] | .spec.template.spec.nodeSelector={"node-role.kubernetes.io/control-plane": ""}' | kubectl create -f -
   ```
 
 Then you can check report:
@@ -46,7 +46,7 @@ We always appreciate helping users with debugging complex issues. Please follow 
 
 Data that will be collected:
 * Deckhouse queue state
-* global Deckhouse values (without any sensitive data)
+* global Deckhouse values
 * enabled modules list
 * `events` from all namespaces
 * controllers and pods manifests from namespaces owned by Deckhouse

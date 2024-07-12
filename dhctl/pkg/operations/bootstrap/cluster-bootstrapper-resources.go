@@ -15,12 +15,14 @@
 package bootstrap
 
 import (
+	"fmt"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 func (b *ClusterBootstrapper) CreateResources() error {
@@ -45,13 +47,17 @@ func (b *ClusterBootstrapper) CreateResources() error {
 		return nil
 	}
 
-	sshClient, err := ssh.NewInitClientFromFlags(true)
-	if err != nil {
-		return err
+	if b.SSHClient != nil {
+		if _, err := b.SSHClient.Start(); err != nil {
+			return fmt.Errorf("unable to start ssh client: %w", err)
+		}
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
 	}
 
 	return log.Process("bootstrap", "Create resources", func() error {
-		kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
+		kubeCl, err := operations.ConnectToKubernetesAPI(b.SSHClient)
 		if err != nil {
 			return err
 		}

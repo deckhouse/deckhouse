@@ -127,6 +127,7 @@ spec:
       annotations:
         traffic.sidecar.istio.io/includeInboundPorts: ""
         traffic.sidecar.istio.io/includeOutboundIPRanges: {{ $context.Values.global.discovery.serviceSubnet | quote }}
+        inject.istio.io/templates: "sidecar,d8-hold-istio-proxy-termination-until-application-stops"
       {{- end }}
     spec:
   {{- if $crd.spec.nodeSelector }}
@@ -174,7 +175,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /controller/healthz
-            port: 10354
+            port: 4207
             scheme: HTTPS
           initialDelaySeconds: 30
           timeoutSeconds: 5
@@ -183,7 +184,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /controller/healthz
-            port: 10354
+            port: 4207
             scheme: HTTPS
           initialDelaySeconds: 10
           periodSeconds: 2
@@ -258,6 +259,19 @@ spec:
     {{- end }}
   {{- end }}
         - containerPort: 443
+          protocol: TCP
+  {{- if eq $crd.spec.inlet "HostPort"}}
+    {{- if $hostPort.httpsPort }}
+          hostPort: {{ $hostPort.httpsPort }}
+    {{- end }}
+  {{- end }}
+  {{- if eq $crd.spec.inlet "HostPortWithProxyProtocol"}}
+    {{- if $hostPortWithProxyProtocol.httpsPort }}
+          hostPort: {{ $hostPortWithProxyProtocol.httpsPort }}
+    {{- end }}
+  {{- end }}
+        - containerPort: 443
+          protocol: UDP
   {{- if eq $crd.spec.inlet "HostPort"}}
     {{- if $hostPort.httpsPort }}
           hostPort: {{ $hostPort.httpsPort }}
@@ -324,7 +338,7 @@ spec:
       - name: kube-rbac-proxy
         image: {{ include "helm_lib_module_image" (list $context "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):10354"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4207"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -366,7 +380,7 @@ spec:
               - -server
               - 127.0.0.1:10254
         ports:
-        - containerPort: 10354
+        - containerPort: 4207
           name: https-metrics
         resources:
           requests:

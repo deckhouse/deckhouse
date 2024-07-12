@@ -39,22 +39,38 @@ type checkStep struct {
 	fun            func() error
 }
 
-func NewChecker(sshClient *ssh.Client, config *config.DeckhouseInstaller, metaConfig *config.MetaConfig) Checker {
+func NewChecker(
+	sshClient *ssh.Client,
+	config *config.DeckhouseInstaller,
+	metaConfig *config.MetaConfig,
+) Checker {
 	return Checker{
 		sshClient:               sshClient,
 		metaConfig:              metaConfig,
 		installConfig:           config,
 		imageDescriptorProvider: remoteDescriptorProvider{},
-		buildDigestProvider:     &dhctlBuildDigestProvider{DigestFilePath: app.DeckhouseImageDigestFile},
+		buildDigestProvider: &dhctlBuildDigestProvider{
+			DigestFilePath: app.DeckhouseImageDigestFile,
+		},
 	}
 }
 
 func (pc *Checker) Static() error {
 	return pc.do("Preflight checks for static-cluster", []checkStep{
 		{
+			fun:            pc.CheckSSHCredential,
+			successMessage: "ssh credential is correctly",
+			skipFlag:       app.SSHCredentialsCheckArgName,
+		},
+		{
 			fun:            pc.CheckSSHTunnel,
-			successMessage: "ssh tunnel will up",
+			successMessage: "ssh tunnel between installer and node is possible",
 			skipFlag:       app.SSHForwardArgName,
+		},
+		{
+			fun:            pc.CheckPythonAndItsModules,
+			successMessage: "python and required modules are installed",
+			skipFlag:       app.PythonChecksArgName,
 		},
 		{
 			fun:            pc.CheckRegistryAccessThroughProxy,
@@ -69,7 +85,12 @@ func (pc *Checker) Static() error {
 		{
 			fun:            pc.CheckLocalhostDomain,
 			successMessage: "resolve the localhost domain",
-			skipFlag:       app.ResolvingLocalhostArgName,
+			skipFlag:       app.RegistryCredentialsCheckArgName,
+		},
+		{
+			fun:            pc.CheckSudoIsAllowedForUser,
+			successMessage: "sudo is allowed for user",
+			skipFlag:       app.SudoAllowedCheckArgName,
 		},
 	})
 }
@@ -79,7 +100,18 @@ func (pc *Checker) Cloud() error {
 }
 
 func (pc *Checker) Global() error {
-	return nil
+	return pc.do("Global preflight checks", []checkStep{
+		{
+			fun:            pc.CheckPublicDomainTemplate,
+			successMessage: "PublicDomainTemplate is correctly",
+			skipFlag:       app.PublicDomainTemplateCheckArgName,
+		},
+		{
+			fun:            pc.CheckRegistryCredentials,
+			successMessage: "registry credentials are correct",
+			skipFlag:       app.RegistryCredentialsCheckArgName,
+		},
+	})
 }
 
 func (pc *Checker) do(title string, checks []checkStep) error {
@@ -90,7 +122,11 @@ func (pc *Checker) do(title string, checks []checkStep) error {
 		}
 
 		for _, check := range checks {
-			loop := retry.NewLoop(fmt.Sprintf("Checking %s", check.successMessage), 1, 10*time.Second)
+			loop := retry.NewLoop(
+				fmt.Sprintf("Checking %s", check.successMessage),
+				1,
+				10*time.Second,
+			)
 			if err := loop.Run(check.fun); err != nil {
 				return fmt.Errorf("Installation aborted: %w\n"+
 					`Please fix this problem or skip it if you're sure with %s flag`, err, check.skipFlag)

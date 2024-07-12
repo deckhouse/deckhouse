@@ -151,9 +151,11 @@ var skipOssChecks = map[string]struct{}{
 	// module name
 	"001-priority-class":                      {},
 	"005-external-module-manager":             {},
+	"039-registry-packages-proxy":             {},
 	"011-flow-schema":                         {},
 	"013-helm":                                {}, // helm in 002-deckhouse
-	"021-kube-proxy":                          {},
+	"036-kube-proxy":                          {},
+	"025-static-routing-manager":              {},
 	"030-cloud-provider-aws":                  {},
 	"030-cloud-provider-azure":                {},
 	"030-cloud-provider-gcp":                  {},
@@ -161,6 +163,7 @@ var skipOssChecks = map[string]struct{}{
 	"030-cloud-provider-vsphere":              {},
 	"030-cloud-provider-vcd":                  {},
 	"030-cloud-provider-yandex":               {},
+	"030-cloud-provider-zvirt":                {},
 	"035-cni-simple-bridge":                   {},
 	"140-user-authz":                          {},
 	"160-multitenancy-manager":                {},

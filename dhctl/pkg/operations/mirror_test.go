@@ -41,10 +41,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
 
+	logger "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/mirror"
 )
 
 func TestMirrorE2E_Insecure(t *testing.T) {
+	logger.InitLogger("pretty")
+
 	tmpDir, err := os.MkdirTemp(os.TempDir(), "mirror_e2e")
 	require.NoError(t, err)
 	t.Cleanup(func() {
@@ -61,6 +64,7 @@ func TestMirrorE2E_Insecure(t *testing.T) {
 
 	pullCtx := &mirror.Context{
 		Insecure:              true,
+		BundlePath:            filepath.Join(tmpDir, "d8.tar"),
 		DeckhouseRegistryRepo: sourceHost + sourceRepoPath,
 		UnpackedImagesPath:    workingDir,
 		ValidationMode:        mirror.NoValidation,
@@ -267,7 +271,7 @@ func createDeckhouseReleaseChannelImageInRegistry(t *testing.T, repo, tag, versi
 
 func validateDeckhouseReleasesManifests(t *testing.T, pullCtx *mirror.Context, versions []semver.Version) {
 	t.Helper()
-	deckhouseReleasesManifestsFilepath := filepath.Join(filepath.Dir(pullCtx.TarBundlePath), "deckhousereleases.yaml")
+	deckhouseReleasesManifestsFilepath := filepath.Join(filepath.Dir(pullCtx.BundlePath), "deckhousereleases.yaml")
 	actualManifests, err := os.ReadFile(deckhouseReleasesManifestsFilepath)
 	require.NoError(t, err)
 

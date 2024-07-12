@@ -11,11 +11,18 @@
 {!{- if eq $ctx.provider "vsphere"  -}!}
 {!{-   $layout = "Standard" -}!}
 {!{- end -}!}
+{!{- if eq $ctx.provider "vclouddirector"  -}!}
+{!{-   $layout = "Standard" -}!}
+{!{- end -}!}
 {!{- if eq $ctx.provider "static"  -}!}
 {!{-   $layout = "Static" -}!}
 {!{- end -}!}
 {!{ $layout }!}
 {!{ end -}!}
+
+{!{- define "e2e_kubernetes_default_version" -}!}
+1.27
+{!{- end -}!}
 
 # job for set e2e requirement status
 # $1 - name of function to set status. see ../scripts/e2e-commit-status.js
@@ -79,6 +86,12 @@
 {!{- else if eq $provider "vsphere" }!}
   LAYOUT_VSPHERE_PASSWORD: ${{ secrets.LAYOUT_VSPHERE_PASSWORD }}
   LAYOUT_VSPHERE_BASE_DOMAIN: ${{ secrets.LAYOUT_VSPHERE_BASE_DOMAIN }}
+{!{- else if eq $provider "vclouddirector" }!}
+  LAYOUT_VCD_PASSWORD: ${{ secrets.LAYOUT_VCD_PASSWORD }}
+  LAYOUT_VCD_USERNAME: ${{ secrets.LAYOUT_VCD_USERNAME }}
+  LAYOUT_STATIC_BASTION_IP: 80.249.129.56
+  LAYOUT_VCD_SERVER: ${{ secrets.LAYOUT_VCD_SERVER }}
+  LAYOUT_VCD_ORG: ${{ secrets.LAYOUT_VCD_ORG }}
 {!{- end }!}
   COMMENT_ID: ${{ inputs.comment_id }}
   GITHUB_API_SERVER: ${{ github.api_url }}
@@ -123,13 +136,15 @@ run: |
   bastion_ip_file=""
   if [[ "${PROVIDER}" == "Static" ]] ; then
     bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+  elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+    bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
   fi
 
   echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
 
   $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 {!{ end }!}
-  
+
 {!{- if eq $provider "eks" }!}
   chmod 755 $(pwd)/testing/cloud_layouts/{!{ $script_eks }!}
 
@@ -226,6 +241,12 @@ run: |
 {!{- else if eq $provider "vsphere" }!}
     -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
     -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
+{!{- else if eq $provider "vclouddirector" }!}
+    -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
+    -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
+    -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
+    -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
+    -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
 {!{- end }!}
     -e USER_RUNNER_ID=${user_runner_id} \
     -v $(pwd)/testing:/deckhouse/testing \
@@ -268,9 +289,10 @@ check_e2e_labels:
       with:
         script: |
           const provider = '{!{ $ctx.provider }!}';
+          const kubernetesDefaultVersion = '{!{ $ctx.kubernetesDefaultVersion }!}';
 
           const ci = require('./.github/scripts/js/ci');
-          return await ci.checkE2ELabels({github, context, core, provider});
+          return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
 # </template: check_e2e_labels_job>
 {!{- end -}!}
 
@@ -307,7 +329,11 @@ check_e2e_labels:
     PROVIDER: {!{ $ctx.providerName }!}
     CRI: {!{ $ctx.criName }!}
     LAYOUT: {!{ $ctx.layout }!}
+{!{- if and ( eq $provider "eks" ) ( eq $ctx.kubernetesVersion "Automatic" ) }!}
+    KUBERNETES_VERSION: "{!{ $ctx.kubernetesDefaultVersion }!}"
+{!{- else }!}
     KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+{!{- end }!}
     EVENT_LABEL: ${{ github.event.label.name }}
   runs-on: [self-hosted, {!{ $runsOnLabel }!}]
   steps:
@@ -338,7 +364,12 @@ check_e2e_labels:
         # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
         # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
         # CRI and PROVIDER values are trimmed to reduce prefix length.
-        DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}")
+        if [[ "${KUBERNETES_VERSION}" == "Automatic" ]] ; then
+          KUBERNETES_VERSION_SUF="auto"
+        else
+          KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
+        fi
+        DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
         if [[ "${MANUAL_RUN}" == "false" ]] ; then
           # for jobs which run multiple providers concurrency (daily e2e, for example)
           # add provider suffix to prevent "directory already exists" error
@@ -450,7 +481,11 @@ check_e2e_labels:
         PROVIDER: {!{ $ctx.providerName }!}
         CRI: {!{ $ctx.criName }!}
         LAYOUT: {!{ $ctx.layout }!}
+{!{- if and ( eq $provider "eks" ) ( eq $ctx.kubernetesVersion "Automatic" ) }!}
+        KUBERNETES_VERSION: "{!{ $ctx.kubernetesDefaultVersion }!}"
+{!{- else }!}
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+{!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -494,7 +529,11 @@ check_e2e_labels:
         PROVIDER: {!{ $ctx.providerName }!}
         CRI: {!{ $ctx.criName }!}
         LAYOUT: {!{ $ctx.layout }!}
+{!{- if and ( eq $provider "eks" ) ( eq $ctx.kubernetesVersion "Automatic" ) }!}
+        KUBERNETES_VERSION: "{!{ $ctx.kubernetesDefaultVersion }!}"
+{!{- else }!}
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+{!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -539,6 +578,17 @@ check_e2e_labels:
         else
           echo Not a directory.
         fi
+        if [ -n $USER_RUNNER_ID ]; then
+          echo "Fix temp directories owner..."
+          chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+          chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+          chown -R $USER_RUNNER_ID /tmp || true
+        else
+          echo "Fix temp directories permissions..."
+          chmod -f -R 777 "$(pwd)/testing" || true
+          chmod -f -R 777 "/deckhouse/testing" || true
+          chmod -f -R 777 /tmp || true
+        fi
 
 {!{- if coll.Has $ctx "manualRun" }!}
 {!{    tmpl.Exec "update_comment_on_finish" (slice "job,separate" $ctx.jobName) | strings.Indent 4 }!}
@@ -571,7 +621,11 @@ check_e2e_labels:
     PROVIDER: {!{ $ctx.providerName }!}
     CRI: {!{ $ctx.criName }!}
     LAYOUT: {!{ $ctx.layout }!}
+{!{- if and ( eq $provider "eks" ) ( eq $ctx.kubernetesVersion "Automatic" ) }!}
+    KUBERNETES_VERSION: "{!{ $ctx.kubernetesDefaultVersion }!}"
+{!{- else }!}
     KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+{!{- end }!}
     EVENT_LABEL: ${{ github.event.label.name }}
   runs-on: [self-hosted, {!{ $runsOnLabel }!}]
   steps:
@@ -648,7 +702,11 @@ check_e2e_labels:
         PROVIDER: {!{ $ctx.providerName }!}
         CRI: {!{ $ctx.criName }!}
         LAYOUT: {!{ $ctx.layout }!}
+{!{- if and ( eq $provider "eks" ) ( eq $ctx.kubernetesVersion "Automatic" ) }!}
+        KUBERNETES_VERSION: "{!{ $ctx.kubernetesDefaultVersion }!}"
+{!{- else }!}
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+{!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -679,6 +737,17 @@ check_e2e_labels:
           rm -rf "${TMPPATH}"
         else
           echo Not a directory.
+        fi
+        if [ -n $USER_RUNNER_ID ]; then
+          echo "Fix temp directories owner..."
+          chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+          chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+          chown -R $USER_RUNNER_ID /tmp || true
+        else
+          echo "Fix temp directories permissions..."
+          chmod -f -R 777 "$(pwd)/testing" || true
+          chmod -f -R 777 "/deckhouse/testing" || true
+          chmod -f -R 777 /tmp || true
         fi
 
 {!{    tmpl.Exec "update_comment_on_finish" (slice "job,separate" $ctx.jobName) | strings.Indent 4 }!}

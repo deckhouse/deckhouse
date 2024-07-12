@@ -106,6 +106,7 @@ apiVersions:
 
           > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
         x-doc-required: true
+        x-unsafe-rules: [updateMasterImage]
         additionalProperties: false
         required: [replicas, instanceClass, volumeTypeMap]
         properties:
@@ -197,6 +198,41 @@ apiVersions:
             additionalProperties:
               type: string
               minLength: 1
+          serverGroup:
+            type: object
+            description: |
+              The ServerGroup object groups instances together. The instances in the group are placed on the same hypervisor (affinity) or different hypervisors (anti-affinity). This allows you to increase the fault tolerance of the cluster.
+            required: [policy]
+            properties:
+              policy:
+                type: string
+                enum: [AntiAffinity, ManuallyManaged]
+                description: |
+                  The policy that determines how instances are distributed among hypervisors.
+
+                  - `AntiAffinity` — instances are placed on different hypervisors. This policy is managed by Deckhouse.
+                  - `ManuallyManaged` — instances are placed on different hypervisors. This policy is managed outside of Deckhouse.
+              manuallyManaged:
+                type: object
+                required: [id]
+                properties:
+                  id:
+                    type: string
+                    description: |
+                      The id of the existing `ServerGroup` object managed outside of Deckhouse.
+            oneOf:
+              - properties:
+                  policy:
+                    enum:
+                      - AntiAffinity
+                  manuallyManaged:
+                    not: {}
+              - properties:
+                  policy:
+                    enum:
+                      - ManuallyManaged
+                required:
+                  - manuallyManaged
       nodeGroups:
         description: |
           An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
@@ -403,6 +439,7 @@ apiVersions:
 
                       This parameter also has influence on type of volume that will be used for root disk; the ["How to use rootDiskSize and when it is preferred"](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-use-rootdisksize-and-when-it-is-preferred) section describes how to use it.
                     type: integer
+                    default: 50
                   additionalTags:
                     description: |
                       The additional tags to attach to the instance created (in addition to those specified in the cloud provider configuration).
@@ -504,6 +541,8 @@ apiVersions:
             default: DirectRoutingWithPortSecurityEnabled
           externalNetworkName:
             <<: *externalNetworkName
+          externalNetworkDHCP:
+            <<: *externalNetworkDHCP
           masterWithExternalFloatingIP:
             description: |
               Defines if Floating IP must be assigned to master nodes.

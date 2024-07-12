@@ -14,15 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package updater
+package d8updater
 
 import (
 	"encoding/json"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/internal/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
 type DeckhouseRelease struct {
@@ -35,10 +36,80 @@ type DeckhouseRelease struct {
 	Requirements  map[string]string
 	ChangelogLink string
 	Disruptions   []string
-	ApplyAfter    *time.Time
-	CooldownUntil *time.Time
+	ApplyAfter    *metav1.Time
+	CooldownUntil *metav1.Time
 
 	Status v1alpha1.DeckhouseReleaseStatus // don't set transition time here to avoid snapshot overload
+}
+
+func (d *DeckhouseRelease) GetName() string {
+	return d.Name
+}
+
+func (d *DeckhouseRelease) GetApplyAfter() *time.Time {
+	if d.ApplyAfter == nil {
+		return nil
+	}
+	return &d.ApplyAfter.Time
+}
+
+func (d *DeckhouseRelease) GetVersion() *semver.Version {
+	return d.Version
+}
+
+func (d *DeckhouseRelease) GetRequirements() map[string]string {
+	return d.Requirements
+}
+
+func (d *DeckhouseRelease) GetChangelogLink() string {
+	return d.ChangelogLink
+}
+
+func (d *DeckhouseRelease) GetCooldownUntil() *time.Time {
+	if d.CooldownUntil == nil {
+		return nil
+	}
+	return &d.CooldownUntil.Time
+}
+
+func (d *DeckhouseRelease) GetDisruptions() []string {
+	return d.Disruptions
+}
+
+func (d *DeckhouseRelease) GetDisruptionApproved() bool {
+	return d.AnnotationFlags.DisruptionApproved
+}
+
+func (d *DeckhouseRelease) GetPhase() string {
+	return d.Status.Phase
+}
+
+func (d *DeckhouseRelease) GetForce() bool {
+	return d.AnnotationFlags.Force
+}
+
+func (d *DeckhouseRelease) GetApplyNow() bool {
+	return d.AnnotationFlags.ApplyNow
+}
+
+func (d *DeckhouseRelease) GetApprovedStatus() bool {
+	return d.Status.Approved
+}
+
+func (d *DeckhouseRelease) SetApprovedStatus(val bool) {
+	d.Status.Approved = val
+}
+
+func (d *DeckhouseRelease) GetSuspend() bool {
+	return d.AnnotationFlags.Suspend
+}
+
+func (d *DeckhouseRelease) GetManuallyApproved() bool {
+	return d.ManuallyApproved
+}
+
+func (d *DeckhouseRelease) GetMessage() string {
+	return d.Status.Message
 }
 
 type DeckhouseReleaseAnnotationsFlags struct {
@@ -49,18 +120,6 @@ type DeckhouseReleaseAnnotationsFlags struct {
 	NotificationShift  bool // time shift by the notification process
 }
 
-type ByVersion []DeckhouseRelease
-
-func (a ByVersion) Len() int {
-	return len(a)
-}
-func (a ByVersion) Swap(i, j int) {
-	a[i], a[j] = a[j], a[i]
-}
-func (a ByVersion) Less(i, j int) bool {
-	return a[i].Version.LessThan(a[j].Version)
-}
-
 type StatusPatch v1alpha1.DeckhouseReleaseStatus
 
 func (sp StatusPatch) MarshalJSON() ([]byte, error) {
@@ -69,9 +128,4 @@ func (sp StatusPatch) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(m)
-}
-
-type DeckhouseReleaseData struct {
-	IsUpdating bool
-	Notified   bool
 }

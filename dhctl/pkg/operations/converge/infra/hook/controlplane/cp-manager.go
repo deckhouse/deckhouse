@@ -16,13 +16,20 @@ package controlplane
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
+
+var ErrControlPlaneIsNotReady = errors.New("Control plane is not ready\n")
 
 type ManagerReadinessChecker struct {
 	kubeCl *client.KubernetesClient
@@ -32,6 +39,56 @@ func NewManagerReadinessChecker(kubeCl *client.KubernetesClient) *ManagerReadine
 	return &ManagerReadinessChecker{
 		kubeCl: kubeCl,
 	}
+}
+
+func (c *ManagerReadinessChecker) IsReadyAll() error {
+	return retry.NewLoop("Control-plane manager pods readiness", 50, 10*time.Second).Run(func() error {
+		nodes, err := c.kubeCl.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{
+			LabelSelector: "node.deckhouse.io/group=master",
+		})
+		if err != nil {
+			log.DebugF("Error while getting nodes count: %v\n", err)
+			return ErrControlPlaneIsNotReady
+		}
+
+		cpmPodsList, err := c.kubeCl.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{
+			LabelSelector: "app=d8-control-plane-manager",
+		})
+		if err != nil {
+			log.DebugF("Error while getting control-plane manager pods: %v\n", err)
+			return ErrControlPlaneIsNotReady
+		}
+
+		readyPods := make(map[string]struct{})
+		for _, pod := range cpmPodsList.Items {
+			p := pod
+			ready, err := isPodReady(&p)
+			if err != nil {
+				log.DebugF("Error while getting control-plane manager pod readiness: %v\n", err)
+			}
+			if ready {
+				readyPods[p.Name] = struct{}{}
+			}
+		}
+
+		message := fmt.Sprintf("Pods Ready %v of %v\n", len(readyPods), len(nodes.Items))
+		for _, pod := range cpmPodsList.Items {
+			p := pod
+			condition := "NotReady"
+			if _, ok := readyPods[p.Name]; ok {
+				condition = "Ready"
+			}
+
+			message += fmt.Sprintf("* %s (%s) | %s\n", p.Name, p.Spec.NodeName, condition)
+		}
+
+		if len(readyPods) >= len(nodes.Items) {
+			log.InfoLn(message)
+			return nil
+		}
+
+		return fmt.Errorf(strings.TrimSuffix(message, "\n"))
+	})
 }
 
 func (c *ManagerReadinessChecker) IsReady(nodeName string) (bool, error) {
@@ -52,15 +109,22 @@ func (c *ManagerReadinessChecker) IsReady(nodeName string) (bool, error) {
 		return false, fmt.Errorf("Found multiple control plane manager pods for one node")
 	}
 
-	cpmPod := cpmPodsList.Items[0]
-	podName := cpmPod.GetName()
-	phase := cpmPod.Status.Phase
+	return isPodReady(&cpmPodsList.Items[0])
+}
 
-	if cpmPod.Status.Phase != corev1.PodRunning {
+func (c *ManagerReadinessChecker) Name() string {
+	return "Control plane manager readiness"
+}
+
+func isPodReady(p *corev1.Pod) (bool, error) {
+	podName := p.GetName()
+	phase := p.Status.Phase
+
+	if p.Status.Phase != corev1.PodRunning {
 		return false, fmt.Errorf("Control plane manager pod %s is not running (%s)", podName, phase)
 	}
 
-	for _, status := range cpmPod.Status.ContainerStatuses {
+	for _, status := range p.Status.ContainerStatuses {
 		if status.Name != "control-plane-manager" {
 			continue
 		}
@@ -69,8 +133,4 @@ func (c *ManagerReadinessChecker) IsReady(nodeName string) (bool, error) {
 	}
 
 	return false, fmt.Errorf("Not found control-plane-manager container in pod %s", podName)
-}
-
-func (c *ManagerReadinessChecker) Name() string {
-	return "Control plane manager readiness"
 }

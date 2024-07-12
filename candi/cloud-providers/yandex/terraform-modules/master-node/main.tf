@@ -18,7 +18,6 @@ locals {
   zone_to_subnet = length(local.mapping) == 0 ? {
     "ru-central1-a" = length(data.yandex_vpc_subnet.kube_a) > 0 ? data.yandex_vpc_subnet.kube_a[0] : object({})
     "ru-central1-b" = length(data.yandex_vpc_subnet.kube_b) > 0 ? data.yandex_vpc_subnet.kube_b[0] : object({})
-    "ru-central1-c" = length(data.yandex_vpc_subnet.kube_c) > 0 ? data.yandex_vpc_subnet.kube_c[0] : object({})
     "ru-central1-d" = length(data.yandex_vpc_subnet.kube_d) > 0 ? data.yandex_vpc_subnet.kube_d[0] : object({})
   } : data.yandex_vpc_subnet.existing
 
@@ -50,11 +49,6 @@ data "yandex_vpc_subnet" "kube_b" {
   name = "${local.prefix}-b"
 }
 
-data "yandex_vpc_subnet" "kube_c" {
-  count = length(local.mapping) == 0 ? 1 : 0
-  name = "${local.prefix}-c"
-}
-
 data "yandex_vpc_subnet" "kube_d" {
   count = length(local.mapping) == 0 ? 1 : 0
   name = "${local.prefix}-d"
@@ -81,7 +75,7 @@ resource "yandex_compute_disk" "kubernetes_data" {
   description = "volume for etcd and kubernetes certs"
   size        = local.etcd_disk_size_gb
   zone        = local.internal_subnet.zone
-  type        = "network-ssd"
+  type        = local.disk_type
 
   labels = local.additional_labels
 }
@@ -104,7 +98,7 @@ resource "yandex_compute_instance" "master" {
 
   boot_disk {
     initialize_params {
-      type     = "network-ssd"
+      type     = local.disk_type
       image_id = local.image_id
       size     = local.disk_size_gb
 

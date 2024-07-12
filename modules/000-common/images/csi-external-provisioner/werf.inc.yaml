@@ -14,7 +14,11 @@ docker:
   ENTRYPOINT: ["/csi-provisioner"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    {{- if semverCompare ">=1.30" $version }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+    {{- else }}
 from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+    {{- end }}
 shell:
   beforeInstall:
     - git clone --depth 1 --branch {{ $value.csi.provisioner }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-provisioner.git /src

@@ -157,7 +157,7 @@
         There are Pods in `{{$labels.namespace}}` namespace with istio data-plane version `{{$labels.full_version}}` which differ from control-plane one `{{$labels.desired_full_version}}`.
         Consider restarting affected Pods, use PromQL query to get the list:
         ```
-        max by (namespace, dataplane_pod) (d8_istio_dataplane_metadata{version="{{$labels.full_version}}"})
+        max by (namespace, dataplane_pod) (d8_istio_dataplane_metadata{full_version="{{$labels.full_version}}"})
         ```
         Also consider using the automatic istio data-plane update described in the documentation: https://deckhouse.io/documentation/v1/modules/110-istio/examples.html#upgrading-istio
       plk_create_group_if_not_exists__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes

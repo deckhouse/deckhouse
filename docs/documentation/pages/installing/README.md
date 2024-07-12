@@ -277,7 +277,7 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
 ```
 
 , where:
-- `<DECKHOUSE_REVISION>` — edition of Deckhouse: `ee` for Enterprise Edition and `ce` for Community Edition;
+- `<DECKHOUSE_REVISION>` — [edition](../revision-comparison.html) of Deckhouse (e.g., `ee` for Enterprise Edition, `ce` for Community Edition, etc.);
 - `<MOUNT_OPTIONS>` — options for mounting files in the installer container, such as:
   - SSH authentication keys;
   - config file;
@@ -310,7 +310,7 @@ This command will start the Deckhouse installation in a cloud:
 ```shell
 dhctl bootstrap \
   --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-  --config=/config.yml --resources=/resources.yml
+  --config=/config.yml --config=/resources.yml
 ```
 
 , where:

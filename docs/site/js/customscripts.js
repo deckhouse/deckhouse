@@ -146,12 +146,13 @@ $(document).ready(function(){
 // GDPR
 
 $(document).ready(function(){
-    var $gdpr = $('.gdpr');
-    var $gdpr_button = $('.gdpr__button');
-    var gdpr_status = $.cookie('gdpr-status');
+    const $gdpr = $('.gdpr');
+    const $gdpr_button = $('.gdpr__button');
+    const gdpr_status = $.cookie('gdpr-status');
+    const cmplz_banner_status = $.cookie('cmplz_banner-status');
 
-    if (!gdpr_status || gdpr_status != 'accepted') {
-        $gdpr.show();
+    if ((!gdpr_status || gdpr_status !== 'accepted') && cmplz_banner_status !== 'dismissed') {
+        $gdpr.css('display', 'flex');
     }
 
     $gdpr_button.on('click', function() {

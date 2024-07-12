@@ -37,7 +37,7 @@ func TestBundlePackingAndUnpacking(t *testing.T) {
 
 	t.Cleanup(func() {
 		_ = os.RemoveAll(packFromDir)
-		_ = os.RemoveAll(packFromDir)
+		_ = os.RemoveAll(unpackToDir)
 		_ = os.Remove(tarBundlePath)
 	})
 
@@ -45,14 +45,59 @@ func TestBundlePackingAndUnpacking(t *testing.T) {
 	expectedFiles := findAllPaths(t, packFromDir)
 
 	err = PackBundle(&Context{
-		TarBundlePath:      tarBundlePath,
+		BundlePath:         tarBundlePath,
 		UnpackedImagesPath: packFromDir,
 	})
 	require.NoError(t, err, "Packing should finish without errors")
 	require.FileExists(t, tarBundlePath)
 
 	err = UnpackBundle(&Context{
-		TarBundlePath:      tarBundlePath,
+		BundlePath:         tarBundlePath,
+		UnpackedImagesPath: unpackToDir,
+	})
+	require.NoError(t, err, "Unpacking should finish without errors")
+
+	resultingFiles := findAllPaths(t, unpackToDir)
+	require.Equal(t, expectedFiles, resultingFiles, "Expected to find same file trees under source and target dirs")
+}
+
+func TestChunkedBundlePackingAndUnpacking(t *testing.T) {
+	tmpDir := os.TempDir()
+	bundlePath := filepath.Join(tmpDir, "pack_test.tar")
+
+	packFromDir, err := os.MkdirTemp(os.TempDir(), "pack_test")
+	require.NoError(t, err)
+	unpackToDir, err := os.MkdirTemp(os.TempDir(), "unpack_test")
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		_ = os.RemoveAll(packFromDir)
+		_ = os.RemoveAll(unpackToDir)
+		_ = os.Remove(bundlePath)
+	})
+
+	fillTestFileTree(t, packFromDir)
+	expectedFiles := findAllPaths(t, packFromDir)
+
+	err = PackBundle(&Context{
+		BundlePath:         bundlePath,
+		BundleChunkSize:    3 * 1024 * 1024,
+		UnpackedImagesPath: packFromDir,
+	})
+	require.NoError(t, err, "Packing should finish without errors")
+
+	expectedChunks := []string{
+		"pack_test.tar.0000.chunk",
+		"pack_test.tar.0001.chunk",
+		"pack_test.tar.0002.chunk",
+		"pack_test.tar.0003.chunk",
+	}
+	for _, chunkName := range expectedChunks {
+		require.FileExists(t, filepath.Join(filepath.Dir(bundlePath), chunkName))
+	}
+
+	err = UnpackBundle(&Context{
+		BundlePath:         bundlePath,
 		UnpackedImagesPath: unpackToDir,
 	})
 	require.NoError(t, err, "Unpacking should finish without errors")
@@ -76,7 +121,7 @@ func fillTestFileTree(t *testing.T, packFromDir string) {
 		file, err := os.Create(filePath)
 		require.NoError(t, err)
 
-		_, err = io.CopyN(file, rand.Reader, 256)
+		_, err = io.CopyN(file, rand.Reader, 10*1024*1024)
 		require.NoError(t, err)
 
 		require.NoError(t, file.Sync())

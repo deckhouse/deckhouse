@@ -152,16 +152,16 @@ html {
         content: '';
         display: inline-block;
         margin-bottom: 2px;
-        margin-left: 4px;
-        width: 9px;
-        height: 6px;
-        background: bottom / contain no-repeat url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMiIgaGVpZ2h0PSI4IiBmaWxsPSJub25lIj48cGF0aCBmaWxsPSIjMDA2NEZGIiBkPSJNNS42MSA3LjUyYy4yLjI1LjU4LjI1Ljc4IDBsNS4wMS02LjJhLjUuNSAwIDAgMC0uMzgtLjgySC45OGEuNS41IDAgMCAwLS4zOC44MWw1LjAxIDYuMloiLz48L3N2Zz4=");
+        margin-left: 5px;
+        width: 8px;
+        height: 5px;
+        background: bottom / contain no-repeat url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTMiIGhlaWdodD0iOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtMTEuMDIgMS41LTUgNS01LTUiIHN0cm9rZT0iIzIyMkE1RCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=");
         transition: .15s;
 
         @include min-w(xl) {
           margin-left: 8px;
-          width: 11px;
-          height: 7px;
+          width: 12px;
+          height: 8px;
         }
       }
 
@@ -207,10 +207,10 @@ html {
   }
 
   a {
-    font-size: 12px;
+    font-size: .875em;
 
     @include min-w(xl) {
-      font-size: 14px;
+      font-size: 16px;
     }
   }
 
@@ -247,11 +247,6 @@ html {
 
 .header {
     background: $color-inverse;
-    &__logo {
-        svg {
-            height: 48px;
-        }
-    }
 
     &__navigation {
         display: flex;

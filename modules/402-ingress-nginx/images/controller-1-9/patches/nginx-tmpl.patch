@@ -56,7 +56,31 @@ index 94dc12412..93b7d2efc 100644
      {{ if $cfg.UseGeoIP2 }}
      # https://github.com/leev/ngx_http_geoip2_module#example-usage
  
-@@ -928,9 +939,7 @@ stream {
+@@ -387,6 +398,15 @@ http {
+         {{ $reqUri }} 0;{{ end }}
+         default 1;
+     }
++    map $server_name $total_upstream_response_time {
++        default 0;
++    }
++    map $server_name $upstream_retries {
++        default 0;
++    }
++    map $server_name $formatted_status {
++        default $status;
++    }
+ 
+     {{ if or $cfg.DisableAccessLog $cfg.DisableHTTPAccessLog }}
+     access_log off;
+@@ -923,14 +943,15 @@ stream {
+             proxy_set_header       Host               $best_http_host;
+ 
+             set $proxy_upstream_name {{ $upstreamName | quote }};
++            set $formatted_status $status;
++            set $upstream_retries "0";
++            set $total_upstream_response_time "0";
+ 
+             rewrite                (.*) / break;
  
              proxy_pass            http://upstream_balancer;
              log_by_lua_block {
@@ -67,18 +91,37 @@ index 94dc12412..93b7d2efc 100644
              }
          }
          {{ end }}
-@@ -1223,6 +1232,10 @@ stream {
+@@ -978,6 +999,9 @@ stream {
+         {{ buildHTTPSListener $all $server.Hostname }}
+ 
+         set $proxy_upstream_name "-";
++        set $formatted_status $status;
++        set $upstream_retries "0";
++        set $total_upstream_response_time "0";
+ 
+         {{ if not ( empty $server.CertificateAuth.MatchCN ) }}
+         {{ if gt (len $server.CertificateAuth.MatchCN) 0 }}
+@@ -1140,6 +1164,10 @@ stream {
+             proxy_set_header            X-Auth-Request-Redirect $request_uri;
+             {{ end }}
+ 
++            {{ if not (contains $externalAuth.AuthSnippet "proxy_connect_timeout") }}
++            proxy_connect_timeout                   15s;
++            {{ end }}
++
+             {{ if $externalAuth.AuthCacheKey }}
+             proxy_buffering                         "on";
+             {{ else }}
+@@ -1223,6 +1251,8 @@ stream {
              set $location_path  {{ $ing.Path | escapeLiteralDollar | quote }};
              set $global_rate_limit_exceeding n;
  
 +            set $content_kind "";
-+            set $total_upstream_response_time "0";
-+            set $upstream_retries "0";
 +
              {{ buildOpentelemetryForLocation $all.Cfg.EnableOpentelemetry $all.Cfg.OpentelemetryTrustIncomingSpan $location }}
  
              {{ if $location.Mirror.Source }}
-@@ -1253,11 +1266,9 @@ stream {
+@@ -1253,11 +1283,9 @@ stream {
  
              log_by_lua_block {
                  balancer.log()
@@ -91,7 +134,7 @@ index 94dc12412..93b7d2efc 100644
              }
  
              {{ if not $location.Logs.Access }}
-@@ -1531,14 +1542,15 @@ stream {
+@@ -1531,14 +1559,15 @@ stream {
  
          {{ if eq $server.Hostname "_" }}
          # health checks in cloud providers require the use of port {{ $all.ListenPorts.HTTP }}

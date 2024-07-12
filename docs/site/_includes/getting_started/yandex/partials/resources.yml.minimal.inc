@@ -46,9 +46,6 @@ spec:
     - ru-central1-a
   disruptions:
     approvalMode: Automatic
-  nodeTemplate:
-    labels:
-      node.deckhouse.io/group: worker
   nodeType: CloudEphemeral
 ---
 # [<en>] Section containing the parameters of NGINX Ingress controller.

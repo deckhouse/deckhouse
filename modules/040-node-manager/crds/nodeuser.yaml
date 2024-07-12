@@ -16,7 +16,7 @@ spec:
   versions:
     - name: v1alpha1
       served: true
-      storage: true
+      storage: false
       schema: &schema
         openAPIV3Schema:
           type: object
@@ -74,7 +74,7 @@ spec:
                   description: |
                     Hashed user password.
 
-                    The format corresponds to the password hashes in `/etc/shadow`. Yoou can get it using the following command: `openssl passwd -6`.
+                    The format corresponds to the password hashes in `/etc/shadow`. You can get it using the following command: `openssl passwd -6`.
                   x-doc-examples: ['$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC']
                 isSudoer:
                   type: boolean
@@ -99,7 +99,7 @@ spec:
                   - [ '*' ]
                   items:
                     type: string
-      additionalPrinterColumns: &additionalPrinterColumns
+      additionalPrinterColumns:
         - name: Uid
           jsonPath: .spec.uid
           type: number
@@ -123,6 +123,127 @@ spec:
             CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
     - name: v1
       served: true
-      storage: false
-      schema: *schema
-      additionalPrinterColumns: *additionalPrinterColumns
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the linux users to create on all nodes.
+
+            The user's home directory is created in the `/home/deckhouse/` directory.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              oneOf:
+              - required:
+                - uid
+                - sshPublicKey
+                - passwordHash
+              - required:
+                - uid
+                - sshPublicKeys
+                - passwordHash
+              properties:
+                uid:
+                  type: number
+                  description: |
+                    Node user ID.
+
+                    We recommend using the values `>= 1100` to avoid conflicts with manually created users.
+
+                    This parameter does not change during the entire resource life.
+                  x-doc-examples: [1100]
+                  minimum: 1001
+                  x-doc-required: true
+                sshPublicKey:
+                  type: string
+                  x-doc-deprecated: true
+                  description: |
+                    Node user SSH public key.
+
+                    Either `sshPublicKey` or `sshPublicKeys` **must** be specified.
+                  x-doc-examples: ['ssh-rsa AAABBB']
+                sshPublicKeys:
+                  type: array
+                  items:
+                    type: string
+                  description: |
+                    Node user SSH public keys.
+
+                    Either `sshPublicKey` or `sshPublicKeys` **must** be specified.
+                  x-doc-examples:
+                  - ['ssh-rsa AAABBB', 'cert-authority,principals="name" ssh-rsa BBBCCC']
+                passwordHash:
+                  type: string
+                  x-doc-required: true
+                  description: |
+                    Hashed user password.
+
+                    The format corresponds to the password hashes in `/etc/shadow`. You can get it using the following command: `openssl passwd -6`.
+                  x-doc-examples: ['$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC']
+                isSudoer:
+                  type: boolean
+                  description: 'Persistence of node user in sudo group.'
+                  x-doc-examples: ['true']
+                  default: false
+                extraGroups:
+                  type: array
+                  description: 'Node user additional system groups.'
+                  items:
+                    type: string
+                  x-doc-examples:
+                  - [ 'docker' ]
+                  - [ 'docker', 'ftp' ]
+                nodeGroups:
+                  type: array
+                  default: [ '*' ]
+                  description: List of NodeGroups to apply the user for.
+                  x-doc-examples:
+                  - [ 'master', 'worker' ]
+                  - [ 'worker' ]
+                  - [ '*' ]
+                  items:
+                    type: string
+            status:
+              default: {}
+              type: object
+              description: |
+                User creation status information
+              properties:
+                errors:
+                  default: {}
+                  type: object
+                  description: |
+                    List of user creation errors on each node
+                  additionalProperties:
+                    type: string
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Uid
+          jsonPath: .spec.uid
+          type: number
+          description: User ID
+        - name: IsSudoer
+          jsonPath: .spec.isSudoer
+          type: boolean
+          description: Can user run commands as root
+        - name: ExtraGroups
+          jsonPath: .spec.extraGroups
+          type: string
+          description: extra groups for user
+        - name: NodeGroups
+          jsonPath: .spec.nodeGroups
+          type: string
+          description: nodegroups for user
+        - name: Errors
+          jsonPath: .status.errors
+          type: string
+          description: Number of errors when creating a user on selected nodes
+        - name: Age
+          jsonPath: .metadata.creationTimestamp
+          type: date
+          description: >
+            CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata

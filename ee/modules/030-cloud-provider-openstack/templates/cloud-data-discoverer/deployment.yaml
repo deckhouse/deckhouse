@@ -129,6 +129,7 @@ spec:
               name: cloud-data-discoverer
         - name: CLUSTER_UUID
           value: {{ .Values.global.discovery.clusterUUID | quote }}
+        {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         livenessProbe:
           httpGet:
             path: /healthz

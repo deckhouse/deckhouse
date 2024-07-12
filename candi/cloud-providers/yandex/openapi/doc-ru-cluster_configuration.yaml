@@ -48,6 +48,9 @@ apiVersions:
               diskSizeGB:
                 description: |
                   Размер диска у инстансов. Значение указывается в `ГиБ`.
+              diskType:
+                description: |
+                  Тип диска у создаваемых инстансов.
               etcdDiskSizeGb:
                 description: |
                   Размер диска для etcd. Значение указывается в `ГиБ`.

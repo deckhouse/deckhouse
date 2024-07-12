@@ -43,12 +43,19 @@ editions:
   - ceph-csi
   - openvpn
 
+- name: SE
+  modulesDir: "ee/se/modules"
+
+  excludeModules:
+  - dashboard
+
 - name: EE
   modulesDir: "ee/modules"
   terraformProviders:
     - openstack
     - vsphere
     - vcd
+    - ovirt
 
 - name: FE
   modulesDir: "ee/fe/modules"

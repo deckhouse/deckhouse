@@ -228,7 +228,6 @@ func newExportConfig(rw *remotewrite.RemoteWrite, headers map[string]string) exp
 	tlsConfig["insecure_skip_verify"] = strconv.FormatBool(rw.Spec.Config.TLSConfig.InsecureSkipVerify)
 
 	if rw.Spec.Config.TLSConfig.CA != "" {
-
 		tlsConfig["ca"] = rw.Spec.Config.TLSConfig.CA
 	}
 

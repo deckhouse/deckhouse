@@ -1,6 +1,6 @@
 {{- define "falco_resources" }}
-cpu: 10m
-memory: 25Mi
+cpu: 50m
+memory: 64Mi
 {{- end }}
 
 {{- define "falcosidekick_resources" }}
@@ -22,20 +22,8 @@ metadata:
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
 spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: DaemonSet
-    name: {{ $.Chart.Name }}
-  updatePolicy:
-    updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-    - containerName: "falco"
-      minAllowed:
-      {{- include "falco_resources" . | nindent 8 }}
-      maxAllowed:
-        cpu: 4000m
-        memory: 5Gi
+    {{- include "helm_lib_resources_management_vpa_spec"  (list "apps/v1" "DaemonSet" $.Chart.Name "falco" $.Values.runtimeAuditEngine.resourcesRequests ) | nindent 2}}
+    {{- if eq (.Values.runtimeAuditEngine.resourcesRequests.mode) "VPA" }}
     - containerName: "falcosidekick"
       minAllowed:
       {{- include "falcosidekick_resources" . | nindent 8 }}
@@ -49,6 +37,7 @@ spec:
         cpu: 100m
         memory: 300Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+    {{- end }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -163,14 +152,14 @@ spec:
         livenessProbe:
           httpGet:
             path: /sidekick/ping
-            port: 8766
+            port: 4212
             scheme: HTTPS
           initialDelaySeconds: 10
           periodSeconds: 5
         readinessProbe:
           httpGet:
             path: /sidekick/ping
-            port: 8766
+            port: 4212
             scheme: HTTPS
           initialDelaySeconds: 10
           periodSeconds: 5
@@ -224,7 +213,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8766"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4212"
         - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
         - "--v=2"
         - "--logtostderr=true"
@@ -251,17 +240,17 @@ spec:
                   subresource: prometheus-metrics
                   name: {{ $.Chart.Name }}
         ports:
-        - containerPort: 8766
+        - containerPort: 4212
           name: https-metrics
         livenessProbe:
           httpGet:
             path: /livez
-            port: 8766
+            port: 4212
             scheme: HTTPS
         readinessProbe:
           httpGet:
             path: /livez
-            port: 8766
+            port: 4212
             scheme: HTTPS
         resources:
           requests:

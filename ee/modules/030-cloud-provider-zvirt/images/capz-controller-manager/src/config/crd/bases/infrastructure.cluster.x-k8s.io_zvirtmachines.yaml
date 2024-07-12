@@ -1,0 +1,182 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: zvirtmachines.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    kind: ZvirtMachine
+    listKind: ZvirtMachineList
+    plural: zvirtmachines
+    singular: zvirtmachine
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: ZvirtMachine is the Schema for the zvirtmachines API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ZvirtMachineSpec defines the desired state of ZvirtMachine
+            properties:
+              cpu:
+                description: CPU defines the VM CPU.
+                properties:
+                  cores:
+                    default: 1
+                    description: Cores is the number of cores per socket.
+                    format: int32
+                    type: integer
+                  sockets:
+                    default: 4
+                    description: Sockets is the number of sockets for a VM.
+                    format: int32
+                    type: integer
+                  threads:
+                    default: 1
+                    description: Threads is the number of thread per core.
+                    format: int32
+                    type: integer
+                required:
+                - cores
+                - sockets
+                - threads
+                type: object
+              id:
+                description: ID is the UUID of the VM
+                type: string
+              memory:
+                default: 8192
+                description: MemoryMB is the size of a VM's memory in MiBs.
+                format: int32
+                type: integer
+              nicName:
+                default: nic1
+                description: NicName is a name that will be assigned to the vNIC attached
+                  to the VM.
+                type: string
+              providerID:
+                description: ProviderID is the UUID of the VM, prefixed with 'zvirt://'
+                  proto.
+                type: string
+              rootDiskSizeGb:
+                default: 20
+                description: RootDiskSize size of the bootable disk in GiB.
+                format: int64
+                type: integer
+              template:
+                description: The VM template this instance will be created from.
+                type: string
+              vnicProfileID:
+                description: VNICProfileID the id of the zVirt vNic profile for the
+                  VM.
+                type: string
+            required:
+            - cpu
+            - nicName
+            - rootDiskSizeGb
+            - template
+            - vnicProfileID
+            type: object
+          status:
+            description: ZvirtMachineStatus defines the observed state of ZvirtMachine
+            properties:
+              addresses:
+                description: Addresses holds a list of the host names, external IP
+                  addresses, internal IP addresses, external DNS names, and/or internal
+                  DNS names for the VM.
+                items:
+                  properties:
+                    address:
+                      type: string
+                    type:
+                      description: MachineAddressType describes a valid MachineAddress
+                        type.
+                      type: string
+                  required:
+                  - address
+                  - type
+                  type: object
+                type: array
+              conditions:
+                description: Conditions defines current service state of the ZvirtMachine.
+                items:
+                  description: Condition defines an observation of a Cluster API resource
+                    operational state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
+                      type: string
+                    reason:
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may not be empty.
+                      type: string
+                    severity:
+                      description: |-
+                        Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: |-
+                        Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+              failureMessage:
+                description: FailureMessage will describe an error if something goes
+                  wrong during Machine lifecycle.
+                type: string
+              failureReason:
+                description: FailureReason will contain an error type if something
+                  goes wrong during Machine lifecycle.
+                type: string
+              ready:
+                description: Ready indicates the VM has been provisioned and is ready.
+                type: boolean
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

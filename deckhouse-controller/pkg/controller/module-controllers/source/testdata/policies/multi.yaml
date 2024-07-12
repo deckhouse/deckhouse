@@ -1,0 +1,74 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleUpdatePolicy
+metadata:
+  name: deckhouse-ignore
+spec:
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        source: deckhouse
+  releaseChannel: Alpha
+  update:
+    mode: Ignore
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleUpdatePolicy
+metadata:
+  name: deckhouse-prod
+spec:
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        module: deckhouse-admin
+        source: deckhouse-prod
+  releaseChannel: Alpha
+  update:
+    mode: Auto
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleUpdatePolicy
+metadata:
+  name: deckhouse-prod-ignore
+spec:
+  moduleReleaseSelector:
+    labelSelector:
+      matchExpressions:
+        - key: source
+          operator: In
+          values:
+            - deckhouse-prod
+        - key: module
+          operator: NotIn
+          values:
+            - deckhouse-admin
+            - deckhouse-commander
+  releaseChannel: Alpha
+  update:
+    mode: Ignore
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleUpdatePolicy
+metadata:
+  name: foxtrot-alpha
+spec:
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        source: foxtrot
+  releaseChannel: Alpha
+  update:
+    mode: Auto
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleUpdatePolicy
+metadata:
+  name: my-test-alpha
+spec:
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        source: my-test
+  releaseChannel: Alpha
+  update:
+    mode: Auto

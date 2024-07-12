@@ -16,3 +16,9 @@ properties:
           - type: string
           - type: boolean
             enum: [false]
+      grafanaToken:
+        type: string
+        default: ""
+      logShipperToken:
+        type: string
+        default: ""

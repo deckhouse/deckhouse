@@ -128,7 +128,7 @@ EOF
 
   if [[ "$allowedZones" != "[]" ]]; then
     for zone in $(jq -e -r '.[]' <<< "$ngZones"); do
-      if ! printf '%s\n' "${allowedZones[@]}" | grep -qE "^$zone\$"; then
+      if ! grep -qE "^$zone\$" <<< "$allowedZones"; then
         cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"unknown zone \"${zone}\""}
 EOF

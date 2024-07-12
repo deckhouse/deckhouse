@@ -34,8 +34,7 @@ standard:
     instanceClass:
       flavorName: m1.large                      # Required.
       imageName: ubuntu-20-04-cloud-amd64       # Required.
-      # Optional, local disk is used if not specified.
-      rootDiskSize: 50
+      rootDiskSize: 50                          # Optional, default 50 gigabytes.
       additionalTags:
         severity: critical                      # Optional.
         environment: production                 # Optional.

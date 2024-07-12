@@ -56,17 +56,21 @@ func init() {
 	}
 
 	checkIstioAndK8sVersionsCompatibilityFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-		comingDefaultK8sVersion := requirementValue
+		comingDefaultK8sVersionSemver, err := semver.NewVersion(requirementValue)
+		if err != nil {
+			return false, err
+		}
+		comingDefaultK8sVersion := fmt.Sprintf("%d.%d", comingDefaultK8sVersionSemver.Major(), comingDefaultK8sVersionSemver.Minor())
 
 		currentMinIstioVersionRaw, exists := getter.Get(minVersionValuesKey)
 		if !exists {
-			return false, fmt.Errorf("%s key is not registred", minVersionValuesKey)
+			return true, nil
 		}
 		currentMinIstioVersionStr := currentMinIstioVersionRaw.(string)
 
 		isAtomaticK8sVerRaw, exists := getter.Get(isK8sVersionAutomaticKey)
 		if !exists {
-			return false, fmt.Errorf("%s key is not registred", isK8sVersionAutomaticKey)
+			return true, nil
 		}
 		isAtomaticK8sVer := isAtomaticK8sVerRaw.(bool)
 		// Only if k8s version is set to Automatic in cluster
@@ -76,7 +80,7 @@ func init() {
 
 		compatibilityMapRaw, exists := getter.Get(istioToK8sCompatibilityMapKey)
 		if !exists {
-			return false, fmt.Errorf("%s key is not registred", istioToK8sCompatibilityMapKey)
+			return true, nil
 		}
 		compatibilityMap, ok := compatibilityMapRaw.(map[string][]string)
 		if !ok {

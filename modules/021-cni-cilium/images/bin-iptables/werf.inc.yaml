@@ -1,0 +1,22 @@
+{{- $iptablesVersion := "1.8.8-1" }}
+---
+# #####################################################################
+# Build IPTABLES binaries (based on base-cilium-dev)
+# Original IMAGE_TAG of cilium/iptables is 67f517af50e18f64cd12625021f1c39246bb4f92
+# Corresponding commit is 3e6b0f588d788ac0e69f4d126cfb3c55b1513948 (https://github.com/cilium/image-tools/tree/3e6b0f588d788ac0e69f4d126cfb3c55b1513948)
+# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile#L10
+# and https://github.com/cilium/image-tools/blob/3e6b0f588d788ac0e69f4d126cfb3c55b1513948/images/iptables/Dockerfile
+# and https://github.com/cilium/image-tools/blob/aee704bc3cf922acc4a2a02b0b76f524d4796a14/images/iptables/Dockerfile
+# and https://salsa.debian.org/pkg-netfilter-team/pkg-iptables/-/tree/debian/1.8.8-1
+# #####################################################################
+---
+artifact: {{ $.ModuleName }}/iptables-artifact
+fromImage: {{ $.ModuleName }}/base-cilium-dev
+shell:
+  install:
+  - mkdir /iptables
+  - gbp clone {{ $.SOURCE_REPO }}/pkg-netfilter-team/pkg-iptables.git /iptables/iptables-{{ $iptablesVersion }}
+  - cd /iptables/iptables-{{ $iptablesVersion }}
+  - git checkout debian/{{ $iptablesVersion }}
+  - dpkg-checkbuilddeps /iptables/iptables-{{ $iptablesVersion }}/debian/control
+  - gbp buildpackage --git-ignore-branch --git-ignore-new --git-no-pristine-tar -b -us -uc

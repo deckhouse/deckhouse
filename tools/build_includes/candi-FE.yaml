@@ -9,6 +9,8 @@
   to: /deckhouse/candi/bashible/bundles/astra
 - add: /ee/be/candi/bashible/bundles/redos
   to: /deckhouse/candi/bashible/bundles/redos
+- add: /ee/be/candi/bashible/bundles/rosa
+  to: /deckhouse/candi/bashible/bundles/rosa
 - add: /ee/be/candi/bashible/detect_bundle.sh
   to: /deckhouse/candi/bashible/detect_bundle.sh
 - add: /ee/candi/cloud-providers/openstack
@@ -17,5 +19,7 @@
   to: /deckhouse/candi/cloud-providers/vsphere
 - add: /ee/candi/cloud-providers/vcd
   to: /deckhouse/candi/cloud-providers/vcd
+- add: /ee/candi/cloud-providers/zvirt
+  to: /deckhouse/candi/cloud-providers/zvirt
 - add: /ee/fe/candi/bashible/common-steps/all/099_upd_tfadm.sh.tpl
   to: /deckhouse/candi/bashible/common-steps/all/099_upd_tfadm.sh.tpl

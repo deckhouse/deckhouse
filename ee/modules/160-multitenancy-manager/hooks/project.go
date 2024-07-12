@@ -33,12 +33,12 @@ const (
 	defaultProjectTemplatePath = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/default-project-template.yaml"
 	secureProjectTemplatePath  = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/secure-project-template.yaml"
 	dedicatedNodesTemplatePath = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/secure-with-dedicated-nodes-project-template.yaml"
-	userResourcesTemplatePath  = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
+	userResourcesTemplatesPath = "/deckhouse/modules/160-multitenancy-manager/templates/user-resources/templates/"
 	// Alternative path is needed to run tests in ci\cd pipeline
 	alternativeDefaultProjectTemplatePath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/default-project-template.yaml"
 	alternativeSecureProjectTemplatePath  = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/secure-project-template.yaml"
 	alternativeDedicatedNodesTemplatePath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/secure-with-dedicated-nodes-project-template.yaml"
-	alternativeUserResourcesTemplatePath  = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/user-resources-templates.yaml"
+	alternativeUserResourcesTemplatesPath = "/deckhouse/ee/modules/160-multitenancy-manager/templates/user-resources/templates/"
 )
 
 var onceCreateDefaultTemplates sync.Once
@@ -81,7 +81,7 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 			}
 		}
 	}
-	var projectValuesSnap = internal.GetProjectSnapshots(input, projectTemplateValuesSnap)
+	var projectsSnap = internal.GetProjectSnapshots(input, projectTemplateValuesSnap)
 	var existProjects = set.NewFromSnapshot(input.Snapshots[internal.ProjectsSecrets])
 
 	helmClient, err := dc.GetHelmClient(internal.D8MultitenancyManager)
@@ -89,13 +89,12 @@ func handleProjects(input *go_hook.HookInput, dc dependency.Container) error {
 		return err
 	}
 
-	// TODO read template once
 	resourcesTemplate, err := readUserResourcesTemplate()
 	if err != nil {
 		return err
 	}
 
-	for projectName, projectValues := range projectValuesSnap {
+	for projectName, projectValues := range projectsSnap {
 		postRenderer.SetProject(projectName)
 		if existProjects.Has(projectName) {
 			existProjects.Delete(projectName)
@@ -133,11 +132,20 @@ func concatValues(ps internal.ProjectSnapshot, pts internal.ProjectTemplateSnaps
 	}
 }
 
+var userTemplates = make(map[string]interface{})
+
 func readUserResourcesTemplate() (map[string]interface{}, error) {
-	templateData, err := os.ReadFile(userResourcesTemplatePath)
+	// read templates for projects
+	if len(userTemplates) > 0 {
+		return userTemplates, nil
+	}
+
+	dirPath := userResourcesTemplatesPath
+	files, err := os.ReadDir(userResourcesTemplatesPath)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			templateData, err = os.ReadFile(alternativeUserResourcesTemplatePath)
+		if os.IsNotExist(err) {
+			dirPath = alternativeUserResourcesTemplatesPath
+			files, err = os.ReadDir(alternativeUserResourcesTemplatesPath)
 			if err != nil {
 				return nil, err
 			}
@@ -146,13 +154,24 @@ func readUserResourcesTemplate() (map[string]interface{}, error) {
 		}
 	}
 
-	templates := map[string]interface{}{
-		filepath.Base(userResourcesTemplatePath): templateData,
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+
+		templateData, err := os.ReadFile(filepath.Join(dirPath, file.Name()))
+		if err != nil {
+			return nil, err
+		}
+
+		userTemplates[file.Name()] = templateData
 	}
 
-	return templates, nil
+	return userTemplates, nil
 }
 
+// we have to install Default projects from hook, otherwise deckhouse will try to render it
+// also matrix tests will fail
 func createDefaultProjectTemplate(input *go_hook.HookInput) {
 	onceBody := func() {
 		defaultProjectTemplateRaw, err := readDefaultProjectTemplate(defaultProjectTemplatePath, alternativeDefaultProjectTemplatePath)

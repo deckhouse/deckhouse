@@ -68,9 +68,6 @@ kubernetesVersion: "1.29"
 	})
 
 	for provider, valueName := range cloudProviderNameToModule {
-		provider := provider
-		valueName := valueName
-
 		Context("Cluster has a d8-cluster-configuration secret with provider "+provider, func() {
 			provider := provider
 

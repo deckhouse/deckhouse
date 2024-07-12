@@ -127,7 +127,7 @@ Destination registries:
 - DECKHOUSE_REGISTRY_HOST
 - DEV_REGISTRY_PATH
 */}!}
-{!{ range $werfEnv := slice "CE" "EE" "FE" "BE" }!}
+{!{ range $werfEnv := slice "CE" "EE" "FE" "BE" "SE" }!}
       - name: Publish release images for {!{ $werfEnv }!}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
@@ -181,7 +181,7 @@ Destination registries:
 
           # Variables
           #   1. Edition and channel.
-          # CE/EE/FE/BE -> ce/ee/fe/be
+          # CE/EE/FE/BE/SE -> ce/ee/fe/be/se
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
           RELEASE_CHANNEL={!{ $channel }!}
 

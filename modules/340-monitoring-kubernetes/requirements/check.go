@@ -17,8 +17,8 @@ limitations under the License.
 package requirements
 
 import (
-	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -32,21 +32,26 @@ func init() {
 		if err != nil {
 			return false, err
 		}
-		unavailabelVersionStr, exists := getter.Get(hooks.AutoK8sVersion)
+		deprecatesK8sVersionsRaw, exists := getter.Get(hooks.K8sVersionsWithDeprecations)
 		if !exists {
 			return true, nil
 		}
-		unavailabelVersion, err := semver.NewVersion(unavailabelVersionStr.(string))
-		if err != nil {
-			return false, err
+
+		deprecatedK8sVersions := deprecatesK8sVersionsRaw.(string)
+		if deprecatedK8sVersions == "initial" {
+			return false, fmt.Errorf("checking for deprecated resources")
 		}
 
-		if !desiredVersion.LessThan(unavailabelVersion) {
-			if reason, exists := getter.Get(hooks.AutoK8sReason); exists {
-				return false, fmt.Errorf("k8s version is not available because outdated versions of resources are used: %v", reason)
-			}
+		if deprecatedK8sVersions == "" {
+			return true, nil
+		}
 
-			return false, errors.New("k8s version is not available because outdated versions of resources are used")
+		arr := strings.Split(deprecatedK8sVersions, ",")
+		for _, k8VersionStr := range arr {
+			k8Version := semver.MustParse(k8VersionStr)
+			if k8Version.LessThan(desiredVersion) || k8Version.Equal(desiredVersion) {
+				return false, fmt.Errorf("k8s version is not available because deprecated resources are used. Check alerts for details")
+			}
 		}
 
 		return true, nil

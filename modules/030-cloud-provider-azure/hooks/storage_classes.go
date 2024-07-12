@@ -17,7 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -30,6 +32,7 @@ type StorageClass struct {
 	CachingMode       string `json:"cachingMode,omitempty"`
 	DiskIOPSReadWrite int64  `json:"diskIOPSReadWrite,omitempty"`
 	DiskMBpsReadWrite int64  `json:"diskMBpsReadWrite,omitempty"`
+	Tags              string `json:"tags,omitempty"`
 }
 
 var storageClassesConfig = []StorageClass{
@@ -75,11 +78,14 @@ func storageClasses(input *go_hook.HookInput) error {
 	var provisionStorageClasses []StorageClass
 
 	for _, sc := range provision {
+		tagsArray := sc.Get("tags").Array()
+		tags := tagsToString(tagsArray)
 		provisionStorageClasses = append(provisionStorageClasses, StorageClass{
 			Name:              sc.Get("name").String(),
 			Type:              sc.Get("type").String(),
 			DiskIOPSReadWrite: sc.Get("diskIOPSReadWrite").Int(),
 			DiskMBpsReadWrite: sc.Get("diskMBpsReadWrite").Int(),
+			Tags:              tags,
 		})
 	}
 
@@ -128,4 +134,14 @@ func storageClasses(input *go_hook.HookInput) error {
 	}
 
 	return nil
+}
+
+func tagsToString(tagsArray []gjson.Result) string {
+	tags := make([]string, 0, len(tagsArray))
+	for _, tag := range tagsArray {
+		key := tag.Get("key").String()
+		value := tag.Get("value").String()
+		tags = append(tags, fmt.Sprintf("%s=%s", key, value))
+	}
+	return strings.Join(tags, ",")
 }

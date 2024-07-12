@@ -3,6 +3,7 @@ title: "Custom Resources"
 permalink: en/cr.html
 ---
 
+{{ site.data.schemas.global.crds.deckhouse-release | format_crd: "global" }}
 {{ site.data.schemas.global.crds.module | format_crd: "global" }}
 {{ site.data.schemas.global.crds.module-config | format_crd: "global" }}
 {{ site.data.schemas.global.crds.module-pull-override | format_crd: "global" }}

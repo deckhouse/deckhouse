@@ -18,13 +18,15 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"regexp"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
-	MirrorModuleDirectory  = ""
-	MirrorModuleSourcePath = ""
+	MirrorModulesDirectory  = ""
+	MirrorModulesSourcePath = ""
+	MirrorModulesFilter     = ""
 )
 
 func DefineMirrorModulesFlags(cmd *kingpin.CmdClause) {
@@ -33,12 +35,12 @@ func DefineMirrorModulesFlags(cmd *kingpin.CmdClause) {
 		PlaceHolder("PATH").
 		Required().
 		Envar(configEnvName("MIRROR_MODULES_DIR")).
-		StringVar(&MirrorModuleDirectory)
+		StringVar(&MirrorModulesDirectory)
 	cmd.Flag("module-source", "Path to ModuleSource YAML document describing where to pull modules from. Conflicts with --registry").
 		Short('m').
 		PlaceHolder("PATH").
 		Envar(configEnvName("MIRROR_MODULES_SOURCE")).
-		ExistingFileVar(&MirrorModuleSourcePath)
+		ExistingFileVar(&MirrorModulesSourcePath)
 	cmd.Flag("registry", "Push modules to your private registry, specified as registry-host[:port][/path]. Conflicts with --module-source").
 		Short('r').
 		Envar(configEnvName("MIRROR_PRIVATE_REGISTRY")).
@@ -53,6 +55,11 @@ func DefineMirrorModulesFlags(cmd *kingpin.CmdClause) {
 		PlaceHolder("PASSWORD").
 		Envar(configEnvName("MIRROR_PASS")).
 		StringVar(&MirrorRegistryPassword)
+	cmd.Flag("modules-filter", `Filter which modules to pull. Format is "moduleName:v1.2.3" or "moduleName:release-channel", separated by ';'.`).
+		Short('f').
+		PlaceHolder("PASSWORD").
+		Envar(configEnvName("MIRROR_PASS")).
+		StringVar(&MirrorModulesFilter)
 	cmd.Flag("tls-skip-verify", "TLS certificate validation.").
 		BoolVar(&MirrorTLSSkipVerify)
 	cmd.Flag("insecure", "Interact with registries over HTTP.").
@@ -60,6 +67,9 @@ func DefineMirrorModulesFlags(cmd *kingpin.CmdClause) {
 
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
 		if err := validateRegistryCredentials(); err != nil {
+			return err
+		}
+		if err := validateModuleFilterFormat(); err != nil {
 			return err
 		}
 
@@ -70,11 +80,11 @@ func DefineMirrorModulesFlags(cmd *kingpin.CmdClause) {
 			}
 		}
 
-		if MirrorModuleSourcePath == "" && MirrorRegistry == "" {
+		if MirrorModulesSourcePath == "" && MirrorRegistry == "" {
 			return errors.New("One of --modules-source or --registry flags is required.")
 		}
 
-		if MirrorModuleSourcePath != "" && MirrorRegistry != "" {
+		if MirrorModulesSourcePath != "" && MirrorRegistry != "" {
 			return errors.New("You have specified both --module-source and --registry flags. This is not how it works.\n\n" +
 				"Leave only --module-source if you want to pull modules from ModuleSource.\n" +
 				"Leave only --registry if you already pulled modules images and want to push it to your private registry.")
@@ -82,4 +92,16 @@ func DefineMirrorModulesFlags(cmd *kingpin.CmdClause) {
 
 		return nil
 	})
+}
+
+func validateModuleFilterFormat() error {
+	if MirrorModulesFilter == "" {
+		return nil
+	}
+
+	if !regexp.MustCompile(`([a-zA-Z0-9-_]+:(v\d+\.\d+\.\d+|[a-zA-Z0-9_\-]+));?`).MatchString(MirrorModulesFilter) {
+		return errors.New("Invalid filter pattern")
+	}
+
+	return nil
 }

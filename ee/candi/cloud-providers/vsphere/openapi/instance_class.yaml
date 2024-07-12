@@ -70,7 +70,7 @@ spec:
                     type: string
                 datastore:
                   description: |
-                    Path to a Datastore in which VirtualMachines will be cloned. Relative to the datacenter.
+                    Path to a Datastore (relative to the datacenter) in which VirtualMachines will be cloned.
 
                     By default, a datastore from the `master` InstanceClass is used.
                   x-doc-examples: ['lun-1201']

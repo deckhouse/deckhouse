@@ -82,13 +82,13 @@ $(document).ready(function() {
   $.cookie('lang', '{{ page.lang }}');
   $('#enter-license-key').click((e)=> {
     e.preventDefault();
-    let licenseToken = $('[license-token]').val()
+    let licenseToken = $('[license-token]').val().trim();
     getLicenseToken(licenseToken)
   });
 
   $('[license-token]').keypress((e) => {
       const keycode = (event.keyCode ? event.keyCode : event.which);
-      let licenseToken = $('[license-token]').val()
+      let licenseToken = $('[license-token]').val().trim();
       if (keycode == '13') {
         getLicenseToken(licenseToken)
       }

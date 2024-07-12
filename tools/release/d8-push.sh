@@ -41,7 +41,10 @@ Usage: $0
         Print this message.
 "
 }
-
+echo "
+DEPRECATION NOTICE: d8-pull and d8-push scripts are deprecated. Please use dhctl mirror command instead for Deckhouse releases starting from version 1.45.
+See the documentation for additional information https://deckhouse.io/documentation/v1/deckhouse-faq.html#manually-uploading-images-to-an-air-gapped-registry
+"
 HAS_DOCKER="$(type "docker" &> /dev/null && echo true || echo false)"
 HAS_GNU_READLINK=$(type "readlink" &> /dev/null && readlink --version | grep -qi GNU && echo true || echo false)
 D8_DOCKER_CONFIG_DIR=~/.docker/deckhouse

@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -101,13 +102,16 @@ type DeckhouseInstaller struct {
 
 	ReleaseChannel   string
 	InstallerVersion string
+
+	CommanderMode bool
+	CommanderUUID uuid.UUID
 }
 
 func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
 	registryNameTemplate := "%s%s:%s"
 	tag := c.DevBranch
 	if forceVersionTag {
-		versionTag, foundValidTag := readVersionTagFromInstallerContainer()
+		versionTag, foundValidTag := ReadVersionTagFromInstallerContainer()
 		if foundValidTag {
 			tag = versionTag
 		}
@@ -124,7 +128,7 @@ func (c *DeckhouseInstaller) IsRegistryAccessRequired() bool {
 	return c.Registry.DockerCfg != ""
 }
 
-func readVersionTagFromInstallerContainer() (string, bool) {
+func ReadVersionTagFromInstallerContainer() (string, bool) {
 	rawFile, err := os.ReadFile(app.VersionFile)
 	if err != nil {
 		log.WarnF(
@@ -148,17 +152,17 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	}
 	clusterConfig, err := metaConfig.ClusterConfigYAML()
 	if err != nil {
-		return nil, fmt.Errorf("marshal cluster config: %v", err)
+		return nil, fmt.Errorf("Marshal cluster config failed: %v", err)
 	}
 
 	providerClusterConfig, err := metaConfig.ProviderClusterConfigYAML()
 	if err != nil {
-		return nil, fmt.Errorf("marshal provider config: %v", err)
+		return nil, fmt.Errorf("Marshal provider config failed: %v", err)
 	}
 
 	staticClusterConfig, err := metaConfig.StaticClusterConfigYAML()
 	if err != nil {
-		return nil, fmt.Errorf("marshal static config: %v", err)
+		return nil, fmt.Errorf("Marshal static config failed: %v", err)
 	}
 
 	bundle := DefaultBundle

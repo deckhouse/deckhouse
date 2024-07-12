@@ -34,7 +34,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/addon-operator/sdk"
 	klient "github.com/flant/kube-client/client"
 	"github.com/flant/kube-client/fake"
@@ -150,7 +149,7 @@ type HookExecutionConfig struct {
 	BindingContexts          BindingContextsSlice
 	BindingContextController *hookcontext.BindingContextController
 	extraHookEnvs            []string
-	ValuesValidator          *validation.ValuesValidator
+	ValuesValidator          *values_validation.ValuesValidator
 	GoHookError              error
 	GoHookBindingActions     []go_hook.BindingAction
 
@@ -260,8 +259,7 @@ func HookExecutionConfigInit(initValues, initConfigValues string, k8sVersion ...
 	buf := &bytes.Buffer{}
 	logrus.SetOutput(buf)
 	// TODO Is there a solution for ginkgo to have a shared validator for all tests in module?
-	hec.ValuesValidator = validation.NewValuesValidator()
-	err = values_validation.LoadOpenAPISchemas(hec.ValuesValidator, moduleName, modulePath)
+	hec.ValuesValidator, err = values_validation.NewValuesValidator(moduleName, modulePath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, buf.String())
 		panic(fmt.Errorf("load module OpenAPI schemas for hook: %v", err))
@@ -510,9 +508,9 @@ func (hec *HookExecutionConfig) RunHook() {
 	Expect(hec.configValues.JSONRepr).ToNot(BeEmpty())
 
 	By("Validating initial values")
-	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.values.JSONRepr, false)).To(Succeed())
+	Expect(hec.ValuesValidator.ValidateJSONValues(moduleName, hec.values.JSONRepr, false)).To(Succeed())
 	By("Validating initial config values")
-	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.configValues.JSONRepr, true)).To(Succeed())
+	Expect(hec.ValuesValidator.ValidateJSONValues(moduleName, hec.configValues.JSONRepr, true)).To(Succeed())
 
 	tmpDir, err = TempDirWithPerms(globalTmpDir, "", 0o777)
 	Expect(err).ShouldNot(HaveOccurred())
@@ -593,9 +591,9 @@ func (hec *HookExecutionConfig) RunHook() {
 	}
 
 	By("Validating resulting values")
-	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.values.JSONRepr, false)).To(Succeed())
+	Expect(hec.ValuesValidator.ValidateJSONValues(moduleName, hec.values.JSONRepr, false)).To(Succeed())
 	By("Validating resulting config values")
-	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.configValues.JSONRepr, true)).To(Succeed())
+	Expect(hec.ValuesValidator.ValidateJSONValues(moduleName, hec.configValues.JSONRepr, true)).To(Succeed())
 
 	if len(kubernetesPatchBytes) != 0 {
 		operations, err := object_patch.ParseOperations(kubernetesPatchBytes)
@@ -739,9 +737,9 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	hec.GoHookBindingActions = bindingActions
 
 	By("Validating resulting values")
-	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.values.JSONRepr, false)).To(Succeed())
+	Expect(hec.ValuesValidator.ValidateJSONValues(moduleName, hec.values.JSONRepr, false)).To(Succeed())
 	By("Validating resulting config values")
-	Expect(values_validation.ValidateJSONValues(hec.ValuesValidator, moduleName, hec.configValues.JSONRepr, true)).To(Succeed())
+	Expect(hec.ValuesValidator.ValidateJSONValues(moduleName, hec.configValues.JSONRepr, true)).To(Succeed())
 }
 
 var _ = BeforeSuite(func() {

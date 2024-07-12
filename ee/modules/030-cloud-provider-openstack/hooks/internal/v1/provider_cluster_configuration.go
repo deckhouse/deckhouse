@@ -38,17 +38,18 @@ type OpenstackProviderClusterConfiguration struct {
 		InternalNetworkCIDR     string `json:"internalNetworkCIDR,omitempty" yaml:"internalNetworkCIDR,omitempty"`
 		InternalNetworkSecurity bool   `json:"internalNetworkSecurity,omitempty" yaml:"internalNetworkSecurity,omitempty"`
 		ExternalNetworkName     string `json:"externalNetworkName,omitempty" yaml:"externalNetworkName,omitempty"`
-		ExternalNetworkDHCP     bool   `json:"externalNetworkDHCP,omitempty" yaml:"externalNetworkDHCP,omitempty"`
+		ExternalNetworkDHCP     *bool  `json:"externalNetworkDHCP,omitempty" yaml:"externalNetworkDHCP,omitempty"`
 	} `json:"standardWithNoRouter,omitempty" yaml:"standardWithNoRouter,omitempty"`
 	Simple struct {
 		ExternalNetworkName string `json:"externalNetworkName,omitempty" yaml:"externalNetworkName,omitempty"`
-		ExternalNetworkDHCP bool   `json:"externalNetworkDHCP,omitempty" yaml:"externalNetworkDHCP,omitempty"`
+		ExternalNetworkDHCP *bool  `json:"externalNetworkDHCP,omitempty" yaml:"externalNetworkDHCP,omitempty"`
 		PodNetworkMode      string `json:"podNetworkMode,omitempty" yaml:"podNetworkMode,omitempty"`
 	} `json:"simple,omitempty" yaml:"simple,omitempty"`
 	SimpleWithInternalNetwork struct {
 		InternalSubnetName           string `json:"internalSubnetName,omitempty" yaml:"internalSubnetName,omitempty"`
 		PodNetworkMode               string `json:"podNetworkMode,omitempty" yaml:"podNetworkMode,omitempty"`
 		ExternalNetworkName          string `json:"externalNetworkName,omitempty" yaml:"externalNetworkName,omitempty"`
+		ExternalNetworkDHCP          *bool  `json:"externalNetworkDHCP,omitempty" yaml:"externalNetworkDHCP,omitempty"`
 		MasterWithExternalFloatingIP bool   `json:"masterWithExternalFloatingIP,omitempty" yaml:"masterWithExternalFloatingIP,omitempty"`
 	} `json:"simpleWithInternalNetwork,omitempty" yaml:"simpleWithInternalNetwork,omitempty"`
 

@@ -15,7 +15,6 @@
 package template
 
 import (
-	"fmt"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
@@ -25,12 +24,15 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
-const (
+var (
 	candiDir         = "/deckhouse/candi"
-	bashibleDir      = "/var/lib/bashible"
 	candiBashibleDir = candiDir + "/bashible"
-	stepsDir         = bashibleDir + "/bundle_steps"
 	detectBundlePath = candiBashibleDir + "/detect_bundle.sh"
+)
+
+const (
+	bashibleDir = "/var/lib/bashible"
+	stepsDir    = bashibleDir + "/bundle_steps"
 )
 
 type saveFromTo struct {
@@ -53,10 +55,8 @@ func logTemplatesData(name string, data map[string]interface{}) {
 	}
 
 	formattedData, _ := yaml.Marshal(dataForLog)
-	_ = log.Process("default", fmt.Sprintf("%s data", name), func() error {
-		log.InfoF(string(formattedData))
-		return nil
-	})
+
+	log.DebugF("Data %s\n%s", name, string(formattedData))
 }
 
 func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePath string, metaConfig *config.MetaConfig) error {
@@ -72,19 +72,17 @@ func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePat
 	}
 	logTemplatesData("bashible", bashibleData)
 
-	return log.Process("default", "Render bashible bundle templates", func() error {
-		if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, bundleName, devicePath); err != nil {
-			return err
-		}
+	if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, bundleName, devicePath); err != nil {
+		return err
+	}
 
-		if err := PrepareKubeadmConfig(templateController, kubeadmData); err != nil {
-			return err
-		}
+	if err := PrepareKubeadmConfig(templateController, kubeadmData); err != nil {
+		return err
+	}
 
-		bashboosterDir := filepath.Join(candiBashibleDir, "bashbooster")
-		log.InfoF("From %q to %q\n", bashboosterDir, bashibleDir)
-		return templateController.RenderBashBooster(bashboosterDir, bashibleDir)
-	})
+	bashboosterDir := filepath.Join(candiBashibleDir, "bashbooster")
+	log.DebugF("From %q to %q\n", bashboosterDir, bashibleDir)
+	return templateController.RenderBashBooster(bashboosterDir, bashibleDir)
 }
 
 func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider, bundle, devicePath string) error {
@@ -140,14 +138,14 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 	}
 
 	for _, info := range saveInfo {
-		log.InfoF("From %q to %q\n", info.from, info.to)
+		log.DebugF("From %q to %q\n", info.from, info.to)
 		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, info.ignorePaths); err != nil {
 			return err
 		}
 	}
 
 	firstRunFileFlag := filepath.Join(templateController.TmpDir, bashibleDir, "first_run")
-	log.InfoF("Create %q\n", firstRunFileFlag)
+	log.DebugF("Create %q\n", firstRunFileFlag)
 	if err := fs.CreateEmptyFile(firstRunFileFlag); err != nil {
 		return err
 	}
@@ -194,4 +192,13 @@ func RenderAndSaveDetectBundle(data map[string]interface{}) (string, error) {
 	log.DebugLn("Start render detect bundle script")
 
 	return RenderAndSaveTemplate("detect_bundle.sh", detectBundlePath, data)
+}
+
+func InitGlobalVars(pwd string) {
+	candiDir = pwd + "/deckhouse/candi"
+	candiBashibleDir = candiDir + "/bashible"
+	detectBundlePath = candiBashibleDir + "/detect_bundle.sh"
+	checkPortsScriptPath = candiBashibleDir + "/preflight/check_ports.sh"
+	checkLocalhostScriptPath = candiBashibleDir + "/preflight/check_localhost.sh"
+	preflightScriptDirPath = candiBashibleDir + "/preflight/"
 }
