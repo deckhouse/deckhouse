@@ -18,7 +18,6 @@ package validation
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"net/http"
 
@@ -39,13 +38,9 @@ func kubernetesVersionHandler() http.Handler {
 			if !ok {
 				return nil, fmt.Errorf("expect Secret as unstructured, got %T", obj)
 			}
-			val, ok := secret.Data["cluster-configuration.yaml"]
+			clusterConfigurationRaw, ok := secret.Data["cluster-configuration.yaml"]
 			if !ok {
 				return nil, fmt.Errorf("expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
-			}
-			var clusterConfigurationRaw = make([]byte, base64.StdEncoding.DecodedLen(len(val)))
-			if _, err := base64.StdEncoding.Decode(clusterConfigurationRaw, val); err != nil {
-				return nil, err
 			}
 			var clusterConf struct {
 				KubernetesVersion string `json:"kubernetesVersion"`
