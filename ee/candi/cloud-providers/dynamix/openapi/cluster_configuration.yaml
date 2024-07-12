@@ -204,7 +204,7 @@ apiVersions:
         additionalProperties: false
         description: Parameters for connecting to the Dynamix.
         properties:
-          controllerURL:
+          controllerUrl:
             type: string
             description: The URL to the Dynamix API endpoint.
           oauth2Url:
