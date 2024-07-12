@@ -11,7 +11,7 @@ apiVersions:
         enum: [deckhouse.io/v1]
       kind:
         type: string
-        enum: [ZvirtCloudProviderDiscoveryData]
+        enum: [DynamixCloudProviderDiscoveryData]
       zones:
         type: array
         items:
