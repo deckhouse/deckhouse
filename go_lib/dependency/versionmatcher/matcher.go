@@ -62,7 +62,7 @@ func (m *Matcher) ValidateByName(name string) error {
 	return nil
 }
 
-func (m *Matcher) ReverseValidate(baseVersion string) (string, error) {
+func (m *Matcher) ValidateBaseVersion(baseVersion string) (string, error) {
 	parsed, err := semver.NewVersion(baseVersion)
 	if err != nil {
 		return "", err
