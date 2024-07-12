@@ -493,7 +493,7 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 	}
 
 	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
-		BreakIf(func(err error) bool { return errors.Is(err, ErrBashibleTimeout) }).
+		BreakIf(func(err error) bool { return errors.Is(err, frontend.ErrBashibleTimeout) }).
 		Run(func() error {
 			// we do not need to restart tunnel because we have HealthMonitor
 
