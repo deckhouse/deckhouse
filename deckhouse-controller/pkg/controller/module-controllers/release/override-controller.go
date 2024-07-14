@@ -87,7 +87,7 @@ func NewModulePullOverrideController(
 
 	ctr, err := controller.New("module-pull-override", mgr, controller.Options{
 		MaxConcurrentReconciles: 1,
-		CacheSyncTimeout:        30 * time.Minute,
+		CacheSyncTimeout:        3 * time.Minute,
 		NeedLeaderElection:      pointer.Bool(false),
 		Reconciler:              rc,
 	})

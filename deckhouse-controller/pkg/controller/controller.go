@@ -31,6 +31,7 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/go-logr/logr"
 	log "github.com/sirupsen/logrus"
+	appsv1 "k8s.io/api/apps/v1"
 	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -51,11 +52,13 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
+	deckhouse_release "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -86,7 +89,8 @@ type DeckhouseController struct {
 	deckhouseModules map[string]*models.DeckhouseModule
 	// <module-name>: <module-source>
 	sourceModules           map[string]string
-	embeddedDeckhousePolicy *v1alpha1.ModuleUpdatePolicySpec
+	embeddedDeckhousePolicy *v1alpha1.ModuleUpdatePolicySpecContainer
+	deckhouseSettings       *helpers.DeckhouseSettingsContainer
 }
 
 func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager, metricStorage *metric_storage.MetricStorage) (*DeckhouseController, error) {
@@ -96,16 +100,20 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	}
 
 	dc := dependency.NewDependencyContainer()
-	embeddedDeckhousePolicy := &v1alpha1.ModuleUpdatePolicySpec{
+	embeddedDeckhousePolicy := v1alpha1.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
 		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
 			Mode: "Auto",
 		},
 		ReleaseChannel: "Stable",
-	}
+	})
+	ds := &helpers.DeckhouseSettings{ReleaseChannel: "Stable"}
+	ds.Update.DisruptionApprovalMode = "Auto"
+	ds.Update.Mode = "Auto"
+	dsContainer := helpers.NewDeckhouseSettingsContainer(ds)
 
 	scheme := runtime.NewScheme()
 
-	for _, add := range []func(s *runtime.Scheme) error{corev1.AddToScheme, coordv1.AddToScheme, v1alpha1.AddToScheme} {
+	for _, add := range []func(s *runtime.Scheme) error{corev1.AddToScheme, coordv1.AddToScheme, v1alpha1.AddToScheme, appsv1.AddToScheme} {
 		err = add(scheme)
 		if err != nil {
 			return nil, err
@@ -138,11 +146,27 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 						},
 					},
 				},
-				// for ModuleRelease controller
+				// for ModuleRelease controller and DeckhouseRelease controller
 				&corev1.Secret{}: {
 					Namespaces: map[string]cache.Config{
 						namespace: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse", "module": "deckhouse"}),
+						},
+					},
+				},
+				// for DeckhouseRelease controller
+				&corev1.Pod{}: {
+					Namespaces: map[string]cache.Config{
+						namespace: {
+							LabelSelector: labels.SelectorFromSet(map[string]string{"app": "deckhouse"}),
+						},
+					},
+				},
+				// for DeckhouseRelease controller
+				&corev1.ConfigMap{}: {
+					Namespaces: map[string]cache.Config{
+						namespace: {
+							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse"}),
 						},
 					},
 				},
@@ -151,6 +175,11 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	err = deckhouse_release.NewDeckhouseReleaseController(ctx, mgr, dc, mm, dsContainer)
+	if err != nil {
+		return nil, fmt.Errorf("new Deckhouse release controller: %w", err)
 	}
 
 	err = source.NewModuleSourceController(mgr, dc, embeddedDeckhousePolicy)
@@ -186,6 +215,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		deckhouseModules:        make(map[string]*models.DeckhouseModule),
 		sourceModules:           make(map[string]string),
 		embeddedDeckhousePolicy: embeddedDeckhousePolicy,
+		deckhouseSettings:       dsContainer,
 		metricStorage:           metricStorage,
 	}, nil
 }
@@ -270,20 +300,17 @@ func (dml *DeckhouseController) runDeckhouseConfigObserver(deckhouseConfigC <-ch
 		cfg := <-deckhouseConfigC
 
 		b, _ := cfg.AsBytes("yaml")
-		mups := &v1alpha1.ModuleUpdatePolicySpec{
-			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
-				Mode: "Auto",
-			},
+		settings := &helpers.DeckhouseSettings{
 			ReleaseChannel: "Stable",
 		}
-		err := yaml.Unmarshal(b, mups)
+		settings.Update.Mode = "Auto"
+		err := yaml.Unmarshal(b, settings)
 		if err != nil {
-			log.Errorf("Error occurred during the Deckhouse embedded policy build: %s", err)
+			log.Errorf("Error occurred during the Deckhouse settings unmarshalling: %s", err)
 			continue
 		}
-		dml.embeddedDeckhousePolicy.ReleaseChannel = mups.ReleaseChannel
-		dml.embeddedDeckhousePolicy.Update.Mode = mups.Update.Mode
-		dml.embeddedDeckhousePolicy.Update.Windows = mups.Update.Windows
+		dml.embeddedDeckhousePolicy.Set(settings)
+		dml.deckhouseSettings.Set(settings)
 	}
 }
 
