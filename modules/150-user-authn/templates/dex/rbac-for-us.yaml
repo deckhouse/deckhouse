@@ -15,6 +15,7 @@ rules:
 - apiGroups: ["apiextensions.k8s.io"]
   resources: ["customresourcedefinitions"]
   verbs:
+  - get
   - list
   - watch
   - create
@@ -25,8 +26,8 @@ rules:
 - apiGroups: ["dex.coreos.com"]
   resources:
   - authcodes
-  - authrequests 
-  - connectors   
+  - authrequests
+  - connectors
   - devicerequests
   - devicetokens
   - oauth2clients
@@ -35,6 +36,7 @@ rules:
   - refreshtokens
   - signingkeies
   verbs:
+  - get
   - list
   - watch
   - create
