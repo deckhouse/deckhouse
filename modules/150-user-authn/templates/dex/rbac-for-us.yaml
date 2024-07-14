@@ -14,10 +14,34 @@ metadata:
 rules:
 - apiGroups: ["apiextensions.k8s.io"]
   resources: ["customresourcedefinitions"]
-  verbs: ["*"]
+  verbs:
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
 - apiGroups: ["dex.coreos.com"]
-  resources: ["*"]
-  verbs: ["*"]
+  resources:
+  - authcodes
+  - authrequests 
+  - connectors   
+  - devicerequests
+  - devicetokens
+  - oauth2clients
+  - offlinesessionses
+  - passwords
+  - refreshtokens
+  - signingkeies
+  verbs:
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -50,7 +74,14 @@ rules:
   - passwords
   - refreshtokens
   - signingkeies
-  verbs: ["*"]
+  verbs:
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
