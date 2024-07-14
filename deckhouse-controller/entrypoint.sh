@@ -58,7 +58,7 @@ cat <<EOF
 EOF
 
 coreModulesDir=$(echo ${MODULES_DIR} | awk -F ":" '{print $1}')
-cat "${coreModulesDir}"/values-"${bundles_map[$bundle]}".yaml >> /tmp/values.yaml
+cat "${coreModulesDir}"/values-"${bundles_map[$bundle]}".yaml > /tmp/values.yaml
 
 set +o pipefail
 set +e
