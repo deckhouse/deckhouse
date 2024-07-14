@@ -93,9 +93,6 @@ var skipCheckWildcards = map[string][]string{
 	"upmeter/templates/upmeter/rbac-for-us.yaml": {
 		"d8:upmeter:upmeter",
 	},
-	"documentation/templates/rbac-for-us.yaml": {
-		"documentation:leases-edit",
-	},
 	"delivery/templates/argocd/application-controller/rbac-for-us.yaml": {
 		"d8:delivery:argocd:application-controller",
 	},
