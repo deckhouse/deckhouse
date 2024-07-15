@@ -429,7 +429,9 @@ apiVersions:
           type: string
         minItems: 1
         uniqueItems: true
-        description: The globally restricted set of zones that this cloud provider works with.
+        description: |
+          The globally restricted set of zones that this cloud provider works with.
+          Currently restricts only the creation of nodes in the cluster.
       additionalRolePolicies:
         type: array
         items:
