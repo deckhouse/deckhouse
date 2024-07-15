@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -125,14 +126,30 @@ func (mr *ModuleRelease) GetSuspend() bool {
 }
 
 func (mr *ModuleRelease) GetManuallyApproved() bool {
-	if approved, found := mr.ObjectMeta.Annotations[approvalAnnotation]; found {
+	log.Info("=== GetManuallyApproved: ModuleRelease", log.Fields{
+		"ModuleRelease": *mr,
+	})
+	log.Info("=== GetManuallyApproved: GetAnnotations", log.Fields{
+		"Annotations": mr.GetObjectMeta().GetAnnotations(),
+	})
+	if approved, found := mr.GetObjectMeta().GetAnnotations()[approvalAnnotation]; found {
+		log.Info("=== GetManuallyApproved: GetAnnotations: found", log.Fields{
+			"approved": approved,
+			"found":    found,
+		})
 		value, err := strconv.ParseBool(approved)
+		log.Info("=== GetManuallyApproved: ParseBool", log.Fields{
+			"value": value,
+			"err":   err,
+		})
 		if err != nil {
 			return false
 		}
 
 		return value
 	}
+
+	log.Info("=== GetManuallyApproved: not found")
 
 	return false
 }
