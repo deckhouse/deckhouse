@@ -854,11 +854,11 @@ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-control
    kubectl -n d8-system delete po -l app=deckhouse
    ```
 
-1. Дождитесь перезапуска Deckhouse и [выполнения всех задач в очереди](./#как-проверить-очередь-заданий-в-deckhouse):
+1. Дождитесь перезапуска Deckhouse и [выполнения всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse):
 
-  ```shell
-  kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
-  ```
+   ```shell
+   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   ```
 
 1. На master-узле проверьте применение новых настроек.
 
@@ -919,11 +919,11 @@ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-control
    kubectl -n d8-system delete po -l app=deckhouse
    ```
 
-1. Дождитесь перезапуска Deckhouse и [выполнения всех задач в очереди](./#как-проверить-очередь-заданий-в-deckhouse):
+1. Дождитесь перезапуска Deckhouse и [выполнения всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse):
 
-  ```shell
-  kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
-  ```
+   ```shell
+   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   ```
   
 1. На master-узле проверьте применение новых настроек.
 

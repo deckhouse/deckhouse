@@ -852,11 +852,11 @@ To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
    kubectl -n d8-system delete po -l app=deckhouse
    ```
 
-1. Wait until Deckhouse restarts and [all tasks in the queue are completed](./#how-to-check-the-job-queue-in-deckhouse):
+1. Wait until Deckhouse restarts and [all tasks in the queue are completed](#how-to-check-the-job-queue-in-deckhouse):
 
- ```shell
- kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
- ```
+   ```shell
+   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   ```
 
 1. On the master node, check the application of the new settings.
 
@@ -917,7 +917,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
    kubectl -n d8-system delete po -l app=deckhouse
    ```
 
-1. Wait until Deckhouse restarts and [all tasks in the queue are completed](./#how-to-check-the-job-queue-in-deckhouse):
+1. Wait until Deckhouse restarts and [all tasks in the queue are completed](#how-to-check-the-job-queue-in-deckhouse):
 
    ```shell
    kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
