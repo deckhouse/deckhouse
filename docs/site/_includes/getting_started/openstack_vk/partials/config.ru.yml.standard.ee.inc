@@ -165,15 +165,19 @@ masterNodeGroup:
     # [<ru>] <availability zone>: <volume type>
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    DP1: dp1-high-iops
+    ME1: high-iops
   instanceClass:
-    # [<en>] Flavor in use.
-    # [<ru>] Используемый flavor.
+    # [<en>] Flavor in use. You can view the list using the command 'openstack flavor list'
+    # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-flavorname
+    # [<ru>] Используемый flavor. Посмотреть список flavor можно командой 'openstack flavor list'
+    # [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-flavorname
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
     flavorName: Standard-4-8-80
-    # [<en>] VM image in use.
-    # [<ru>] Используемый образ виртуальной машины.
+    # [<en>] VM image in use. You can view the list of images using the command 'openstack image list'
+    # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-imagename
+    # [<ru>] Используемый образ виртуальной машины. Посмотреть список образов можно командой 'openstack image list'
+    # [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-imagename
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
     imageName: ubuntu-22-202404160933.gitd6495fe9
