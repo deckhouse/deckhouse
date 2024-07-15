@@ -24,8 +24,8 @@
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 56,
-  "iteration": 1720611581004,
+  "id": 73,
+  "iteration": 1721055814362,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -47,13 +47,14 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Whether master is leader or not",
+      "description": "Monitors which SeaweedFS Master instances are the current leaders",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
           "mappings": [],
+          "noValue": "No",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -89,7 +90,7 @@
         },
         "showPercentChange": false,
         "text": {},
-        "textMode": "auto",
+        "textMode": "value_and_name",
         "wideLayout": true
       },
       "pluginVersion": "8.5.13",
@@ -101,18 +102,17 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum by (pod) (SeaweedFS_master_is_leader{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"})",
+          "expr": "sum by (instance) (SeaweedFS_master_is_leader{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"})",
           "format": "time_series",
           "hide": false,
-          "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A",
           "step": 60
         }
       ],
-      "title": "Raft leader",
+      "title": "Leader Status",
       "type": "stat"
     },
     {
@@ -120,7 +120,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Count times leader changed",
+      "description": "Tracks the number of leader changes for SeaweedFS Master instances",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -196,18 +196,17 @@
             "uid": "${ds_prometheus}"
           },
           "exemplar": true,
-          "expr": "sum by (pod) (SeaweedFS_master_leader_changes{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\", type=~\".+\"})",
+          "expr": "sum by (instance) (SeaweedFS_master_leader_changes{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\", type=~\".+\"})",
           "format": "time_series",
           "hide": false,
           "instant": false,
-          "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{instance}}",
           "refId": "A",
           "step": 60
         }
       ],
-      "title": "Master leader changes",
+      "title": "Leader Changes",
       "type": "timeseries"
     },
     {
@@ -215,7 +214,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Heartbeats received from components",
+      "description": "Displays the number of SeaweedFS Master instances currently acting as leaders.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -235,7 +234,7 @@
             },
             "lineInterpolation": "linear",
             "lineWidth": 1,
-            "pointSize": 4,
+            "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
@@ -256,6 +255,10 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 2
               }
             ]
           },
@@ -269,7 +272,7 @@
         "x": 16,
         "y": 1
       },
-      "id": 18,
+      "id": 22,
       "links": [],
       "options": {
         "legend": {
@@ -291,17 +294,17 @@
             "uid": "${ds_prometheus}"
           },
           "exemplar": true,
-          "expr": "sum by (type) (increase(SeaweedFS_master_received_heartbeats{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval]))",
+          "expr": "sum (SeaweedFS_master_is_leader{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"})",
           "format": "time_series",
           "hide": false,
-          "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "{{type}}",
+          "legendFormat": "Leaders",
           "refId": "A",
           "step": 60
         }
       ],
-      "title": "Received heartbeats",
+      "thresholds": [],
+      "title": "SeaweedFS Master Leader Count",
       "type": "timeseries"
     },
     {
@@ -309,7 +312,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Count replica placement mismatch",
+      "description": "Displays instances with detected replica placement mismatches for SeaweedFS Master instances.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -386,19 +389,18 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum (SeaweedFS_master_replica_placement_mismatch{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"} > 0) by (pod)",
+          "expr": "sum (SeaweedFS_master_replica_placement_mismatch{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"} > 0) by (instance)",
           "format": "time_series",
           "hide": false,
           "instant": false,
-          "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{instance}}",
           "refId": "A",
           "step": 60
         }
       ],
       "thresholds": [],
-      "title": "Replica Placement Mismatch",
+      "title": "Replica Placement Mismatches",
       "type": "timeseries"
     },
     {
@@ -406,7 +408,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Total count of raft leaders",
+      "description": "Shows the increase in received heartbeats by type for SeaweedFS Master instances over a specified interval",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -426,7 +428,7 @@
             },
             "lineInterpolation": "linear",
             "lineWidth": 1,
-            "pointSize": 5,
+            "pointSize": 4,
             "scaleDistribution": {
               "type": "linear"
             },
@@ -460,7 +462,7 @@
         "x": 8,
         "y": 7
       },
-      "id": 22,
+      "id": 18,
       "links": [],
       "options": {
         "legend": {
@@ -482,18 +484,16 @@
             "uid": "${ds_prometheus}"
           },
           "exemplar": true,
-          "expr": "sum (SeaweedFS_master_is_leader{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"})",
+          "expr": "sum by (type) (increase(SeaweedFS_master_received_heartbeats{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
-          "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "Leaders",
+          "legendFormat": "{{type}}",
           "refId": "A",
           "step": 60
         }
       ],
-      "thresholds": [],
-      "title": "Raft leader count",
+      "title": "Heartbeats",
       "type": "timeseries"
     },
     {
@@ -501,13 +501,14 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Whether cluster locked or not",
+      "description": "Shows the status of cluster locks",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
           "mappings": [],
+          "noValue": "No",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -555,10 +556,9 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "SeaweedFS_master_admin_lock{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}",
+          "expr": "SeaweedFS_master_admin_lock{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}",
           "format": "time_series",
           "hide": false,
-          "interval": "",
           "intervalFactor": 2,
           "legendFormat": "Client IP: {{client}}",
           "range": true,
@@ -566,7 +566,7 @@
           "step": 60
         }
       ],
-      "title": "Admin lock",
+      "title": "Admin Lock Status",
       "type": "stat"
     },
     {
@@ -584,6 +584,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
+          "description": "Shows the 90th percentile latency of requests to SeaweedFS filer instances",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -602,6 +603,9 @@
                   "viz": false
                 },
                 "lineInterpolation": "linear",
+                "lineStyle": {
+                  "fill": "solid"
+                },
                 "lineWidth": 1,
                 "pointSize": 5,
                 "scaleDistribution": {
@@ -624,10 +628,6 @@
                 "steps": [
                   {
                     "color": "green"
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
                   }
                 ]
               },
@@ -639,7 +639,7 @@
             "h": 7,
             "w": 8,
             "x": 0,
-            "y": 14
+            "y": 2
           },
           "id": 66,
           "links": [],
@@ -661,7 +661,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_filer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_filer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -674,7 +674,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_filer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le, type))",
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_filer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, type))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -683,7 +683,7 @@
               "step": 60
             }
           ],
-          "title": "Filer Request Duration 90th percentile",
+          "title": "90th Percentile of Filer Request Duration",
           "type": "timeseries"
         },
         {
@@ -691,6 +691,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
+          "description": "The query calculates the 95th percentile of request duration to the SeaweedFS filer over a specified time interval.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -746,7 +747,7 @@
             "h": 7,
             "w": 8,
             "x": 8,
-            "y": 14
+            "y": 2
           },
           "id": 68,
           "links": [],
@@ -768,7 +769,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_filer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_filer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -781,7 +782,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_filer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le, type))",
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_filer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, type))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -790,7 +791,7 @@
               "step": 60
             }
           ],
-          "title": "Filer Request Duration 95th percentile",
+          "title": "95th Percentile of Filer Request Duration",
           "type": "timeseries"
         },
         {
@@ -798,6 +799,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
+          "description": "The query calculates the 99th percentile of request duration to the SeaweedFS filer over a specified time interval.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -853,7 +855,7 @@
             "h": 7,
             "w": 8,
             "x": 16,
-            "y": 14
+            "y": 2
           },
           "id": 70,
           "links": [],
@@ -875,7 +877,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_filer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_filer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -888,7 +890,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_filer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le, type))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_filer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, type))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -897,7 +899,7 @@
               "step": 60
             }
           ],
-          "title": "Filer Request Duration 99th percentile",
+          "title": "99th Percentile of Filer Request Duration",
           "type": "timeseries"
         },
         {
@@ -905,6 +907,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
+          "description": "The query calculates the queries rate to the SeaweedFS filer in requests per second (RPS) over a specified time interval.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -952,7 +955,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "reqps"
             },
             "overrides": [
               {
@@ -973,7 +976,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 21
+            "y": 9
           },
           "id": 32,
           "links": [],
@@ -999,7 +1002,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "rate(SeaweedFS_filer_request_total{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[1m]) * 5",
+              "expr": "rate(SeaweedFS_filer_request_total{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{type}}",
@@ -1029,6 +1032,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
+          "description": "The query calculates the 90th percentile of request duration to the SeaweedFS S3 interface over a specified time interval.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1084,7 +1088,7 @@
             "h": 7,
             "w": 8,
             "x": 0,
-            "y": 29
+            "y": 3
           },
           "id": 34,
           "links": [],
@@ -1107,7 +1111,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_s3_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1121,7 +1125,7 @@
                 "uid": "${ds_prometheus}"
               },
               "editorMode": "code",
-              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le, type, bucket))",
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_s3_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, type, bucket))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1131,7 +1135,7 @@
               "step": 60
             }
           ],
-          "title": "S3 Request Duration 90th percentile",
+          "title": "90th Percentile of S3 Request Duration",
           "type": "timeseries"
         },
         {
@@ -1139,6 +1143,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
+          "description": "The query calculates the 95th percentile of request duration to the SeaweedFS S3 interface over a specified time interval.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1194,7 +1199,7 @@
             "h": 7,
             "w": 8,
             "x": 8,
-            "y": 29
+            "y": 3
           },
           "id": 36,
           "links": [],
@@ -1217,7 +1222,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_s3_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1231,7 +1236,7 @@
                 "uid": "${ds_prometheus}"
               },
               "editorMode": "code",
-              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le, type, bucket))",
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_s3_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, type, bucket))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1241,7 +1246,7 @@
               "step": 60
             }
           ],
-          "title": "S3 Request Duration 95th percentile",
+          "title": "95th Percentile of S3 Request Duration",
           "type": "timeseries"
         },
         {
@@ -1249,6 +1254,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
+          "description": "The query calculates the 99th percentile of request duration to the SeaweedFS S3 interface over a specified time interval.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1304,7 +1310,7 @@
             "h": 7,
             "w": 8,
             "x": 16,
-            "y": 29
+            "y": 3
           },
           "id": 38,
           "links": [],
@@ -1327,7 +1333,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1342,10 +1348,9 @@
               },
               "editorMode": "code",
               "exemplar": true,
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le, type, bucket))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, type, bucket))",
               "format": "time_series",
               "hide": false,
-              "interval": "",
               "intervalFactor": 2,
               "legendFormat": "{{bucket}} {{type}}",
               "range": true,
@@ -1353,7 +1358,7 @@
               "step": 60
             }
           ],
-          "title": "S3 Request Duration 99th percentile",
+          "title": "99th Percentile of S3 Request Duration",
           "type": "timeseries"
         },
         {
@@ -1361,120 +1366,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 10,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "never",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "min": 0,
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green"
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "s"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 7,
-            "w": 24,
-            "x": 0,
-            "y": 36
-          },
-          "id": 40,
-          "links": [],
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "table",
-              "placement": "right",
-              "showLegend": true
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "none"
-            }
-          },
-          "pluginVersion": "10.3.1",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${ds_prometheus}"
-              },
-              "exemplar": true,
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le))",
-              "format": "time_series",
-              "hide": false,
-              "interval": "",
-              "intervalFactor": 2,
-              "legendFormat": "average",
-              "refId": "A",
-              "step": 60
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${ds_prometheus}"
-              },
-              "editorMode": "code",
-              "exemplar": true,
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le, type, bucket, pod))",
-              "format": "time_series",
-              "hide": false,
-              "interval": "",
-              "intervalFactor": 2,
-              "legendFormat": "{{bucket}} {{type}} {{pod}}",
-              "range": true,
-              "refId": "B",
-              "step": 60
-            }
-          ],
-          "title": "S3 Request. Duration 99th percentile per instance",
-          "type": "timeseries"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${ds_prometheus}"
-          },
+          "description": "The query calculates the average queries rate to the SeaweedFS S3 interface over a specified time interval, aggregated by request types and buckets.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1522,7 +1414,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "reqps"
             },
             "overrides": [
               {
@@ -1543,7 +1435,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 43
+            "y": 10
           },
           "id": 44,
           "links": [],
@@ -1570,7 +1462,7 @@
                 "uid": "${ds_prometheus}"
               },
               "editorMode": "code",
-              "expr": "sum (rate(SeaweedFS_s3_request_total{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[1m]) * 5) by (bucket, type)",
+              "expr": "sum (rate(SeaweedFS_s3_request_total{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (bucket, type)",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{bucket}} {{type}}",
@@ -1601,6 +1493,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
+          "description": "This query calculates the 90th percentile of request durations to the SeaweedFS Volume Server over a specified time interval.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1654,9 +1547,9 @@
           },
           "gridPos": {
             "h": 7,
-            "w": 12,
+            "w": 8,
             "x": 0,
-            "y": 51
+            "y": 4
           },
           "id": 48,
           "links": [],
@@ -1679,7 +1572,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le, exported_instance))",
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, exported_instance))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1691,14 +1584,14 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "average",
               "refId": "C"
             }
           ],
-          "title": "Volume Server Request Duration 99th percentile",
+          "title": "Request Duration 90th percentile",
           "type": "timeseries"
         },
         {
@@ -1706,6 +1599,219 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
+          "description": "This query calculates the 95th percentile of request durations to the SeaweedFS Volume Server over a specified time interval.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 8,
+            "y": 4
+          },
+          "id": 117,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "10.3.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, exported_instance))",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "{{exported_instance}}",
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "average",
+              "refId": "C"
+            }
+          ],
+          "title": "Request Duration 95th percentile",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "This query calculates the 99th percentile of request durations to the SeaweedFS Volume Server over a specified time interval.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 16,
+            "y": 4
+          },
+          "id": 118,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "10.3.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, exported_instance))",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "{{exported_instance}}",
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "average",
+              "refId": "C"
+            }
+          ],
+          "title": "Request Duration 99th percentile",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "This query calculates the average query per second (QPS) to the SeaweedFS Volume Server over a specified time interval, aggregated by request type.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1758,9 +1864,9 @@
           },
           "gridPos": {
             "h": 7,
-            "w": 12,
-            "x": 12,
-            "y": 51
+            "w": 24,
+            "x": 0,
+            "y": 11
           },
           "id": 84,
           "links": [],
@@ -1784,7 +1890,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(rate(SeaweedFS_volumeServer_request_total{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (type)",
+              "expr": "sum(rate(SeaweedFS_volumeServer_request_total{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (type)",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{type}}",
@@ -1800,6 +1906,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
+          "description": "This query calculates the number of volumes on the SeaweedFS Volume Server, aggregated by collection and type.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1854,7 +1961,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 58
+            "y": 18
           },
           "id": 50,
           "links": [],
@@ -1877,7 +1984,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(SeaweedFS_volumeServer_volumes{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}) by (collection, type)",
+              "expr": "sum(SeaweedFS_volumeServer_volumes{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}) by (collection, type)",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1889,14 +1996,14 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(SeaweedFS_volumeServer_volumes{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"})",
+              "expr": "sum(SeaweedFS_volumeServer_volumes{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"})",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "Total",
               "refId": "B"
             }
           ],
-          "title": "Volume Count",
+          "title": "Number of Volumes on Volume Server",
           "type": "timeseries"
         },
         {
@@ -1904,6 +2011,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
+          "description": "This query calculates the total disk size used on the SeaweedFS Volume Server, aggregated by collection and type.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1958,7 +2066,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 65
+            "y": 25
           },
           "id": 52,
           "links": [],
@@ -1981,7 +2089,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(SeaweedFS_volumeServer_total_disk_size{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}) by (collection, type)",
+              "expr": "sum(SeaweedFS_volumeServer_total_disk_size{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}) by (collection, type)",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1993,14 +2101,14 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(SeaweedFS_volumeServer_total_disk_size{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"})",
+              "expr": "sum(SeaweedFS_volumeServer_total_disk_size{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"})",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "Total",
               "refId": "B"
             }
           ],
-          "title": "Used Disk Space by Collection and Type",
+          "title": "Total Disk Size on Volume Server",
           "type": "timeseries"
         },
         {
@@ -2008,6 +2116,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
+          "description": "This query calculates the total disk size used on the SeaweedFS Volume Server, aggregated by instance.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2062,7 +2171,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 72
+            "y": 32
           },
           "id": 54,
           "links": [],
@@ -2085,7 +2194,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(SeaweedFS_volumeServer_total_disk_size{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}) by (exported_instance)",
+              "expr": "sum(SeaweedFS_volumeServer_total_disk_size{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}) by (exported_instance)",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -2093,7 +2202,7 @@
               "refId": "A"
             }
           ],
-          "title": "Used Disk Space by Host",
+          "title": "Total Disk Size on Volume Server",
           "type": "timeseries"
         }
       ],
@@ -2133,7 +2242,7 @@
                   "viz": false
                 },
                 "lineInterpolation": "linear",
-                "lineWidth": 2,
+                "lineWidth": 1,
                 "pointSize": 5,
                 "scaleDistribution": {
                   "type": "linear"
@@ -2170,7 +2279,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 80
+            "y": 5
           },
           "id": 56,
           "links": [],
@@ -2193,7 +2302,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_filerStore_request_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (le, type))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_filerStore_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, type))",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{type}}",
@@ -2263,7 +2372,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 87
+            "y": 12
           },
           "id": 58,
           "links": [],
@@ -2289,7 +2398,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(rate(SeaweedFS_filerStore_request_total{namespace=~\"$namespace\", pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__rate_interval])) by (type)",
+              "expr": "sum(rate(SeaweedFS_filerStore_request_total{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (type)",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{type}}",
@@ -2411,10 +2520,10 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "process_resident_memory_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}",
+              "expr": "process_resident_memory_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "{{pod}} - resident",
+              "legendFormat": "{{instance}} - resident",
               "metric": "process_resident_memory_bytes",
               "refId": "A",
               "step": 4
@@ -2424,10 +2533,10 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "process_virtual_memory_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}",
+              "expr": "process_virtual_memory_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "{{pod}} - virtual",
+              "legendFormat": "{{instance}} - virtual",
               "metric": "process_virtual_memory_bytes",
               "refId": "B",
               "step": 4
@@ -2521,10 +2630,10 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "rate(process_resident_memory_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__interval])",
+              "expr": "rate(process_resident_memory_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}[$__interval])",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "{{pod}} - resident",
+              "legendFormat": "{{instance}} - resident",
               "metric": "process_resident_memory_bytes",
               "refId": "A",
               "step": 4
@@ -2534,10 +2643,10 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "deriv(process_virtual_memory_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__interval])",
+              "expr": "deriv(process_virtual_memory_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}[$__interval])",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "{{pod}} - virtual",
+              "legendFormat": "{{instance}} - virtual",
               "metric": "process_virtual_memory_bytes",
               "refId": "B",
               "step": 4
@@ -2644,10 +2753,10 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "go_memstats_alloc_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}",
+              "expr": "go_memstats_alloc_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "{{pod}} - bytes allocated",
+              "legendFormat": "{{instance}} - bytes allocated",
               "metric": "go_memstats_alloc_bytes",
               "refId": "A",
               "step": 4
@@ -2657,10 +2766,10 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "rate(go_memstats_alloc_bytes_total{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}[30s])",
+              "expr": "rate(go_memstats_alloc_bytes_total{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}[30s])",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "{{pod}} - alloc rate",
+              "legendFormat": "{{instance}} - alloc rate",
               "metric": "go_memstats_alloc_bytes_total",
               "refId": "B",
               "step": 4
@@ -2670,10 +2779,10 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "go_memstats_stack_inuse_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}",
+              "expr": "go_memstats_stack_inuse_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "{{pod}} - stack inuse",
+              "legendFormat": "{{instance}} - stack inuse",
               "metric": "go_memstats_stack_inuse_bytes",
               "refId": "C",
               "step": 4
@@ -2683,11 +2792,11 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "go_memstats_heap_inuse_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}",
+              "expr": "go_memstats_heap_inuse_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
-              "legendFormat": "{{pod}} - heap inuse",
+              "legendFormat": "{{instance}} - heap inuse",
               "metric": "go_memstats_heap_inuse_bytes",
               "refId": "D",
               "step": 4
@@ -2794,10 +2903,10 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "deriv(go_memstats_alloc_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__interval])",
+              "expr": "deriv(go_memstats_alloc_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}[$__interval])",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "{{pod}} - bytes allocated",
+              "legendFormat": "{{instance}} - bytes allocated",
               "metric": "go_memstats_alloc_bytes",
               "refId": "A",
               "step": 4
@@ -2807,10 +2916,10 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "rate(go_memstats_alloc_bytes_total{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__interval])",
+              "expr": "rate(go_memstats_alloc_bytes_total{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}[$__interval])",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "{{pod}} - alloc rate",
+              "legendFormat": "{{instance}} - alloc rate",
               "metric": "go_memstats_alloc_bytes_total",
               "refId": "B",
               "step": 4
@@ -2820,10 +2929,10 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "deriv(go_memstats_stack_inuse_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__interval])",
+              "expr": "deriv(go_memstats_stack_inuse_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}[$__interval])",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "{{pod}} - stack inuse",
+              "legendFormat": "{{instance}} - stack inuse",
               "metric": "go_memstats_stack_inuse_bytes",
               "refId": "C",
               "step": 4
@@ -2833,11 +2942,11 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "deriv(go_memstats_heap_inuse_bytes{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__interval])",
+              "expr": "deriv(go_memstats_heap_inuse_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}[$__interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
-              "legendFormat": "{{pod}} - heap inuse",
+              "legendFormat": "{{instance}} - heap inuse",
               "metric": "go_memstats_heap_inuse_bytes",
               "refId": "D",
               "step": 4
@@ -2931,10 +3040,10 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "process_open_fds{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}",
+              "expr": "process_open_fds{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "{{pod}}",
+              "legendFormat": "{{instance}}",
               "metric": "process_open_fds",
               "refId": "A",
               "step": 4
@@ -3028,113 +3137,16 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "deriv(process_open_fds{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}[$__interval])",
+              "expr": "deriv(process_open_fds{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}[$__interval])",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "{{pod}}",
+              "legendFormat": "{{instance}}",
               "metric": "process_open_fds",
               "refId": "A",
               "step": 4
             }
           ],
           "title": "open fds deriv",
-          "type": "timeseries"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${ds_prometheus}"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 10,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 2,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "never",
-                "spanNulls": true,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green"
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "short"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 7,
-            "w": 12,
-            "x": 0,
-            "y": 117
-          },
-          "id": 114,
-          "links": [],
-          "options": {
-            "legend": {
-              "calcs": [
-                "mean",
-                "lastNotNull",
-                "max"
-              ],
-              "displayMode": "table",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "none"
-            }
-          },
-          "pluginVersion": "8.5.13",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${ds_prometheus}"
-              },
-              "expr": "go_goroutines{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}",
-              "format": "time_series",
-              "intervalFactor": 2,
-              "legendFormat": "{{pod}}",
-              "metric": "go_goroutines",
-              "refId": "A",
-              "step": 4
-            }
-          ],
-          "title": "Goroutines",
           "type": "timeseries"
         },
         {
@@ -3195,7 +3207,7 @@
           "gridPos": {
             "h": 7,
             "w": 12,
-            "x": 12,
+            "x": 0,
             "y": 117
           },
           "id": 116,
@@ -3222,16 +3234,113 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "go_gc_duration_seconds{namespace=~\"$namespace\",pod=~\"$pod\", endpoint=~\"$endpoint\"}",
+              "expr": "go_gc_duration_seconds{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "{{pod}}: {{quantile}}",
+              "legendFormat": "{{instance}}: {{quantile}}",
               "metric": "go_gc_duration_seconds",
               "refId": "A",
               "step": 4
             }
           ],
           "title": "GC duration quantiles",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 117
+          },
+          "id": 114,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [
+                "mean",
+                "lastNotNull",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "8.5.13",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "expr": "go_goroutines{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "{{instance}}",
+              "metric": "go_goroutines",
+              "refId": "A",
+              "step": 4
+            }
+          ],
+          "title": "Goroutines",
           "type": "timeseries"
         }
       ],
@@ -3246,7 +3355,11 @@
   "templating": {
     "list": [
       {
-        "current": {},
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
         "hide": 0,
         "includeAll": false,
         "label": "Prometheus",
@@ -3261,12 +3374,20 @@
         "type": "datasource"
       },
       {
-        "current": {},
+        "current": {
+          "selected": false,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
         "datasource": {
           "type": "prometheus",
           "uid": "${ds_prometheus}"
         },
-        "definition": "label_values(SeaweedFS_master_is_leader, namespace)",
+        "definition": "label_values(SeaweedFS_master_is_leader{job=~\"$job\"}, namespace)",
         "hide": 0,
         "includeAll": true,
         "label": "Namespace",
@@ -3274,7 +3395,7 @@
         "name": "namespace",
         "options": [],
         "query": {
-          "query": "label_values(SeaweedFS_master_is_leader, namespace)",
+          "query": "label_values(SeaweedFS_master_is_leader{job=~\"$job\"}, namespace)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -3284,20 +3405,28 @@
         "type": "query"
       },
       {
-        "current": {},
+        "current": {
+          "selected": false,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
         "datasource": {
           "type": "prometheus",
           "uid": "${ds_prometheus}"
         },
-        "definition": "label_values(SeaweedFS_master_is_leader{namespace=~\"$namespace\"}, pod)",
+        "definition": "label_values(SeaweedFS_master_is_leader{job=~\"$job\", namespace=~\"$namespace\"}, instance)",
         "hide": 0,
         "includeAll": true,
-        "label": "Pod",
+        "label": "Instance",
         "multi": true,
-        "name": "pod",
+        "name": "instance",
         "options": [],
         "query": {
-          "query": "label_values(SeaweedFS_master_is_leader{namespace=~\"$namespace\"}, pod)",
+          "query": "label_values(SeaweedFS_master_is_leader{job=~\"$job\", namespace=~\"$namespace\"}, instance)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -3307,27 +3436,13 @@
         "type": "query"
       },
       {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${ds_prometheus}"
-        },
-        "definition": "label_values(SeaweedFS_master_is_leader{namespace=~\"$namespace\", pod=~\"$pod\"}, endpoint)",
+        "description": "job",
         "hide": 2,
-        "includeAll": true,
-        "label": "Endpoint",
-        "multi": true,
-        "name": "endpoint",
-        "options": [],
-        "query": {
-          "query": "label_values(SeaweedFS_master_is_leader{namespace=~\"$namespace\", pod=~\"$pod\"}, endpoint)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 1,
-        "regex": "",
+        "label": "job",
+        "name": "job",
+        "query": "system-registry-seaweedfs",
         "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
+        "type": "constant"
       }
     ]
   },
@@ -3341,6 +3456,6 @@
   "timezone": "",
   "title": "Seaweedfs",
   "uid": "V7nS6t_Ik",
-  "version": 4,
+  "version": 24,
   "weekStart": ""
 }
