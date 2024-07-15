@@ -236,6 +236,8 @@ apiVersions:
       zones:
         description: |
           Глобальное ограничение набора зон, с которыми работает cloud provider.
+          
+          Ограничивает только **создание** узлов в кластере.
       additionalRolePolicies:
         description: |
           Список дополнительных policy actions для IAM-ролей.
