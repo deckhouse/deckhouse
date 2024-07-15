@@ -44,6 +44,6 @@ locals{
     "create_hostname_file": true,
     "ssh_deletekeys": true,
     "ssh_genkeytypes": ["rsa", "ecdsa", "ed25519"],
-    "ssh_authorized_keys" : [local.ssh_pubkey]
+    "ssh_keys" : [local.ssh_pubkey]
   }, length(var.cloudConfig) > 0 ? yamldecode(base64decode(var.cloudConfig)) : tomap({})))
 }
