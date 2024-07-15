@@ -368,26 +368,20 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	policy := new(v1alpha1.ModuleUpdatePolicy)
 	// if release has associated update policy
 	if policyName, found := mr.ObjectMeta.Labels[UpdatePolicyLabel]; found {
-		if policyName == "" {
-			policy = &v1alpha1.ModuleUpdatePolicy{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
-					APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "",
-				},
-				Spec: *c.deckhouseEmbeddedPolicy.Get(),
-			}
-		} else {
+		policy = &v1alpha1.ModuleUpdatePolicy{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
+				APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "",
+			},
+			Spec: *c.deckhouseEmbeddedPolicy.Get(),
+		}
+
+		if policyName != "" {
 			// get policy spec
-			err = c.client.Get(ctx, types.NamespacedName{Name: policyName}, policy)
-			if err != nil {
-				if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy %s not found", policyName)); e != nil {
-					return ctrl.Result{Requeue: true}, e
-				}
-				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-			}
+			_ = c.client.Get(ctx, types.NamespacedName{Name: policyName}, policy)
 		}
 
 		if policy.Spec.Update.Mode == "Ignore" {
