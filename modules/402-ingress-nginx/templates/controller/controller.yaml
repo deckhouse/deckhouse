@@ -262,6 +262,11 @@ spec:
           hostPort: {{ $hostPortWithProxyProtocol.httpPort }}
     {{- end }}
   {{- end }}
+  {{- if eq $crd.spec.inlet "HostPortWithSSLPassthrough"}}
+    {{- if $hostPortWithSSLPassthrough.httpPort }}
+          hostPort: {{ $hostPortWithSSLPassthrough.httpPort }}
+    {{- end }}
+  {{- end }}
         - containerPort: 443
           protocol: TCP
   {{- if eq $crd.spec.inlet "HostPort"}}
