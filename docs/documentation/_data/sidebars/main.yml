@@ -329,42 +329,6 @@ entries:
                   url: /modules/030-cloud-provider-vcd/examples.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-vcd/faq.html
-            - title: zVirt
-              d8Revision: ee
-              featureStatus: experimental
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/030-cloud-provider-zvirt/
-                - title:
-                    en: Installation
-                    ru: Установка
-                  folders:
-                    - title:
-                        en: Preparing environment
-                        ru: Подготовка окружения
-                      url: /modules/030-cloud-provider-zvirt/environment.html
-                    - title:
-                        en: Layouts
-                        ru: Схемы размещения
-                      url: /modules/030-cloud-provider-zvirt/layouts.html
-                    - title:
-                        en: Provider configuration
-                        ru: Настройка провайдера
-                      url: /modules/030-cloud-provider-zvirt/cluster_configuration.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/030-cloud-provider-zvirt/configuration.html
-                    - title: Custom Resources
-                      url: /modules/030-cloud-provider-zvirt/cr.html
-                - title: FAQ
-                  url: /modules/030-cloud-provider-zvirt/faq.html
             - title: Yandex Cloud
               folders:
                 - title:
@@ -403,6 +367,42 @@ entries:
                   url: /modules/030-cloud-provider-yandex/examples.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-yandex/faq.html
+            - title: zVirt
+              d8Revision: ee
+              featureStatus: experimental
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/030-cloud-provider-zvirt/
+                - title:
+                    en: Installation
+                    ru: Установка
+                  folders:
+                    - title:
+                        en: Preparing environment
+                        ru: Подготовка окружения
+                      url: /modules/030-cloud-provider-zvirt/environment.html
+                    - title:
+                        en: Layouts
+                        ru: Схемы размещения
+                      url: /modules/030-cloud-provider-zvirt/layouts.html
+                    - title:
+                        en: Provider configuration
+                        ru: Настройка провайдера
+                      url: /modules/030-cloud-provider-zvirt/cluster_configuration.html
+                - title:
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/030-cloud-provider-zvirt/configuration.html
+                    - title: Custom Resources
+                      url: /modules/030-cloud-provider-zvirt/cr.html
+                - title: FAQ
+                  url: /modules/030-cloud-provider-zvirt/faq.html
         - title:
             en: Control plane management
             ru: Управление control plane
@@ -449,6 +449,16 @@ entries:
             en: Other modules
             ru: Другие модули
           folders:
+            - title: cilium-hubble
+              folders:
+                - title:
+                    ru: Описание
+                    en: Description
+                  url: /modules/500-cilium-hubble/
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/500-cilium-hubble/configuration.html
             - title: cni-cilium
               folders:
                 - title:
@@ -465,16 +475,6 @@ entries:
                     en: Examples
                     ru: Примеры
                   url: /modules/021-cni-cilium/examples.html
-            - title: cilium-hubble
-              folders:
-                - title:
-                    ru: Описание
-                    en: Description
-                  url: /modules/500-cilium-hubble/
-                - title:
-                    ru: Настройки
-                    en: Configuration
-                  url: /modules/500-cilium-hubble/configuration.html
             - title: cni-flannel
               folders:
                 - title:
@@ -491,12 +491,6 @@ entries:
                     en: Description
                     ru: Описание
                   url: /modules/035-cni-simple-bridge/
-            - title: kube-proxy
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/036-kube-proxy/
             - title: kube-dns
               folders:
                 - title:
@@ -513,6 +507,12 @@ entries:
                   url: /modules/042-kube-dns/examples.html
                 - title: FAQ
                   url: /modules/042-kube-dns/faq.html
+            - title: kube-proxy
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/036-kube-proxy/
             - title: node-local-dns
               d8Revision: ee
               folders:
@@ -528,16 +528,6 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/350-node-local-dns/configuration.html
-            - title: terraform-manager
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/040-terraform-manager/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/040-terraform-manager/configuration.html
             - title: static-routing-manager
               folders:
                 - title:
@@ -558,6 +548,16 @@ entries:
                     en: Examples
                     ru: Примеры
                   url: /modules/025-static-routing-manager/examples.html
+            - title: terraform-manager
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/040-terraform-manager/
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/040-terraform-manager/configuration.html
     - title:
         en: Accessing cluster
         ru: Доступ к кластеру
@@ -822,6 +822,18 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/600-flant-integration/configuration.html
+            - title: operator-prometheus
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/200-operator-prometheus/
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/200-operator-prometheus/configuration.html
+                - title: FAQ
+                  url: /modules/200-operator-prometheus/faq.html
             - title: okmeter
               featureStatus: proprietaryOkmeter
               folders:
@@ -837,18 +849,6 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/500-okmeter/configuration.html
-            - title: operator-prometheus
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/200-operator-prometheus/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/200-operator-prometheus/configuration.html
-                - title: FAQ
-                  url: /modules/200-operator-prometheus/faq.html
             - title: prometheus-pushgateway
               folders:
                 - title:
@@ -1119,20 +1119,6 @@ entries:
             en: Other modules
             ru: Другие модули
           folders:
-            - title: network-policy-engine
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/050-network-policy-engine/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/050-network-policy-engine/examples.html
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/050-network-policy-engine/configuration.html
             - title: cert-manager
               folders:
                 - title:
@@ -1155,6 +1141,20 @@ entries:
                       url: /modules/101-cert-manager/cr.html
                 - title: FAQ
                   url: /modules/101-cert-manager/faq.html
+            - title: network-policy-engine
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/050-network-policy-engine/
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/050-network-policy-engine/examples.html
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/050-network-policy-engine/configuration.html
             - title: operator-trivy
               d8Revision: ee
               featureStatus: experimental
