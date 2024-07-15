@@ -36,10 +36,41 @@ kubernetes:
       {
         "kube-dns-conf": .data.Corefile,
       }
+  - name: d8-cluster-configuration
+    apiVersion: v1
+    kind: Secret
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    nameSelector:
+      matchNames:
+      - d8-cluster-configuration
+    namespace:
+      nameSelector:
+        matchNames: ["kube-system"]
+    jqFilter: |
+      {
+        "clusterDomain": ( .data."cluster-configuration.yaml" // "" | @base64d | match("[ ]*clusterDomain:[ ]+(.*)\n").captures[0].string),
+      }
+  - name: kube-dns-module
+    apiVersion: deckhouse.io/v1alpha1
+    kind: Module
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    nameSelector:
+      matchNames:
+      - kube-dns
+    jqFilter: |
+      {
+        "status": .status.status,
+      }
 kubernetesValidating:
 - name: publicdomaintemplate-policy.deckhouse.io
   group: main
-  includeSnapshotsFrom: ["d8-kube-dns-cm-wh"]
+  includeSnapshotsFrom: ["d8-kube-dns-cm-wh", "d8-cluster-configuration", "kube-dns-module"]
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
@@ -53,8 +84,14 @@ EOF
 function __main__() {
   mcName=$(context::jq -r '.review.request.object.metadata.name')
   if [[ "$mcName" == "global" ]]; then
-    kubeDNSConf=$(context::jq -r '.snapshots.["d8-kube-dns-cm-wh"][].filterResult.["kube-dns-conf"]')
-    dnsDomains=$(echo $kubeDNSConf | grep -oP  'kubernetes .*? ip6.arpa')
+    moduleKubeDNS=$(context::jq -r '.snapshots.["kube-dns-module"][]?.filterResult.["status"]')
+
+    if [[ $moduleKubeDNS == "Ready" ]]; then
+      kubeDNSConf=$(context::jq -r '.snapshots.["d8-kube-dns-cm-wh"][]?.filterResult.["kube-dns-conf"]')
+      dnsDomains=$(echo $kubeDNSConf | grep -oP '(?<=kubernetes )(.*?)(?=ip6.arpa)')
+    else
+      dnsDomains=$(context::jq -r '.snapshots.["d8-cluster-configuration"][]?.filterResult.["clusterDomain"]')
+    fi
     publicDomainTemplate=$(context::jq -r '.review.request.object.spec.settings.modules.publicDomainTemplate' | sed s/%s.//)
 
     for domain in $dnsDomains; do

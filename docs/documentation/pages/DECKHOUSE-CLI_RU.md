@@ -34,33 +34,4 @@ Deckhouse CLI — это интерфейс командной строки дл
 
 ## Как установить Deckhouse CLI?
 
-1. Скачайте архив для вашей ОС:
-   * [Linux x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-linux-amd64.tar.gz)
-   * [macOS x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-darwin-amd64.tar.gz)
-   * [macOS ARM64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-darwin-arm64.tar.gz)
-
-1. Распакуйте архив:
-
-   ```bash
-   tar -xvf "d8-v${RELEASE_VERSION}-${OS}-${ARCH}.tar.gz" "${OS}-${ARCH}/d8"
-   ```
-
-   > Например, для архива с названием `d8-v0.1.2-linux-amd64.tar.gz` команда будет выглядеть так: `tar -xvf "d8-v0.1.2-linux-amd64.tar.gz" "linux-amd64/d8"`.
-
-1. Переместите файл `d8` в каталог в переменной `PATH` вашей системы:
-
-   ```bash
-   sudo mv "${OS}-${ARCH}/d8" /usr/local/bin/
-   ```
-
-   > Например, для распакованного файла `linux-amd64/d8` команда будет выглядеть так: `sudo mv "linux-amd64/d8" /usr/local/bin/`.
-   >
-   > `PATH` — это системная переменная, содержащая список каталогов, в которых ОС будет искать исполняемый файл при вызове команды из терминала. Просмотреть этот список можно командой `echo $PATH`.
-
-1. Проверьте, что утилита работает:
-
-   ```bash
-   d8 help
-   ```
-
-Готово, вы установили Deckhouse CLI.
+{% include d8-cli-install/main.liquid %}

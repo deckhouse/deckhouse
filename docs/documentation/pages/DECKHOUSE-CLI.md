@@ -33,33 +33,4 @@ On the command line, the utility can be invoked using the `d8` alias. All the co
 
 ## How do I install Deckhouse CLI?
 
-1. Download the archive for your OS/architecture:
-   * [Linux x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-linux-amd64.tar.gz)
-   * [macOS x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-darwin-amd64.tar.gz)
-   * [macOS ARM64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-darwin-arm64.tar.gz)
-
-1. Extract the archive:
-
-   ```bash
-   tar -xvf "d8-v${RELEASE_VERSION}-${OS}-${ARCH}.tar.gz" "${OS}-${ARCH}/d8"
-   ```
-
-   > For example, for an archive named `d8-v0.1.2-linux-amd64.tar.gz`, the command would look as follows: `tar -xvf "d8-v0.1.2-linux-amd64.tar.gz" "linux-amd64/d8"`.
-
-1. Copy the `d8` file to a directory at the `PATH` variable on your system:
-
-   ```bash
-   sudo mv "${OS}-${ARCH}/d8" /usr/local/bin/
-   ```
-
-   > For example, for an extracted file named `linux-amd64/d8`, the command would look as follows: `sudo mv "linux-amd64/d8" /usr/local/bin/`.
-   >
-   > `PATH` is a system variable containing a list of directories with executable files. This is where the OS will look for the binary when a command is run in the terminal. You can view this list with the `echo $PATH` command.
-
-1. Check that the CLI is working:
-
-   ```bash
-   d8 help
-   ```
-
-Congrats, you have successfully installed Deckhouse CLI!
+{% include d8-cli-install/main.liquid %}

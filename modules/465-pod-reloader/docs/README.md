@@ -16,7 +16,7 @@ All annotations are described here. You can find examples in the [Examples](exam
 | `pod-reloader.deckhouse.io/search`           | Deployment, DaemonSet, StatefulSet | Only resources, ConfigMap or Secret, with annotation `pod-reloader.deckhouse.io/match: "true"` cause restart | `"true"`, `"false"`                            |
 | `pod-reloader.deckhouse.io/configmap-reload` | Deployment, DaemonSet, StatefulSet | List of ConfigMaps which should cause controller restart.                                                    | `"some-cm"`, `"some-cm1,some-cm2"`             |
 | `pod-reloader.deckhouse.io/secret-reload`    | Deployment, DaemonSet, StatefulSet | List of Secrets which should cause controller restart.                                                       | `"some-secret"`, `"some-secret1,some-secret2"` |
-| `pod-reloader.deckhouse.io/match`            | Secret, Configmap                  | Annotation mark resources for resources which should cause restart                                           | `"true"`, `"false"`                            |
+| `pod-reloader.deckhouse.io/match`            | Secret, ConfigMap                  | Annotation mark resources for resources which should cause restart                                           | `"true"`, `"false"`                            |
 
 **Important** Annotation `pod-reloader.deckhouse.io/search` cannot be used together with `pod-reloader.deckhouse.io/auto: "true"` because Reloader will ignore `pod-reloader.deckhouse.io/search` and `pod-reloader.deckhouse.io/match`. For the right behavior set `pod-reloader.deckhouse.io/auto` to `"false"` or delete it.
 

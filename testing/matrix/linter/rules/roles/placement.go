@@ -44,7 +44,8 @@ func isDeckhouseSystemNamespace(actual string) bool {
 		// TODO: remove next lines after RBAC objects naming fixes
 		actual == "d8-admission-policy-engine" ||
 		actual == "d8-operator-trivy" ||
-		actual == "d8-log-shipper"
+		actual == "d8-log-shipper" ||
+		actual == "d8-local-path-provisioner"
 }
 
 func ObjectRBACPlacement(m utils.Module, object storage.StoreObject) errors.LintRuleError {

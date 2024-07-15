@@ -58,18 +58,11 @@ var skipCheckWildcards = map[string][]string{
 	"cloud-provider-yandex/templates/cloud-controller-manager/rbac-for-us.yaml": {
 		"d8:cloud-provider-yandex:cloud-controller-manager",
 	},
-	"local-path-provisioner/templates/rbac-for-us.yaml": {
-		"d8:local-path-provisioner",
-	},
 	"istio/templates/kiali/rbac-for-us.yaml": {
 		"d8:istio:kiali",
 	},
 	"istio/templates/operator/rbac-for-us.yaml": {
 		"d8:istio:operator",
-	},
-	"user-authn/templates/dex/rbac-for-us.yaml": {
-		"d8:user-authn:dex:crd",
-		"dex",
 	},
 	"operator-prometheus/templates/rbac-for-us.yaml": {
 		"d8:operator-prometheus",
@@ -95,9 +88,6 @@ var skipCheckWildcards = map[string][]string{
 	},
 	"upmeter/templates/upmeter/rbac-for-us.yaml": {
 		"d8:upmeter:upmeter",
-	},
-	"documentation/templates/rbac-for-us.yaml": {
-		"documentation:leases-edit",
 	},
 	"delivery/templates/argocd/application-controller/rbac-for-us.yaml": {
 		"d8:delivery:argocd:application-controller",

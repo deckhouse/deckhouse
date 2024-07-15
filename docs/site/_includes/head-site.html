@@ -29,13 +29,6 @@
 {% asset featherlight.min.css %}
 
 <!-- scripts -->
-{%- unless site.mode == "module" %}
-{%- if page.lang == "ru" %}
-    <script src="https://embed.small.chat/T037FSPS9C02AE1YJWQ2.js" async></script>
-{%- else %}
-    <script src="https://embed.small.chat/T037FSPS9C01V5672DPV.js" async></script>
-{%- endif %}
-{%- endunless %}
 {% asset jquery.min.js %}
 {% asset jquery.cookie.min.js %}
 {% asset bootstrap.min.js %}
@@ -175,35 +168,5 @@
 </script>
 
 {%- unless site.mode == "module" %}
-<!-- Yandex.Metrika counter -->
-<script type="text/javascript" >
-    (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-    m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
-    (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
-
-    ym(78422802, "init", {
-         clickmap:true,
-         trackLinks:true,
-         accurateTrackBounce:true,
-         webvisor:true
-    });
-
-    window.addEventListener("smallchat:ready", function() {
-      Smallchat.on("chat:opened", () => {
-        ym(78422802, 'reachGoal', 'open_online_chat');
-      })
-    })
- </script>
- <noscript><div><img src="https://mc.yandex.ru/watch/78422802" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
- <!-- /Yandex.Metrika counter -->
-
- <!-- Global site tag (gtag.js) - Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-4X28CEP7W2"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-4X28CEP7W2');
-    </script>
-<!-- /Global site tag (gtag.js) -->
+{%- include counters-and-chat.liquid %}
 {%- endunless %}

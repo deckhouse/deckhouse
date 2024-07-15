@@ -9,8 +9,15 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "capcd-controller-manager")) | nindent 2 }}
 type: Opaque
 data:
+  {{- if $providerClusterConfiguration.username }}
   username: {{ $providerClusterConfiguration.username | b64enc | quote }}
+  {{- end }}
+  {{- if $providerClusterConfiguration.password }}
   password: {{ $providerClusterConfiguration.password | b64enc | quote }}
+  {{- end }}
+  {{- if $providerClusterConfiguration.apiToken }}
+  refreshToken: {{ $providerClusterConfiguration.apiToken | b64enc | quote }}
+  {{- end }}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: VCDCluster
