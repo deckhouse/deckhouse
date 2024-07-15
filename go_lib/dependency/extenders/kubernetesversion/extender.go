@@ -93,8 +93,8 @@ func (e *Extender) getKubernetesVersion() {
 }
 
 func (e *Extender) waitForFileExists(path string) error {
+	e.logger.Debugf("waiting for file %s", path)
 	for {
-		e.logger.Debugf("waiting for file %s", path)
 		if _, err := os.Stat(path); err == nil {
 			e.logger.Debugf("file %s exists", path)
 			return nil
@@ -182,6 +182,7 @@ func (e *Extender) ValidateRelease(releaseName, moduleName, rawConstraint string
 		return fmt.Errorf("parse kubernetes version failed: %s", e.err)
 	}
 	e.mtx.Unlock()
+	e.logger.Debugf("validate requirements for %s", releaseName)
 	if err := e.versionMatcher.ValidateRelease(moduleName, rawConstraint); err != nil {
 		e.logger.Errorf("requirements of %s release are not satisfied: current kubernetes version is not suitable: %s", releaseName, err.Error())
 		return fmt.Errorf("requirements are not satisfied: current kubernetes version is not suitable: %s", err.Error())
