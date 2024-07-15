@@ -22,6 +22,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
+	scherror "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/error"
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/utils/pointer"
@@ -44,6 +45,8 @@ var _ extenders.Extender = &Extender{}
 type Extender struct {
 	logger         logger.Logger
 	versionMatcher *versionmatcher.Matcher
+	mtx            sync.Mutex
+	err            error
 }
 
 func Instance() *Extender {
@@ -59,7 +62,10 @@ func (e *Extender) watchForKubernetesVersion() {
 	watcher := &versionWatcher{ch: versionCh}
 	go func() {
 		if err := watcher.watch("/tmp/kubectl_version"); err != nil {
-			panic(err)
+			e.mtx.Lock()
+			e.err = err
+			e.mtx.Unlock()
+			close(versionCh)
 		}
 	}()
 	for version := range versionCh {
@@ -89,6 +95,12 @@ func (e *Extender) IsTerminator() bool {
 
 // Filter implements Extender interface, it is used by scheduler in addon-operator
 func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
+	e.mtx.Lock()
+	if e.err != nil {
+		e.mtx.Unlock()
+		return nil, &scherror.PermanentError{Err: fmt.Errorf("parse kubernetes version failed: %s", e.err)}
+	}
+	e.mtx.Unlock()
 	if err := e.versionMatcher.ValidateByName(name); err != nil {
 		e.logger.Errorf("requirements of %s are not satisfied: current kubernetes version is not suitable: %s", name, err.Error())
 		return pointer.Bool(false), fmt.Errorf("requirements are not satisfied: current kubernetes version is not suitable: %s", err.Error())
@@ -107,6 +119,12 @@ func (e *Extender) ValidateBaseVersion(baseVersion string) error {
 }
 
 func (e *Extender) ValidateConstraint(name, rawConstraint string) error {
+	e.mtx.Lock()
+	if e.err != nil {
+		e.mtx.Unlock()
+		return fmt.Errorf("parse kubernetes version failed: %s", e.err)
+	}
+	e.mtx.Unlock()
 	if err := e.versionMatcher.ValidateConstraint(rawConstraint); err != nil {
 		e.logger.Errorf("requirements of %s are not satisfied: current kubernetes version is not suitable: %s", name, err.Error())
 		return fmt.Errorf("requirements are not satisfied: current kubernetes version is not suitable: %s", err.Error())
