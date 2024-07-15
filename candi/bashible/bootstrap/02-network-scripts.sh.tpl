@@ -17,5 +17,7 @@
 {{- if .provider }}
   {{- if $bootstrap_script_network := $.Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/bootstrap-networks.sh.tpl" .provider) }}
     {{- tpl ($bootstrap_script_network) $ | nindent 0 }}
+  {{ else if $bootstrap_script_network := $.Files.Get (printf "candi/cloud-providers/%s/bashible/bootstrap-networks.sh.tpl" .provider) }}
+    {{- tpl ($bootstrap_script_network) $ | nindent 0 }}
   {{- end }}
 {{- end }}
