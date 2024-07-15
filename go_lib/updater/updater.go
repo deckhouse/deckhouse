@@ -233,7 +233,7 @@ func (du *Updater[R]) checkMinorReleaseConditions(predictedRelease *R, updateWin
 
 		if du.inManualMode {
 			// check: release is approved in Manual mode
-			if !(*predictedRelease).GetApprovedStatus() {
+			if !(*predictedRelease).GetManuallyApproved() {
 				du.logger.Infof("Release %s is waiting for manual approval", (*predictedRelease).GetName())
 				du.metricsUpdater.WaitingManual((*predictedRelease).GetName(), float64(du.totalPendingManualReleases))
 				err := du.updateStatus(predictedRelease, waitingManualApprovalMsg, PhasePending)
