@@ -173,7 +173,7 @@ spec:
                       description: |
                         Accepts all the incoming `X-Forwarded-*` headers and passes them to upstreams.
 
-                        > **Caution!** Make sure that requests to the Ingress are sent from trusted sources when using this option.
+                        > **Caution!** Make sure that requests to the Ingress controller are sent from trusted sources when using this option.
                     realIPHeader:
                       type: string
                       description: |
@@ -765,7 +765,7 @@ spec:
                         Annotations that will be passed to service with type load balancer to configure it.
 
                         > **Caution!** The module does not take into account the specifics of setting annotations in different clouds.
-                        >  Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
+                        > Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
                       additionalProperties:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
