@@ -19,6 +19,7 @@ package deckhouseversion
 import (
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
@@ -56,7 +57,7 @@ func Instance() *Extender {
 			versionMatcher: versionmatcher.New(false),
 		}
 		if raw, err := os.ReadFile("/deckhouse/version"); err == nil {
-			if string(raw) == "dev" {
+			if strings.TrimSpace(string(raw)) == "dev" {
 				instance.logger.Warn("this is dev cluster, v0.0.0 will be used")
 				return
 			}
