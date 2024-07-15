@@ -106,7 +106,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		},
 		ReleaseChannel: "Stable",
 	})
-	ds := &helpers.DeckhouseSettings{ReleaseChannel: "Stable"}
+	ds := &helpers.DeckhouseSettings{ReleaseChannel: ""}
 	ds.Update.DisruptionApprovalMode = "Auto"
 	ds.Update.Mode = "Auto"
 	dsContainer := helpers.NewDeckhouseSettingsContainer(ds)
@@ -300,10 +300,13 @@ func (dml *DeckhouseController) runDeckhouseConfigObserver(deckhouseConfigC <-ch
 		cfg := <-deckhouseConfigC
 
 		b, _ := cfg.AsBytes("yaml")
+		fmt.Println("LOOP CFG", string(b))
 		settings := &helpers.DeckhouseSettings{
-			ReleaseChannel: "Stable",
+			ReleaseChannel: "",
 		}
 		settings.Update.Mode = "Auto"
+		settings.Update.DisruptionApprovalMode = "Auto"
+
 		err := yaml.Unmarshal(b, settings)
 		if err != nil {
 			log.Errorf("Error occurred during the Deckhouse settings unmarshalling: %s", err)
