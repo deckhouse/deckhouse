@@ -56,13 +56,22 @@ func Instance() *Extender {
 			logger:         log.WithField("extender", Name),
 			versionMatcher: versionmatcher.New(false),
 		}
+		if val := os.Getenv("TEST_EXTENDER_DECKHOUSE_VERSION"); val != "" {
+			parsed, err := semver.NewVersion(val)
+			if err == nil {
+				instance.logger.Debugf("setting deckhouse version to %s from env", parsed.String())
+				instance.versionMatcher.ChangeBaseVersion(parsed)
+				return
+			}
+			instance.logger.Warnf("cannot parse TEST_DECKHOUSE_VERSION env variable value %q: %v", val, err)
+		}
 		if raw, err := os.ReadFile("/deckhouse/version"); err == nil {
 			if strings.TrimSpace(string(raw)) == "dev" {
-				instance.logger.Warn("this is dev cluster, v0.0.0 will be used")
+				instance.logger.Warn("this is dev cluster, v1.0.0 will be used")
 				return
 			}
 			if parsed, err := semver.NewVersion(string(raw)); err == nil {
-				instance.logger.Debugf("setting deckhouse version to %s", parsed.String())
+				instance.logger.Debugf("setting deckhouse version to %s from file", parsed.String())
 				instance.versionMatcher.ChangeBaseVersion(parsed)
 			} else {
 				instance.logger.Warn("failed to parse deckhouse version")

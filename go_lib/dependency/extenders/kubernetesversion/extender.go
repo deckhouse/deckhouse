@@ -18,7 +18,10 @@ package kubernetesversion
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
@@ -52,11 +55,56 @@ type Extender struct {
 func Instance() *Extender {
 	once.Do(func() {
 		instance = &Extender{logger: log.WithField("extender", Name), versionMatcher: versionmatcher.New(true)}
+		if val := os.Getenv("TEST_EXTENDER_KUBERNETES_VERSION"); val != "" {
+			parsed, err := semver.NewVersion(val)
+			if err == nil {
+				instance.logger.Debugf("setting kubernetes version to %s from env", parsed.String())
+				instance.versionMatcher.ChangeBaseVersion(parsed)
+				return
+			}
+			instance.logger.Warnf("cannot parse TEST_EXTENDER_KUBERNETES_VERSION env variable value %q: %v", val, err)
+		}
+		instance.getKubernetesVersion()
 		go instance.watchForKubernetesVersion()
 	})
 	return instance
 }
 
+// wait for file and then set initial kubernetes version
+func (e *Extender) getKubernetesVersion() {
+	if err := e.waitForFileExists("/tmp/kubectl_version"); err != nil {
+		e.err = err
+		return
+	}
+	content, err := os.ReadFile("/tmp/kubectl_version")
+	if err != nil {
+		e.err = err
+		return
+	}
+	parsed, err := semver.NewVersion(strings.TrimSpace(string(content)))
+	if err != nil {
+		e.err = err
+		return
+	}
+	instance.logger.Debugf("setting kubernets version to %s from file", parsed.String())
+	e.versionMatcher.ChangeBaseVersion(parsed)
+}
+
+func (e *Extender) waitForFileExists(path string) error {
+	for {
+		e.logger.Debugf("waiting for file %s", path)
+		if _, err := os.Stat(path); err == nil {
+			e.logger.Debugf("file %s exists", path)
+			return nil
+		} else if os.IsNotExist(err) {
+			time.Sleep(10 * time.Millisecond)
+		} else {
+			return err
+		}
+	}
+}
+
+// update kubernetes version if kubectl_version is updated
 func (e *Extender) watchForKubernetesVersion() {
 	versionCh := make(chan *semver.Version)
 	watcher := &versionWatcher{ch: versionCh}
