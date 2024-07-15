@@ -309,6 +309,7 @@ func (dml *DeckhouseController) runDeckhouseConfigObserver(deckhouseConfigC <-ch
 			log.Errorf("Error occurred during the Deckhouse settings unmarshalling: %s", err)
 			continue
 		}
+		fmt.Println("LOOP DECKHOUSE SETTINGS", settings)
 		dml.embeddedDeckhousePolicy.Set(settings)
 		dml.deckhouseSettings.Set(settings)
 	}
