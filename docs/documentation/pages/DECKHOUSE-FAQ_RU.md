@@ -286,25 +286,39 @@ Patch-релизы (например, обновление на версию `1.
 
 ### Как проверить очередь заданий в Deckhouse?
 
-Для просмотра списка заданий, которые находятся в очереди на выполнение в Deckhouse, требуется выполнить команду `queue main` в контейнере `deckhouse-controller` пода `deckhouse` (в случае, если сервис запущен в кластером режиме - у лидера кластера)
-
-Запрос всех заданий в очереди:
+Для просмотра состояния всех очередей заданий Deckhouse, выполните следующую команду:
 
 ```shell
-kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list
+kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
 ```
 
-Пример вывода, когда в очереди еще есть задания (`length 38`):
+Пример вывода (очереди пусты):
+
+```console
+$ kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+Summary:
+- 'main' queue: empty.
+- 88 other queues (0 active, 88 empty): 0 tasks.
+- no tasks to handle.
+```
+
+Для просмотра состояния очереди заданий `main` Deckhouse, выполните следующую команду:
 
 ```shell
-# kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list | grep status:
+kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+```
+
+Пример вывода (в очереди `main` 38 заданий):
+
+```console
+$ kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
 Queue 'main': length 38, status: 'run first task'
 ```
 
-Пример вывода, когда очередь пуста (`length 0`):
+Пример вывода (очередь `main` пуста):
 
-```shell
-# kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list | grep status:
+```console
+$ kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
 Queue 'main': length 0, status: 'waiting for task 0s'
 ```
 
@@ -843,7 +857,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-control
 1. Дождитесь перезапуска Deckhouse и [выполнения всех задач в очереди](./#как-проверить-очередь-заданий-в-deckhouse):
 
   ```shell
-  kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list
+  kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
   ```
 
 1. На master-узле проверьте применение новых настроек.
@@ -908,7 +922,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-control
 1. Дождитесь перезапуска Deckhouse и [выполнения всех задач в очереди](./#как-проверить-очередь-заданий-в-deckhouse):
 
   ```shell
-  kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list
+  kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
   ```
   
 1. На master-узле проверьте применение новых настроек.
@@ -946,7 +960,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-control
 В кластерах с несколькими master-узлами Deckhouse запускается в режиме высокой доступности (в нескольких экземплярах). Для доступа к активному контроллеру Deckhouse можно использовать следующую команду (на примере команды `deckhouse-controller queue list`):
 
 ```shell
-kubectl -n d8-system exec -it $((kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath={.spec.holderIdentity} 2>/dev/null || echo "deploy/deckhouse") | cut -d. -f1) -c deckhouse -- deckhouse-controller queue list
+kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
 ```
 
 ### Как обновить версию Kubernetes в кластере?
