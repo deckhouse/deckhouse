@@ -11,7 +11,7 @@ This module installs and configures the [Prometheus](https://prometheus.io/) mon
 
 If a StorageClass supports automatic volume expansion (allowVolumeExpansion: true), it can automatically expand the volume if there is not enough disk space for Prometheus data. Otherwise, you will receive an alert that the volume space in Prometheus is running out.
 
-The [Vertical Pod Autoscaler](../../modules/302-vertical-pod-autoscaler/) module makes it possible to automatically request CPU and memory resources based on the utilization history when the Pod is recreated. Also, the Prometheus memory consumption is minimized by caching requests to it via [Trickster](https://github.com/trickstercache/trickster).
+The [Vertical Pod Autoscaler](../../modules/302-vertical-pod-autoscaler/) module makes it possible to automatically request CPU and memory resources based on the utilization history when the Pod is recreated. Also, the Prometheus memory consumption is minimized by caching requests to it via aggregation proxy.
 
 Both pulling and pushing of metrics are supported.
 
@@ -79,7 +79,6 @@ Deckhouse supports sending alerts using `Alertmanager`:
 |-----------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **prometheus-main**         | The primary Prometheus instance that scrapes metrics every 30 seconds (you can change this value using the `scrapeInterval` parameter). It processes all the rules, sends alerts, and serves as the main data source.                                                                    |
 | **prometheus-longterm**     | The secondary Prometheus instance that scrapes the data of the primary Prometheus instance (`prometheus-main`) every 5 minutes (you can change this value using the `longtermScrapeInterval` parameter). It is used for long-term history storage and displaying data for large periods. |
-| **trickster**               | The caching proxy that reduces the load on Prometheus.                                                                                                                                                                                                                                   |
 | **aggregating-proxy**       | An aggregating and caching proxy  that reduces the load on Prometheus and aggregate both main and longterm in single datasource.                                                                                                                                                         |
 | **memcached**               | Distributed memory caching system.                                                                                                                                                                                                                                                       |
 | **grafana**                 | The managed observability platform with ready-to-use dashboards for all Deckhouse modules and popular applications. Grafana instances are highly available, stateless, and configured by CRDs.                                                                                           |
