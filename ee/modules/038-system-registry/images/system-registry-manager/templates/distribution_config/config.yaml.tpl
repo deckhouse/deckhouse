@@ -30,7 +30,7 @@ http:
   prefix: /
   secret: asecretforlocaldevelopment
   debug:
-    addr: "{{ .hostIP }}:5002"
+    addr: "127.0.0.1:5002"
     prometheus:
       enabled: true
       path: /metrics

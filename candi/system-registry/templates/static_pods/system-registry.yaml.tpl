@@ -52,6 +52,7 @@ spec:
       - -master.raftBootstrap
       {{- end }}
       - -metricsPort=9324
+      - -metricsIp="127.0.0.1"
       - -volume.readMode=redirect
       - -s3.allowDeleteBucketNotEmpty=true
       - -master.defaultReplication=000
