@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -28,8 +29,8 @@ import (
 	"github.com/iancoleman/strcase"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/helm"
@@ -191,12 +192,12 @@ func (hec *Config) HelmRender(options ...Option) {
 			if len(opts.filterPath) > 0 {
 				for _, fp := range opts.filterPath {
 					if strings.Contains(filePath, fp) {
-						opts.renderedOutput[filePath] = trimBlankLines(manifests)
+						opts.renderedOutput[filePath] = orderManifests(trimBlankLines(manifests))
 						break
 					}
 				}
 			} else {
-				opts.renderedOutput[filePath] = trimBlankLines(manifests)
+				opts.renderedOutput[filePath] = orderManifests(trimBlankLines(manifests))
 			}
 		}
 		for _, doc := range releaseutil.SplitManifests(manifests) {
@@ -234,6 +235,31 @@ func trimBlankLines(content string) string {
 
 	// Join the non-blank lines back together
 	return strings.Join(filteredLines, "\n")
+}
+
+func orderManifests(manifests string) string {
+	if manifests == "" {
+		return ""
+	}
+
+	// sort manifests and their content in the predefined order
+	splitManifests := releaseutil.SplitManifests(manifests)
+	manifestsKeys := make([]string, 0, len(splitManifests))
+	for k := range splitManifests {
+		manifestsKeys = append(manifestsKeys, k)
+	}
+	sort.Sort(releaseutil.BySplitManifestsOrder(manifestsKeys))
+
+	result := strings.Builder{}
+	for _, k := range manifestsKeys {
+		var tmp interface{}
+		_ = yaml.Unmarshal([]byte(splitManifests[k]), &tmp)
+		data, _ := yaml.Marshal(tmp)
+		result.WriteString("---\n")
+		result.WriteString(string(data))
+	}
+
+	return result.String()
 }
 
 type configOptions struct {
