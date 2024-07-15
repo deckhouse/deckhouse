@@ -81,7 +81,7 @@ spec:
             value: {{ $.Values.global.discovery.clusterDomain | quote }}
         ports:
           - containerPort: 8081
-            name: http-probe
+            name: builder-http
             protocol: TCP
         livenessProbe:
           httpGet:

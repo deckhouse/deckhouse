@@ -26,7 +26,7 @@ spec:
   ports:
     - name: builder-http
       port: 8081
-      targetPort: http-probe
+      targetPort: builder-http
       protocol: TCP
   selector:
     app: documentation
