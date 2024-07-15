@@ -202,6 +202,8 @@ func (c *moduleReleaseReconciler) deleteReconcile(ctx context.Context, mr *v1alp
 		return ctrl.Result{Requeue: true}, err
 	}
 
+	extenders.DeleteConstraints(mr.GetModuleName())
+
 	return ctrl.Result{}, nil
 }
 

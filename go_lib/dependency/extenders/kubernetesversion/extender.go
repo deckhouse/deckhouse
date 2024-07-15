@@ -133,6 +133,11 @@ func (e *Extender) AddConstraint(name, rawConstraint string) error {
 	return nil
 }
 
+func (e *Extender) DeleteConstraint(name string) {
+	e.logger.Debugf("deleting constraint for %q", name)
+	e.versionMatcher.DeleteConstraint(name)
+}
+
 // Name implements Extender interface, it is used by scheduler in addon-operator
 func (e *Extender) Name() extenders.ExtenderName {
 	return Name
