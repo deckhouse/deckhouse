@@ -177,13 +177,13 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	if err != nil {
 		return nil, err
 	}
-  
-  // register extenders
-  for _, extender := range extenders.Extenders() {
-	  if err = mm.AddExtender(extender); err != nil {
-		  return nil, err
-	  }
-  }
+
+	// register extenders
+	for _, extender := range extenders.Extenders() {
+		if err = mm.AddExtender(extender); err != nil {
+			return nil, err
+		}
+	}
 
 	err = deckhouse_release.NewDeckhouseReleaseController(ctx, mgr, dc, mm, dsContainer)
 	if err != nil {

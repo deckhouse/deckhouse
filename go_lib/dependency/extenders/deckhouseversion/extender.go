@@ -23,6 +23,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
+	scherror "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/error"
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/utils/pointer"
@@ -45,6 +46,7 @@ var _ extenders.Extender = &Extender{}
 type Extender struct {
 	logger         logger.Logger
 	versionMatcher *versionmatcher.Matcher
+	err            error
 }
 
 func Instance() *Extender {
@@ -54,14 +56,20 @@ func Instance() *Extender {
 			versionMatcher: versionmatcher.New(false),
 		}
 		if raw, err := os.ReadFile("/deckhouse/version"); err == nil {
+			if string(raw) == "dev" {
+				instance.logger.Warn("this is dev cluster, v0.0.0 will be used")
+				return
+			}
 			if parsed, err := semver.NewVersion(string(raw)); err == nil {
 				instance.logger.Debugf("setting deckhouse version to %s", parsed.String())
 				instance.versionMatcher.ChangeBaseVersion(parsed)
 			} else {
-				instance.logger.Warn("failed to parse deckhouse version, v0.0.0 will be used")
+				instance.logger.Warn("failed to parse deckhouse version")
+				instance.err = err
 			}
 		} else {
-			instance.logger.Warn("failed to read deckhouse version from /deckhouse/version, v0.0.0 will be used")
+			instance.logger.Warn("failed to read deckhouse version from /deckhouse/version")
+			instance.err = err
 		}
 	})
 	return instance
@@ -88,6 +96,9 @@ func (e *Extender) IsTerminator() bool {
 
 // Filter implements Extender interface, it is used by scheduler in addon-operator
 func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
+	if e.err != nil {
+		return nil, &scherror.PermanentError{Err: fmt.Errorf("parse deckhouse version failed: %s", e.err)}
+	}
 	if err := e.versionMatcher.ValidateByName(name); err != nil {
 		e.logger.Errorf("requirements of %s are not satisfied: current deckhouse version is not suitable: %s", name, err.Error())
 		return pointer.Bool(false), fmt.Errorf("requirements are not satisfied: current deckhouse version is not suitable: %s", err.Error())
@@ -106,6 +117,9 @@ func (e *Extender) ValidateBaseVersion(baseVersion string) error {
 }
 
 func (e *Extender) ValidateConstraint(name, rawConstraint string) error {
+	if e.err != nil {
+		return &scherror.PermanentError{Err: fmt.Errorf("parse deckhouse version failed: %s", e.err)}
+	}
 	if err := e.versionMatcher.ValidateConstraint(rawConstraint); err != nil {
 		e.logger.Errorf("requirements of %s are not satisfied: current deckhouse version is not suitable: %s", name, err.Error())
 		return fmt.Errorf("requirements are not satisfied: current deckhouse version is not suitable: %s", err.Error())
