@@ -21,24 +21,28 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
 
+	"sigs.k8s.io/yaml"
+
+	"helm.sh/helm/v3/pkg/releaseutil"
+
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
 var (
+	// generate golden files with: `make FOCUS=ingress-nginx GOLDEN=true tests-modules`
 	golden bool
 )
 
 func init() {
-	// you can generate new golden files with the command: `make FOCUS=ingress-nginx GOLDEN=true tests-modules `
 	if os.Getenv("GOLDEN") == "" {
 		return
 	}
@@ -121,12 +125,27 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 				}
 				filePath := filepath.Join(goldenDir, renderedFile)
 
-				// keep golden files already sorted
-				var tmp interface{}
-				err = yaml.Unmarshal([]byte(content), &tmp)
-				Expect(err).To(Not(HaveOccurred()))
-				contentBytes, _ := yaml.Marshal(tmp)
-				content = string(contentBytes)
+				{
+					// sort manifests and their content in the predefined order
+					splitManifests := releaseutil.SplitManifests(content)
+					manifestsKeys := make([]string, 0, len(splitManifests))
+					for k := range splitManifests {
+						manifestsKeys = append(manifestsKeys, k)
+					}
+					sort.Sort(releaseutil.BySplitManifestsOrder(manifestsKeys))
+
+					result := strings.Builder{}
+					for _, k := range manifestsKeys {
+						var tmp interface{}
+						err = yaml.Unmarshal([]byte(splitManifests[k]), &tmp)
+						Expect(err).ShouldNot(HaveOccurred())
+						data, _ := yaml.Marshal(tmp)
+						result.WriteString("---\n")
+						result.WriteString(string(data))
+					}
+
+					content = result.String()
+				}
 
 				if golden {
 					Expect(os.MkdirAll(filepath.Dir(filePath), os.ModePerm)).To(Succeed())

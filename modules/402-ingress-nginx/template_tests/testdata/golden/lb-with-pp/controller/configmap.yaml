@@ -1,3 +1,4 @@
+---
 apiVersion: v1
 data:
   allow-snippet-annotations: "true"
@@ -37,4 +38,54 @@ metadata:
     heritage: deckhouse
     module: ingress-nginx
   name: test-lbwpp-config
+  namespace: d8-ingress-nginx
+---
+apiVersion: v1
+data:
+  X-Foo: bar
+  X-Request-Start: t=${msec}
+kind: ConfigMap
+metadata:
+  labels:
+    heritage: deckhouse
+    module: ingress-nginx
+  name: test-lbwpp-custom-headers
+  namespace: d8-ingress-nginx
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    heritage: deckhouse
+    module: ingress-nginx
+  name: test-lbwpp-custom-headers-reload
+  namespace: d8-ingress-nginx
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: reload-test-lbwpp.deckhouse.io
+    http:
+      paths:
+      - backend:
+          service:
+            name: fakeservice
+            port:
+              name: https
+        path: /d18475119d75d3c873bd30e53f4615ef66bf84d9ae1508df173dcc114cfecbb4
+        pathType: ImplementationSpecific
+---
+apiVersion: v1
+data:
+  telemetry_config.yml: |-
+    discard:
+      namespaces:
+        []
+      ingresses:
+        []
+kind: ConfigMap
+metadata:
+  labels:
+    heritage: deckhouse
+    module: ingress-nginx
+  name: d8-ingress-telemetry-config
   namespace: d8-ingress-nginx

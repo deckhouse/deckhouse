@@ -1,3 +1,4 @@
+---
 apiVersion: v1
 data:
   allow-snippet-annotations: "true"
@@ -35,4 +36,53 @@ metadata:
     heritage: deckhouse
     module: ingress-nginx
   name: wait-lb-non-default-config
+  namespace: d8-ingress-nginx
+---
+apiVersion: v1
+data:
+  X-Request-Start: t=${msec}
+kind: ConfigMap
+metadata:
+  labels:
+    heritage: deckhouse
+    module: ingress-nginx
+  name: wait-lb-non-default-custom-headers
+  namespace: d8-ingress-nginx
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    heritage: deckhouse
+    module: ingress-nginx
+  name: wait-lb-non-default-custom-headers-reload
+  namespace: d8-ingress-nginx
+spec:
+  ingressClassName: null
+  rules:
+  - host: reload-wait-lb-non-default.deckhouse.io
+    http:
+      paths:
+      - backend:
+          service:
+            name: fakeservice
+            port:
+              name: https
+        path: /e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+        pathType: ImplementationSpecific
+---
+apiVersion: v1
+data:
+  telemetry_config.yml: |-
+    discard:
+      namespaces:
+        []
+      ingresses:
+        []
+kind: ConfigMap
+metadata:
+  labels:
+    heritage: deckhouse
+    module: ingress-nginx
+  name: d8-ingress-telemetry-config
   namespace: d8-ingress-nginx

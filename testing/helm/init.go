@@ -224,9 +224,12 @@ func trimBlankLines(content string) string {
 	// Filter out blank lines
 	var filteredLines []string
 	for _, line := range lines {
-		if strings.TrimSpace(line) != "" {
-			filteredLines = append(filteredLines, line)
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
 		}
+
+		filteredLines = append(filteredLines, line)
 	}
 
 	// Join the non-blank lines back together
