@@ -38,7 +38,7 @@ locals {
   vm_type = "high_performance"
   nic_name = "nic1"
   ssh_pubkey = lookup(var.providerClusterConfiguration, "sshPublicKey", null)
-  root_disk_size = lookup(local.instance_class, "rootDiskSizeGb", 20)*1024*1024*1024
+  root_disk_size = lookup(local.instance_class, "rootDiskSizeGb", 50)*1024*1024*1024
 
   cloud_init_script = yamlencode(merge({
     "hostname": local.node_name,
