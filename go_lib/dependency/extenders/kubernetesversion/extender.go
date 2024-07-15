@@ -39,8 +39,9 @@ const (
 )
 
 var (
-	instance *Extender
-	once     sync.Once
+	instance       *Extender
+	once           sync.Once
+	kubernetesOnce sync.Once
 )
 
 var _ extenders.Extender = &Extender{}
@@ -55,6 +56,13 @@ type Extender struct {
 func Instance() *Extender {
 	once.Do(func() {
 		instance = &Extender{logger: log.WithField("extender", Name), versionMatcher: versionmatcher.New(true)}
+	})
+	return instance
+}
+
+// set initial kubernetes version
+func (e *Extender) getKubernetesVersion() {
+	kubernetesOnce.Do(func() {
 		if val := os.Getenv("TEST_EXTENDER_KUBERNETES_VERSION"); val != "" {
 			parsed, err := semver.NewVersion(val)
 			if err == nil {
@@ -64,30 +72,24 @@ func Instance() *Extender {
 			}
 			instance.logger.Warnf("cannot parse TEST_EXTENDER_KUBERNETES_VERSION env variable value %q: %v", val, err)
 		}
-		instance.getKubernetesVersion()
+		if err := e.waitForFileExists("/tmp/kubectl_version"); err != nil {
+			e.err = err
+			return
+		}
+		content, err := os.ReadFile("/tmp/kubectl_version")
+		if err != nil {
+			e.err = err
+			return
+		}
+		parsed, err := semver.NewVersion(strings.TrimSpace(string(content)))
+		if err != nil {
+			e.err = err
+			return
+		}
+		instance.logger.Debugf("setting kubernets version to %s from file", parsed.String())
+		e.versionMatcher.ChangeBaseVersion(parsed)
 		go instance.watchForKubernetesVersion()
 	})
-	return instance
-}
-
-// wait for file and then set initial kubernetes version
-func (e *Extender) getKubernetesVersion() {
-	if err := e.waitForFileExists("/tmp/kubectl_version"); err != nil {
-		e.err = err
-		return
-	}
-	content, err := os.ReadFile("/tmp/kubectl_version")
-	if err != nil {
-		e.err = err
-		return
-	}
-	parsed, err := semver.NewVersion(strings.TrimSpace(string(content)))
-	if err != nil {
-		e.err = err
-		return
-	}
-	instance.logger.Debugf("setting kubernets version to %s from file", parsed.String())
-	e.versionMatcher.ChangeBaseVersion(parsed)
 }
 
 func (e *Extender) waitForFileExists(path string) error {
@@ -143,6 +145,7 @@ func (e *Extender) IsTerminator() bool {
 
 // Filter implements Extender interface, it is used by scheduler in addon-operator
 func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
+	e.getKubernetesVersion()
 	e.mtx.Lock()
 	if e.err != nil {
 		e.mtx.Unlock()
@@ -167,6 +170,7 @@ func (e *Extender) ValidateBaseVersion(baseVersion string) error {
 }
 
 func (e *Extender) ValidateConstraint(name, rawConstraint string) error {
+	e.getKubernetesVersion()
 	e.mtx.Lock()
 	if e.err != nil {
 		e.mtx.Unlock()
