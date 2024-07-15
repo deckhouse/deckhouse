@@ -561,6 +561,7 @@ func (r *deckhouseReleaseReconciler) isDeckhousePodReady() bool {
 // development mode, without release channel
 func (r *deckhouseReleaseReconciler) updateByImageHashLoop(ctx context.Context) {
 	wait.UntilWithContext(ctx, func(ctx context.Context) {
+		fmt.Println("RUN UPDATE IMAGE TAG LOOP", r.updateSettings.Get().ReleaseChannel)
 		if r.updateSettings.Get().ReleaseChannel != "" {
 			return
 		}
