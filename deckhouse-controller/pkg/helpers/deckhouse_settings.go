@@ -17,7 +17,6 @@ limitations under the License.
 package helpers
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
@@ -48,8 +47,6 @@ type DeckhouseSettingsContainer struct {
 func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-
-	fmt.Println("LOOP CONTAINER SETTINGS", settings)
 
 	c.spec.ReleaseChannel = settings.ReleaseChannel
 	c.spec.Update.Mode = settings.Update.Mode
