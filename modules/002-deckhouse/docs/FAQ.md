@@ -7,7 +7,7 @@ title: "The deckhouse module: FAQ"
 First, you have to exec in Deckhouse Pod:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- bash
+kubectl -n d8-system exec -ti svc/deckhouse-leader -- bash
 ```
 
 Then you have to select which node you want to run kube-bench.
