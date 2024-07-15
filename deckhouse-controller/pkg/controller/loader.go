@@ -118,8 +118,8 @@ func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModu
 		log.Debugf("conversions for %q module not found", valuesModuleName)
 	}
 
-	// Load constrains
-	if err = extenders.AddConstraints(def.Name, def.Requirements); err != nil {
+	// Load constrains of installed modules
+	if err = extenders.AddInstalledConstraints(def.Name, def.Requirements); err != nil {
 		return nil, err
 	}
 
