@@ -23,7 +23,6 @@ metadata:
   labels:
     app: proxy-failover
     heritage: deckhouse
-    init: "20240716004950"
     module: ingress-nginx
     name: solid
   name: proxy-solid-failover
