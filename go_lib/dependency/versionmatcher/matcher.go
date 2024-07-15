@@ -47,6 +47,12 @@ func (m *Matcher) AddConstraint(name, rawConstraint string) error {
 	return nil
 }
 
+func (m *Matcher) DeleteConstraint(name string) {
+	if _, ok := m.constraints[name]; ok {
+		delete(m.constraints, name)
+	}
+}
+
 func (m *Matcher) ValidateByName(name string) error {
 	constraint, ok := m.constraints[name]
 	if !ok {

@@ -50,6 +50,11 @@ func AddConstraints(module string, requirements map[string]string) error {
 	return nil
 }
 
+func DeleteConstraints(module string) {
+	deckhouseversion.Instance().DeleteConstraint(module)
+	kubernetesversion.Instance().DeleteConstraint(module)
+}
+
 func CheckRequirements(moduleRelease string, requirements map[string]string) error {
 	if len(requirements[kubernetesversion.RequirementsField]) > 0 {
 		if err := kubernetesversion.Instance().ValidateConstraint(moduleRelease, requirements[kubernetesversion.RequirementsField]); err != nil {
