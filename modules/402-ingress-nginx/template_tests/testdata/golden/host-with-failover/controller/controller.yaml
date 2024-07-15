@@ -1,0 +1,26 @@
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    app: controller
+    heritage: deckhouse
+    module: ingress-nginx
+    name: solid
+  name: controller-solid
+  namespace: d8-ingress-nginx
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: controller
+      maxAllowed:
+        cpu: 200m
+        memory: 200Mi
+      minAllowed:
+        cpu: 10m
+        memory: 50Mi
+  targetRef:
+    apiVersion: apps.kruise.io/v1alpha1
+    kind: DaemonSet
+    name: controller-solid
+  updatePolicy:
+    updateMode: Auto

@@ -1,0 +1,17 @@
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    app: controller
+    heritage: deckhouse
+    module: ingress-nginx
+    name: test-without-hpa
+  name: controller-test-without-hpa
+  namespace: d8-ingress-nginx
+spec:
+  targetRef:
+    apiVersion: apps.kruise.io/v1alpha1
+    kind: DaemonSet
+    name: controller-test-without-hpa
+  updatePolicy:
+    updateMode: "Off"

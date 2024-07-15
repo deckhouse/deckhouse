@@ -188,12 +188,15 @@ func (hec *Config) HelmRender(options ...Option) {
 
 	for filePath, manifests := range files {
 		if opts.renderedOutput != nil {
-			if opts.filterPath != "" {
-				if strings.Contains(filePath, opts.filterPath) {
-					opts.renderedOutput[filePath] = manifests
+			if len(opts.filterPath) > 0 {
+				for _, fp := range opts.filterPath {
+					if strings.Contains(filePath, fp) {
+						opts.renderedOutput[filePath] = trimBlankLines(manifests)
+						break
+					}
 				}
 			} else {
-				opts.renderedOutput[filePath] = manifests
+				opts.renderedOutput[filePath] = trimBlankLines(manifests)
 			}
 		}
 		for _, doc := range releaseutil.SplitManifests(manifests) {
@@ -211,9 +214,28 @@ func (hec *Config) HelmRender(options ...Option) {
 	}
 }
 
+func trimBlankLines(content string) string {
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return ""
+	}
+	lines := strings.Split(content, "\n")
+
+	// Filter out blank lines
+	var filteredLines []string
+	for _, line := range lines {
+		if strings.TrimSpace(line) != "" {
+			filteredLines = append(filteredLines, line)
+		}
+	}
+
+	// Join the non-blank lines back together
+	return strings.Join(filteredLines, "\n")
+}
+
 type configOptions struct {
 	renderedOutput map[string]string
-	filterPath     string
+	filterPath     []string
 }
 
 type Option func(options *configOptions)
@@ -226,9 +248,9 @@ func WithRenderOutput(m map[string]string) Option {
 }
 
 // WithFilteredRenderOutput same as WithRenderOutput but filters files which contain `filter` pattern
-func WithFilteredRenderOutput(m map[string]string, filter string) Option {
+func WithFilteredRenderOutput(m map[string]string, filters []string) Option {
 	return func(options *configOptions) {
 		options.renderedOutput = m
-		options.filterPath = filter
+		options.filterPath = filters
 	}
 }
