@@ -1,6 +1,6 @@
 # Cilium connectivity tests
 
-## Create a default clusterrolle with the name `cilium` before run
+## Create a default clusterrole with the name `cilium` before run
 
 ```bash
 kubectl get clusterrole d8:cni-cilium:agent -o yaml | sed -e 's/name: d8:cni-cilium:agent/name: cilium/' | kubectl apply -f -
