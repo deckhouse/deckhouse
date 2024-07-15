@@ -46,7 +46,7 @@ func TestGetReleasePolicy(t *testing.T) {
 		client:                  cl,
 		externalModulesDir:      os.Getenv("EXTERNAL_MODULES_DIR"),
 		dc:                      dependency.NewDependencyContainer(),
-		deckhouseEmbeddedPolicy: embeddedDeckhousePolicy,
+		deckhouseEmbeddedPolicy: v1alpha1.NewModuleUpdatePolicySpecContainer(embeddedDeckhousePolicy),
 		logger:                  log.New(),
 
 		moduleSourcesChecksum: make(sourceChecksum),

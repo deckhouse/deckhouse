@@ -71,7 +71,7 @@ type moduleReleaseReconciler struct {
 	externalModulesDir string
 	symlinksDir        string
 
-	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpec
+	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpecContainer
 
 	preflightCountDown *sync.WaitGroup
 
@@ -94,7 +94,7 @@ const (
 func NewModuleReleaseController(
 	mgr manager.Manager,
 	dc dependency.Container,
-	embeddedPolicy *v1alpha1.ModuleUpdatePolicySpec,
+	embeddedPolicyContainer *v1alpha1.ModuleUpdatePolicySpecContainer,
 	mm moduleManager,
 	metricStorage *metric_storage.MetricStorage,
 	preflightCountDown *sync.WaitGroup,
@@ -110,7 +110,7 @@ func NewModuleReleaseController(
 		metricStorage:           metricStorage,
 		moduleManager:           mm,
 		symlinksDir:             filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
-		deckhouseEmbeddedPolicy: embeddedPolicy,
+		deckhouseEmbeddedPolicy: embeddedPolicyContainer,
 
 		delayTimer: time.NewTimer(3 * time.Second),
 
@@ -126,7 +126,7 @@ func NewModuleReleaseController(
 
 	ctr, err := controller.New("module-release", mgr, controller.Options{
 		MaxConcurrentReconciles: 3,
-		CacheSyncTimeout:        15 * time.Minute,
+		CacheSyncTimeout:        3 * time.Minute,
 		NeedLeaderElection:      pointer.Bool(false),
 		Reconciler:              c,
 	})
@@ -215,7 +215,7 @@ func (c *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, m
 
 		return ctrl.Result{Requeue: true}, nil // process to the next phase
 
-	case v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended:
+	case v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended, v1alpha1.PhaseSkipped:
 		if mr.Labels["status"] != strings.ToLower(mr.Status.Phase) {
 			// update labels
 			addLabels(mr, map[string]string{"status": strings.ToLower(mr.Status.Phase)})
@@ -377,7 +377,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "",
 				},
-				Spec: *c.deckhouseEmbeddedPolicy,
+				Spec: *c.deckhouseEmbeddedPolicy.Get(),
 			}
 		} else {
 			// get policy spec
@@ -410,7 +410,8 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	for _, r := range otherReleases.Items {
 		pointerReleases = append(pointerReleases, &r)
 	}
-	releaseUpdater.PrepareReleases(pointerReleases)
+	releaseUpdater.SetReleases(pointerReleases)
+
 	if releaseUpdater.ReleasesCount() == 0 {
 		return ctrl.Result{}, nil
 	}
@@ -892,6 +893,7 @@ func (c *moduleReleaseReconciler) parseNotificationConfig(ctx context.Context) (
 		return nil, fmt.Errorf("get secret: %w", err)
 	}
 
+	// TODO: remove this dependency
 	jsonSettings, ok := secret.Data["updateSettings.json"]
 	if !ok {
 		return new(updater.NotificationConfig), nil

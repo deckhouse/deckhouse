@@ -64,10 +64,6 @@ var skipCheckWildcards = map[string][]string{
 	"istio/templates/operator/rbac-for-us.yaml": {
 		"d8:istio:operator",
 	},
-	"user-authn/templates/dex/rbac-for-us.yaml": {
-		"d8:user-authn:dex:crd",
-		"dex",
-	},
 	"operator-prometheus/templates/rbac-for-us.yaml": {
 		"d8:operator-prometheus",
 	},
@@ -92,9 +88,6 @@ var skipCheckWildcards = map[string][]string{
 	},
 	"upmeter/templates/upmeter/rbac-for-us.yaml": {
 		"d8:upmeter:upmeter",
-	},
-	"documentation/templates/rbac-for-us.yaml": {
-		"documentation:leases-edit",
 	},
 	"delivery/templates/argocd/application-controller/rbac-for-us.yaml": {
 		"d8:delivery:argocd:application-controller",

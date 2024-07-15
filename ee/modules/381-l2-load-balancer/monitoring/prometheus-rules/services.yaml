@@ -1,0 +1,18 @@
+- name: d8.l2-load-balancer.services
+  rules:
+    - alert: L2LoadBalancerOrphanServiceFound
+      expr: max by (namespace, name) (d8_l2_load_balancer_orphan_service == 1)
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: application
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__istio_irrelevant_external_services: ClusterHasL2LoadBalancerOrphanServices,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__istio_irrelevant_external_services: ClusterHasL2LoadBalancerOrphanServices,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: Found orphan service with irrelevant L2LoadBalancer name
+        description: |
+          There is orphan service in the namespace: `{{$labels.namespace}}` with the name: `{{$labels.name}}` which has irrelevant L2LoadBalancer name.
+
+          It is recommended to check L2LoadBalancer name in annotations (`network.deckhouse.io/l2-load-balancer-name`).
