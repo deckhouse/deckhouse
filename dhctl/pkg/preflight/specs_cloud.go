@@ -85,20 +85,20 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 		return fmt.Errorf("unknown provider cluster configuration kind: %s", configKind)
 	}
 
-	if err = validateIntegerPropertyAtPath(configObject, rootDiskPropertyPath, minimumRequiredRootDiskSizeGB); err != nil {
+	if err = validateIntegerPropertyAtPath(configObject, rootDiskPropertyPath, minimumRequiredRootDiskSizeGB, true); err != nil {
 		return fmt.Errorf("Root disk capacity: %v", err)
 	}
-	if err = validateIntegerPropertyAtPath(configObject, ramAmountPropertyPath, minimumRequiredMemoryMB); err != nil {
+	if err = validateIntegerPropertyAtPath(configObject, ramAmountPropertyPath, minimumRequiredMemoryMB, false); err != nil {
 		return fmt.Errorf("RAM amount: %v", err)
 	}
-	if err = validateIntegerPropertyAtPath(configObject, coreCountPropertyPath, minimumRequiredCPUCores); err != nil {
+	if err = validateIntegerPropertyAtPath(configObject, coreCountPropertyPath, minimumRequiredCPUCores, false); err != nil {
 		return fmt.Errorf("CPU cores count: %v", err)
 	}
 
 	return nil
 }
 
-func validateIntegerPropertyAtPath(configObject map[string]any, propertyPath []string, minimalValue int) error {
+func validateIntegerPropertyAtPath(configObject map[string]any, propertyPath []string, minimalValue int, allowMissing bool) error {
 	if len(propertyPath) == 0 {
 		return nil
 	}
@@ -108,8 +108,12 @@ func validateIntegerPropertyAtPath(configObject map[string]any, propertyPath []s
 		return fmt.Errorf("malformed provider cluster configuration: reading .%s: %w", strings.Join(propertyPath, "."), err)
 	}
 	if !found {
-		return fmt.Errorf("malformed provider cluster configuration: reading reading .%s: no such property", strings.Join(propertyPath, "."))
+		if allowMissing {
+			return nil
+		}
+		return fmt.Errorf("malformed provider cluster configuration: reading .%s: no such property", strings.Join(propertyPath, "."))
 	}
+
 	if propertyValue.(int) < minimalValue {
 		return fmt.Errorf("expected at least %d, but %d is configured", minimalValue, propertyValue)
 	}
