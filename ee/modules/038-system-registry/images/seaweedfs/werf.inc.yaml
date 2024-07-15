@@ -1,5 +1,5 @@
-{{- $REPO := "https://github.com/sample/seaweedfs"}}
-{{- $BRANCH := "feat/logs-verbosity"}}
+{{- $REPO := "https://github.com/seaweedfs/seaweedfs"}}
+{{- $BRANCH := "master"}}
 {{- $GIT_CLONE_DEST_PATH := "/go/src/github.com/seaweedfs/seaweedfs"}}
 ---
 artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"

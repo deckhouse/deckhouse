@@ -69,3 +69,41 @@ spec:
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
+{{- if (include "isSystemRegistryEnabled" $) }}
+  - scheme: https
+    port: https-metrics
+    path: /distribution/metrics
+    tlsConfig:
+      insecureSkipVerify: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    relabelings:
+    - regex: endpoint|namespace|pod|container
+      action: labeldrop
+    - targetLabel: job
+      replacement: system-registry-distribution
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
+      regex: "true"
+      action: keep
+  - scheme: https
+    port: https-metrics
+    path: /seaweedfs/metrics
+    tlsConfig:
+      insecureSkipVerify: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    relabelings:
+    - regex: endpoint|namespace|pod|container
+      action: labeldrop
+    - targetLabel: job
+      replacement: system-registry-seaweedfs
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
+      regex: "true"
+      action: keep
+{{- end }}
