@@ -10,6 +10,10 @@ rules:
   - /scheduler/metrics
   - /controller-manager/metrics
   - /etcd/metrics
+  {{- if (include "isSystemRegistryEnabled" $) }}
+  - /distribution/metrics
+  - /seaweedfs/metrics
+  {{- end }}
   verbs:
   - get
 ---
