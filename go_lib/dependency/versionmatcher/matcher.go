@@ -26,7 +26,8 @@ type Matcher struct {
 	withBaseVersionLock bool
 	mtx                 sync.Mutex
 	baseVersion         *semver.Version
-	constraints         map[string]*semver.Constraints
+	installed           map[string]*semver.Constraints
+	release             map[string]*semver.Constraints
 }
 
 func New(withBaseVersionLock bool) *Matcher {
@@ -34,7 +35,8 @@ func New(withBaseVersionLock bool) *Matcher {
 	return &Matcher{
 		withBaseVersionLock: withBaseVersionLock,
 		baseVersion:         baseVersion,
-		constraints:         make(map[string]*semver.Constraints),
+		installed:           make(map[string]*semver.Constraints),
+		release:             make(map[string]*semver.Constraints),
 	}
 }
 
@@ -43,18 +45,17 @@ func (m *Matcher) AddConstraint(name, rawConstraint string) error {
 	if err != nil {
 		return err
 	}
-	m.constraints[name] = constraint
+	m.installed[name] = constraint
 	return nil
 }
 
-func (m *Matcher) DeleteConstraint(name string) {
-	if _, ok := m.constraints[name]; ok {
-		delete(m.constraints, name)
-	}
+func (m *Matcher) DeleteConstraints(name string) {
+	delete(m.installed, name)
+	delete(m.release, name)
 }
 
-func (m *Matcher) ValidateByName(name string) error {
-	constraint, ok := m.constraints[name]
+func (m *Matcher) ValidateInstalled(name string) error {
+	mod, ok := m.installed[name]
 	if !ok {
 		return nil
 	}
@@ -62,7 +63,7 @@ func (m *Matcher) ValidateByName(name string) error {
 		m.mtx.Lock()
 		defer m.mtx.Unlock()
 	}
-	if _, errs := constraint.Validate(m.baseVersion); len(errs) != 0 {
+	if _, errs := mod.Validate(m.baseVersion); len(errs) != 0 {
 		return errs[0]
 	}
 	return nil
@@ -73,15 +74,21 @@ func (m *Matcher) ValidateBaseVersion(baseVersion string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	for name, constraint := range m.constraints {
-		if _, errs := constraint.Validate(parsed); len(errs) != 0 {
-			return name, errs[0]
+	for module, installed := range m.installed {
+		if _, errs := installed.Validate(parsed); len(errs) != 0 {
+			// if there is a release constraint for the module which requirements are met try to validate it instead of installed
+			if release, ok := m.release[module]; ok {
+				if _, errs = release.Validate(parsed); len(errs) == 0 {
+					return "", nil
+				}
+			}
+			return module, errs[0]
 		}
 	}
 	return "", nil
 }
 
-func (m *Matcher) ValidateConstraint(rawConstraint string) error {
+func (m *Matcher) ValidateRelease(name, rawConstraint string) error {
 	constraint, err := semver.NewConstraint(rawConstraint)
 	if err != nil {
 		return err
@@ -91,8 +98,11 @@ func (m *Matcher) ValidateConstraint(rawConstraint string) error {
 		defer m.mtx.Unlock()
 	}
 	if _, errs := constraint.Validate(m.baseVersion); len(errs) != 0 {
+		m.release[name] = constraint
 		return errs[0]
 	}
+	// clear release constraint
+	delete(m.release, name)
 	return nil
 }
 

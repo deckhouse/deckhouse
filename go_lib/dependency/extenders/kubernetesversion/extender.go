@@ -124,7 +124,7 @@ func (e *Extender) watchForKubernetesVersion() {
 	}
 }
 
-func (e *Extender) AddConstraint(name, rawConstraint string) error {
+func (e *Extender) AddInstalledConstraint(name, rawConstraint string) error {
 	if err := e.versionMatcher.AddConstraint(name, rawConstraint); err != nil {
 		e.logger.Debugf("adding constraint for %q failed", name)
 		return err
@@ -133,9 +133,9 @@ func (e *Extender) AddConstraint(name, rawConstraint string) error {
 	return nil
 }
 
-func (e *Extender) DeleteConstraint(name string) {
-	e.logger.Debugf("deleting constraint for %q", name)
-	e.versionMatcher.DeleteConstraint(name)
+func (e *Extender) DeleteConstraints(name string) {
+	e.logger.Debugf("deleting constrains for %q", name)
+	e.versionMatcher.DeleteConstraints(name)
 }
 
 // Name implements Extender interface, it is used by scheduler in addon-operator
@@ -157,7 +157,7 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 		return nil, &scherror.PermanentError{Err: fmt.Errorf("parse kubernetes version failed: %s", e.err)}
 	}
 	e.mtx.Unlock()
-	if err := e.versionMatcher.ValidateByName(name); err != nil {
+	if err := e.versionMatcher.ValidateInstalled(name); err != nil {
 		e.logger.Errorf("requirements of %s are not satisfied: current kubernetes version is not suitable: %s", name, err.Error())
 		return pointer.Bool(false), fmt.Errorf("requirements are not satisfied: current kubernetes version is not suitable: %s", err.Error())
 	}
@@ -174,7 +174,7 @@ func (e *Extender) ValidateBaseVersion(baseVersion string) error {
 	return nil
 }
 
-func (e *Extender) ValidateConstraint(name, rawConstraint string) error {
+func (e *Extender) ValidateRelease(releaseName, moduleName, rawConstraint string) error {
 	e.getKubernetesVersion()
 	e.mtx.Lock()
 	if e.err != nil {
@@ -182,10 +182,10 @@ func (e *Extender) ValidateConstraint(name, rawConstraint string) error {
 		return fmt.Errorf("parse kubernetes version failed: %s", e.err)
 	}
 	e.mtx.Unlock()
-	if err := e.versionMatcher.ValidateConstraint(rawConstraint); err != nil {
-		e.logger.Errorf("requirements of %s are not satisfied: current kubernetes version is not suitable: %s", name, err.Error())
+	if err := e.versionMatcher.ValidateRelease(moduleName, rawConstraint); err != nil {
+		e.logger.Errorf("requirements of %s release are not satisfied: current kubernetes version is not suitable: %s", releaseName, err.Error())
 		return fmt.Errorf("requirements are not satisfied: current kubernetes version is not suitable: %s", err.Error())
 	}
-	e.logger.Debugf("requirements of %s are satisfied", name)
+	e.logger.Debugf("requirements of %s release are satisfied", releaseName)
 	return nil
 }

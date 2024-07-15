@@ -100,8 +100,10 @@ func (suite *ReleaseControllerTestSuite) TearDownSubTest() {
 func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	entries, err := os.ReadDir("./testdata/releaseController")
 	require.NoError(suite.T(), err)
-	os.Setenv("TEST_EXTENDER_DECKHOUSE_VERSION", "v1.0.0")
-	os.Setenv("TEST_EXTENDER_KUBERNETES_VERSION", "1.28.0")
+	err = os.Setenv("TEST_EXTENDER_DECKHOUSE_VERSION", "v1.0.0")
+	require.NoError(suite.T(), err)
+	err = os.Setenv("TEST_EXTENDER_KUBERNETES_VERSION", "1.28.0")
+	require.NoError(suite.T(), err)
 	suite.Run("testdata cases", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
 			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}}"}}}, nil

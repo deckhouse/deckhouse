@@ -36,14 +36,14 @@ func Extenders() []extenders.Extender {
 	}
 }
 
-func AddConstraints(module string, requirements map[string]string) error {
+func AddInstalledConstraints(module string, requirements map[string]string) error {
 	if len(requirements[deckhouseversion.RequirementsField]) > 0 {
-		if err := deckhouseversion.Instance().AddConstraint(module, requirements[deckhouseversion.RequirementsField]); err != nil {
+		if err := deckhouseversion.Instance().AddInstalledConstraint(module, requirements[deckhouseversion.RequirementsField]); err != nil {
 			return err
 		}
 	}
 	if len(requirements[kubernetesversion.RequirementsField]) > 0 {
-		if err := kubernetesversion.Instance().AddConstraint(module, requirements[kubernetesversion.RequirementsField]); err != nil {
+		if err := kubernetesversion.Instance().AddInstalledConstraint(module, requirements[kubernetesversion.RequirementsField]); err != nil {
 			return err
 		}
 	}
@@ -51,18 +51,18 @@ func AddConstraints(module string, requirements map[string]string) error {
 }
 
 func DeleteConstraints(module string) {
-	deckhouseversion.Instance().DeleteConstraint(module)
-	kubernetesversion.Instance().DeleteConstraint(module)
+	deckhouseversion.Instance().DeleteConstraints(module)
+	kubernetesversion.Instance().DeleteConstraints(module)
 }
 
-func CheckRequirements(moduleRelease string, requirements map[string]string) error {
+func CheckRequirements(moduleRelease, moduleName string, requirements map[string]string) error {
 	if len(requirements[kubernetesversion.RequirementsField]) > 0 {
-		if err := kubernetesversion.Instance().ValidateConstraint(moduleRelease, requirements[kubernetesversion.RequirementsField]); err != nil {
+		if err := kubernetesversion.Instance().ValidateRelease(moduleRelease, moduleName, requirements[kubernetesversion.RequirementsField]); err != nil {
 			return err
 		}
 	}
 	if len(requirements[deckhouseversion.RequirementsField]) > 0 {
-		if err := deckhouseversion.Instance().ValidateConstraint(moduleRelease, requirements[deckhouseversion.RequirementsField]); err != nil {
+		if err := deckhouseversion.Instance().ValidateRelease(moduleRelease, moduleName, requirements[deckhouseversion.RequirementsField]); err != nil {
 			return err
 		}
 	}
