@@ -20,15 +20,18 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/tidwall/gjson"
-
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
 )
+
+type DeckhouseUpdateSettings struct {
+	NotificationConfig     *NotificationConfig
+	DisruptionApprovalMode string
+	Mode                   string
+	ClusterUUID            string
+}
 
 type NotificationConfig struct {
 	WebhookURL              string          `json:"webhook"`
@@ -60,41 +63,6 @@ func (a *Auth) Fill(req *http.Request) {
 	}
 }
 
-func ParseNotificationConfigFromValues(input *go_hook.HookInput) (*NotificationConfig, error) {
-	webhook, ok := input.Values.GetOk("deckhouse.update.notification.webhook")
-	if !ok {
-		webhook = gjson.Result{}
-	}
-
-	var minimalTime libapi.Duration
-	t, ok := input.Values.GetOk("deckhouse.update.notification.minimalNotificationTime")
-	if ok {
-		err := json.Unmarshal([]byte(t.Raw), &minimalTime)
-		if err != nil {
-			return nil, fmt.Errorf("parsing minimalNotificationTime: %v", err)
-		}
-	}
-
-	skipTLSVertify := input.Values.Get("deckhouse.update.notification.tlsSkipVerify").Bool()
-
-	var auth *Auth
-	a, ok := input.Values.GetOk("deckhouse.update.notification.auth")
-	if ok {
-		auth = &Auth{}
-		err := json.Unmarshal([]byte(a.Raw), auth)
-		if err != nil {
-			return nil, fmt.Errorf("parsing auth: %v", err)
-		}
-	}
-
-	return &NotificationConfig{
-		WebhookURL:              webhook.String(),
-		SkipTLSVerify:           skipTLSVertify,
-		MinimalNotificationTime: minimalTime,
-		Auth:                    auth,
-	}, nil
-}
-
 func sendWebhookNotification(config *NotificationConfig, data webhookData) error {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: config.SkipTLSVerify},
@@ -104,17 +72,20 @@ func sendWebhookNotification(config *NotificationConfig, data webhookData) error
 		Timeout:   10 * time.Second,
 	}
 
-	buf := bytes.NewBuffer(nil)
-	_ = json.NewEncoder(buf).Encode(data)
-
-	req, err := http.NewRequest(http.MethodPost, config.WebhookURL, buf)
-	if err != nil {
-		return err
-	}
-	req.Header.Add("Content-Type", "application/json")
-	config.Auth.Fill(req)
-
+	var err error
 	for i := 0; i < 3; i++ {
+		// We can only read the buffer once, so for each attempt we need to create a new one
+		buf := bytes.NewBuffer(nil)
+		_ = json.NewEncoder(buf).Encode(data)
+
+		var req *http.Request
+		req, err = http.NewRequest(http.MethodPost, config.WebhookURL, buf)
+		if err != nil {
+			return err
+		}
+		req.Header.Add("Content-Type", "application/json")
+		config.Auth.Fill(req)
+
 		_, err = client.Do(req)
 		if err == nil {
 			return nil
