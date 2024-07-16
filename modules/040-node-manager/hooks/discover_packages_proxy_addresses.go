@@ -34,7 +34,8 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/node-manager",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 1},
+	Queue:        "/modules/node-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "packages_proxy",
