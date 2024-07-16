@@ -347,7 +347,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		if err = c.updateModuleReleaseStatusMessage(ctx, mr, err.Error()); err != nil {
 			return ctrl.Result{Requeue: true}, err
 		}
-		return ctrl.Result{Requeue: false}, nil
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
 	otherReleases := new(v1alpha1.ModuleReleaseList)
