@@ -118,6 +118,9 @@ func physicalCoresCountFromCPUInfo(info *bytes.Buffer) (int, error) {
 			physicalCPUsToCores[lastPhysicalId] = int(v)
 		}
 	}
+	if err := scanner.Err(); err != nil {
+		return 0, fmt.Errorf("Failed to parse cpu info from /proc/cpuinfo: %w", err)
+	}
 
 	totalPhysicalCores := 0
 	for _, coreCount := range physicalCPUsToCores {
