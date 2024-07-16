@@ -1113,6 +1113,11 @@ spec:
                   required: ['hostPortWithProxyProtocol']
                 - properties:
                     inlet:
+                      enum: [ 'HostPortWithSSLPassthrough' ]
+                    hostPortWithSSLPassthrough: { }
+                  required: [ 'hostPortWithSSLPassthrough' ]
+                - properties:
+                    inlet:
                       enum: ['HostWithFailover']
                     hostWithFailover: {}
               x-kubernetes-validations:

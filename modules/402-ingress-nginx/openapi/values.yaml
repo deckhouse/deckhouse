@@ -162,6 +162,14 @@ properties:
                       type: integer
                     httpsPort:
                       type: integer
+                hostPortWithSSLPassthrough:
+                  type: object
+                  default: {}
+                  properties:
+                    httpPort:
+                      type: integer
+                    httpsPort:
+                      type: integer
                 hostWithFailover:
                   type: object
                   default: {}
