@@ -95,10 +95,6 @@ rules:
   - tokenreviews
   verbs:
   - create
-- apiGroups: ["apps"]
-  resources: ["deployments/http"]
-  resourceNames: ["trickster"]
-  verbs: ["get", "create", "update", "patch", "delete"]
 - apiGroups:
     - monitoring.coreos.com
   resources:

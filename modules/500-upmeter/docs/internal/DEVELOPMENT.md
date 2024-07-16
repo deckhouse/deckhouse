@@ -140,7 +140,7 @@ spec:
   - horizontal-pod-autoscaler
   - key-metrics-presence
   - metric-sources
-  - trickster
+  - aggregating-proxy
 - nginx
   - *(controller name)*
 - nodegroups
