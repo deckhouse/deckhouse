@@ -24,23 +24,99 @@
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 73,
-  "iteration": 1721055814362,
+  "id": 76,
+  "iteration": 1721141479764,
   "links": [],
   "liveNow": false,
   "panels": [
     {
-      "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds_prometheus}"
+      },
+      "description": "Up",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "index": 0,
+                  "text": "Down"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 1,
+                  "text": "Up"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "noValue": "Down",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
       "gridPos": {
-        "h": 1,
-        "w": 24,
+        "h": 6,
+        "w": 12,
         "x": 0,
         "y": 0
       },
-      "id": 2,
-      "panels": [],
-      "title": "Master Servers",
-      "type": "row"
+      "id": 125,
+      "links": [],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "text": {},
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum by (instance) (up{job=~\"$job\", instance=~\"$instance\"})",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 2,
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "A",
+          "step": 60
+        }
+      ],
+      "title": "Up",
+      "type": "stat"
     },
     {
       "datasource": {
@@ -54,7 +130,7 @@
             "mode": "thresholds"
           },
           "mappings": [],
-          "noValue": "No",
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -70,9 +146,9 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 8,
-        "x": 0,
-        "y": 1
+        "w": 12,
+        "x": 12,
+        "y": 0
       },
       "id": 14,
       "links": [],
@@ -102,7 +178,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum by (instance) (SeaweedFS_master_is_leader{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"})",
+          "expr": "sum by (instance) (SeaweedFS_master_is_leader{job=~\"$job\", instance=~\"$instance\"})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
@@ -114,387 +190,6 @@
       ],
       "title": "Leader Status",
       "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${ds_prometheus}"
-      },
-      "description": "Tracks the number of leader changes for SeaweedFS Master instances",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 4,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 1
-      },
-      "id": 16,
-      "links": [],
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "8.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${ds_prometheus}"
-          },
-          "exemplar": true,
-          "expr": "sum by (instance) (SeaweedFS_master_leader_changes{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\", type=~\".+\"})",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "intervalFactor": 2,
-          "legendFormat": "{{instance}}",
-          "refId": "A",
-          "step": 60
-        }
-      ],
-      "title": "Leader Changes",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${ds_prometheus}"
-      },
-      "description": "Displays the number of SeaweedFS Master instances currently acting as leaders.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 2
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 16,
-        "y": 1
-      },
-      "id": 22,
-      "links": [],
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "8.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${ds_prometheus}"
-          },
-          "exemplar": true,
-          "expr": "sum (SeaweedFS_master_is_leader{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"})",
-          "format": "time_series",
-          "hide": false,
-          "intervalFactor": 2,
-          "legendFormat": "Leaders",
-          "refId": "A",
-          "step": 60
-        }
-      ],
-      "thresholds": [],
-      "title": "SeaweedFS Master Leader Count",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${ds_prometheus}"
-      },
-      "description": "Displays instances with detected replica placement mismatches for SeaweedFS Master instances.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 4,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 0,
-        "y": 7
-      },
-      "id": 20,
-      "links": [],
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "8.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${ds_prometheus}"
-          },
-          "editorMode": "code",
-          "exemplar": true,
-          "expr": "sum (SeaweedFS_master_replica_placement_mismatch{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"} > 0) by (instance)",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "intervalFactor": 2,
-          "legendFormat": "{{instance}}",
-          "refId": "A",
-          "step": 60
-        }
-      ],
-      "thresholds": [],
-      "title": "Replica Placement Mismatches",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${ds_prometheus}"
-      },
-      "description": "Shows the increase in received heartbeats by type for SeaweedFS Master instances over a specified interval",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 4,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 7
-      },
-      "id": 18,
-      "links": [],
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "8.1.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${ds_prometheus}"
-          },
-          "exemplar": true,
-          "expr": "sum by (type) (increase(SeaweedFS_master_received_heartbeats{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval]))",
-          "format": "time_series",
-          "hide": false,
-          "intervalFactor": 2,
-          "legendFormat": "{{type}}",
-          "refId": "A",
-          "step": 60
-        }
-      ],
-      "title": "Heartbeats",
-      "type": "timeseries"
     },
     {
       "datasource": {
@@ -523,10 +218,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 16,
-        "y": 7
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 6
       },
       "id": 24,
       "links": [],
@@ -556,7 +251,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "SeaweedFS_master_admin_lock{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}",
+          "expr": "SeaweedFS_master_admin_lock{job=~\"$job\", instance=~\"$instance\"}",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
@@ -570,6 +265,99 @@
       "type": "stat"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds_prometheus}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "id": 135,
+      "links": [],
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "editorMode": "code",
+          "expr": "rate(SeaweedFS_wdclient_connect_updates{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 2,
+          "legendFormat": "{{instance}} {{type}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Weed client connection updates per second",
+      "type": "timeseries"
+    },
+    {
       "collapsed": true,
       "gridPos": {
         "h": 1,
@@ -577,337 +365,14 @@
         "x": 0,
         "y": 13
       },
-      "id": 12,
+      "id": 2,
       "panels": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "description": "Shows the 90th percentile latency of requests to SeaweedFS filer instances",
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 10,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineStyle": {
-                  "fill": "solid"
-                },
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "never",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "min": 0,
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green"
-                  }
-                ]
-              },
-              "unit": "s"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 7,
-            "w": 8,
-            "x": 0,
-            "y": 2
-          },
-          "id": 66,
-          "links": [],
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "none"
-            }
-          },
-          "pluginVersion": "8.5.13",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${ds_prometheus}"
-              },
-              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_filer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
-              "format": "time_series",
-              "hide": false,
-              "intervalFactor": 2,
-              "legendFormat": "average",
-              "refId": "A",
-              "step": 60
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${ds_prometheus}"
-              },
-              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_filer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, type))",
-              "format": "time_series",
-              "hide": false,
-              "intervalFactor": 2,
-              "legendFormat": "{{type}}",
-              "refId": "B",
-              "step": 60
-            }
-          ],
-          "title": "90th Percentile of Filer Request Duration",
-          "type": "timeseries"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${ds_prometheus}"
-          },
-          "description": "The query calculates the 95th percentile of request duration to the SeaweedFS filer over a specified time interval.",
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 10,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "never",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "min": 0,
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green"
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "s"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 7,
-            "w": 8,
-            "x": 8,
-            "y": 2
-          },
-          "id": 68,
-          "links": [],
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "none"
-            }
-          },
-          "pluginVersion": "8.5.13",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${ds_prometheus}"
-              },
-              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_filer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
-              "format": "time_series",
-              "hide": false,
-              "intervalFactor": 2,
-              "legendFormat": "average",
-              "refId": "A",
-              "step": 60
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${ds_prometheus}"
-              },
-              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_filer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, type))",
-              "format": "time_series",
-              "hide": false,
-              "intervalFactor": 2,
-              "legendFormat": "{{type}}",
-              "refId": "B",
-              "step": 60
-            }
-          ],
-          "title": "95th Percentile of Filer Request Duration",
-          "type": "timeseries"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${ds_prometheus}"
-          },
-          "description": "The query calculates the 99th percentile of request duration to the SeaweedFS filer over a specified time interval.",
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 10,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "never",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "min": 0,
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green"
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "s"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 7,
-            "w": 8,
-            "x": 16,
-            "y": 2
-          },
-          "id": 70,
-          "links": [],
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "none"
-            }
-          },
-          "pluginVersion": "8.5.13",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${ds_prometheus}"
-              },
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_filer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
-              "format": "time_series",
-              "hide": false,
-              "intervalFactor": 2,
-              "legendFormat": "average",
-              "refId": "A",
-              "step": 60
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${ds_prometheus}"
-              },
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_filer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, type))",
-              "format": "time_series",
-              "hide": false,
-              "intervalFactor": 2,
-              "legendFormat": "{{type}}",
-              "refId": "B",
-              "step": 60
-            }
-          ],
-          "title": "99th Percentile of Filer Request Duration",
-          "type": "timeseries"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${ds_prometheus}"
-          },
-          "description": "The query calculates the queries rate to the SeaweedFS filer in requests per second (RPS) over a specified time interval.",
+          "description": "Displays the number of SeaweedFS Master instances currently acting as leaders.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -931,7 +396,7 @@
                 "scaleDistribution": {
                   "type": "linear"
                 },
-                "showPoints": "never",
+                "showPoints": "auto",
                 "spanNulls": false,
                 "stacking": {
                   "group": "A",
@@ -942,7 +407,6 @@
                 }
               },
               "mappings": [],
-              "min": 0,
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
@@ -951,70 +415,627 @@
                   },
                   {
                     "color": "red",
-                    "value": 80
+                    "value": 2
                   }
                 ]
               },
-              "unit": "reqps"
+              "unit": "none"
             },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "total"
-                },
-                "properties": [
-                  {
-                    "id": "custom.lineWidth",
-                    "value": 0
-                  }
-                ]
-              }
-            ]
+            "overrides": []
           },
           "gridPos": {
-            "h": 7,
-            "w": 24,
+            "h": 6,
+            "w": 8,
             "x": 0,
-            "y": 9
+            "y": 14
           },
-          "id": 32,
+          "id": 22,
           "links": [],
           "options": {
             "legend": {
-              "calcs": [
-                "lastNotNull",
-                "max"
-              ],
-              "displayMode": "table",
-              "placement": "right",
-              "width": 250
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
             },
             "tooltip": {
-              "mode": "multi",
-              "sort": "desc"
+              "mode": "single",
+              "sort": "none"
             }
           },
-          "pluginVersion": "8.5.13",
+          "pluginVersion": "8.1.2",
           "targets": [
             {
               "datasource": {
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "rate(SeaweedFS_filer_request_total{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])",
+              "exemplar": true,
+              "expr": "sum (SeaweedFS_master_is_leader{job=~\"$job\", instance=~\"$instance\"})",
               "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "Leaders",
+              "refId": "A",
+              "step": 60
+            }
+          ],
+          "thresholds": [],
+          "title": "SeaweedFS Master Leader Count",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "Tracks the number of leader changes for SeaweedFS Master instances",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 4,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  }
+                ]
+              },
+              "unit": "none"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 8,
+            "y": 14
+          },
+          "id": 16,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "8.1.2",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "exemplar": true,
+              "expr": "sum by (instance) (SeaweedFS_master_leader_changes{job=~\"$job\", instance=~\"$instance\", type=~\".+\"})",
+              "format": "time_series",
+              "hide": false,
+              "instant": false,
+              "intervalFactor": 2,
+              "legendFormat": "{{instance}}",
+              "refId": "A",
+              "step": 60
+            }
+          ],
+          "title": "Leader Changes",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "Displays instances with detected replica placement mismatches for SeaweedFS Master instances.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 4,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  }
+                ]
+              },
+              "unit": "none"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 16,
+            "y": 14
+          },
+          "id": 20,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "8.1.2",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "editorMode": "code",
+              "exemplar": true,
+              "expr": "sum (SeaweedFS_master_replica_placement_mismatch{job=~\"$job\", instance=~\"$instance\"} > 0) by (instance)",
+              "format": "time_series",
+              "hide": false,
+              "instant": false,
+              "intervalFactor": 2,
+              "legendFormat": "{{instance}}",
+              "refId": "A",
+              "step": 60
+            }
+          ],
+          "thresholds": [],
+          "title": "Replica Placement Mismatches",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "Shows the increase in received heartbeats by type for SeaweedFS Master instances over a specified interval",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 4,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  }
+                ]
+              },
+              "unit": "none"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 0,
+            "y": 20
+          },
+          "id": 18,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "8.1.2",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "exemplar": true,
+              "expr": "sum by (type) (increase(SeaweedFS_master_received_heartbeats{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]))",
+              "format": "time_series",
+              "hide": false,
               "intervalFactor": 2,
               "legendFormat": "{{type}}",
               "refId": "A",
-              "step": 30
+              "step": 60
             }
           ],
-          "title": "Filer QPS",
+          "title": "Heartbeats",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "Raft Boltdb GetLog Count",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 4,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  }
+                ]
+              },
+              "unit": "none"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 8,
+            "y": 20
+          },
+          "id": 124,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "8.1.2",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "editorMode": "code",
+              "exemplar": true,
+              "expr": "sum(rate(SeaweedFS_raft_boltdb_getLog_count{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (instance)",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "{{type}}",
+              "range": true,
+              "refId": "A",
+              "step": 60
+            }
+          ],
+          "title": "Raft Boltdb GetLog Count",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "This metric estimates the time it takes to get the log from Raft Boltdb.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 4,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 16,
+            "y": 20
+          },
+          "id": 136,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [
+                "min",
+                "max",
+                "mean"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "8.1.2",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "editorMode": "code",
+              "exemplar": true,
+              "expr": "rate(SeaweedFS_raft_boltdb_getLog{job=~\"$job\", instance=~\"$instance\", quantile=\"0.99\"}[$__rate_interval])",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "{{instance}}",
+              "range": true,
+              "refId": "A",
+              "step": 60
+            }
+          ],
+          "title": "Raft Boltdb GetLog Duration (99th Percentile)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "This metric measures the number of RPC calls to add entries to the Raft log.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 4,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  }
+                ]
+              },
+              "unit": "ops"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 26
+          },
+          "id": 137,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [
+                "min",
+                "max",
+                "mean"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "8.1.2",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "editorMode": "code",
+              "exemplar": true,
+              "expr": "sum (rate(SeaweedFS_raft_replication_appendEntries_rpc{job=~\"$job\", instance=~\"$instance\", quantile=\"0.99\"}[$__rate_interval])) by (instance, peer_id)",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{type}}",
+              "range": true,
+              "refId": "A",
+              "step": 60
+            }
+          ],
+          "title": "Raft Append Entries RPC",
           "type": "timeseries"
         }
       ],
-      "title": "Filer Server",
+      "title": "Master Servers",
       "type": "row"
     },
     {
@@ -1088,7 +1109,7 @@
             "h": 7,
             "w": 8,
             "x": 0,
-            "y": 3
+            "y": 15
           },
           "id": 34,
           "links": [],
@@ -1111,7 +1132,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_s3_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_s3_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1125,7 +1146,7 @@
                 "uid": "${ds_prometheus}"
               },
               "editorMode": "code",
-              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_s3_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, type, bucket))",
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_s3_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le, type, bucket))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1199,7 +1220,7 @@
             "h": 7,
             "w": 8,
             "x": 8,
-            "y": 3
+            "y": 15
           },
           "id": 36,
           "links": [],
@@ -1222,7 +1243,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_s3_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_s3_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1236,7 +1257,7 @@
                 "uid": "${ds_prometheus}"
               },
               "editorMode": "code",
-              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_s3_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, type, bucket))",
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_s3_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le, type, bucket))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1310,7 +1331,7 @@
             "h": 7,
             "w": 8,
             "x": 16,
-            "y": 3
+            "y": 15
           },
           "id": 38,
           "links": [],
@@ -1333,7 +1354,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1348,7 +1369,7 @@
               },
               "editorMode": "code",
               "exemplar": true,
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, type, bucket))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_s3_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le, type, bucket))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1435,7 +1456,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 10
+            "y": 22
           },
           "id": 44,
           "links": [],
@@ -1462,7 +1483,7 @@
                 "uid": "${ds_prometheus}"
               },
               "editorMode": "code",
-              "expr": "sum (rate(SeaweedFS_s3_request_total{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (bucket, type)",
+              "expr": "sum (rate(SeaweedFS_s3_request_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (bucket, type)",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{bucket}} {{type}}",
@@ -1486,8 +1507,1337 @@
         "x": 0,
         "y": 15
       },
+      "id": 12,
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "Shows the 90th percentile latency of requests to SeaweedFS filer instances",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineStyle": {
+                  "fill": "solid"
+                },
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 0,
+            "y": 16
+          },
+          "id": 66,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "8.5.13",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_filer_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "average",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_filer_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le, type))",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "{{type}}",
+              "refId": "B",
+              "step": 60
+            }
+          ],
+          "title": "90th Percentile of Filer Request Duration",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "The query calculates the 95th percentile of request duration to the SeaweedFS filer over a specified time interval.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 8,
+            "y": 16
+          },
+          "id": 68,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "8.5.13",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_filer_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "average",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_filer_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le, type))",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "{{type}}",
+              "refId": "B",
+              "step": 60
+            }
+          ],
+          "title": "95th Percentile of Filer Request Duration",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "The query calculates the 99th percentile of request duration to the SeaweedFS filer over a specified time interval.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 16,
+            "y": 16
+          },
+          "id": 70,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "8.5.13",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_filer_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "average",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_filer_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le, type))",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "{{type}}",
+              "refId": "B",
+              "step": 60
+            }
+          ],
+          "title": "99th Percentile of Filer Request Duration",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "The query calculates the queries rate to the SeaweedFS filer in requests per second (RPS) over a specified time interval.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "reqps"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 23
+          },
+          "id": 32,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "right",
+              "width": 250
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "pluginVersion": "8.5.13",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "editorMode": "code",
+              "expr": "sum by (code, type) (rate(SeaweedFS_filer_request_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "{{type}}: {{code}}",
+              "range": true,
+              "refId": "A",
+              "step": 30
+            }
+          ],
+          "title": "Filer RPS",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "This query calculates the average call rate of Filer handlers in SeaweedFS over a specified time interval.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "reqps"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 30
+          },
+          "id": 121,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "right",
+              "width": 250
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "pluginVersion": "8.5.13",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "expr": "rate(SeaweedFS_filer_handler_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "{{type}}",
+              "refId": "A",
+              "step": 30
+            }
+          ],
+          "title": "Filer handler RPS",
+          "type": "timeseries"
+        }
+      ],
+      "title": "Filer Server",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 6,
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "This query calculates the 90th percentile of request durations to the SeaweedFS Filer Store over a specified time interval, aggregated by request type.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "min": 0,
+              "noValue": "0",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 0,
+            "y": 17
+          },
+          "id": 56,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": false
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "10.3.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_filerStore_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le, store, type))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "{{store}} {{type}}",
+              "range": true,
+              "refId": "B"
+            }
+          ],
+          "title": "90th Percentile of Filer Store Request Duration",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "This query calculates the 95th percentile of request durations to the SeaweedFS Filer Store over a specified time interval, aggregated by request type.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "min": 0,
+              "noValue": "0",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 8,
+            "y": 17
+          },
+          "id": 119,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": false
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "10.3.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_filerStore_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le, store, type))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "{{store}} {{type}}",
+              "range": true,
+              "refId": "B"
+            }
+          ],
+          "title": "95th Percentile of Filer Store Request Duration",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "This query calculates the 99th percentile of request durations to the SeaweedFS Filer Store over a specified time interval, aggregated by request type.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "min": 0,
+              "noValue": "0",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 16,
+            "y": 17
+          },
+          "id": 120,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": false
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "10.3.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_filerStore_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le, store, type))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "{{store}} {{type}}",
+              "range": true,
+              "refId": "B"
+            }
+          ],
+          "title": "99th Percentile of Filer Store Request Duration",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "This query calculates the average request rate (QPS) to the SeaweedFS Filer Store over a specified time interval, aggregated by request type.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  }
+                ]
+              },
+              "unit": "ops"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 24
+          },
+          "id": 58,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [
+                "mean",
+                "lastNotNull"
+              ],
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "10.3.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "editorMode": "code",
+              "expr": "sum(rate(SeaweedFS_filerStore_request_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (store, type)",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "{{store}} {{type}}",
+              "range": true,
+              "refId": "B"
+            }
+          ],
+          "title": "Request Rate to Filer Store (QPS)",
+          "type": "timeseries"
+        }
+      ],
+      "title": "Filer Store",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
       "id": 8,
       "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "Volume IsReadOnly",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  }
+                ]
+              },
+              "unit": "bool"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 18
+          },
+          "id": 131,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "10.3.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "editorMode": "code",
+              "expr": "SeaweedFS_volumeServer_read_only_volumes{job=~\"$job\", instance=~\"$instance\", type=~\"IsReadOnly\"}",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "{{collection}} {{type}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Volume IsReadOnly",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "Volume isDiskSpaceLow",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  }
+                ]
+              },
+              "unit": "bool"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 18
+          },
+          "id": 132,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "10.3.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "editorMode": "code",
+              "expr": "SeaweedFS_volumeServer_read_only_volumes{job=~\"$job\", instance=~\"$instance\", type=~\"isDiskSpaceLow\"}",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "{{collection}} {{type}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Volume isDiskSpaceLow",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "Volume noWriteCanDelete",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  }
+                ]
+              },
+              "unit": "bool"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 25
+          },
+          "id": 133,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "10.3.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "editorMode": "code",
+              "expr": "SeaweedFS_volumeServer_read_only_volumes{job=~\"$job\", instance=~\"$instance\", type=~\"noWriteCanDelete\"}",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "{{collection}} {{type}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Volume noWriteCanDelete",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "Volume noWriteOrDelete",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  }
+                ]
+              },
+              "unit": "bool"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 25
+          },
+          "id": 134,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "10.3.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "editorMode": "code",
+              "expr": "SeaweedFS_volumeServer_read_only_volumes{job=~\"$job\", instance=~\"$instance\", type=~\"noWriteOrDelete\"}",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "{{collection}} {{type}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Volume noWriteOrDelete",
+          "type": "timeseries"
+        },
         {
           "datasource": {
             "type": "prometheus",
@@ -1549,7 +2899,7 @@
             "h": 7,
             "w": 8,
             "x": 0,
-            "y": 4
+            "y": 32
           },
           "id": 48,
           "links": [],
@@ -1572,7 +2922,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, exported_instance))",
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le, exported_instance))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1584,7 +2934,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "average",
@@ -1655,7 +3005,7 @@
             "h": 7,
             "w": 8,
             "x": 8,
-            "y": 4
+            "y": 32
           },
           "id": 117,
           "links": [],
@@ -1678,7 +3028,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, exported_instance))",
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le, exported_instance))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1690,7 +3040,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "average",
@@ -1761,7 +3111,7 @@
             "h": 7,
             "w": 8,
             "x": 16,
-            "y": 4
+            "y": 32
           },
           "id": 118,
           "links": [],
@@ -1784,7 +3134,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, exported_instance))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le, exported_instance))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1796,7 +3146,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "average",
@@ -1804,206 +3154,6 @@
             }
           ],
           "title": "Request Duration 99th percentile",
-          "type": "timeseries"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${ds_prometheus}"
-          },
-          "description": "This query calculates the average query per second (QPS) to the SeaweedFS Volume Server over a specified time interval, aggregated by request type.",
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 10,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 2,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "never",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green"
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "short"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 7,
-            "w": 24,
-            "x": 0,
-            "y": 11
-          },
-          "id": 84,
-          "links": [],
-          "options": {
-            "legend": {
-              "calcs": [
-                "sum"
-              ],
-              "displayMode": "table",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "none"
-            }
-          },
-          "pluginVersion": "8.5.13",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${ds_prometheus}"
-              },
-              "expr": "sum(rate(SeaweedFS_volumeServer_request_total{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (type)",
-              "format": "time_series",
-              "intervalFactor": 2,
-              "legendFormat": "{{type}}",
-              "refId": "A",
-              "step": 4
-            }
-          ],
-          "title": "Volume Server QPS",
-          "type": "timeseries"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${ds_prometheus}"
-          },
-          "description": "This query calculates the number of volumes on the SeaweedFS Volume Server, aggregated by collection and type.",
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 10,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "never",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green"
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "short"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 7,
-            "w": 24,
-            "x": 0,
-            "y": 18
-          },
-          "id": 50,
-          "links": [],
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "table",
-              "placement": "right",
-              "showLegend": true
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "none"
-            }
-          },
-          "pluginVersion": "10.3.1",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${ds_prometheus}"
-              },
-              "expr": "sum(SeaweedFS_volumeServer_volumes{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}) by (collection, type)",
-              "format": "time_series",
-              "hide": false,
-              "intervalFactor": 2,
-              "legendFormat": "{{collection}} {{type}}",
-              "refId": "A"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${ds_prometheus}"
-              },
-              "expr": "sum(SeaweedFS_volumeServer_volumes{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"})",
-              "format": "time_series",
-              "intervalFactor": 2,
-              "legendFormat": "Total",
-              "refId": "B"
-            }
-          ],
-          "title": "Number of Volumes on Volume Server",
           "type": "timeseries"
         },
         {
@@ -2064,9 +3214,9 @@
           },
           "gridPos": {
             "h": 7,
-            "w": 24,
+            "w": 12,
             "x": 0,
-            "y": 25
+            "y": 39
           },
           "id": 52,
           "links": [],
@@ -2089,7 +3239,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(SeaweedFS_volumeServer_total_disk_size{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}) by (collection, type)",
+              "expr": "sum(SeaweedFS_volumeServer_total_disk_size{job=~\"$job\", instance=~\"$instance\"}) by (collection, type)",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -2101,7 +3251,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(SeaweedFS_volumeServer_total_disk_size{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"})",
+              "expr": "sum(SeaweedFS_volumeServer_total_disk_size{job=~\"$job\", instance=~\"$instance\"})",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "Total",
@@ -2109,6 +3259,101 @@
             }
           ],
           "title": "Total Disk Size on Volume Server",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "This query calculates the average query per second (QPS) to the SeaweedFS Volume Server over a specified time interval, aggregated by request type.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 39
+          },
+          "id": 84,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [
+                "sum"
+              ],
+              "displayMode": "table",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "8.5.13",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "expr": "sum(rate(SeaweedFS_volumeServer_request_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (type)",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "{{type}}",
+              "refId": "A",
+              "step": 4
+            }
+          ],
+          "title": "Volume Server QPS",
           "type": "timeseries"
         },
         {
@@ -2169,9 +3414,9 @@
           },
           "gridPos": {
             "h": 7,
-            "w": 24,
+            "w": 12,
             "x": 0,
-            "y": 32
+            "y": 46
           },
           "id": 54,
           "links": [],
@@ -2194,7 +3439,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(SeaweedFS_volumeServer_total_disk_size{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}) by (exported_instance)",
+              "expr": "sum(SeaweedFS_volumeServer_total_disk_size{job=~\"$job\", instance=~\"$instance\"}) by (exported_instance)",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -2204,26 +3449,13 @@
           ],
           "title": "Total Disk Size on Volume Server",
           "type": "timeseries"
-        }
-      ],
-      "title": "Volume Server",
-      "type": "row"
-    },
-    {
-      "collapsed": true,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 16
-      },
-      "id": 6,
-      "panels": [
+        },
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
+          "description": "This query calculates the number of volumes on the SeaweedFS Volume Server, aggregated by collection and type.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2258,7 +3490,6 @@
                 }
               },
               "mappings": [],
-              "min": 0,
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
@@ -2271,24 +3502,24 @@
                   }
                 ]
               },
-              "unit": "s"
+              "unit": "short"
             },
             "overrides": []
           },
           "gridPos": {
             "h": 7,
-            "w": 24,
-            "x": 0,
-            "y": 5
+            "w": 12,
+            "x": 12,
+            "y": 46
           },
-          "id": 56,
+          "id": 50,
           "links": [],
           "options": {
             "legend": {
               "calcs": [],
               "displayMode": "table",
               "placement": "right",
-              "showLegend": false
+              "showLegend": true
             },
             "tooltip": {
               "mode": "multi",
@@ -2302,21 +3533,48 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_filerStore_request_seconds_bucket{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (le, type))",
+              "expr": "sum(SeaweedFS_volumeServer_volumes{job=~\"$job\", instance=~\"$instance\"}) by (collection, type)",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "{{collection}} {{type}}",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "expr": "sum(SeaweedFS_volumeServer_volumes{job=~\"$job\", instance=~\"$instance\"})",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "{{type}}",
+              "legendFormat": "Total",
               "refId": "B"
             }
           ],
-          "title": "Filer Store Request Duration 99th percentile",
+          "title": "Number of Volumes on Volume Server",
           "type": "timeseries"
-        },
+        }
+      ],
+      "title": "Volume Server",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "id": 127,
+      "panels": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
+          "description": "This query calculates the 90th percentile of vacuuming durations on the SeaweedFS Volume Server over a specified time interval, aggregated by instance and type.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2364,27 +3622,24 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "s"
             },
             "overrides": []
           },
           "gridPos": {
             "h": 7,
-            "w": 24,
+            "w": 8,
             "x": 0,
-            "y": 12
+            "y": 19
           },
-          "id": 58,
+          "id": 128,
           "links": [],
           "options": {
             "legend": {
-              "calcs": [
-                "mean",
-                "lastNotNull"
-              ],
+              "calcs": [],
               "displayMode": "table",
-              "placement": "right",
-              "showLegend": true
+              "placement": "bottom",
+              "showLegend": false
             },
             "tooltip": {
               "mode": "multi",
@@ -2398,18 +3653,248 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(rate(SeaweedFS_filerStore_request_total{job=~\"$job\", namespace=~\"$namespace\", instance=~\"$instance\"}[$__rate_interval])) by (type)",
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_volumeServer_vacuuming_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le, instance, type))",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "{{instance}} {{type}}",
+              "range": true,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "{{type}}",
-              "refId": "B"
+              "legendFormat": "average",
+              "refId": "C"
             }
           ],
-          "title": "Filer Store QPS",
+          "title": "90th Percentile of Volume Server Vacuuming Duration",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "This query calculates the 95th percentile of vacuuming durations on the SeaweedFS Volume Server over a specified time interval, aggregated by instance and type.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 8,
+            "y": 19
+          },
+          "id": 129,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": false
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "10.3.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.95, sum(rate(SeaweedFS_volumeServer_vacuuming_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le, instance, type))",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "{{instance}} {{type}}",
+              "range": true,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "average",
+              "refId": "C"
+            }
+          ],
+          "title": "95th Percentile of Volume Server Vacuuming Duration",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "description": "This query calculates the 99th percentile of vacuuming durations on the SeaweedFS Volume Server over a specified time interval, aggregated by instance and type.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 16,
+            "y": 19
+          },
+          "id": 130,
+          "links": [],
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": false
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "10.3.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.99, sum(rate(SeaweedFS_volumeServer_vacuuming_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le, instance, type))",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 2,
+              "legendFormat": "{{instance}} {{type}}",
+              "range": true,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${ds_prometheus}"
+              },
+              "expr": "histogram_quantile(0.90, sum(rate(SeaweedFS_volumeServer_request_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (le))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "average",
+              "refId": "C"
+            }
+          ],
+          "title": "99th Percentile of Volume Server Vacuuming Duration",
           "type": "timeseries"
         }
       ],
-      "title": "Filer Store",
+      "title": "Volume Vacuuming",
       "type": "row"
     },
     {
@@ -2418,7 +3903,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 19
       },
       "id": 4,
       "panels": [
@@ -2427,6 +3912,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
+          "description": "This query shows the amount of physical memory (RAM) used by the process.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2494,7 +3980,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 95
+            "y": 20
           },
           "id": 102,
           "links": [],
@@ -2520,7 +4006,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "process_resident_memory_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}",
+              "expr": "process_resident_memory_bytes{job=~\"$job\",instance=~\"$instance\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{instance}} - resident",
@@ -2533,7 +4019,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "process_virtual_memory_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}",
+              "expr": "process_virtual_memory_bytes{job=~\"$job\",instance=~\"$instance\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{instance}} - virtual",
@@ -2542,7 +4028,7 @@
               "step": 4
             }
           ],
-          "title": "process memory",
+          "title": "Process memory",
           "type": "timeseries"
         },
         {
@@ -2550,6 +4036,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
+          "description": "This query shows the rate of change in physical memory (RAM) usage by the process over a specified time interval.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2604,7 +4091,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 95
+            "y": 20
           },
           "id": 104,
           "links": [],
@@ -2630,7 +4117,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "rate(process_resident_memory_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}[$__interval])",
+              "expr": "rate(process_resident_memory_bytes{job=~\"$job\",instance=~\"$instance\"}[$__interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{instance}} - resident",
@@ -2643,7 +4130,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "deriv(process_virtual_memory_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}[$__interval])",
+              "expr": "deriv(process_virtual_memory_bytes{job=~\"$job\",instance=~\"$instance\"}[$__interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{instance}} - virtual",
@@ -2652,7 +4139,7 @@
               "step": 4
             }
           ],
-          "title": "process memory deriv",
+          "title": "Process memory deriv",
           "type": "timeseries"
         },
         {
@@ -2727,7 +4214,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 103
+            "y": 28
           },
           "id": 106,
           "links": [],
@@ -2753,7 +4240,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "go_memstats_alloc_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}",
+              "expr": "go_memstats_alloc_bytes{job=~\"$job\",instance=~\"$instance\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{instance}} - bytes allocated",
@@ -2766,7 +4253,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "rate(go_memstats_alloc_bytes_total{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}[30s])",
+              "expr": "rate(go_memstats_alloc_bytes_total{job=~\"$job\",instance=~\"$instance\"}[30s])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{instance}} - alloc rate",
@@ -2779,7 +4266,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "go_memstats_stack_inuse_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}",
+              "expr": "go_memstats_stack_inuse_bytes{job=~\"$job\",instance=~\"$instance\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{instance}} - stack inuse",
@@ -2792,7 +4279,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "go_memstats_heap_inuse_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}",
+              "expr": "go_memstats_heap_inuse_bytes{job=~\"$job\",instance=~\"$instance\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -2802,7 +4289,7 @@
               "step": 4
             }
           ],
-          "title": "go memstats",
+          "title": "Go memstats",
           "type": "timeseries"
         },
         {
@@ -2877,7 +4364,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 103
+            "y": 28
           },
           "id": 108,
           "links": [],
@@ -2903,7 +4390,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "deriv(go_memstats_alloc_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}[$__interval])",
+              "expr": "deriv(go_memstats_alloc_bytes{job=~\"$job\",instance=~\"$instance\"}[$__interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{instance}} - bytes allocated",
@@ -2916,7 +4403,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "rate(go_memstats_alloc_bytes_total{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}[$__interval])",
+              "expr": "rate(go_memstats_alloc_bytes_total{job=~\"$job\",instance=~\"$instance\"}[$__interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{instance}} - alloc rate",
@@ -2929,7 +4416,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "deriv(go_memstats_stack_inuse_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}[$__interval])",
+              "expr": "deriv(go_memstats_stack_inuse_bytes{job=~\"$job\",instance=~\"$instance\"}[$__interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{instance}} - stack inuse",
@@ -2942,7 +4429,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "deriv(go_memstats_heap_inuse_bytes{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}[$__interval])",
+              "expr": "deriv(go_memstats_heap_inuse_bytes{job=~\"$job\",instance=~\"$instance\"}[$__interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -2952,7 +4439,7 @@
               "step": 4
             }
           ],
-          "title": "go memstats deriv",
+          "title": "Go memstats deriv",
           "type": "timeseries"
         },
         {
@@ -3014,7 +4501,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 110
+            "y": 35
           },
           "id": 110,
           "links": [],
@@ -3040,7 +4527,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "process_open_fds{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}",
+              "expr": "process_open_fds{job=~\"$job\",instance=~\"$instance\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{instance}}",
@@ -3049,7 +4536,7 @@
               "step": 4
             }
           ],
-          "title": "open fds",
+          "title": "Open fds",
           "type": "timeseries"
         },
         {
@@ -3111,7 +4598,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 110
+            "y": 35
           },
           "id": 112,
           "links": [],
@@ -3137,7 +4624,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "deriv(process_open_fds{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}[$__interval])",
+              "expr": "deriv(process_open_fds{job=~\"$job\",instance=~\"$instance\"}[$__interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{instance}}",
@@ -3146,7 +4633,7 @@
               "step": 4
             }
           ],
-          "title": "open fds deriv",
+          "title": "Open fds deriv",
           "type": "timeseries"
         },
         {
@@ -3208,7 +4695,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 117
+            "y": 42
           },
           "id": 116,
           "links": [],
@@ -3234,7 +4721,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "go_gc_duration_seconds{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}",
+              "expr": "go_gc_duration_seconds{job=~\"$job\",instance=~\"$instance\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{instance}}: {{quantile}}",
@@ -3305,7 +4792,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 117
+            "y": 42
           },
           "id": 114,
           "links": [],
@@ -3331,7 +4818,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "go_goroutines{job=~\"$job\", namespace=~\"$namespace\",instance=~\"$instance\"}",
+              "expr": "go_goroutines{job=~\"$job\",instance=~\"$instance\"}",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{instance}}",
@@ -3374,68 +4861,6 @@
         "type": "datasource"
       },
       {
-        "current": {
-          "selected": false,
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
-          ]
-        },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${ds_prometheus}"
-        },
-        "definition": "label_values(SeaweedFS_master_is_leader{job=~\"$job\"}, namespace)",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Namespace",
-        "multi": true,
-        "name": "namespace",
-        "options": [],
-        "query": {
-          "query": "label_values(SeaweedFS_master_is_leader{job=~\"$job\"}, namespace)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
-      },
-      {
-        "current": {
-          "selected": false,
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
-          ]
-        },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${ds_prometheus}"
-        },
-        "definition": "label_values(SeaweedFS_master_is_leader{job=~\"$job\", namespace=~\"$namespace\"}, instance)",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Instance",
-        "multi": true,
-        "name": "instance",
-        "options": [],
-        "query": {
-          "query": "label_values(SeaweedFS_master_is_leader{job=~\"$job\", namespace=~\"$namespace\"}, instance)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
-      },
-      {
         "description": "job",
         "hide": 2,
         "label": "job",
@@ -3443,6 +4868,37 @@
         "query": "system-registry-seaweedfs",
         "skipUrlSync": false,
         "type": "constant"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${ds_prometheus}"
+        },
+        "definition": "label_values(up{job=~\"$job\"}, instance)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Instance",
+        "multi": true,
+        "name": "instance",
+        "options": [],
+        "query": {
+          "query": "label_values(up{job=~\"$job\"}, instance)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
       }
     ]
   },
@@ -3454,8 +4910,8 @@
     "hidden": false
   },
   "timezone": "",
-  "title": "Seaweedfs",
+  "title": "Registry Seaweedfs",
   "uid": "V7nS6t_Ik",
-  "version": 24,
+  "version": 11,
   "weekStart": ""
 }
