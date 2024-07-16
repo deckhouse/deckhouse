@@ -1,6 +1,6 @@
 {{- $binaries := "/usr/lib64/libnetfilter_conntrack.so* /sbin/ipset /sbin/ip /usr/sbin/conntrack" }}
 {{- $iptables_version := "1.8.10" }}
-{{- $iptables_image_version := $version | replace "." "-" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ .Images.BASE_ALT_DEV }}
