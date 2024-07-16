@@ -79,16 +79,16 @@ ROUTE_EOF
   {{- /* # Configure the internal interface to route all vpc to all vm */}}
     cat > /etc/netplan/999-cim-"$ifname".yaml <<BOOTSTRAP_NETWORK_EOF
 network:
-	version: 2
-	ethernets:
-		$ifname:
-			dhcp4: true
-			dhcp4-overrides:
-				use-hostname: false
-				use-routes: false
-			match:
-				macaddress: $mac
-			$route_settings
+  version: 2
+  ethernets:
+    $ifname:
+      dhcp4: true
+      dhcp4-overrides:
+        use-hostname: false
+        use-routes: false
+      match:
+        macaddress: $mac
+      $route_settings
 BOOTSTRAP_NETWORK_EOF
 
   done
