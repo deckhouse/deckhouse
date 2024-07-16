@@ -32,7 +32,7 @@ module "security-groups" {
 data "aws_availability_zones" "available" {}
 
 locals {
-  az_count    = length(data.aws_availability_zones.available.names)
+  az_count    = length(local.actual_zones)
   subnet_cidr = lookup(var.providerClusterConfiguration, "nodeNetworkCIDR", module.vpc.cidr_block)
 }
 
