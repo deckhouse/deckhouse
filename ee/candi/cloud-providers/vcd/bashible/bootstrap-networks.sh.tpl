@@ -5,27 +5,28 @@
 */}}
 shopt -s extglob
 
-if ! which netplan 2>/dev/null 1>&2; then
-  exit 0
+if which netplan 2>/dev/null 1>&2; then
+  netplan_configure
 fi
 
-primary_mac="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
+function netplan_configure(){
+  primary_mac="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
 
-if [ -z "$primary_mac" ]; then
-  primary_ifname=$(grep -Po '(ens|eth|eno|enp)[0-9]+(?=:)' /etc/netplan/50-cloud-init.yaml | head -n1)
-else
-  primary_ifname="$(ip -o link show | grep "link/ether $primary_mac" | cut -d ":" -f2 | tr -d " ")"
-fi
-
-for i in /sys/class/net/!($primary_ifname); do
-  if ! udevadm info "$i" 2>/dev/null | grep -Po '(?<=E: ID_NET_DRIVER=)vmxnet.*' 1>/dev/null 2>&1; then
-    continue
+  if [ -z "$primary_mac" ]; then
+    primary_ifname=$(grep -Po '(ens|eth|eno|enp)[0-9]+(?=:)' /etc/netplan/50-cloud-init.yaml | head -n1)
+  else
+    primary_ifname="$(ip -o link show | grep "link/ether $primary_mac" | cut -d ":" -f2 | tr -d " ")"
   fi
 
-  ifname=$(basename "$i")
-  mac="$(ip link show dev $ifname | grep "link/ether" | sed "s/  //g" | cut -d " " -f2)"
+  for i in /sys/class/net/!($primary_ifname); do
+    if ! udevadm info "$i" 2>/dev/null | grep -Po '(?<=E: ID_NET_DRIVER=)vmxnet.*' 1>/dev/null 2>&1; then
+      continue
+    fi
 
-  cat > /etc/netplan/100-cim-"$ifname".yaml <<BOOTSTRAP_NETWORK_EOF
+    ifname=$(basename "$i")
+    mac="$(ip link show dev $ifname | grep "link/ether" | sed "s/  //g" | cut -d " " -f2)"
+
+    cat > /etc/netplan/100-cim-"$ifname".yaml <<BOOTSTRAP_NETWORK_EOF
 network:
   version: 2
   ethernets:
@@ -39,9 +40,11 @@ network:
       match:
         macaddress: $mac
 BOOTSTRAP_NETWORK_EOF
-done
+  done
 
-netplan generate
-netplan apply
+  netplan generate
+  netplan apply
 
+}
 shopt -u extglob
+

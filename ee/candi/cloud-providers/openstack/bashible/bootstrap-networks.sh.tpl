@@ -5,8 +5,8 @@
 */}}
 shopt -s extglob
 
-if ! which netplan 2>/dev/null 1>&2; then
-  exit 0
+if which netplan 2>/dev/null 1>&2; then
+  netplan_configure
 fi
 
 function render_and_deploy_netplan_config() {
@@ -25,31 +25,34 @@ network:
 END_FILE
 }
 
-count_default_routes=$(ip -4 route show default | wc -l)
-if [[ "$count_default_routes" -gt "1" ]]; then
-  CLOUD_INIT_NETPLAN_CFG="/etc/netplan/50-cloud-init.yaml"
-  configured_macs="$(grep -Po '(?<=macaddress: ).+' $CLOUD_INIT_NETPLAN_CFG)"
-  for configured_mac in $configured_macs; do
-    ifname="$(ip -o link show | grep "link/ether $configured_mac" | cut -d ":" -f2 | tr -d " ")"
-    if [[ "$ifname" != "" ]]; then
-      configured_ifnames_pattern+="$ifname "
-    fi
-  done
-  count_configured_ifnames=$(wc -w <<< "$configured_ifnames_pattern")
-  if [[ "$count_configured_ifnames" -gt "1" ]]; then
-    if ! grep -q -Po '(?<=route-metric: ).+' $CLOUD_INIT_NETPLAN_CFG; then
-      global_metric=100
-      for i in $configured_ifnames_pattern; do
-        cim_dev=$i
-        cim_mac="$(ip link show dev $i | grep "link/ether" | sed "s/  //g" | cut -d " " -f2)"
-        cim_metric=$global_metric
-        global_metric=$((global_metric + 100))
-        render_and_deploy_netplan_config "$cim_dev" "$cim_metric" "$cim_mac"
-      done
-      netplan generate
-      netplan apply
+function netplan_configure(){
+  count_default_routes=$(ip -4 route show default | wc -l)
+  if [[ "$count_default_routes" -gt "1" ]]; then
+    CLOUD_INIT_NETPLAN_CFG="/etc/netplan/50-cloud-init.yaml"
+    configured_macs="$(grep -Po '(?<=macaddress: ).+' $CLOUD_INIT_NETPLAN_CFG)"
+    for configured_mac in $configured_macs; do
+      ifname="$(ip -o link show | grep "link/ether $configured_mac" | cut -d ":" -f2 | tr -d " ")"
+      if [[ "$ifname" != "" ]]; then
+        configured_ifnames_pattern+="$ifname "
+      fi
+    done
+    count_configured_ifnames=$(wc -w <<< "$configured_ifnames_pattern")
+    if [[ "$count_configured_ifnames" -gt "1" ]]; then
+      if ! grep -q -Po '(?<=route-metric: ).+' $CLOUD_INIT_NETPLAN_CFG; then
+        global_metric=100
+        for i in $configured_ifnames_pattern; do
+          cim_dev=$i
+          cim_mac="$(ip link show dev $i | grep "link/ether" | sed "s/  //g" | cut -d " " -f2)"
+          cim_metric=$global_metric
+          global_metric=$((global_metric + 100))
+          render_and_deploy_netplan_config "$cim_dev" "$cim_metric" "$cim_mac"
+        done
+        netplan generate
+        netplan apply
+      fi
     fi
   fi
-fi
 
-shopt -u extglob
+  shopt -u extglob
+
+}
