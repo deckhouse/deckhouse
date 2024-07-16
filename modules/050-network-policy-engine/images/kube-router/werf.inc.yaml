@@ -37,7 +37,7 @@ import:
   add: /relocate
   to: /
   before: setup
-- artifact: registryPackages/iptables-artifact-{{ $iptables_image_version }}
+- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /sbin/
   includePaths:
