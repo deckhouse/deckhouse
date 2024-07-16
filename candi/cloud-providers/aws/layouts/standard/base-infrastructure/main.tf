@@ -34,11 +34,12 @@ data "aws_availability_zones" "available" {}
 locals {
   az_count    = length(data.aws_availability_zones.available.names)
   subnet_cidr = lookup(var.providerClusterConfiguration, "nodeNetworkCIDR", module.vpc.cidr_block)
+  actual_zones = lookup(var.providerClusterConfiguration, "zones", {}) != {} ? tolist(setintersection(data.aws_availability_zones.available.names, var.providerClusterConfiguration.zones)) : data.aws_availability_zones.available.names
 }
 
 resource "aws_subnet" "kube_public" {
   count                   = local.az_count
-  availability_zone       = data.aws_availability_zones.available.names[count.index]
+  availability_zone       = local.actual_zones[count.index]
   cidr_block              = cidrsubnet(local.subnet_cidr, ceil(log(local.az_count * 2, 2)), count.index)
   vpc_id                  = module.vpc.id
   map_public_ip_on_launch = true
@@ -52,7 +53,7 @@ resource "aws_subnet" "kube_public" {
 
 resource "aws_subnet" "kube_internal" {
   count                   = local.az_count
-  availability_zone       = data.aws_availability_zones.available.names[count.index]
+  availability_zone       = local.actual_zones[count.index]
   cidr_block              = cidrsubnet(local.subnet_cidr, ceil(log(local.az_count * 2, 2)), count.index + local.az_count)
   vpc_id                  = module.vpc.id
   map_public_ip_on_launch = false

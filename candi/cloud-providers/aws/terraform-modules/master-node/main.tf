@@ -14,7 +14,7 @@
 
 data "aws_availability_zones" "available" {}
 locals {
-  az_count = length(data.aws_availability_zones.available.names)
+  az_count = length(local.zones)
 }
 
 data "aws_subnet" "kube" {
