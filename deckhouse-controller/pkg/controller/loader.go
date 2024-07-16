@@ -34,6 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 )
 
 var (
@@ -152,7 +153,7 @@ func (dml *DeckhouseController) searchAndLoadDeckhouseModules() error {
 				return fmt.Errorf("process module %s: %w", def.Name, err)
 			}
 
-			if !strings.HasPrefix(def.Path, os.Getenv("EXTERNAL_MODULES_DIR")) {
+			if !strings.HasPrefix(def.Path, d8env.GetDownloadedModulesDir()) {
 				dml.sourceModules[def.Name] = "Embedded"
 			}
 

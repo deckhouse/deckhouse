@@ -41,6 +41,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
@@ -74,7 +75,7 @@ func (suite *ReleaseControllerTestSuite) SetupSuite() {
 	flag.Parse()
 	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 	suite.tmpDir = suite.T().TempDir()
-	suite.T().Setenv("EXTERNAL_MODULES_DIR", suite.tmpDir)
+	suite.T().Setenv(d8env.DownloadedModulesDir, suite.tmpDir)
 	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0777)
 }
 
@@ -164,13 +165,13 @@ type: Opaque
 	cl := fake.NewClientBuilder().WithScheme(sc).WithObjects(initObjects...).WithStatusSubresource(&v1alpha1.ModuleSource{}, &v1alpha1.ModuleRelease{}).Build()
 
 	rec := &moduleReleaseReconciler{
-		client:             cl,
-		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
-		dc:                 dependency.NewDependencyContainer(),
-		logger:             log.New(),
-		symlinksDir:        filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
-		moduleManager:      stubModulesManager{},
-		delayTimer:         time.NewTimer(3 * time.Second),
+		client:               cl,
+		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		dc:                   dependency.NewDependencyContainer(),
+		logger:               log.New(),
+		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
+		moduleManager:        stubModulesManager{},
+		delayTimer:           time.NewTimer(3 * time.Second),
 
 		deckhouseEmbeddedPolicy: v1alpha1.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
 			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{

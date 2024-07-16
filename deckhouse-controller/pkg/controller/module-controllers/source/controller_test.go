@@ -20,6 +20,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 	"time"
 
@@ -30,6 +31,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -40,14 +43,19 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 )
 
-var golden bool
+var (
+	golden     bool
+	mDelimiter *regexp.Regexp
+)
 
 func init() {
 	flag.BoolVar(&golden, "golden", false, "generate golden files")
+	mDelimiter = regexp.MustCompile("(?m)^---$")
 }
 
 func TestControllerTestSuite(t *testing.T) {
@@ -90,15 +98,20 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 	}
 
 	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
-	got := suite.fetchResults()
+	gotB := suite.fetchResults()
 
 	if golden {
-		err := os.WriteFile(goldenFile, got, 0666)
+		err := os.WriteFile(goldenFile, gotB, 0666)
 		require.NoError(suite.T(), err)
 	} else {
-		exp, err := os.ReadFile(goldenFile)
+		got := singleDocToManifests(gotB)
+		expB, err := os.ReadFile(goldenFile)
 		require.NoError(suite.T(), err)
-		assert.YAMLEq(suite.T(), string(exp), string(got))
+		exp := singleDocToManifests(expB)
+		assert.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
+		for i := range got {
+			assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
+		}
 	}
 }
 
@@ -164,6 +177,16 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		suite.setupController(string(suite.fetchTestFileData("with-stale-error.yaml")))
 		ms := suite.getModuleSource(suite.testMSName)
 		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), ms)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("With outdated module releases", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
+		suite.setupController(string(suite.fetchTestFileData("ms-with-module-releases.yaml")))
+		err := suite.updateModuleReleasesStatuses()
+		require.NoError(suite.T(), err)
+		ms := suite.getModuleSource(suite.testMSName)
+		_, err = suite.ctr.createOrUpdateReconcile(context.TODO(), ms)
 		require.NoError(suite.T(), err)
 	})
 }
@@ -394,6 +417,25 @@ func (suite *ControllerTestSuite) createFakeModuleSource(yamlObj string) *v1alph
 	return &ms
 }
 
+func (suite *ControllerTestSuite) updateModuleReleasesStatuses() error {
+	var releases v1alpha1.ModuleReleaseList
+	err := suite.kubeClient.List(context.TODO(), &releases)
+	if err != nil {
+		return err
+	}
+
+	caser := cases.Title(language.English)
+	for _, release := range releases.Items {
+		release.Status.Phase = caser.String(release.ObjectMeta.Labels["status"])
+		err = suite.kubeClient.Status().Update(context.TODO(), &release)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (suite *ControllerTestSuite) getModuleSource(name string) *v1alpha1.ModuleSource {
 	var ms v1alpha1.ModuleSource
 	err := suite.kubeClient.Get(context.TODO(), types.NamespacedName{Name: name}, &ms)
@@ -435,13 +477,13 @@ func (suite *ControllerTestSuite) setupController(yamlDoc string) {
 
 	sc := runtime.NewScheme()
 	_ = v1alpha1.SchemeBuilder.AddToScheme(sc)
-	cl := fake.NewClientBuilder().WithScheme(sc).WithObjects(initObjects...).WithStatusSubresource(&v1alpha1.ModuleSource{}).Build()
+	cl := fake.NewClientBuilder().WithScheme(sc).WithObjects(initObjects...).WithStatusSubresource(&v1alpha1.ModuleSource{}, &v1alpha1.ModuleRelease{}).Build()
 
 	rec := &moduleSourceReconciler{
-		client:             cl,
-		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
-		dc:                 dependency.NewDependencyContainer(),
-		logger:             log.New(),
+		client:               cl,
+		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		dc:                   dependency.NewDependencyContainer(),
+		logger:               log.New(),
 
 		deckhouseEmbeddedPolicy: v1alpha1.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
 			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
@@ -454,4 +496,15 @@ func (suite *ControllerTestSuite) setupController(yamlDoc string) {
 
 	suite.ctr = rec
 	suite.kubeClient = cl
+}
+
+func singleDocToManifests(doc []byte) (result []string) {
+	split := mDelimiter.Split(string(doc), -1)
+
+	for i := range split {
+		if split[i] != "" {
+			result = append(result, split[i])
+		}
+	}
+	return
 }

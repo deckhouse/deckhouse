@@ -57,7 +57,6 @@ type DeckhouseDeploymentParams struct {
 	IsSecureRegistry       bool
 	MasterNodeSelector     bool
 	KubeadmBootstrap       bool
-	ExternalModulesEnabled bool // TODO remove this after integrating external-module-manager into deckhouse-controller
 }
 
 type imagesDigests map[string]map[string]interface{}
@@ -385,15 +384,13 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		"/deckhouse/modules",
 	}
 
-	if params.ExternalModulesEnabled {
-		const externalModulesDir = "/deckhouse/external-modules/modules"
-		modulesDirs = append(modulesDirs, externalModulesDir)
-		deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
-		deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
-			Name:  "EXTERNAL_MODULES_DIR",
-			Value: externalModulesDir,
-		})
-	}
+	const downloadedModulesDir = "/deckhouse/external-modules/modules"
+	modulesDirs = append(modulesDirs, downloadedModulesDir)
+	deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
+	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
+		Name:  "DOWNLOADED_MODULES_DIR",
+		Value: downloadedModulesDir,
+	})
 
 	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
 		Name:  "MODULES_DIR",

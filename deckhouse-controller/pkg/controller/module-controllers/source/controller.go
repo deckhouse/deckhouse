@@ -43,17 +43,20 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	controllerUtils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 const (
 	defaultScanInterval        = 3 * time.Minute
 	registryChecksumAnnotation = "modules.deckhouse.io/registry-spec-checksum"
+
+	outdatedReleasesKeepCount = 3
 )
 
 type moduleSourceReconciler struct {
-	client             client.Client
-	externalModulesDir string
+	client               client.Client
+	downloadedModulesDir string
 
 	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpecContainer
 
@@ -69,10 +72,10 @@ func NewModuleSourceController(mgr manager.Manager, dc dependency.Container, emb
 	lg := log.WithField("component", "ModuleSourceController")
 
 	c := &moduleSourceReconciler{
-		client:             mgr.GetClient(),
-		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
-		dc:                 dc,
-		logger:             lg,
+		client:               mgr.GetClient(),
+		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		dc:                   dc,
+		logger:               lg,
 
 		deckhouseEmbeddedPolicy: embeddedPolicyContainer,
 		moduleSourcesChecksum:   make(sourceChecksum),
@@ -167,7 +170,7 @@ func (c *moduleSourceReconciler) createOrUpdateReconcile(ctx context.Context, ms
 
 	modulesChecksums := c.getModuleSourceChecksum(ms.Name)
 
-	md := downloader.NewModuleDownloader(c.dc, c.externalModulesDir, ms, opts)
+	md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, ms, opts)
 
 	// get all policies regardless of their labels
 	var policies v1alpha1.ModuleUpdatePolicyList
@@ -210,6 +213,11 @@ func (c *moduleSourceReconciler) createOrUpdateReconcile(ctx context.Context, ms
 
 	// save checksums
 	c.saveSourceChecksums(ms.Name, modulesChecksums)
+
+	err = c.cleanUpModuleReleases(ctx, ms)
+	if err != nil {
+		return ctrl.Result{Requeue: true}, err
+	}
 
 	// everything is ok, check source on the other iteration
 	return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
@@ -413,31 +421,98 @@ func (c *moduleSourceReconciler) updateModuleSourceStatus(ctx context.Context, m
 	return c.client.Status().Update(ctx, msCopy)
 }
 
+// cleanUpModuleReleases finds and deletes all outdated releases (in Suspend or Superseded phases) but three last related to the provided ModuleSource
+func (c *moduleSourceReconciler) cleanUpModuleReleases(ctx context.Context, ms *v1alpha1.ModuleSource) error {
+	// get related releases
+	var moduleReleasesFromSource v1alpha1.ModuleReleaseList
+	err := c.client.List(ctx, &moduleReleasesFromSource, client.MatchingLabels{"source": ms.Name})
+	if err != nil {
+		return fmt.Errorf("couldn't list module releases to clean up: %w", err)
+	}
+
+	type outdatedRelease struct {
+		name    string
+		version *semver.Version
+	}
+
+	outdatedReleases := make(map[string][]outdatedRelease, 0)
+
+	// get all outdated releases by module names
+	for _, rl := range moduleReleasesFromSource.Items {
+		if metav1.IsControlledBy(&rl, ms) {
+			if rl.Status.Phase == v1alpha1.PhaseSuperseded || rl.Status.Phase == v1alpha1.PhaseSuspended {
+				outdatedReleases[rl.Spec.ModuleName] = append(outdatedReleases[rl.Spec.ModuleName], outdatedRelease{
+					name:    rl.Name,
+					version: rl.Spec.Version,
+				})
+			}
+		}
+	}
+
+	// sort and delete all outdated releases except for three last releases per a module
+	for moduleName, releases := range outdatedReleases {
+		sort.Slice(releases, func(i, j int) bool { return releases[j].version.LessThan(releases[i].version) })
+		c.logger.Debugf("Found the following outdated releases for %s module: %v", moduleName, releases)
+		if len(releases) > outdatedReleasesKeepCount {
+			for i := outdatedReleasesKeepCount; i < len(releases); i++ {
+				c.logger.Infof("Clean up outdated release %q of %q module", releases[i].name, moduleName)
+				err = c.deleteModulesRelease(ctx, moduleName, releases[i].name, "v"+releases[i].version.String())
+				if err != nil {
+					c.logger.Warnf("Couldn't clean up outdated release %q of %s module: %s", releases[i], moduleName, err)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// deleteModulesRelease deletes ModuleRelease from the cluster and file system
+func (c *moduleSourceReconciler) deleteModulesRelease(ctx context.Context, moduleName, releaseName, releaseVersion string) error {
+	modulePath := filepath.Join(c.downloadedModulesDir, moduleName, releaseVersion)
+	err := os.RemoveAll(modulePath)
+	if err != nil {
+		return fmt.Errorf("couldn't remove %s directory: %v", modulePath, err)
+	}
+
+	releaseObj := &v1alpha1.ModuleRelease{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: releaseName,
+		},
+	}
+	err = c.client.Delete(ctx, releaseObj)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("couldn't remove %s ModuleRelease from the cluster: %v", releaseName, err)
+	}
+
+	return nil
+}
+
 // checkAndPropagateRegistrySettings checks if modules source registry settings were updated (comparing registryChecksumAnnotation annotation and current registry spec)
 // and update relevant module releases' openapi values files if it the case
-func (c *moduleSourceReconciler) checkAndPropagateRegistrySettings(ctx context.Context, msCopy *v1alpha1.ModuleSource) ( /* update required */ bool, error) {
+func (c *moduleSourceReconciler) checkAndPropagateRegistrySettings(ctx context.Context, ms *v1alpha1.ModuleSource) ( /* update required */ bool, error) {
 	// get registry settings checksum
-	marshaledSpec, err := json.Marshal(msCopy.Spec.Registry)
+	marshaledSpec, err := json.Marshal(ms.Spec.Registry)
 	if err != nil {
-		return false, fmt.Errorf("couldn't marshal %s module source registry spec: %w", msCopy.Name, err)
+		return false, fmt.Errorf("couldn't marshal %s module source registry spec: %w", ms.Name, err)
 	}
 
 	currentChecksum := fmt.Sprintf("%x", md5.Sum(marshaledSpec))
 	// if there is no annotations - only set the current checksum value
-	if msCopy.ObjectMeta.Annotations == nil {
-		msCopy.ObjectMeta.Annotations = make(map[string]string)
-		msCopy.ObjectMeta.Annotations[registryChecksumAnnotation] = currentChecksum
+	if ms.ObjectMeta.Annotations == nil {
+		ms.ObjectMeta.Annotations = make(map[string]string)
+		ms.ObjectMeta.Annotations[registryChecksumAnnotation] = currentChecksum
 		return true, nil
 	}
 
 	// if the annotation matches current checksum - there is nothing to do here
-	if msCopy.ObjectMeta.Annotations[registryChecksumAnnotation] == currentChecksum {
+	if ms.ObjectMeta.Annotations[registryChecksumAnnotation] == currentChecksum {
 		return false, nil
 	}
 
 	// get related releases
 	var moduleReleasesFromSource v1alpha1.ModuleReleaseList
-	err = c.client.List(ctx, &moduleReleasesFromSource, client.MatchingLabels{"source": msCopy.Name})
+	err = c.client.List(ctx, &moduleReleasesFromSource, client.MatchingLabels{"source": ms.Name})
 	if err != nil {
 		return false, fmt.Errorf("couldn't list module releases to update registry settings: %w", err)
 	}
@@ -446,17 +521,17 @@ func (c *moduleSourceReconciler) checkAndPropagateRegistrySettings(ctx context.C
 		if rl.Status.Phase == v1alpha1.PhaseDeployed {
 			ownerReferences := rl.GetOwnerReferences()
 			for _, ref := range ownerReferences {
-				if ref.UID == msCopy.UID && ref.Name == msCopy.Name && ref.Kind == "ModuleSource" {
+				if ref.UID == ms.UID && ref.Name == ms.Name && ref.Kind == "ModuleSource" {
 					// update the values.yaml file in externam-modules/<module_name>/v<module_version/openapi path
-					err = downloader.InjectRegistryToModuleValues(filepath.Join(c.externalModulesDir, rl.Spec.ModuleName, fmt.Sprintf("v%s", rl.Spec.Version)), msCopy)
+					err = downloader.InjectRegistryToModuleValues(filepath.Join(c.downloadedModulesDir, rl.Spec.ModuleName, fmt.Sprintf("v%s", rl.Spec.Version)), ms)
 					if err != nil {
 						return false, fmt.Errorf("couldn't update module release %s registry settings: %w", rl.Name, err)
 					}
 					// annotate module release with the release.RegistrySpecChangedAnnotation annotation to notify module release controller about registry spec
 					// change, if the module release isn't overridden by a module pull override
-					mpoExists, err := c.isModulePullOverrideExists(ctx, msCopy.Name, rl.Spec.ModuleName)
+					mpoExists, err := c.isModulePullOverrideExists(ctx, ms.Name, rl.Spec.ModuleName)
 					if err != nil {
-						return false, fmt.Errorf("unexpected error on getting ModulePullOverride for %s/%s: %w", msCopy.Name, rl.Spec.ModuleName, err)
+						return false, fmt.Errorf("unexpected error on getting ModulePullOverride for %s/%s: %w", ms.Name, rl.Spec.ModuleName, err)
 					}
 					if mpoExists {
 						break
@@ -479,14 +554,14 @@ func (c *moduleSourceReconciler) checkAndPropagateRegistrySettings(ctx context.C
 
 	// get related module pull overrides
 	var mposFromSource v1alpha1.ModulePullOverrideList
-	err = c.client.List(ctx, &mposFromSource, client.MatchingLabels{"source": msCopy.Name})
+	err = c.client.List(ctx, &mposFromSource, client.MatchingLabels{"source": ms.Name})
 	if err != nil {
 		return false, fmt.Errorf("could list module pull overrides to update registry settings: %w", err)
 	}
 
 	for _, mpo := range mposFromSource.Items {
 		// update the values.yaml file in externam-modules/<module_name>/dev/openapi path
-		err = downloader.InjectRegistryToModuleValues(filepath.Join(c.externalModulesDir, mpo.Name, "dev"), msCopy)
+		err = downloader.InjectRegistryToModuleValues(filepath.Join(c.downloadedModulesDir, mpo.Name, "dev"), ms)
 		if err != nil {
 			return false, fmt.Errorf("couldn't update module pull override %s registry settings: %w", mpo.Name, err)
 		}
@@ -501,7 +576,7 @@ func (c *moduleSourceReconciler) checkAndPropagateRegistrySettings(ctx context.C
 		}
 	}
 
-	msCopy.ObjectMeta.Annotations[registryChecksumAnnotation] = currentChecksum
+	ms.ObjectMeta.Annotations[registryChecksumAnnotation] = currentChecksum
 
 	return true, nil
 }
