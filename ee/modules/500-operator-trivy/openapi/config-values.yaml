@@ -76,7 +76,9 @@ properties:
   reportResourceLabels:
     type: array
     description: |
-      A list of additional labels, which values are exported from the resources being scanned, to apply to Trivi's reports.
+      A list of additional labels for marking Trivi's reports (VulnerabilityReport).
+      
+      The values of these labels will correspond to the values of the scanned resources' labels.
     items:
       type: string
     x-example:
