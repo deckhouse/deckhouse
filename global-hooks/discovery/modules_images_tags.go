@@ -24,6 +24,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/iancoleman/strcase"
+
+	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 )
 
 var re = regexp.MustCompile(`^([0-9]+)-([a-zA-Z-]+)$`)
@@ -33,17 +35,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, discoveryModulesImagesDigests)
 
 func discoveryModulesImagesDigests(input *go_hook.HookInput) error {
-	var externalModulesDir string
+	var downloadedModulesDir string
 
 	digestsFile := "/deckhouse/modules/images_digests.json"
 
-	if env := os.Getenv("EXTERNAL_MODULES_DIR"); env != "" {
-		externalModulesDir = filepath.Join(env, "modules")
+	if env := d8env.GetDownloadedModulesDir(); env != "" {
+		downloadedModulesDir = filepath.Join(env, "modules")
 	}
 
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		digestsFile = os.Getenv("D8_DIGESTS_TMP_FILE")
-		externalModulesDir = "testdata/modules-images-tags/external-modules"
+		downloadedModulesDir = "testdata/modules-images-tags/external-modules"
 	}
 
 	digestsObj, err := parseImagesDigestsFile(digestsFile)
@@ -51,12 +53,12 @@ func discoveryModulesImagesDigests(input *go_hook.HookInput) error {
 		return err
 	}
 
-	if externalModulesDir == "" {
+	if downloadedModulesDir == "" {
 		input.Values.Set("global.modulesImages.digests", digestsObj)
 		return nil
 	}
 
-	modulesDigestsObj := readModulesImagesDigests(input, externalModulesDir)
+	modulesDigestsObj := readModulesImagesDigests(input, downloadedModulesDir)
 	for k, v := range modulesDigestsObj {
 		// under no circumstances do we overwrite existing digests
 		if _, found := digestsObj[k]; !found {

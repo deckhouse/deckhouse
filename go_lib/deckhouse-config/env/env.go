@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,16 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package hooks
+package env
 
 import (
-	"testing"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"os"
 )
 
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
+const (
+	DownloadedModulesDir = "DOWNLOADED_MODULES_DIR"
+)
+
+func GetDownloadedModulesDir() string {
+	value := os.Getenv(DownloadedModulesDir)
+	if len(value) != 0 {
+		return value
+	}
+	return os.Getenv("EXTERNAL_MODULES_DIR")
 }

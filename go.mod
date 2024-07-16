@@ -64,6 +64,7 @@ require (
 	github.com/go-logr/logr v1.4.1
 	github.com/go-openapi/strfmt v0.19.5
 	github.com/go-openapi/validate v0.19.12
+	github.com/gofrs/uuid/v5 v5.2.0
 	github.com/itchyny/gojq v0.12.15
 	github.com/jonboulle/clockwork v0.4.0
 	github.com/slok/kubewebhook/v2 v2.5.0
@@ -131,7 +132,6 @@ require (
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/goccy/go-graphviz v0.1.3 // indirect
-	github.com/gofrs/uuid/v5 v5.2.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect

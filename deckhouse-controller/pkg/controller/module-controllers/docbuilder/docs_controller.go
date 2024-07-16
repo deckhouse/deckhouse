@@ -45,14 +45,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/module"
 	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
 )
 
 type moduleDocumentationReconciler struct {
-	client             client.Client
-	externalModulesDir string
+	client               client.Client
+	downloadedModulesDir string
 
 	dc          dependency.Container
 	docsBuilder *docs_builder.Client
@@ -65,7 +66,7 @@ func NewModuleDocumentationController(mgr manager.Manager, dc dependency.Contain
 
 	c := &moduleDocumentationReconciler{
 		mgr.GetClient(),
-		os.Getenv("EXTERNAL_MODULES_DIR"),
+		d8env.GetDownloadedModulesDir(),
 		dependency.NewDependencyContainer(),
 		docs_builder.NewClient(dc.GetHTTPClient()),
 		lg,
@@ -260,7 +261,7 @@ func (mdr *moduleDocumentationReconciler) getDocsBuilderAddresses(ctx context.Co
 }
 
 func (mdr *moduleDocumentationReconciler) getDocumentationFromModuleDir(modulePath string, pw *io.PipeWriter) error {
-	moduleDir := path.Join(mdr.externalModulesDir, modulePath) + "/"
+	moduleDir := path.Join(mdr.downloadedModulesDir, modulePath) + "/"
 
 	dir, err := os.Stat(moduleDir)
 	if err != nil {

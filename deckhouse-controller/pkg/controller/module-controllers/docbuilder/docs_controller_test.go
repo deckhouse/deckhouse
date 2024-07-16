@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
 )
@@ -83,7 +84,7 @@ func (suite *ControllerTestSuite) SetupSuite() {
 	flag.Parse()
 	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 	suite.tmpDir = suite.T().TempDir()
-	suite.T().Setenv("EXTERNAL_MODULES_DIR", suite.tmpDir)
+	suite.T().Setenv(d8env.DownloadedModulesDir, suite.tmpDir)
 	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0777)
 }
 
@@ -279,11 +280,11 @@ func (suite *ControllerTestSuite) setupController(yamlDoc string) {
 	cl := fake.NewClientBuilder().WithScheme(sc).WithObjects(initObjects...).WithStatusSubresource(&v1alpha1.ModuleDocumentation{}).Build()
 	dc := dependency.NewDependencyContainer()
 	rec := &moduleDocumentationReconciler{
-		client:             cl,
-		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
-		logger:             log.New(),
-		docsBuilder:        docs_builder.NewClient(dc.GetHTTPClient()),
-		dc:                 dc,
+		client:               cl,
+		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		logger:               log.New(),
+		docsBuilder:          docs_builder.NewClient(dc.GetHTTPClient()),
+		dc:                   dc,
 	}
 
 	suite.ctr = rec

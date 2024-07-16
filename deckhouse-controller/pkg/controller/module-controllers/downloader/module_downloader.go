@@ -47,19 +47,19 @@ const (
 )
 
 type ModuleDownloader struct {
-	dc                 dependency.Container
-	externalModulesDir string
+	dc                   dependency.Container
+	downloadedModulesDir string
 
 	ms              *v1alpha1.ModuleSource
 	registryOptions []cr.Option
 }
 
-func NewModuleDownloader(dc dependency.Container, externalModulesDir string, ms *v1alpha1.ModuleSource, registryOptions []cr.Option) *ModuleDownloader {
+func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, registryOptions []cr.Option) *ModuleDownloader {
 	return &ModuleDownloader{
-		dc:                 dc,
-		externalModulesDir: externalModulesDir,
-		ms:                 ms,
-		registryOptions:    registryOptions,
+		dc:                   dc,
+		downloadedModulesDir: downloadedModulesDir,
+		ms:                   ms,
+		registryOptions:      registryOptions,
 	}
 }
 
@@ -76,7 +76,7 @@ type ModuleDownloadResult struct {
 // if checksum is equal to a module image digest - do nothing
 // otherwise return new digest
 func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum string) (string, *models.DeckhouseModuleDefinition, error) {
-	moduleStorePath := path.Join(md.externalModulesDir, moduleName, DefaultDevVersion)
+	moduleStorePath := path.Join(md.downloadedModulesDir, moduleName, DefaultDevVersion)
 
 	img, err := md.fetchImage(moduleName, imageTag)
 	if err != nil {
@@ -108,7 +108,7 @@ func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion st
 		moduleVersion = "v" + moduleVersion
 	}
 
-	moduleVersionPath := path.Join(md.externalModulesDir, moduleName, moduleVersion)
+	moduleVersionPath := path.Join(md.downloadedModulesDir, moduleName, moduleVersion)
 
 	return md.fetchAndCopyModuleByVersion(moduleName, moduleVersion, moduleVersionPath)
 }
