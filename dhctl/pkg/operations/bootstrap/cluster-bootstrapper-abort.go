@@ -85,11 +85,12 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 
 	hasUUID, err := stateCache.InCache("uuid")
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to check uuid: %w", err)
 	}
 
 	if !hasUUID {
 		if b.CommanderMode {
+			log.InfoF("No UUID found in the cache, will exit now\n")
 			return nil
 		}
 		return fmt.Errorf("No UUID found in the cache. Perhaps, the cluster was already bootstrapped.")

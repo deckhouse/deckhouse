@@ -36,7 +36,6 @@ apiVersions:
         enum: [InitConfiguration]
       deckhouse:
         type: object
-        x-unsafe: true
         description: Initial parameters required to install Deckhouse.
         properties:
           imagesRepo:
