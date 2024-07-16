@@ -68,7 +68,8 @@ spec:
                     ca:
                       type: string
                       description: |
-                        Root CA certificate (PEM format) to validate the registry’s HTTPS certificate (if self-signed certificates are used). **Creating a ModuleSource resource with the CA certificate spec will cause the container to restart on all nodes.**
+                        Root CA certificate (PEM format) to validate the registry’s HTTPS certificate (if self-signed certificates are used).
+                        > Creating a ModuleSource resource with the CA certificate spec will cause the container to restart on all nodes.
             status:
               type: object
               properties:
