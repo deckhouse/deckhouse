@@ -1,4 +1,6 @@
-{{- $binaries := "/sbin/xtables-nft-multi /sbin/ip6tables-nft /sbin/ip6tables-nft-restore /sbin/ip6tables-nft-save /sbin/iptables-nft /sbin/iptables-nft-restore /sbin/iptables-nft-save /sbin/xtables-legacy-multi /sbin/iptables /sbin/iptables-restore /sbin/iptables-save /sbin/iptables-legacy /sbin/iptables-legacy-restore /sbin/iptables-legacy-save /sbin/ip6tables /sbin/ip6tables-restore /sbin/ip6tables-save /sbin/ip6tables-legacy /sbin/ip6tables-legacy-restore /sbin/ip6tables-legacy-save /usr/lib64/libnetfilter_conntrack.so* /sbin/ipset /sbin/ip /usr/sbin/conntrack" }}
+{{- $binaries := "/usr/lib64/libnetfilter_conntrack.so* /sbin/ipset /sbin/ip /usr/sbin/conntrack" }}
+{{- $iptables_version := "1.8.10" }}
+{{- $iptables_image_version := $version | replace "." "-" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ .Images.BASE_ALT_DEV }}
@@ -35,12 +37,12 @@ import:
   add: /relocate
   to: /
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- artifact: registryPackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
-  to: /
+  to: /sbin/
   includePaths:
-  - lib64/iptables
-  - lib64/libm*
+  - xtables-legacy-multi
+  - xtables-nft-multi
   before: setup
 - image: common/iptables-wrapper
   add: /iptables-wrapper
