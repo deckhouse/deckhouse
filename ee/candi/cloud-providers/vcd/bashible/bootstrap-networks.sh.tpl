@@ -5,10 +5,6 @@
 */}}
 shopt -s extglob
 
-if which netplan 2>/dev/null 1>&2; then
-  netplan_configure
-fi
-
 function netplan_configure(){
   primary_mac="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
 
@@ -46,5 +42,10 @@ BOOTSTRAP_NETWORK_EOF
   netplan apply
 
 }
+
+if which netplan 2>/dev/null 1>&2; then
+  netplan_configure
+fi
+
 shopt -u extglob
 

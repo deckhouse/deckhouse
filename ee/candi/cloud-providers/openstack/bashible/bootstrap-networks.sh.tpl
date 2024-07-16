@@ -5,10 +5,6 @@
 */}}
 shopt -s extglob
 
-if which netplan 2>/dev/null 1>&2; then
-  netplan_configure
-fi
-
 function render_and_deploy_netplan_config() {
   interface=$1
   metric=$2
@@ -52,7 +48,10 @@ function netplan_configure(){
       fi
     fi
   fi
-
-  shopt -u extglob
-
 }
+
+if which netplan 2>/dev/null 1>&2; then
+  netplan_configure
+fi
+
+shopt -u extglob

@@ -16,10 +16,6 @@
 */}}
 shopt -s extglob
 
-if which netplan 2>/dev/null 1>&2; then
-  netplan_configure
-fi
-
 function ip_in_subnet(){
   python3 -c "import ipaddress; exit(0) if ipaddress.ip_address('$1') in ipaddress.ip_network('$2') else exit(1)"
   return $?
@@ -95,6 +91,11 @@ BOOTSTRAP_NETWORK_EOF
   netplan generate
   netplan apply
 }
+
+if which netplan 2>/dev/null 1>&2; then
+  netplan_configure
+fi
+
 shopt -u extglob
 
 
