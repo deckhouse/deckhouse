@@ -5,6 +5,10 @@
 */}}
 shopt -s extglob
 
+if ! which netplan 2>/dev/null 1>&2; then
+  exit 0
+fi
+
 primary_mac="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
 
 if [ -z "$primary_mac" ]; then

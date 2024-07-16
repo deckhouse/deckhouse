@@ -16,6 +16,10 @@
 */}}
 shopt -s extglob
 
+if ! which netplan 2>/dev/null 1>&2; then
+  exit 0
+fi
+
 function ip_in_subnet(){
   python3 -c "import ipaddress; exit(0) if ipaddress.ip_address('$1') in ipaddress.ip_network('$2') else exit(1)"
   return $?
