@@ -59,7 +59,7 @@ func (g *apiResourceListGetter) Get(gvk *schema.GroupVersionKind) (*metav1.APIRe
 
 	var resourcesList *metav1.APIResourceList
 	var err error
-	err = retry.NewSilentLoop("Get resources list", 50, 5*time.Second).Run(func() error {
+	err = retry.NewLoop("Get resources list", 50, 5*time.Second).Run(func() error {
 		// ServerResourcesForGroupVersion does not return error if API returned NotFound (404) or Forbidden (403)
 		// https://github.com/kubernetes/client-go/blob/51a4fd4aee686931f6a53148b3f4c9094f80d512/discovery/discovery_client.go#L204
 		// and if CRD was not deployed method will return empty APIResources list
@@ -211,7 +211,6 @@ func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Res
 	resourceCreator := NewCreator(kubeCl, resources)
 
 	waiter := NewWaiter(checkers)
-
 	for {
 		err := resourceCreator.TryToCreate()
 		if err != nil && !errors.Is(err, ErrNotAllResourcesCreated) {
