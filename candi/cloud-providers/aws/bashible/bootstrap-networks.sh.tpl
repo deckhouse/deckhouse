@@ -103,7 +103,7 @@ bb-package-fetch-blobs() {
     do
       retries=$(( retries+1 )) 
       bb-package-fetch-blob "${PACKAGE_DIGEST}" "${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar.gz" && break
-			sleep 2
+      sleep 2
     done
   done
 }
@@ -139,11 +139,11 @@ with open('$2', 'wb') as f:
 EOFILE
 }
 
+if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
 {{ with .images.registrypackages }}
-bb-package-install "ec2DescribeTags:{{ .ec2DescribeTagsV001Flant2 }}" 
+  bb-package-install "ec2DescribeTags:{{ .ec2DescribeTagsV001Flant2 }}" 
 {{- end }}
 
-if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
   attempt=0
   fail_describe_tags=0
   until [[ $(/opt/deckhouse/bin/ec2_describe_tags -query_meta) ]]; do 
