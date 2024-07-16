@@ -295,7 +295,7 @@ Queue 'main': length 0, status: 'waiting for task 0s'
   Here is how you can retrieve the IP address of the Deckhouse container registry in a pod:
   
   ```shell
-  $ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- getent ahosts registry.deckhouse.io
+  $ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- getent ahosts registry.deckhouse.io
   46.4.145.194    STREAM registry.deckhouse.io
   46.4.145.194    DGRAM  registry.deckhouse.io
   ```
@@ -795,7 +795,7 @@ The general cluster parameters are stored in the [ClusterConfiguration](installi
 To change the general cluster parameters, run the command:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
+kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
 ```
 
 After saving the changes, Deckhouse will bring the cluster configuration to the state according to the changed configuration. Depending on the size of the cluster, this may take some time.
@@ -807,7 +807,7 @@ Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER
 Regardless of the cloud provider used, its settings can be changed using the following command:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
 ### How do I change the configuration of a static cluster?
@@ -817,7 +817,7 @@ Settings of a static cluster are stored in the [StaticClusterConfiguration](inst
 To change the settings of a static cluster, run the command:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
 ```
 
 ### How to switch Deckhouse EE to CE?
@@ -967,7 +967,7 @@ To upgrade the Kubernetes version in a cluster change the [kubernetesVersion](in
 1. Run the command:
 
    ```shell
-   kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
+   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
    ```
 
 1. Change the `kubernetesVersion` field.
