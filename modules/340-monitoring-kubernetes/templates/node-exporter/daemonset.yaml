@@ -79,6 +79,7 @@ spec:
         - '--collector.ntp'
         - '--no-collector.wifi'
         - '--collector.ntp.server-is-local'
+        - '--collector.ntp.server=$(HOST_IP)'
         - '--collector.processes'
         - '--collector.filesystem.mount-points-exclude'
         - '(^/(dev|proc|sys|run)($|/))|(^/var/lib/docker/)|(^/var/lib/containerd/)|(/kubelet/)'
@@ -94,6 +95,11 @@ spec:
         - '/host/textfile*'
         - '--collector.netstat.fields'
         - '^(.*_(InErrors|InErrs)|Ip_Forwarding|Ip(6|Ext)_(InOctets|OutOctets)|Icmp6?_(InMsgs|OutMsgs)|TcpExt_.*|Tcp_(ActiveOpens|InSegs|OutSegs|PassiveOpens|RetransSegs|CurrEstab)|Udp6?_(InDatagrams|OutDatagrams|NoPorts))$'
+        env:
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         volumeMounts:
         - name: root
           readOnly:  true
