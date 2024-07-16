@@ -80,15 +80,16 @@ function get_phase2() {
   done
 }
 
+#run network scripts
+  {{- if $bootstrap_networks := $context.Files.Get "candi/bashible/bootstrap/01-network-scripts.sh.tpl" }}
+    {{- tpl ( $bootstrap_networks ) $tpl_context | nindent 0 }}
+  {{- end }}
+
 #prepare_base_d8_binaries
-  {{- if $fetch_base_pkgs := $context.Files.Get "candi/bashible/bootstrap/01-base-pkgs.sh.tpl" }}
+  {{- if $fetch_base_pkgs := $context.Files.Get "candi/bashible/bootstrap/02-base-pkgs.sh.tpl" }}
     {{- tpl ( $fetch_base_pkgs ) $tpl_context | nindent 0 }}
   {{- end }}
 
-#run network scripts
-  {{- if $bootstrap_networks := $context.Files.Get "candi/bashible/bootstrap/02-network-scripts.sh.tpl" }}
-    {{- tpl ( $bootstrap_networks ) $tpl_context | nindent 0 }}
-  {{- end }}
 
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 run_log_output
