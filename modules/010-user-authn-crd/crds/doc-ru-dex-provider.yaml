@@ -188,7 +188,7 @@ spec:
                             [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения предпочтительного имени пользователя.
                     scopes:
                       description: |
-                        Список [полей](https://github.com/dexidp/website/blob/main/content/docs/custom-scopes-claims-clients.md) для включения в ответ при запросе токена.
+                        Список [полей](https://github.com/dexidp/website/blob/main/content/docs/configuration/custom-scopes-claims-clients.md) для включения в ответ при запросе токена.
                     promptType:
                       description: |
                         Определяет — должен ли Issuer запрашивать подтверждение и давать подсказки при аутентификации.
