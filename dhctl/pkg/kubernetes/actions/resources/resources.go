@@ -65,7 +65,7 @@ func (g *apiResourceListGetter) Get(gvk *schema.GroupVersionKind) (*metav1.APIRe
 		// and if CRD was not deployed method will return empty APIResources list
 		resourcesList, err = g.kubeCl.Discovery().ServerResourcesForGroupVersion(gvk.GroupVersion().String())
 		if err != nil {
-			return fmt.Errorf("can't get preferred resources '%s': %w", gvk, err)
+			return fmt.Errorf("can't get preferred resources '%s': %w", key, err)
 		}
 		return nil
 	})
