@@ -15,16 +15,9 @@
 # limitations under the License.
 */}}
 
-function check_python() {
-    for pybin in python3 python2 python; do
-      if command -v "$pybin" >/dev/null 2>&1; then
-        python_binary="$pybin"
-        return 0
-      fi
-    done
-    echo "Python not found, exiting..."
-    return 1
-}
+{{- if $check_python := .Files.Get "/deckhouse/candi/bashible/check_python.sh" | default (.Files.Get "candi/bashible/check_python.sh") -}}
+  {{- $check_python . | nindent 0 }}
+{{- end }}
 
 function try_connect() {
     cat - <<EOF | $python_binary

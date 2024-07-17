@@ -1,5 +1,5 @@
 #!/bin/bash
-{{- /*
+
 # Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,9 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-*/}}
-{{- if .provider }}
-  {{- if $bootstrap_script_network := $.Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/bootstrap-networks.sh.tpl" .provider) | default ($.Files.Get (printf "candi/cloud-providers/%s/bashible/bootstrap-networks.sh.tpl" .provider) ) }}
-    {{- tpl ($bootstrap_script_network) $ | nindent 0 }}
-  {{- end }}
-{{- end }}
+
+function check_python() {
+  for pybin in python3 python2 python; do
+    if command -v "$pybin" >/dev/null 2>&1; then
+      python_binary="$pybin"
+      return 0
+    fi
+  done
+  echo "Python not found, exiting..."
+  return 1
+}

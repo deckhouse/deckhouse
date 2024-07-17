@@ -62,12 +62,7 @@ bb-apt-rpm-update() {
     export DEBIAN_FRONTEND=noninteractive
     bb-flag? apt-rpm-updated && return 0
     bb-log-info 'Updating apt cache'
-    if ! apt-get update ; then
-			#for resolve error: 'error reading from /var/lib/apt/lists/partial/ftp.altlinux.org_pub_distributions_ALTLinux_p10_branch_x86%5f64-i586_base_release - fgets (0 Success)'
-      rm -rf  /var/lib/apt/lists/* 
-			mkdir -p /var/lib/apt/lists/partial
-      apt-get update
-    fi
+    apt-get update
     bb-flag-set apt-rpm-updated
 }
 
