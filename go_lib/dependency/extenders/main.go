@@ -55,7 +55,7 @@ func DeleteConstraints(module string) {
 	kubernetesversion.Instance().DeleteConstraints(module)
 }
 
-func CheckRequirements(moduleRelease, moduleName string, requirements map[string]string) error {
+func CheckModuleReleaseRequirements(moduleRelease, moduleName string, requirements map[string]string) error {
 	if len(requirements[kubernetesversion.RequirementsField]) > 0 {
 		if err := kubernetesversion.Instance().ValidateRelease(moduleRelease, moduleName, requirements[kubernetesversion.RequirementsField]); err != nil {
 			return err

@@ -48,6 +48,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
@@ -233,6 +235,16 @@ func (r *deckhouseReleaseReconciler) patchSuspendAnnotation(dr *v1alpha1.Deckhou
 func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (ctrl.Result, error) {
 	if r.clusterUUID == "" {
 		r.clusterUUID = r.getClusterUUID(ctx)
+	}
+
+	if err := deckhouseversion.Instance().ValidateBaseVersion(dr.Spec.Version); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if len(dr.Spec.Requirements["autoK8sVersion"]) > 0 {
+		if err := kubernetesversion.Instance().ValidateBaseVersion(dr.Spec.Requirements["autoK8sVersion"]); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	releaseData, err := r.getReleaseData(ctx)

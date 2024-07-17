@@ -343,7 +343,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	moduleName := mr.Spec.ModuleName
 
 	c.logger.Debugf("checking requirements of %s for module %s by extenders", mr.GetName(), mr.GetModuleName())
-	if err := extenders.CheckRequirements(mr.GetName(), mr.GetModuleName(), mr.Spec.Requirements); err != nil {
+	if err := extenders.CheckModuleReleaseRequirements(mr.GetName(), mr.GetModuleName(), mr.Spec.Requirements); err != nil {
 		if err = c.updateModuleReleaseStatusMessage(ctx, mr, err.Error()); err != nil {
 			return ctrl.Result{Requeue: true}, err
 		}
