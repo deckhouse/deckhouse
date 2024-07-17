@@ -95,6 +95,8 @@
     node-exporter will restart.
  - **[monitoring-kubernetes]** Fix false-positive results in precomputed metric `oom_kills:normalized`. [#8592](https://github.com/deckhouse/deckhouse/pull/8592)
  - **[multitenancy-manager]** Replace special characters in a AuthorizationRule `metadata.name`. [#8665](https://github.com/deckhouse/deckhouse/pull/8665)
+ - **[network-policy-engine]** The kube-router image now use the same iptables binaries as on the host to prevent incompatibility. [#9065](https://github.com/deckhouse/deckhouse/pull/9065)
+ - **[node-manager]** Revert bashible drain annotations checks. [#9057](https://github.com/deckhouse/deckhouse/pull/9057)
  - **[operator-trivy]** Fix service URL to work in env where HTTP_PROXY/HTTPS_PROXY is set. [#8958](https://github.com/deckhouse/deckhouse/pull/8958)
  - **[operator-trivy]** Set `node.collector.imagePullSecret` to `deckhouse-registry`. [#8679](https://github.com/deckhouse/deckhouse/pull/8679)
  - **[prometheus]** Fix missing _kube-rbac-proxy_ CA in aggregating proxy deployment. [#8789](https://github.com/deckhouse/deckhouse/pull/8789)
