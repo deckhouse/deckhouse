@@ -161,6 +161,7 @@ func (t *ReverseTunnel) StartHealthMonitor(checker ReverseTunnelChecker, killer 
 		// we need chan for restarting because between restarting we can get stop signal
 		restartCh := make(chan int, 1024)
 		id := -1
+		restartsCount := 0
 		restart := func(id int) {
 			log.DebugF("[%d] Send restart signal\n", id)
 			restartCh <- id
@@ -177,7 +178,13 @@ func (t *ReverseTunnel) StartHealthMonitor(checker ReverseTunnelChecker, killer 
 				log.InfoLn("Stop health monitor")
 				return
 			case oldId := <-restartCh:
-				log.DebugF("[%d] Restart signal was received\n", oldId)
+				restartsCount++
+				log.DebugF("[%d] Restart signal was received: restarts count %d\n", oldId, restartsCount)
+
+				if restartsCount > 1024 {
+					panic("Reverse tunnel restarts count exceeds 1024")
+				}
+
 				newId, err := t.tryToRestart(oldId, killer)
 				if err != nil {
 					log.DebugF("[%d] Restart failed with error: %v\n", oldId, err)
@@ -186,6 +193,7 @@ func (t *ReverseTunnel) StartHealthMonitor(checker ReverseTunnelChecker, killer 
 				}
 				log.DebugF("[%d] Restart successful. New id %d\n", oldId, newId)
 				id = newId
+				restartsCount = 0
 			case err := <-t.errorCh:
 				id = err.id
 				log.DebugF("[%d] Tunnel was stopped with error '%v'. Try restart fully\n", id, err.err)
