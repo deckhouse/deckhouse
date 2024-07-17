@@ -84,6 +84,7 @@ spec:
 
 type DeckhouseInstaller struct {
 	Registry              RegistryData
+	UpstreamRegistry      RegistryData
 	LogLevel              string
 	Bundle                string
 	DevBranch             string
@@ -252,6 +253,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	installConfig := DeckhouseInstaller{
 		UUID:                  metaConfig.UUID,
 		Registry:              metaConfig.Registry,
+		UpstreamRegistry:      metaConfig.UpstreamRegistry,
 		DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
 		Bundle:                bundle,
 		LogLevel:              logLevel,
