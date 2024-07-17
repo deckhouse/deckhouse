@@ -496,6 +496,14 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
       - To authenticate in a third-party registry, you need to use the `--source-login` and `--source-password` parameters;
    - `--images-bundle-chunk-size=N` — to specify the maximum file size (in GB) to split the image archive into. As a result of the operation, instead of a single file archive, a set of `.chunk` files will be created (e.g., `d8.tar.NNNN.chunk`). To upload images from such a set of files, specify the file name without the `.NNNN.chunk` suffix in the `d8 mirror push` command (e.g., `d8.tar` for files like `d8.tar.NNNN.chunk`).
 
+   Additional configuration options for `d8 mirror` family of commands are available as environment variables:
+    - `HTTP_PROXY / HTTPS_PROXY` — The proxy URLs for HTTP(S) requests unless overridden by `$NO_PROXY`;
+    - `NO_PROXY` — Specified as a comma-separated list containing hosts that should be excluded from proxying. Each value is represented by an IP address prefix (1.2.3.4), an IP address prefix in CIDR notation (1.2.3.4/8), a domain name, or a special DNS label `*`. An IP address prefix and domain name can also include a literal port number (1.2.3.4:80). A domain name matches that name and all subdomains. A domain name with a leading "." matches subdomains only. For example "foo.com" matches "foo.com" and "bar.foo.com"; ".y.com" matches "x.y.com" but not "y.com". A single asterisk `*` indicates that no proxying should be done;
+    - `SSL_CERT_FILE` — Identifies where to locate the SSL certificate file. If set this overrides the system default;
+    - `SSL_CERT_DIR` — Identifies which directories to check for SSL certificate files. If set this overrides the system default. It is a colon separated list of directories. See <https://www.openssl.org/docs/man1.0.2/man1/c_rehash.html>;
+    - `TMPDIR (*nix) / TMP (Windows)` — Path to a temporary directory to be used during pull and push operations. All the processing is performed within this directory. it should have enough free disk space to hold an entire bundle you are downloading;
+    - `MIRROR_BYPASS_ACCESS_CHECKS` — Set this to `1` to skip validation of registry credentials;
+
    Example of a command to download all versions of Deckhouse EE starting from version 1.59 (provide the license key):
 
    ```shell
