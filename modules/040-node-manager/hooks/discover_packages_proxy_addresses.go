@@ -81,10 +81,10 @@ func handlePackagesProxyEndpoints(input *go_hook.HookInput) error {
 	endpointsList := endpointsSet.Slice() // sorted
 
 	if len(endpointsList) == 0 {
-		input.LogEntry.Warn("no kubernetes packages proxy endpoints host:port specified")
-		return nil
+		return fmt.Errorf("no kubernetes packages proxy endpoints host:port specified")
 	}
 
+	input.LogEntry.Infof("Found kubernetes packages proxy endpoints: %v", endpointsList)
 	input.Values.Set("nodeManager.internal.packagesProxy.addresses", endpointsList)
 
 	return nil
