@@ -182,7 +182,7 @@ spec:
       proxy:
         image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
         clusterDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
-  {{- if and (hasKey $.Values.istio.sidecar.resourcesManagement "static") (or (hasKey $.Values.istio.sidecar.resourcesManagement.static "requests") (hasKey $.Values.istio.sidecar.resourcesManagement.static "limits")) }}
+  {{- if and ($.Values.istio.sidecar.resourcesManagement) (eq $.Values.istio.sidecar.resourcesManagement.mode "Static") ($.Values.istio.sidecar.resourcesManagement.static)}}
         resources:
           {{- include "helm_lib_resources_management_original_pod_resources" $.Values.istio.sidecar.resourcesManagement | nindent 10 }}
   {{- else }}
