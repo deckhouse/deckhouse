@@ -1,4 +1,3 @@
-
 apiVersion: v1
 kind: Pod
 metadata:
@@ -52,14 +51,14 @@ spec:
       - -master.raftBootstrap
       {{- end }}
       - -metricsPort=9324
-      - -metricsIp="127.0.0.1"
+      - -metricsIp=127.0.0.1
       - -volume.readMode=redirect
       - -s3.allowDeleteBucketNotEmpty=true
       - -master.defaultReplication=000
       - -volume.pprof
       - -filer.maxMB=16
       - -ip={{ .hostIP }}
-      {{- if eq (len .masterPeers) 0 }}
+      {{- if or (not .masterPeers) (eq (len .masterPeers) 0) }}
       - -master.peers={{ .hostIP }}:9333
       {{- else }}
       - -master.peers={{ range $index, $masterPeerAddr := .masterPeers }}{{ if $index }},{{ end }}{{ printf "%s:%s" $masterPeerAddr "9333" }}{{ end }}
