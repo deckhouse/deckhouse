@@ -61,12 +61,18 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 }`
 
 	suite.Run("Have new deckhouse image", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&fakeLayer{}, &fakeLayer{Body: `{"version": "v1.25.3"}`}}, nil
-		},
-			DigestStub: func() (v1.Hash, error) {
-				return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b777")
-			}}, nil)
+		dependency.TestDC.CRClient.ImageMock.Return(
+			&fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&fakeLayer{}, &fakeLayer{
+						FilesContent: map[string]string{`version.json`: `{"version": "v1.25.3"}`}},
+					}, nil
+				},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b777")
+				},
+			}, nil,
+		)
 
 		suite.setupController("have-new-deckhouse-image.yaml", initValues, embeddedMUP)
 		err := suite.ctr.checkDeckhouseRelease(ctx)
@@ -74,12 +80,19 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 	})
 
 	suite.Run("Have canary release wave 0", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&fakeLayer{}, &fakeLayer{Body: `{"version": "v1.25.0", "canary": {"stable": {"enabled": true, "waves": 5, "interval": "6m"}}}`}}, nil
-		},
-			DigestStub: func() (v1.Hash, error) {
-				return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
-			}}, nil)
+		dependency.TestDC.CRClient.ImageMock.Return(
+			&fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&fakeLayer{}, &fakeLayer{
+						FilesContent: map[string]string{
+							`version.json`: `{"version": "v1.25.0", "canary": {"stable": {"enabled": true, "waves": 5, "interval": "6m"}}}`,
+						}}}, nil
+				},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+				},
+			}, nil,
+		)
 
 		suite.setupController("have-canary-release-wave-0.yaml", initValues, embeddedMUP)
 		err := suite.ctr.checkDeckhouseRelease(ctx)
@@ -87,9 +100,13 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 	})
 
 	suite.Run("Have canary release wave 4", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&fakeLayer{}, &fakeLayer{Body: `{"version": "v1.25.5", "canary": {"stable": {"enabled": true, "waves": 5, "interval": "15m"}}}`}}, nil
-		},
+		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{
+					FilesContent: map[string]string{
+						`version.json`: `{"version": "v1.25.5", "canary": {"stable": {"enabled": true, "waves": 5, "interval": "15m"}}}`,
+					}}}, nil
+			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b666")
 			}}, nil)
@@ -102,12 +119,12 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 	suite.Run("Existed release suspended", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{Body: `{"version": "v1.25.0", "suspend": true}`}}, nil
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{
+					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0", "suspend": true}`}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
-			},
-		}, nil)
+			}}, nil)
 
 		suite.setupController("existed-release-suspended.yaml", initValues, embeddedMUP)
 		err := suite.ctr.checkDeckhouseRelease(ctx)
@@ -117,7 +134,8 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 	suite.Run("Deployed release suspended", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{Body: `{"version": "v1.25.0", "suspend": true}`}}, nil
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{
+					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0", "suspend": true}`}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
@@ -132,7 +150,8 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 	suite.Run("New release suspended", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{Body: `{"version": "v1.25.0", "suspend": true}`}}, nil
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{
+					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0", "suspend": true}`}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
@@ -147,7 +166,8 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 	suite.Run("Resume suspended release", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{Body: `{"version": "v1.25.0"}`}}, nil
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{
+					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0"}`}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
@@ -162,7 +182,8 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 	suite.Run("Image hash not changed", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{Body: `{"version": "v1.25.0"}`}}, nil
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{
+					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0"}`}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66857")
@@ -178,7 +199,10 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 	suite.Run("Release has requirements", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{Body: `{"version": "v1.30.0", "requirements": {"k8s": "1.19", "req1": "dep1"}}`}}, nil
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{
+					FilesContent: map[string]string{
+						`version.json`: `{"version": "v1.30.0", "requirements": {"k8s": "1.19", "req1": "dep1"}}`,
+					}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66858")
@@ -193,7 +217,9 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 	suite.Run("Release has canary", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"canary":{"alpha":{"enabled":true,"interval":"5m","waves":2},"beta":{"enabled":false,"interval":"1m","waves":1},"early-access":{"enabled":true,"interval":"30m","waves":6},"rock-solid":{"enabled":false,"interval":"5m","waves":5},"stable":{"enabled":true,"interval":"30m","waves":6}},"version":"v1.31.0"}`}}}, nil
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{
+					FilesContent: map[string]string{
+						"version.json": `{"canary":{"alpha":{"enabled":true,"interval":"5m","waves":2}, "beta":{"enabled":false,"interval":"1m","waves":1},"early-access":{"enabled":true,"interval":"30m","waves":6},"rock-solid":{"enabled":false,"interval":"5m","waves":5},"stable":{"enabled":true,"interval":"30m","waves":6}},"version":"v1.31.0"}`}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76859")
@@ -218,7 +244,9 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 		}, nil)
 		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.31.0"}`}}}, nil
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{
+					"version.json": `{"version":"v1.31.0"}`,
+				}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76859")
@@ -240,7 +268,9 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 	suite.Run("Inherit release cooldown", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.31.1"}`}}}, nil
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{
+					"version.json": `{"version":"v1.31.1"}`,
+				}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76869")
@@ -262,7 +292,9 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 	suite.Run("Patch release has own cooldown", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.31.2"}`}}}, nil
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{
+					"version.json": `{"version":"v1.31.2"}`,
+				}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
@@ -284,7 +316,9 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 	suite.Run("Release has disruptions", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.32.0", "disruptions":{"1.32":["ingressNginx"]}}`}}}, nil
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{
+					"version.json": `{"version": "v1.32.0", "disruptions":{"1.32":["ingressNginx"]}}`,
+				}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66859")
@@ -402,8 +436,6 @@ global:
 
 type fakeLayer struct {
 	v1.Layer
-	// Deprecated: use FilesContent with specified name instead
-	Body string
 
 	FilesContent map[string]string // pair: filename - file content
 }
@@ -412,11 +444,6 @@ func (fl fakeLayer) Uncompressed() (io.ReadCloser, error) {
 	result := bytes.NewBuffer(nil)
 	if fl.FilesContent == nil {
 		fl.FilesContent = make(map[string]string)
-	}
-
-	if fl.Body != "" && len(fl.FilesContent) == 0 {
-		// backward compatibility for tests
-		fl.FilesContent["version.json"] = fl.Body
 	}
 
 	if len(fl.FilesContent) == 0 {
@@ -441,10 +468,6 @@ func (fl fakeLayer) Uncompressed() (io.ReadCloser, error) {
 }
 
 func (fl fakeLayer) Size() (int64, error) {
-	if len(fl.Body) > 0 {
-		return int64(len(fl.Body)), nil
-	}
-
 	return int64(len(fl.FilesContent)), nil
 }
 
