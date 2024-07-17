@@ -596,8 +596,6 @@ func SecretWithNodeTerraformState(nodeName, nodeGroup string, data, settings []b
 		"d8-system",
 		body,
 		map[string]string{
-			"node.deckhouse.io/node-group":      nodeGroup,
-			"node.deckhouse.io/node-name":       nodeName,
 			"node.deckhouse.io/terraform-state": "",
 		},
 	)
