@@ -62,7 +62,7 @@ stream {
     {{ $parts := splitList ":" $value -}}
     {{ $ip := index $parts 0 -}}
     server {{ $ip }}:5001;
-    {{- end -}}
+    {{- end }}
   }
   {{- end }}
  {{- else if eq .runType "ClusterBootstrap" }}
