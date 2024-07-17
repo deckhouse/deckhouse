@@ -49,6 +49,8 @@ locals{
       {
         "name" : "user",
         "ssh_authorized_keys" : [local.ssh_pubkey]
+        "groups": "users, wheel",
+        "sudo": "ALL=(ALL) NOPASSWD:ALL"
       }
     ]
   }, length(var.cloudConfig) > 0 ? yamldecode(base64decode(var.cloudConfig)) : tomap({})))
