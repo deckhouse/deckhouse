@@ -13,7 +13,7 @@
 # #####################################################################
 ---
 artifact: {{ $.ModuleName }}/iptables-artifact
-fromImage: {{ $.ModuleName }}/base-cilium-dev
+from: {{ $.Images.BASE_ALT_DEV_CILIUM }}
 shell:
   beforeInstall:
     - apt-get remove --purge -y iptables iptables-ipv6 iptables-nft

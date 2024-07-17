@@ -1,13 +1,11 @@
 {{- $ciliumVersion := "1.14.5" }}
-{{- $fromCacheVersion := "17" }}
 ---
 # #####################################################################
 # Build cilium-agent binaries
 # Based on https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile (builder stage)
 ---
 artifact: {{ $.ModuleName }}/cilium-artifact
-fromImage: {{ $.ModuleName }}/base-cilium-dev
-fromCacheVersion: {{ $fromCacheVersion }}
+from: {{ $.Images.BASE_ALT_DEV_CILIUM }}
 git:
 - add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
