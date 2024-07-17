@@ -1,0 +1,15 @@
+log-shipper:
+  fixes:
+    - summary: Improve alert `D8LogShipperAgentNotScheduledInCluster`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7999
+network-policy-engine:
+  fixes:
+    - summary: >-
+        The kube-router image now use the same iptables binaries as on the host to prevent
+        incompatibility.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9065
+node-manager:
+  fixes:
+    - summary: Revert bashible drain annotations checks.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9057
+
