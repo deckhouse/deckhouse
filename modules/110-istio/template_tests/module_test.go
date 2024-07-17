@@ -615,14 +615,7 @@ updatePolicy:
 		It("", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			iopV19 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x19x7")
-			Expect(iopV19.Field("spec.values.global.proxy.resources").String()).To(MatchYAML(`
-limits:
-  cpu: 2000m
-  memory: 1024Mi
-requests:
-  cpu: 100m
-  memory: 128Mi
-`))
+			Expect(iopV19.Field("spec.values.global.proxy.resources").String()).To(MatchYAML(`{}`))
 		})
 	})
 

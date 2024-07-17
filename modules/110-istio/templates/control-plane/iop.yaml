@@ -186,13 +186,7 @@ spec:
         resources:
           {{- include "helm_lib_resources_management_original_pod_resources" $.Values.istio.sidecar.resourcesManagement | nindent 10 }}
   {{- else }}
-        resources:
-          limits:
-            cpu: 2000m
-            memory: 1024Mi
-          requests:
-            cpu: 100m
-            memory: 128Mi
+        resources: {}
   {{- end }}
         logLevel: warning
         componentLogLevel: "misc:error"
@@ -272,6 +266,7 @@ spec:
         d8-check-kernel-version: |
           spec:
             initContainers:
+            # TODO: change to helm_lib_module_init_container_check_linux_kernel after closing issue https://github.com/deckhouse/deckhouse/issues/7680
             {{- include "module_init_container_check_linux_kernel" (tuple $ ">= 5.7") | nindent 12 }}
 {{- end }}
         d8-hold-istio-proxy-termination-until-application-stops: |
