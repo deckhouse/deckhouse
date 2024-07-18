@@ -53,11 +53,6 @@ sys.stdout.write(data["bootstrap"])
 EOF
 }
 
-#check_python
-{{- if $check_python := $context.Files.Get "candi/bashible/check_python.sh" -}}
-  {{- tpl ( $check_python ) $tpl_context | nindent 0 }}
-{{- end }}
-
 function get_phase2() {
   bootstrap_ng_name="common.{{ $ng.name }}"
   token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"

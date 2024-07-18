@@ -15,8 +15,8 @@
 # limitations under the License.
 */}}
 
-{{- if $check_python := .Files.Get "/deckhouse/candi/bashible/check_python.sh" | default (.Files.Get "candi/bashible/check_python.sh") -}}
-  {{- $check_python . | nindent 0 }}
+{{- if $check_python := .Files.Get "/deckhouse/candi/bashible/check_python.sh.tpl" | default (.Files.Get "candi/bashible/check_python.sh.tpl") -}}
+  {{- tpl ( $check_python ) . | nindent 0 }}
 {{- end }}
 
 function try_connect() {

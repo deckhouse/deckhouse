@@ -16,10 +16,6 @@
 #!/bin/bash
 set -Eeo pipefail
 
-{{- if $check_python := .Files.Get "/deckhouse/candi/bashible/check_python.sh" | default (.Files.Get "candi/bashible/check_python.sh") -}}
-  {{- tpl ( $check_python ) . | nindent 0 }}
-{{- end }}
-
 {{- if $bb_package_install := .Files.Get "/deckhouse/candi/bashible/bb_package_install.sh.tpl" | default (.Files.Get "candi/bashible/bb_package_install.sh.tpl") -}}
   {{- tpl ( $bb_package_install ) . | nindent 0 }}
 {{- end }}
