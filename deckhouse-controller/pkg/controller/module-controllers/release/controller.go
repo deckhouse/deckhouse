@@ -455,7 +455,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	if releaseUpdater.PredictedReleaseIsPatch() {
 		// patch release does not respect update windows or ManualMode
 		err = releaseUpdater.ApplyPredictedRelease(nil)
-		if errors.Is(err, updater.NotReadyForDeployError) {
+		if errors.Is(err, updater.ErrNotReadyForDeploy) {
 			//TODO: create custom error type with additional fields like reason end requeueAfter
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
@@ -474,7 +474,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	}
 
 	err = releaseUpdater.ApplyPredictedRelease(windows)
-	if errors.Is(err, updater.NotReadyForDeployError) {
+	if errors.Is(err, updater.ErrNotReadyForDeploy) {
 		//TODO: create custom error type with additional fields like reason end requeueAfter
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
