@@ -31,9 +31,17 @@ module "security-groups" {
 
 data "aws_availability_zones" "available" {}
 
+data "aws_availability_zones" "available_except_local_zone" {
+  filter {
+    name   = "opt-in-status"
+    values = ["opt-in-not-required"]
+  }
+}
+
 locals {
   az_count    = length(data.aws_availability_zones.available.names)
   subnet_cidr = lookup(var.providerClusterConfiguration, "nodeNetworkCIDR", module.vpc.cidr_block)
+
 }
 
 resource "aws_subnet" "kube_public" {
@@ -80,8 +88,18 @@ resource "aws_internet_gateway" "kube" {
   })
 }
 
+locals {
+  first_non_local_az = data.aws_availability_zones.available_except_local_zone.names[0]
+  first_non_local_subnet_id = one(
+    aws_subnet.kube_public.*.id[*][
+      index(aws_subnet.kube_public.*.availability_zone, local.first_non_local_az)
+    ]
+  )
+}
+
+
 resource "aws_nat_gateway" "kube" {
-  subnet_id     = aws_subnet.kube_public[0].id
+  subnet_id     = local.first_non_local_subnet_id
   allocation_id = aws_eip.natgw.id
 
   tags = merge(local.tags, {
