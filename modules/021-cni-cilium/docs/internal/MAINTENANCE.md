@@ -1,6 +1,7 @@
 # Maintenance
 
 ## Rollout restarting of the cilium agent pods
+
 Previously, a mechanism was added to safely update pods with cilium agents. Because of this, the simple `rollout restart ds agent` command no longer functions.
 
 This command allows you to restart all pods of the cilium agent sequentially, if necessary.
