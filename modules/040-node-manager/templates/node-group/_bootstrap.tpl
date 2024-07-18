@@ -55,7 +55,7 @@ EOF
 
 #check_python
 {{- if $check_python := $context.Files.Get "candi/bashible/check_python.sh" -}}
-  {{- $check_python | nindent 0 }}
+  {{- tpl ( $check_python ) $tpl_context | nindent 0 }}
 {{- end }}
 
 function get_phase2() {
