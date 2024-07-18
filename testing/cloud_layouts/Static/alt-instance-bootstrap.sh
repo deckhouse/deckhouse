@@ -17,6 +17,6 @@
 cat > /usr/local/bin/is-instance-bootstrapped << EOF
 #!/bin/bash
 set -Eeo pipefail
-cat /etc/altlinux-release | grep -q "ALT p10"
+cat /etc/altlinux-release | grep -q "ALT p11"
 EOF
 chmod +x /usr/local/bin/is-instance-bootstrapped
