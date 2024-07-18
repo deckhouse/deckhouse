@@ -370,7 +370,7 @@ func DetermineBundleName(sshClient *ssh.Client) (string, error) {
 			return err
 		}
 
-		return retry.NewSilentLoop("Get bundle", 6, 1*time.Second).Run(func() error {
+		return retry.NewSilentLoop("Get bundle", 3, 1*time.Second).Run(func() error {
 			// run detect bundle type
 			detectCmd := sshClient.UploadScript(file)
 			stdout, err := detectCmd.Execute()
