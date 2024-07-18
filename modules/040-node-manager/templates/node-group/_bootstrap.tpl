@@ -69,6 +69,10 @@ function get_phase2() {
   done
 }
 
+{{- if $bb_package_install := .Files.Get "candi/bashible/bb_package_install.sh.tpl" -}}
+  {{- tpl ( $bb_package_install ) $tpl_context | nindent 0 }}
+{{- end }}
+
 #run network scripts
   {{- if $bootstrap_networks := $context.Files.Get "candi/bashible/bootstrap/01-network-scripts.sh.tpl" }}
     {{- tpl ( $bootstrap_networks ) $tpl_context | nindent 0 }}

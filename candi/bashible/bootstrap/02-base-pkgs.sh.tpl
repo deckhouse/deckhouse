@@ -16,7 +16,15 @@
 #!/bin/bash
 set -Eeo pipefail
 
-{{- if $bb_package_install := .Files.Get "/deckhouse/candi/bashible/bb_package_install.sh.tpl" | default (.Files.Get "candi/bashible/bb_package_install.sh.tpl") -}}
+{{- /*
+# dhctl and node-manager renders have differents helm root dir and .Files.Get should use different paths:
+# '/deckhouse/candi/bashible/...' - dhctl
+# 'candi/bashible/...' - node-manager
+# For dhctl render we include 'bb_package_install'.
+# For node-manager render this file include to place, where 'bb_package_install' already included on previous lines.
+*/}}
+
+{{- if $bb_package_install := .Files.Get "/deckhouse/candi/bashible/bb_package_install.sh.tpl" -}}
   {{- tpl ( $bb_package_install ) . | nindent 0 }}
 {{- end }}
 
