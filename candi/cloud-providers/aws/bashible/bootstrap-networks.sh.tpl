@@ -15,7 +15,9 @@
 # limitations under the License.
 */}}
 
-#We need define function in this file for dhctl bootstrap render.
+{{- /*
+# We need include 'bb_package_install' in this file for dhctl bootstrap render.
+*/}}
 {{- if $bb_package_install := .Files.Get "/deckhouse/candi/bashible/bb_package_install.sh.tpl" -}}
   {{- tpl ( $bb_package_install ) . | nindent 0 }}
 {{- end }}
