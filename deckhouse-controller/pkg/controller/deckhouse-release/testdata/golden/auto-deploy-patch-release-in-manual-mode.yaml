@@ -26,7 +26,7 @@ metadata:
   resourceVersion: "1002"
 spec:
   version: v1.25.1
-status:v1.26.0
+status:
   approved: false
   message: ""
   phase: Deployed
@@ -91,16 +91,3 @@ spec:
         name: deckhouse
         resources: {}
 status: {}
----
-apiVersion: v1
-data:
-  isUpdating: "true"
-  notified: "false"
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  labels:
-    heritage: deckhouse
-  name: d8-release-data
-  namespace: d8-system
-  resourceVersion: "1"
