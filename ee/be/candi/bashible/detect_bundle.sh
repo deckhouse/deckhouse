@@ -18,7 +18,7 @@ if [ ! -e /etc/os-release ]; then
   >&2 echo "ERROR: Can't determine OS! /etc/os-release is not found."
   exit 1
 fi
-
+set -x
 . /etc/os-release
 case "$ID" in
   centos|rocky|almalinux|rhel)
