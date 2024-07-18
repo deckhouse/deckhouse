@@ -100,7 +100,7 @@ func main() {
 
 	fmt.Printf("Starting Docker Distribution: %s %s\n", appPath, os.Args)
 	env := os.Environ()
-	if err := syscall.Exec(appPath, os.Args, env); err != nil {
+	if err := syscall.Exec(appPath, append([]string{appPath}, os.Args[1:]...), env); err != nil {
 		fmt.Printf("Failed to execute Docker Distribution due to the following error: %v\n", err)
 		return
 	}
