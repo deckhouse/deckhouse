@@ -16,13 +16,12 @@ spec:
   failurePolicy: Fail
   matchConstraints:
     resourceRules:
-      - apiGroups:   [""]
+      - apiGroups: [""]
         apiVersions: ["*"]
-        operations:  ["CREATE"]
-        resources:   ["namespaces"]
+        operations: ["CREATE"]
+        resources: ["namespaces"]
   validations:
-    - expression: '!(request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
-        && (object.metadata.name.startsWith("d8-") || object.metadata.name.startsWith("kube-")))'
+    - expression: '!(request.userInfo.username != "system:serviceaccount:d8-system:deckhouse" && (object.metadata.name.startsWith("d8-") || object.metadata.name.startsWith("kube-")))'
       reason: Forbidden
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
       messageExpression: '''Creation of system namespaces is forbidden'''
@@ -58,10 +57,10 @@ spec:
   failurePolicy: Fail
   matchConstraints:
     resourceRules:
-      - apiGroups:   ["*"]
+      - apiGroups: ["*"]
         apiVersions: ["*"]
-        operations:  ["CREATE", "UPDATE"]
-        resources:   ["*"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["*"]
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'exclude-groups'
@@ -99,4 +98,47 @@ spec:
     objectSelector:
       matchLabels:
         heritage: deckhouse
+---
+{{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
+apiVersion: admissionregistration.k8s.io/v1
+{{- else if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
+apiVersion: admissionregistration.k8s.io/v1beta1
+{{- else }}
+apiVersion: admissionregistration.k8s.io/v1alpha1
+{{- end }}
+{{- $policyName := "machines.deckhouse.io" }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["machine.sapcloud.io", "cluster.x-k8s.io"]
+        apiVersions: ["*"]
+        operations: ["DELETE"]
+        resources: ["*"]
+  matchConditions:
+    - name: 'allow-only-for-d8-accounts'
+      expression: '!(request.userInfo.username.startsWith("system:serviceaccount:d8-"))'
+  validations:
+    - expression: 'false'
+      reason: Forbidden
+      messageExpression: '''Operation on machine object is forbidden for this user by ValidatingAdmissionPolicy {{ $policyName }}'''
+---
+{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
+apiVersion: admissionregistration.k8s.io/v1beta1
+{{- else }}
+apiVersion: admissionregistration.k8s.io/v1alpha1
+{{- end }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}-binding
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+  validationActions: [Deny]
+{{- end }}
 {{- end }}

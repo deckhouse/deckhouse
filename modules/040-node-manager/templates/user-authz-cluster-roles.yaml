@@ -60,16 +60,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - cluster.x-k8s.io
-  resources:
-  - machines
-  - machinesets
-  - machinedeployments
-  verbs:
-  - get
-  - list
-  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -94,9 +84,6 @@ rules:
   - machinesets
   - machinedeployments
   verbs:
-  - create
-  - delete
-  - deletecollection
   - patch
   - update
 - apiGroups:
@@ -106,8 +93,5 @@ rules:
   - machinesets
   - machinedeployments
   verbs:
-  - create
-  - delete
-  - deletecollection
   - patch
   - update
