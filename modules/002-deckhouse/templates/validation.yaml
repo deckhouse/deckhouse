@@ -21,7 +21,8 @@ spec:
         operations: ["CREATE"]
         resources: ["namespaces"]
   validations:
-    - expression: '!(request.userInfo.username != "system:serviceaccount:d8-system:deckhouse" && (object.metadata.name.startsWith("d8-") || object.metadata.name.startsWith("kube-")))'
+    - expression: '!(request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
+        && (object.metadata.name.startsWith("d8-") || object.metadata.name.startsWith("kube-")))'
       reason: Forbidden
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
       messageExpression: '''Creation of system namespaces is forbidden'''
