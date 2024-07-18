@@ -17,11 +17,11 @@
 set -Eeo pipefail
 
 {{- if $check_python := .Files.Get "/deckhouse/candi/bashible/check_python.sh" | default (.Files.Get "candi/bashible/check_python.sh") -}}
-  {{- $check_python . | nindent 0 }}
+  {{- $check_python | nindent 0 }}
 {{- end }}
 
-{{- if $bb-package-install := .Files.Get "/deckhouse/candi/bashible/bb-package-install.sh.tpl" | default (.Files.Get "candi/bashible/bb-package-install.sh.tpl") -}}
-  {{- $bb-package-install . | nindent 0 }}
+{{- if $bb_package_install := .Files.Get "/deckhouse/candi/bashible/bb_package_install.sh.tpl" | default (.Files.Get "candi/bashible/bb_package_install.sh.tpl") -}}
+  {{- tpl ( $bb_package_install ) . | nindent 0 }}
 {{- end }}
 
 {{ with .images.registrypackages }}

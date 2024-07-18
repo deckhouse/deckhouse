@@ -15,6 +15,16 @@
 # limitations under the License.
 */}}
 
+#We need define functions in this file for dhctl bootstrap render
+{{- if $check_python := .Files.Get "/deckhouse/candi/bashible/check_python.sh" | default (.Files.Get "candi/bashible/check_python.sh") -}}
+  {{- $check_python | nindent 0 }}
+{{- end }}
+
+{{- if $bb_package_install := .Files.Get "/deckhouse/candi/bashible/bb_package_install.sh.tpl" | default (.Files.Get "candi/bashible/bb_package_install.sh.tpl") -}}
+  {{- tpl ( $bb_package_install ) . | nindent 0 }}
+{{- end }}
+
+
 if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
 {{ with .images.registrypackages }}
   bb-package-install "ec2DescribeTags:{{ .ec2DescribeTagsV001Flant2 }}" 
