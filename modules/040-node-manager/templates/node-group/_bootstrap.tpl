@@ -54,7 +54,7 @@ EOF
 }
 
 #check_python
-{{- if $check_python := .Files.Get "/deckhouse/candi/bashible/check_python.sh" | default (.Files.Get "candi/bashible/check_python.sh") -}}
+{{- if $check_python := $context.Files.Get "/deckhouse/candi/bashible/check_python.sh" | default (.Files.Get "candi/bashible/check_python.sh") -}}
   {{- $check_python . | nindent 0 }}
 {{- end }}
 
