@@ -15,11 +15,13 @@
 # limitations under the License.
 */}}
 
-#We need define functions in this file for dhctl bootstrap render
-{{- if $check_python := .Files.Get "/deckhouse/candi/bashible/check_python.sh" | default (.Files.Get "candi/bashible/check_python.sh") -}}
+
+# In node-manager render this function already defined.
+{{- if $check_python := .Files.Get "/deckhouse/candi/bashible/check_python.sh" -}}
   {{- $check_python | nindent 0 }}
 {{- end }}
 
+#We need define function in this file for dhctl bootstrap render.
 {{- if $bb_package_install := .Files.Get "/deckhouse/candi/bashible/bb_package_install.sh.tpl" | default (.Files.Get "candi/bashible/bb_package_install.sh.tpl") -}}
   {{- tpl ( $bb_package_install ) . | nindent 0 }}
 {{- end }}
