@@ -45,7 +45,7 @@ const (
 	PhaseSkipped    = "Skipped"
 )
 
-var NotReadyForDeployError = errors.New("not ready for deploy")
+var ErrNotReadyForDeploy = errors.New("not ready for deploy")
 
 type Updater[R Release] struct {
 	now          time.Time
@@ -309,7 +309,7 @@ func (du *Updater[R]) ApplyPredictedRelease(updateWindows update.Windows) error 
 	}
 
 	if !readyForDeploy {
-		return NotReadyForDeployError
+		return ErrNotReadyForDeploy
 	}
 
 	// all checks are passed, deploy release
