@@ -175,6 +175,8 @@ github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee h1:evii83J+/6QGNv
 github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee/go.mod h1:f+REaGl/+pZR97rbTcwHEka/MAipoQQ2Mc0iQUj4ak0=
 github.com/flant/shell-operator v1.4.9 h1:QHKxtc0Y5lc8OpskvyIuOUEZrNXDSo1PXAiwZ6hjLRY=
 github.com/flant/shell-operator v1.4.9/go.mod h1:pXvO4tnlY4SJJLDpO0F1jAZ1Ni7bndxhC4mSyabmPYM=
+github.com/flant/shell-operator v1.4.10 h1:QuBqx/pp+xuLU8ibZ3uOaYD8Ji5HiWXR1viDm0XeUZA=
+github.com/flant/shell-operator v1.4.10/go.mod h1:pXvO4tnlY4SJJLDpO0F1jAZ1Ni7bndxhC4mSyabmPYM=
 github.com/fogleman/gg v1.3.0 h1:/7zJX8F6AaYQc57WQCyN9cAIz+4bCJGO9B+dyW29am8=
 github.com/fogleman/gg v1.3.0/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
 github.com/foxcpp/go-mockdns v1.0.0 h1:7jBqxd3WDWwi/6WhDvacvH1XsN3rOLXyHM1uhvIx6FI=
