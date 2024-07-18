@@ -25,7 +25,6 @@ import:
 shell:
   install:
   - cd /usr/src/app
-  - yarn install
   - export NODE_ENV=production NODE_OPTIONS="--max_old_space_size=8000"
   - yarn build
 ---
