@@ -106,3 +106,22 @@
           We recommend you to migrate to the State Timeline plugin: https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/state-timeline/
 
           Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+
+- name: d8.trickster.ingress_deprecation
+  rules:
+    - alert: TricksterIngressesDeprecated
+      expr: |
+        count(d8_trickster_deprecated_ingresses > 0)
+      labels:
+        tier: cluster
+        severity_level: "8"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_trickster_deprecations: "TricksterDeprecations,tier=cluster,kubernetes=~kubernetes"
+        plk_grouped_by__d8_trickster_deprecations: "TricksterDeprecations,tier=cluster,kubernetes=~kubernetes"
+        summary: Deprecated Trickster ingresses have been found.
+        description: |
+          Some of the existing ingresses uses deprecated trickster service as its backend
+          Trickster service is no longer supported, we recommend you to migrate to Aggregation proxy
+          To list all potentially invalid ingresses use the expr `sum by (ingress, namespace, backed) (d8_trickster_deprecated_ingresses) > 0`
