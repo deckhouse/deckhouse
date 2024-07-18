@@ -69,7 +69,7 @@ function get_phase2() {
   done
 }
 
-  {{- if $bb_package_install := .Files.Get "candi/bashible/bb_package_install.sh.tpl" -}}
+  {{- if $bb_package_install := $context.Files.Get "candi/bashible/bb_package_install.sh.tpl" -}}
     {{- tpl ( $bb_package_install ) $tpl_context | nindent 0 }}
   {{- end }}
 

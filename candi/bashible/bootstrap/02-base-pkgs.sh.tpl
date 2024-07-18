@@ -17,7 +17,7 @@
 set -Eeo pipefail
 
 {{- /*
-# dhctl and node-manager renders have differents helm root dir and .Files.Get should use different paths:
+# dhctl and node-manager renders have different helm root dir and .Files.Get should use different paths:
 # '/deckhouse/candi/bashible/...' - dhctl
 # 'candi/bashible/...' - node-manager
 # For dhctl render we include 'bb_package_install'.
