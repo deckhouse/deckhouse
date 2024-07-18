@@ -41,21 +41,21 @@ func newModuleUpdater(logger logger.Logger, nConfig *updater.NotificationConfig,
 	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string) *updater.Updater[*v1alpha1.ModuleRelease] {
 	return updater.NewUpdater[*v1alpha1.ModuleRelease](logger, nConfig, mode,
 		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(),
-		newSettings(), newWebhookDataGetter(), enabledModules)
+		newSettings(), newWebhookDataSource(), enabledModules)
 }
 
-func newWebhookDataGetter() *webhookDataGetter {
-	return &webhookDataGetter{}
+func newWebhookDataSource() *webhookDataSource {
+	return &webhookDataSource{}
 }
 
-type webhookDataGetter struct {
+type webhookDataSource struct {
 }
 
-func (w *webhookDataGetter) GetMessage(release *v1alpha1.ModuleRelease, releaseApplyTime time.Time) string {
-	version := fmt.Sprintf("%d.%d", release.GetVersion().Major(), release.GetVersion().Minor())
-
-	return fmt.Sprintf("New module %s release %s is available. Release will be applied at: %s",
-		release.Spec.ModuleName, version, releaseApplyTime.Format(time.RFC850))
+func (webhookDataSource) Fill(output *updater.WebhookData, release *v1alpha1.ModuleRelease, applyTime time.Time) {
+	output.UpdateType = updater.UpdateTypeModule
+	output.Message = fmt.Sprintf("New module %s release %s is available. Release will be applied at: %s",
+		release.Spec.ModuleName, output.Version, applyTime.Format(time.RFC850))
+	output.ModuleName = release.GetModuleName()
 }
 
 func newKubeAPI(ctx context.Context, logger logger.Logger, client client.Client, externalModulesDir string, symlinksDir string,
