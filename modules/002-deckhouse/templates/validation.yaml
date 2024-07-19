@@ -120,13 +120,15 @@ spec:
         apiVersions: ["*"]
         operations: ["DELETE"]
         resources: ["*"]
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'allow-only-for-d8-accounts'
       expression: '!(request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username == "kubernetes-admin")'
+{{- else }}
   validations:
-    - expression: 'false'
+    - expression: '(request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username == "kubernetes-admin")'
       reason: Forbidden
-      messageExpression: '''Operation on machine object is forbidden for this user by ValidatingAdmissionPolicy {{ $policyName }}'''
+{{- end }}
 ---
 {{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1beta1
