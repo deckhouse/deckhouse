@@ -121,7 +121,7 @@ spec:
         operations: ["DELETE"]
         resources: ["*"]
   validations:
-    - expression: '!(request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username == "kubernetes-admin")'
+    - expression: '(request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username == "kubernetes-admin")'
       reason: Forbidden
       messageExpression: '''Operation on machine object is forbidden for this user by ValidatingAdmissionPolicy {{ $policyName }}'''
 ---
