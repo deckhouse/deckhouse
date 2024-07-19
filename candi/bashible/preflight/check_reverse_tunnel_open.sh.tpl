@@ -15,7 +15,7 @@
 # limitations under the License.
 */}}
 
-{{- $python_discovery := .Files.Get "deckhouse/candi/bashible/utils/python_discovery.sh.tpl" }}
+{{- $python_discovery := .Files.Get "deckhouse/candi/bashible/check_python.sh.tpl" }}
 {{- tpl ( $python_discovery ) . | nindent 0 }}
 
 cat - <<EOF | $python_binary
