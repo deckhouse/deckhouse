@@ -4,7 +4,7 @@ groups:
     - name: alpha
       version: v1.62
     - name: beta
-      version: v1.61
+      version: v1.62
     - name: ea
       version: v1.61
     - name: stable
