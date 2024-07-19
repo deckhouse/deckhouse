@@ -90,18 +90,20 @@ func applyMCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 }
 
 func applyCniConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var cm v1core.Secret
-	err := sdk.FromUnstructured(obj, &cm)
+	var secret v1core.Secret
+	err := sdk.FromUnstructured(obj, &secret)
 	if err != nil {
 		return "", err
 	}
 
-	cni, ok := cm.Data["cni"]
-	if ok {
-		return string(cni), nil
+	cni, ok := secret.Data["cni"]
+	fmt.Printf("CNI string: %s", string(cni))
+
+	if !ok || len(string(cni)) == 0 {
+		return nil, nil
 	}
 
-	return nil, nil
+	return string(cni), nil
 }
 
 func enableCni(input *go_hook.HookInput) error {
@@ -111,7 +113,8 @@ func enableCni(input *go_hook.HookInput) error {
 	explicitlyEnabledCNIs := set.NewFromSnapshot(deckhouseMCSnap)
 
 	if len(cniNameSnap) == 0 {
-		return fmt.Errorf("CNI name not found")
+		input.LogEntry.Warnln("CNI name not found")
+		return nil
 	}
 
 	if len(explicitlyEnabledCNIs) > 1 {
