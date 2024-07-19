@@ -122,7 +122,7 @@ spec:
         resources: ["*"]
   matchConditions:
     - name: 'allow-only-for-d8-accounts'
-      expression: '!(request.userInfo.username.startsWith("system:serviceaccount:d8-"))'
+      expression: '!(request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username == "kubernetes-admin")'
   validations:
     - expression: 'false'
       reason: Forbidden
