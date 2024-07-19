@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -95,13 +96,9 @@ func applyCniConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	if err != nil {
 		return "", err
 	}
-
 	cni, ok := cm.Data["cni"]
-
-	fmt.Printf("CNI string: %s", string(cni))
-
-	if !ok || len(string(cni)) == 0 {
-		return nil, nil
+	if ok {
+		return string(cni), nil
 	}
 
 	return nil, nil
@@ -115,6 +112,15 @@ func enableCni(input *go_hook.HookInput) error {
 
 	if len(cniNameSnap) == 0 {
 		input.LogEntry.Warnln("CNI name not found")
+
+		input.PatchCollector.MergePatch(map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"annotations": map[string]string{
+					"retry-timestamp": fmt.Sprintf("%d", time.Now().Unix()),
+				},
+			},
+		}, "v1", "Secret", "kube-system", "d8-cni-configuration")
+
 		return nil
 	}
 
