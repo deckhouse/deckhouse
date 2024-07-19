@@ -183,6 +183,7 @@ func (c *moduleReleaseReconciler) deleteReconcile(ctx context.Context, mr *v1alp
 	}
 
 	if mr.Status.Phase == v1alpha1.PhaseDeployed {
+		extenders.DeleteConstraints(mr.GetModuleName())
 		symlinkPath := filepath.Join(c.externalModulesDir, "modules", fmt.Sprintf("%d-%s", mr.Spec.Weight, mr.Spec.ModuleName))
 		err := os.RemoveAll(symlinkPath)
 		if err != nil {
@@ -201,8 +202,6 @@ func (c *moduleReleaseReconciler) deleteReconcile(ctx context.Context, mr *v1alp
 	if err != nil {
 		return ctrl.Result{Requeue: true}, err
 	}
-
-	extenders.DeleteConstraints(mr.GetModuleName())
 
 	return ctrl.Result{}, nil
 }
