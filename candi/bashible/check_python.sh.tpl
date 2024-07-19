@@ -1,6 +1,5 @@
-#!/bin/bash
-
-# Copyright 2023 Flant JSC
+{{- /*
+# Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,10 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+*/}}
 
-cat > /usr/local/bin/is-instance-bootstrapped << EOF
-#!/bin/bash
-set -Eeo pipefail
-cat /etc/altlinux-release | grep -q "ALT p11"
-EOF
-chmod +x /usr/local/bin/is-instance-bootstrapped
+function check_python() {
+  for pybin in python3 python2 python; do
+    if command -v "$pybin" >/dev/null 2>&1; then
+      python_binary="$pybin"
+      return 0
+    fi
+  done
+  echo "Python not found, exiting..."
+  return 1
+}

@@ -43,16 +43,9 @@ export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
 export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
 {{- end }}
 
-function check_python() {
-  for pybin in python3 python2 python; do
-    if command -v "$pybin" >/dev/null 2>&1; then
-      python_binary="$pybin"
-      return 0
-    fi
-  done
-  echo "Python not found, exiting..."
-  return 1
-}
+{{- if $check_python := .Files.Get "/deckhouse/candi/bashible/check_python.sh.tpl" | default (.Files.Get "candi/bashible/check_python.sh.tpl") -}}
+  {{- tpl ( $check_python ) . | nindent 0 }}
+{{- end }}
 
 bb-package-install() {
   local PACKAGE_WITH_DIGEST
@@ -137,11 +130,3 @@ with open('$2', 'wb') as f:
     f.write(response.read())
 EOFILE
 }
-
-{{ with .images.registrypackages }}
-bb-package-install "jq:{{ .jq16 }}" "curl:{{ .d8Curl821 }}" "netcat:{{ .netcat110481 }}"
-{{ if eq $.provider "aws" }}
-bb-package-install "ec2DescribeTags:{{ .ec2DescribeTagsV001Flant2 }}" 
-{{- end }}
-{{- end }}
-mkdir -p /var/lib/bashible/
