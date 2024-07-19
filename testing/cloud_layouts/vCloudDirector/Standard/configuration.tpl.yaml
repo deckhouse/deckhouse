@@ -47,7 +47,7 @@ masterNodeGroup:
     sizingPolicy: ${VCD_ORG}-MSK
     etcdDiskSizeGb: 10
     rootDiskSizeGb: 40
-    template: private-templates/Ubuntu 24.04 Server (20240628)
+    template: private-templates/debian-12-template
   replicas: 1
 nodeGroups:
 - instanceClass:

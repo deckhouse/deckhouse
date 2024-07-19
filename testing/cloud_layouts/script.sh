@@ -357,7 +357,8 @@ function prepare_environment() {
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VCD_PASSWORD} ${VCD_SERVER} ${VCD_USERNAME} ${VCD_ORG}' \
         <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
         
-    ssh_user="ubuntu"
+    ssh_user="debian"
+		ssh_user_bastion="ubuntu"
     ;;
 
   "Static")
@@ -679,13 +680,17 @@ function bootstrap() {
   ssh-add "$ssh_private_key_path"
 
   # Check if LAYOUT_STATIC_BASTION_IP is set and not empty
+	if [[ -z $ssh_user_bastion ]]; then
+		$ssh_user_bastion=$ssh_user
+	fi
+
   if [[ -n "$LAYOUT_STATIC_BASTION_IP" ]]; then
-    ssh_bastion="-J $ssh_user@$LAYOUT_STATIC_BASTION_IP"
-    ssh_bastion_params="--ssh-bastion-host $LAYOUT_STATIC_BASTION_IP --ssh-bastion-user $ssh_user"
+    ssh_bastion="-J $ssh_user_bastion@$LAYOUT_STATIC_BASTION_IP"
+    ssh_bastion_params="--ssh-bastion-host $LAYOUT_STATIC_BASTION_IP --ssh-bastion-user $ssh_user_bastion"
     >&2 echo "Using static bastion at $LAYOUT_STATIC_BASTION_IP"
 
     echo "bastion_ip_address_for_ssh = \"$LAYOUT_STATIC_BASTION_IP\"" >> "$bootstrap_log"
-    echo "bastion_user_name_for_ssh = \"$ssh_user\"" >> "$bootstrap_log"
+    echo "bastion_user_name_for_ssh = \"$ssh_user_bastion\"" >> "$bootstrap_log"
 
   else
     ssh_bastion=""
