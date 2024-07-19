@@ -356,7 +356,7 @@ function prepare_environment() {
         env VCD_ORG="$LAYOUT_VCD_ORG" \
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VCD_PASSWORD} ${VCD_SERVER} ${VCD_USERNAME} ${VCD_ORG}' \
         <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
-        
+
     ssh_user="ubuntu"
     ;;
 
@@ -435,10 +435,59 @@ function run-test() {
   wait_cluster_ready || return $?
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
+    test_requirements || return $?
     change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
     wait_deckhouse_ready || return $?
     wait_cluster_ready || return $?
   fi
+}
+
+function test_requirements() {
+  wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_386 -O /usr/bin/yq &&\
+      chmod +x /usr/bin/yq
+
+  command -v yq >/dev/null 2>&1 || return 1
+
+  export deckhouseRelease=$(echo 'apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  annotations:
+    dryrun: "true"
+  name: v1.96.3
+spec:
+  version: v1.96.3
+  requirements:' | yq '. | load("/deckhouse/release.yaml") as $d1 | .spec.requirements=$d1.requirements'
+  )
+
+  testScript=$(cat <<"END_SCRIPT"
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+
+echo 'apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  settings:
+    releaseChannel: Stable
+    update:
+      mode: Auto' | kubectl apply -f -
+
+echo "$deckhouseRelease" | kubectl apply -f -
+
+[[ "$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.phase}')" == "Deployed" ]]
+END_SCRIPT
+)
+
+  if $ssh_command -i "$ssh_private_key_path" "$ssh_bastion" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+    return 0
+  fi
+
+  >&2 echo "Release status is not Deployed: $(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.phase}')"
+
+  return 1
 }
 
 function bootstrap_static() {
