@@ -45,14 +45,14 @@ func PanicRecoveryHandler() func(ctx context.Context, p any) error {
 
 func UnaryLogger(log *slog.Logger) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
-		return handler(logger.ToContext(ctx, log), req)
+		return handler(logger.ToContext(ctx, log, logger.AttrFromGRPCCtx(ctx)...), req)
 	}
 }
 
 func StreamLogger(log *slog.Logger) grpc.StreamServerInterceptor {
 	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		wss := newStreamContextWrapper(ss)
-		wss.SetContext(logger.ToContext(ss.Context(), log))
+		wss.SetContext(logger.ToContext(ss.Context(), log, logger.AttrFromGRPCCtx(ss.Context())...))
 		return handler(srv, wss)
 	}
 }
