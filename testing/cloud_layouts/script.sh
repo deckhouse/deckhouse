@@ -357,7 +357,7 @@ function prepare_environment() {
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VCD_PASSWORD} ${VCD_SERVER} ${VCD_USERNAME} ${VCD_ORG}' \
         <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
         
-    ssh_user="debian"
+    ssh_user="ubuntu"
     ;;
 
   "Static")
