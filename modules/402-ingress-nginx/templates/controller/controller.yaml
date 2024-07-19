@@ -4,7 +4,7 @@
 {{- $name := index . 2 }}
 {{- $failover := index . 3 }}
 {{- $crdChecksum := toJson $crd | sha256sum }}
-{{- $loadBalancer := (or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol")) }}
+{{- $loadBalancer := (or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough")) }}
 {{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
 {{- $kubernetesVersion := $context.Values.global.discovery.kubernetesVersion }}
 
