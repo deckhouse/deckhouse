@@ -111,8 +111,7 @@ func enableCni(input *go_hook.HookInput) error {
 	explicitlyEnabledCNIs := set.NewFromSnapshot(deckhouseMCSnap)
 
 	if len(cniNameSnap) == 0 {
-		input.LogEntry.Warnln("CNI name not found")
-		return nil
+		return fmt.Errorf("CNI name not found")
 	}
 
 	if len(explicitlyEnabledCNIs) > 1 {
