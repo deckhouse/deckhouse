@@ -115,6 +115,7 @@ spec:
           - "--livez-path=/livez"
         ports:
           - containerPort: 4219
+            hostPort: 4219
             name: https
         env:
           - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
