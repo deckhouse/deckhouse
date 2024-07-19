@@ -81,7 +81,7 @@ func handlePackagesProxyEndpoints(input *go_hook.HookInput) error {
 	endpointsList := endpointsSet.Slice() // sorted
 
 	if len(endpointsList) == 0 {
-		return fmt.Errorf("no packages proxy endpoints found ")
+		return fmt.Errorf("no packages proxy endpoints found")
 	}
 
 	input.LogEntry.Infof("found packages proxy endpoints: %v", endpointsList)
