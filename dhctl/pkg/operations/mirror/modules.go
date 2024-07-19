@@ -30,7 +30,7 @@ type Module struct {
 	Releases     []string
 }
 
-func GetDeckhouseExternalModules(mirrorCtx *Context) ([]Module, error) {
+func GetDeckhouseDownloadableModules(mirrorCtx *Context) ([]Module, error) {
 	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptionsFromMirrorContext(mirrorCtx)
 	repoPathBuildFuncForDeckhouseModule := func(repo, moduleName string) string {
 		return fmt.Sprintf("%s/modules/%s", mirrorCtx.DeckhouseRegistryRepo, moduleName)
@@ -49,13 +49,13 @@ func GetDeckhouseExternalModules(mirrorCtx *Context) ([]Module, error) {
 	return result, nil
 }
 
-func GetExternalModulesFromRepo(repo string, registryAuth authn.Authenticator, insecure, skipVerifyTLS bool) ([]Module, error) {
+func GetDownloadableModulesFromRepo(repo string, registryAuth authn.Authenticator, insecure, skipVerifyTLS bool) ([]Module, error) {
 	nameOpts, remoteOpts := MakeRemoteRegistryRequestOptions(registryAuth, insecure, skipVerifyTLS)
-	repoPathBuildFuncForExternalModule := func(repo, moduleName string) string {
+	repoPathBuildFuncForDownloadableModule := func(repo, moduleName string) string {
 		return fmt.Sprintf("%s/%s", repo, moduleName)
 	}
 
-	result, err := getModulesForRepo(repo, repoPathBuildFuncForExternalModule, nameOpts, remoteOpts)
+	result, err := getModulesForRepo(repo, repoPathBuildFuncForDownloadableModule, nameOpts, remoteOpts)
 	if err != nil {
 		return nil, fmt.Errorf("Get external modules: %w", err)
 	}
@@ -103,7 +103,7 @@ func getModulesForRepo(
 	return result, nil
 }
 
-func FindExternalModuleImages(
+func FindDownloadableModuleImages(
 	mod *Module,
 	authProvider authn.Authenticator,
 	skipReleaseChannels, insecure, skipVerifyTLS bool,

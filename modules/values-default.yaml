@@ -7,7 +7,6 @@ cloudDataCrdEnabled: true
 containerizedDataImporterEnabled: true
 controlPlaneManagerEnabled: true
 dashboardEnabled: true
-externalModuleManagerEnabled: true
 deckhouseEnabled: true
 documentationEnabled: true
 deschedulerEnabled: true

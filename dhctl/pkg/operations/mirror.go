@@ -54,7 +54,7 @@ func MirrorDeckhouseToLocalFS(
 
 	if !mirrorCtx.SkipModulesPull {
 		log.InfoF("Fetching Deckhouse external modules list...\t")
-		modules, err = mirror.GetDeckhouseExternalModules(mirrorCtx)
+		modules, err = mirror.GetDeckhouseDownloadableModules(mirrorCtx)
 		if err != nil {
 			return fmt.Errorf("get Deckhouse modules: %w", err)
 		}

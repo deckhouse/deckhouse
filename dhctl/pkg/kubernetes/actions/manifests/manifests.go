@@ -234,10 +234,19 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 					},
 				},
 				{
-					Name: "external-modules",
+					Name: "downloaded",
 					VolumeSource: apiv1.VolumeSource{
 						HostPath: &apiv1.HostPathVolumeSource{
-							Path: "/var/lib/deckhouse/external-modules",
+							Path: "/var/lib/deckhouse/downloaded",
+							Type: &hostPathDirectory,
+						},
+					},
+				},
+				{
+					Name: "host-deckhouse",
+					VolumeSource: apiv1.VolumeSource{
+						HostPath: &apiv1.HostPathVolumeSource{
+							Path: "/var/lib/deckhouse",
 							Type: &hostPathDirectory,
 						},
 					},
@@ -281,25 +290,25 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				MountPath: "/.kube",
 			},
 			{
-				Name:      "external-modules",
+				Name:      "downloaded",
 				ReadOnly:  false,
-				MountPath: "/deckhouse/external-modules",
+				MountPath: "/deckhouse/downloaded",
 			},
 		},
 	}
 
 	deckhouseInitContainer := apiv1.Container{
-		Name:            "init-external-modules",
+		Name:            "init-downloaded-modules",
 		Image:           initContainerImage,
 		ImagePullPolicy: apiv1.PullAlways,
 		Command: []string{
-			"sh", "-c", "mkdir -p /deckhouse/external-modules/modules && chown -hR 64535 /deckhouse/external-modules /deckhouse/external-modules/modules && chmod 0700 /deckhouse/external-modules /deckhouse/external-modules/modules",
+			"sh", "-c", `if [ -d "/host/deckhouse/external-modules" ] && [ -n "$(ls -A "/host/deckhouse/external-modules")" ]; then cp -r /host/deckhouse/external-modules/* /host/deckhouse/downloaded/ && rm -rf /host/deckhouse/external-modules; fi && mkdir -p /host/deckhouse/downloaded/modules && chown -hR 64535 /host/deckhouse/downloaded /host/deckhouse/downloaded/modules && chmod 0700 /host/deckhouse/downloaded /host/deckhouse/downloaded/modules`,
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
-				Name:      "external-modules",
+				Name:      "host-deckhouse",
 				ReadOnly:  false,
-				MountPath: "/deckhouse/external-modules",
+				MountPath: "/host/deckhouse",
 			},
 		},
 	}
@@ -384,7 +393,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		"/deckhouse/modules",
 	}
 
-	const downloadedModulesDir = "/deckhouse/external-modules/modules"
+	const downloadedModulesDir = "/deckhouse/downloaded/modules"
 	modulesDirs = append(modulesDirs, downloadedModulesDir)
 	deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
 	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{

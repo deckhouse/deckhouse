@@ -45,7 +45,7 @@ func discoveryModulesImagesDigests(input *go_hook.HookInput) error {
 
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		digestsFile = os.Getenv("D8_DIGESTS_TMP_FILE")
-		downloadedModulesDir = "testdata/modules-images-tags/external-modules"
+		downloadedModulesDir = "testdata/modules-images-tags/downloaded-modules"
 	}
 
 	digestsObj, err := parseImagesDigestsFile(digestsFile)
