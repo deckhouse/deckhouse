@@ -200,18 +200,6 @@ bb-package-fetch() {
   bb-log-info "Packages saved under ${BB_FETCHED_PACKAGES_STORE}"
 }
 
-# Unpack package from module image and run install script
-# bb-package-module-install package:digest registry_auth scheme registry_address registry_path
-bb-package-module-install() {
-  local MODULE_PACKAGE=$1
-  local REGISTRY_AUTH=$2
-  local SCHEME=$3
-  local REGISTRY_ADDRESS=$4
-  local REGISTRY_PATH=$5
-
-  bb-package-install $MODULE_PACKAGE
-}
-
 # run uninstall script from hold dir
 # bb-package-remove package
 bb-package-remove() {
