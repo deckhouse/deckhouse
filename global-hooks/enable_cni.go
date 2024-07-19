@@ -90,20 +90,21 @@ func applyMCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 }
 
 func applyCniConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var secret v1core.Secret
-	err := sdk.FromUnstructured(obj, &secret)
+	var cm v1core.Secret
+	err := sdk.FromUnstructured(obj, &cm)
 	if err != nil {
 		return "", err
 	}
 
-	cni, ok := secret.Data["cni"]
+	cni, ok := cm.Data["cni"]
+
 	fmt.Printf("CNI string: %s", string(cni))
 
 	if !ok || len(string(cni)) == 0 {
 		return nil, nil
 	}
 
-	return string(cni), nil
+	return nil, nil
 }
 
 func enableCni(input *go_hook.HookInput) error {
