@@ -35,7 +35,7 @@ The first check begins instantly when the operator starts.
 
 This patch adds primaryLink metric for reports.
 
-### 007-delete-historical-sboms
+### 007-delete-historical-sboms.patch
 
 This patch adds sbom reports to reportTTL manager, current version of operator can mark historical sbom reports but nobody deletes them.
 

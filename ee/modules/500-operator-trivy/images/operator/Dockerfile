@@ -30,7 +30,7 @@ RUN patch -p1 < 001-add-registry-secret-as-dockerconfigjson.patch && \
     patch -p1 < 004-scan-job-registry-ca.patch && \
     patch -p1 < 005-cis-benchmark-on-startup.patch && \
     patch -p1 < 006-new-metrics.patch && \
-    patch -p1 < 007-delete-historical-sboms
+    patch -p1 < 007-delete-historical-sboms.patch
 
 RUN go get golang.org/x/net@v0.17.0 && go mod tidy && go mod vendor
 RUN go build -ldflags '-s -w -extldflags "-static"' -o operator-trivy ./cmd/trivy-operator/main.go
