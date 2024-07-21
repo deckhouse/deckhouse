@@ -145,8 +145,8 @@ properties:
               ```
 
               Description of POST request fields:
-              - `updateType` - string, type of updating event. Possible values: `Deckhouse`, `Module`;
-              - `moduleName` - string, name of the module. Set only if updateType = `Module`
+              - `updateType` — string, the update event type. Possible values: `Deckhouse`, `Module`;
+              - `moduleName` — string, the name of the module. Set only if `updateType: Module`.
               - `version` - string, minor version number;
               - `requirements` - object, version requirements;
               - `changelogLink` - string, a URL to the minor version changelog;
