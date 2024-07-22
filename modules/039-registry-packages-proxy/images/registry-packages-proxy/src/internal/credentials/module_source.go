@@ -15,6 +15,8 @@
 package credentials
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -25,20 +27,43 @@ var moduleSourceGVR = schema.GroupVersionResource{
 	Resource: "modulesources",
 }
 
+// copy of the dhctl/pkg/apis/v1alpha1/source.go
+
 type ModuleSource struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// Spec defines the behavior of an ModuleSource.
 	Spec ModuleSourceSpec `json:"spec"`
+
+	// Status of an ModuleSource.
+	Status ModuleSourceStatus `json:"status,omitempty"`
 }
 
 type ModuleSourceSpec struct {
-	Registry ModuleSourceSpecRegistry `json:"registry"`
+	Registry       ModuleSourceSpecRegistry `json:"registry"`
+	ReleaseChannel string                   `json:"releaseChannel"`
 }
 
 type ModuleSourceSpecRegistry struct {
 	Scheme    string `json:"scheme,omitempty"`
 	Repo      string `json:"repo"`
-	DockerCFG []byte `json:"dockerCfg"`
+	DockerCFG string `json:"dockerCfg"`
 	CA        string `json:"ca"`
+}
+
+type ModuleSourceStatus struct {
+	SyncTime         time.Time     `json:"syncTime"`
+	ModulesCount     int           `json:"modulesCount"`
+	AvailableModules []string      `json:"availableModules"`
+	Msg              string        `json:"message"`
+	ModuleErrors     []ModuleError `json:"moduleErrors"`
+}
+
+type ModuleError struct {
+	Name  string `json:"name"`
+	Error string `json:"error"`
 }
