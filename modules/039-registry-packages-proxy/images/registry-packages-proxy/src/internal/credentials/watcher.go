@@ -91,7 +91,7 @@ func (w *Watcher) watchSecret(ctx context.Context) {
 	watchFunc := func(_ metav1.ListOptions) (watch.Interface, error) {
 		timeout := int64((30 * time.Second).Seconds())
 
-		// Get the module sources and their registry credentials
+		// Get the deckhouse-registry secret
 		return w.k8sClient.CoreV1().Secrets("d8-system").Watch(ctx, metav1.ListOptions{
 			TimeoutSeconds: &timeout,
 			FieldSelector:  fields.OneTermEqualSelector("metadata.name", "deckhouse-registry").String(),
@@ -196,6 +196,8 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 		return fmt.Errorf("unmarshal module source event: %v", err)
 	}
 
+	w.logger.Infof("%s event from module source %s received", moduleSourceEvent.Type, moduleSource.Name)
+
 	switch moduleSourceEvent.Type {
 	case watch.Added, watch.Modified:
 		var auth string
@@ -216,19 +218,13 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 		}
 
 		w.Lock()
-		for _, module := range moduleSource.Status.AvailableModules {
-			w.logger.Infof("added registry config for repo %s and module %s", moduleSource.Spec.Registry.Repo, module.Name)
-			fullPath := strings.Join([]string{moduleSource.Spec.Registry.Repo, module.Name}, "/")
-			w.registryClientConfigs[fullPath] = clientConfig
-		}
+		w.logger.Infof("added registry config for repo %s", moduleSource.Spec.Registry.Repo)
+		w.registryClientConfigs[moduleSource.Spec.Registry.Repo] = clientConfig
 		w.Unlock()
 	case watch.Deleted:
 		w.Lock()
-		for _, module := range moduleSource.Status.AvailableModules {
-			w.logger.Infof("deleted registry config for repo %s and module %s", moduleSource.Spec.Registry.Repo, module.Name)
-			fullPath := strings.Join([]string{moduleSource.Spec.Registry.Repo, module.Name}, "/")
-			delete(w.registryClientConfigs, fullPath)
-		}
+		w.logger.Infof("deleted registry config for repo %s", moduleSource.Spec.Registry.Repo)
+		delete(w.registryClientConfigs, moduleSource.Spec.Registry.Repo)
 		w.Unlock()
 	}
 

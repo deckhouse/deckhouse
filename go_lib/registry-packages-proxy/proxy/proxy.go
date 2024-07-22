@@ -16,6 +16,7 @@ package proxy
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -70,18 +71,26 @@ func (p *Proxy) Serve() {
 			return
 		}
 
+		requestIP := getRequestIP(r)
 		digest := r.URL.Query().Get("digest")
+		repository := r.URL.Query().Get("repository")
+		additionalPath := r.URL.Query().Get("path")
+
+		if repository == "" {
+			repository = registry.DefaultRepository
+		}
+
+		logEntry := fmt.Sprintf("request from %s received: repo = %s, digest = %s", requestIP, repository, digest)
+
+		if additionalPath != "" {
+			logEntry = fmt.Sprintf("%s, additional_path = %s", logEntry, additionalPath)
+		}
+
+		p.logger.Infof("%s\n", logEntry)
 
 		if digest == "" {
 			http.Error(w, "missing digest", http.StatusBadRequest)
 			return
-		}
-
-		repository := r.URL.Query().Get("repository")
-		if repository == registry.DefaultRepository {
-			p.logger.Infof("%s digest from main repository request received\n", digest)
-		} else {
-			p.logger.Infof("%s digest from repository %s request received\n", digest, repository)
 		}
 
 		size, packageReader, err := p.getPackage(r.Context(), digest, repository)
@@ -116,7 +125,7 @@ func (p *Proxy) Serve() {
 		}
 	})
 
-	p.logger.Debugf("Starting packages proxy listener: %s\n\n", p.listener.Addr())
+	p.logger.Debugf("Starting packages proxy listener: %s\n", p.listener.Addr())
 
 	if err := p.server.Serve(p.listener); err != nil && err != http.ErrServerClosed {
 		p.logger.Error(err)
@@ -203,4 +212,15 @@ func WithCache(cache cache.Cache) ProxyOption {
 	return func(p *Proxy) {
 		p.cache = cache
 	}
+}
+
+func getRequestIP(r *http.Request) string {
+	IPAddress := r.Header.Get("X-Real-Ip")
+	if IPAddress == "" {
+		IPAddress = r.Header.Get("X-Forwarded-For")
+	}
+	if IPAddress == "" {
+		IPAddress = r.RemoteAddr
+	}
+	return IPAddress
 }

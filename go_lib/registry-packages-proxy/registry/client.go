@@ -23,7 +23,7 @@ import (
 
 const (
 	// defaultRepository is the repository address from deckhouse-registry secret.
-	DefaultRepository = ""
+	DefaultRepository = "__default__"
 )
 
 var ErrPackageNotFound = errors.New("package not found")
