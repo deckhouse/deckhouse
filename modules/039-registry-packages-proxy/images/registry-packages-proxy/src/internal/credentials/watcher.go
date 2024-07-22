@@ -140,11 +140,13 @@ func (w *Watcher) processSecretEvent(secretEvent watch.Event) error {
 		}
 
 		w.Lock()
+		w.logger.Info("added registry config for main repo")
 		w.registryClientConfigs[registry.DefaultRepository] = registryConfig
 		w.Unlock()
 
 	case watch.Deleted:
 		w.Lock()
+		w.logger.Info("deleted registry config for main repo")
 		delete(w.registryClientConfigs, registry.DefaultRepository)
 		w.Unlock()
 	}
@@ -157,7 +159,7 @@ func (w *Watcher) watchModuleSources(ctx context.Context) {
 		timeout := int64((30 * time.Second).Seconds())
 
 		// Get the module sources and their registry credentials
-		return w.k8sDynamicClient.Resource(moduleSourceGVR).Watch(ctx, metav1.ListOptions{TimeoutSeconds: &timeout})
+		return w.k8sDynamicClient.Resource(ModuleSourceGVR).Watch(ctx, metav1.ListOptions{TimeoutSeconds: &timeout})
 	}
 
 	moduleSourcesWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
@@ -200,7 +202,7 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 
 		if len(moduleSource.Spec.Registry.DockerCFG) > 0 {
 			var err error
-			auth, err = dockerConfigToAuth(moduleSource.Spec.Registry.DockerCFG, strings.Split(moduleSource.Spec.Registry.Repo, "/")[0])
+			auth, err = dockerConfigToAuth([]byte(moduleSource.Spec.Registry.DockerCFG), strings.Split(moduleSource.Spec.Registry.Repo, "/")[0])
 			if err != nil {
 				return err
 			}
@@ -216,7 +218,7 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 		w.Lock()
 		for _, module := range moduleSource.Status.AvailableModules {
 			w.logger.Infof("added registry config for repo %s and module %s", moduleSource.Spec.Registry.Repo, module)
-			fullPath := strings.Join([]string{moduleSource.Spec.Registry.Repo, module}, "/")
+			fullPath := strings.Join([]string{moduleSource.Spec.Registry.Repo, module.Name}, "/")
 			w.registryClientConfigs[fullPath] = clientConfig
 		}
 		w.Unlock()
@@ -224,7 +226,7 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 		w.Lock()
 		for _, module := range moduleSource.Status.AvailableModules {
 			w.logger.Infof("deleted registry config for repo %s and module %s", moduleSource.Spec.Registry.Repo, module)
-			fullPath := strings.Join([]string{moduleSource.Spec.Registry.Repo, module}, "/")
+			fullPath := strings.Join([]string{moduleSource.Spec.Registry.Repo, module.Name}, "/")
 			delete(w.registryClientConfigs, fullPath)
 		}
 		w.Unlock()
