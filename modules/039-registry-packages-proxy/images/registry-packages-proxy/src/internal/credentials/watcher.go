@@ -191,7 +191,7 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(moduleSourceEvent.Object.(*unstructured.Unstructured).Object, &moduleSource)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal module source event: %v", err)
 	}
 
 	switch moduleSourceEvent.Type {
