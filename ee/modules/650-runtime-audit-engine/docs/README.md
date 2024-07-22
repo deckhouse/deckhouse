@@ -51,8 +51,8 @@ The main part of a rule is a conditional expression (which uses the [conditions 
 
 There is a built-in set of rules that cannot be disabled. It helps to identify problems with Deckhouse security as well as security problems affecting the `runtime-audit-engine` module.
 
-- a rule statically located in the `falco` container, along the path `/etc/falco/k8s_audit_rules.yaml` - rules for Kubernetes auditing.
-- a rule placed in the custom resource format [FalcoAuditRules](cr.html#falcoauditrules), `fstec` - audit rules that meet the requirements of Order No. 118 of the FSTEC of Russia dated July 4, 2022. (Information security requirements for containerization tools)
+- a rule statically located in the `falco` container, along the path `/etc/falco/k8s_audit_rules.yaml` — rules for Kubernetes auditing.
+- a rule placed in the custom resource format [FalcoAuditRules](cr.html#falcoauditrules).
 
 
 ### Custom audit rules
