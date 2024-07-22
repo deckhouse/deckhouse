@@ -218,7 +218,9 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 	err = validateModule(*moduleDef)
 	if err != nil {
 		mo.Status.Message = fmt.Sprintf("validation failed: %s", err)
-		_ = c.updateModulePullOverrideStatus(ctx, mo)
+		if err = c.updateModulePullOverrideStatus(ctx, mo); err != nil {
+			return ctrl.Result{Requeue: true}, fmt.Errorf("update ovveride status: %w", err)
+		}
 		return ctrl.Result{}, fmt.Errorf("validation failed: %w", err)
 	}
 
