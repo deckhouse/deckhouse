@@ -93,16 +93,23 @@ func applyServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 		loadBalancerClass = *service.Spec.LoadBalancerClass
 	}
 
+	var internalTrafficPolicy v1.ServiceInternalTrafficPolicy
+	if service.Spec.InternalTrafficPolicy != nil {
+		internalTrafficPolicy = *service.Spec.InternalTrafficPolicy
+	}
+
 	return ServiceInfo{
-		AnnotationIsMissed: false,
-		Name:               service.GetName(),
-		Namespace:          service.GetNamespace(),
-		L2LoadBalancerName: l2LBName,
-		LoadBalancerClass:  loadBalancerClass,
-		ExternalIPsCount:   externalIPsCount,
-		Ports:              service.Spec.Ports,
-		Selector:           service.Spec.Selector,
-		ClusterIP:          service.Spec.ClusterIP,
+		AnnotationIsMissed:    false,
+		Name:                  service.GetName(),
+		Namespace:             service.GetNamespace(),
+		L2LoadBalancerName:    l2LBName,
+		LoadBalancerClass:     loadBalancerClass,
+		ExternalIPsCount:      externalIPsCount,
+		Ports:                 service.Spec.Ports,
+		ExternalTrafficPolicy: service.Spec.ExternalTrafficPolicy,
+		InternalTrafficPolicy: internalTrafficPolicy,
+		Selector:              service.Spec.Selector,
+		ClusterIP:             service.Spec.ClusterIP,
 	}, nil
 }
 
@@ -131,6 +138,7 @@ func handleLoadBalancers(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_l2_load_balancer")
 	l2lbservices := make([]L2LBServiceConfig, 0, 4)
 	l2loadbalancers := makeL2LoadBalancersMapFromSnapshot(input.Snapshots["l2loadbalancers"])
+	configuredLoadBalancerClass := input.Values.Get("l2LoadBalancer.loadBalancerClass").String()
 
 	for _, serviceSnap := range input.Snapshots["services"] {
 		service, ok := serviceSnap.(ServiceInfo)
@@ -140,6 +148,14 @@ func handleLoadBalancers(input *go_hook.HookInput) error {
 
 		if service.AnnotationIsMissed {
 			input.LogEntry.Warnf("Annotation %s is missed for service %s in namespace %s", keyAnnotationL2BalancerName, service.Name, service.Namespace)
+			continue
+		}
+
+		if (configuredLoadBalancerClass != "" && service.LoadBalancerClass != configuredLoadBalancerClass) ||
+			(configuredLoadBalancerClass == "" && service.LoadBalancerClass != "") {
+			// two possible case:
+			// loadBalancerClass is set in mc and hook watches services with same class
+			// loadBalancerClass is empty and hook watches services without class
 			continue
 		}
 
@@ -159,15 +175,17 @@ func handleLoadBalancers(input *go_hook.HookInput) error {
 		for i := 0; i < service.ExternalIPsCount; i++ {
 			nodeIndex := i % len(nodes)
 			l2lbservices = append(l2lbservices, L2LBServiceConfig{
-				Name:              fmt.Sprintf("%s-%s-%d", service.Name, l2lb.Name, i),
-				Namespace:         service.Namespace,
-				ServiceName:       service.Name,
-				ServiceNamespace:  service.Namespace,
-				PreferredNode:     nodes[nodeIndex].Name,
-				LoadBalancerClass: service.LoadBalancerClass,
-				ClusterIP:         service.ClusterIP,
-				Ports:             service.Ports,
-				Selector:          service.Selector,
+				Name:                  fmt.Sprintf("%s-%s-%d", service.Name, l2lb.Name, i),
+				Namespace:             service.Namespace,
+				ServiceName:           service.Name,
+				ServiceNamespace:      service.Namespace,
+				PreferredNode:         nodes[nodeIndex].Name,
+				LoadBalancerClass:     service.LoadBalancerClass,
+				ExternalTrafficPolicy: service.ExternalTrafficPolicy,
+				InternalTrafficPolicy: service.InternalTrafficPolicy,
+				ClusterIP:             service.ClusterIP,
+				Ports:                 service.Ports,
+				Selector:              service.Selector,
 			})
 		}
 	}

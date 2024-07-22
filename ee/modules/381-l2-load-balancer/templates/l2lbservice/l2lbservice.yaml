@@ -15,10 +15,10 @@ spec:
     namespace: {{ $l2lbservice.serviceNamespace }}
   ports:
     {{ $l2lbservice.ports | toYaml | nindent 4 }}
+  externalTrafficPolicy: {{ $l2lbservice.externalTrafficPolicy }}
+  internalTrafficPolicy: {{ $l2lbservice.internalTrafficPolicy }}
   selector:
     {{ $l2lbservice.selector | toYaml | nindent 4 }}
   type: LoadBalancer
-  {{ if $.Values.l2LoadBalancer.loadBalancerClass }}
-  loadBalancerClass: {{ $.Values.l2LoadBalancer.loadBalancerClass }}
-  {{- end }}
+  loadBalancerClass: "l2-load-balancer-class.network.deckhouse.io"
 {{- end }}

@@ -49,6 +49,10 @@ properties:
               additionalProperties:
                 type: string
               type: object
+            externalTrafficPolicy:
+              type: string
+            InternalTrafficPolicy:
+              type: string
             ports:
               items:
                 properties:

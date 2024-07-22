@@ -56,9 +56,7 @@ spec:
             - --host=127.0.0.1
             - --port=7474
             - --ml-bindport=4225
-            {{ if .Values.l2LoadBalancer.loadBalancerClass }}
-            - --lb-class={{ .Values.l2LoadBalancer.loadBalancerClass }}
-            {{- end }}
+            - --lb-class="l2-load-balancer-class.network.deckhouse.io"
           env:
             - name: METALLB_NODE_NAME
               valueFrom:

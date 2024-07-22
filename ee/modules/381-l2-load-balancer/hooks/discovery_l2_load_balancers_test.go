@@ -13,7 +13,7 @@ import (
 )
 
 var _ = Describe("l2-load-balancer :: hooks :: discovery_l2_lb ::", func() {
-	f := HookExecutionConfigInit(`{"l2LoadBalancer":{"internal": {"l2lbservices": [{}]}}}`, "")
+	f := HookExecutionConfigInit(`{"l2LoadBalancer":{"loadBalancerClass": "my-lb-class", "internal": {"l2lbservices": [{}]}}}`, "")
 	f.RegisterCRD("network.deckhouse.io", "v1alpha1", "L2LoadBalancer", false)
 
 	Context("Empty Cluster", func() {
@@ -45,6 +45,8 @@ spec:
   - port: 7473
     protocol: TCP
     targetPort: 7473
+  externalTrafficPolicy: Local
+  internalTrafficPolicy: Cluster
   selector:
     app: nginx
   type: LoadBalancer
@@ -120,6 +122,8 @@ spec:
                 "targetPort": 7473
               }
             ],
+			"externalTrafficPolicy": "Local",
+            "internalTrafficPolicy": "Cluster",
             "selector": {
               "app": "nginx"
             }
@@ -139,6 +143,8 @@ spec:
                 "targetPort": 7473
               }
             ],
+			"externalTrafficPolicy": "Local",
+            "internalTrafficPolicy": "Cluster",
             "selector": {
               "app": "nginx"
             }
@@ -158,6 +164,8 @@ spec:
                 "targetPort": 7473
               }
             ],
+			"externalTrafficPolicy": "Local",
+            "internalTrafficPolicy": "Cluster",
             "selector": {
               "app": "nginx"
             }

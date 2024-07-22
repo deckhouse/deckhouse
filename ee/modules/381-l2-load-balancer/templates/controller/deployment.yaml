@@ -55,9 +55,7 @@ spec:
         - args:
             - --port=7472
             - --webhook-mode=disabled
-            {{ if .Values.l2LoadBalancer.loadBalancerClass }}
-            - --lb-class={{ .Values.l2LoadBalancer.loadBalancerClass }}
-            {{- end }}
+            - --lb-class="l2-load-balancer-class.network.deckhouse.io"
           env:
           - name: METALLB_ML_SECRET_NAME
             value: memberlist
