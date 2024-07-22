@@ -202,7 +202,7 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 
 		if len(moduleSource.Spec.Registry.DockerCFG) > 0 {
 			var err error
-			auth, err = dockerConfigToAuth([]byte(moduleSource.Spec.Registry.DockerCFG), strings.Split(moduleSource.Spec.Registry.Repo, "/")[0])
+			auth, err = dockerConfigToAuth(moduleSource.Spec.Registry.DockerCFG, strings.Split(moduleSource.Spec.Registry.Repo, "/")[0])
 			if err != nil {
 				return err
 			}
