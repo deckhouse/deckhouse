@@ -39,6 +39,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/pointer"
@@ -380,8 +381,13 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		}
 
 		if policyName != "" {
-			// get policy spec
-			_ = c.client.Get(ctx, types.NamespacedName{Name: policyName}, policy)
+			// get all policies regardless of their labels
+			var policies v1alpha1.ModuleUpdatePolicyList
+			err = c.client.List(ctx, &policies)
+			policy, err = c.getReleasePolicy(mr.GetModuleSource(), mr.GetName(), policies.Items)
+			if err != nil {
+				return ctrl.Result{Requeue: true}, err
+			}
 		}
 
 		if policy.Spec.Update.Mode == "Ignore" {
@@ -391,6 +397,8 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
 	} else {
+		// TODO: add alert for this
+		// TODO: In the alert we have to have a command to delete the label from MR (somthing like: kubectl label mr XXX deckhouse.io/update-policy-
 		if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy not set. Create a ModuleUpdatePolicy object and label the release '%s=<policy_name>'", UpdatePolicyLabel)); e != nil {
 			return ctrl.Result{Requeue: true}, e
 		}
@@ -474,6 +482,53 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 
 	modulesChangedReason = "a new module release found"
 	return ctrl.Result{}, nil
+}
+
+// getReleasePolicy checks if any update policy matches the module release and if it's so - returns the policy and its release channel.
+// if several policies match the module release labels, conflict=true is returned
+func (c *moduleReleaseReconciler) getReleasePolicy(sourceName, moduleName string, policies []v1alpha1.ModuleUpdatePolicy) (*v1alpha1.ModuleUpdatePolicy, error) {
+	var releaseLabelsSet labels.Set = map[string]string{"module": moduleName, "source": sourceName}
+	var matchedPolicy *v1alpha1.ModuleUpdatePolicy
+	var found bool
+
+	for _, policy := range policies {
+		if policy.Spec.ModuleReleaseSelector.LabelSelector != nil {
+			selector, err := metav1.LabelSelectorAsSelector(policy.Spec.ModuleReleaseSelector.LabelSelector)
+			if err != nil {
+				return nil, err
+			}
+			selectorSourceName, sourceLabelExists := selector.RequiresExactMatch("source")
+			if sourceLabelExists && selectorSourceName != sourceName {
+				// 'source' label is set, but does not match the given ModuleSource
+				continue
+			}
+
+			if selector.Matches(releaseLabelsSet) {
+				// ModuleUpdatePolicy matches ModuleSource and specified Module
+				if found {
+					return nil, fmt.Errorf("more than one update policy matches the module: %s and %s", matchedPolicy.Name, policy.Name)
+				}
+				found = true
+				matchedPolicy = &policy
+			}
+		}
+	}
+
+	if !found {
+		c.logger.Infof("ModuleUpdatePolicy for ModuleSource: %q, Module: %q not found, using Embedded policy: %+v", sourceName, moduleName, *c.deckhouseEmbeddedPolicy.Get())
+		return &v1alpha1.ModuleUpdatePolicy{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
+				APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "", // special empty default policy, inherits Deckhouse settings for update mode
+			},
+			Spec: *c.deckhouseEmbeddedPolicy.Get(),
+		}, nil
+	}
+
+	return matchedPolicy, nil
 }
 
 func (c *moduleReleaseReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
