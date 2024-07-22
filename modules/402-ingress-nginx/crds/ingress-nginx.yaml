@@ -626,7 +626,7 @@ spec:
                     * `HostPortWithProxyProtocol` — Ingress controller is deployed and available through nodes' ports via `hostPort, it uses proxy-protocol to get a real IP of the client.
 
                       > **Caution!** Make sure that requests to the Ingress are sent from trusted sources when using this inlet. The `acceptRequestsFrom` parameter can help you with defining trusted sources.
-                    * `HostPortWithSSLPassthrough` - Ingress controller is deployed and available through nodes' ports via `hostPort, it enables SSLPassthrough option and backends can be configurated to accept traffic without SSL termination.
+                    * `HostPortWithSSLPassthrough` - Ingress controller is deployed and available through nodes' ports via `hostPort, it enables SSLPassthrough option and backends can be configured to accept traffic without SSL termination.
                     
                       SSL Passthrough leverages SNI and reads the virtual domain from the TLS negotiation, which requires compatible clients. After a connection has been accepted by the TLS listener, 
                       it is handled by the controller itself and piped back and forth between the backend and the client.
