@@ -217,7 +217,7 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 
 		w.Lock()
 		for _, module := range moduleSource.Status.AvailableModules {
-			w.logger.Infof("added registry config for repo %s and module %s", moduleSource.Spec.Registry.Repo, module)
+			w.logger.Infof("added registry config for repo %s and module %s", moduleSource.Spec.Registry.Repo, module.Name)
 			fullPath := strings.Join([]string{moduleSource.Spec.Registry.Repo, module.Name}, "/")
 			w.registryClientConfigs[fullPath] = clientConfig
 		}
@@ -225,7 +225,7 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 	case watch.Deleted:
 		w.Lock()
 		for _, module := range moduleSource.Status.AvailableModules {
-			w.logger.Infof("deleted registry config for repo %s and module %s", moduleSource.Spec.Registry.Repo, module)
+			w.logger.Infof("deleted registry config for repo %s and module %s", moduleSource.Spec.Registry.Repo, module.Name)
 			fullPath := strings.Join([]string{moduleSource.Spec.Registry.Repo, module.Name}, "/")
 			delete(w.registryClientConfigs, fullPath)
 		}
