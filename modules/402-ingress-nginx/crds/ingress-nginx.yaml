@@ -610,7 +610,7 @@ spec:
                     The way traffic goes to cluster from the outer network.
                     * `LoadBalancer` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned.
                     * `LoadBalancerWithProxyProtocol` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned. Ingress controller uses proxy-protocol to get a real IP of the client.
-                    * `LoadBalancerWithSSLPasstrough` - Infress controller is deployed and the service of `LoadBalancer` type is provisioned. It enables SSLPassthrough option and backends can be configurated to accept traffic without SSL termination.
+                    * `LoadBalancerWithSSLPasstrough` - Ingress controller is deployed and the service of `LoadBalancer` type is provisioned. It enables SSLPassthrough option and backends can be configured to accept traffic without SSL termination.
                       > **Caution!** SSLPassthrough feature is implemented by intercepting all traffic on the configured HTTPS port (default: 443) and handing it over to a local TCP proxy. This bypasses NGINX completely and introduces a non-negligible performance penalty.
 
                       SSL Passthrough leverages SNI and reads the virtual domain from the TLS negotiation, which requires compatible clients. After a connection has been accepted by the TLS listener, 
