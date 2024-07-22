@@ -615,7 +615,7 @@ spec:
     EOF
   nodeGroups:
   - gpu
-  weight: 49
+  weight: 31
 ```
 
 Далее необходимо добавить NodeGroupConfiguration для установки драйверов Nvidia для NodeGroup `gpu`.
