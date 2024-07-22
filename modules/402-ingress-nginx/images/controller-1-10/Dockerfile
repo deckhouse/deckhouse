@@ -2,7 +2,7 @@ ARG BASE_ALT
 ARG BASE_ALT_DEV
 ARG BASE_ALPINE_DEV
 ARG BASE_GOLANG_22_ALPINE_DEV
-ARG CONTROLLER_BRANCH=controller-v1.10.2
+ARG CONTROLLER_BRANCH=controller-v1.10.3
 
 FROM $BASE_ALT as base-alt
 
@@ -67,9 +67,9 @@ RUN patch build.sh < nginx-build.patch && /build.sh
 
 # This intermediary image will be used only to copy all the required files to the chroot
 # Based on tag "controller-v1.10.2":
-# - https://github.com/kubernetes/ingress-nginx/blob/controller-v1.10.2/images/nginx-1.25/rootfs/Dockerfile
-# - https://github.com/kubernetes/ingress-nginx/blob/controller-v1.10.2/rootfs/Dockerfile-chroot
-# - https://github.com/kubernetes/ingress-nginx/blob/controller-v1.10.2/rootfs/chroot.sh
+# - https://github.com/kubernetes/ingress-nginx/blob/controller-v1.10.3/images/nginx-1.25/rootfs/Dockerfile
+# - https://github.com/kubernetes/ingress-nginx/blob/controller-v1.10.3/rootfs/Dockerfile-chroot
+# - https://github.com/kubernetes/ingress-nginx/blob/controller-v1.10.3/rootfs/chroot.sh
 FROM $BASE_ALT_DEV as chroot
 
 COPY --from=nginx-builder /usr/local /usr/local
