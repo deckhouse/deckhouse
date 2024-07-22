@@ -15,8 +15,6 @@
 package credentials
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -51,19 +49,10 @@ type ModuleSourceSpec struct {
 type ModuleSourceSpecRegistry struct {
 	Scheme    string `json:"scheme,omitempty"`
 	Repo      string `json:"repo"`
-	DockerCFG string `json:"dockerCfg"`
+	DockerCFG []byte `json:"dockerCfg"`
 	CA        string `json:"ca"`
 }
 
 type ModuleSourceStatus struct {
-	SyncTime         time.Time     `json:"syncTime"`
-	ModulesCount     int           `json:"modulesCount"`
-	AvailableModules []string      `json:"availableModules"`
-	Msg              string        `json:"message"`
-	ModuleErrors     []ModuleError `json:"moduleErrors"`
-}
-
-type ModuleError struct {
-	Name  string `json:"name"`
-	Error string `json:"error"`
+	AvailableModules []string `json:"availableModules"`
 }
