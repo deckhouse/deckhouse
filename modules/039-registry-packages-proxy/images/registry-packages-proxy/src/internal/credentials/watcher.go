@@ -16,6 +16,7 @@ package credentials
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"sync"
@@ -203,8 +204,12 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 		var auth string
 
 		if len(moduleSource.Spec.Registry.DockerCFG) > 0 {
-			var err error
-			auth, err = dockerConfigToAuth(moduleSource.Spec.Registry.DockerCFG, strings.Split(moduleSource.Spec.Registry.Repo, "/")[0])
+			dc, err := base64.StdEncoding.DecodeString(moduleSource.Spec.Registry.DockerCFG)
+			if err != nil {
+				return err
+			}
+
+			auth, err = dockerConfigToAuth(dc, strings.Split(moduleSource.Spec.Registry.Repo, "/")[0])
 			if err != nil {
 				return err
 			}

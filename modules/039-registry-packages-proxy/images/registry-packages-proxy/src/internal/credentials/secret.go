@@ -28,7 +28,7 @@ type registrySecretData struct {
 	Path         string `json:"path" yaml:"path"`
 	Scheme       string `json:"scheme" yaml:"scheme"`
 	CA           string `json:"ca,omitempty" yaml:"ca,omitempty"`
-	DockerConfig string `json:".dockerconfigjson" yaml:".dockerconfigjson"`
+	DockerConfig []byte `json:".dockerconfigjson" yaml:".dockerconfigjson"`
 }
 
 func (d *registrySecretData) FromSecretData(m map[string][]byte) {
@@ -49,7 +49,7 @@ func (d *registrySecretData) FromSecretData(m map[string][]byte) {
 	}
 
 	if v, ok := m[".dockerconfigjson"]; ok {
-		d.DockerConfig = string(v)
+		d.DockerConfig = v
 	}
 }
 
@@ -82,15 +82,10 @@ type dockerConfig struct {
 	} `json:"auths"`
 }
 
-func dockerConfigToAuth(config string, address string) (string, error) {
+func dockerConfigToAuth(config []byte, address string) (string, error) {
 	var dockerConfig dockerConfig
 
-	auth, err := base64.StdEncoding.DecodeString(config)
-	if err != nil {
-		return "", err
-	}
-
-	err = json.Unmarshal(auth, &dockerConfig)
+	err := json.Unmarshal(config, &dockerConfig)
 	if err != nil {
 		return "", err
 	}
