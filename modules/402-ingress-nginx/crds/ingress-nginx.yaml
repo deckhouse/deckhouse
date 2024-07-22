@@ -807,7 +807,7 @@ spec:
 
                         > **Caution!** The cloud provider may not support this option or ignore it.  
                         > Providers supporting the option: _AWS_, _GCP_, _Azure_.  
-                        > Providers ignoring the option: _YandexCloud_.  
+                        > Providers ignoring the option: _Yandex Cloud_.  
                         > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
                       items:
                         type: string
