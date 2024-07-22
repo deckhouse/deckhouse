@@ -161,6 +161,7 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 	if err = copyDirectory(tmpModuleVersionPath, moduleVersionPath); err != nil {
 		return fmt.Errorf("copy module dir: %w", err)
 	}
+	def.Path = moduleVersionPath
 
 	// search symlink for module by regexp
 	// module weight for a new version of the module may be different from the old one,
