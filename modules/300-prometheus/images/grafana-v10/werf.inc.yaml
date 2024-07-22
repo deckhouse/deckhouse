@@ -17,6 +17,7 @@ shell:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-js-builder
 from: {{ $.Images.BASE_NODE_18_ALPINE }}
+fromCacheVersion: "123"
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
   add: /usr/src/app
@@ -42,7 +43,7 @@ import:
 shell:
   beforeInstall:
   - apt-get update
-  - apt-get -y --no-install-recommends install gcc musl musl-tools nano
+  - apt-get -y --no-install-recommends install gcc musl musl-tools
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
   - cd /usr/src/app
@@ -71,6 +72,7 @@ shell:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
 from: {{ $.Images.BASE_UBUNTU_DEV }}
+fromCacheVersion: "123"
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
   add: /usr/src/app/bin/linux-amd64/grafana
@@ -145,6 +147,7 @@ from: {{ $.Images.BASE_ALT }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
+fromCacheVersion: "123"
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /
