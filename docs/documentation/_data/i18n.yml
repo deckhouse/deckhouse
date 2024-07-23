@@ -194,6 +194,12 @@ common:
   module_has_the_following_alerts:
     en: The following alerts are implemented in the module
     ru: В модуле реализованы следующие алерты
+  module_has_1_alert:
+    en: The module has [%d alert](%url).
+    ru: В модуле реализован [%d алерт](%url).
+  module_has_2_to_4_alerts:
+    en: The module has [%d alerts](%url).
+    ru: В модуле реализовано [%d алерта](%url).
   module_has_number_of_alerts:
     en: The module has [%d alerts](%url).
     ru: В модуле реализовано [%d алертов](%url).
