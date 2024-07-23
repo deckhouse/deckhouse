@@ -144,6 +144,7 @@ func (p *Proxy) Stop() {
 func (p *Proxy) getPackage(ctx context.Context, digest string, repository string) (int64, io.ReadCloser, error) {
 	// if cache is nil, return digest directly from registry
 	if p.cache == nil {
+		p.logger.Infof("cache is not set, trying to fetch package from registry")
 		return p.getPackageFromRegistry(ctx, digest, repository)
 	}
 
@@ -199,7 +200,7 @@ func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repos
 		return 0, nil, err
 	}
 
-	size, registryReader, err := p.registryClient.GetPackage(ctx, registryConfig, digest)
+	size, registryReader, err := p.registryClient.GetPackage(ctx, p.logger, registryConfig, digest)
 	if err != nil {
 		return 0, nil, err
 	}
