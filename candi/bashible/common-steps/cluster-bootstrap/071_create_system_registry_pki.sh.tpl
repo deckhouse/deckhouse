@@ -20,7 +20,7 @@
 registry_pki_path="/etc/kubernetes/system-registry/pki"
 etcd_pki_path="/etc/kubernetes/pki/etcd"
 
-bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf get ns d8-system || bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf create ns d8-system 
+bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf get ns d8-system || bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf create ns d8-system
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system delete secret d8-system-registry-pki || true
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret generic d8-system-registry-pki \
   --from-file=etcd-ca.key=$etcd_pki_path/ca.key \
