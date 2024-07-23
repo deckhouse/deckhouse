@@ -72,7 +72,7 @@ spec:
           image: {{ include "helm_lib_module_image" (list . "argocd") }}
           imagePullPolicy: IfNotPresent
           ports:
-          - name: notifications
+          - name: metrics
             containerPort: 9001
           livenessProbe:
             tcpSocket:
