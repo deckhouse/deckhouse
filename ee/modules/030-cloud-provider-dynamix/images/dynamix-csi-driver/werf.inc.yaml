@@ -1,0 +1,34 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /dynamix-csi-driver
+  to: /dynamix-csi-driver
+  before: setup
+docker:
+  ENTRYPOINT: ["/dynamix-csi-driver"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+git:
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to:  /src
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - export VERSION="0.1.0"
+  - cd /src
+  - go mod tidy
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version=${VERSION}" -o /dynamix-csi-driver cmd/dynamix-csi-driver/main.go
+  - chown 64535:64535 /dynamix-csi-driver
+  - chmod 0755 /dynamix-csi-driver
