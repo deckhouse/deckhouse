@@ -53,6 +53,7 @@ scopes:
     networking:
         modules:
             - node-local-dns
+            - static-routing-manager
             - network-gateway
             - metallb
             - flow-schema
@@ -75,6 +76,7 @@ scopes:
             - d8-metallb
             - d8-network-gateway
             - d8-openvpn
+            - d8-static-routing-manager
             - d8-system
             - kube-system
     observability:
@@ -2560,6 +2562,40 @@ modules:
                       nonresourceurls: []
             use: []
         namespace: d8-snapshot-controller
+    static-routing-manager:
+        scopes:
+            - networking
+        capabilities:
+            manage:
+                - name: d8:manage:capability:module:static-routing-manager:view
+                  rules:
+                    - verbs:
+                        - get
+                        - list
+                        - watch
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - static-routing-manager
+                      nonresourceurls: []
+                - name: d8:manage:capability:module:static-routing-manager:edit
+                  rules:
+                    - verbs:
+                        - create
+                        - update
+                        - patch
+                        - delete
+                      apigroups:
+                        - deckhouse.io
+                      resources:
+                        - moduleconfigs
+                      resourcenames:
+                        - static-routing-manager
+                      nonresourceurls: []
+            use: []
+        namespace: d8-static-routing-manager
     terraform-manager:
         scopes:
             - infrastructure

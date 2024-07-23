@@ -2,3 +2,4 @@ module: priority-class
 namespace: none
 scopes:
   - kubernetes
+
