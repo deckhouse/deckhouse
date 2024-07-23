@@ -21,18 +21,23 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 )
 
 func IsExtendersField(field string) bool {
-	return slices.Contains([]string{kubernetesversion.RequirementsField, deckhouseversion.RequirementsField}, field)
+	return slices.Contains([]string{
+		kubernetesversion.RequirementsField,
+		deckhouseversion.RequirementsField,
+		bootstrapped.RequirementsField}, field)
 }
 
 func Extenders() []extenders.Extender {
 	return []extenders.Extender{
 		kubernetesversion.Instance(),
 		deckhouseversion.Instance(),
+		bootstrapped.Instance(),
 	}
 }
 
@@ -47,12 +52,18 @@ func AddInstalledConstraints(module string, requirements map[string]string) erro
 			return err
 		}
 	}
+	if len(requirements[bootstrapped.RequirementsField]) > 0 {
+		if err := bootstrapped.Instance().AddInstalledConstraint(module, requirements[bootstrapped.RequirementsField]); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 func DeleteConstraints(module string) {
 	deckhouseversion.Instance().DeleteConstraints(module)
 	kubernetesversion.Instance().DeleteConstraints(module)
+	bootstrapped.Instance().DeleteConstraints(module)
 }
 
 func CheckModuleReleaseRequirements(moduleRelease, moduleName string, requirements map[string]string) error {
