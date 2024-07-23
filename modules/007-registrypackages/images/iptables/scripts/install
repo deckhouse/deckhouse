@@ -18,7 +18,7 @@ cp -f xtables-legacy-multi /opt/deckhouse/bin
 cp -f xtables-nft-multi /opt/deckhouse/bin
 
 if [ -f /opt/deckhouse/bin/iptables ]; then
-  # if iptables symlinks already exist, we doesn't update it
+  # If iptables symlinks already exist, we don't update them.
   exit 0
 fi
 
@@ -40,7 +40,7 @@ function kernelNFTSupport() {
       fi
       
       if [[ $matchCount -eq 2 ]]; then
-        # CONFIG_NF_TABLES and CONFIG_NF_TABLES_IPV4 should be present for nft support
+        # CONFIG_NF_TABLES and CONFIG_NF_TABLES_IPV4 are present for nft support
         return 0
       else
         return 1
