@@ -22,6 +22,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/google/uuid"
@@ -71,6 +72,14 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 			"--server-network=unix",
 			fmt.Sprintf("--server-address=%s", address),
 		)
+
+		// Launch new process group so that signals (ex: SIGINT) are not sent also to the child process.
+		// https://stackoverflow.com/a/66261096
+		// Child process will start own child process e.g. terraform. We want them to finish normally.
+		// Parent process should wait for all children.
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Setpgid: true,
+		}
 
 		// todo: handle logs from parallel server instances
 		cmd.Stdout = os.Stdout
