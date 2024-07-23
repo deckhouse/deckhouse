@@ -52,6 +52,7 @@ type MetaConfig struct {
 	VersionMap       map[string]interface{} `json:"-"`
 	Images           imagesDigests          `json:"-"`
 	Registry         RegistryData           `json:"-"`
+	RegistryPki      RegistryPkiData        `json:"_"`
 	UpstreamRegistry RegistryData           `json:"-"`
 	UUID             string                 `json:"clusterUUID,omitempty"`
 	InstallerVersion string                 `json:"-"`
@@ -107,16 +108,22 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		m.Registry.RegistryMode = m.DeckhouseConfig.RegistryMode
 
 		if m.DeckhouseConfig.RegistryMode != "Direct" {
+			internalRegistryPkiData, err := getRegistryPkiData()
+			if err != nil {
+				return nil, fmt.Errorf("unable to generate internal registry cert and key: %v", err)
+			}
+
 			internalRegistryData := RegistryData{
 				Address:      "localhost:5001",
 				Path:         m.Registry.Path,
-				Scheme:       "http",
+				Scheme:       "https",
 				DockerCfg:    "ewogICJhdXRocyI6IHsKICAgICJsb2NhbGhvc3Q6NTAwMSI6IHsKICAgICAgImF1dGgiOiAiY0hWemFHVnlPbkIxYzJobGNnPT0iCiAgICB9CiAgfQp9Cg==",
-				CA:           "",
+				CA:           internalRegistryPkiData.CaCert,
 				RegistryMode: m.DeckhouseConfig.RegistryMode,
 			}
 			m.UpstreamRegistry = m.Registry
 			m.Registry = internalRegistryData
+			m.RegistryPki = *internalRegistryPkiData
 		}
 	}
 
@@ -365,6 +372,7 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 			return nil, err
 		}
 		result["upstreamRegistry"] = upstreamRegistryData
+		result["registryPki"] = m.RegistryPki.ConvertToMap()
 	}
 
 	result["registry"] = registryData
@@ -453,6 +461,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 			return nil, err
 		}
 		configForBashibleBundleTemplate["upstreamRegistry"] = upstreamRegistryData
+		configForBashibleBundleTemplate["registryPki"] = m.RegistryPki.ConvertToMap()
 	}
 
 	configForBashibleBundleTemplate["registry"] = registryData
@@ -525,6 +534,8 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 	}
 
 	out.Registry = m.Registry
+	out.UpstreamRegistry = m.UpstreamRegistry
+	out.RegistryPki = out.RegistryPki
 
 	if m.ClusterType != "" {
 		out.ClusterType = m.ClusterType

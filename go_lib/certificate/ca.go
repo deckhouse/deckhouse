@@ -54,7 +54,7 @@ func GenerateCA(logger *logrus.Entry, cn string, options ...Option) (Authority, 
 	defer log.SetOutput(logWriter)
 
 	ca, _, key, err := initca.New(request)
-	if err != nil {
+	if err != nil && logger != nil {
 		logger.Errorln(buf.String())
 	}
 
