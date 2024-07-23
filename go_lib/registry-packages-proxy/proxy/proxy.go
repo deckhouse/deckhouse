@@ -87,7 +87,7 @@ func (p *Proxy) Serve() {
 			logEntry = fmt.Sprintf("%s, additional_path = %s", logEntry, additionalPath)
 		}
 
-		p.logger.Infof("%s\n", logEntry)
+		p.logger.Infof("%s", logEntry)
 
 		if digest == "" {
 			p.logger.Error("missing digest")
@@ -95,7 +95,7 @@ func (p *Proxy) Serve() {
 			return
 		}
 
-		size, packageReader, err := p.getPackage(r.Context(), digest, repository)
+		size, packageReader, err := p.getPackage(r.Context(), digest, repository, additionalPath)
 		if packageReader != nil {
 			defer packageReader.Close()
 		}
@@ -128,7 +128,7 @@ func (p *Proxy) Serve() {
 		}
 	})
 
-	p.logger.Debugf("Starting packages proxy listener: %s\n", p.listener.Addr())
+	p.logger.Debugf("Starting packages proxy listener: %s", p.listener.Addr())
 
 	if err := p.server.Serve(p.listener); err != nil && err != http.ErrServerClosed {
 		p.logger.Error(err)
@@ -144,11 +144,11 @@ func (p *Proxy) Stop() {
 	}
 }
 
-func (p *Proxy) getPackage(ctx context.Context, digest string, repository string) (int64, io.ReadCloser, error) {
+func (p *Proxy) getPackage(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
 	// if cache is nil, return digest directly from registry
 	if p.cache == nil {
 		p.logger.Infof("cache is not set, trying to fetch package from registry")
-		return p.getPackageFromRegistry(ctx, digest, repository)
+		return p.getPackageFromRegistry(ctx, digest, repository, path)
 	}
 
 	// otherwise try to find digest in the cache
@@ -159,11 +159,11 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 	// if any error other than item in the cache not found, get digest directly from the registry
 	if !errors.Is(err, cache.ErrEntryNotFound) {
 		p.logger.Errorf("Get package from cache: %v", err)
-		return p.getPackageFromRegistry(ctx, digest, repository)
+		return p.getPackageFromRegistry(ctx, digest, repository, path)
 	}
 
 	// if digest is not found in the cache, get digest from registry and add digest to the cache
-	size, registryReader, err := p.getPackageFromRegistry(ctx, digest, repository)
+	size, registryReader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -197,13 +197,13 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 	return size, pipeReader, nil
 }
 
-func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repository string) (int64, io.ReadCloser, error) {
+func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
 	registryConfig, err := p.getter.Get(repository)
 	if err != nil {
 		return 0, nil, err
 	}
 
-	size, registryReader, err := p.registryClient.GetPackage(ctx, p.logger, registryConfig, digest)
+	size, registryReader, err := p.registryClient.GetPackage(ctx, p.logger, registryConfig, digest, path)
 	if err != nil {
 		return 0, nil, err
 	}

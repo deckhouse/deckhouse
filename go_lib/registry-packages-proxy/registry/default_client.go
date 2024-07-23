@@ -34,10 +34,15 @@ import (
 
 type DefaultClient struct{}
 
-func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *ClientConfig, digest string) (int64, io.ReadCloser, error) {
+func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *ClientConfig, digest string, path string) (int64, io.ReadCloser, error) {
+
+	repo := config.Repository
+	if path != "" {
+		repo = fmt.Sprintf("%s/%s", repo, path)
+	}
 
 	nameOpts := newNameOptions(config.Scheme)
-	repository, err := name.NewRepository(config.Repository, nameOpts...)
+	repository, err := name.NewRepository(repo, nameOpts...)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -52,12 +57,11 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 		remoteOpts...)
 	if err != nil {
 		e := &transport.Error{}
-		for _, err := range e.Errors {
-			log.Error(err.String())
-		}
-		log.Error(e.Error())
-		if errors.As(err, &e) && e.StatusCode == http.StatusNotFound {
-			return 0, nil, ErrPackageNotFound
+		if errors.As(err, &e) {
+			log.Error(e.Error())
+			if e.StatusCode == http.StatusNotFound {
+				return 0, nil, ErrPackageNotFound
+			}
 		}
 		return 0, nil, err
 	}
