@@ -4,6 +4,8 @@ title: "Cloud provider — Yandex Cloud: настройки"
 
 > **Внимание!** При изменении настроек модуля **пересоздания существующих объектов `Machines` в кластере НЕ происходит** (новые объекты `Machine` будут создаваться с новыми параметрами). Пересоздание происходит только при изменении параметров `NodeGroup` и `YandexInstanceClass`. Подробнее в документации модуля [node-manager](../../modules/040-node-manager/faq.html#как-пересоздать-эфемерные-машины-в-облаке-с-новой-конфигурацией).
 
+{% include module-alerts.liquid %}
+
 {% include module-settings.liquid %}
 
 ## Storage

@@ -2,6 +2,8 @@
 title: "Модуль node-local-dns: настройки"
 ---
 
+{% include module-alerts.liquid %}
+
 {% include module-bundle.liquid %}
 
 Модуль не требует конфигурации (все работает из коробки).

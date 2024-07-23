@@ -8,4 +8,6 @@ title: "Cloud provider — AWS: настройки"
 
 Модуль автоматически создает StorageClasses, которые есть в AWS: `gp3`, `gp2`, `sc1` и `st1`, позволяет сконфигурировать диски с необходимым IOPS, а также отфильтровать ненужные StorageClass, указав их в параметре `exclude`.
 
+{% include module-alerts.liquid %}
+
 {% include module-settings.liquid %}
