@@ -22,11 +22,12 @@ if [ -f /opt/deckhouse/bin/iptables ]; then
   exit 0
 fi
 
-function kernelNFTSupport() {
+function checkNFTSupportInKernelBuildConfiguration() {
   local configNFTablesRegex='CONFIG_NF_(TABLES|TABLES_IPV4)=(y|m)'
   local configFiles=(
     /boot/config-$(uname -r)
     /proc/config.gz
+    /lib/modules/$(uname -r)/build/.config
     /boot/config
   )
 
@@ -52,7 +53,7 @@ function kernelNFTSupport() {
   return 1
 }
 
-function checkAndRemoveRule() {
+function checkNFTSupportByAddingNFTRules() {
   local iptablesCommand="/opt/deckhouse/bin/xtables-nft-multi iptables"
   local rule="-t filter -A OUTPUT -s 216.216.216.216 -d 216.216.216.216 -j ACCEPT"
 
