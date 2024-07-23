@@ -20,11 +20,7 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"net/http"
-	"net/http/httputil"
-	"time"
 
-	"github.com/emicklei/go-restful/v3"
 	"github.com/spf13/cobra"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apiserver/pkg/endpoints/openapi"
@@ -143,20 +139,6 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 	return config, nil
 }
 
-func loggingMiddleware(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
-	now := time.Now()
-
-	reqBytes, err := httputil.DumpRequest(req.Request, true)
-	if err != nil {
-		_ = resp.WriteError(http.StatusInternalServerError, err)
-		return
-	}
-
-	fmt.Printf("raw http request:\n%s", reqBytes)
-	chain.ProcessFilter(req, resp)
-	fmt.Printf("%s %s %v", req.Request.Method, req.Request.URL, time.Since(now))
-}
-
 // RunBashibleServer starts a new BashibleServer given BashibleServerOptions
 func (o BashibleServerOptions) RunBashibleServer(stopCh <-chan struct{}) error {
 	config, err := o.Config(stopCh)
@@ -176,7 +158,6 @@ func (o BashibleServerOptions) RunBashibleServer(stopCh <-chan struct{}) error {
 			return nil
 		},
 	)
-	server.GenericAPIServer.Handler.GoRestfulContainer.Filter(loggingMiddleware)
 
 	return server.GenericAPIServer.PrepareRun().Run(stopCh)
 }
