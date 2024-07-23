@@ -28,6 +28,7 @@ properties:
               x-examples: [false]
       kialiSigningKey:
         type: string
+        x-examples: "kiali"
       istioToK8sCompatibilityMap:
         type: object
         default:
