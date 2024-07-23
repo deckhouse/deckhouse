@@ -64,15 +64,15 @@ func applyKialiSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 }
 
 func generateKialiSigningKey(input *go_hook.HookInput) error {
-	for _, secretSnapshot := range input.Snapshots["kiali_signing_key_secret"] {
-		secret := secretSnapshot.(kialiSecret)
-		if len(secret.SigningKey) == 32 {
-			input.Values.Set("istio.internal.kialiSigningKey", secret.SigningKey)
-			return nil
-		}
+	kialiSigningKey := ""
+	if len(input.Snapshots["kiali_signing_key_secret"]) == 1 {
+		secret := input.Snapshots["kiali_signing_key_secret"][0].(kialiSecret)
+		kialiSigningKey = secret.SigningKey
 	}
-	generatedSigningKey := randomString(32)
-	input.Values.Set("istio.internal.kialiSigningKey", generatedSigningKey)
+	if len(kialiSigningKey) != 32 {
+		kialiSigningKey = randomString(32)
+	}
+	input.Values.Set("istio.internal.kialiSigningKey", kialiSigningKey)
 	return nil
 }
 
