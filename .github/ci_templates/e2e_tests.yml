@@ -160,7 +160,7 @@ run: |
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e CRI=${CRI} \
   -e USER_RUNNER_ID=${user_runner_id} \
-  -v $(pwd)/testing:/deckhouse/testing \
+  -v $(pwd):/deckhouse \
   -v ${TMP_DIR_PATH}:/tmp \
   ${TERRAFORM_IMAGE_NAME} \
   bash /deckhouse/testing/cloud_layouts/{!{ $script_eks }!} {!{ $script_arg }!}
@@ -176,7 +176,7 @@ run: |
   -v "$PWD/config.yml:/config.yml" \
   -v ${TMP_DIR_PATH}:/tmp \
   -v "$PWD/resources.yml:/resources.yml" \
-  -v $(pwd)/testing:/deckhouse/testing \
+  -v $(pwd):/deckhouse \
   ${INSTALL_IMAGE_NAME} \
   bash -c "dhctl bootstrap-phase install-deckhouse \
     --kubeconfig=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
@@ -198,7 +198,7 @@ run: |
   -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
   -e CRI=${CRI} \
   -e USER_RUNNER_ID=${user_runner_id} \
-  -v $(pwd)/testing:/deckhouse/testing \
+  -v $(pwd):/deckhouse \
   -v ${TMP_DIR_PATH}:/tmp \
   ${TERRAFORM_IMAGE_NAME} \
   bash -c "/deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_deckhouse_ready && \
@@ -249,7 +249,7 @@ run: |
     -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
 {!{- end }!}
     -e USER_RUNNER_ID=${user_runner_id} \
-    -v $(pwd)/testing:/deckhouse/testing \
+    -v $(pwd):/deckhouse \
     -v ${TMP_DIR_PATH}:/tmp \
     -w /deckhouse \
   ${INSTALL_IMAGE_NAME} \

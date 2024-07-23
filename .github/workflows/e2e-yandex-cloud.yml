@@ -492,7 +492,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd):/deckhouse \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -581,7 +581,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd):/deckhouse \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -965,7 +965,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd):/deckhouse \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -1054,7 +1054,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd):/deckhouse \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -1438,7 +1438,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd):/deckhouse \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -1527,7 +1527,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd):/deckhouse \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -1911,7 +1911,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd):/deckhouse \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -2000,7 +2000,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd):/deckhouse \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -2384,7 +2384,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd):/deckhouse \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -2473,7 +2473,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd):/deckhouse \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -2857,7 +2857,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd):/deckhouse \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -2946,7 +2946,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd):/deckhouse \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \

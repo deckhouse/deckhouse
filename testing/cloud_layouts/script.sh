@@ -443,27 +443,24 @@ function run-test() {
 }
 
 function test_requirements() {
-  wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_386 -O /usr/bin/yq &&\
-      chmod +x /usr/bin/yq
-
-  command -v yq >/dev/null 2>&1 || return 1
-
-  export deckhouseRelease=$(echo 'apiVersion: deckhouse.io/v1alpha1
-approved: false
-kind: DeckhouseRelease
-metadata:
-  annotations:
-    dryrun: "true"
-  name: v1.96.3
-spec:
-  version: v1.96.3
-  requirements:' | yq '. | load("/deckhouse/release.yaml") as $d1 | .spec.requirements=$d1.requirements'
-  )
+  >&2 echo "Start check requirements ..."
+  if [ ! -f "release.yaml" ]; then
+      return 1
+  fi
+  releaseFile=$(< "release.yaml")
+  export releaseFile
 
   testScript=$(cat <<"END_SCRIPT"
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
+
+wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_386 -O /usr/bin/yq &&\
+  chmod +x /usr/bin/yq
+
+command -v yq >/dev/null 2>&1 || return 1
+
+echo "$releaseFile" > /tmp/releaseFile.yaml
 
 echo 'apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -475,18 +472,30 @@ spec:
     update:
       mode: Auto' | kubectl apply -f -
 
-echo "$deckhouseRelease" | kubectl apply -f -
+echo 'apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  annotations:
+    dryrun: "true"
+  name: v1.96.3
+spec:
+  version: v1.96.3
+  requirements:' | yq '. | load(\"/tmp/releaseFile.yaml\") as \$d1 | .spec.requirements=\$d1.requirements' | kubectl apply -f -
+
+rm /tmp/releaseFile.yaml
+
+>&2 echo "Release status: $(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.phase}')"
 
 [[ "$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.phase}')" == "Deployed" ]]
 END_SCRIPT
 )
 
-  if $ssh_command -i "$ssh_private_key_path" "$ssh_bastion" "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+  if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
     return 0
   fi
 
-  >&2 echo "Release status is not Deployed: $(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.phase}')"
-
+  write_deckhouse_logs
   return 1
 }
 
