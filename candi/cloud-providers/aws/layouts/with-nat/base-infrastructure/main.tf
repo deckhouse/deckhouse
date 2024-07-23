@@ -41,7 +41,6 @@ data "aws_availability_zones" "available_except_local_zone" {
 locals {
   az_count    = length(data.aws_availability_zones.available.names)
   subnet_cidr = lookup(var.providerClusterConfiguration, "nodeNetworkCIDR", module.vpc.cidr_block)
-
 }
 
 resource "aws_subnet" "kube_public" {
