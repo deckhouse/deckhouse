@@ -84,12 +84,15 @@
  - **[deckhouse]** Clarify `ValidatingAdmissionPolicy` for objects with label `heritage: deckhouse`. [#8819](https://github.com/deckhouse/deckhouse/pull/8819)
  - **[deckhouse]** registry-packages-proxy revision. [#8796](https://github.com/deckhouse/deckhouse/pull/8796)
  - **[deckhouse]** Fix ValidatingAdmissionPolicy for objects with the label `heritage: deckhouse`. [#8778](https://github.com/deckhouse/deckhouse/pull/8778)
+ - **[dhctl]** Enable default preflight checks for dhctl server bootstrap operation. [#9013](https://github.com/deckhouse/deckhouse/pull/9013)
  - **[dhctl]** Fix a preflight check for python breaking without `python` symlink installed. [#8890](https://github.com/deckhouse/deckhouse/pull/8890)
  - **[dhctl]** Set right path for terrafrom plugins. [#8831](https://github.com/deckhouse/deckhouse/pull/8831)
  - **[dhctl]** Fixed bootstrap on systems with umask `027/077`. [#8622](https://github.com/deckhouse/deckhouse/pull/8622)
  - **[dhctl]** Fix incorrect error handling. [#8506](https://github.com/deckhouse/deckhouse/pull/8506)
  - **[docs]** The outdated `--resources` flag has been replaced by `--config` in the Getting Started. Update kind-d8.sh to use newer KIND and Kubectl versions. [#8775](https://github.com/deckhouse/deckhouse/pull/8775)
  - **[go_lib]** Fix working registry packages proxy with insecure registries(HTTP). [#8891](https://github.com/deckhouse/deckhouse/pull/8891)
+ - **[istio]** Revert Istio operator RBAC. [#9116](https://github.com/deckhouse/deckhouse/pull/9116)
+    The previous fix was breaking the deployment of new versions of istiod.
  - **[log-shipper]** Delete lock files before sending a signal to vector to update the configuration. [#8730](https://github.com/deckhouse/deckhouse/pull/8730)
  - **[monitoring-kubernetes]** Fix node exporter NTP address. [#9016](https://github.com/deckhouse/deckhouse/pull/9016)
     node-exporter will restart.
@@ -103,6 +106,7 @@
  - **[prometheus]** Fix copying of Grafana v10 custom certificate. [#8749](https://github.com/deckhouse/deckhouse/pull/8749)
  - **[prometheus]** Expose Grafana v10 metrics. [#8723](https://github.com/deckhouse/deckhouse/pull/8723)
  - **[prometheus]** Update documentation. Remove the patch for Grafana 10. [#8580](https://github.com/deckhouse/deckhouse/pull/8580)
+ - **[registrypackages]** Fix detection of iptables nft support in iptables registry-package during install. [#9121](https://github.com/deckhouse/deckhouse/pull/9121)
 
 ## Chore
 
@@ -129,6 +133,7 @@
     Note that you will need to change the access policies on the firewalls before upgrading the cluster.
  - **[cni-cilium]** Add alert for orphan EgressGatewayPolicy. [#8912](https://github.com/deckhouse/deckhouse/pull/8912)
  - **[deckhouse]** Fix overwriting embedded modules' images tags. [#8722](https://github.com/deckhouse/deckhouse/pull/8722)
+ - **[dhctl]** Minor logging fixes. [#9062](https://github.com/deckhouse/deckhouse/pull/9062)
  - **[docs]** Add documentation on module development. [#7779](https://github.com/deckhouse/deckhouse/pull/7779)
  - **[ingress-nginx]** Adjust `D8NginxIngressKruiseControllerPodIsRestartingTooOften` alert's threshold. [#8966](https://github.com/deckhouse/deckhouse/pull/8966)
  - **[ingress-nginx]** Make deprecated GeoIP hook less intrusive. [#8822](https://github.com/deckhouse/deckhouse/pull/8822)
