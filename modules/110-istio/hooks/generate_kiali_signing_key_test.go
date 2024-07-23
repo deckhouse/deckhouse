@@ -63,4 +63,26 @@ data:
 		})
 	})
 
+	Context("Wrong signing key is in cluster; empty value", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kiali-signing-key
+  namespace: d8-istio
+type: Opaque
+data:
+  key: "d3Jvbmcta2V5" # "wrong-key", not 32 bytes len
+`))
+			f.RunHook()
+		})
+		It("Signing key must be generated anew", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+
+			Expect(len(f.ValuesGet("istio.internal.kialiSigningKey").String())).To(Equal(32))
+		})
+	})
 })
