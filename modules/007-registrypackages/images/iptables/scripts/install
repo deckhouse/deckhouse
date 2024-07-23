@@ -28,14 +28,13 @@ function checkNFTSupportInKernelBuildConfiguration() {
     /boot/config-$(uname -r)
     /proc/config.gz
     /lib/modules/$(uname -r)/build/.config
-    /boot/config
   )
 
   for file in "${configFiles[@]}"; do
     if [ -f "$file" ]; then
       local matchCount
       if [[ "$file" == *.gz ]]; then
-        matchCount=$(zgrep -Ec "$configNFTablesRegex" "$file")
+        matchCount=$(cat "$file" | gzip -d | grep -Ec "$configNFTablesRegex" )
       else
         matchCount=$(grep -Ec "$configNFTablesRegex" "$file")
       fi
@@ -55,12 +54,12 @@ function checkNFTSupportInKernelBuildConfiguration() {
 
 function checkNFTSupportByAddingNFTRules() {
   local iptablesCommand="/opt/deckhouse/bin/xtables-nft-multi iptables"
-  local rule="-t filter -A OUTPUT -s 216.216.216.216 -d 216.216.216.216 -j ACCEPT"
+  local rule="-t filter -A OUTPUT -s 127.216.216.216 -d 127.216.216.216 -j ACCEPT"
 
   # Check if the rule can be added
   if $($iptablesCommand $rule); then
     # Delete the rule if it was successfully added
-    $iptablesCommand -t filter -D OUTPUT -s 216.216.216.216 -d 216.216.216.216 -j ACCEPT
+    $iptablesCommand -t filter -D OUTPUT -s 127.216.216.216 -d 127.216.216.216 -j ACCEPT
     return 0
   fi
 
@@ -68,9 +67,9 @@ function checkNFTSupportByAddingNFTRules() {
 }
 
 function isNftSupport() {
-  if kernelNFTSupport; then
+  if checkNFTSupportInKernelBuildConfiguration; then
     return 0
-  elif checkAndRemoveRule; then
+  elif checkNFTSupportByAddingNFTRules; then
     return 0
   else
     return 1
