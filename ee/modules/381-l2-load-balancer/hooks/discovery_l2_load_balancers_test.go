@@ -108,6 +108,7 @@ spec:
 			Expect(f.ValuesGet("l2LoadBalancer.internal.l2lbservices").String()).To(MatchJSON(`
 [
           {
+			"publishNotReadyAddresses": false,
             "name": "nginx-ingress-0",
             "namespace": "nginx",
 			"serviceName": "nginx",
@@ -129,6 +130,7 @@ spec:
             }
           },
           {
+			"publishNotReadyAddresses": false,
             "name": "nginx-ingress-1",
             "namespace": "nginx",
 			"serviceName": "nginx",
@@ -150,6 +152,7 @@ spec:
             }
           },
           {
+			"publishNotReadyAddresses": false,
             "name": "nginx-ingress-2",
             "namespace": "nginx",
 			"serviceName": "nginx",

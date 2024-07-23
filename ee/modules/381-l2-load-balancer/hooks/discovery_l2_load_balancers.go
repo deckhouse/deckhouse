@@ -76,7 +76,7 @@ func applyServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	l2LBName, ok := service.Annotations[keyAnnotationL2BalancerName]
 	if !ok {
 		// L2LoadBalancer name must be specified
-		return ServiceInfo{Name: service.Name, Namespace: service.Namespace, AnnotationIsMissed: true}, nil
+		return ServiceInfo{Name: service.Name, Namespace: service.Namespace, L2LBNameAnnotationIsMissed: true}, nil
 	}
 
 	var externalIPsCount = 1
@@ -99,17 +99,18 @@ func applyServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	}
 
 	return ServiceInfo{
-		AnnotationIsMissed:    false,
-		Name:                  service.GetName(),
-		Namespace:             service.GetNamespace(),
-		L2LoadBalancerName:    l2LBName,
-		LoadBalancerClass:     loadBalancerClass,
-		ExternalIPsCount:      externalIPsCount,
-		Ports:                 service.Spec.Ports,
-		ExternalTrafficPolicy: service.Spec.ExternalTrafficPolicy,
-		InternalTrafficPolicy: internalTrafficPolicy,
-		Selector:              service.Spec.Selector,
-		ClusterIP:             service.Spec.ClusterIP,
+		L2LBNameAnnotationIsMissed: false,
+		Name:                       service.GetName(),
+		Namespace:                  service.GetNamespace(),
+		L2LoadBalancerName:         l2LBName,
+		LoadBalancerClass:          loadBalancerClass,
+		ExternalIPsCount:           externalIPsCount,
+		Ports:                      service.Spec.Ports,
+		ExternalTrafficPolicy:      service.Spec.ExternalTrafficPolicy,
+		InternalTrafficPolicy:      internalTrafficPolicy,
+		Selector:                   service.Spec.Selector,
+		ClusterIP:                  service.Spec.ClusterIP,
+		PublishNotReadyAddresses:   service.Spec.PublishNotReadyAddresses,
 	}, nil
 }
 
@@ -138,7 +139,7 @@ func handleLoadBalancers(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_l2_load_balancer")
 	l2lbservices := make([]L2LBServiceConfig, 0, 4)
 	l2loadbalancers := makeL2LoadBalancersMapFromSnapshot(input.Snapshots["l2loadbalancers"])
-	configuredLoadBalancerClass := input.Values.Get("l2LoadBalancer.loadBalancerClass").String()
+	l2lbLoadBalancerClass := input.Values.Get("l2LoadBalancer.loadBalancerClass").String()
 
 	for _, serviceSnap := range input.Snapshots["services"] {
 		service, ok := serviceSnap.(ServiceInfo)
@@ -146,13 +147,13 @@ func handleLoadBalancers(input *go_hook.HookInput) error {
 			continue
 		}
 
-		if service.AnnotationIsMissed {
+		if service.L2LBNameAnnotationIsMissed {
 			input.LogEntry.Warnf("Annotation %s is missed for service %s in namespace %s", keyAnnotationL2BalancerName, service.Name, service.Namespace)
 			continue
 		}
 
-		if (configuredLoadBalancerClass != "" && service.LoadBalancerClass != configuredLoadBalancerClass) ||
-			(configuredLoadBalancerClass == "" && service.LoadBalancerClass != "") {
+		if (l2lbLoadBalancerClass != "" && service.LoadBalancerClass != l2lbLoadBalancerClass) ||
+			(l2lbLoadBalancerClass == "" && service.LoadBalancerClass != "") {
 			// two possible cases:
 			// loadBalancerClass is set in mc and hook watches only services with the same class
 			// loadBalancerClass is empty and hook watches only services without the class
@@ -175,17 +176,18 @@ func handleLoadBalancers(input *go_hook.HookInput) error {
 		for i := 0; i < service.ExternalIPsCount; i++ {
 			nodeIndex := i % len(nodes)
 			l2lbservices = append(l2lbservices, L2LBServiceConfig{
-				Name:                  fmt.Sprintf("%s-%s-%d", service.Name, l2lb.Name, i),
-				Namespace:             service.Namespace,
-				ServiceName:           service.Name,
-				ServiceNamespace:      service.Namespace,
-				PreferredNode:         nodes[nodeIndex].Name,
-				LoadBalancerClass:     service.LoadBalancerClass,
-				ExternalTrafficPolicy: service.ExternalTrafficPolicy,
-				InternalTrafficPolicy: service.InternalTrafficPolicy,
-				ClusterIP:             service.ClusterIP,
-				Ports:                 service.Ports,
-				Selector:              service.Selector,
+				Name:                     fmt.Sprintf("%s-%s-%d", service.Name, l2lb.Name, i),
+				Namespace:                service.Namespace,
+				ServiceName:              service.Name,
+				ServiceNamespace:         service.Namespace,
+				PreferredNode:            nodes[nodeIndex].Name,
+				LoadBalancerClass:        service.LoadBalancerClass,
+				ExternalTrafficPolicy:    service.ExternalTrafficPolicy,
+				InternalTrafficPolicy:    service.InternalTrafficPolicy,
+				PublishNotReadyAddresses: service.PublishNotReadyAddresses,
+				ClusterIP:                service.ClusterIP,
+				Ports:                    service.Ports,
+				Selector:                 service.Selector,
 			})
 		}
 	}

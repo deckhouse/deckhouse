@@ -17,6 +17,7 @@ spec:
     {{ $l2lbservice.ports | toYaml | nindent 4 }}
   externalTrafficPolicy: {{ $l2lbservice.externalTrafficPolicy }}
   internalTrafficPolicy: {{ $l2lbservice.internalTrafficPolicy }}
+  publishNotReadyAddresses: {{ $l2lbservice.publishNotReadyAddresses }}
   selector:
     {{ $l2lbservice.selector | toYaml | nindent 4 }}
   type: LoadBalancer
