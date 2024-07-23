@@ -21,6 +21,7 @@ import (
 	"io"
 	"net"
 
+	"github.com/emicklei/go-restful/v3"
 	"github.com/spf13/cobra"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apiserver/pkg/endpoints/openapi"
@@ -115,6 +116,16 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 		return nil, err
 	}
 
+	serverConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(
+		bashibleopenapi.GetOpenAPIDefinitions,
+		openapi.NewDefinitionNamer(apiserver.Scheme))
+	serverConfig.OpenAPIConfig.Info.Title = "Bashible"
+	serverConfig.OpenAPIConfig.Info.Version = "0.1"
+
+	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
+		return nil, err
+	}
+
 	deployInformer := serverConfig.SharedInformerFactory.Apps().V1().Deployments().Informer()
 	deployHealthChecker, err := readyz.NewDeploymentReadinessCheck(stopCh, deployInformer, "d8-system", "deckhouse")
 	if err != nil {
@@ -127,6 +138,10 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 		ExtraConfig:   apiserver.ExtraConfig{},
 	}
 	return config, nil
+}
+
+func loggingMiddleware(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
+	fmt.Printf("Received request: %s %s %s\n", req.Request.RemoteAddr, req.Request.Method, req.Request.RequestURI)
 }
 
 // RunBashibleServer starts a new BashibleServer given BashibleServerOptions
@@ -148,6 +163,7 @@ func (o BashibleServerOptions) RunBashibleServer(stopCh <-chan struct{}) error {
 			return nil
 		},
 	)
+	server.GenericAPIServer.Handler.GoRestfulContainer.Filter(loggingMiddleware)
 
 	return server.GenericAPIServer.PrepareRun().Run(stopCh)
 }
