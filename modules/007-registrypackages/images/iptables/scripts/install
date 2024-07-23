@@ -19,13 +19,60 @@ cp -f xtables-nft-multi /opt/deckhouse/bin
 
 if [ -f /opt/deckhouse/bin/iptables ]; then
   # if iptables symlinks already exist, we doesn't update it
-  return 0
+  exit 0
 fi
 
-function isNftSupport() {
-  if /opt/deckhouse/bin/xtables-nft-multi iptables -t filter -A OUTPUT -s 216.216.216.216 -d 216.216.216.216 -j ACCEPT;
-    /opt/deckhouse/bin/xtables-nft-multi iptables -t filter -D OUTPUT -s 216.216.216.216 -d 216.216.216.216 -j ACCEPT
+function kernelNFTSupport() {
+  local configNFTablesRegex='CONFIG_NF_(TABLES|TABLES_IPV4)=(y|m)'
+  local configFiles=(
+    /boot/config-$(uname -r)
+    /proc/config.gz
+    /boot/config
+  )
+
+  for file in "${configFiles[@]}"; do
+    if [ -f "$file" ]; then
+      local matchCount
+      if [[ "$file" == *.gz ]]; then
+        matchCount=$(zgrep -Ec "$configNFTablesRegex" "$file")
+      else
+        matchCount=$(grep -Ec "$configNFTablesRegex" "$file")
+      fi
+      
+      if [[ $matchCount -eq 2 ]]; then
+        # CONFIG_NF_TABLES and CONFIG_NF_TABLES_IPV4 should be present for nft support
+        return 0
+      else
+        return 1
+      fi
+    fi
+  done
+
+  # If no kernel configuration files were found
+  return 1
+}
+
+function checkAndRemoveRule() {
+  local iptablesCommand="/opt/deckhouse/bin/xtables-nft-multi iptables"
+  local rule="-t filter -A OUTPUT -s 216.216.216.216 -d 216.216.216.216 -j ACCEPT"
+
+  # Check if the rule can be added
+  if $($iptablesCommand $rule); then
+    # Delete the rule if it was successfully added
+    $iptablesCommand -t filter -D OUTPUT -s 216.216.216.216 -d 216.216.216.216 -j ACCEPT
     return 0
+  fi
+  
+  return 1
+}
+
+function isNftSupport() {
+  if kernelNFTSupport; then
+    return 0
+  elif checkAndRemoveRule; then
+    return 0
+  else
+    return 1
   fi
 }
 
@@ -37,7 +84,6 @@ if [[ ${IPTABLES_LEGACY_RULE} -ne 0 ]]; then
 elif (isNftSupport); then
   iptablesModeBin="xtables-nft-multi"
 else
-  # use iptables-nft as default
   iptablesModeBin="xtables-legacy-multi"
 fi
 
