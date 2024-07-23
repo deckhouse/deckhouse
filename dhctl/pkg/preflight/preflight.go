@@ -64,8 +64,13 @@ func (pc *Checker) Static() error {
 		},
 		{
 			fun:            pc.CheckSSHTunnel,
-			successMessage: "ssh tunnel will up",
+			successMessage: "ssh tunnel between installer and node is possible",
 			skipFlag:       app.SSHForwardArgName,
+		},
+		{
+			fun:            pc.CheckPythonAndItsModules,
+			successMessage: "python and required modules are installed",
+			skipFlag:       app.PythonChecksArgName,
 		},
 		{
 			fun:            pc.CheckRegistryAccessThroughProxy,
@@ -81,6 +86,11 @@ func (pc *Checker) Static() error {
 			fun:            pc.CheckLocalhostDomain,
 			successMessage: "resolve the localhost domain",
 			skipFlag:       app.RegistryCredentialsCheckArgName,
+		},
+		{
+			fun:            pc.CheckSudoIsAllowedForUser,
+			successMessage: "sudo is allowed for user",
+			skipFlag:       app.SudoAllowedCheckArgName,
 		},
 	})
 }

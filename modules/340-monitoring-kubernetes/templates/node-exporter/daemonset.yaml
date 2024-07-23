@@ -74,11 +74,12 @@ spec:
         name: node-exporter
         {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "SYS_TIME")) | nindent 8 }}
         args:
-        - '--web.listen-address=127.0.0.1:9101'
+        - '--web.listen-address=127.0.0.1:4206'
         - '--path.rootfs=/host/root'
         - '--collector.ntp'
         - '--no-collector.wifi'
         - '--collector.ntp.server-is-local'
+        - '--collector.ntp.server=$(HOST_IP)'
         - '--collector.processes'
         - '--collector.filesystem.mount-points-exclude'
         - '(^/(dev|proc|sys|run)($|/))|(^/var/lib/docker/)|(^/var/lib/containerd/)|(/kubelet/)'
@@ -94,6 +95,11 @@ spec:
         - '/host/textfile*'
         - '--collector.netstat.fields'
         - '^(.*_(InErrors|InErrs)|Ip_Forwarding|Ip(6|Ext)_(InOctets|OutOctets)|Icmp6?_(InMsgs|OutMsgs)|TcpExt_.*|Tcp_(ActiveOpens|InSegs|OutSegs|PassiveOpens|RetransSegs|CurrEstab)|Udp6?_(InDatagrams|OutDatagrams|NoPorts))$'
+        env:
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         volumeMounts:
         - name: root
           readOnly:  true
@@ -143,7 +149,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9101"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4206"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -155,7 +161,7 @@ spec:
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             upstreams:
-            - upstream: http://127.0.0.1:9101/metrics
+            - upstream: http://127.0.0.1:4206/metrics
               path: /metrics
               authorization:
                 resourceAttributes:
@@ -166,7 +172,7 @@ spec:
                   subresource: prometheus-metrics
                   name: node-exporter
         ports:
-        - containerPort: 9101
+        - containerPort: 4206
           name: https-metrics
         resources:
           requests:

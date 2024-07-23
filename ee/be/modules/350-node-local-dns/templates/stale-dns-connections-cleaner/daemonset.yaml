@@ -67,7 +67,7 @@ spec:
           httpGet:
             path: /healthz
             host: 127.0.0.1
-            port: 9000
+            port: 8001
             scheme: HTTP
         resources:
           requests:

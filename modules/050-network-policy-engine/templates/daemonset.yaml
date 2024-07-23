@@ -57,10 +57,10 @@ spec:
         - --run-firewall=true
         - --run-service-proxy=false
         - --metrics-path=/metrics
-        - --metrics-port=10445
+        - --metrics-port=4213
         - --health-port=10444
         ports:
-        - containerPort: 10445
+        - containerPort: 4213
           name: http-metrics
         env:
         - name: NODE_NAME

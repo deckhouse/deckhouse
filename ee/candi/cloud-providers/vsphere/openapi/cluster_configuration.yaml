@@ -12,7 +12,7 @@ apiVersions:
       Run the following command to change the configuration in a running cluster:
 
       ```shell
-      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit provider-cluster-configuration
       ```
     x-doc-search: |
       ProviderClusterConfiguration
@@ -366,8 +366,6 @@ apiVersions:
         default: false
         description: |
           Set the value to `true` if the path specified in `vmFolderPath` exists. Installing more than one cluster in a folder is not possible.
-        x-examples:
-          - "dev/test"
         x-unsafe: true
       region:
         type: string

@@ -76,7 +76,7 @@ kind: ModuleConfig
 metadata:
   name: user-authn
 spec:
-  version: 1
+  version: 2
   enabled: true
   settings:
     controlPlaneConfigurator:
@@ -86,31 +86,11 @@ spec:
     # [<en>] Enabling access to the API server through Ingress.
     # [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
     publishAPI:
-      enable: true
+      enabled: true
       https:
         mode: Global
         global:
           kubeconfigGeneratorMasterCA: ""
----
-# [<en>] cni-cilium module settings.
-# [<en>] https://deckhouse.io/documentation/v1/modules/021-cni-cilium/configuration.html
-# [<ru>] Настройки модуля cni-cilium.
-# [<ru>] https://deckhouse.ru/documentation/v1/modules/021-cni-cilium/configuration.html
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: cni-cilium
-spec:
-  version: 1
-  # [<en>] Enable cni-cilium module
-  # [<ru>] Включить модуль cni-cilium
-  enabled: true
-  settings:
-    # [<en>] cni-cilium module settings
-    # [<en>] https://deckhouse.io/documentation/v1/modules/021-cni-cilium/configuration.html
-    # [<ru>] Настройки модуля cni-cilium
-    # [<ru>] https://deckhouse.ru/documentation/v1/modules/021-cni-cilium/configuration.html
-    tunnelMode: VXLAN
 ---
 # [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cluster_configuration.html

@@ -33,6 +33,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -126,6 +127,6 @@ func socketPath() (string, error) {
 		return "", fmt.Errorf("creating uuid for socket path")
 	}
 
-	address := filepath.Join("/var/run/dhctl", sockUUID.String()+".sock")
+	address := filepath.Join(app.TmpDirName, sockUUID.String()+".sock")
 	return address, nil
 }

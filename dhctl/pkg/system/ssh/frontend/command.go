@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -45,10 +46,21 @@ type Command struct {
 }
 
 func NewCommand(sess *session.Session, name string, arg ...string) *Command {
+	args := make([]string, len(arg))
+	copy(args, arg)
+	for i := range args {
+		if !strings.HasPrefix(args[i], `"`) &&
+			!strings.HasSuffix(args[i], `"`) &&
+			strings.Contains(args[i], " ") {
+			args[i] = strconv.Quote(args[i])
+		}
+	}
+
 	return &Command{
-		Session: sess,
-		Name:    name,
-		Args:    arg,
+		Executor: process.NewDefaultExecutor(cmd.NewSSH(sess).WithCommand(name, args...).Cmd()),
+		Session:  sess,
+		Name:     name,
+		Args:     args,
 	}
 }
 

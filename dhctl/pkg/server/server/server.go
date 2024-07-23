@@ -18,7 +18,6 @@ import (
 	"context"
 	"log/slog"
 	"net"
-	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
@@ -31,7 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	pbdhctl "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/interceptors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/validation"
@@ -104,7 +102,7 @@ func Serve(network, address string, parallelTasksLimit int) error {
 	go func() {
 		<-ctx.Done()
 
-		pkg.GracefulStop(s, time.Second*10)
+		s.GracefulStop()
 	}()
 
 	if err = s.Serve(listener); err != nil {

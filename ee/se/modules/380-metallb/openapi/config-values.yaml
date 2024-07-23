@@ -1,6 +1,9 @@
 type: object
 required: ["addressPools"]
 properties:
+  loadBalancerClass:
+    type: string
+    description: Optional field specifying the class of the LoadBalancer. The LoadBalancerClass field is mandatory when using both the metallb and l2-load-balancer modules simultaneously. It is also recommended to fill it in if there are third-party controllers in the cluster that manage Service resources with the LoadBalancer type.
   nodeSelector:
     type: object
     additionalProperties:

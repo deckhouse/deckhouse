@@ -229,6 +229,44 @@ spec:
                           description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удаленного хоста.
                         verifyCertificate:
                           description: Проверка действия TLS-сертификата удаленного хоста.
+                socket:
+                  properties:
+                    address:
+                      description: "Адрес сокета."
+                    encoding:
+                      description: "В каком формате закодировать сообщение."
+                    mode:
+                      descriptions: "Тип сокета, который будет использован."
+                    tcp:
+                      descriptions: "Параметры для настройки TCP-сокетов."
+                      properties:
+                        tls:
+                          description: Настройки защищенного TLS-соединения.
+                          properties:
+                            caFile:
+                              description: Закодированный в Base64 сертификат CA в формате PEM.
+                            clientCrt:
+                              description: Конфигурация клиентского сертификата.
+                              properties:
+                                crtFile:
+                                  description: |
+                                    Закодированный в Base64 сертификат в формате PEM.
+
+                                    Также необходимо указать ключ в параметре `keyFile`.
+                                keyFile:
+                                  description: |
+                                    Закодированный в Base64 ключ в формате PEM.
+
+                                    Также необходимо указать сертификат в параметре `crtFile`.
+                                keyPass:
+                                  description: Закодированный в Base64 пароль для ключа.
+                        verifyHostname:
+                          description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удаленного хоста.
+                        verifyCertificate:
+                          description: |
+                            Проверка действия TLS-сертификата удаленного хоста.
+                            
+                            Если установлено значение `false`, сертификат не проверяется в списках отзыва сертификатов.
                 vector:
                   properties:
                     endpoint:

@@ -21,7 +21,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
@@ -33,7 +32,6 @@ import (
 
 	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	pbdhctl "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/interceptors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/dhctl"
@@ -112,7 +110,7 @@ func Serve(network, address string) error {
 	go func() {
 		<-ctx.Done()
 
-		pkg.GracefulStop(s, time.Second*10)
+		s.GracefulStop()
 	}()
 
 	if err = s.Serve(listener); err != nil {

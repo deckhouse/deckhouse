@@ -25,7 +25,7 @@ moduleLinkTitleCR: Custom Resources
 module_is_available_in_ee_only: Модуль доступен только в Deckhouse Enterprise Edition.
 module_alert_experimental: Функциональность модуля может сильно измениться. Совместимость с будущими версиями не гарантируется
 module_alert_preview: Функциональность модуля может измениться, но основные возможности сохранятся. Совместимость с будущими версиями обеспечивается, но может потребовать дополнительных действий по миграции.
-module_alert_deprecated: Модуль выведен из употребления.
+module_alert_deprecated: Модуль устарел.
 deprecated_parameter: Параметр устарел
 deprecated_parameter_hint: Поддержка параметра может быть исключена в следующих версиях.
 element_of_array: элемент массива

@@ -19,11 +19,13 @@ create_user_and_group() {
     local userid="$2"
     local groupname="$3"
     local groupid="$4"
+		local shell="$5"
 
     uid="$(id -u "${username}" 2>/dev/null || true)"
     gid="$(getent group "${groupname}" | cut -d: -f3 || true)"
 
     if [ "$uid" == "$userid" ] && [ "$gid" == "$groupid" ]; then
+				usermod -s "$shell" "$username"
         return
     fi
 
@@ -33,7 +35,7 @@ create_user_and_group() {
     fi
 
     groupadd -g "$groupid" "$groupname"
-    useradd -u "$userid" -g "$groupname" "$username"
+    useradd -M -s "$shell" -u "$userid" -g "$groupname" "$username"
 }
 
-create_user_and_group deckhouse 64535 deckhouse 64535
+create_user_and_group deckhouse 64535 deckhouse 64535 /sbin/nologin

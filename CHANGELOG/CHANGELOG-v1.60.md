@@ -62,9 +62,9 @@
  - **[deckhouse-controller]** Fix updates to module loading statistics and an error related to concurrent requests for module documentation building. [#8235](https://github.com/deckhouse/deckhouse/pull/8235)
  - **[deckhouse-controller]** Repeated queries with a limited number of attempts to get CRDs and apply conversion strategies. [#7949](https://github.com/deckhouse/deckhouse/pull/7949)
  - **[dhctl]** Fix working with registries on non-standard ports. [#8727](https://github.com/deckhouse/deckhouse/pull/8727)
-    registry-packages-proxy should be restarted
+    registry-packages-proxy will restart.
  - **[dhctl]** Fix registry path calculation. [#8646](https://github.com/deckhouse/deckhouse/pull/8646)
-    Registry packages proxy should be restarted.
+    registry-packages-proxy will restart.
  - **[dhctl]** Print invalid YAML documents. [#8296](https://github.com/deckhouse/deckhouse/pull/8296)
  - **[dhctl]** Fix preflight ports checking when static cluster is bootstrapping. [#7917](https://github.com/deckhouse/deckhouse/pull/7917)
  - **[docs]** Add a guide for full etcd recovery in the cluster. [#8405](https://github.com/deckhouse/deckhouse/pull/8405)
@@ -81,6 +81,7 @@
  - **[metallb]** Switched to state-timeline plugin in MetalLB  Grafana dashboard. [#8389](https://github.com/deckhouse/deckhouse/pull/8389)
  - **[monitoring-applications]** Fix rabbitmq dashboard. [#7979](https://github.com/deckhouse/deckhouse/pull/7979)
  - **[monitoring-ping]** Skip nodes without IP address. [#8440](https://github.com/deckhouse/deckhouse/pull/8440)
+ - **[node-manager]** Create `status.errors` object for all _NodeUsers_ (migration) and add a conversion webhook for the same logic. [#8962](https://github.com/deckhouse/deckhouse/pull/8962)
  - **[node-manager]** Fix RBAC permissions and startup schedule cleanup of NodeUser creation errors. [#8639](https://github.com/deckhouse/deckhouse/pull/8639)
  - **[node-manager]** Errors when adding a NodeUser do not block bashible. [#8054](https://github.com/deckhouse/deckhouse/pull/8054)
  - **[okmeter]** Respect `nodeSelector` and `tolerations` configuration options from the `ModuleConfig`. [#8377](https://github.com/deckhouse/deckhouse/pull/8377)
@@ -89,9 +90,9 @@
  - **[prometheus]** Change `ignore_error` value from `true` to `false` in the aggregation proxy config to prevent caching empty results. [#8415](https://github.com/deckhouse/deckhouse/pull/8415)
  - **[prometheus]** Drop the metrics named `memcached_slab_*` from memcached. [#8342](https://github.com/deckhouse/deckhouse/pull/8342)
  - **[registry-packages-proxy]** Fix working with registries on non-standard ports. [#8727](https://github.com/deckhouse/deckhouse/pull/8727)
-    registry-packages-proxy should be restarted
+    registry-packages-proxy will restart.
  - **[registry-packages-proxy]** Fix registry path calculation. [#8646](https://github.com/deckhouse/deckhouse/pull/8646)
-    Registry packages proxy should be restarted.
+    registry-packages-proxy will restart.
  - **[registry-packages-proxy]** Don't replace the system CA certificates if a custom CA is used. [#8537](https://github.com/deckhouse/deckhouse/pull/8537)
  - **[registry-packages-proxy]** Fix panic when using custom CA. [#8276](https://github.com/deckhouse/deckhouse/pull/8276)
  - **[upmeter]** Fix agent error "cannot add series for probe <probename>: limit reached". [#8304](https://github.com/deckhouse/deckhouse/pull/8304)

@@ -80,7 +80,7 @@ kind: ModuleConfig
 metadata:
   name: user-authn
 spec:
-  version: 1
+  version: 2
   enabled: true
   settings:
     controlPlaneConfigurator:
@@ -90,11 +90,25 @@ spec:
     # [<en>] Enabling access to the API server through Ingress.
     # [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
     publishAPI:
-      enable: true
+      enabled: true
       https:
         mode: Global
         global:
           kubeconfigGeneratorMasterCA: ""
+---
+# [<en>] cloud-provider-openstack module settings.
+# [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/configuration.html
+# [<ru>] Настройки модуля cloud-provider-openstack.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-openstack
+spec:
+  version: 1
+  enabled: true
+  settings:
+    ignoreVolumeMicroversion: true
 ---
 # [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html
@@ -151,18 +165,22 @@ masterNodeGroup:
     # [<ru>] <availability zone>: <volume type>
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    DP1: dp1-high-iops
+    ME1: high-iops
   instanceClass:
-    # [<en>] Flavor in use.
-    # [<ru>] Используемый flavor.
+    # [<en>] Flavor in use. You can view the list using the command 'openstack flavor list'
+    # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-flavorname
+    # [<ru>] Используемый flavor. Посмотреть список flavor можно командой 'openstack flavor list'
+    # [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-flavorname
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
     flavorName: Standard-4-8-80
-    # [<en>] VM image in use.
-    # [<ru>] Используемый образ виртуальной машины.
+    # [<en>] VM image in use. You can view the list of images using the command 'openstack image list'
+    # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-imagename
+    # [<ru>] Используемый образ виртуальной машины. Посмотреть список образов можно командой 'openstack image list'
+    # [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-imagename
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    imageName: Ubuntu-22.04-202208
+    imageName: ubuntu-22-202404160933.gitd6495fe9
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
     rootDiskSize: 40

@@ -10,7 +10,7 @@ apiVersions:
         Выполните следующую команду, чтобы изменить конфигурацию в запущенном кластере:
 
         ```shell
-        kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+        kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit provider-cluster-configuration
         ```
       properties:
         masterNodeGroup:
@@ -147,5 +147,10 @@ apiVersions:
               description: Имя пользователя с полными правами на проект.
             password:
               description: Пароль пользователя.
+            apiToken:
+              description: |
+                Токен для аутентификации.
+
+                > **Внимание!** При использовании `apiToken` необходимо оставить `username` и `password` пустыми.
             insecure:
               description:  Устанавливается в `true`, VCD имеет self-signed-сертификат.

@@ -20,7 +20,8 @@ metadata:
       proxy_set_header X-Original-URI         $request_uri;
       ssi on;
       ssi_silent_errors on;
-      rewrite ^/source/modules/(.*)$ /modules/$1 permanent;
+      rewrite ^/source/modules/(.*)$ /modules/$1 redirect;
+      rewrite ^/platform/(.*)$ /documentation/v1/$1 redirect;
       rewrite ^/documentation/v1/modules/490-virtualization/(examples|configuration|cr|faq).html(.*)$ /modules/virtualization/stable/$1.html$2 permanent;
       rewrite ^/documentation/v1/modules/490-virtualization/.*$ /modules/virtualization/stable/ permanent;
       rewrite ^/modules/([^./]+)/?$ /modules/$1/stable/ permanent;
@@ -96,6 +97,13 @@ spec:
             port:
               name: http
       - path: /modules
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /platform
         pathType: Prefix
         backend:
           service:

@@ -23,28 +23,72 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	"github.com/pkg/errors"
 )
 
 type DefaultClient struct{}
 
 func (c *DefaultClient) GetPackage(ctx context.Context, config *ClientConfig, digest string) (int64, io.ReadCloser, error) {
-	repository, err := name.NewRepository(config.Repository)
+
+	nameOpts := newNameOptions(config.Scheme)
+	repository, err := name.NewRepository(config.Repository, nameOpts...)
 	if err != nil {
 		return 0, nil, err
 	}
 
+	remoteOpts, err := newRemoteOptions(ctx, config)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	image, err := remote.Image(
+		repository.Digest(digest),
+		remoteOpts...)
+	if err != nil {
+		e := &transport.Error{}
+		if errors.As(err, &e) && e.StatusCode == http.StatusNotFound {
+			return 0, nil, ErrPackageNotFound
+		}
+		return 0, nil, err
+	}
+
+	layers, err := image.Layers()
+	if err != nil {
+		return 0, nil, err
+	}
+
+	size, err := layers[len(layers)-1].Size()
+	if err != nil {
+		return 0, nil, err
+	}
+
+	reader, err := layers[len(layers)-1].Compressed()
+	if err != nil {
+		return 0, nil, err
+	}
+
+	return size, reader, nil
+}
+
+func newNameOptions(scheme string) []name.Option {
+	opts := []name.Option{name.StrictValidation}
+	if strings.ToLower(scheme) == "http" {
+		opts = append(opts, name.Insecure)
+	}
+	return opts
+}
+
+func newRemoteOptions(ctx context.Context, config *ClientConfig) ([]remote.Option, error) {
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 
 	if config.CA != "" {
 		certPool, err := x509.SystemCertPool()
 		if err != nil {
-			return 0, nil, fmt.Errorf("failed to load system cert pool: %w", err)
+			return nil, fmt.Errorf("failed to load system cert pool: %w", err)
 		}
 
 		certPool.AppendCertsFromPEM([]byte(config.CA))
@@ -71,33 +115,5 @@ func (c *DefaultClient) GetPackage(ctx context.Context, config *ClientConfig, di
 		})))
 	}
 
-	image, err := remote.Image(
-		repository.Digest(digest),
-		options...)
-	if err != nil {
-		e := &transport.Error{}
-
-		if errors.As(err, &e) && e.StatusCode == http.StatusNotFound {
-			return 0, nil, ErrPackageNotFound
-		}
-
-		return 0, nil, err
-	}
-
-	layers, err := image.Layers()
-	if err != nil {
-		return 0, nil, err
-	}
-
-	size, err := layers[len(layers)-1].Size()
-	if err != nil {
-		return 0, nil, err
-	}
-
-	reader, err := layers[len(layers)-1].Compressed()
-	if err != nil {
-		return 0, nil, err
-	}
-
-	return size, reader, nil
+	return options, nil
 }

@@ -28,6 +28,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -45,7 +46,7 @@ var (
 )
 
 func LoadConfigFromFile(paths []string, opts ...ValidateOption) (*MetaConfig, error) {
-	metaConfig, err := ParseConfig(paths, opts...)
+	metaConfig, err := ParseConfig(fs.RevealWildcardPaths(paths), opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +91,11 @@ func numerateManifestLines(manifest []byte) string {
 func ParseConfig(paths []string, opts ...ValidateOption) (*MetaConfig, error) {
 	content := ""
 	for _, path := range paths {
+
+		if strings.Contains(path, "*") {
+			continue // skip wildcard paths, we revealed them in the previous step
+		}
+
 		log.DebugF("Have config file %s\n", path)
 		fileContent, err := os.ReadFile(path)
 		if err != nil {

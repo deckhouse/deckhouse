@@ -22,7 +22,7 @@ docker:
 {{- end }}
 ---
 artifact: {{ $.ModuleName }}/controller-artifact
-from: {{ $.Images.BASE_GOLANG_21_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
 fromCacheVersion: 1
 git:
   - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/controller

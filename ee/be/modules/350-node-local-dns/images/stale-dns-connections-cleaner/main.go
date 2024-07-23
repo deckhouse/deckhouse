@@ -34,7 +34,7 @@ const (
 	nldLabelSelector string = "app=node-local-dns"
 	nldDstPort       uint16 = 53
 	scanInterval            = 30 * time.Second
-	listenAddress           = "127.0.0.1:9000"
+	listenAddress           = "127.0.0.1:8001"
 	// netlink const
 	familyIPv4          = syscall.AF_INET
 	protoUDP            = unix.IPPROTO_UDP

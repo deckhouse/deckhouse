@@ -14,7 +14,11 @@ docker:
   ENTRYPOINT: ["/livenessprobe"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    {{- if semverCompare ">=1.30" $version }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+    {{- else }}
 from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
+    {{- end }}
 shell:
   beforeInstall:
     - git clone --depth 1 --branch {{ $value.csi.livenessprobe }} {{ $.SOURCE_REPO }}/kubernetes-csi/livenessprobe.git /src

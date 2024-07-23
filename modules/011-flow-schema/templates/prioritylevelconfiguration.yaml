@@ -3,10 +3,8 @@
 apiVersion: flowcontrol.apiserver.k8s.io/v1
   {{- else if semverCompare "> 1.26" .Values.global.discovery.kubernetesVersion }}
 apiVersion: flowcontrol.apiserver.k8s.io/v1beta3
-{{- else if semverCompare ">= 1.25" .Values.global.discovery.kubernetesVersion }}
-apiVersion: flowcontrol.apiserver.k8s.io/v1beta2
 {{- else }}
-apiVersion: flowcontrol.apiserver.k8s.io/v1beta1
+apiVersion: flowcontrol.apiserver.k8s.io/v1beta2
 {{- end }}
 kind: PriorityLevelConfiguration
 metadata:

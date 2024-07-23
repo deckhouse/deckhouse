@@ -362,49 +362,17 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	var clusterDomain string
-	err = json.Unmarshal(metaConfig.ClusterConfig["clusterDomain"], &clusterDomain)
-	if err != nil {
-		return err
-	}
-
-	// we need clusterDomain to generate proper certificate for packages proxy
-	err = StartRegistryPackagesProxy(metaConfig.Registry, clusterDomain)
-	if err != nil {
-		return fmt.Errorf("failed to start registry packages proxy: %v", err)
-	}
-
 	if err := WaitForSSHConnectionOnMaster(b.SSHClient); err != nil {
 		return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
 	}
 
-	// need closure for registry packages tunnel
-	runBashible := func() error {
-		tun, err := SetupSSHTunnelToRegistryPackagesProxy(b.SSHClient)
-		if err != nil {
-			return fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
-		}
-		defer func() {
-			err := tun.Stop()
-			if err != nil {
-				log.DebugF("Cannot stop SSH tunnel to registry packages proxy: %v\n", err)
-			}
-		}()
-
-		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecuteBashibleBundlePhase, false, stateCache, nil); err != nil {
-			return err
-		} else if shouldStop {
-			return nil
-		}
-
-		if err := RunBashiblePipeline(b.SSHClient, metaConfig, nodeIP, devicePath); err != nil {
-			return err
-		}
-
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecuteBashibleBundlePhase, false, stateCache, nil); err != nil {
+		return err
+	} else if shouldStop {
 		return nil
 	}
 
-	if err := runBashible(); err != nil {
+	if err := RunBashiblePipeline(b.SSHClient, metaConfig, nodeIP, devicePath); err != nil {
 		return err
 	}
 

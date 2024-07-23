@@ -1194,7 +1194,7 @@ You can trigger release related actions by commenting on this issue:
 
 
 **Note 1:**
-A single command \`/e2e/run/<provider>\` will run e2e with default CRI 'containerd' and Kubernetes version '1.25'.
+A single command \`/e2e/run/<provider>\` will run e2e with default CRI 'containerd' and Kubernetes version '1.27'.
 Put \`/e2e/use\` options below \`/e2e/run\` command to set specific CRI and Kubernetes version. E.g.:
 
 \`\`\`

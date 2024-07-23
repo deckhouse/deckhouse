@@ -186,7 +186,8 @@ func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
 
 	dockerCfg, err := base64.StdEncoding.DecodeString(dockerCfgBase64)
 	if err != nil {
-		return authn.AuthConfig{}, err
+		// if base64 decoding failed, try to use input as it is
+		dockerCfg = []byte(dockerCfgBase64)
 	}
 	auths := gjson.Get(string(dockerCfg), "auths").Map()
 	authConfig := authn.AuthConfig{}

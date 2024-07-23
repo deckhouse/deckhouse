@@ -56,6 +56,9 @@ type ClusterLogDestinationSpec struct {
 	// Splunk spec for the Splunk endpoint
 	Splunk SplunkSpec `json:"splunk"`
 
+	// Socket spec for the Socket endpoint
+	Socket SocketSpec `json:"socket"`
+
 	// Vector spec for the Vector endpoint
 	Vector VectorSpec `json:"vector"`
 
@@ -108,12 +111,13 @@ type CommonTLSSpec struct {
 	VerifyCertificate   *bool  `json:"verifyCertificate,omitempty"`
 }
 
-type EncodingCodec string
+type EncodingCodec = string
 
 const (
-	EncodingCodecText EncodingCodec = "TEXT"
-	EncodingCodecCEF  EncodingCodec = "CEF"
-	EncodingCodecJSON EncodingCodec = "JSON"
+	EncodingCodecText   EncodingCodec = "Text"
+	EncodingCodecCEF    EncodingCodec = "CEF"
+	EncodingCodecJSON   EncodingCodec = "JSON"
+	EncodingCodecSyslog EncodingCodec = "Syslog"
 )
 
 type CommonEncoding struct {
@@ -190,6 +194,27 @@ type SplunkSpec struct {
 
 	Index string `json:"index,omitempty"`
 
+	TLS CommonTLSSpec `json:"tls,omitempty"`
+}
+
+type SocketSpec struct {
+	Address string `json:"address,omitempty"`
+
+	Mode SocketMode `json:"mode,omitempty"`
+
+	Encoding CommonEncoding `json:"encoding,omitempty"`
+
+	TCP SocketTCPSpec `json:"tcp,omitempty"`
+}
+
+type SocketMode = string
+
+const (
+	SocketModeTCP SocketMode = "TCP"
+	SocketModeUDP SocketMode = "UDP"
+)
+
+type SocketTCPSpec struct {
 	TLS CommonTLSSpec `json:"tls,omitempty"`
 }
 

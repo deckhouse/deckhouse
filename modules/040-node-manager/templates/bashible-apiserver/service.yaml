@@ -8,6 +8,6 @@ spec:
   ports:
   - port: 443
     protocol: TCP
-    targetPort: 10423
+    targetPort: 4221
   selector:
     app: "bashible-apiserver"

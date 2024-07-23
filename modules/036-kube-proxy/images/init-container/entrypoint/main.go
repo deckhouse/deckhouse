@@ -101,13 +101,18 @@ func main() {
 	}
 
 	featureGates := map[string]bool{
-		"ProxyTerminatingEndpoints":         true,
-		"TopologyAwareHints":                true,
+		"TopologyAwareHints": true,
 	}
 
 	kubernetesVersion, err := semver.NewVersion(os.Getenv("KUBERNETES_VERSION"))
 	if err != nil {
 		log.Fatalf("Error parsing kubernetes version: %s", err)
+	}
+
+	// The ProxyTerminatingEndpoints feature gate has been removed in Kubernetes v1.30.
+	k8s130, _ := semver.NewVersion("1.30")
+	if kubernetesVersion.LessThan(k8s130) {
+		featureGates["ProxyTerminatingEndpoints"] = true
 	}
 
 	// The DaemonSetUpdateSurge feature gate has been removed in Kubernetes v1.27.
