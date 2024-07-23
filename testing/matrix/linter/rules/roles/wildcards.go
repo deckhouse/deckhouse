@@ -105,6 +105,9 @@ var skipCheckWildcards = map[string][]string{
 	"cloud-provider-zvirt/templates/cloud-controller-manager/rbac-for-us.yaml": {
 		"d8:cloud-provider-zvirt:cloud-controller-manager",
 	},
+	"istio/templates/operator/rbac-for-us.yaml": {
+		"d8:istio:operator",
+	}, // istiod deploy doesn't work without wildcard
 }
 
 // ObjectRolesWildcard is a linter for checking the presence

@@ -12,188 +12,118 @@ metadata:
   name: d8:istio:operator
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
-# istio groups
-- apiGroups:
-  - install.istio.io
-  resources:
-  - istiooperators
-  - istiooperators/status
-  verbs:
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
-- apiGroups:
-  - networking.istio.io
-  resources:
-  - destinationrules
-  - destinationrules/status
-  - envoyfilters
-  - envoyfilters/status
-  - gateways
-  - gateways/status
-  - proxyconfigs
-  - proxyconfigs/status
-  - serviceentries
-  - serviceentries/status
-  - sidecars
-  - sidecars/status
-  - virtualservices
-  - virtualservices/status
-  - workloadentries
-  - workloadentries/status
-  - workloadgroups
-  - workloadgroups/status
-  verbs:
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
-- apiGroups:
-  - security.istio.io
-  resources:
-  - authorizationpolicies
-  - authorizationpolicies/status
-  - peerauthentications
-  - peerauthentications/status
-  - requestauthentications
-  - requestauthentications/status
-  verbs:
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
-# k8s groups
-- apiGroups:
-  - admissionregistration.k8s.io
-  resources:
-  - mutatingwebhookconfigurations
-  - validatingwebhookconfigurations
-  verbs:
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
-- apiGroups:
-  - apiextensions.k8s.io
-  resources:
-  - customresourcedefinitions.apiextensions.k8s.io
-  - customresourcedefinitions
-  verbs:
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
-- apiGroups:
-  - apps
-  - extensions
-  resources:
-  - daemonsets
-  - deployments
-  - deployments/finalizers
-  - ingresses
-  - replicasets
-  - statefulsets
-  verbs:
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
-- apiGroups:
-  - autoscaling
-  resources:
-  - horizontalpodautoscalers
-  verbs:
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
-- apiGroups:
-  - monitoring.coreos.com
-  resources:
-  - servicemonitors
-  verbs:
-  - get
-  - create
-  - update
-- apiGroups:
-  - policy
-  resources:
-  - poddisruptionbudgets
-  verbs:
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - clusterrolebindings
-  - clusterroles
-  - roles
-  - rolebindings
-  verbs:
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
-- apiGroups:
-  - coordination.k8s.io
-  resources:
-  - leases
-  verbs:
-  - get
-  - create
-  - update
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  - endpoints
-  - events
-  - namespaces
-  - pods
-  - pods/proxy
-  - pods/portforward
-  - persistentvolumeclaims
-  - secrets
-  - services
-  - serviceaccounts
-  verbs:
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
+  # istio groups
+  - apiGroups:
+      - authentication.istio.io
+    resources:
+      - '*'
+    verbs:
+      - '*'
+  - apiGroups:
+      - config.istio.io
+    resources:
+      - '*'
+    verbs:
+      - '*'
+  - apiGroups:
+      - install.istio.io
+    resources:
+      - '*'
+    verbs:
+      - '*'
+  - apiGroups:
+      - networking.istio.io
+    resources:
+      - '*'
+    verbs:
+      - '*'
+  - apiGroups:
+      - security.istio.io
+    resources:
+      - '*'
+    verbs:
+      - '*'
+  # k8s groups
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - mutatingwebhookconfigurations
+      - validatingwebhookconfigurations
+    verbs:
+      - '*'
+  - apiGroups:
+      - apiextensions.k8s.io
+    resources:
+      - customresourcedefinitions.apiextensions.k8s.io
+      - customresourcedefinitions
+    verbs:
+      - '*'
+  - apiGroups:
+      - apps
+      - extensions
+    resources:
+      - daemonsets
+      - deployments
+      - deployments/finalizers
+      - ingresses
+      - replicasets
+      - statefulsets
+    verbs:
+      - '*'
+  - apiGroups:
+      - autoscaling
+    resources:
+      - horizontalpodautoscalers
+    verbs:
+      - '*'
+  - apiGroups:
+      - monitoring.coreos.com
+    resources:
+      - servicemonitors
+    verbs:
+      - get
+      - create
+      - update
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets
+    verbs:
+      - '*'
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - clusterrolebindings
+      - clusterroles
+      - roles
+      - rolebindings
+    verbs:
+      - '*'
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - create
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - endpoints
+      - events
+      - namespaces
+      - pods
+      - pods/proxy
+      - pods/portforward
+      - persistentvolumeclaims
+      - secrets
+      - services
+      - serviceaccounts
+    verbs:
+      - '*'
+
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -201,9 +131,9 @@ metadata:
   name: d8:istio:operator
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 subjects:
-- kind: ServiceAccount
-  name: operator
-  namespace: d8-{{ .Chart.Name }}
+  - kind: ServiceAccount
+    name: operator
+    namespace: d8-{{ .Chart.Name }}
 roleRef:
   kind: ClusterRole
   name: d8:istio:operator
