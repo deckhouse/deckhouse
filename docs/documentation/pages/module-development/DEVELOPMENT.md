@@ -161,7 +161,7 @@ registry.example.io
 ```
 
 {% alert level="warning" %}
-The container registry must support a nested repository structure. See [the requirements section](module-development/#requirements) for more details.  
+The container registry must support a nested repository structure. See [the requirements section](../#requirements) for more details.  
 {% endalert %}
 
 Below is a list of commands for working with the module source. The examples use the [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane) tool. Follow the [instructions](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation) to install it. For macOS, use `brew`.

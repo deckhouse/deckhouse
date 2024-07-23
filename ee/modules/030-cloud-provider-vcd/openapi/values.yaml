@@ -80,7 +80,7 @@ properties:
                 additionalProperties: false
                 required: [ template, storageProfile, sizingPolicy ]
                 description: |
-                  Partial contents of the fields of the [VCDInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-VCD/cr.html#VCDinstanceclass).
+                  Partial contents of the fields of the [VCDInstanceClass](../cluster_configuration.html#vcdinstanceclass).
                 properties:
                   rootDiskSizeGb:
                     description: |
@@ -192,7 +192,7 @@ properties:
                   additionalProperties: false
                   required: [ template, storageProfile, sizingPolicy ]
                   description: |
-                    Partial contents of the fields of the [VCDInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vcd/cr.html#VCDinstanceclass).
+                    Partial contents of the fields of the [VCDInstanceClass](../cluster_configuration.html#vcdinstanceclass).
                   properties:
                     rootDiskSizeGb:
                       description: |
