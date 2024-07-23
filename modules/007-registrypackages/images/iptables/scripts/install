@@ -62,7 +62,7 @@ function checkAndRemoveRule() {
     $iptablesCommand -t filter -D OUTPUT -s 216.216.216.216 -d 216.216.216.216 -j ACCEPT
     return 0
   fi
-  
+
   return 1
 }
 
@@ -81,7 +81,7 @@ IPTABLES_LEGACY_RULE=$( (/opt/deckhouse/bin/xtables-legacy-multi iptables-save |
 
 if [[ ${IPTABLES_LEGACY_RULE} -ne 0 ]]; then
   iptablesModeBin="xtables-legacy-multi"
-elif (isNftSupport); then
+elif isNftSupport; then
   iptablesModeBin="xtables-nft-multi"
 else
   iptablesModeBin="xtables-legacy-multi"
