@@ -93,7 +93,7 @@ bb-package-fetch-blobs() {
     retries=0
     while [ "$retries" -lt 3 ]
     do
-      retries=$(( retries+1 )) 
+      retries=$(( retries+1 ))
       bb-package-fetch-blob "${PACKAGE_DIGEST}" "${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar.gz" && break
 			sleep 2
     done
@@ -115,7 +115,7 @@ endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
 random.shuffle(endpoints)
 ssl._create_default_https_context = ssl._create_unverified_context
 for ep in endpoints:
-  url = 'https://{}/package?digest=$1&repository=${REPOSITORY}'.format(ep)
+  url = 'https://{}/package?digest=$1&repository=${REPOSITORY}&path=${REPOSITORY_PATH}'.format(ep)
   request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
   try:
     response = urlopen(request, timeout=300)
