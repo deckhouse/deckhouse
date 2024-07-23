@@ -93,7 +93,7 @@ func applyServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 		loadBalancerClass = *service.Spec.LoadBalancerClass
 	}
 
-	var internalTrafficPolicy v1.ServiceInternalTrafficPolicy
+	internalTrafficPolicy := v1.ServiceInternalTrafficPolicyCluster
 	if service.Spec.InternalTrafficPolicy != nil {
 		internalTrafficPolicy = *service.Spec.InternalTrafficPolicy
 	}

@@ -54,7 +54,7 @@ properties:
             internalTrafficPolicy:
               type: string
             publishNotReadyAddresses:
-              type: bool
+              type: boolean
             ports:
               items:
                 properties:
