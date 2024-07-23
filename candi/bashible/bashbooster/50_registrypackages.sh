@@ -56,6 +56,9 @@ function check_python() {
 # Fetch a package using python.
 # bb-package-proxy-fetch-blob digest output_file_path
 bb-package-fetch-blob() {
+  local REPOSITORY="${REPOSITORY:-}"
+  local REPOSITORY_PATH="${REPOSITORY_PATH:-}"
+
   check_python
 
   cat - <<EOF | $python_binary

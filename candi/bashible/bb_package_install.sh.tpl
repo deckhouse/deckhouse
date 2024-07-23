@@ -18,10 +18,9 @@ set -Eeo pipefail
 
 export PATH="/opt/deckhouse/bin:$PATH"
 export LANG=C
-export REPOSITORY=""
 export BB_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages"
-export TMPDIR="/opt/deckhouse/tmp"
 export BB_FETCHED_PACKAGES_STORE="/${TMPDIR}/registrypackages"
+export TMPDIR="/opt/deckhouse/tmp"
 {{- if .proxy }}
   {{- if .proxy.httpProxy }}
 export HTTP_PROXY={{ .proxy.httpProxy | quote }}
@@ -101,6 +100,9 @@ bb-package-fetch-blobs() {
 }
 
 bb-package-fetch-blob() {
+  local REPOSITORY="${REPOSITORY:-}"
+  local REPOSITORY_PATH="${REPOSITORY_PATH:-}"
+
   check_python
 
   cat - <<EOFILE | $python_binary
