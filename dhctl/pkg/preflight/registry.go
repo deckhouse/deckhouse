@@ -328,13 +328,18 @@ func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) 
 		}
 	}
 
-	if len(metaConfig.Registry.CA) == 0 {
+	ca := metaConfig.Registry.CA
+	if metaConfig.Registry.RegistryMode != "Direct" {
+		ca = metaConfig.UpstreamRegistry.CA
+	}
+
+	if len(ca) == 0 {
 		client.Transport = httpTransport
 		return client, nil
 	}
 
 	certPool := x509.NewCertPool()
-	if ok := certPool.AppendCertsFromPEM([]byte(metaConfig.Registry.CA)); !ok {
+	if ok := certPool.AppendCertsFromPEM([]byte(ca)); !ok {
 		return nil, fmt.Errorf("invalid cert in CA PEM")
 	}
 

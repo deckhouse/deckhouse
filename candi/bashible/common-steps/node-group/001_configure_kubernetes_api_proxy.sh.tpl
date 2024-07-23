@@ -34,14 +34,6 @@ events {
 }
 
 
-# DEBUG
-{{- range $key, $value := .registry }}
-# registry {{ $key }}: {{ $value }}
-{{- end }}
-
-# registryMode: {{- .registryMode }}
-
-
 stream {
   upstream kubernetes {
     least_conn;

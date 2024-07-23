@@ -25,26 +25,70 @@ fi
 
 {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
 
+# Install igniter packages
 bb-package-install "seaweedfs:{{ .images.systemRegistry.seaweedfs }}" "dockerAuth:{{ .images.systemRegistry.dockerAuth }}" "dockerDistribution:{{ .images.systemRegistry.dockerDistribution }}"
 bb-package-install "etcd:{{ .images.controlPlaneManager.etcd }}"
 
+# Create a directories for the system registry configuration
+mkdir -p $IGNITER_DIR
+
+# Create a directories for the system registry data if it does not exist
 mkdir -p /opt/deckhouse/system-registry/seaweedfs_data/
 
-mkdir -p $IGNITER_DIR
 # Read previously discovered IP address of the node
 discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 
+# Prepare certs
+bb-sync-file "$IGNITER_DIR/ca.key" - << EOF
+{{ .registryPki.caKey }}
+EOF
+
+bb-sync-file "$IGNITER_DIR/ca.crt" - << EOF
+{{ .registryPki.caCert }}
+EOF
+
+# Auth certs
+if [ ! -f "$IGNITER_DIR/auth.key" ]; then
+    openssl genrsa -out "$IGNITER_DIR/auth.key" 2048
+fi
+if [ ! -f "$IGNITER_DIR/auth.csr" ]; then
+    openssl req -new -key "$IGNITER_DIR/auth.key" \
+    -subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=${discovered_node_ip}" \
+    -addext "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost" \
+    -out "$IGNITER_DIR/auth.csr"
+fi
+if [ ! -f "$IGNITER_DIR/auth.crt" ]; then
+    openssl x509 -req -in "$IGNITER_DIR/auth.csr" -CA "$IGNITER_DIR/ca.crt" -CAkey "$IGNITER_DIR/ca.key" -CAcreateserial \
+    -out "$IGNITER_DIR/auth.crt" -days 365 -sha256 \
+    -extfile <(printf "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost")
+fi
+
+# Distribution certs
+if [ ! -f "$IGNITER_DIR/distribution.key" ]; then
+    openssl genrsa -out "$IGNITER_DIR/distribution.key" 2048
+fi
+if [ ! -f "$IGNITER_DIR/distribution.csr" ]; then
+    openssl req -new -key "$IGNITER_DIR/distribution.key" \
+    -subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=${discovered_node_ip}" \
+    -addext "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost" \
+    -out "$IGNITER_DIR/distribution.csr"
+fi
+if [ ! -f "$IGNITER_DIR/distribution.crt" ]; then
+    openssl x509 -req -in "$IGNITER_DIR/distribution.csr" -CA "$IGNITER_DIR/ca.crt" -CAkey "$IGNITER_DIR/ca.key" -CAcreateserial \
+    -out "$IGNITER_DIR/distribution.crt" -days 365 -sha256 \
+    -extfile <(printf "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost")
+fi
+
 bb-sync-file "$IGNITER_DIR/auth_config.yaml" - << EOF
 server:
-  #addr: "${discovered_node_ip}:5051"
-  #addr: "0.0.0.0:5051"
   addr: "localhost:5051"
-
+  certificate: "$IGNITER_DIR/auth.crt"
+  key: "$IGNITER_DIR/auth.key"
 token:
   issuer: "Registry server"
   expiration: 900
-  certificate: "$IGNITER_DIR/cert.crt"
-  key: "$IGNITER_DIR/cert.key"
+  certificate: "$IGNITER_DIR/auth.crt"
+  key: "$IGNITER_DIR/auth.key"
 
 users:
   # Password is specified as a BCrypt hash. Use htpasswd -nB USERNAME to generate.
@@ -111,14 +155,20 @@ storage:
     blobdescriptor: inmemory
 
 http:
-  #addr: ${discovered_node_ip}:5001
-  #addr: 0.0.0.0:5001
   addr: localhost:5001
   prefix: /
   secret: asecretforlocaldevelopment
-  #tls:
-  #  key: $IGNITER_DIR/cert.key
-  #  certificate: $IGNITER_DIR/cert.crt
+  debug:
+    addr: localhost:5002
+    prometheus:
+      enabled: true
+      path: /metrics
+  tls:
+    certificate: $IGNITER_DIR/distribution.crt
+    key: $IGNITER_DIR/distribution.key
+#    clientcas:
+#      - $IGNITER_DIR/ca.crt
+
 {{- if eq .registry.registryMode "Proxy" -}}
 {{- $scheme := .upstreamRegistry.scheme | trimSuffix "/" | trimPrefix "/" -}}
 {{- $address := .upstreamRegistry.address | trimSuffix "/" | trimPrefix "/" }}
@@ -127,14 +177,14 @@ proxy:
   username: "$UPSTREAM_REGISTRY_LOGIN"
   password: "$UPSTREAM_REGISTRY_PASSWORD"
   ttl: 72h
-  {{- end }}
+{{- end }}
 
 auth:
   token:
-    realm: http://localhost:5051/auth
+    realm: https://localhost:5051/auth
     service: Docker registry
     issuer: Registry server
-    rootcertbundle: "$IGNITER_DIR/cert.crt"
+    rootcertbundle: "$IGNITER_DIR/auth.crt"
     autoredirect: false
 EOF
 
@@ -212,7 +262,7 @@ check_and_run "auth_server" "/opt/deckhouse/bin/auth_server -logtostderr $IGNITE
 check_and_run "registry" "/opt/deckhouse/bin/registry serve $IGNITER_DIR/distribution_config.yaml" "$IGNITER_DIR/logs/distribution.log"
 
 for (( attempt=1; attempt <= \$max_attempts; attempt++ )); do
-    response=\$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5001)
+    response=\$(curl -s -o /dev/null -w "%{http_code}" https://localhost:5001)
     if [[ "\$response" == "200" ]]; then
         docker_registry_started=true
         break
@@ -257,32 +307,6 @@ EOF
 
 chmod a+x "$IGNITER_DIR/start_system_registry_igniter.sh"
 chmod a+x "$IGNITER_DIR/stop_system_registry_igniter.sh"
-
-
-# TEMPORARY: generate self-signed certificates
-if [ ! -f "$IGNITER_DIR/rootCA.key" ]; then
-    openssl genrsa -out "$IGNITER_DIR/rootCA.key" 4096
-fi
-if [ ! -f "$IGNITER_DIR/rootCA.crt" ]; then
-    openssl req -new -x509 -days 3650 -key "$IGNITER_DIR/rootCA.key" \
-    -subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=Root CA" \
-    -out "$IGNITER_DIR/rootCA.crt"
-fi
-if [ ! -f "$IGNITER_DIR/cert.key" ]; then
-    openssl genrsa -out "$IGNITER_DIR/cert.key" 2048
-fi
-if [ ! -f "$IGNITER_DIR/cert.csr" ]; then
-    openssl req -new -key "$IGNITER_DIR/cert.key" \
-    -subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=${discovered_node_ip}" \
-    -addext "subjectAltName=IP:${discovered_node_ip}" \
-    -out "$IGNITER_DIR/cert.csr"
-fi
-if [ ! -f "$IGNITER_DIR/cert.crt" ]; then
-    openssl req -new -x509 -days 365 -key "$IGNITER_DIR/cert.key" \
-    -subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=${discovered_node_ip}" \
-    -addext "subjectAltName=IP:${discovered_node_ip}" \
-    -out "$IGNITER_DIR/cert.crt"
-fi
 
 bash "$IGNITER_DIR/start_system_registry_igniter.sh"
 
