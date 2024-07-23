@@ -9,6 +9,6 @@ spec:
     - name: metrics
       port: 9001
       protocol: TCP
-      targetPort: notifications
+      targetPort: metrics
   selector:
     app.kubernetes.io/name: argocd-notifications-controller
