@@ -120,10 +120,9 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 	// 	openapi.NewDefinitionNamer(apiserver.Scheme))
 	// serverConfig.OpenAPIConfig.Info.Title = "Bashible"
 	// serverConfig.OpenAPIConfig.Info.Version = "0.1"
-
-	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
-		return nil, err
-	}
+	// if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
+	// 	return nil, err
+	// }
 
 	deployInformer := serverConfig.SharedInformerFactory.Apps().V1().Deployments().Informer()
 	deployHealthChecker, err := readyz.NewDeploymentReadinessCheck(stopCh, deployInformer, "d8-system", "deckhouse")
