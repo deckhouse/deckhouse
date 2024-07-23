@@ -90,7 +90,7 @@ func (w *Watcher) Watch(ctx context.Context) {
 
 func (w *Watcher) watchSecret(ctx context.Context) {
 	watchFunc := func(_ metav1.ListOptions) (watch.Interface, error) {
-		timeout := int64((30 * time.Second).Seconds())
+		timeout := int64(30)
 
 		// Get the deckhouse-registry secret
 		return w.k8sClient.CoreV1().Secrets("d8-system").Watch(ctx, metav1.ListOptions{

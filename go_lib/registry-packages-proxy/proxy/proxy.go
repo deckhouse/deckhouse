@@ -67,6 +67,7 @@ func NewProxy(server *http.Server,
 func (p *Proxy) Serve() {
 	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "HEAD" && r.Method != "GET" {
+			p.logger.Error("method not allowed")
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
@@ -89,6 +90,7 @@ func (p *Proxy) Serve() {
 		p.logger.Infof("%s\n", logEntry)
 
 		if digest == "" {
+			p.logger.Error("missing digest")
 			http.Error(w, "missing digest", http.StatusBadRequest)
 			return
 		}
@@ -98,6 +100,7 @@ func (p *Proxy) Serve() {
 			defer packageReader.Close()
 		}
 		if err != nil {
+			p.logger.Error(err)
 			if errors.Is(err, registry.ErrPackageNotFound) {
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return

@@ -61,7 +61,7 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 
 	// check if cache entry exists
 	if !c.storageGetOK(digest) {
-		c.logger.Infof("entry with digest %s is not foundd in the cache", digest)
+		c.logger.Infof("entry with digest %s is not found in the cache", digest)
 		return 0, nil, cache.ErrEntryNotFound
 	}
 
