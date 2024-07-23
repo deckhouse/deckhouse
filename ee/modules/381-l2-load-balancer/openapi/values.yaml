@@ -41,6 +41,8 @@ properties:
               type: string
             loadBalancerClass:
               type: string
+            loadBalancerName:
+              type: string
             clusterIP:
               type: string
             preferredNode:
