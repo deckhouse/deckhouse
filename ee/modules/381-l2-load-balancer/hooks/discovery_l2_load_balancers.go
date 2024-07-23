@@ -153,9 +153,9 @@ func handleLoadBalancers(input *go_hook.HookInput) error {
 
 		if (configuredLoadBalancerClass != "" && service.LoadBalancerClass != configuredLoadBalancerClass) ||
 			(configuredLoadBalancerClass == "" && service.LoadBalancerClass != "") {
-			// two possible case:
-			// loadBalancerClass is set in mc and hook watches services with same class
-			// loadBalancerClass is empty and hook watches services without class
+			// two possible cases:
+			// loadBalancerClass is set in mc and hook watches only services with the same class
+			// loadBalancerClass is empty and hook watches only services without the class
 			continue
 		}
 

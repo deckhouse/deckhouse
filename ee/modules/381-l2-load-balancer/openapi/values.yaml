@@ -51,7 +51,7 @@ properties:
               type: object
             externalTrafficPolicy:
               type: string
-            InternalTrafficPolicy:
+            internalTrafficPolicy:
               type: string
             ports:
               items:
