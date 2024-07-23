@@ -53,8 +53,9 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 	if err != nil {
 		e := &transport.Error{}
 		for _, err := range e.Errors {
-			log.Errorf(err.String())
+			log.Error(err.String())
 		}
+		log.Error(e.Error())
 		if errors.As(err, &e) && e.StatusCode == http.StatusNotFound {
 			return 0, nil, ErrPackageNotFound
 		}
