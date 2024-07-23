@@ -8,6 +8,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list $ (dict "parent-service" $l2lbservice.serviceName)) | nindent 2 }}
   annotations:
     metallb.universe.tf/preferredL2SpeakerNode: {{ $l2lbservice.preferredNode }}
+    metallb.universe.tf/address-pool: {{ $l2lbservice.loadBalancerName }}
 spec:
   clusterIP: {{ $l2lbservice.clusterIP }}
   serviceRef:

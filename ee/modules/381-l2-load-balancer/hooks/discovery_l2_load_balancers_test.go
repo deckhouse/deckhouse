@@ -127,7 +127,8 @@ spec:
             "internalTrafficPolicy": "Cluster",
             "selector": {
               "app": "nginx"
-            }
+            },
+			"loadBalancerName": "ingress"
           },
           {
 			"publishNotReadyAddresses": false,
@@ -149,7 +150,8 @@ spec:
             "internalTrafficPolicy": "Cluster",
             "selector": {
               "app": "nginx"
-            }
+            },
+			"loadBalancerName": "ingress"
           },
           {
 			"publishNotReadyAddresses": false,
@@ -171,7 +173,8 @@ spec:
             "internalTrafficPolicy": "Cluster",
             "selector": {
               "app": "nginx"
-            }
+            },
+			"loadBalancerName": "ingress"
           }
 ]
 `))

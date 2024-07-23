@@ -56,6 +56,7 @@ type L2LBServiceConfig struct {
 	ExternalTrafficPolicy    v1.ServiceExternalTrafficPolicy `json:"externalTrafficPolicy"`
 	InternalTrafficPolicy    v1.ServiceInternalTrafficPolicy `json:"internalTrafficPolicy"`
 	Selector                 map[string]string               `json:"selector"`
+	LoadBalancerName         string                          `json:"loadBalancerName"`
 }
 
 type L2LoadBalancerInfo struct {

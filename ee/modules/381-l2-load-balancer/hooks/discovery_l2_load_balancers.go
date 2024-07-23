@@ -188,6 +188,7 @@ func handleLoadBalancers(input *go_hook.HookInput) error {
 				ClusterIP:                service.ClusterIP,
 				Ports:                    service.Ports,
 				Selector:                 service.Selector,
+				LoadBalancerName:         l2lb.Name,
 			})
 		}
 	}
