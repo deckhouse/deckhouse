@@ -75,6 +75,7 @@ nodeGroups:
     # качестве шлюза по умолчанию.
     configDrive: false
     # Обязательный параметр, сеть будет использована как шлюз по умолчанию.
+    # Совпадает с сloud.prefix в ресурсе ClusterConfiguration
     mainNetwork: kube
     additionalNetworks:                         # Необязательный параметр.
     - office
@@ -165,6 +166,7 @@ nodeGroups:
     # качестве шлюза по умолчанию.
     configDrive: false
     # Обязательный параметр, сеть будет использована как шлюз по умолчанию.
+    # Совпадает с сloud.prefix в ресурсе ClusterConfiguration
     mainNetwork: kube
     additionalNetworks:                           # Необязательный параметр.
     - office
@@ -247,6 +249,7 @@ nodeGroups:
     # качестве шлюза по умолчанию.
     configDrive: false
     # Обязательный параметр, сеть будет использована как шлюз по умолчанию.
+    # Совпадает с сloud.prefix в ресурсе ClusterConfiguration
     mainNetwork: kube
     additionalNetworks:                         # Необязательный параметр.
     - office
@@ -329,6 +332,7 @@ nodeGroups:
     # качестве шлюза по умолчанию.
     configDrive: false
     # Обязательный параметр. Сеть будет использована как шлюз по умолчанию.
+    # Совпадает с сloud.prefix в ресурсе ClusterConfiguration
     mainNetwork: kube
     additionalNetworks:                         # Необязательный параметр.
     - office
