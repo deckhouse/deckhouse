@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -Eeuo pipefail
+set -Euo pipefail
 
 help() {
 echo "
@@ -84,7 +84,7 @@ check_requirements() {
 
 function cleanup() {
   echo "Cleaning up..."
-  docker rm -f d8-install-${EDITION}-${TAG} 2>/dev/null
+  docker rm -f d8-install-${EDITION}-${TAG} &>/dev/null
 }
 
 
@@ -103,10 +103,19 @@ if [ -n "`docker ps -a| grep d8-install-${EDITION}-${TAG}`" ]; then
 fi
 
 echo "Creating the installer container for DKP ${EDITION} ${TAG}..."
-docker create --name d8-install-${EDITION}-${TAG} ${INSTALL_IMAGE_PATH}
+
+docker create --pull always --name d8-install-${EDITION}-${TAG} ${INSTALL_IMAGE_PATH} 1>/dev/null
+
+if [ $? -ne 0 ]; then
+  echo "Error creating installer container!"
+  exit 1
+fi
 
 echo "Getting the images digest from the installer container..."
 IMAGES_SHA=$(docker cp d8-install-${EDITION}-${TAG}:/deckhouse/candi/images_digests.json - | tar -Oxf - | grep -Eo "sha256:[a-f0-9]+")
+IMAGES_SHA_COUNT="$(echo ${IMAGES_SHA} | wc -w)"
+
+echo "Got ${IMAGES_SHA_COUNT} images to check."
 
 for sha in ${IMAGES_SHA}; do
   echo -n "Checking image ${sha}..."
