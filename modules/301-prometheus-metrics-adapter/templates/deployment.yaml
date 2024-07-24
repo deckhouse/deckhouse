@@ -82,7 +82,7 @@ spec:
         - --config=/etc/adapter/config.yaml
         - --client-ca-file=/var/run/apiserver-proxy-client/ca.crt
         ports:
-        - name: metrics
+        - name: https-metrics
           containerPort: 6443
         livenessProbe:
           httpGet:

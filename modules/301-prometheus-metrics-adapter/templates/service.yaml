@@ -8,6 +8,6 @@ metadata:
 spec:
   ports:
   - port: 443
-    targetPort: metrics
+    targetPort: https-metrics
   selector:
     app: prometheus-metrics-adapter
