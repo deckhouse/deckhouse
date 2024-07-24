@@ -1,0 +1,105 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    component: rules
+    heritage: deckhouse
+    module: ingress-nginx
+    prometheus: main
+  name: prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa
+  namespace: d8-monitoring
+spec:
+  groups:
+  - name: prometheus-metrics-adapter.d8-ingress-nginx
+    rules:
+    - expr: avg by (controller_name) (kube_controller_pod{controller_type="DaemonSet",
+        namespace="d8-ingress-nginx"} * on (pod) group_right(controller_name) round(rate(container_cpu_usage_seconds_total{container!="POD"}[1m])
+        * 100))
+      record: kube_adapter_metric_d8_ingress_nginx_ds_cpu_utilization
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  labels:
+    app: hpa-scaler
+    heritage: deckhouse
+    module: ingress-nginx
+    name: test
+  name: hpa-scaler-test
+  namespace: d8-ingress-nginx
+spec:
+  maxReplicas: 6
+  metrics:
+  - external:
+      metric:
+        name: d8_ingress_nginx_ds_cpu_utilization
+        selector:
+          matchLabels:
+            controller_name: controller-test
+      target:
+        type: Value
+        value: "50"
+    type: External
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: hpa-scaler-test
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: controller
+    heritage: deckhouse
+    module: ingress-nginx
+    name: test
+  name: hpa-scaler-test
+  namespace: d8-ingress-nginx
+spec:
+  replicas: 2
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: hpa-scaler
+      name: test
+  template:
+    metadata:
+      labels:
+        app: hpa-scaler
+        name: test
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - hpa-scaler
+              - key: name
+                operator: In
+                values:
+                - test
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - image: registry.example.com@imageHash-common-pause
+        name: hpa-scaler
+        resources:
+          requests:
+            cpu: 10m
+            memory: 1Mi
+      imagePullSecrets:
+      - name: deckhouse-registry
+      tolerations:
+      - key: dedicated.deckhouse.io
+        operator: Equal
+        value: ingress-nginx
+      - key: dedicated.deckhouse.io
+        operator: Equal
+        value: frontend
+      - key: drbd.linbit.com/lost-quorum
+      - key: drbd.linbit.com/force-io-error
+      - key: drbd.linbit.com/ignore-fail-over

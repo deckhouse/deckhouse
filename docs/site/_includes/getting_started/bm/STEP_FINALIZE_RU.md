@@ -282,7 +282,6 @@ sudo /opt/deckhouse/bin/kubectl create -f user.yml
 <pre class="highlight">
 <code example-hosts>api.example.com
 argocd.example.com
-cdi-uploadproxy.example.com
 dashboard.example.com
 documentation.example.com
 dex.example.com
@@ -308,7 +307,6 @@ export PUBLIC_IP="<PUBLIC_IP>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
 $PUBLIC_IP api.example.com
 $PUBLIC_IP argocd.example.com
-$PUBLIC_IP cdi-uploadproxy.example.com
 $PUBLIC_IP dashboard.example.com
 $PUBLIC_IP documentation.example.com
 $PUBLIC_IP dex.example.com

@@ -16,6 +16,7 @@ package proxy
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -66,29 +67,40 @@ func NewProxy(server *http.Server,
 func (p *Proxy) Serve() {
 	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "HEAD" && r.Method != "GET" {
+			p.logger.Error("method not allowed")
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 
+		requestIP := getRequestIP(r)
 		digest := r.URL.Query().Get("digest")
+		repository := r.URL.Query().Get("repository")
+		additionalPath := r.URL.Query().Get("path")
+
+		if repository == "" {
+			repository = registry.DefaultRepository
+		}
+
+		logEntry := fmt.Sprintf("request from %s received: repo = %s, digest = %s", requestIP, repository, digest)
+
+		if additionalPath != "" {
+			logEntry = fmt.Sprintf("%s, additional_path = %s", logEntry, additionalPath)
+		}
+
+		p.logger.Infof("%s", logEntry)
 
 		if digest == "" {
+			p.logger.Error("missing digest")
 			http.Error(w, "missing digest", http.StatusBadRequest)
 			return
 		}
 
-		repository := r.URL.Query().Get("repository")
-		if repository == registry.DefaultRepository {
-			p.logger.Infof("%s digest from main repository request received\n", digest)
-		} else {
-			p.logger.Infof("%s digest from repository %s request received\n", digest, repository)
-		}
-
-		size, packageReader, err := p.getPackage(r.Context(), digest, repository)
+		size, packageReader, err := p.getPackage(r.Context(), digest, repository, additionalPath)
 		if packageReader != nil {
 			defer packageReader.Close()
 		}
 		if err != nil {
+			p.logger.Error(err)
 			if errors.Is(err, registry.ErrPackageNotFound) {
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
@@ -116,7 +128,7 @@ func (p *Proxy) Serve() {
 		}
 	})
 
-	p.logger.Debugf("Starting packages proxy listener: %s\n\n", p.listener.Addr())
+	p.logger.Debugf("Starting packages proxy listener: %s", p.listener.Addr())
 
 	if err := p.server.Serve(p.listener); err != nil && err != http.ErrServerClosed {
 		p.logger.Error(err)
@@ -132,10 +144,11 @@ func (p *Proxy) Stop() {
 	}
 }
 
-func (p *Proxy) getPackage(ctx context.Context, digest string, repository string) (int64, io.ReadCloser, error) {
+func (p *Proxy) getPackage(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
 	// if cache is nil, return digest directly from registry
 	if p.cache == nil {
-		return p.getPackageFromRegistry(ctx, digest, repository)
+		p.logger.Infof("cache is not set, trying to fetch package from registry")
+		return p.getPackageFromRegistry(ctx, digest, repository, path)
 	}
 
 	// otherwise try to find digest in the cache
@@ -146,11 +159,11 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 	// if any error other than item in the cache not found, get digest directly from the registry
 	if !errors.Is(err, cache.ErrEntryNotFound) {
 		p.logger.Errorf("Get package from cache: %v", err)
-		return p.getPackageFromRegistry(ctx, digest, repository)
+		return p.getPackageFromRegistry(ctx, digest, repository, path)
 	}
 
 	// if digest is not found in the cache, get digest from registry and add digest to the cache
-	size, registryReader, err := p.getPackageFromRegistry(ctx, digest, repository)
+	size, registryReader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -184,13 +197,13 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 	return size, pipeReader, nil
 }
 
-func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repository string) (int64, io.ReadCloser, error) {
+func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
 	registryConfig, err := p.getter.Get(repository)
 	if err != nil {
 		return 0, nil, err
 	}
 
-	size, registryReader, err := p.registryClient.GetPackage(ctx, registryConfig, digest)
+	size, registryReader, err := p.registryClient.GetPackage(ctx, p.logger, registryConfig, digest, path)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -203,4 +216,15 @@ func WithCache(cache cache.Cache) ProxyOption {
 	return func(p *Proxy) {
 		p.cache = cache
 	}
+}
+
+func getRequestIP(r *http.Request) string {
+	IPAddress := r.Header.Get("X-Real-Ip")
+	if IPAddress == "" {
+		IPAddress = r.Header.Get("X-Forwarded-For")
+	}
+	if IPAddress == "" {
+		IPAddress = r.RemoteAddr
+	}
+	return IPAddress
 }

@@ -516,7 +516,7 @@ func DeckhouseRegistrySecret(registry config.RegistryData) *apiv1.Secret {
 }
 
 func generateSecret(name, namespace string, data map[string][]byte, labels map[string]string) *apiv1.Secret {
-	preparedLabels := map[string]string{"heritage": "deckhouse", "name": name}
+	preparedLabels := map[string]string{"heritage": "deckhouse"}
 	for key, value := range labels {
 		preparedLabels[key] = value
 	}

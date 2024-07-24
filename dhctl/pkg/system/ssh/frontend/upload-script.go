@@ -138,6 +138,8 @@ func (u *UploadScript) pathWithEnv(path string) string {
 	return fmt.Sprintf("%s %s", envs, path)
 }
 
+var ErrBashibleTimeout = errors.New("Timeout bashible step running")
+
 func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte, err error) {
 	bundleName := fmt.Sprintf("bundle-%s.tar", time.Now().Format("20060102-150405"))
 	bundleLocalFilepath := filepath.Join(app.TmpDirName, bundleName)
@@ -175,10 +177,11 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 	// Buffers to implement output handler logic
 	lastStep := ""
 	failsCounter := 0
+	isBashibleTimeout := false
 
 	processLogger := log.GetProcessLogger()
 
-	handler := bundleOutputHandler(bundleCmd, processLogger, &lastStep, &failsCounter)
+	handler := bundleOutputHandler(bundleCmd, processLogger, &lastStep, &failsCounter, &isBashibleTimeout)
 	err = bundleCmd.WithStdoutHandler(handler).CaptureStdout(nil).CaptureStderr(nil).Run()
 	if err != nil {
 		if lastStep != "" {
@@ -197,6 +200,11 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 	} else {
 		processLogger.LogProcessEnd()
 	}
+
+	if isBashibleTimeout {
+		return bundleCmd.StdoutBytes(), ErrBashibleTimeout
+	}
+
 	return bundleCmd.StdoutBytes(), err
 }
 
@@ -207,6 +215,7 @@ func bundleOutputHandler(
 	processLogger log.ProcessLogger,
 	lastStep *string,
 	failsCounter *int,
+	isBashibleTimeout *bool,
 ) func(string) {
 	stepLogs := make([]string, 0)
 	return func(l string) {
@@ -221,6 +230,7 @@ func bundleOutputHandler(
 				log.ErrorF(strings.Join(stepLogs, "\n"))
 				*failsCounter++
 				if *failsCounter > 10 {
+					*isBashibleTimeout = true
 					if cmd != nil {
 						// Force kill bashible
 						_ = cmd.cmd.Process.Kill()

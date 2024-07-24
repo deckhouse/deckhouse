@@ -18,10 +18,9 @@ set -Eeo pipefail
 
 export PATH="/opt/deckhouse/bin:$PATH"
 export LANG=C
-export REPOSITORY=""
 export BB_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages"
-export TMPDIR="/opt/deckhouse/tmp"
 export BB_FETCHED_PACKAGES_STORE="/${TMPDIR}/registrypackages"
+export TMPDIR="/opt/deckhouse/tmp"
 {{- if .proxy }}
   {{- if .proxy.httpProxy }}
 export HTTP_PROXY={{ .proxy.httpProxy | quote }}
@@ -43,16 +42,9 @@ export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
 export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
 {{- end }}
 
-function check_python() {
-  for pybin in python3 python2 python; do
-    if command -v "$pybin" >/dev/null 2>&1; then
-      python_binary="$pybin"
-      return 0
-    fi
-  done
-  echo "Python not found, exiting..."
-  return 1
-}
+{{- if $check_python := .Files.Get "/deckhouse/candi/bashible/check_python.sh.tpl" | default (.Files.Get "candi/bashible/check_python.sh.tpl") -}}
+  {{- tpl ( $check_python ) . | nindent 0 }}
+{{- end }}
 
 bb-package-install() {
   local PACKAGE_WITH_DIGEST
@@ -100,7 +92,7 @@ bb-package-fetch-blobs() {
     retries=0
     while [ "$retries" -lt 3 ]
     do
-      retries=$(( retries+1 )) 
+      retries=$(( retries+1 ))
       bb-package-fetch-blob "${PACKAGE_DIGEST}" "${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar.gz" && break
 			sleep 2
     done
@@ -108,6 +100,9 @@ bb-package-fetch-blobs() {
 }
 
 bb-package-fetch-blob() {
+  local REPOSITORY="${REPOSITORY:-}"
+  local REPOSITORY_PATH="${REPOSITORY_PATH:-}"
+
   check_python
 
   cat - <<EOFILE | $python_binary
@@ -122,7 +117,7 @@ endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
 random.shuffle(endpoints)
 ssl._create_default_https_context = ssl._create_unverified_context
 for ep in endpoints:
-  url = 'https://{}/package?digest=$1&repository=${REPOSITORY}'.format(ep)
+  url = 'https://{}/package?digest=$1&repository=${REPOSITORY}&path=${REPOSITORY_PATH}'.format(ep)
   request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
   try:
     response = urlopen(request, timeout=300)
@@ -137,11 +132,3 @@ with open('$2', 'wb') as f:
     f.write(response.read())
 EOFILE
 }
-
-{{ with .images.registrypackages }}
-bb-package-install "jq:{{ .jq16 }}" "curl:{{ .d8Curl821 }}" "netcat:{{ .netcat110481 }}"
-{{ if eq $.provider "aws" }}
-bb-package-install "ec2DescribeTags:{{ .ec2DescribeTagsV001Flant2 }}" 
-{{- end }}
-{{- end }}
-mkdir -p /var/lib/bashible/

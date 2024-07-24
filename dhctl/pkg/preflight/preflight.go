@@ -58,6 +58,11 @@ func NewChecker(
 func (pc *Checker) Static() error {
 	return pc.do("Preflight checks for static-cluster", []checkStep{
 		{
+			fun:            pc.CheckSingleSSHHostForStatic,
+			successMessage: "only one --ssh-host parameter used",
+			skipFlag:       app.OneSSHHostCheckArgName,
+		},
+		{
 			fun:            pc.CheckSSHCredential,
 			successMessage: "ssh credential is correctly",
 			skipFlag:       app.SSHCredentialsCheckArgName,
@@ -86,11 +91,6 @@ func (pc *Checker) Static() error {
 			fun:            pc.CheckLocalhostDomain,
 			successMessage: "resolve the localhost domain",
 			skipFlag:       app.RegistryCredentialsCheckArgName,
-		},
-		{
-			fun:            pc.CheckSudoIsAllowedForUser,
-			successMessage: "sudo is allowed for user",
-			skipFlag:       app.SudoAllowedCheckArgName,
 		},
 	})
 }
