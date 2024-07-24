@@ -65,6 +65,11 @@ resource "vcd_vapp_vm" "node" {
     iops            = data.vcd_storage_profile.sp.iops_settings[0].disk_iops_per_gb_max > 0 ? data.vcd_storage_profile.sp.iops_settings[0].disk_iops_per_gb_max * local.instance_class.rootDiskSizeGb : ( data.vcd_storage_profile.sp.iops_settings[0].default_disk_iops > 0 ?  data.vcd_storage_profile.sp.iops_settings[0].default_disk_iops : 0)
   }
 
+  customization {
+    force = false
+    enabled = true
+  }
+
   lifecycle {
     ignore_changes = [
       guest_properties
