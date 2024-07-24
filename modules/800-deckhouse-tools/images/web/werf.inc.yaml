@@ -10,14 +10,9 @@ git:
   stageDependencies:
     setup:
     - '**/*'
-- add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/static
-  to: /app
-  stageDependencies:
-    setup:
-      - '**/*'
 import:
   - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-    add: /deckhouse-cli/dist
+    add: /app
     to: /app
     before: setup
 docker:
@@ -25,6 +20,12 @@ docker:
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_22_BULLSEYE_DEV }}
+git:
+  - add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/static
+    to: /app
+    stageDependencies:
+      setup:
+        - '**/*'
 shell:
   setup:
     - export GOPROXY={{ $.GOPROXY }}
@@ -32,3 +33,4 @@ shell:
     - sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d v3.38.0
     - cd /deckhouse-cli
     - task build-and-package
+    - mv dist/* /app
