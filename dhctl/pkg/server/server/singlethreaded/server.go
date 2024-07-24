@@ -38,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
+// debug
 // Serve starts GRPC server
 func Serve(network, address string) error {
 	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{})
