@@ -56,6 +56,9 @@ function check_python() {
 # Fetch a package using python.
 # bb-package-proxy-fetch-blob digest output_file_path
 bb-package-fetch-blob() {
+  local REPOSITORY="${REPOSITORY:-}"
+  local REPOSITORY_PATH="${REPOSITORY_PATH:-}"
+
   check_python
 
   cat - <<EOF | $python_binary
@@ -69,7 +72,7 @@ except ImportError as e:
 endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
 endpoint = random.choice(endpoints)
 ssl._create_default_https_context = ssl._create_unverified_context
-url = 'https://{}/package?digest=$1&repository=${REPOSITORY}'.format(endpoint)
+url = 'https://{}/package?digest=$1&repository=${REPOSITORY}&path=${REPOSITORY_PATH}'.format(endpoint)
 request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
 try:
     response = urlopen(request, timeout=300)
@@ -153,10 +156,12 @@ bb-package-install() {
 }
 
 # Unpack package from module image and run install script
-# bb-package-module-install package:digest repository
+# bb-package-module-install package:digest repository module_name
+# repository is like in appropriate ModuleConfig
 bb-package-module-install() {
   local MODULE_PACKAGE=$1
   local REPOSITORY=$2
+  local REPOSITORY_PATH=$3
 
   bb-package-install $MODULE_PACKAGE
 }
