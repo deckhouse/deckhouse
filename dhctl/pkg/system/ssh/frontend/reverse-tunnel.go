@@ -16,31 +16,69 @@ package frontend
 
 import (
 	"fmt"
+	"math/rand/v2"
+	"os"
 	"os/exec"
-	"strings"
+	"sync"
+	"time"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/cmd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 )
 
+type ReverseTunnelChecker interface {
+	CheckTunnel() (string, error)
+}
+
+type ReverseTunnelKiller interface {
+	KillTunnel() (string, error)
+}
+
+type tunnelWaitResult struct {
+	id  int
+	err error
+}
+
 type ReverseTunnel struct {
 	Session *session.Session
 	Address string
-	sshCmd  *exec.Cmd
+
+	tunMutex sync.Mutex
+	sshCmd   *exec.Cmd
+	started  bool
+	stopCh   chan struct{}
+
+	errorCh chan tunnelWaitResult
 }
 
 func NewReverseTunnel(sess *session.Session, address string) *ReverseTunnel {
 	return &ReverseTunnel{
 		Session: sess,
 		Address: address,
+		errorCh: make(chan tunnelWaitResult),
 	}
 }
 
 func (t *ReverseTunnel) Up() error {
-	if t.Session == nil {
-		return fmt.Errorf("up tunnel '%s': SSH client is undefined", t.String())
+	_, err := t.upNewTunnel(-1)
+	return err
+}
+
+func (t *ReverseTunnel) upNewTunnel(oldId int) (int, error) {
+	t.tunMutex.Lock()
+	defer t.tunMutex.Unlock()
+
+	if t.started {
+		log.DebugF("[%d] Reverse tunnel already up\n", oldId)
+		return -1, fmt.Errorf("already up")
 	}
+
+	id := rand.Int()
+
+	log.DebugF("[%d] Start reverse tunnel\n", id)
 
 	t.sshCmd = cmd.NewSSH(t.Session).
 		WithArgs(
@@ -48,36 +86,165 @@ func (t *ReverseTunnel) Up() error {
 			"-n", // no stdin
 			"-R", t.Address,
 		).
+		WithExitWhenTunnelFailure(true).
 		Cmd()
 
 	err := t.sshCmd.Start()
 	if err != nil {
-		return fmt.Errorf("tunnel up: %w", err)
+		return id, fmt.Errorf("[%d] Cannot start tunnel ssh command: %w", id, err)
 	}
 
 	go func() {
-		err = t.sshCmd.Wait()
-		if err != nil {
-			f := log.InfoF
-			// signal: killed is normal signal for stopping tunnel process
-			// because we kill it
-			if strings.Contains(err.Error(), "signal: killed") {
-				f = log.DebugF
-			}
-			f("cannot gracefully stop tunnel '%s': %v\n", t.String(), err)
+		log.DebugF("[%d] Reverse tunnel started. Wait stop tunnel...\n", id)
+
+		err := t.sshCmd.Wait()
+
+		t.errorCh <- tunnelWaitResult{
+			id:  id,
+			err: err,
 		}
+
+		log.DebugF("[%d] Reverse tunnel was stopped and handled\n", id)
 	}()
 
-	return nil
+	t.started = true
+
+	return id, nil
 }
 
-func (t *ReverseTunnel) Stop() error {
-	err := t.sshCmd.Process.Kill()
-	if err != nil {
-		return fmt.Errorf("stop tunnel '%s': %w", t.String(), err)
+func (t *ReverseTunnel) isStarted() bool {
+	t.tunMutex.Lock()
+	defer t.tunMutex.Unlock()
+	r := t.started
+	return r
+}
+
+func (t *ReverseTunnel) tryToRestart(id int, killer ReverseTunnelKiller) (int, error) {
+	t.stop(id, false)
+	log.DebugF("[%d] Kill tunnel\n", id)
+	if out, err := killer.KillTunnel(); err != nil {
+		log.DebugF("[%d] Kill tunnel was finished with error: %v; stdout: '%s'\n", id, err, out)
+		return id, err
+	}
+	return t.upNewTunnel(id)
+}
+
+func (t *ReverseTunnel) StartHealthMonitor(checker ReverseTunnelChecker, killer ReverseTunnelKiller) {
+	t.tunMutex.Lock()
+	t.stopCh = make(chan struct{})
+	t.tunMutex.Unlock()
+
+	checkReverseTunnel := func(id int) bool {
+		log.DebugF("[%d] Start Check reverse tunnel\n", id)
+
+		err := retry.NewSilentLoop("Check reverse tunnel", 2, 2*time.Second).Run(func() error {
+			out, err := checker.CheckTunnel()
+			if err != nil {
+				log.DebugF("[%d] Cannot check ssh tunnel: '%v': stderr: '%s'\n", id, err, out)
+				return err
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			log.DebugF("[%d] Tunnel check timeout, last error: %v\n", id, err)
+			return false
+		}
+
+		log.DebugF("[%d] Tunnel check successful!\n", id)
+		return true
 	}
 
-	return nil
+	go func() {
+		log.DebugLn("Start health monitor")
+		// we need chan for restarting because between restarting we can get stop signal
+		restartCh := make(chan int, 1024)
+		id := -1
+		restartsCount := 0
+		restart := func(id int) {
+			log.DebugF("[%d] Send restart signal\n", id)
+			restartCh <- id
+			log.DebugF("[%d] Signal was sent. Chan len: %d\n", id, len(restartCh))
+		}
+		for {
+
+			if !checkReverseTunnel(id) {
+				go restart(id)
+			}
+
+			select {
+			case <-t.stopCh:
+				log.InfoLn("Stop health monitor")
+				return
+			case oldId := <-restartCh:
+				restartsCount++
+				log.DebugF("[%d] Restart signal was received: restarts count %d\n", oldId, restartsCount)
+
+				if restartsCount > 1024 {
+					panic("Reverse tunnel restarts count exceeds 1024")
+				}
+
+				newId, err := t.tryToRestart(oldId, killer)
+				if err != nil {
+					log.DebugF("[%d] Restart failed with error: %v\n", oldId, err)
+					go restart(oldId)
+					continue
+				}
+				log.DebugF("[%d] Restart successful. New id %d\n", oldId, newId)
+				id = newId
+				restartsCount = 0
+			case err := <-t.errorCh:
+				id = err.id
+				log.DebugF("[%d] Tunnel was stopped with error '%v'. Try restart fully\n", id, err.err)
+				started := t.isStarted()
+				if started {
+					log.DebugF("[%d] Tunnel already up. Skip restarting\n", id)
+					continue
+				}
+
+				go restart(id)
+				continue
+			}
+		}
+	}()
+}
+
+func (t *ReverseTunnel) Stop() {
+	t.stop(-1, true)
+}
+
+func (t *ReverseTunnel) stop(id int, full bool) {
+	t.tunMutex.Lock()
+	defer t.tunMutex.Unlock()
+
+	if !t.started {
+		log.DebugF("[%d] Reverse tunnel already stopped\n", id)
+		return
+	}
+
+	log.DebugF("[%d] Stop reverse tunnel\n", id)
+	defer log.DebugF("[%d] End stop reverse tunnel\n", id)
+
+	if full && t.stopCh != nil {
+		log.DebugF("[%d] Stop reverse tunnel health monitor\n", id)
+		t.stopCh <- struct{}{}
+	}
+
+	log.DebugF("[%d] Try to find tunnel process %d\n", id, t.sshCmd.Process.Pid)
+	_, err := os.FindProcess(t.sshCmd.Process.Pid)
+	if err == nil {
+		log.DebugF("[%d] Process found %d. Kill it\n", id, t.sshCmd.Process.Pid)
+		err := t.sshCmd.Process.Kill()
+		if err != nil {
+			log.DebugF("[%d] Cannot kill process %d: %v\n", id, t.sshCmd.Process.Pid, err)
+		}
+	} else {
+		log.DebugF("[%d] Stopping tunnel. Process %d already finished\n", id, t.sshCmd.Process.Pid)
+	}
+
+	t.sshCmd = nil
+	t.started = false
 }
 
 func (t *ReverseTunnel) String() string {

@@ -15,7 +15,19 @@
 # limitations under the License.
 */}}
 
+{{- /*
+# We need include 'bb_package_install' in this file for dhctl bootstrap render.
+*/}}
+{{- if $bb_package_install := .Files.Get "/deckhouse/candi/bashible/bb_package_install.sh.tpl" -}}
+  {{- tpl ( $bb_package_install ) . | nindent 0 }}
+{{- end }}
+
+
 if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
+{{ with .images.registrypackages }}
+  bb-package-install "ec2DescribeTags:{{ .ec2DescribeTagsV001Flant2 }}" 
+{{- end }}
+
   attempt=0
   fail_describe_tags=0
   until [[ $(/opt/deckhouse/bin/ec2_describe_tags -query_meta) ]]; do 

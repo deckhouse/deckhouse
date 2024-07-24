@@ -270,6 +270,7 @@ properties:
           Manages Istio sidecar container resources.
 
           **Caution!** The setting only applies to new Pods with `istio-proxy`.
+        type: object
         default: {}
         x-examples:
           - static:
@@ -277,6 +278,7 @@ properties:
                 cpu: "100m"
                 memory: "128Mi"
               limits:
+                cpu: "2000m"
                 memory: "1Gi"
         properties:
           mode:
@@ -321,6 +323,7 @@ properties:
                       - type: string
                         pattern: "^[0-9]+m?$"
                       - type: number
+                    default: '2000m'
                     description: |
                       CPU limits.
                   memory:

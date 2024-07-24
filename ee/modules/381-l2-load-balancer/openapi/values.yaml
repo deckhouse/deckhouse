@@ -41,6 +41,8 @@ properties:
               type: string
             loadBalancerClass:
               type: string
+            loadBalancerName:
+              type: string
             clusterIP:
               type: string
             preferredNode:
@@ -49,6 +51,12 @@ properties:
               additionalProperties:
                 type: string
               type: object
+            externalTrafficPolicy:
+              type: string
+            internalTrafficPolicy:
+              type: string
+            publishNotReadyAddresses:
+              type: boolean
             ports:
               items:
                 properties:

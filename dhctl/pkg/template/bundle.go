@@ -198,7 +198,7 @@ func InitGlobalVars(pwd string) {
 	candiDir = pwd + "/deckhouse/candi"
 	candiBashibleDir = candiDir + "/bashible"
 	detectBundlePath = candiBashibleDir + "/detect_bundle.sh"
-	checkPortsScriptPath = candiBashibleDir + "/preflight/check_ports.sh"
-	checkLocalhostScriptPath = candiBashibleDir + "/preflight/check_localhost.sh"
+	checkPortsScriptPath = candiBashibleDir + "/preflight/check_ports.sh.tpl"
+	checkLocalhostScriptPath = candiBashibleDir + "/preflight/check_localhost.sh.tpl"
 	preflightScriptDirPath = candiBashibleDir + "/preflight/"
 }
