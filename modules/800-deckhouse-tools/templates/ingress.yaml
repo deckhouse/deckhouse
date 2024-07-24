@@ -30,7 +30,7 @@ spec:
   tls:
     - hosts:
         - {{ include "helm_lib_module_public_domain" (list . "tools") }}
-      secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+      secretName: {{ include "helm_lib_module_https_secret_name" (list . "tools-ingress-tls") }}
   {{- end }}
 {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
@@ -42,7 +42,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse-tools")) | nindent 2 }}
 spec:
   certificateOwnerRef: false
-  secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "tools-ingress-tls") }}
   {{ include "helm_lib_module_generate_common_name" (list . "tools") | nindent 2 }}
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "tools") }}

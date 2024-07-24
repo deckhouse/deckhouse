@@ -30,10 +30,6 @@ positive:
             "operator": "Equal",
             "value": "system",
           }
-    - auth:
-        externalAuthentication:
-          authURL: "https://api.example.com/auth"
-          authSignInURL: "https://www.example.com/login"
   values:
     - internal: {}
     - https:
