@@ -2,9 +2,11 @@
 Copyright 2024 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
-package dynamix
+package dynamixcsidriver
 
 import (
+	"dynamix-csi-driver/pkg/dynamix-csi-driver/service"
+	"dynamixcommon/config"
 	"errors"
 	"sync"
 
@@ -12,23 +14,15 @@ import (
 )
 
 type csiDriver struct {
-	csi.UnimplementedIdentityServer
 	csi.UnimplementedControllerServer
 	csi.UnimplementedNodeServer
 	csi.UnimplementedGroupControllerServer
 
-	config Config
+	config config.CSIConfig
 	mutex  sync.Mutex
 }
 
-type Config struct {
-	DriverName    string
-	Endpoint      string
-	NodeID        string
-	VendorVersion string
-}
-
-func NewCSIDriver(cfg Config) (*csiDriver, error) {
+func NewDriver(cfg config.CSIConfig) (*csiDriver, error) {
 	if cfg.DriverName == "" {
 		return nil, errors.New("no driver name provided")
 	}
@@ -47,7 +41,16 @@ func NewCSIDriver(cfg Config) (*csiDriver, error) {
 
 func (d *csiDriver) Run() error {
 	s := NewNonBlockingGRPCServer()
-	s.Start(d.config.Endpoint, d, d, d, d)
+	s.Start(
+		d.config.Endpoint,
+		service.NewIdentity(
+			d.config.DriverName,
+			d.config.VendorVersion,
+		),
+		d,
+		d,
+		d,
+	)
 	s.Wait()
 
 	return nil
