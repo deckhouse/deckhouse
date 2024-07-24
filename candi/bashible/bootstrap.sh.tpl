@@ -25,6 +25,7 @@ function basic_bootstrap_{{ .bundle }} {
 
 set -Eeuo pipefail
 shopt -s failglob
+set -x
 
 export BOOTSTRAP_DIR="/var/lib/bashible"
 export TMPDIR="/opt/deckhouse/tmp"

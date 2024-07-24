@@ -123,6 +123,7 @@ run_cloud_network_setup
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 run_log_output
   {{- end }}
+set -x
 get_phase2 | bash
 
   {{- /*
