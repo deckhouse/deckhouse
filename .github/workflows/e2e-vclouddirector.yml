@@ -496,7 +496,8 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd):/deckhouse \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -589,7 +590,8 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd):/deckhouse \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -977,7 +979,8 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd):/deckhouse \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -1070,7 +1073,8 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd):/deckhouse \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -1458,7 +1462,8 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd):/deckhouse \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -1551,7 +1556,8 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd):/deckhouse \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -1939,7 +1945,8 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd):/deckhouse \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -2032,7 +2039,8 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd):/deckhouse \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -2420,7 +2428,8 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd):/deckhouse \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -2513,7 +2522,8 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd):/deckhouse \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -2901,7 +2911,8 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd):/deckhouse \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -2994,7 +3005,8 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd):/deckhouse \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
