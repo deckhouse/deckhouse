@@ -6,7 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
-	"dynamix-csi-driver/pkg/dynamix"
+	dynamixcsidriver "dynamix-csi-driver/pkg/dynamix-csi-driver"
+	"dynamixcommon/config"
 	"flag"
 	"fmt"
 	"os"
@@ -17,7 +18,7 @@ import (
 var version = ""
 
 func main() {
-	cfg := dynamix.Config{
+	cfg := config.CSIConfig{
 		VendorVersion: version,
 	}
 	flag.StringVar(&cfg.Endpoint, "endpoint", "unix://tmp/csi.sock", "CSI endpoint")
@@ -31,7 +32,7 @@ func main() {
 		return
 	}
 
-	driver, err := dynamix.NewCSIDriver(cfg)
+	driver, err := dynamixcsidriver.NewDriver(cfg)
 	if err != nil {
 		fmt.Printf("Failed to initialize driver: %s", err.Error())
 		os.Exit(1)
