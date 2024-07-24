@@ -18,20 +18,22 @@ package d8updater
 
 import "github.com/flant/shell-operator/pkg/metric_storage"
 
-func newMetricsUpdater(metricStorage *metric_storage.MetricStorage) *metricsUpdater {
-	return &metricsUpdater{
+const metricReleasesGroup = "d8_releases"
+
+func newMetricUpdater(metricStorage *metric_storage.MetricStorage) *metricUpdater {
+	return &metricUpdater{
 		metricStorage: metricStorage,
 	}
 }
 
-type metricsUpdater struct {
+type metricUpdater struct {
 	metricStorage *metric_storage.MetricStorage
 }
 
-func (mu *metricsUpdater) WaitingManual(_ string, _ float64) {
-	mu.metricStorage.
+func (mu metricUpdater) WaitingManual(name string, totalPendingManualReleases float64) {
+	mu.metricStorage.GroupedVault.GaugeSet(metricReleasesGroup, "d8_release_waiting_manual", totalPendingManualReleases, map[string]string{"name": name})
 }
 
-func (mu *metricsUpdater) ReleaseBlocked(_, _ string) {
-	mu.metricStorage.
+func (mu metricUpdater) ReleaseBlocked(name, reason string) {
+	mu.metricStorage.GroupedVault.GaugeSet(metricReleasesGroup, "d8_release_blocked", 1, map[string]string{"name": name, "reason": reason})
 }

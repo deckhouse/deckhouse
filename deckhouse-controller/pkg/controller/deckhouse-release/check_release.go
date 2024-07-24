@@ -48,6 +48,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
+const (
+	metricUpdatingFailedGroup = "d8_updating_failed"
+)
+
 func (r *deckhouseReleaseReconciler) checkDeckhouseReleaseLoop(ctx context.Context) {
 	wait.UntilWithContext(ctx, func(ctx context.Context) {
 		if r.updateSettings.Get().ReleaseChannel == "" {
@@ -140,6 +144,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		pointerReleases = append(pointerReleases, &r)
 	}
 	sort.Sort(sort.Reverse(updater.ByVersion[*v1alpha1.DeckhouseRelease](pointerReleases)))
+	r.metricStorage.GroupedVault.ExpireGroupMetrics(metricUpdatingFailedGroup)
 
 releaseLoop:
 	for _, release := range pointerReleases {
@@ -205,6 +210,11 @@ releaseLoop:
 			}
 			if err := releaseChecker.StepByStepUpdate(release.GetVersion(), newSemver); err != nil {
 				releaseChecker.logger.Errorf("step by step update failed. err: %v", err)
+				labels := map[string]string{
+					"version": release.GetVersion().Original(),
+				}
+
+				r.metricStorage.GroupedVault.GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 1, labels)
 				return err
 			}
 
