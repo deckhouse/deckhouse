@@ -180,6 +180,7 @@ var skipOssChecks = map[string]struct{}{
 	"500-okmeter":                             {},
 	"500-upmeter":                             {},
 	"600-secret-copier":                       {},
+	"800-deckhouse-tools":                     {},
 	"810-documentation":                       {},
 }
 
