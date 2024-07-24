@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/flant/shell-operator/pkg/metric_storage"
+
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
@@ -61,11 +63,13 @@ type deckhouseReleaseReconciler struct {
 	moduleManager moduleManager
 
 	updateSettings          *helpers.DeckhouseSettingsContainer
+	metricStorage           *metric_storage.MetricStorage
 	clusterUUID             string
 	releaseVersionImageHash string
 }
 
-func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container, moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer) error {
+func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
+	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metric_storage.MetricStorage) error {
 	lg := log.WithField("component", "DeckhouseRelease")
 
 	r := &deckhouseReleaseReconciler{
@@ -74,6 +78,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		logger:         lg,
 		moduleManager:  moduleManager,
 		updateSettings: updateSettings,
+		metricStorage:  metricStorage,
 	}
 
 	// wait for cache sync

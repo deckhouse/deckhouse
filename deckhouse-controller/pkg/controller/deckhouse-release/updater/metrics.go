@@ -16,12 +16,22 @@ limitations under the License.
 
 package d8updater
 
-func newMetricsUpdater() *metricsUpdater {
-	return &metricsUpdater{}
+import "github.com/flant/shell-operator/pkg/metric_storage"
+
+func newMetricsUpdater(metricStorage *metric_storage.MetricStorage) *metricsUpdater {
+	return &metricsUpdater{
+		metricStorage: metricStorage,
+	}
 }
 
-type metricsUpdater struct{}
+type metricsUpdater struct {
+	metricStorage *metric_storage.MetricStorage
+}
 
-func (mu *metricsUpdater) WaitingManual(_ string, _ float64) {}
+func (mu *metricsUpdater) WaitingManual(_ string, _ float64) {
+	mu.metricStorage.
+}
 
-func (mu *metricsUpdater) ReleaseBlocked(_, _ string) {}
+func (mu *metricsUpdater) ReleaseBlocked(_, _ string) {
+	mu.metricStorage.
+}
