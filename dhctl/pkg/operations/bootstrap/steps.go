@@ -116,6 +116,11 @@ func ExecuteBashibleBundle(sshClient *ssh.Client, tmpDir string) error {
 		if errors.As(err, &ee) {
 			return fmt.Errorf("bundle '%s' error: %v\nstderr: %s", bundleDir, err, string(ee.Stderr))
 		}
+
+		if errors.Is(err, frontend.ErrBashibleTimeout) {
+			return frontend.ErrBashibleTimeout
+		}
+
 		return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
 	}
 	return nil
@@ -330,19 +335,19 @@ func StartRegistryPackagesProxy(config config.RegistryData, clusterDomain string
 type registryPackagesProxyLogger struct{}
 
 func (r registryPackagesProxyLogger) Errorf(format string, args ...interface{}) {
-	log.ErrorF(format, args...)
+	log.ErrorF(format+"\n", args...)
 }
 
 func (r registryPackagesProxyLogger) Infof(format string, args ...interface{}) {
-	log.InfoF(format, args...)
+	log.InfoF(format+"\n", args...)
 }
 
 func (r registryPackagesProxyLogger) Warnf(format string, args ...interface{}) {
-	log.WarnF(format, args...)
+	log.WarnF(format+"\n", args...)
 }
 
 func (r registryPackagesProxyLogger) Debugf(format string, args ...interface{}) {
-	log.DebugF(format, args...)
+	log.DebugF(format+"\n", args...)
 }
 
 func (r registryPackagesProxyLogger) Error(args ...interface{}) {

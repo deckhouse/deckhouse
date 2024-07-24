@@ -175,7 +175,7 @@ func (t *ReverseTunnel) StartHealthMonitor(checker ReverseTunnelChecker, killer 
 
 			select {
 			case <-t.stopCh:
-				log.InfoLn("Stop health monitor")
+				log.DebugLn("Stop health monitor")
 				return
 			case oldId := <-restartCh:
 				restartsCount++
