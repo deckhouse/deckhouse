@@ -41,7 +41,6 @@ spec:
   tls:
   - hosts:
     - {{ include "helm_lib_module_public_domain" (list . "grafana-v8") }}
-    - {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
     secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   {{- end }}
   rules:
