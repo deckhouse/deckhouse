@@ -21,6 +21,6 @@ shell:
   setup:
     - export GOPROXY={{ $.GOPROXY }}
     - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
-    - cd /deckhouse-cli
     - sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d v3.38.0
+    - cd /deckhouse-cli
     - task build-and-package
