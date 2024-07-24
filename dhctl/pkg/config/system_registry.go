@@ -33,7 +33,7 @@ func (d *RegistryPkiData) ConvertToMap() map[string]interface{} {
 }
 
 func getRegistryPkiData() (*RegistryPkiData, error) {
-	registryPkiDataCacheName := "pki-data"
+	registryPkiDataCacheName := "system-registry-pki-data"
 
 	inCache, err := cache.Global().InCache(registryPkiDataCacheName)
 	if err != nil {
@@ -57,7 +57,7 @@ func getRegistryPkiData() (*RegistryPkiData, error) {
 
 func newRegistryAuthority() (certificate.Authority, error) {
 	return certificate.GenerateCA(
-		"registry-selfsigned-ca",
+		"system-registry-selfsigned-ca",
 		certificate.WithNames(
 			csr.Name{
 				C:  "RU",
