@@ -1,0 +1,3 @@
+---
+title: "Модуль documentation: примеры"
+---
