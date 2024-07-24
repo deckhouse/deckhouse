@@ -219,7 +219,7 @@ func (s *Service) CommanderDetachCluster(
 	err = log.Process("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			request.ConnectionConfig,
-			config.NewSchemaStore(),
+			s.schemaStore,
 			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),

@@ -44,12 +44,15 @@ type Service struct {
 
 	podName  string
 	cacheDir string
+
+	schemaStore *config.SchemaStore
 }
 
-func New(podName, cacheDir string) *Service {
+func New(podName, cacheDir string, schemaStore *config.SchemaStore) *Service {
 	return &Service{
-		podName:  podName,
-		cacheDir: cacheDir,
+		podName:     podName,
+		cacheDir:    cacheDir,
+		schemaStore: schemaStore,
 	}
 }
 
