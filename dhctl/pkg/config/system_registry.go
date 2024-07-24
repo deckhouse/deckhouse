@@ -15,9 +15,9 @@
 package config
 
 import (
-	"github.com/cloudflare/cfssl/csr"
+	// "github.com/cloudflare/cfssl/csr"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/certificate"
+	// "github.com/deckhouse/deckhouse/dhctl/pkg/util/certificate"
 )
 
 type RegistryPkiData struct {
@@ -44,28 +44,29 @@ func getRegistryPkiData() (*RegistryPkiData, error) {
 		err := cache.Global().LoadStruct(registryPkiDataCacheName, &registryPkiData)
 		return &registryPkiData, err
 	} else {
-		authority, err := newRegistryAuthority()
-		if err != nil {
-			return nil, err
-		}
+		// authority, err := newRegistryAuthority()
+		// if err != nil {
+		// 	return nil, err
+		// }
 
-		registryPkiData := RegistryPkiData{CaCert: authority.Cert, CaKey: authority.Key}
+		// registryPkiData := RegistryPkiData{CaCert: authority.Cert, CaKey: authority.Key}
+		registryPkiData := RegistryPkiData{CaCert: "", CaKey: ""}
 		err = cache.Global().SaveStruct(registryPkiDataCacheName, registryPkiData)
 		return &registryPkiData, err
 	}
 }
 
-func newRegistryAuthority() (certificate.Authority, error) {
-	return certificate.GenerateCA(
-		"system-registry-selfsigned-ca",
-		certificate.WithNames(
-			csr.Name{
-				C:  "RU",
-				ST: "MO",
-				L:  "Moscow",
-				O:  "Flant",
-				OU: "Deckhouse Registry",
-			},
-		),
-	)
-}
+// func newRegistryAuthority() (certificate.Authority, error) {
+// 	return certificate.GenerateCA(
+// 		"system-registry-selfsigned-ca",
+// 		certificate.WithNames(
+// 			csr.Name{
+// 				C:  "RU",
+// 				ST: "MO",
+// 				L:  "Moscow",
+// 				O:  "Flant",
+// 				OU: "Deckhouse Registry",
+// 			},
+// 		),
+// 	)
+// }
