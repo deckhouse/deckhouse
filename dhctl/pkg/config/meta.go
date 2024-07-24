@@ -108,22 +108,16 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		m.Registry.RegistryMode = m.DeckhouseConfig.RegistryMode
 
 		if m.DeckhouseConfig.RegistryMode != "Direct" {
-			internalRegistryPkiData, err := getRegistryPkiData()
-			if err != nil {
-				return nil, fmt.Errorf("unable to generate internal registry cert and key: %v", err)
-			}
-
 			internalRegistryData := RegistryData{
 				Address:      "localhost:5001",
 				Path:         m.Registry.Path,
 				Scheme:       "https",
 				DockerCfg:    "ewogICJhdXRocyI6IHsKICAgICJsb2NhbGhvc3Q6NTAwMSI6IHsKICAgICAgImF1dGgiOiAiY0hWemFHVnlPbkIxYzJobGNnPT0iCiAgICB9CiAgfQp9Cg==",
-				CA:           internalRegistryPkiData.CaCert,
+				CA:           "",
 				RegistryMode: m.DeckhouseConfig.RegistryMode,
 			}
 			m.UpstreamRegistry = m.Registry
 			m.Registry = internalRegistryData
-			m.RegistryPki = *internalRegistryPkiData
 		}
 	}
 
@@ -197,6 +191,22 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 	}
 
 	return m, nil
+}
+
+// Some of the information from the metaconfig is used to create a global cache.
+// This function is necessary to initialize the data after creating the global cache
+func (m *MetaConfig) PrepareAfterGlobalCacheInit() (error) {
+	if len(m.InitClusterConfig) > 0 {
+		if m.DeckhouseConfig.RegistryMode != "Direct" {
+			internalRegistryPkiData, err := getRegistryPkiData()
+			if err != nil {
+				return fmt.Errorf("unable to get internal registry cert and key: %v", err)
+			}
+			m.Registry.CA = (*internalRegistryPkiData).CaCert
+			m.RegistryPki = *internalRegistryPkiData
+		}
+	}
+	return nil
 }
 
 func validateRegistryDockerCfg(cfg string) error {

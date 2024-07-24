@@ -221,6 +221,11 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		log.DebugLn("Cache was dropped")
 	}
 
+	// Post initialization of metaconfig (global cache is used)
+	if err := metaConfig.PrepareAfterGlobalCacheInit(); err != nil {
+		return err
+	}
+
 	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
 		return err
 	}
