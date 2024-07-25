@@ -100,7 +100,17 @@ spec:
         volumeMounts:
         - name: kiali-configuration
           mountPath: "/kiali-configuration"
+        - name: kiali-signing-key
+          mountPath: "/kiali-override-secrets/login-token-signing-key"
+
       volumes:
       - name: kiali-configuration
         configMap:
           name: kiali
+      - name: kiali-signing-key
+        secret:
+          secretName: kiali-signing-key
+          items:
+          - key: key
+            path: value.txt
+          optional: false
