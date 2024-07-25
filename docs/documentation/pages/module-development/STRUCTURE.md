@@ -90,7 +90,7 @@ This directory contains [_CustomResourceDefinitions_](https://kubernetes.io/docs
 {% endraw %}
 
 {% alert level="warning" %}
-For CRDs from the module's `/crds` directory to be applied in the cluster, the [ensure_crds.py](https://github.com/deckhouse/modules-template/blob/main/hooks/ensure_crds.py) hook must be added from the _module template_. See [`hooks`](#hooks) for more information.
+For CRDs from the module's `/crds` directory to be applied in the cluster, the [hello.py](https://github.com/deckhouse/modules-template/blob/main/hooks/hello.py) hook must be added from the _module template_. See [`hooks`](#hooks) for more information.
 {% endalert %}
 
 {% raw -%}
@@ -215,7 +215,7 @@ You need a file with the appropriate suffix for each language, e.g. `image1.jpg`
 The `/hooks` directory contains the module's hooks. A hook is an executable file executed in response to an event. Hooks are also used by the module for dynamic interaction with Kubernetes API. For example, they can be used to handle events related to the creation or deletion of objects in a cluster.
 {% endraw %}
 
-[Get to know](./#before-you-start) the concept of hooks before you start developing your own hook. You can use the [Python library](https://github.com/deckhouse/lib-python) by the Deckhouse team to speed up the development of hooks.
+[Get to know](../#before-you-start) the concept of hooks before you start developing your own hook. You can use the [Python library](https://github.com/deckhouse/lib-python) by the Deckhouse team to speed up the development of hooks.
 
 {% raw %}
 Hook requirements:
@@ -445,7 +445,7 @@ This file stores the following module settings:
 
 - `tags: string` — the additional module tags, which are converted to module labels: `module.deckhouse.io/$tag=""`.
 - `weight: integer` — the module weight. The default weight is 900, you can set your own weight between 900 and 999.
-- `stage: string` — [module lifecycle stage](versioning/#module-lifecycle). Can be `Sandbox`, `Incubating`, `Graduated`, or `Deprecated`.
+- `stage: string` — [module lifecycle stage](../versioning/#module-lifecycle). Can be `Sandbox`, `Incubating`, `Graduated`, or `Deprecated`.
 - `description: string` — the module description.
 
 An example:
