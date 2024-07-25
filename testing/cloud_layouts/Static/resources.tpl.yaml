@@ -62,3 +62,68 @@ spec:
     dedicated.worker: ""
   addressPool:
     - 192.168.2.100-192.168.2.150
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: RoutingTable
+metadata:
+  name: myrt-main
+spec:
+  ipRoutingTableID: 254 # main routing table id is 254
+  routes:
+    - destination: 10.1.1.0/8
+      gateway: 192.168.21.1
+  nodeSelector:
+    dedicated.worker: ""
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: IPRuleSet
+metadata:
+  name: myiprule
+spec:
+  rules:
+    - selectors:
+        from:
+          - 192.168.111.0/24
+          - 192.168.222.0/24
+        to:
+          - 8.8.8.8/32
+          - 172.16.8.0/21
+        sportRange:
+          start: 100
+          end: 200
+        dportRange:
+          start: 300
+          end: 400
+        ipProto: 6
+      actions:
+        lookup:
+          routingTableName: myrt-main
+      priority: 50
+  nodeSelector:
+    dedicated.worker: ""
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: EgressGateway
+metadata:
+  name: my-egressgw
+spec:
+  nodeSelector:
+    dedicated.worker: ""
+  sourceIP:
+    mode: VirtualIPAddress
+    virtualIPAddress:
+      ip: 172.18.18.242
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: EgressGatewayPolicy
+metadata:
+  name: my-egressgw-policy
+spec:
+  destinationCIDRs:
+    - 0.0.0.0/0
+  egressGatewayName: my-egressgw
+  selectors:
+    - podSelector:
+        matchLabels:
+          app: backend
+          io.kubernetes.pod.namespace: my-ns
