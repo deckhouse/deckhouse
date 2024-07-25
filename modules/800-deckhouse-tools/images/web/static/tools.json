@@ -1,23 +1,23 @@
 [
   {
-    "version": "0.0.0",
+    "version": "$version",
     "name": "Deckhouse CLI",
     "links": [
       {
         "link": "/d8/linux-amd64",
-        "platform": "Linux"
+        "platform": "Linux (Intel)"
       },
       {
         "link": "/d8/darwin-amd64",
-        "platform": "macOS (Intel)"
+        "platform": "MacOS (Intel)"
       },
       {
         "link": "/d8/darwin-arm64",
-        "platform": "macOS (ARM)"
+        "platform": "MacOS (ARM)"
       },
       {
         "link": "/d8/windows-amd64",
-        "platform": "Windows"
+        "platform": "Windows (Intel)"
       }
     ]
   }
