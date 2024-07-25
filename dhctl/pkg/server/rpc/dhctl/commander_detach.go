@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"sync"
-	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -42,7 +40,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
@@ -50,15 +47,20 @@ func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
 
 	logger.L(ctx).Info("started")
 
-	f := fsm.New("initial", s.CommanderDetachServerTransitions())
+	f := fsm.New("initial", s.commanderDetachServerTransitions())
 
 	doneCh := make(chan struct{})
 	internalErrCh := make(chan error)
 	receiveCh := make(chan *pb.CommanderDetachRequest)
 	sendCh := make(chan *pb.CommanderDetachResponse)
+	logWriter := logger.NewLogWriter(logger.L(ctx).With(logTypeDHCTL), sendCh,
+		func(lines []string) *pb.CommanderDetachResponse {
+			return &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+	)
 
-	s.startdetacherReceiver(server, receiveCh, doneCh, internalErrCh)
-	s.startdetacherSender(server, sendCh, internalErrCh)
+	startReceiver[*pb.CommanderDetachRequest, *pb.CommanderDetachResponse](server, receiveCh, doneCh, internalErrCh)
+	startSender[*pb.CommanderDetachRequest, *pb.CommanderDetachResponse](server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -84,9 +86,10 @@ connectionProcessor:
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startCommanderDetach(
-					ctx, message.Start, &CommanderDetachLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
-				)
+				go func() {
+					result := s.commanderDetach(ctx, message.Start, logWriter)
+					sendCh <- &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Result{Result: result}}
+				}()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",
@@ -97,64 +100,7 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) startdetacherReceiver(
-	server pb.DHCTL_CommanderDetachServer,
-	receiveCh chan *pb.CommanderDetachRequest,
-	doneCh chan struct{},
-	internalErrCh chan error,
-) {
-	go func() {
-		for {
-			request, err := server.Recv()
-			if errors.Is(err, io.EOF) {
-				close(doneCh)
-				return
-			}
-			if err != nil {
-				internalErrCh <- fmt.Errorf("receiving message: %w", err)
-				return
-			}
-			receiveCh <- request
-		}
-	}()
-}
-
-func (s *Service) startdetacherSender(
-	server pb.DHCTL_CommanderDetachServer,
-	sendCh chan *pb.CommanderDetachResponse,
-	internalErrCh chan error,
-) {
-	go func() {
-		for response := range sendCh {
-			loop := retry.NewSilentLoop("send message", 10, time.Millisecond*100)
-			err := loop.Run(func() error {
-				return server.Send(response)
-			})
-			if err != nil {
-				internalErrCh <- fmt.Errorf("sending message: %w", err)
-				return
-			}
-		}
-	}()
-}
-
-func (s *Service) startCommanderDetach(
-	ctx context.Context,
-	request *pb.CommanderDetachStart,
-	logWriter *CommanderDetachLogWriter,
-	sendCh chan *pb.CommanderDetachResponse,
-) {
-	go func() {
-		result := s.CommanderDetachCluster(ctx, request, logWriter)
-		sendCh <- &pb.CommanderDetachResponse{
-			Message: &pb.CommanderDetachResponse_Result{
-				Result: result,
-			},
-		}
-	}()
-}
-
-func (s *Service) CommanderDetachCluster(
+func (s *Service) commanderDetach(
 	ctx context.Context,
 	request *pb.CommanderDetachStart,
 	logWriter io.Writer,
@@ -292,7 +238,7 @@ func (s *Service) CommanderDetachCluster(
 	return &pb.CommanderDetachResult{State: resState, Err: errToString(errors.Join(resErrs...))}
 }
 
-func (s *Service) CommanderDetachServerTransitions() []fsm.Transition {
+func (s *Service) commanderDetachServerTransitions() []fsm.Transition {
 	return []fsm.Transition{
 		{
 			Event:       "start",
@@ -300,43 +246,4 @@ func (s *Service) CommanderDetachServerTransitions() []fsm.Transition {
 			Destination: "running",
 		},
 	}
-}
-
-type CommanderDetachLogWriter struct {
-	l      *slog.Logger
-	sendCh chan *pb.CommanderDetachResponse
-
-	m    sync.Mutex
-	prev []byte
-}
-
-func (w *CommanderDetachLogWriter) Write(p []byte) (n int, err error) {
-	w.m.Lock()
-	defer w.m.Unlock()
-
-	var r []string
-
-	for _, b := range p {
-		switch b {
-		case '\n', '\r':
-			s := string(w.prev)
-			if s != "" {
-				r = append(r, s)
-			}
-			w.prev = []byte{}
-		default:
-			w.prev = append(w.prev, b)
-		}
-	}
-
-	if len(r) > 0 {
-		for _, line := range r {
-			w.l.Info(line, logTypeDHCTL)
-		}
-		w.sendCh <- &pb.CommanderDetachResponse{
-			Message: &pb.CommanderDetachResponse_Logs{Logs: &pb.Logs{Logs: r}},
-		}
-	}
-
-	return len(p), nil
 }
