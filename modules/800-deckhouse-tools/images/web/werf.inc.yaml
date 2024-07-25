@@ -37,9 +37,11 @@ shell:
     - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
     - sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d v3.38.0
     - cd /deckhouse-cli
-    - task build-and-package
-    - mv dist/* /app
-    - mv /static/* /app
+    - task build:dist:all
+    - mkdir -p /app/files
+    - mv dist /app/files/d8-cli
+    - jq '[.[] | .version="{{ $version }}"]' /static/tools.json > /app/tools.json
+    - mv /static/robots.txt /app
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
 from: {{ .Images.BASE_NODE_20_ALPINE_DEV }}
