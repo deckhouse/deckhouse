@@ -151,7 +151,7 @@ spec:
         {{- end }}
         ports:
         - name: webhook
-          containerPort: 9680
+          containerPort: 4227
         livenessProbe:
           httpGet:
             path: /sidekick/ping
