@@ -17,12 +17,16 @@ package dhctl
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -30,8 +34,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -170,6 +179,112 @@ func writeTempFile(data []byte) (string, error) {
 	return f.Name(), nil
 }
 
+func portToString(p *int32) string {
+	if p == nil {
+		return ""
+	}
+	return strconv.Itoa(int(*p))
+}
+
+func errToString(err error) string {
+	if err != nil {
+		return err.Error()
+	}
+	return ""
+}
+
+type serverStream[Request proto.Message, Response proto.Message] interface {
+	Send(Response) error
+	Recv() (Request, error)
+	grpc.ServerStream
+}
+
+func startReceiver[Request proto.Message, Response proto.Message](
+	server serverStream[Request, Response],
+	receiveCh chan Request,
+	doneCh chan struct{},
+	internalErrCh chan error,
+) {
+	go func() {
+		for {
+			request, err := server.Recv()
+			if errors.Is(err, io.EOF) {
+				close(doneCh)
+				return
+			}
+			if err != nil {
+				internalErrCh <- fmt.Errorf("receiving message: %w", err)
+				return
+			}
+			receiveCh <- request
+		}
+	}()
+}
+
+func startSender[Request proto.Message, Response proto.Message](
+	server serverStream[Request, Response],
+	sendCh chan Response,
+	internalErrCh chan error,
+) {
+	go func() {
+		for response := range sendCh {
+			loop := retry.NewSilentLoop("send message", 10, time.Millisecond*100)
+			err := loop.Run(func() error {
+				return server.Send(response)
+			})
+			if err != nil {
+				internalErrCh <- fmt.Errorf("sending message: %w", err)
+				return
+			}
+		}
+	}()
+}
+
+type fsmPhaseSwitcher[T proto.Message, OperationPhaseDataT any] struct {
+	f        *fsm.FiniteStateMachine
+	dataFunc func(
+		completedPhase phases.OperationPhase,
+		completedPhaseState phases.DhctlState,
+		phaseData OperationPhaseDataT,
+		nextPhase phases.OperationPhase,
+		nextPhaseCritical bool,
+	) (T, error)
+	sendCh chan T
+	next   chan error
+}
+
+func (b *fsmPhaseSwitcher[T, OperationPhaseDataT]) switchPhase(
+	completedPhase phases.OperationPhase,
+	completedPhaseState phases.DhctlState,
+	phaseData OperationPhaseDataT,
+	nextPhase phases.OperationPhase,
+	nextPhaseCritical bool,
+) error {
+	err := b.f.Event("wait")
+	if err != nil {
+		return fmt.Errorf("changing state to waiting: %w", err)
+	}
+
+	data, err := b.dataFunc(
+		completedPhase,
+		completedPhaseState,
+		phaseData,
+		nextPhase,
+		nextPhaseCritical,
+	)
+	if err != nil {
+		return fmt.Errorf("switch phase data func error: %w", err)
+	}
+
+	b.sendCh <- data
+
+	switchErr, ok := <-b.next
+	if !ok {
+		return fmt.Errorf("server stopped, cancel task")
+	}
+	return switchErr
+}
+
 func onCheckResult(checkRes *check.CheckResult) error {
 	printableCheckRes := *checkRes
 	printableCheckRes.StatusDetails.TerraformPlan = nil
@@ -185,18 +300,4 @@ func onCheckResult(checkRes *check.CheckResult) error {
 	})
 
 	return nil
-}
-
-func portToString(p *int32) string {
-	if p == nil {
-		return ""
-	}
-	return strconv.Itoa(int(*p))
-}
-
-func errToString(err error) string {
-	if err != nil {
-		return err.Error()
-	}
-	return ""
 }
