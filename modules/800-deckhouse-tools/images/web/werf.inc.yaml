@@ -38,8 +38,8 @@ shell:
     - sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d v3.38.0
     - cd /deckhouse-cli
     - task build:dist:all
-    - mkdir -p /app/files
-    - mv dist /app/files/d8-cli
+    - mkdir -p /app/files/d8-cli
+    - mv dist/{{ $version }}/* /app/files/d8-cli
     - jq '[.[] | .version="{{ $version }}"]' /static/tools.json > /app/tools.json
     - mv /static/robots.txt /app
 ---
