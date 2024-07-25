@@ -21,8 +21,8 @@ registry_pki_path="/etc/kubernetes/system-registry/pki"
 etcd_pki_path="/etc/kubernetes/pki/etcd"
 
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf get ns d8-system || bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf create ns d8-system
-bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system delete secret d8-system-registry-pki || true
-bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret generic d8-system-registry-pki \
+bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system delete secret system-registry-init-configuration || true
+bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret generic system-registry-init-configuration \
   --from-file=etcd-ca.key=$etcd_pki_path/ca.key \
   --from-file=etcd-ca.crt=$etcd_pki_path/ca.crt \
   --from-file=registry-ca.key=$registry_pki_path/ca.key \
@@ -33,4 +33,17 @@ bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret ge
   --from-file=auth.crt=$registry_pki_path/auth.crt \
   --from-file=distribution.key=$registry_pki_path/distribution.key \
   --from-file=distribution.crt=$registry_pki_path/distribution.crt \
+  --from-literal=registryMode='{{- .registry.registryMode }}' \
+  --from-literal=registryUserRwName='{{- .internalRegistryAccess.userRw.name }}' \
+  --from-literal=registryUserRwPassword='{{- .internalRegistryAccess.userRw.password }}' \
+  --from-literal=registryUserRwPasswordHash='{{- .internalRegistryAccess.userRw.passwordHash }}' \
+  --from-literal=registryUserRoName='{{- .internalRegistryAccess.userRo.name }}' \
+  --from-literal=registryUserRoPassword='{{- .internalRegistryAccess.userRo.password }}' \
+  --from-literal=registryUserRoPasswordHash='{{- .internalRegistryAccess.userRo.passwordHash }}' \
+  --from-literal=upstreamRegistryAddress='{{- .upstreamRegistry.address }}' \
+  --from-literal=upstreamRegistryPath='{{- .upstreamRegistry.path }}' \
+  --from-literal=upstreamRegistryScheme='{{- .upstreamRegistry.scheme }}' \
+  --from-file=upstreamRegistryCA=$registry_pki_path/ca.crt \
+  --from-literal=upstreamRegistryAuth='{{- .upstreamRegistry.auth }}'
+
 {{- end }}

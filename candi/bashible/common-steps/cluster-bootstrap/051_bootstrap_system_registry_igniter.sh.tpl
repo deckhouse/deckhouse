@@ -40,11 +40,11 @@ discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 
 # Prepare certs
 bb-sync-file "$IGNITER_DIR/ca.key" - << EOF
-{{ .registryPki.caKey }}
+{{ .internalRegistryAccess.ca.key }}
 EOF
 
 bb-sync-file "$IGNITER_DIR/ca.crt" - << EOF
-{{ .registryPki.caCert }}
+{{ .internalRegistryAccess.ca.cert }}
 EOF
 
 # Auth certs
@@ -92,18 +92,18 @@ token:
 
 users:
   # Password is specified as a BCrypt hash. Use htpasswd -nB USERNAME to generate.
-  "pusher":
-    password: "\$2y\$05\$d9Ko2sN9YKSgeu9oxfPiAeopkPTaD65RWQiZtaZ2.hnNnLyFObRne"  # pusher
-  "puller":
-    password: "\$2y\$05\$wVbhDuuhL/TAVj4xMt3lbeCAYWxP1JJNZJdDS/Elk7Ohf7yhT5wNq"  # puller
+  {{ .internalRegistryAccess.userRw.name | quote }}:
+    password: "{{ .internalRegistryAccess.userRw.passwordHash | replace "$" "\\$" }}"
+  {{ .internalRegistryAccess.userRo.name | quote }}:
+    password: "{{ .internalRegistryAccess.userRo.passwordHash | replace "$" "\\$" }}"
 
 acl:
-  - match: { account: "pusher" }
+  - match: { account: {{ .internalRegistryAccess.userRw.name | quote }} }
     actions: [ "*" ]
-    comment: "Pusher has full access to everything."
-  - match: {account: "/.+/"}  # Match all accounts.
+    comment: "has full access"
+  - match: { account: {{ .internalRegistryAccess.userRo.name | quote }} }
     actions: ["pull"]
-    comment: "readonly access to all accounts"
+    comment: "has readonly access"
   # Access is denied by default.
 EOF
 
