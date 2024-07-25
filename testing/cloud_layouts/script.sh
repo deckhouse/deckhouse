@@ -450,6 +450,7 @@ function test_requirements() {
   fi
 
   release=$(< /deckhouse/release.yaml)
+  if [ -z "${release:-}" ]; then return 1; fi
   release=${release//\"/\\\"}
 
   >&2 echo "Run script ... "
@@ -462,7 +463,7 @@ set -Eeuo pipefail
 wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_386 -O /usr/bin/yq &&\
  chmod +x /usr/bin/yq
 
-command -v yq >/dev/null 2>&1 || return 1
+command -v yq >/dev/null 2>&1 || exit 1
 
 echo "$release" > /tmp/releaseFile.yaml
 
