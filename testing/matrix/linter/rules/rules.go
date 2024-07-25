@@ -616,14 +616,6 @@ func objectServiceTargetPort(object storage.StoreObject) errors.LintRuleError {
 }
 
 func skipHostNetworkPorts(o *storage.StoreObject, c *v1.Container, p *v1.ContainerPort, hostNetworkUsed bool) bool {
-	// The 123 port is standard one, which is configured on external clients.
-	if o.Unstructured.GetKind() == "DaemonSet" && strings.HasPrefix(o.Unstructured.GetName(), "chrony") &&
-		o.Unstructured.GetNamespace() == "d8-chrony" && c.Name == "chrony" {
-		if (hostNetworkUsed && p.ContainerPort == 123) || p.HostPort == 123 {
-			return true
-		}
-	}
-
 	// The 5416 port is standard one which is already configured on client's side.
 	if o.Unstructured.GetKind() == "StatefulSet" && o.Unstructured.GetName() == "openvpn" &&
 		o.Unstructured.GetNamespace() == "d8-openvpn" && c.Name == "openvpn-tcp" {

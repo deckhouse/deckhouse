@@ -56,6 +56,11 @@ groups:
     en: Nodes to masters traffic
     ru: Трафик между любыми узлами и мастер-узлами
   destinations:
+  - ports: "4234"
+    protocol: UDP
+    description:
+      en: NTP for time synchronization between nodes
+      ru: NTP для синхронизации времени между узлами
   - ports: "6443"
     protocol: TCP
     description:
@@ -87,11 +92,6 @@ groups:
     description:
       en: ICMP for node-to-node connectivity monitoring
       ru: ICMP для мониторинга связности между узлами
-  - ports: "123"
-    protocol: UDP
-    description:
-      en: NTP for time synchronization between nodes
-      ru: NTP для синхронизации времени между узлами
   - ports: "7000-7999"
     protocol: TCP
     description:

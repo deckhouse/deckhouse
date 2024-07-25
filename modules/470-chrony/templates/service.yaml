@@ -10,6 +10,6 @@ spec:
     app: chrony-master
   ports:
     - protocol: UDP
-      port: 123
+      port: 4234
       name: ntp
       targetPort: ntp
