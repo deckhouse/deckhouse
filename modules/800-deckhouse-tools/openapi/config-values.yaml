@@ -7,6 +7,49 @@ properties:
       The class of the Ingress controller of the documentation web UI.
 
       An optional parameter; by default, the `modules.ingressClass` global value is used.
+  auth:
+    type: object
+    default: {}
+    description: |
+      Parameters to authenticate and authorize access to the documentation web interface.
+    properties:
+      externalAuthentication:
+        type: object
+        description: |
+          Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+
+          > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) module is enabled.
+        properties:
+          authURL:
+            type: string
+            default: ""
+            description: |
+              The URL of the authentication service.
+
+              If the user is authenticated, the service should return an HTTP 200 response code.
+            x-examples:
+              - https://documentation-dex-authenticator.d8-system.svc.cluster.local/dex-authenticator/auth
+          authSignInURL:
+            type: string
+            default: ""
+            description: |
+              The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response.
+            x-examples:
+              - https://$host/dex-authenticator/sign_in
+      allowedUserGroups:
+        type: array
+        items:
+          type: string
+        default: []
+        description: |
+          An array of groups whose users can browse the documentation.
+
+          This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
+
+          > **Caution!** Note that you must add those groups to the appropriate field in the `DexProvider` config if this module is used together with the `user-authn` one.
+        x-examples:
+          - ["admin", "users"]
+          - []
   https:
     type: object
     x-examples:
