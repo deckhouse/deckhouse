@@ -9,10 +9,10 @@ spec:
     - name: http
       port: 80
       protocol: TCP
-      targetPort: 8080
+      targetPort: server
     - name: https
       port: 443
       protocol: TCP
-      targetPort: 8080
+      targetPort: server
   selector:
     app.kubernetes.io/name: argocd-server

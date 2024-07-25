@@ -64,21 +64,21 @@ spec:
         - "-config"
         - "/kiali-configuration/config.yaml"
         ports:
-        - name: api-port
+        - name: api
           containerPort: 20001
         - name: http-metrics
           containerPort: 9090
         readinessProbe:
           httpGet:
             path: /kiali/healthz
-            port: api-port
+            port: api
             scheme: HTTP
           initialDelaySeconds: 5
           periodSeconds: 30
         livenessProbe:
           httpGet:
             path: /kiali/healthz
-            port: api-port
+            port: api
             scheme: HTTP
           initialDelaySeconds: 5
           periodSeconds: 30
