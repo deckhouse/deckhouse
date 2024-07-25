@@ -20,27 +20,5 @@
         "platform": "Windows"
       }
     ]
-  },
-  {
-    "version": "1.0.0",
-    "name": "Some other tool",
-    "links": [
-      {
-        "link": "/d8/linux-amd64",
-        "platform": "Linux"
-      },
-      {
-        "link": "/d8/darwin-amd64",
-        "platform": "macOS (Intel)"
-      },
-      {
-        "link": "/d8/darwin-arm64",
-        "platform": "macOS (ARM)"
-      },
-      {
-        "link": "/d8/windows-amd64",
-        "platform": "Windows"
-      }
-    ]
   }
 ]
