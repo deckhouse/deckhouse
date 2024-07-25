@@ -100,8 +100,13 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	}
 
 	dc := dependency.NewDependencyContainer()
-	// create a policy with empty spec, it'll be filled in with relevant settings from the deckhouse moduleConfig, see runDeckhouseConfigObserver method
-	embeddedDeckhousePolicy := v1alpha1.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{})
+	// create a default policy, it'll be filled in with relevant settings from the deckhouse moduleConfig, see runDeckhouseConfigObserver method
+	embeddedDeckhousePolicy := v1alpha1.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
+		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			Mode: "Auto",
+		},
+		ReleaseChannel: "Stable",
+	})
 	ds := &helpers.DeckhouseSettings{ReleaseChannel: ""}
 	ds.Update.DisruptionApprovalMode = "Auto"
 	ds.Update.Mode = "Auto"
@@ -310,6 +315,7 @@ func (dml *DeckhouseController) runDeckhouseConfigObserver(deckhouseConfigC <-ch
 		}
 		dml.deckhouseSettings.Set(settings)
 
+		// if deckhouse moduleConfig has releaseChannel unset, apply default releaseChannel Stable to the embedded Deckhouse policy
 		if len(settings.ReleaseChannel) == 0 {
 			settings.ReleaseChannel = "Stable"
 			log.Debugf("Embedded deckhouse policy release channel set to %s", settings.ReleaseChannel)
