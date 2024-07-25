@@ -80,8 +80,15 @@ resource "aws_internet_gateway" "kube" {
   })
 }
 
+locals {
+  first_non_local_az = data.aws_availability_zones.available_except_local_zone.names[0]
+  first_non_local_subnet_id = [for subnet in aws_subnet.kube_public : 
+    subnet.id if subnet.availability_zone == local.first_non_local_az][0]
+}
+
+
 resource "aws_nat_gateway" "kube" {
-  subnet_id     = aws_subnet.kube_public[0].id
+  subnet_id     = local.first_non_local_subnet_id
   allocation_id = aws_eip.natgw.id
 
   tags = merge(local.tags, {
