@@ -100,12 +100,8 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	}
 
 	dc := dependency.NewDependencyContainer()
-	embeddedDeckhousePolicy := v1alpha1.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
-		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
-			Mode: "Auto",
-		},
-		ReleaseChannel: "Stable",
-	})
+	// create a policy with empty spec, it'll be filled in with relevant settings from the deckhouse moduleConfig, see runDeckhouseConfigObserver method
+	embeddedDeckhousePolicy := v1alpha1.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{})
 	ds := &helpers.DeckhouseSettings{ReleaseChannel: ""}
 	ds.Update.DisruptionApprovalMode = "Auto"
 	ds.Update.Mode = "Auto"
@@ -295,6 +291,7 @@ func (dml *DeckhouseController) StartPluggableModulesControllers(ctx context.Con
 	log.Info("The preflight checks are done")
 }
 
+// runDeckhouseConfigObserver updates embeddedDeckhousePolicy and deckhouseSettings containers with the configuration from deckhouse moduleConfig
 func (dml *DeckhouseController) runDeckhouseConfigObserver(deckhouseConfigC <-chan utils.Values) {
 	for {
 		cfg := <-deckhouseConfigC
@@ -311,8 +308,13 @@ func (dml *DeckhouseController) runDeckhouseConfigObserver(deckhouseConfigC <-ch
 			log.Errorf("Error occurred during the Deckhouse settings unmarshalling: %s", err)
 			continue
 		}
-		dml.embeddedDeckhousePolicy.Set(settings)
 		dml.deckhouseSettings.Set(settings)
+
+		if len(settings.ReleaseChannel) == 0 {
+			settings.ReleaseChannel = "Stable"
+			log.Debugf("Embedded deckhouse policy release channel set to %s", settings.ReleaseChannel)
+		}
+		dml.embeddedDeckhousePolicy.Set(settings)
 	}
 }
 
