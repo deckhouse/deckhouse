@@ -17,13 +17,21 @@ limitations under the License.
 package hooks
 
 import (
-	"testing"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/generate_password"
 )
 
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
-}
+const (
+	moduleValuesKey = "deckhouseTools"
+	authSecretNS    = "d8-system"
+	authSecretName  = "tools-basic-auth"
+)
+
+var (
+	generatePasswordSettings = generate_password.HookSettings{
+		ModuleName: moduleValuesKey,
+		Namespace:  authSecretNS,
+		SecretName: authSecretName,
+	}
+)
+
+var _ = generate_password.RegisterHook(generatePasswordSettings)

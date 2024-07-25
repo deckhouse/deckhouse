@@ -17,13 +17,14 @@ limitations under the License.
 package hooks
 
 import (
-	"testing"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/external_auth"
 )
 
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
-}
+var _ = external_auth.RegisterHook(external_auth.Settings{
+	ExternalAuthPath:            "deckhouseTools.auth.externalAuthentication",
+	DexAuthenticatorEnabledPath: "deckhouseTools.internal.deployDexAuthenticator",
+	DexExternalAuth: external_auth.ExternalAuth{
+		AuthURL:       "https://tools-dex-authenticator.d8-system.svc.%CLUSTER_DOMAIN%/dex-authenticator/auth",
+		AuthSignInURL: "https://$host/dex-authenticator/sign_in",
+	},
+})

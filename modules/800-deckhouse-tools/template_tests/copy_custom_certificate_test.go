@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ var _ = Describe("Module :: deckhouse-tools :: helm template :: custom-certifica
 
 		It("Everything must render properly for default cluster", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			createdSecret := f.KubernetesResource("Secret", "d8-system", "ingress-tls-customcertificate")
+			createdSecret := f.KubernetesResource("Secret", "d8-system", "tools-ingress-tls-customcertificate")
 			Expect(createdSecret.Exists()).To(BeTrue())
 			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`))
 		})
