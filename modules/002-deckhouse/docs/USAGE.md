@@ -116,7 +116,7 @@ spec:
       disruptionApprovalMode: Manual
 ```
 
-In this mode, it will be necessary to confirm each minor disruptive update with the `release.deckhouse.io/disruption-approved=true` annotation on the [DeckhouseRelease](cr.html#deckhouserelease) resource.
+In this mode, it will be necessary to confirm each minor disruptive update with the `release.deckhouse.io/disruption-approved=true` annotation on the [DeckhouseRelease](../../cr.html#deckhouserelease) resource.
 
 An example of confirmation of a potentially dangerous Deckhouse minor update `v1.36.4`:
 

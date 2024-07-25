@@ -116,7 +116,7 @@ spec:
       disruptionApprovalMode: Manual
 ```
 
-В этом режиме необходимо подтверждать каждое минорное потенциально опасное (disruptive) обновление Deckhouse (без учета patch-версий) с помощью аннотации `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе [DeckhouseRelease](cr.html#deckhouserelease).
+В этом режиме необходимо подтверждать каждое минорное потенциально опасное (disruptive) обновление Deckhouse (без учета patch-версий) с помощью аннотации `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе [DeckhouseRelease](../../cr.html#deckhouserelease).
 
 Пример подтверждения минорного потенциально опасного обновления Deckhouse `v1.36.4`:
 

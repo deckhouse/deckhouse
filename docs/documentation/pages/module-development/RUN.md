@@ -79,7 +79,7 @@ The complete list of modules available from all module sources created in the cl
 kubectl get ms  -o jsonpath='{.items[*].status.modules[*].name}'
 ```
 
-After creating the `ModuleSource` resource and successful synchronization, _module releases_, i. e., [ModuleRelease](cr.html#modulerelease) resources will begin to be created in the cluster (DKP creates them automatically, you don't need to do it manually). Use the following command to print the list of releases:
+After creating the `ModuleSource` resource and successful synchronization, _module releases_, i. e., [ModuleRelease](../../cr.html#modulerelease) resources will begin to be created in the cluster (DKP creates them automatically, you don't need to do it manually). Use the following command to print the list of releases:
 
 ```shell
 kubectl get mr
@@ -100,7 +100,7 @@ module-two-v1.2.5          Pending      deckhouse       44d              Waiting
 
 ```
 
-If there is a module release in `Deployed` status, this module can be [enabled](#enable-module) in the cluster. If a module release is in `Superseded` status, it means that the module release is out of date, and there is a newer release to replace it.
+If there is a module release in `Deployed` status, this module can be [enabled](#enabling-the-module) in the cluster. If a module release is in `Superseded` status, it means that the module release is out of date, and there is a newer release to replace it.
 
 {% alert level="warning" %}
 If a module release is Pending, it means that manual confirmation is required to install it (see [module update policy](#module-update-policy) below). You can confirm the module release using the following command (specify the _moduleRelease_ name):
