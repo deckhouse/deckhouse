@@ -49,14 +49,14 @@ type MetaConfig struct {
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
-	VersionMap       map[string]interface{} `json:"-"`
-	Images           imagesDigests          `json:"-"`
-	Registry         RegistryData           `json:"-"`
-	RegistryPki      RegistryPkiData        `json:"_"`
-	UpstreamRegistry RegistryData           `json:"-"`
-	UUID             string                 `json:"clusterUUID,omitempty"`
-	InstallerVersion string                 `json:"-"`
-	ResourcesYAML    string                 `json:"-"`
+	VersionMap             map[string]interface{} `json:"-"`
+	Images                 imagesDigests          `json:"-"`
+	Registry               RegistryData           `json:"-"`
+	UpstreamRegistry       RegistryData           `json:"-"`
+	InternalRegistryAccess RegistryAccessData     `json:"_"`
+	UUID                   string                 `json:"clusterUUID,omitempty"`
+	InstallerVersion       string                 `json:"-"`
+	ResourcesYAML          string                 `json:"-"`
 }
 
 type imagesDigests map[string]map[string]interface{}
@@ -111,7 +111,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 			internalRegistryData := RegistryData{
 				Address:      "localhost:5001",
 				Path:         m.Registry.Path,
-				Scheme:       "https",
+				Scheme:       "http",
 				DockerCfg:    "ewogICJhdXRocyI6IHsKICAgICJsb2NhbGhvc3Q6NTAwMSI6IHsKICAgICAgImF1dGgiOiAiY0hWemFHVnlPbkIxYzJobGNnPT0iCiAgICB9CiAgfQp9Cg==",
 				CA:           "",
 				RegistryMode: m.DeckhouseConfig.RegistryMode,
@@ -195,15 +195,49 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 
 // Some of the information from the metaconfig is used to create a global cache.
 // This function is necessary to initialize the data after creating the global cache
-func (m *MetaConfig) PrepareAfterGlobalCacheInit() (error) {
+func (m *MetaConfig) PrepareAfterGlobalCacheInit() error {
+	type DockerCfg struct {
+		Auths map[string]struct {
+			Auth string `json:"auth"`
+		} `json:"auths"`
+	}
+
 	if len(m.InitClusterConfig) > 0 {
 		if m.DeckhouseConfig.RegistryMode != "Direct" {
-			internalRegistryPkiData, err := getRegistryPkiData()
+			internalRegistryAccessData, err := getRegistryAccessData()
 			if err != nil {
-				return fmt.Errorf("unable to get internal registry cert and key: %v", err)
+				return fmt.Errorf("unable to get internal registry access data: %v", err)
 			}
-			m.Registry.CA = (*internalRegistryPkiData).CaCert
-			m.RegistryPki = *internalRegistryPkiData
+
+			dockerAuth := base64.StdEncoding.EncodeToString(
+				[]byte(fmt.Sprintf(
+					"%s:%s",
+					internalRegistryAccessData.UserRo.Name,
+					internalRegistryAccessData.UserRo.Password,
+				)),
+			)
+
+			dockerCfg, err := json.Marshal(
+				DockerCfg{
+					Auths: map[string]struct {
+						Auth string `json:"auth"`
+					}{
+						m.Registry.Address: struct {
+							Auth string `json:"auth"`
+						}{
+							Auth: dockerAuth,
+						},
+					},
+				},
+			)
+			if err != nil {
+				return fmt.Errorf("cannot marshal docker cfg: %v", err)
+			}
+
+			m.Registry.DockerCfg = string(base64.StdEncoding.EncodeToString(dockerCfg))
+			m.Registry.Scheme = "https"
+			m.Registry.CA = (*internalRegistryAccessData).CA.Cert
+			m.InternalRegistryAccess = *internalRegistryAccessData
 		}
 	}
 	return nil
@@ -388,7 +422,7 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 			return nil, err
 		}
 		result["upstreamRegistry"] = upstreamRegistryData
-		result["registryPki"] = m.RegistryPki.ConvertToMap()
+		result["internalRegistryAccess"] = m.InternalRegistryAccess.ConvertToMap()
 	}
 
 	result["registry"] = registryData
@@ -477,7 +511,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 			return nil, err
 		}
 		configForBashibleBundleTemplate["upstreamRegistry"] = upstreamRegistryData
-		configForBashibleBundleTemplate["registryPki"] = m.RegistryPki.ConvertToMap()
+		configForBashibleBundleTemplate["internalRegistryAccess"] = m.InternalRegistryAccess.ConvertToMap()
 	}
 
 	configForBashibleBundleTemplate["registry"] = registryData
@@ -551,7 +585,7 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 
 	out.Registry = m.Registry
 	out.UpstreamRegistry = m.UpstreamRegistry
-	out.RegistryPki = out.RegistryPki
+	out.InternalRegistryAccess = m.InternalRegistryAccess
 
 	if m.ClusterType != "" {
 		out.ClusterType = m.ClusterType

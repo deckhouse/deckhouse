@@ -668,31 +668,32 @@ func CommanderUUIDConfigMap(uuid string) *apiv1.ConfigMap {
 		Data: map[string]string{CommanderUUIDCmKey: uuid},
 	}
 }
-func SystemRegistryInitialModuleConfig(RegistryMode string, UpstreamRegistry config.RegistryData) *apiv1.Secret {
-	upstreamAuth, err := UpstreamRegistry.Auth()
-	if err != nil {
-		log.ErrorF("parse upstreamAuth: %v", err)
-		return nil
-	}
 
-	return &apiv1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "system-registry-init-configuration",
-			Namespace: "d8-system",
-			Labels: map[string]string{
-				"heritage": "deckhouse",
-			},
-		},
-		StringData: map[string]string{
-			"registryMode":            RegistryMode,
-			"upstreamRegistryAddress": UpstreamRegistry.Address,
-			"upstreamRegistryPath":    UpstreamRegistry.Path,
-			"upstreamRegistryScheme":  UpstreamRegistry.Scheme,
-			"upstreamRegistryCA":      UpstreamRegistry.CA,
-			"upstreamRegistryAuth":    upstreamAuth,
-		},
-	}
-}
+// func SystemRegistryInitialModuleConfig(RegistryMode string, UpstreamRegistry config.RegistryData) *apiv1.Secret {
+// 	upstreamAuth, err := UpstreamRegistry.Auth()
+// 	if err != nil {
+// 		log.ErrorF("parse upstreamAuth: %v", err)
+// 		return nil
+// 	}
+
+// 	return &apiv1.Secret{
+// 		ObjectMeta: metav1.ObjectMeta{
+// 			Name:      "system-registry-init-configuration",
+// 			Namespace: "d8-system",
+// 			Labels: map[string]string{
+// 				"heritage": "deckhouse",
+// 			},
+// 		},
+// 		StringData: map[string]string{
+// 			"registryMode":            RegistryMode,
+// 			"upstreamRegistryAddress": UpstreamRegistry.Address,
+// 			"upstreamRegistryPath":    UpstreamRegistry.Path,
+// 			"upstreamRegistryScheme":  UpstreamRegistry.Scheme,
+// 			"upstreamRegistryCA":      UpstreamRegistry.CA,
+// 			"upstreamRegistryAuth":    upstreamAuth,
+// 		},
+// 	}
+// }
 
 func KubeDNSService(ipAddress string) *apiv1.Service {
 	return &apiv1.Service{

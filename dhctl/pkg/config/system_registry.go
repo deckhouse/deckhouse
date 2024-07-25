@@ -15,43 +15,82 @@
 package config
 
 import (
+	"fmt"
+	"math/rand"
+
 	"github.com/cloudflare/cfssl/csr"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/certificate"
+	"golang.org/x/crypto/bcrypt"
 )
 
-type RegistryPkiData struct {
-	CaCert string `json:"caCert"`
-	CaKey  string `json:"caKey"`
+type RegistryAccessData struct {
+	CA     certificate.Authority `json:"ca"`
+	UserRw RegistryUser          `json:"userRw"`
+	UserRo RegistryUser          `json:"userRo"`
 }
 
-func (d *RegistryPkiData) ConvertToMap() map[string]interface{} {
+type RegistryUser struct {
+	Name         string `json:"name"`
+	Password     string `json:"password"`
+	PasswordHash string `json:"passwordHash"`
+}
+
+func (d *RegistryAccessData) ConvertToMap() map[string]interface{} {
 	return map[string]interface{}{
-		"caCert": d.CaCert,
-		"caKey":  d.CaKey,
+		"ca": map[string]interface{}{
+			"cert": d.CA.Cert,
+			"key":  d.CA.Key,
+		},
+		"userRw": map[string]interface{}{
+			"name":         d.UserRw.Name,
+			"password":     d.UserRw.Password,
+			"passwordHash": d.UserRw.PasswordHash,
+		},
+		"userRo": map[string]interface{}{
+			"name":         d.UserRo.Name,
+			"password":     d.UserRo.Password,
+			"passwordHash": d.UserRo.PasswordHash,
+		},
 	}
 }
 
-func getRegistryPkiData() (*RegistryPkiData, error) {
-	registryPkiDataCacheName := "system-registry-pki-data"
+func getRegistryAccessData() (*RegistryAccessData, error) {
+	registryAccessDataCacheName := "system-registry-access-data"
+	registryUserRw := "deckhouse-rw"
+	registryUserRo := "deckhouse-ro"
 
-	inCache, err := cache.Global().InCache(registryPkiDataCacheName)
+	inCache, err := cache.Global().InCache(registryAccessDataCacheName)
 	if err != nil {
 		return nil, err
 	}
 	if inCache {
-		var registryPkiData RegistryPkiData
-		err := cache.Global().LoadStruct(registryPkiDataCacheName, &registryPkiData)
-		return &registryPkiData, err
+		var registryAccessData RegistryAccessData
+		err := cache.Global().LoadStruct(registryAccessDataCacheName, &registryAccessData)
+		return &registryAccessData, err
 	} else {
 		authority, err := newRegistryAuthority()
 		if err != nil {
 			return nil, err
 		}
 
-		registryPkiData := RegistryPkiData{CaCert: authority.Cert, CaKey: authority.Key}
-		err = cache.Global().SaveStruct(registryPkiDataCacheName, registryPkiData)
-		return &registryPkiData, err
+		userRw, err := newRegistryUser(registryUserRw)
+		if err != nil {
+			return nil, err
+		}
+
+		userRo, err := newRegistryUser(registryUserRo)
+		if err != nil {
+			return nil, err
+		}
+
+		registryAccessData := RegistryAccessData{
+			CA:     authority,
+			UserRw: *userRw,
+			UserRo: *userRo,
+		}
+		err = cache.Global().SaveStruct(registryAccessDataCacheName, registryAccessData)
+		return &registryAccessData, err
 	}
 }
 
@@ -68,4 +107,27 @@ func newRegistryAuthority() (certificate.Authority, error) {
 			},
 		),
 	)
+}
+
+func newRegistryUser(name string) (*RegistryUser, error) {
+	password := generateRegistryPassword()
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, fmt.Errorf("error generating the password hash for the user %s: %v", name, err)
+	}
+
+	registryUser := RegistryUser{Name: name, Password: password, PasswordHash: string(passwordHash)}
+	return &registryUser, nil
+}
+
+func generateRegistryPassword() string {
+	passwordLength := 12
+	asciiStart := 33
+	asciiEnd := 126
+
+	password := make([]byte, passwordLength)
+	for i := range password {
+		password[i] = byte(rand.Intn(asciiEnd-asciiStart+1) + asciiStart)
+	}
+	return string(password)
 }
