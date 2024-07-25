@@ -2,7 +2,7 @@
 interface ToolListItem {
   name: string,
   version: string;
-  links: Array<{ link: string, platform: "Linux" | "macOS (Intel)" | "macOS (ARM)" | "Windows" }>
+  links: Array<{ link: string, platform: "Linux (Intel)" | "MacOS (Intel)" | "MacOS (ARM)" | "Windows (Intel)" }>
 }
 
 export default {
