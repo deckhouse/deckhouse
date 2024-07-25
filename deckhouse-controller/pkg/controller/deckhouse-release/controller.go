@@ -25,9 +25,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flant/shell-operator/pkg/metric_storage"
-
 	"github.com/flant/addon-operator/pkg/utils/logger"
+	"github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
 	log "github.com/sirupsen/logrus"
