@@ -444,23 +444,27 @@ function run-test() {
 
 function test_requirements() {
   >&2 echo "Start check requirements ..."
-  if [ ! -f "release.yaml" ]; then
+  if [ ! -f /deckhouse/release.yaml ]; then
+      >&2 echo "File /deckhouse/release.yaml not found"
       return 1
   fi
-  releaseFile=$(< "release.yaml")
-  export releaseFile
 
-  testScript=$(cat <<"END_SCRIPT"
+  release=$(< /deckhouse/release.yaml)
+  release=${release//\"/\\\"}
+
+  >&2 echo "Run script ... "
+
+  testScript=$(cat <<ENDSC
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
 
 wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_386 -O /usr/bin/yq &&\
-  chmod +x /usr/bin/yq
+ chmod +x /usr/bin/yq
 
 command -v yq >/dev/null 2>&1 || return 1
 
-echo "$releaseFile" > /tmp/releaseFile.yaml
+echo "$release" > /tmp/releaseFile.yaml
 
 echo 'apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -481,17 +485,20 @@ metadata:
   name: v1.96.3
 spec:
   version: v1.96.3
-  requirements:' | yq '. | load(\"/tmp/releaseFile.yaml\") as \$d1 | .spec.requirements=\$d1.requirements' | kubectl apply -f -
+  requirements:
+' | yq '. | load("/tmp/releaseFile.yaml") as \$d1 | .spec.requirements=\$d1.requirements' | kubectl apply -f -
 
 rm /tmp/releaseFile.yaml
 
->&2 echo "Release status: $(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.phase}')"
+sleep 5
 
-[[ "$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.phase}')" == "Deployed" ]]
-END_SCRIPT
+>&2 echo "Release status: \$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.phase}')"
+
+[[ "\$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.phase}')" == "Deployed" ]]
+ENDSC
 )
 
-  if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+  if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<$testScript; then
     return 0
   fi
 
