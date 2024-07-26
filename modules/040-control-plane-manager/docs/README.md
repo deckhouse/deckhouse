@@ -39,7 +39,7 @@ The CPM module supports `control plane` running in a *single-master* or *multi-m
 
 In the *single-master* mode:
 - `kube-apiserver` only uses the `etcd` instance that is hosted on the same node;
-- `kube-apiserver` processes localhost requests.
+- A proxy server is configured on the node that responds to localhost, `kube-apiserver` responds to the IP address of the master node.
 
 In the *multi-master* mode, `control plane` components are automatically deployed in a fault-tolerant manner:
 - `kube-apiserver`  is configured to work with all etcd instances;
