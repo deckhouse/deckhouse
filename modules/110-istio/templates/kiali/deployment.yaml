@@ -64,21 +64,21 @@ spec:
         - "-config"
         - "/kiali-configuration/config.yaml"
         ports:
-        - name: api-port
+        - name: api
           containerPort: 20001
         - name: http-metrics
           containerPort: 9090
         readinessProbe:
           httpGet:
             path: /kiali/healthz
-            port: api-port
+            port: api
             scheme: HTTP
           initialDelaySeconds: 5
           periodSeconds: 30
         livenessProbe:
           httpGet:
             path: /kiali/healthz
-            port: api-port
+            port: api
             scheme: HTTP
           initialDelaySeconds: 5
           periodSeconds: 30
@@ -100,7 +100,17 @@ spec:
         volumeMounts:
         - name: kiali-configuration
           mountPath: "/kiali-configuration"
+        - name: kiali-signing-key
+          mountPath: "/kiali-override-secrets/login-token-signing-key"
+
       volumes:
       - name: kiali-configuration
         configMap:
           name: kiali
+      - name: kiali-signing-key
+        secret:
+          secretName: kiali-signing-key
+          items:
+          - key: key
+            path: value.txt
+          optional: false

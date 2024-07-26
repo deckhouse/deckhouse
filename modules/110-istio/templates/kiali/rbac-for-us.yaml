@@ -12,7 +12,8 @@ metadata:
   name: d8:istio:kiali
   {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 rules:
-- apiGroups: [""]
+- apiGroups:
+  - ""
   resources:
   - configmaps
   - endpoints
@@ -21,7 +22,8 @@ rules:
   - get
   - list
   - watch
-- apiGroups: [""]
+- apiGroups:
+  - ""
   resources:
   - namespaces
   - pods
@@ -31,14 +33,16 @@ rules:
   - get
   - list
   - watch
-  - patch
-- apiGroups: [""]
+- apiGroups:
+  - ""
   resources:
   - pods/portforward
   verbs:
   - create
   - post
-- apiGroups: ["extensions", "apps"]
+- apiGroups:
+  - extensions
+  - apps
   resources:
   - daemonsets
   - deployments
@@ -48,8 +52,8 @@ rules:
   - get
   - list
   - watch
-  - patch
-- apiGroups: ["batch"]
+- apiGroups:
+  - batch
   resources:
   - cronjobs
   - jobs
@@ -57,56 +61,98 @@ rules:
   - get
   - list
   - watch
-  - patch
 - apiGroups:
   - networking.istio.io
+  resources:
+  - destinationrules
+  - destinationrules/status
+  - envoyfilters
+  - envoyfilters/status
+  - gateways
+  - gateways/status
+  - proxyconfigs
+  - proxyconfigs/status
+  - serviceentries
+  - serviceentries/status
+  - sidecars
+  - sidecars/status
+  - virtualservices
+  - virtualservices/status
+  - workloadentries
+  - workloadentries/status
+  - workloadgroups
+  - workloadgroups/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - security.istio.io
+  resources:
+  - authorizationpolicies
+  - authorizationpolicies/status
+  - peerauthentications
+  - peerauthentications/status
+  - requestauthentications
+  - requestauthentications/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - extensions.istio.io
+  resources:
+  - wasmplugins
+  - wasmplugins/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - telemetry.istio.io
+  resources:
+  - telemetries
+  - telemetries/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - gateway.networking.k8s.io
-  resources: ["*"]
+  resources:
+  - grpcroutes
+  - grpcroutes/status
+  - gateways
+  - gateways/status
+  - gatewayclasses
+  - gatewayclasses/status
+  - httproutes
+  - httproutes/status
   verbs:
   - get
   - list
   - watch
-  - create
-  - delete
-  - patch
-- apiGroups: ["apps.openshift.io"]
-  resources:
-  - deploymentconfigs
-  verbs:
-  - get
-  - list
-  - watch
-  - patch
-- apiGroups: ["project.openshift.io"]
-  resources:
-  - projects
-  verbs:
-  - get
-- apiGroups: ["route.openshift.io"]
-  resources:
-  - routes
-  verbs:
-  - get
-- apiGroups: ["authentication.k8s.io"]
+- apiGroups:
+  - authentication.k8s.io
   resources:
   - tokenreviews
   verbs:
   - create
-- apiGroups: ["apps"]
-  resources: ["deployments/http"]
-  resourceNames: ["trickster"]
-  verbs: ["get", "create", "update", "patch", "delete"]
 - apiGroups:
-    - monitoring.coreos.com
+  - apps
+  resourceNames:
+  - trickster
   resources:
-    - prometheuses
-    - prometheuses/http
+  - deployments/http"
   verbs:
-    - create
-    - get
+  - get
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - prometheuses
+  - prometheuses/http
+  verbs:
+  - get
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

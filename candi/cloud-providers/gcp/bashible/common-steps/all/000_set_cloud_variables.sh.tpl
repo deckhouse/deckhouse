@@ -17,7 +17,7 @@
 shutdown_grace_period="30s"
 shutdown_grace_period_critical_pods="5s"
 
-preemptible="$(curl -sS -H "Metadata-Flavor: Google" 169.254.169.254/computeMetadata/v1/instance/scheduling/preemptible || true)"
+preemptible="$(d8-curl -sS -H "Metadata-Flavor: Google" 169.254.169.254/computeMetadata/v1/instance/scheduling/preemptible || true)"
 
 if [[ "$preemptible" == "FALSE" ]]; then
   shutdown_grace_period="90s"

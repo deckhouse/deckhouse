@@ -47,7 +47,7 @@ Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44
      * A tag from the tag category in `zoneTagCategory` (`k8s-zone` by default) **must be added** to the Cluster. This tag will indicate the **zone**.
   5. Folder for VirtualMachines to be created.
      * An optional parameter. By default, the root vm folder is used.
-  6. Create a role with the appropriate [set](#list-of-privileges-for-using-the-module) of privileges.
+  6. Create a role with the appropriate [set](#list-of-required-privileges) of privileges.
   7. Create a user and assign the above role to it.
 * A tag from the tag category in `regionTagCategory` (`k8s-region` by default) **must be added** to the Datacenter. This tag will indicate the region.
 

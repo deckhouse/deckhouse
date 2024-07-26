@@ -7,7 +7,7 @@ title: "Модуль deckhouse: FAQ"
 Вначале необходимо зайти внутрь пода Deckhouse:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- bash
+kubectl -n d8-system exec -ti svc/deckhouse-leader -- bash
 ```
 
 Далее необходимо выбрать, на каком узле запустить kube-bench.

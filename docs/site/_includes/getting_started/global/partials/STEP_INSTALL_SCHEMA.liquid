@@ -114,6 +114,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    - at least 60 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS)
    - [supported OS](/documentation/v1/supported_versions.html)
    - Linux kernel version >= `5.7`
+   - **Unique hostname** within servers (virtual machines) of the cluster
    {% if page.platform_code == "bm-private" %}
    - access to a proxy registry or to a private container image registry containing Deckhouse images
    - access to the default OS package repositories (via a proxy server or an internal package repository server);

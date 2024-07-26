@@ -10,8 +10,10 @@ spec:
   - name: http
     protocol: TCP
     port: 20001
+    targetPort: api
   - name: http-metrics
     protocol: TCP
     port: 9090
+    targetPort: http-metrics
   selector:
     app: kiali

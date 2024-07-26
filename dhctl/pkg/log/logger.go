@@ -600,11 +600,16 @@ func (d *TeeLogger) FlushAndClose() error {
 		return nil
 	}
 
+	d.bufMutex.Lock()
+	defer d.bufMutex.Unlock()
+
 	err := d.buf.Flush()
 	if err != nil {
 		d.l.LogWarnF("Cannot flush TeeLogger: %v \n", err)
 		return err
 	}
+
+	d.buf = nil
 
 	err = d.out.Close()
 	if err != nil {
@@ -714,6 +719,10 @@ func (d *TeeLogger) writeToFile(content string) {
 
 	d.bufMutex.Lock()
 	defer d.bufMutex.Unlock()
+
+	if d.buf == nil {
+		return
+	}
 
 	if _, err := d.buf.Write([]byte(content)); err != nil {
 		d.l.LogDebugF("Cannot write to TeeLog: %v", err)

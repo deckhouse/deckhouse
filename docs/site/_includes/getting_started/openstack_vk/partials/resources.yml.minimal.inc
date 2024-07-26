@@ -45,7 +45,7 @@ spec:
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
     zones:
-    - DP1
+    - ME1
   disruptions:
     approvalMode: Automatic
   nodeType: CloudEphemeral

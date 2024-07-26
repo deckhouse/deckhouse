@@ -1,8 +1,8 @@
 ARG BASE_ALT
 ARG BASE_ALT_DEV
 ARG BASE_ALPINE_DEV
-ARG BASE_GOLANG_21_BULLSEYE_DEV
-ARG CONTROLLER_BRANCH=controller-v1.10.1
+ARG BASE_GOLANG_22_ALPINE_DEV
+ARG CONTROLLER_BRANCH=controller-v1.10.3
 
 FROM $BASE_ALT as base-alt
 
@@ -26,7 +26,7 @@ RUN cd / && \
     && luarocks-5.1 install lua-iconv-7-3.src.rock
 
 # Build ingress controller, debug tool and pre-stop hook
-FROM $BASE_GOLANG_21_BULLSEYE_DEV as controller-builder
+FROM $BASE_GOLANG_22_ALPINE_DEV  as controller-builder
 ARG CONTROLLER_BRANCH
 ENV CONTROLLER_BRANCH=${CONTROLLER_BRANCH}
 ARG SOURCE_REPO
@@ -66,10 +66,10 @@ RUN apt-get update && apt-get install -y ninja-build libabseil-cpp-devel build-e
 RUN patch build.sh < nginx-build.patch && /build.sh
 
 # This intermediary image will be used only to copy all the required files to the chroot
-# Based on tag "controller-v1.10.1":
-# - https://github.com/kubernetes/ingress-nginx/blob/controller-v1.10.1/images/nginx-1.25/rootfs/Dockerfile
-# - https://github.com/kubernetes/ingress-nginx/blob/controller-v1.10.1/rootfs/Dockerfile-chroot
-# - https://github.com/kubernetes/ingress-nginx/blob/controller-v1.10.1/rootfs/chroot.sh
+# Based on tag "controller-v1.10.2":
+# - https://github.com/kubernetes/ingress-nginx/blob/controller-v1.10.3/images/nginx-1.25/rootfs/Dockerfile
+# - https://github.com/kubernetes/ingress-nginx/blob/controller-v1.10.3/rootfs/Dockerfile-chroot
+# - https://github.com/kubernetes/ingress-nginx/blob/controller-v1.10.3/rootfs/chroot.sh
 FROM $BASE_ALT_DEV as chroot
 
 COPY --from=nginx-builder /usr/local /usr/local

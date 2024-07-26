@@ -19,3 +19,6 @@ rm -f /tmp/bootstrap.sh
 rm -rf /tmp/candi-bundle*
 rm -f /tmp/bundle*.tar
 rm -f /tmp/kubeadm-config*
+
+# needs for dhctl bootstrap restarting check
+echo "OK" > /opt/deckhouse/first-control-plane-bashible-ran

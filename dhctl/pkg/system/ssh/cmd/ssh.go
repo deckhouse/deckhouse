@@ -34,6 +34,8 @@ type SSH struct {
 	Env         []string
 	CommandName string
 	CommandArgs []string
+
+	ExitWhenTunnelFailure bool
 }
 
 func NewSSH(sess *session.Session) *SSH {
@@ -47,6 +49,11 @@ func (s *SSH) WithEnv(env ...string) *SSH {
 
 func (s *SSH) WithArgs(args ...string) *SSH {
 	s.Args = args
+	return s
+}
+
+func (s *SSH) WithExitWhenTunnelFailure(yes bool) *SSH {
+	s.ExitWhenTunnelFailure = yes
 	return s
 }
 
@@ -94,6 +101,8 @@ func (s *SSH) Cmd() *exec.Cmd {
 		args = append(args, s.Args...)
 	}
 
+	exitOnForwardFailureSet := false
+
 	// add bastion options
 	//  if [[ "x$ssh_bastion_host" != "x" ]] ; then
 	//    export ANSIBLE_SSH_ARGS="${ANSIBLE_SSH_ARGS}
@@ -113,6 +122,11 @@ func (s *SSH) Cmd() *exec.Cmd {
 			"-o", fmt.Sprintf("ProxyCommand=ssh %s -W %%h:%%p %s", bastion, strings.Join(args, " ")),
 			"-o", "ExitOnForwardFailure=yes",
 		}...)
+		exitOnForwardFailureSet = true
+	}
+
+	if !exitOnForwardFailureSet && s.ExitWhenTunnelFailure {
+		args = append(args, "-o", "ExitOnForwardFailure=yes")
 	}
 
 	// add destination: user, host and port
