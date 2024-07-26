@@ -122,6 +122,17 @@ masterNodeGroup:
     diskSizeGB: 50
     externalIPAddresses:
       - Auto
+nodeGroups:
+  - name: node-group-1
+    replicas: 2
+    instanceClass:
+      cores: 4
+      memory: 8192
+      imageID: id
+      diskSizeGB: 50
+      externalIPAddresses:
+        - Auto
+        - Auto
 sshPublicKey: ssh-rsa AAAA
 nodeNetworkCIDR: 10.100.0.0/21
 provider:
