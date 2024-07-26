@@ -11,8 +11,6 @@ force_searchable: true
 
 Количество и параметры процесса заказа машин в облаке настраиваются в custom resource [`NodeGroup`](../../modules/040-node-manager/cr.html#nodegroup) модуля `node-manager`, в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup). Инстанс-класс для cloud-провайдера vSphere — это custom resource [`VsphereInstanceClass`](cr.html#vsphereinstanceclass), в котором указываются конкретные параметры самих машин.
 
-{% include module-settings.liquid %}
-
 ## Storage
 
 Модуль автоматически создает StorageClass для каждого Datastore и DatastoreCluster из зон (зоны).
@@ -84,3 +82,5 @@ force_searchable: true
     </tr>
   </tbody>
 </table>
+
+{% include module-settings.liquid %}

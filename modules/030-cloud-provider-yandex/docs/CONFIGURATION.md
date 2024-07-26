@@ -6,8 +6,6 @@ title: "Cloud provider — Yandex Cloud: configuration"
 
 {% include module-alerts.liquid %}
 
-{% include module-settings.liquid %}
-
 ## Storage
 
 The module automatically creates StorageClasses covering all available disks in Yandex:
@@ -36,3 +34,5 @@ Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44
 The module subscribes to Service objects of the `LoadBalancer` type and creates the corresponding `NetworkLoadBalancer` and `TargetGroup` in Yandex Cloud.
 
 For more information, see the [Kubernetes Cloud Controller Manager for Yandex Cloud documentation](https://github.com/flant/yandex-cloud-controller-manager).
+
+{% include module-settings.liquid %}

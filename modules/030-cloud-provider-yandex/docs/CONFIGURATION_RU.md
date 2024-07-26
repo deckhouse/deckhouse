@@ -6,8 +6,6 @@ title: "Cloud provider — Yandex Cloud: настройки"
 
 {% include module-alerts.liquid %}
 
-{% include module-settings.liquid %}
-
 ## Storage
 
 Модуль автоматически создает StorageClass'ы, покрывающие все варианты дисков в Yandex Cloud:
@@ -36,3 +34,5 @@ title: "Cloud provider — Yandex Cloud: настройки"
 Модуль подписывается на объекты Service с типом `LoadBalancer` и создает соответствующие `NetworkLoadBalancer` и `TargetGroup` в Yandex Cloud.
 
 Больше информации [в документации Kubernetes Cloud Controller Manager for Yandex Cloud](https://github.com/flant/yandex-cloud-controller-manager).
+
+{% include module-settings.liquid %}
