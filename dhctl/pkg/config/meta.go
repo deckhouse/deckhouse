@@ -109,10 +109,10 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 
 		if m.DeckhouseConfig.RegistryMode != "Direct" {
 			internalRegistryData := RegistryData{
-				Address:      "localhost:5001",
+				Address:      "embedded-registry.d8-system.svc.cluster.local:5001",
 				Path:         m.Registry.Path,
 				Scheme:       "http",
-				DockerCfg:    "ewogICJhdXRocyI6IHsKICAgICJsb2NhbGhvc3Q6NTAwMSI6IHsKICAgICAgImF1dGgiOiAiY0hWemFHVnlPbkIxYzJobGNnPT0iCiAgICB9CiAgfQp9Cg==",
+				DockerCfg:    "ewogICJhdXRocyI6IHsKICAgICJlbWJlZGRlZC1yZWdpc3RyeS5kOC1zeXN0ZW0uc3ZjLmNsdXN0ZXIubG9jYWw6NTAwMSI6IHsKICAgICAgImF1dGgiOiAiY0hWemFHVnlPbkIxYzJobGNnPT0iCiAgICB9CiAgfQp9Cg==",
 				CA:           "",
 				RegistryMode: m.DeckhouseConfig.RegistryMode,
 			}
