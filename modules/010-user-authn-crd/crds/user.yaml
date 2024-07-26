@@ -122,7 +122,7 @@ spec:
               properties:
                 email:
                   type: string
-                  pattern: '^[\w\-\.]+@(?:[\w-]+\.)+[\w-]{2,}$'
+                  minLength: 1
                   description: |
                     User email.
 
