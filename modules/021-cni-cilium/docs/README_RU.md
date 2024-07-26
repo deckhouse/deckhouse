@@ -50,3 +50,17 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
 ## Заметка о выключении модуля kube-proxy
 
 Cilium полностью заменяет собой функционал модуля kube-proxy, поэтому тот автоматически отключается при включении модуля cni-cilium.
+
+## Заметка о Egress Gateway
+
+{% alert level="warning" %} Функция доступна только в Enterprise Edition {% endalert %}
+
+Базовый режим. Используются узлы с настроенными IP-адресами.
+
+<div data-presentation="../../presentations/021-cni-cilium/egressgateway_base_ru.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/12l4w9ZS3Hpax1B7eOptm2dQX55VVAFzRTtyihw4Ie0c/ --->
+
+Режим с VirtualIP. Позволяет динамически назначать дополнительные IP-адреса узлам.
+
+<div data-presentation="../../presentations/021-cni-cilium/egressgateway_virtualip_ru.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1tmhbydjpCwhNVist9RT6jzO1CMpc-G1I7rczmdLzV8E/ --->
