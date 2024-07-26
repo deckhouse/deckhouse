@@ -58,7 +58,7 @@ Basic mode. Nodes with configured IP addresses are used.
 <div data-presentation="../../presentations/021-cni-cilium/egressgateway_base_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1Gp8b82WQQnYr6te_zBROKnKmBicdhtX4SXNXDh3lB6Q/ --->
 
-Mode with VirtualIP. Allows you to dynamically assign additional IP addresses to nodes.
+Mode with Virtual IP. Allows you to dynamically assign additional IP addresses to nodes.
 
 <div data-presentation="../../presentations/021-cni-cilium/egressgateway_virtualip_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1jdn39uDFSraQIXVdrREBsRv-Lp4kPidhx4C-gvv1DVk/ --->
