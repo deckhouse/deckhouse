@@ -1,17 +1,3 @@
-# Copyright 2024 Flant JSC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 {{- if eq .cri "Containerd" }}
 _on_containerd_config_changed() {
   {{- if ne .runType "ImageBuilding" }}
@@ -39,14 +25,14 @@ bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
         {{- $parts := splitList ":" $value }}
         {{- $ip := index $parts 0 }}
         {{- $masters = append $masters (printf "%s:5001" $ip) }}
-        {{- $masters_url = append $masters_url (printf "\"%s://%s:5001\", " $.registry.scheme $ip) }}
+        {{- $masters_url = append $masters_url (printf "\"%s://%s:5001\"" $.registry.scheme $ip) }}
       {{- end }}
     {{- else }}
       {{- $masters = list "localhost:5001" }}
-      {{- $masters_url = list (printf "\"%s://localhost:5001\", " $.registry.scheme) }}
+      {{- $masters_url = list (printf "\"%s://localhost:5001\"" $.registry.scheme) }}
     {{- end }}
+    {{- $masters_url = append $masters_url (printf "\"%s://%s\"" $.registry.scheme .registry.address) }}
   {{- end }}
-
 
 systemd_cgroup=true
 # Overriding cgroup type from external config file
@@ -154,12 +140,8 @@ oom_score = 0
       conf_template = ""
     [plugins."io.containerd.grpc.v1.cri".registry]
       [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-          endpoint = ["https://registry-1.docker.io"]
-        {{- range $index, $master := $masters }}
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ $.registry.address }}"]
-          endpoint = [{{ index $masters_url $index }}"{{ $.registry.scheme }}://{{ $.registry.address }}"]
-        {{- end }}
+          endpoint = [{{ joinList "," $masters_url }}]
       [plugins."io.containerd.grpc.v1.cri".registry.configs]
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $.registry.address }}".auth]
           auth = "{{ .registry.auth | default "" }}"
