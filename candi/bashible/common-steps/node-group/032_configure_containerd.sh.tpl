@@ -155,7 +155,7 @@ oom_score = 0
     [plugins."io.containerd.grpc.v1.cri".registry]
       [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ $.registry.address }}"]
-          endpoint = [{{ joinList "," $masters_url }}]
+          endpoint = [{{ range $i, $e := $masters_url }}{{ if $i }}, {{ end }}{{ $e }}{{ end }}]
       [plugins."io.containerd.grpc.v1.cri".registry.configs]
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $.registry.address }}".auth]
           auth = "{{ .registry.auth | default "" }}"
