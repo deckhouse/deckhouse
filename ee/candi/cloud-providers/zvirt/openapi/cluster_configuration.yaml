@@ -98,8 +98,8 @@ apiVersions:
               rootDiskSizeGb:
                 description: |
                   Root disk size in GiB to use in zVirt VirtualMachines.
-                example: 30
-                default: 30
+                example: 50
+                default: 50
                 type: integer
               etcdDiskSizeGb:
                 description: |

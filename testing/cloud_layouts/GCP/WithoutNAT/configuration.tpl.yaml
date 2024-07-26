@@ -30,7 +30,7 @@ masterNodeGroup:
   instanceClass:
     machineType: n1-standard-4
     image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20240523a
-    diskSizeGb: 20
+    diskSizeGb: 50
 provider:
   region: europe-west3
   serviceAccountJSON: '${SERVICE_ACCOUNT_JSON}'
