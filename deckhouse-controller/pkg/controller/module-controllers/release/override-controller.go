@@ -215,6 +215,10 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, fmt.Errorf("got an empty module definition for %s module pull override", mo.Name)
 	}
 
+	log.Info("Validating module", log.Fields{
+		"obj": *moduleDef,
+	})
+
 	err = validateModule(*moduleDef)
 	if err != nil {
 		mo.Status.Message = fmt.Sprintf("validation failed: %s", err)
