@@ -39,7 +39,7 @@ description: Deckhouse управляет компонентами control plane
 
 В конфигурации *single-master*:
 - `kube-apiserver` использует только тот экземпляр `etcd`, который размещен с ним на одном узле;
-- `kube-apiserver` отвечает на localhost.
+- На узле настраивается прокси-сервер, отвечающий на localhost,`kube-apiserver` отвечает на IP-адрес master-узла.
 
 В конфигурации *multi-master* компоненты `control-plane` автоматически разворачиваются в отказоустойчивом режиме:
 - `kube-apiserver` настраивается для работы со всеми экземплярами `etcd`.
