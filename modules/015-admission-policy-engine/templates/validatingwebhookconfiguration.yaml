@@ -54,7 +54,6 @@ webhooks:
     resources: ["pods"]
     operations: ["CREATE"]
 
-  {{/* Include tracked resources because in the next webhook there is exception for namespaces with 'security.deckhouse.io/trivy-provider' label */}}
   {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
 
   {{/* Increase timeout for trivy-provider */}}
@@ -71,8 +70,6 @@ webhooks:
       operator: NotIn
       values:
         - deckhouse
-    - key: security.deckhouse.io/trivy-provider
-      operator: DoesNotExist
   rules:
   {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
   timeoutSeconds: 3
