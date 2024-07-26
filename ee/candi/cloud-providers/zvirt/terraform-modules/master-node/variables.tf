@@ -31,7 +31,7 @@ locals {
   master_vm_type = "high_performance"
   master_nic_name = "nic1"
   ssh_pubkey = lookup(var.providerClusterConfiguration, "sshPublicKey", null)
-  master_root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSizeGb", 20)*1024*1024*1024
+  master_root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSizeGb", 50)*1024*1024*1024
   master_etcd_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "etcdDiskSizeGb", 10)*1024*1024*1024
 
   master_cloud_init_script = yamlencode(merge({

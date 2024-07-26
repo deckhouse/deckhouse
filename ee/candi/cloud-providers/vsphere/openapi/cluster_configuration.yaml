@@ -44,7 +44,7 @@ apiVersions:
             additionalNetworks:
               - K8S_3
             datastore: lun10
-            rootDiskSize: 20
+            rootDiskSize: 50
             runtimeOptions:
               nestedHardwareVirtualization: false
         nodeGroups:
@@ -141,7 +141,7 @@ apiVersions:
                   Root disk size in GiB to use in vSphere VirtualMachines.
 
                   The disk will be automatically enlarged if its size in the template is less than specified.
-                example: 20
+                example: 50
               resourcePool:
                 type: string
                 description: |

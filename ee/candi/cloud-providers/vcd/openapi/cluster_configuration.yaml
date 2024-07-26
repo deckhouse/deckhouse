@@ -81,8 +81,8 @@ apiVersions:
                 rootDiskSizeGb:
                   description: |
                     root disk size in gigabytes.
-                  example: 20
-                  default: 20
+                  example: 50
+                  default: 50
                   type: integer
                 etcdDiskSizeGb:
                   description: |
@@ -195,8 +195,8 @@ apiVersions:
                   rootDiskSizeGb:
                     description: |
                       root disk size in gigabytes.
-                    example: 20
-                    default: 20
+                    example: 50
+                    default: 50
                     type: integer
                   placementPolicy:
                     description: |
