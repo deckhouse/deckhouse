@@ -2,7 +2,31 @@
 title: "Модуль user-authz: примеры конфигурации"
 ---
 
+## Пример назначения прав сетевому администратору
+
+Пример _ClusterRoleBinding_ для назначения прав пользователю `developer`, который будет иметь права управления [сетевыми модулями](./#области-ролевой-модели):
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: developer-binding
+subjects:
+- kind: User
+  name: developer
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:manage:networking:admin
+  apiGroup: rbac.authorization.k8s.io
+```
+
+
 ## Пример `ClusterAuthorizationRule`
+
+{% alert level="warning" %}
+Это пример для [устаревшей ролевой модели](./#устаревшая-ролевая-модель).
+{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -36,6 +60,10 @@ spec:
 ```
 
 ## Создание пользователя
+
+{% alert level="warning" %}
+Это пример для [устаревшей ролевой модели](./#устаревшая-ролевая-модель).
+{% endalert %}
 
 В Kubernetes есть две категории пользователей:
 
@@ -226,6 +254,10 @@ spec:
 
 #### Предоставление доступа созданному пользователю
 
+{% alert level="warning" %}
+Это пример для [устаревшей ролевой модели](./#устаревшая-ролевая-модель).
+{% endalert %}
+
 Для предоставления доступа созданному пользователю создайте `ClusterAuthorizationRule`.
 
 Пример `ClusterAuthorizationRule`:
@@ -350,6 +382,10 @@ EOF
 ```
 
 ## Настройка прав высокоуровневых ролей
+
+{% alert level="warning" %}
+Это пример для [устаревшей ролевой модели](./#устаревшая-ролевая-модель).
+{% endalert %}
 
 Если требуется добавить прав для определенной [высокоуровневой роли](./#ролевая-модель), достаточно создать ClusterRole с аннотацией `user-authz.deckhouse.io/access-level: <AccessLevel>`.
 
