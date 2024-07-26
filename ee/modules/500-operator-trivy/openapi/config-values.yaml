@@ -73,3 +73,14 @@ properties:
       The same as `spec.nodeSelector` for the Kubernetes pod.
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+  reportResourceLabels:
+    type: array
+    description: |
+      A list of additional labels for marking Trivi's reports (VulnerabilityReport).
+      
+      The values of these labels will correspond to the values of the scanned resources' labels.
+    items:
+      type: string
+    x-example:
+      - app
+      - env

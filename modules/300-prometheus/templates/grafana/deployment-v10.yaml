@@ -134,6 +134,8 @@ spec:
           value: "true"
         - name: GF_UNIFIED_ALERTING_ENABLED
           value: "false"
+        - name: GF_UNIFIED_ALERTING_DISABLED_ORGS
+          value: "1"
         {{- if hasKey .Values.prometheus "grafana" }}
           {{- if hasKey .Values.prometheus.grafana "customPlugins" }}
         - name: GF_INSTALL_PLUGINS

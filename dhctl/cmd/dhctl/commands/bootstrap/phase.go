@@ -78,7 +78,8 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 	cmd := parent.Command("create-resources", "Create resources in Kubernetes cluster.")
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
-	app.DefineResourcesFlags(cmd, true)
+	app.DefineConfigsForResourcesPhaseFlags(cmd)
+	app.DefineResourcesFlags(cmd, false)
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {

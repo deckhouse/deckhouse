@@ -24,7 +24,7 @@
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "iteration": 1706038315075,
+  "id": 117,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -41,7 +41,9 @@
           },
           "custom": {
             "align": "auto",
-            "displayMode": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
             "filterable": false,
             "inspect": false,
             "minWidth": 75
@@ -53,8 +55,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -627,7 +628,9 @@
       "id": 141,
       "links": [],
       "options": {
+        "cellHeight": "sm",
         "footer": {
+          "countRows": false,
           "fields": "",
           "reducer": [
             "sum"
@@ -636,9 +639,14 @@
         },
         "showHeader": true
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "10.2.2",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "editorMode": "code",
           "expr": "kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}",
           "format": "table",
           "hide": false,
@@ -649,6 +657,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "max by (pod, node) (avg_over_time(kube_pod_info{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))",
           "format": "table",
           "instant": true,
@@ -657,6 +669,10 @@
           "refId": "S"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", update_mode=\"Off\"}[$__range]))) * 0\nor\nsum by (pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", update_mode=\"Initial\"}[$__range]))) * 0 + 1\nor\nsum by (pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", update_mode=\"Auto\"}[$__range]))) * 0 + 2\nor\nsum by (pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", update_mode=\"Recreate\"}[$__range]))) * 0 + 3\nor\nsum by (pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range])) * 0 + 5",
           "format": "table",
           "hide": false,
@@ -666,6 +682,10 @@
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=~\"$container\"}[$__range]))\nor\nsum by (container) (avg_over_time(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "hide": false,
@@ -675,6 +695,10 @@
           "refId": "C"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (container) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\nor\nsum by (container) (avg_over_time(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
@@ -683,6 +707,10 @@
           "refId": "D"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", container=~\"$container\", resource=\"cpu\"}[$__range])))\nor\nsum by (container) (avg_over_time(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
@@ -691,6 +719,10 @@
           "refId": "E"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "(\n  sum by (container) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n  -\n  sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n) > 0\nor\nsum by (container) (avg_over_time(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
@@ -699,6 +731,10 @@
           "refId": "F"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "(\n  (\n    sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n    -\n    sum by (container) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n  ) or sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n) > 0\nor\nsum by (container) (avg_over_time(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
@@ -707,6 +743,10 @@
           "refId": "G"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "(\n  (\n    sum by (container) (rate(container_cpu_cfs_throttled_periods_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range])) \n    / \n    sum by (container) (rate(container_cpu_cfs_periods_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n  )\n  * sum by (container) (avg_over_time(kube_pod_container_resource_limits{resource=\"cpu\",unit=\"core\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n)\nor\nsum by (container) (avg_over_time(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
@@ -715,6 +755,10 @@
           "refId": "H"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (container) (avg_over_time(container_memory_working_set_bytes:without_kmem{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=~\"$container\"}[$__range]))\nor\nsum by (container) (avg_over_time(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
@@ -723,6 +767,10 @@
           "refId": "I"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (container) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",unit=\"byte\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\nor\nsum by (container) (avg_over_time(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
@@ -731,6 +779,10 @@
           "refId": "J"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (avg_over_time(kube_controller_pod{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", container=~\"$container\", resource=\"memory\"}[$__range])))\nor\nsum by (container) (avg_over_time(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
@@ -739,6 +791,10 @@
           "refId": "K"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "(\n  sum by (container) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",unit=\"byte\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n  -\n  sum by (container) (avg_over_time(container_memory_working_set_bytes:without_kmem{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n) > 0\nor\nsum by (container) (avg_over_time(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
@@ -747,6 +803,10 @@
           "refId": "L"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "(\n  (\n    sum by (container) (avg_over_time(container_memory_working_set_bytes:without_kmem{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n    -\n    sum by (container) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",unit=\"byte\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n  ) or sum by (container) (avg_over_time(container_memory_working_set_bytes:without_kmem{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n) > 0\nor\nsum by (container) (avg_over_time(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
@@ -755,7 +815,12 @@
           "refId": "M"
         },
         {
-          "expr": "(\n  # Show data rate for the Pod if it had hostNetwork: false during the selected period.\n  max_over_time(kube_pod_info{host_network=\"false\", namespace=\"$namespace\", pod=\"$pod\"}[$__range])\n  * on(pod)\n  sum by (pod) (rate(container_network_receive_bytes_total{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n) or (\n  # Else return -1 if the Pod had hostNetwork: true during the selecte period.\n  max_over_time(kube_pod_info{host_network=\"true\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * -1\n)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "editorMode": "code",
+          "expr": "(\n  # Show data rate for the Pod if it had hostNetwork: false during the selected period.\n  sum by (pod) (rate(container_network_receive_bytes_total{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n  * on(pod)\n  max(max_over_time(kube_pod_info{host_network=\"false\", namespace=\"$namespace\", pod=\"$pod\"}[$__range])) by(pod)\n) or (\n  # Else return -1 if the Pod had hostNetwork: true during the selecte period.\n  max_over_time(kube_pod_info{host_network=\"true\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * -1\n)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -764,7 +829,12 @@
           "refId": "N"
         },
         {
-          "expr": "(\n  # Show data rate for the Pod if it had hostNetwork: false during the selected period.\n  max_over_time(kube_pod_info{host_network=\"false\", namespace=\"$namespace\", pod=\"$pod\"}[$__range])\n  * on(pod)\n  sum by (pod) (rate(container_network_transmit_bytes_total{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n) or (\n  # Else return -1 if the Pod had hostNetwork: true during the selecte period.\n  max_over_time(kube_pod_info{host_network=\"true\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * -1\n)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "editorMode": "code",
+          "expr": "(\n  # Show data rate for the Pod if it had hostNetwork: false during the selected period.\n  max(max_over_time(kube_pod_info{host_network=\"false\", namespace=\"$namespace\", pod=\"$pod\"}[$__range])) by(pod)\n  * on(pod)\n  sum by (pod) (rate(container_network_transmit_bytes_total{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n) or (\n  # Else return -1 if the Pod had hostNetwork: true during the selecte period.\n  max_over_time(kube_pod_info{host_network=\"true\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * -1\n)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -773,6 +843,10 @@
           "refId": "O"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by(container) (rate(container_fs_reads_total{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\"}[$__range]))",
           "format": "table",
           "hide": false,
@@ -782,6 +856,10 @@
           "refId": "P"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by(container) (rate(container_fs_writes_total{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\"}[$__range]))",
           "format": "table",
           "hide": false,
@@ -791,6 +869,10 @@
           "refId": "Q"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (container) (increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))",
           "format": "table",
           "hide": false,
@@ -800,6 +882,10 @@
           "refId": "R"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (container) (label_replace(increase(klog_pod_oomkill{namespace=\"$namespace\", pod_name=\"$pod\"}[$__range]), \"container\", \"$1\", \"container_name\", \"(.+)\"))",
           "format": "table",
           "hide": false,
@@ -809,6 +895,10 @@
           "refId": "T"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (container) (avg_over_time(container_memory:kmem{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=~\"$container\"}[$__range]))\nor\nsum by (container) (avg_over_time(kube_pod_container_info{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
@@ -879,7 +969,14 @@
           },
           "custom": {
             "fillOpacity": 70,
-            "lineWidth": 0
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineWidth": 0,
+            "spanNulls": false
           },
           "mappings": [
             {
@@ -947,8 +1044,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               }
             ]
           }
@@ -967,7 +1063,8 @@
         "alignValue": "left",
         "legend": {
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "mergeValues": false,
         "rowHeight": 0.9,
@@ -1006,6 +1103,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1017,6 +1117,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1040,8 +1141,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1095,8 +1195,9 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -1138,6 +1239,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1149,6 +1253,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1172,8 +1277,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1227,8 +1331,9 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -1286,6 +1391,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "cores",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1297,6 +1405,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1319,8 +1428,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1379,6 +1487,7 @@
           ],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "sortBy": "Mean",
           "sortDesc": true
         },
@@ -1423,6 +1532,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "cores",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1434,6 +1546,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1456,8 +1569,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               }
             ]
           },
@@ -1541,6 +1653,7 @@
           ],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "sortBy": "Mean",
           "sortDesc": true
         },
@@ -1596,6 +1709,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "cores",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1607,6 +1723,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1629,8 +1746,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1688,6 +1804,7 @@
           ],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "sortBy": "Mean",
           "sortDesc": true
         },
@@ -1732,6 +1849,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "cores",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1743,6 +1863,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1765,8 +1886,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1823,7 +1943,8 @@
             "mean"
           ],
           "displayMode": "table",
-          "placement": "right"
+          "placement": "right",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1866,6 +1987,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "cores",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1877,6 +2001,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1899,8 +2024,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1958,7 +2082,8 @@
             "max"
           ],
           "displayMode": "table",
-          "placement": "right"
+          "placement": "right",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -2046,8 +2171,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2132,7 +2256,8 @@
             "legend": {
               "calcs": [],
               "displayMode": "list",
-              "placement": "bottom"
+              "placement": "bottom",
+              "showLegend": true
             },
             "tooltip": {
               "mode": "multi",
@@ -2208,6 +2333,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "cores",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -2219,6 +2347,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2241,8 +2370,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2317,7 +2445,7 @@
       },
       "gridPos": {
         "h": 9,
-        "w": 12,
+        "w": 8,
         "x": 0,
         "y": 47
       },
@@ -2330,6 +2458,7 @@
           ],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "sortBy": "Mean",
           "sortDesc": true
         },
@@ -2385,7 +2514,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 56
+        "y": 65
       },
       "id": 12,
       "panels": [],
@@ -2403,6 +2532,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -2414,6 +2546,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2436,8 +2569,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2484,15 +2616,16 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 57
+        "y": 66
       },
       "id": 6,
       "links": [],
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -2534,6 +2667,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -2545,6 +2681,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2567,8 +2704,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               }
             ]
           },
@@ -2661,15 +2797,16 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 57
+        "y": 66
       },
       "id": 8,
       "links": [],
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -2730,6 +2867,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -2741,6 +2881,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2763,8 +2904,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2811,15 +2951,16 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 66
+        "y": 75
       },
       "id": 106,
       "links": [],
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -2862,6 +3003,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -2873,6 +3017,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2895,8 +3040,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2943,15 +3087,16 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 66
+        "y": 75
       },
       "id": 136,
       "links": [],
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -2992,7 +3137,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 74
+        "y": 83
       },
       "id": 16,
       "panels": [
@@ -3040,8 +3185,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   }
                 ]
               },
@@ -3273,8 +3417,9 @@
           "options": {
             "legend": {
               "calcs": [],
-              "displayMode": "hidden",
-              "placement": "bottom"
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false
             },
             "tooltip": {
               "mode": "multi",
@@ -3361,7 +3506,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 75
+        "y": 84
       },
       "id": 25,
       "panels": [],
@@ -3380,6 +3525,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -3391,6 +3539,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -3423,8 +3572,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               }
             ]
           },
@@ -3464,7 +3612,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 76
+        "y": 85
       },
       "id": 27,
       "links": [],
@@ -3474,7 +3622,8 @@
             "mean"
           ],
           "displayMode": "table",
-          "placement": "right"
+          "placement": "right",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -3514,6 +3663,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -3525,6 +3677,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -3557,8 +3710,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               }
             ]
           },
@@ -3598,7 +3750,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 76
+        "y": 85
       },
       "id": 62,
       "links": [],
@@ -3609,6 +3761,7 @@
           ],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "sortBy": "Mean",
           "sortDesc": true
         },
@@ -3648,7 +3801,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 83
+        "y": 92
       },
       "id": 30,
       "panels": [],
@@ -3666,6 +3819,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -3677,6 +3833,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -3699,8 +3856,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3747,7 +3903,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 84
+        "y": 93
       },
       "id": 32,
       "links": [],
@@ -3758,6 +3914,7 @@
           ],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "sortBy": "Mean",
           "sortDesc": true
         },
@@ -3800,6 +3957,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -3811,6 +3971,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -3833,8 +3994,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3881,7 +4041,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 84
+        "y": 93
       },
       "id": 63,
       "links": [],
@@ -3892,6 +4052,7 @@
           ],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "sortBy": "Mean",
           "sortDesc": true
         },
@@ -3933,7 +4094,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 92
+        "y": 101
       },
       "id": 150,
       "panels": [],
@@ -3952,6 +4113,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -3963,6 +4127,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -3985,8 +4150,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -4033,7 +4197,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 93
+        "y": 102
       },
       "id": 148,
       "links": [],
@@ -4043,7 +4207,8 @@
             "mean"
           ],
           "displayMode": "table",
-          "placement": "right"
+          "placement": "right",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -4085,6 +4250,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -4096,6 +4264,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -4118,8 +4287,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -4166,7 +4334,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 93
+        "y": 102
       },
       "id": 151,
       "links": [],
@@ -4176,7 +4344,8 @@
             "mean"
           ],
           "displayMode": "table",
-          "placement": "right"
+          "placement": "right",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -4211,6 +4380,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -4222,6 +4394,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -4244,8 +4417,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -4261,7 +4433,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 101
+        "y": 110
       },
       "id": 152,
       "links": [],
@@ -4271,7 +4443,8 @@
             "mean"
           ],
           "displayMode": "table",
-          "placement": "right"
+          "placement": "right",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -4301,7 +4474,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 109
+        "y": 118
       },
       "id": 156,
       "panels": [
@@ -4316,7 +4489,9 @@
               },
               "custom": {
                 "align": "auto",
-                "displayMode": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
                 "inspect": false
               },
               "decimals": 2,
@@ -4326,8 +4501,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -4567,7 +4741,9 @@
           "id": 154,
           "links": [],
           "options": {
+            "cellHeight": "sm",
             "footer": {
+              "countRows": false,
               "fields": "",
               "reducer": [
                 "sum"
@@ -4576,7 +4752,7 @@
             },
             "showHeader": true
           },
-          "pluginVersion": "8.5.13",
+          "pluginVersion": "10.2.2",
           "targets": [
             {
               "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  kube_persistentvolumeclaim_info{namespace=\"$namespace\"}\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n)",
@@ -4692,6 +4868,9 @@
                 "mode": "palette-classic"
               },
               "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
                 "axisLabel": "",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
@@ -4703,6 +4882,7 @@
                   "tooltip": false,
                   "viz": false
                 },
+                "insertNulls": false,
                 "lineInterpolation": "smooth",
                 "lineWidth": 1,
                 "pointSize": 5,
@@ -4725,8 +4905,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -4752,7 +4931,8 @@
                 "mean"
               ],
               "displayMode": "table",
-              "placement": "right"
+              "placement": "right",
+              "showLegend": true
             },
             "tooltip": {
               "mode": "multi",
@@ -4794,11 +4974,8 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 36,
-  "style": "dark",
-  "tags": [
-    "main"
-  ],
+  "schemaVersion": 38,
+  "tags": [],
   "templating": {
     "list": [
       {
@@ -4823,8 +5000,8 @@
       {
         "current": {
           "selected": false,
-          "text": "d8-cert-manager",
-          "value": "d8-cert-manager"
+          "text": "d8-monitoring",
+          "value": "d8-monitoring"
         },
         "datasource": {
           "type": "prometheus",
@@ -4853,8 +5030,8 @@
       {
         "current": {
           "selected": false,
-          "text": "cert-manager-57855f54bb-6jjph",
-          "value": "cert-manager-57855f54bb-6jjph"
+          "text": "prometheus-main-0",
+          "value": "prometheus-main-0"
         },
         "datasource": {
           "type": "prometheus",
@@ -4883,7 +5060,7 @@
       {
         "allValue": "",
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -4918,7 +5095,7 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -4983,8 +5160,8 @@
       {
         "current": {
           "selected": false,
-          "text": "cert-manager",
-          "value": "cert-manager"
+          "text": "aggregating-proxy",
+          "value": "aggregating-proxy"
         },
         "datasource": {
           "type": "prometheus",

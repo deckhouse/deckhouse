@@ -27,7 +27,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/utils/logger"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,10 +49,6 @@ import (
 const (
 	defaultScanInterval        = 3 * time.Minute
 	registryChecksumAnnotation = "modules.deckhouse.io/registry-spec-checksum"
-)
-
-var (
-	ErrNoPolicyFound = errors.New("no matching update policy found")
 )
 
 type moduleSourceReconciler struct {
@@ -272,14 +267,9 @@ func (c *moduleSourceReconciler) processSourceModule(ctx context.Context, md *do
 		av.Overridden = true
 		return "", av, nil
 	}
-	// check if we have an update policy for the moduleName
+	// get an update policy for the moduleName or, if there is no matching policy, use the embedded on
 	policy, err := c.getReleasePolicy(ms.Name, moduleName, policies)
 	if err != nil {
-		// if policy not found - drop all previous module's errors
-		if errors.Is(err, ErrNoPolicyFound) {
-			return "", av, nil
-			// if another error - update module's error status field
-		}
 		return "", av, err
 	}
 	av.Policy = policy.Name
@@ -371,6 +361,7 @@ func (c *moduleSourceReconciler) createModuleRelease(ctx context.Context, ms *v1
 
 // getReleasePolicy checks if any update policy matches the module release and if it's so - returns the policy and its release channel.
 // if several policies match the module release labels, conflict=true is returned
+// if no policy matches the module release, deckhouseEmbeddedPolicy is returned
 func (c *moduleSourceReconciler) getReleasePolicy(sourceName, moduleName string, policies []v1alpha1.ModuleUpdatePolicy) (*v1alpha1.ModuleUpdatePolicy, error) {
 	var releaseLabelsSet labels.Set = map[string]string{"module": moduleName, "source": sourceName}
 	var matchedPolicy *v1alpha1.ModuleUpdatePolicy

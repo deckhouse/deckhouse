@@ -61,7 +61,7 @@ function nodeuser_patch() {
           sleep 1
         done
 
-        if curl -sS --fail -x "" \
+        if d8-curl -sS --fail -x "" \
           --max-time 10 \
           -XPATCH \
           -H "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
@@ -184,7 +184,12 @@ function main() {
   default_shell="/bin/bash"
   comment="created by deckhouse"
 
-  mkdir -p $home_base_path
+	if [ -d "$home_base_path" ]; then
+		chmod -c 755  $home_base_path 
+		chown -c root:root $home_base_path 
+	else
+		mkdir -p $home_base_path
+	fi
 
   for uid in $(jq -rc '.[].spec.uid' <<< "$node_users_json"); do
     user_name="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | .name' <<< "$node_users_json")"

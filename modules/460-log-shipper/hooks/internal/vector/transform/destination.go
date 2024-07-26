@@ -30,11 +30,13 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 	case v1alpha1.DestElasticsearch, v1alpha1.DestLogstash:
 		transforms = append(transforms, DeDotTransform())
 		fallthrough
-	case v1alpha1.DestVector, v1alpha1.DestKafka:
+	case v1alpha1.DestSocket, v1alpha1.DestVector, v1alpha1.DestKafka:
 		if len(dest.Spec.ExtraLabels) > 0 {
 			transforms = append(transforms, ExtraFieldTransform(dest.Spec.ExtraLabels))
 		}
-		if dest.Spec.Kafka.Encoding.Codec == v1alpha1.EncodingCodecCEF {
+
+		switch v1alpha1.EncodingCodecCEF {
+		case dest.Spec.Kafka.Encoding.Codec, dest.Spec.Socket.Encoding.Codec:
 			transforms = append(transforms, CEFNameAndSeverity())
 		}
 	}

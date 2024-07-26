@@ -200,7 +200,8 @@ spec:
             {{- include "dex_authenticator_resources" . | nindent 12 }}
   {{- end }}
         ports:
-        - containerPort: 8443
+        - name: dex-https
+          containerPort: 8443
           protocol: TCP
       - name: redis
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}

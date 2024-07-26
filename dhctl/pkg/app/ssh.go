@@ -47,7 +47,8 @@ type connectionConfigParser interface {
 }
 
 func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
-	var sshFlagSetByUser bool
+	var sshFlagSetByUser, sshUserFlagSetByUser, sshBastionUserFlagSetByUser bool
+
 	cmd.Flag("ssh-agent-private-keys", "Paths to private keys. Those keys will be used to connect to servers and to the bastion. Can be specified multiple times (default: '~/.ssh/id_rsa')").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_AGENT_PRIVATE_KEYS")).
@@ -61,12 +62,12 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		Envar(configEnvName("SSH_BASTION_PORT")).
 		StringVar(&SSHBastionPort)
 	cmd.Flag("ssh-bastion-user", "User to authenticate under when connecting to bastion (default: $USER)").
-		IsSetByUser(&sshFlagSetByUser).
+		IsSetByUser(&sshBastionUserFlagSetByUser).
 		Default(SSHBastionUser).
 		Envar(configEnvName("SSH_BASTION_USER")).
 		StringVar(&SSHBastionUser)
 	cmd.Flag("ssh-user", "User to authenticate under (default: $USER)").
-		IsSetByUser(&sshFlagSetByUser).
+		IsSetByUser(&sshUserFlagSetByUser).
 		Envar(configEnvName("SSH_USER")).
 		Default(SSHUser).
 		StringVar(&SSHUser)
@@ -86,6 +87,14 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		Envar(configEnvName("CONNECTION_CONFIG")).
 		StringVar(&ConnectionConfigPath)
 
+	cmd.PreAction(func(c *kingpin.ParseContext) error {
+		if !sshBastionUserFlagSetByUser && sshUserFlagSetByUser {
+			SSHBastionUser = SSHUser
+			sshFlagSetByUser = true
+		}
+		return nil
+	})
+
 	cmd.PreAction(func(c *kingpin.ParseContext) (err error) {
 		if len(ConnectionConfigPath) == 0 {
 			return nil
@@ -95,7 +104,7 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 
 	cmd.PreAction(func(c *kingpin.ParseContext) (err error) {
 		if len(SSHPrivateKeys) != 0 {
-			return
+			return nil
 		}
 		return processConnectionConfigFlags()
 	})

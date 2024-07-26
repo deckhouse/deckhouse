@@ -50,6 +50,9 @@ import (
 
 func (r *deckhouseReleaseReconciler) checkDeckhouseReleaseLoop(ctx context.Context) {
 	wait.UntilWithContext(ctx, func(ctx context.Context) {
+		if r.updateSettings.Get().ReleaseChannel == "" {
+			return
+		}
 		err := r.checkDeckhouseRelease(ctx)
 		if err != nil {
 			r.logger.Errorf("check Deckhouse release: %s", err)
