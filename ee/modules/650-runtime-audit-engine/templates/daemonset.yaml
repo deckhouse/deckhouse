@@ -151,7 +151,7 @@ spec:
         {{- end }}
         ports:
         - name: webhook
-          containerPort: 9680
+          containerPort: 4227
         livenessProbe:
           httpGet:
             path: /sidekick/ping
@@ -185,6 +185,8 @@ spec:
           value: d8-runtime-audit-engine.deckhouse.io
         - name: VALIDATING_WEBHOOK_SERVICE_NAME
           value: {{ .Chart.Name }}-webhook
+        - name: VALIDATING_WEBHOOK_LISTEN_PORT
+          value: "4227"
         - name: DEBUG_UNIX_SOCKET
           value: /tmp/shell-operator-debug.socket
         resources:
