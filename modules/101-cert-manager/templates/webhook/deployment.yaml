@@ -65,6 +65,9 @@ spec:
         - --secure-port=6443
         - --tls-cert-file=/certs/tls.crt
         - --tls-private-key-file=/certs/tls.key
+        ports:
+        - name: webhook
+          containerPort: 6443
         env:
         - name: POD_NAMESPACE
           valueFrom:

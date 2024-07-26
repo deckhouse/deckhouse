@@ -11,7 +11,7 @@ apiVersions:
       To change the `ClusterConfiguration` resource in a running cluster, run the following command:
 
       ```shell
-      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit cluster-configuration
       ```
     additionalProperties: false
     required: [apiVersion, kind, clusterType, kubernetesVersion, podSubnetCIDR, serviceSubnetCIDR, clusterDomain]

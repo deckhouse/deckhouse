@@ -27,7 +27,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/utils/logger"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,15 +51,11 @@ const (
 	registryChecksumAnnotation = "modules.deckhouse.io/registry-spec-checksum"
 )
 
-var (
-	ErrNoPolicyFound = errors.New("no matching update policy found")
-)
-
 type moduleSourceReconciler struct {
 	client             client.Client
 	externalModulesDir string
 
-	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpec
+	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpecContainer
 
 	dc dependency.Container
 
@@ -70,7 +65,7 @@ type moduleSourceReconciler struct {
 	moduleSourcesChecksum sourceChecksum
 }
 
-func NewModuleSourceController(mgr manager.Manager, dc dependency.Container, embeddedPolicy *v1alpha1.ModuleUpdatePolicySpec) error {
+func NewModuleSourceController(mgr manager.Manager, dc dependency.Container, embeddedPolicyContainer *v1alpha1.ModuleUpdatePolicySpecContainer) error {
 	lg := log.WithField("component", "ModuleSourceController")
 
 	c := &moduleSourceReconciler{
@@ -79,13 +74,13 @@ func NewModuleSourceController(mgr manager.Manager, dc dependency.Container, emb
 		dc:                 dc,
 		logger:             lg,
 
-		deckhouseEmbeddedPolicy: embeddedPolicy,
+		deckhouseEmbeddedPolicy: embeddedPolicyContainer,
 		moduleSourcesChecksum:   make(sourceChecksum),
 	}
 
 	ctr, err := controller.New("module-source", mgr, controller.Options{
 		MaxConcurrentReconciles: 3,
-		CacheSyncTimeout:        15 * time.Minute,
+		CacheSyncTimeout:        3 * time.Minute,
 		NeedLeaderElection:      pointer.Bool(false),
 		Reconciler:              c,
 	})
@@ -272,14 +267,9 @@ func (c *moduleSourceReconciler) processSourceModule(ctx context.Context, md *do
 		av.Overridden = true
 		return "", av, nil
 	}
-	// check if we have an update policy for the moduleName
+	// get an update policy for the moduleName or, if there is no matching policy, use the embedded on
 	policy, err := c.getReleasePolicy(ms.Name, moduleName, policies)
 	if err != nil {
-		// if policy not found - drop all previous module's errors
-		if errors.Is(err, ErrNoPolicyFound) {
-			return "", av, nil
-			// if another error - update module's error status field
-		}
 		return "", av, err
 	}
 	av.Policy = policy.Name
@@ -368,6 +358,7 @@ func (c *moduleSourceReconciler) createModuleRelease(ctx context.Context, ms *v1
 
 // getReleasePolicy checks if any update policy matches the module release and if it's so - returns the policy and its release channel.
 // if several policies match the module release labels, conflict=true is returned
+// if no policy matches the module release, deckhouseEmbeddedPolicy is returned
 func (c *moduleSourceReconciler) getReleasePolicy(sourceName, moduleName string, policies []v1alpha1.ModuleUpdatePolicy) (*v1alpha1.ModuleUpdatePolicy, error) {
 	var releaseLabelsSet labels.Set = map[string]string{"module": moduleName, "source": sourceName}
 	var matchedPolicy *v1alpha1.ModuleUpdatePolicy
@@ -397,7 +388,7 @@ func (c *moduleSourceReconciler) getReleasePolicy(sourceName, moduleName string,
 	}
 
 	if !found {
-		c.logger.Infof("ModuleUpdatePolicy for ModuleSource: %q, Module: %q not found, using Embedded policy: %+v", sourceName, moduleName, *c.deckhouseEmbeddedPolicy)
+		c.logger.Infof("ModuleUpdatePolicy for ModuleSource: %q, Module: %q not found, using Embedded policy: %+v", sourceName, moduleName, *c.deckhouseEmbeddedPolicy.Get())
 		return &v1alpha1.ModuleUpdatePolicy{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
@@ -406,7 +397,7 @@ func (c *moduleSourceReconciler) getReleasePolicy(sourceName, moduleName string,
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "", // special empty default policy, inherits Deckhouse settings for update mode
 			},
-			Spec: *c.deckhouseEmbeddedPolicy,
+			Spec: *c.deckhouseEmbeddedPolicy.Get(),
 		}, nil
 	}
 

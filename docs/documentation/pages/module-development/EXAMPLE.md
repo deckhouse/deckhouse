@@ -56,7 +56,7 @@ This section provides an example of creating a `hello-world-module` module based
 
 1. Add the OpenAPI schema of the module settings.
 
-   The module parameters are specified in the OpenAPI schema in the [openapi](structure/#openapi) directory. Execute the following command to convert the JSON schema of the chart parameters to the OpenAPI schema of the module:
+   The module parameters are specified in the OpenAPI schema in the [openapi](../structure/#openapi) directory. Execute the following command to convert the JSON schema of the chart parameters to the OpenAPI schema of the module:
 
    ```shell
    yq -P .tmp-chart/helm/hello-world/values.schema.json > openapi/config-values.yaml
@@ -64,7 +64,7 @@ This section provides an example of creating a `hello-world-module` module based
 
 1. Define a rule for building an application container image.
 
-   The rules for building application container images must reside in a subdirectory of the [images](structure/#images) directory of the module. Run the following commands to create an application image directory and a Dockerfile with the image build rules:
+   The rules for building application container images must reside in a subdirectory of the [images](../structure/#images) directory of the module. Run the following commands to create an application image directory and a Dockerfile with the image build rules:
 
    ```shell
    rm -rf images/*
@@ -201,7 +201,7 @@ The following is the sequence of steps to enable the `hello-world-module` in a c
    kubectl get ms ghcr -o yaml
    ```
 
-1. Confirm that new [ModuleRelease](../../cr./cr.html#modulerelease) resources have been created for the module:
+1. Confirm that new [ModuleRelease](../../cr.html#modulerelease) resources have been created for the module:
 
    ```shell
    kubectl get mr

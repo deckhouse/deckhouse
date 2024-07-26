@@ -27,6 +27,9 @@ data:
   # https://github.com/deckhouse/deckhouse/blob/v1.49.0/modules/500-upmeter/images/upmeter/pkg/probe/checker/k8s_statefulset.go#L138
   skipResourceByLabels: upmeter-group,upmeter-probe
   trivy.serverURL: {{ $trivyServerURL }}
+  {{- if .Values.operatorTrivy.reportResourceLabels }}
+  report.resourceLabels: {{ .Values.operatorTrivy.reportResourceLabels | join "," }}
+  {{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap

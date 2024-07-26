@@ -96,24 +96,23 @@ spec:
       containers:
       - name: chrony
         securityContext:
-          allowPrivilegeEscalation: true
           capabilities:
             add:
+            # SYS_TIME: Allows a process to modify the system time.
+            # Chrony is designed to adjust system time.
             - SYS_TIME
+            # CHOWN: Allows changing the ownership of files and directories.
+            # Chrony can create /var/run/chrony folfer and change its owner.
             - CHOWN
+            # DAC_OVERRIDE: Allows access to files and directories, even if the process isn't the owner.
+            # /entrypoint can remove /var/run/chrony/chronyd.pid file (UID/GID 64535:64535).
             - DAC_OVERRIDE
-            - FOWNER
-            - FSETID
-            - KILL
+            # SETGID: Make arbitrary manipulations of process GIDs.
+            # Chrony can change its own process GID on the fly.
             - SETGID
+            # SETUID: Make arbitrary manipulations of process UIDs.
+            # Chrony can change its own process UID on the fly.
             - SETUID
-            - SETPCAP
-            - NET_BIND_SERVICE
-            - NET_RAW
-            - SYS_CHROOT
-            - MKNOD
-            - AUDIT_WRITE
-            - SETFCAP
             drop:
             - ALL
           readOnlyRootFilesystem: true
@@ -136,7 +135,7 @@ spec:
               fieldPath: status.hostIP
         ports:
         - name: ntp
-          containerPort: 123
+          containerPort: 4234
           protocol: UDP
         livenessProbe:
           exec:
@@ -153,11 +152,13 @@ spec:
         - name: tzdata-config
           mountPath: /etc/timezone
           readOnly: true
-        - name: chrony
-          mountPath: /var/run/chrony
+        - name: etc-chrony
+          mountPath: /etc/chrony
         - name: config
-          mountPath: /var/run/chrony/chrony.conf.tpl
+          mountPath: /etc/chrony/chrony.conf.tpl
           subPath: chrony.conf.tpl
+        - name: var-run
+          mountPath: /var/run
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -171,7 +172,9 @@ spec:
       - name: tzdata-config
         hostPath:
           path: /etc/timezone
-      - name: chrony
+      - name: etc-chrony
+        emptyDir: {}
+      - name: var-run
         emptyDir: {}
       - name: config
         configMap:
@@ -214,24 +217,23 @@ spec:
       containers:
       - name: chrony
         securityContext:
-          allowPrivilegeEscalation: true
           capabilities:
             add:
+            # SYS_TIME: Allows a process to modify the system time.
+            # Chrony is designed to adjust system time.
             - SYS_TIME
+            # CHOWN: Allows changing the ownership of files and directories.
+            # Chrony can create /var/run/chrony folfer and change its owner.
             - CHOWN
+            # DAC_OVERRIDE: Allows access to files and directories, even if the process isn't the owner.
+            # /entrypoint can remove /var/run/chrony/chronyd.pid file (UID/GID 64535:64535).
             - DAC_OVERRIDE
-            - FOWNER
-            - FSETID
-            - KILL
+            # SETGID: Make arbitrary manipulations of process GIDs.
+            # Chrony can change its own process GID on the fly.
             - SETGID
+            # SETUID: Make arbitrary manipulations of process UIDs.
+            # Chrony can change its own process UID on the fly.
             - SETUID
-            - SETPCAP
-            - NET_BIND_SERVICE
-            - NET_RAW
-            - SYS_CHROOT
-            - MKNOD
-            - AUDIT_WRITE
-            - SETFCAP
             drop:
             - ALL
           readOnlyRootFilesystem: true
@@ -252,7 +254,7 @@ spec:
               fieldPath: status.hostIP
         ports:
         - name: ntp
-          containerPort: 123
+          containerPort: 4234
           protocol: UDP
         livenessProbe:
           exec:
@@ -269,11 +271,13 @@ spec:
         - name: tzdata-config
           mountPath: /etc/timezone
           readOnly: true
-        - name: chrony
-          mountPath: /var/run/chrony
+        - name: etc-chrony
+          mountPath: /etc/chrony
         - name: config
-          mountPath: /var/run/chrony/chrony.conf.tpl
+          mountPath: /etc/chrony/chrony.conf.tpl
           subPath: chrony.conf.tpl
+        - name: var-run
+          mountPath: /var/run
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -287,9 +291,10 @@ spec:
       - name: tzdata-config
         hostPath:
           path: /etc/timezone
-      - name: chrony
+      - name: etc-chrony
+        emptyDir: {}
+      - name: var-run
         emptyDir: {}
       - name: config
         configMap:
           name: chrony
-

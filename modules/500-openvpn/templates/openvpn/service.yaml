@@ -11,6 +11,6 @@ spec:
   - name: https
     port: 443
     protocol: TCP
-    targetPort: 8443
+    targetPort: https
   selector:
     app: {{ .Chart.Name }}

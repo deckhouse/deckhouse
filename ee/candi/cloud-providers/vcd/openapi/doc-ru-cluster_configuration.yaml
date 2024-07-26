@@ -10,7 +10,7 @@ apiVersions:
         Выполните следующую команду, чтобы изменить конфигурацию в запущенном кластере:
 
         ```shell
-        kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+        kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit provider-cluster-configuration
         ```
       properties:
         masterNodeGroup:
@@ -24,7 +24,7 @@ apiVersions:
                 Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
             instanceClass:
               description: |
-                Частичное содержимое полей [VCDInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-VCD/cr.html#VCDinstanceclass).
+                Частичное содержимое полей [VCDInstanceClass](../cluster_configuration.html#vcdinstanceclass).
               properties:
                 rootDiskSizeGb:
                   description: |
@@ -85,7 +85,7 @@ apiVersions:
                       > **Внимание!** Доступны только поля `effect`, `key`, `values`.
               instanceClass:
                 description: |
-                  Частичное содержимое полей [VCDInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vcd/cr.html#VCDinstanceclass).
+                  Частичное содержимое полей [VCDInstanceClass](../cluster_configuration.html#vcdinstanceclass).
                 properties:
                   rootDiskSizeGb:
                     description: |
