@@ -37,6 +37,7 @@ mkdir -p /opt/deckhouse/system-registry/seaweedfs_data/
 
 # Read previously discovered IP address of the node
 discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
+internal_service_name="embedded-registry"
 
 # Prepare certs
 bb-sync-file "$IGNITER_DIR/ca.key" - << EOF
@@ -54,13 +55,13 @@ fi
 if [ ! -f "$IGNITER_DIR/auth.csr" ]; then
     openssl req -new -key "$IGNITER_DIR/auth.key" \
     -subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=${discovered_node_ip}" \
-    -addext "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost" \
+    -addext "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost,DNS:${internal_service_name}.d8-system.svc.cluster.local,DNS:${internal_service_name}.svc.cluster.local,DNS:${internal_service_name}.cluster.local,DNS:${internal_service_name}" \
     -out "$IGNITER_DIR/auth.csr"
 fi
 if [ ! -f "$IGNITER_DIR/auth.crt" ]; then
     openssl x509 -req -in "$IGNITER_DIR/auth.csr" -CA "$IGNITER_DIR/ca.crt" -CAkey "$IGNITER_DIR/ca.key" -CAcreateserial \
     -out "$IGNITER_DIR/auth.crt" -days 365 -sha256 \
-    -extfile <(printf "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost")
+    -extfile <(printf "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost,DNS:${internal_service_name}.d8-system.svc.cluster.local,DNS:${internal_service_name}.svc.cluster.local,DNS:${internal_service_name}.cluster.local,DNS:${internal_service_name}")
 fi
 
 # Distribution certs
@@ -70,13 +71,13 @@ fi
 if [ ! -f "$IGNITER_DIR/distribution.csr" ]; then
     openssl req -new -key "$IGNITER_DIR/distribution.key" \
     -subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=${discovered_node_ip}" \
-    -addext "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost" \
+    -addext "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost,DNS:${internal_service_name}.d8-system.svc.cluster.local,DNS:${internal_service_name}.svc.cluster.local,DNS:${internal_service_name}.cluster.local,DNS:${internal_service_name}" \
     -out "$IGNITER_DIR/distribution.csr"
 fi
 if [ ! -f "$IGNITER_DIR/distribution.crt" ]; then
     openssl x509 -req -in "$IGNITER_DIR/distribution.csr" -CA "$IGNITER_DIR/ca.crt" -CAkey "$IGNITER_DIR/ca.key" -CAcreateserial \
     -out "$IGNITER_DIR/distribution.crt" -days 365 -sha256 \
-    -extfile <(printf "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost")
+    -extfile <(printf "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost,DNS:${internal_service_name}.d8-system.svc.cluster.local,DNS:${internal_service_name}.svc.cluster.local,DNS:${internal_service_name}.cluster.local,DNS:${internal_service_name}")
 fi
 
 bb-sync-file "$IGNITER_DIR/auth_config.yaml" - << EOF
