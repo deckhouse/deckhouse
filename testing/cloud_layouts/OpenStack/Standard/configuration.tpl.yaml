@@ -40,7 +40,7 @@ provider:
 masterNodeGroup:
   replicas: 1
   instanceClass:
-    rootDiskSize: 30
+    rootDiskSize: 50
     flavorName: m1.large
     imageName: "redos-STD-MINIMAL-8.0.0"
   volumeTypeMap:
