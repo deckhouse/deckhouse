@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
+	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -147,6 +148,10 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 		Weight: release.Spec.Weight,
 		Path:   tmpModuleVersionPath,
 	}
+
+	log.Infof("Validate module: %#v", def)
+	log.Infof("Validate release: %#v", release)
+
 	err = validateModule(def)
 	if err != nil {
 		release.Status.Phase = v1alpha1.PhaseSuspended

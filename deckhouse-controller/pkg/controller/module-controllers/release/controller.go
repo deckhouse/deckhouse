@@ -910,9 +910,8 @@ func (c *moduleReleaseReconciler) parseNotificationConfig(ctx context.Context) (
 }
 
 func validateModule(def models.DeckhouseModuleDefinition) error {
-	log.Info("Validating module", log.Fields{
-		"obj": def,
-	})
+	log.Infof("obj: %#v", def)
+
 	if def.Weight < 900 || def.Weight > 999 {
 		return fmt.Errorf("external module weight must be between 900 and 999")
 	}
