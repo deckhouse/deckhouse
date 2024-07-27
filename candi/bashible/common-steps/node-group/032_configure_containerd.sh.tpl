@@ -45,8 +45,8 @@ bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
       {{- $masters = list "localhost:5001" }}
       {{- $masters_url = list (printf "\"%s://localhost:5001\"" $.registry.scheme) }}
     {{- end }}
-    {{- $masters_url = append $masters_url (printf "\"%s://%s\"" $.registry.scheme .registry.address) }}
   {{- end }}
+  {{- $masters_url = append $masters_url (printf "\"%s://%s\"" $.registry.scheme .registry.address) }}
 
 systemd_cgroup=true
 # Overriding cgroup type from external config file
