@@ -339,6 +339,8 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	moduleName := mr.Spec.ModuleName
 
+	log.Infof("=== Reconciling pending release for module %#v", *mr)
+
 	otherReleases := new(v1alpha1.ModuleReleaseList)
 	err := c.client.List(ctx, otherReleases, client.MatchingLabels{"module": moduleName})
 	if err != nil {
