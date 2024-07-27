@@ -46,7 +46,6 @@ var regexPatterns = map[string]string{
 	`$BASE_GOLANG_16_BUSTER`: imageRegexp(`golang:1.16.[\d.]+-buster`),
 	`$BASE_NGINX_ALPINE`:     imageRegexp(`nginx:[\d.]+-alpine`),
 	`$BASE_PYTHON_ALPINE`:    imageRegexp(`python:[\d.]+-alpine`),
-	`$BASE_SHELL_OPERATOR`:   imageRegexp(`shell-operator:v[\d.]+`),
 	`$BASE_UBUNTU`:           imageRegexp(`ubuntu:[\d.]+`),
 	`$BASE_JEKYLL`:           imageRegexp(`jekyll/jekyll:[\d.]+`),
 	`$BASE_SCRATCH`:          imageRegexp(`scratch:[\d.]+`),
