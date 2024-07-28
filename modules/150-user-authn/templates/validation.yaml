@@ -18,7 +18,7 @@ spec:
     resourceRules:
       - apiGroups:   ["deckhouse.io"]
         apiVersions: ["*"]
-        operations:  ["CREATE"]
+        operations:  ["CREATE", "UPDATE"]
         resources:   ["users"]
   validations:
     - expression: '!( request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
