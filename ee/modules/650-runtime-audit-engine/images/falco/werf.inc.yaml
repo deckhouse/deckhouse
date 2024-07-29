@@ -26,7 +26,7 @@ from: {{ $.Images.BASE_ALT_P11 }}
 shell:
   install:
   - apt-get update
-  - apt-get install -y git openssl-devel wget clang cmake libelf-devel libbpf-devel bpftool perl-IPC-Cmd gcc12 gcc12-c++ build-essential go
+  - apt-get install -y git openssl-devel wget clang cmake libelf-devel libbpf-devel bpftool perl-IPC-Cmd gcc12 gcc12-c++ build-essential golang
   - git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
   - git clone --branch {{ $falcoVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falco.git
   - rm -f /usr/bin/clang
