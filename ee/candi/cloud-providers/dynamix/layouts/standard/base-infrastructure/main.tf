@@ -15,6 +15,7 @@ resource "decort_vins" "vins" {
   name = local.vins_name
   rg_id = decort_resgroup.resource_group.id
   ipcidr = local.node_network_cidr
+  def_net_type = "PRIVATE"
   ip {
     type = "DHCP"
   }
