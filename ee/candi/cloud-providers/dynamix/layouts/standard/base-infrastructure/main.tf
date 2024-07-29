@@ -5,7 +5,7 @@ data "decort_account" "account" {
    account_id = local.account_id
 }
 
-resource "decort_resgroup" "resource_group" {
+resource "decort_resgroup" "decort_resource_group" {
   name = local.resource_group_name
   account_id = data.decort_account.account.account_id
   gid = local.grid
@@ -14,7 +14,7 @@ resource "decort_resgroup" "resource_group" {
 
 resource "decort_vins" "vins" {
   name = local.vins_name
-  rg_id = decort_resgroup.resource_group.rg_id
+  rg_id = decort_resgroup.decort_resource_group.rg_id
   ipcidr = local.node_network_cidr
   ip {
     type = "DHCP"
