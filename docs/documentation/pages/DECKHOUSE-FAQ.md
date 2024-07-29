@@ -606,7 +606,7 @@ Follow these steps for manual loading images of modules, connected from the modu
        --filter='deckhouse-admin@1.3.3; sds-drbd@0.0.1'
      ```
 
-     The command above will download only the `deckhouse-admin` and `sds-drbd` modules. For `deckhouse-admin` all available versions starting from `1.3.3` will be downloaded, and for `sds-drbd`, respectively, starting from `0.0.1`.
+     The command above will only pull the `deckhouse-admin` and `sds-drbd` modules. For `deckhouse-admin`, all available versions starting from `1.3.3` will be pulled; for `sds-drbd` — those starting from `0.0.1`.
 
 1. Upload the directory with the pulled images of the Deckhouse modules to a host with access to the air-gapped registry and install [Deckhouse CLI](deckhouse-cli/) tool.
 
