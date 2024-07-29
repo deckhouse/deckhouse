@@ -44,6 +44,10 @@ bb-sync-file "$registry_pki_path/ca.crt" - << EOF
 {{ .internalRegistryAccess.ca.cert }}
 EOF
 
+bb-sync-file "$registry_pki_path/upstream-registry-ca.crt" - << EOF
+{{ .upstreamRegistry.ca }}
+EOF
+
 # Auth certs
 if [ ! -f "$registry_pki_path/auth.key" ]; then
     openssl genrsa -out "$registry_pki_path/auth.key" 2048

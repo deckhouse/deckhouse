@@ -48,6 +48,10 @@ bb-sync-file "$IGNITER_DIR/ca.crt" - << EOF
 {{ .internalRegistryAccess.ca.cert }}
 EOF
 
+bb-sync-file "$IGNITER_DIR/upstream-registry-ca.crt" - << EOF
+{{ .upstreamRegistry.ca }}
+EOF
+
 # Auth certs
 if [ ! -f "$IGNITER_DIR/auth.key" ]; then
     openssl genrsa -out "$IGNITER_DIR/auth.key" 2048
