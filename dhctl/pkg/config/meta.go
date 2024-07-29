@@ -111,9 +111,13 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 			internalRegistryData := RegistryData{
 				Address:      "embedded-registry.d8-system.svc.cluster.local:5001",
 				Path:         m.Registry.Path,
-				Scheme:       "http",
-				DockerCfg:    "ewogICJhdXRocyI6IHsKICAgICJlbWJlZGRlZC1yZWdpc3RyeS5kOC1zeXN0ZW0uc3ZjLmNsdXN0ZXIubG9jYWw6NTAwMSI6IHsKICAgICAgImF1dGgiOiAiY0hWemFHVnlPbkIxYzJobGNnPT0iCiAgICB9CiAgfQp9Cg==",
-				CA:           "",
+				// These parameters are filled in in the method `PrepareAfterGlobalCacheInit`:
+				// Scheme:       "",
+				// DockerCfg:    "",
+				// CA:           "",
+				// The parameters are not filled with default values. It is necessary to check e2e tests.
+				// Method `PrepareAfterGlobalCacheInit` should always be run.
+				// An error in the e2e tests will show that method `PrepareAfterGlobalCacheInit` was forgotten to run.
 				RegistryMode: m.DeckhouseConfig.RegistryMode,
 			}
 			m.UpstreamRegistry = m.Registry
