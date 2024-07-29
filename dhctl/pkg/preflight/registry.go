@@ -248,7 +248,7 @@ func (pc *Checker) CheckRegistryCredentials() error {
 	var authData string
 	var err error
 
-	if pc.metaConfig.Registry.RegistryMode != "Direct" {
+	if pc.metaConfig.Registry.RegistryMode != "" && pc.metaConfig.Registry.RegistryMode != "Direct" {
 		authData, err = pc.metaConfig.UpstreamRegistry.Auth()
 	} else {
 		authData, err = pc.metaConfig.Registry.Auth()
@@ -268,7 +268,7 @@ func prepareRegistryRequest(
 ) (*http.Request, error) {
 	var registryURL *url.URL
 
-	if metaConfig.Registry.RegistryMode != "Direct" {
+	if metaConfig.Registry.RegistryMode != "" && metaConfig.Registry.RegistryMode != "Direct" {
 		registryURL = &url.URL{
 			Scheme: metaConfig.UpstreamRegistry.Scheme,
 			Host:   metaConfig.UpstreamRegistry.Address,
@@ -329,7 +329,7 @@ func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) 
 	}
 
 	ca := metaConfig.Registry.CA
-	if metaConfig.Registry.RegistryMode != "Direct" {
+	if metaConfig.Registry.RegistryMode != "" && metaConfig.Registry.RegistryMode != "Direct" {
 		ca = metaConfig.UpstreamRegistry.CA
 	}
 

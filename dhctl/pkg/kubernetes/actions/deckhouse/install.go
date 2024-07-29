@@ -298,7 +298,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 		},
 	}
 
-	// if cfg.Registry.RegistryMode != "Direct" {
+	// if cfg.Registry.RegistryMode != "" && cfg.Registry.RegistryMode != "Direct" {
 	// 	tasks = append(tasks, actions.ManifestTask{
 	// 		Name: `Secret "system-registry-init-configuration"`,
 	// 		Manifest: func() interface{} {

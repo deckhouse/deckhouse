@@ -107,7 +107,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 
 		m.Registry.RegistryMode = m.DeckhouseConfig.RegistryMode
 
-		if m.DeckhouseConfig.RegistryMode != "Direct" {
+		if m.DeckhouseConfig.RegistryMode != "" && m.DeckhouseConfig.RegistryMode != "Direct" {
 			internalRegistryData := RegistryData{
 				Address:      "embedded-registry.d8-system.svc.cluster.local:5001",
 				Path:         m.Registry.Path,
@@ -192,7 +192,7 @@ func (m *MetaConfig) PrepareAfterGlobalCacheInit() error {
 	}
 
 	if len(m.InitClusterConfig) > 0 {
-		if m.DeckhouseConfig.RegistryMode != "Direct" {
+		if m.DeckhouseConfig.RegistryMode != "" && m.DeckhouseConfig.RegistryMode != "Direct" {
 			internalRegistryAccessData, err := getRegistryAccessData()
 			if err != nil {
 				return fmt.Errorf("unable to get internal registry access data: %v", err)
@@ -405,7 +405,7 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		return nil, err
 	}
 
-	if m.Registry.RegistryMode != "Direct" {
+	if m.Registry.RegistryMode != "" && m.Registry.RegistryMode != "Direct" {
 		upstreamRegistryData, err := ParseRegistryData(m.UpstreamRegistry)
 		if err != nil {
 			return nil, err

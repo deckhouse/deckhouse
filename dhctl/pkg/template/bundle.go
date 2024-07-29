@@ -80,7 +80,7 @@ func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePat
 		return err
 	}
 
-	if metaConfig.Registry.RegistryMode != "Direct" {
+	if metaConfig.Registry.RegistryMode != "" && metaConfig.Registry.RegistryMode != "Direct" {
 		if err := PrepareSystemRegistry(templateController, bashibleData); err != nil {
 			return err
 		}
