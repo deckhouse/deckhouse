@@ -21,7 +21,6 @@ import (
 	"os"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	scherror "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/error"
@@ -36,19 +35,15 @@ const (
 )
 
 var (
-	instance      *Extender
-	once          sync.Once
-	bootstrapOnce sync.Once
+	instance *Extender
+	once     sync.Once
 )
 
 var _ extenders.Extender = &Extender{}
 
 type Extender struct {
-	bootstrapped bool
-	modules      map[string]bool
-	logger       logger.Logger
-	mtx          sync.Mutex
-	err          error
+	modules map[string]bool
+	logger  logger.Logger
 }
 
 func Instance() *Extender {
@@ -89,22 +84,20 @@ func (e *Extender) IsTerminator() bool {
 
 // Filter implements Extender interface, it is used by scheduler in addon-operator
 func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
-	e.getBootstrapped("/tmp/cluster-is-bootstrapped")
-	e.mtx.Lock()
-	if e.err != nil {
-		e.mtx.Unlock()
-		return nil, &scherror.PermanentError{Err: fmt.Errorf("parse kubernetes version failed: %s", e.err)}
-	}
-	e.mtx.Unlock()
-	if e.err != nil {
-		return nil, &scherror.PermanentError{Err: fmt.Errorf("parse bootstrapped file failed: %s", e.err)}
-	}
 	// module requirement is true by default
 	req := true
 	if val, ok := e.modules[name]; ok {
 		req = val
 	}
-	if req && !e.bootstrapped {
+	if req {
+		bootstrapped, err := e.isBootstrapped("/tmp/cluster-is-bootstrapped")
+		if err != nil {
+			return nil, &scherror.PermanentError{Err: fmt.Errorf("parse bootstrapped file failed: %s", err)}
+		}
+		if bootstrapped {
+			e.logger.Debugf("requirements of %s are satisfied", name)
+			return pointer.Bool(true), nil
+		}
 		e.logger.Errorf("requirements of %s are not satisfied: module requires the cluster to be bootstrapped", name)
 		return pointer.Bool(false), fmt.Errorf("requirements are not satisfied: module requires the cluster to be bootstrapped")
 	}
@@ -112,30 +105,23 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 	return pointer.Bool(true), nil
 }
 
-func (e *Extender) getBootstrapped(path string) {
-	bootstrapOnce.Do(func() {
-		if val := os.Getenv("TEST_EXTENDER_BOOTSTRAPPED"); val != "" {
-			instance.logger.Debugf("setting bootstrapped from env")
-			parsed, err := strconv.ParseBool(val)
-			if err == nil {
-				instance.bootstrapped = parsed
-				return
-			}
-			instance.logger.Errorf("parse boostrapped from env failed: %v", err)
+func (e *Extender) isBootstrapped(path string) (bool, error) {
+	if val := os.Getenv("TEST_EXTENDER_BOOTSTRAPPED"); val != "" {
+		instance.logger.Debugf("setting bootstrapped from env")
+		parsed, err := strconv.ParseBool(val)
+		if err == nil {
+			return parsed, nil
 		}
-		e.logger.Debugf("waiting for file %s", path)
-		for {
-			if _, err := os.Stat(path); err == nil {
-				e.logger.Debugf("file %s exists", path)
-				return
-			} else if os.IsNotExist(err) {
-				time.Sleep(10 * time.Millisecond)
-			} else {
-				e.mtx.Lock()
-				e.err = err
-				e.mtx.Unlock()
-				return
-			}
-		}
-	})
+		instance.logger.Errorf("parse boostrapped from env failed: %v", err)
+	}
+	_, err := os.Stat(path)
+	if err == nil {
+		e.logger.Debugf("file %s exists, cluster is bootstrapped", path)
+		return true, nil
+	} else if os.IsNotExist(err) {
+		e.logger.Debugf("file %s does not exist, cluster is not bootstrapped", path)
+		return false, nil
+	}
+	e.logger.Errorf("failed to read file %s: %v", path, err)
+	return false, err
 }
