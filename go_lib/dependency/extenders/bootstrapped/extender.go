@@ -84,25 +84,20 @@ func (e *Extender) IsTerminator() bool {
 
 // Filter implements Extender interface, it is used by scheduler in addon-operator
 func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
-	// module requirement is true by default
-	req := true
 	if val, ok := e.modules[name]; ok {
-		req = val
-	}
-	if req {
 		bootstrapped, err := e.isBootstrapped("/tmp/cluster-is-bootstrapped")
 		if err != nil {
 			return nil, &scherror.PermanentError{Err: fmt.Errorf("parse bootstrapped file failed: %s", err)}
 		}
-		if bootstrapped {
+		if (val && bootstrapped) || (!val && !bootstrapped) {
 			e.logger.Debugf("requirements of %s are satisfied", name)
 			return pointer.Bool(true), nil
 		}
 		e.logger.Errorf("requirements of %s are not satisfied: module requires the cluster to be bootstrapped", name)
 		return pointer.Bool(false), fmt.Errorf("requirements are not satisfied: module requires the cluster to be bootstrapped")
 	}
-	e.logger.Debugf("requirements of %s are satisfied", name)
-	return pointer.Bool(true), nil
+	e.logger.Debugf("no requirements for %s", name)
+	return nil, nil
 }
 
 func (e *Extender) isBootstrapped(path string) (bool, error) {
