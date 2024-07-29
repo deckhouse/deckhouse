@@ -48,7 +48,7 @@ properties:
               username: '<USERNAME>'
               password: '<PASSWORD>'
               insecure: true
-        required: [ apiVersion, kind, sshPublicKey, grid, masterNodeGroup, layout, provider ]
+        required: [ apiVersion, kind, sshPublicKey, grid, masterNodeGroup, nodeNetworkCIDR, layout, provider ]
         properties:
           apiVersion:
             type: string
