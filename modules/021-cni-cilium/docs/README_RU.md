@@ -51,7 +51,7 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
 
 Cilium полностью заменяет собой функционал модуля kube-proxy, поэтому тот автоматически отключается при включении модуля cni-cilium.
 
-## Заметка о Egress Gateway
+## Заметка об отказоустойчивом Egress Gateway
 
 {% alert level="warning" %} Функция доступна только в Enterprise Edition {% endalert %}
 

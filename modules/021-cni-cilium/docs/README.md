@@ -49,7 +49,7 @@ If you change the Cilium operating mode (the [tunnelMode](configuration.html#par
 
 Cilium has the same functionality as the `kube-proxy` module, so the latter is automatically disabled when the `cni-cilium` module is enabled.
 
-## A note about Egress Gateway
+## A note about fault-tolerant Egress Gateway
 
 {% alert level="warning" %} Feature is only available in Enterprise Edition {% endalert %}
 
