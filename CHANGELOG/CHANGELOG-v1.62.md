@@ -64,6 +64,7 @@
 ## Fixes
 
 
+ - **[candi]** Restore the installation of the `nfs-common` package from the system package repositories. [#9182](https://github.com/deckhouse/deckhouse/pull/9182)
  - **[candi]** Fix home directory permission for NodeUser. [#9030](https://github.com/deckhouse/deckhouse/pull/9030)
     default
  - **[candi]** Fix AWS identity for a EBS device. [#8951](https://github.com/deckhouse/deckhouse/pull/8951)
