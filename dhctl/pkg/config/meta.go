@@ -179,17 +179,6 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 			return nil, fmt.Errorf("unable to unmarshal static nodes from provider cluster configuration: %v", err)
 		}
 	}
-
-	m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
-	m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
-	m.Registry.CA = m.DeckhouseConfig.RegistryCA
-
-	parts := strings.SplitN(m.DeckhouseConfig.ImagesRepo, "/", 2)
-	m.Registry.Address = parts[0]
-	if len(parts) == 2 {
-		m.Registry.Path = fmt.Sprintf("/%s", parts[1])
-	}
-
 	return m, nil
 }
 
