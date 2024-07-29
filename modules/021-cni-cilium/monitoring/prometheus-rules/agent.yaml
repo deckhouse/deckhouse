@@ -1,7 +1,17 @@
 - name: cni-cilium
   rules:
   - alert: CiliumAgentUnreachableHealthEndpoints
-    expr: max by (namespace, pod) (cilium_unreachable_health_endpoints) > 0
+    # Show all current `cilium_unreachable_health_endpoints` if the condition is met:
+    # no changes in pod states for the last N minutes (number of pods including changes - number of pods N minutes ago)
+    expr: |
+      max by (namespace, pod) (cilium_unreachable_health_endpoints) > 0
+      and on()
+      (
+        (
+          count(changes(kube_pod_info{created_by_name="agent",namespace="d8-cni-cilium"}[2m])) -
+          count(kube_pod_info{created_by_name="agent",namespace="d8-cni-cilium"} offset 2m)
+        ) == 0
+      )
     for: 5m
     labels:
       d8_module: cni-cilium
