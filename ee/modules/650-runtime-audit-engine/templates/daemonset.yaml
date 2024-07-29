@@ -77,22 +77,16 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "falco") }}
         args:
         - /usr/bin/falco
-        - -K
-        - /var/run/secrets/kubernetes.io/serviceaccount/token
-        - -k
-        - https://$(KUBERNETES_SERVICE_HOST)
-        - --k8s-node
-        - $(FALCO_K8S_NODE_NAME)
         - -pk
-        - --modern-bpf
-        - --unbuffered
         env:
+        - name: FALCO_HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         - name: FALCO_K8S_NODE_NAME
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        - name: SKIP_DRIVER_LOADER
-          value: ""
         livenessProbe:
           failureThreshold: 3
           httpGet:
