@@ -1,16 +1,17 @@
 ---
 title: "Cluster Autoscaler: Примеры"
 description: Примеры настройки Cluster Autoscaler в Kubernetes. Аннотации для DaemonSet.
-
 ---
 
 ## Описание
 
 <https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-enabledisable-eviction-for-a-specific-daemonset>
 
-Вы можете отключить выселение daemonset подов указав аннотацию:
+Вы можете отключить выселение (evict) подов DaemonSet указав следующую аннотацию:
 
+```console
 {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
+```
 
 ## Почему это важно
 
@@ -167,7 +168,7 @@ spec:
         args: ["-c", "while true; do echo 'Dummy pod'; sleep 3600; done"]
 ```
 
-### Масштабирование деплоймента resource-consumer
+### Масштабирование Deployment resource-consumer
 
 ```bash
 kubectl scale deployment resource-consumer --replicas 0

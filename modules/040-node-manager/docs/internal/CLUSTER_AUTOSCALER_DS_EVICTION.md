@@ -9,7 +9,9 @@ description: Examples of configuring Cluster Autoscaler in Kubernetes. Annotatio
 
 You can disable eviction of DaemonSet pods by specifying this annotation:
 
+```console
 {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
+```
 
 ## Why This Matters
 
