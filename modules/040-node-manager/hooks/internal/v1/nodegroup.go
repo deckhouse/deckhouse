@@ -313,7 +313,38 @@ type Kubelet struct {
 	ContainerLogMaxFiles int `json:"containerLogMaxFiles,omitempty"`
 
 	ResourceReservation KubeletResourceReservation `json:"resourceReservation"`
+
+	TopologyManager KubeletTopologyManager `json:"topologyManager"`
 }
+
+type KubeletTopologyManager struct {
+	// https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/
+	// usage topology
+	// Default: False
+	Enabled *bool `json:"enabled,omitempty"`
+	// Default: Container
+	// +optional
+	Scope KubeletTopologyManagerScope `json:"scope,omitempty"`
+	// Default: 'None'
+	// +optional
+	Policy KubeletTopologyManagerPolicy `json:"policy,omitempty"`
+}
+
+type KubeletTopologyManagerScope string
+
+const (
+	KubeletTopologyManagerScopeContainer KubeletTopologyManagerScope = "Container"
+	KubeletTopologyManagerScopePod       KubeletTopologyManagerScope = "Pod"
+)
+
+type KubeletTopologyManagerPolicy string
+
+const (
+	KubeletTopologyManagerPolicyNone           KubeletTopologyManagerPolicy = "None"
+	KubeletTopologyManagerPolicyBestEffort     KubeletTopologyManagerPolicy = "BestEffort"
+	KubeletTopologyManagerPolicyRestricted     KubeletTopologyManagerPolicy = "Restricted"
+	KubeletTopologyManagerPolicySingleNumaNode KubeletTopologyManagerPolicy = "SingleNumaNode"
+)
 
 type KubeletResourceReservation struct {
 	Mode KubeletResourceReservationMode `json:"mode"`
