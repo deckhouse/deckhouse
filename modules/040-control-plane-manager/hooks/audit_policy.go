@@ -26,6 +26,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
+	apiv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
@@ -52,6 +53,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: filterAuditSecret,
 		},
+		{
+			Name:       "configmaps_with_extra_audit_policy",
+			ApiVersion: "v1",
+			Kind:       "ConfigMap",
+			LabelSelector: &apiv1.LabelSelector{
+				MatchLabels: map[string]string{
+					"control-plane-manager.deckhouse.io/extra-audit-policy-config": "",
+				},
+			},
+			FilterFunc: filterConfigMap,
+		},
 	},
 }, handleAuditPolicy)
 
@@ -68,11 +80,35 @@ func filterAuditSecret(unstructured *unstructured.Unstructured) (go_hook.FilterR
 	return data, nil
 }
 
+func filterConfigMap(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var cm v1.ConfigMap
+
+	err := sdk.FromUnstructured(unstructured, &cm)
+	if err != nil {
+		return nil, err
+	}
+
+	yamlData := struct {
+		ServiceAccounts []string `yaml:"serviceAccounts"`
+	}{ServiceAccounts: make([]string, 0)}
+
+	if data, ok := cm.Data["basicAuditPolicy"]; ok {
+		err = yaml.Unmarshal([]byte(data), &yamlData)
+		if err != nil {
+			return nil, fmt.Errorf("invalid basicAuditPolicy format - yaml expected: %s", err)
+		}
+	}
+
+	return ConfigMapInfo{
+		ServiceAccounts: yamlData.ServiceAccounts,
+	}, nil
+}
+
 func handleAuditPolicy(input *go_hook.HookInput) error {
 	var policy audit.Policy
 
 	if input.Values.Get("controlPlaneManager.apiserver.basicAuditPolicyEnabled").Bool() {
-		appendBasicPolicyRules(&policy)
+		appendBasicPolicyRules(&policy, input.Snapshots["configmaps_with_extra_audit_policy"])
 	}
 
 	snap := input.Snapshots["kube_audit_policy_secret"]
@@ -97,7 +133,7 @@ func handleAuditPolicy(input *go_hook.HookInput) error {
 	return nil
 }
 
-func appendBasicPolicyRules(policy *audit.Policy) {
+func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResult) {
 	var appendDropResourcesRule = func(resource audit.GroupResources) {
 		rule := audit.PolicyRule{
 			Level: audit.LevelNone,
@@ -201,6 +237,17 @@ func appendBasicPolicyRules(policy *audit.Policy) {
 				audit.StageRequestReceived,
 			},
 		}
+
+		// Append sa from extra ConfigMaps
+		if len(extraData) > 0 {
+			users := rule.Users
+			for _, cmSnap := range extraData {
+				configMap := cmSnap.(ConfigMapInfo)
+				users = append(users, configMap.ServiceAccounts...)
+			}
+			rule.Users = users
+		}
+
 		policy.Rules = append(policy.Rules, rule)
 	}
 	// A rule collecting logs about actions taken on the resources in system namespaces.
@@ -267,4 +314,8 @@ func serializePolicy(policy *audit.Policy) (string, error) {
 
 	data := strings.Replace(buf.String(), "metadata:\n  creationTimestamp: null\n", "", 1)
 	return base64.StdEncoding.EncodeToString([]byte(data)), nil
+}
+
+type ConfigMapInfo struct {
+	ServiceAccounts []string
 }
