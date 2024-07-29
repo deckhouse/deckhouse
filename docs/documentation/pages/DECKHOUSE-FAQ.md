@@ -597,14 +597,16 @@ Follow these steps for manual loading images of modules, connected from the modu
      d8 mirror modules pull -d ./d8-modules -m $HOME/module_source.yml
      ```
 
-     To download only a specific set of modules of specific versions, use the `--filter` flag followed by the list of required modules and their versions separated by the `;` character.
+     To download only a specific set of modules of specific versions, use the `--filter` flag followed by the list of required modules and their minimal required versions separated by the `;` character.
 
      For example:
 
      ```shell
      d8 mirror modules pull -d /tmp/d8-modules -m $HOME/module_source.yml \
-       --filter='deckhouse-admin:v1.0.0;deckhouse-admin:v1.3.3; sds-drbd:v0.0.1'
+       --filter='deckhouse-admin@1.3.3; sds-drbd@0.0.1'
      ```
+
+     The command above will download only the `deckhouse-admin` and `sds-drbd` modules. Аor `deckhouse-admin` all available versions starting from `1.3.3` will be downloaded, and for `sds-drbd`, respectively, starting from `0.0.1`.
 
 1. Upload the directory with the pulled images of the Deckhouse modules to a host with access to the air-gapped registry and install [Deckhouse CLI](deckhouse-cli/) tool.
 
