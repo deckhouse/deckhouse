@@ -9,13 +9,13 @@ resource "decort_resgroup" "resource_group" {
   name = local.resource_group_name
   account_id = data.decort_account.account.account_id
   gid = local.grid
+  def_net_type = "NONE"
 }
 
 resource "decort_vins" "vins" {
   name = local.vins_name
   rg_id = decort_resgroup.resource_group.id
   ipcidr = local.node_network_cidr
-  def_net_type = "PRIVATE"
   ip {
     type = "DHCP"
   }
