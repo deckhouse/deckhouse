@@ -142,6 +142,17 @@ properties:
                     annotations:
                       type: object
                       additionalProperties: true
+                loadBalancerWithSSLPassthrough:
+                  type: object
+                  default: {}
+                  properties:
+                    sourceRanges:
+                      type: array
+                      items:
+                        type: string
+                    annotations:
+                      type: object
+                      additionalProperties: true
                 hostPort:
                   type: object
                   default: {}
