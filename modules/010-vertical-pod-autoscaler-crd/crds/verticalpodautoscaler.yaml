@@ -71,7 +71,7 @@ spec:
                               resources in a ResourceList.
                             type: string
                           type: array
-                          x-doc-default: ['ResourceCPU', 'ResourceMemory']
+                          x-doc-default: ['cpu', 'memory']
                         controlledValues:
                           description: Specifies which resource values should be controlled.
                           enum:
