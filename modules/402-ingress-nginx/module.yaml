@@ -1,0 +1,4 @@
+name:  ingress-nginx
+weight: 901
+requirements:
+  bootstrapped: true
