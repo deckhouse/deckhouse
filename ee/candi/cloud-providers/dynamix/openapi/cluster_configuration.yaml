@@ -207,7 +207,7 @@ apiVersions:
           controllerUrl:
             type: string
             description: The URL to the Dynamix API endpoint.
-          oauth2Url:
+          oAuth2Url:
             type: string
             description: The URL to the SSO Dynamix API endpoint.
           appId:
@@ -226,7 +226,7 @@ apiVersions:
             x-doc-default: false
         required:
         - controllerUrl
-        - oauth2Url
+        - oAuth2Url
         - appId
         - appSecret
     oneOf:
