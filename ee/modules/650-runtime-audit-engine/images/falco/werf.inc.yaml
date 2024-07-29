@@ -34,8 +34,6 @@ shell:
   - ln -s x86_64-alt-linux-gcc-12 /usr/bin/x86_64-alt-linux-gcc
   - ln -s x86_64-alt-linux-g++-12 /usr/bin/x86_64-alt-linux-g++
   - mkdir -p /falco/build
-  - cd /falco
-  - git apply /patches/*.patch
   - cd /falco/build
   - cmake -DCMAKE_BUILD_TYPE=release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_DRIVER=OFF -DCPACK_GENERATOR=TGZ -DBUILD_BPF=OFF -DBUILD_FALCO_MODERN_BPF=ON -DBUILD_WARNINGS_AS_ERRORS=OFF -DFALCO_VERSION=0.38.1 -DUSE_BUNDLED_DEPS=ON /falco
   - make package -j4
