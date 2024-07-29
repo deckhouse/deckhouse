@@ -1565,17 +1565,19 @@ select#contact-select {
 // alertslist class
 .alertslist {
   .alertslist__name {
+    display: flex;
+    align-items: center;
     font-size: 16px;
     font-weight: $font-weight-bold;
   }
 
   .alertslist__summary-body {
-    margin: 14px 0px;
+    margin: 14px 0;
   }
 
   .alertslist__badge {
     display: inline-flex;
-    vertical-align: middle;
+    align-items: center;
     font-size: 10px;
     font-weight: $font-weight-bold;
     line-height: 16px;
@@ -1592,43 +1594,53 @@ select#contact-select {
   }
 
   .alertslist__badge_severity {
-    background: #ff4d00;
+    color: #00122c;
+    background: #eef2ff;
+    font-weight: $font-weight-regular;
   }
 
-  .alertslist__badge_severity-s1 {
+  .alertslist__badge_severity span {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 5px;
+    border: 1px solid #9eaec4;
+    border-radius: 50%;
+  }
+
+  .alertslist__badge_severity-s1  span {
     background: #ff0000;
   }
 
-  .alertslist__badge_severity-s2 {
+  .alertslist__badge_severity-s2  span {
     background: #ff4c00;
   }
 
-  .alertslist__badge_severity-s3 {
+  .alertslist__badge_severity-s3  span {
     background: #ff7f00;
   }
 
-  .alertslist__badge_severity-s4 {
+  .alertslist__badge_severity-s4  span {
     background: #ffb600;
   }
 
-  .alertslist__badge_severity-s5 {
+  .alertslist__badge_severity-s5  span {
     background: #ffe100;
   }
 
-  .alertslist__badge_severity-s6 {
+  .alertslist__badge_severity-s6  span {
     background: #c9bc5a;
   }
 
-  .alertslist__badge_severity-s7 {
+  .alertslist__badge_severity-s7  span {
     background: #a09d83;
   }
 
-  .alertslist__badge_severity-s8 {
+  .alertslist__badge_severity-s8  span {
     background: #bcbbb1;
   }
 
-  .alertslist__badge_severity-s9 {
-    background: #ddd;
-    color: $black;
+  .alertslist__badge_severity-s9  span {
+    color: #ddd;
   }
 }

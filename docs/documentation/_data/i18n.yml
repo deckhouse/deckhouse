@@ -186,8 +186,8 @@ common:
     en: Alert summary
     ru: Краткое описание
   alert_severity:
-    en: Alert severity
-    ru: Критичность (severity) алерта
+    en: "Alert severity<br/><br/>S1 – highest<br/>S9 – lowest"
+    ru: "Критичность (severity) алерта<br/><br/>S1 – самая высокая<br/>S9 – самая низкая"
   alert_edition:
     en: The minimum DKP edition in which the alert is available
     ru: Минимальная редакция DKP, в которой доступен алерт
