@@ -17,6 +17,7 @@
 
 {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
 
+# Prepare vars
 registry_pki_path="/etc/kubernetes/system-registry/pki"
 etcd_pki_path="/etc/kubernetes/pki/etcd"
 

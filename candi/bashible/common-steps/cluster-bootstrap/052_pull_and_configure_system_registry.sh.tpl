@@ -30,12 +30,15 @@ mkdir -p /etc/kubernetes/system-registry/{auth_config,seaweedfs_config,distribut
 # Create a directories for the system registry data if it does not exist
 mkdir -p /opt/deckhouse/system-registry/seaweedfs_data/
 
-# Read previously discovered IP address of the node
+# Prepare vars
 discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
-internal_service_name="embedded-registry"
+registry_pki_path="/etc/kubernetes/system-registry/pki"
+internal_registry_domain="{{ .registry.address }}"
+if [[ "$internal_registry_domain" == *":"* ]]; then
+    internal_registry_domain="$(echo "$internal_registry_domain" | cut -d':' -f1)"
+fi
 
 # Prepare certs
-registry_pki_path="/etc/kubernetes/system-registry/pki"
 bb-sync-file "$registry_pki_path/ca.key" - << EOF
 {{ .internalRegistryAccess.ca.key }}
 EOF
@@ -55,13 +58,13 @@ fi
 if [ ! -f "$registry_pki_path/auth.csr" ]; then
     openssl req -new -key "$registry_pki_path/auth.key" \
     -subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=system-registry" \
-    -addext "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost,DNS:${internal_service_name}.d8-system.svc.cluster.local,DNS:${internal_service_name}.svc.cluster.local,DNS:${internal_service_name}.cluster.local,DNS:${internal_service_name}" \
+    -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
     -out "$registry_pki_path/auth.csr"
 fi
 if [ ! -f "$registry_pki_path/auth.crt" ]; then
     openssl x509 -req -in "$registry_pki_path/auth.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
     -out "$registry_pki_path/auth.crt" -days 365 -sha256 \
-    -extfile <(printf "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost,DNS:${internal_service_name}.d8-system.svc.cluster.local,DNS:${internal_service_name}.svc.cluster.local,DNS:${internal_service_name}.cluster.local,DNS:${internal_service_name}")
+    -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
 fi
 
 # Distribution certs
@@ -71,13 +74,13 @@ fi
 if [ ! -f "$registry_pki_path/distribution.csr" ]; then
     openssl req -new -key "$registry_pki_path/distribution.key" \
     -subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=system-registry" \
-    -addext "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost,DNS:${internal_service_name}.d8-system.svc.cluster.local,DNS:${internal_service_name}.svc.cluster.local,DNS:${internal_service_name}.cluster.local,DNS:${internal_service_name}" \
+    -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
     -out "$registry_pki_path/distribution.csr"
 fi
 if [ ! -f "$registry_pki_path/distribution.crt" ]; then
     openssl x509 -req -in "$registry_pki_path/distribution.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
     -out "$registry_pki_path/distribution.crt" -days 365 -sha256 \
-    -extfile <(printf "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost,DNS:${internal_service_name}.d8-system.svc.cluster.local,DNS:${internal_service_name}.svc.cluster.local,DNS:${internal_service_name}.cluster.local,DNS:${internal_service_name}")
+    -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
 fi
 
 # Seaweedfs certs
@@ -87,13 +90,13 @@ fi
 if [ ! -f "$registry_pki_path/seaweedfs.csr" ]; then
     openssl req -new -key "$registry_pki_path/seaweedfs.key" \
     -subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=system-registry" \
-    -addext "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost" \
+    -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip}" \
     -out "$registry_pki_path/seaweedfs.csr"
 fi
 if [ ! -f "$registry_pki_path/seaweedfs.crt" ]; then
     openssl x509 -req -in "$registry_pki_path/seaweedfs.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
     -out "$registry_pki_path/seaweedfs.crt" -days 365 -sha256 \
-    -extfile <(printf "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost")
+    -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip}")
 fi
 
 bb-sync-file /etc/kubernetes/system-registry/auth_config/config.yaml - << EOF
