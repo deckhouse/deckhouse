@@ -78,6 +78,7 @@ spec:
         args:
         - /usr/bin/falco
         - -pk
+        - -modern_ebpf
         env:
         - name: FALCO_HOSTNAME
           valueFrom:
