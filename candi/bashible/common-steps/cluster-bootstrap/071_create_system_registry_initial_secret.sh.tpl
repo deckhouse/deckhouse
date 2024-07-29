@@ -43,7 +43,7 @@ bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret ge
   --from-literal=upstreamRegistryAddress='{{- .upstreamRegistry.address }}' \
   --from-literal=upstreamRegistryPath='{{- .upstreamRegistry.path }}' \
   --from-literal=upstreamRegistryScheme='{{- .upstreamRegistry.scheme }}' \
-  --from-file=upstreamRegistryCA=$registry_pki_path/ca.crt \
+  --from-file=upstreamRegistryCA=$registry_pki_path/upstream-registry-ca.crt \
   --from-literal=upstreamRegistryAuth='{{- .upstreamRegistry.auth }}'
 
 {{- end }}
