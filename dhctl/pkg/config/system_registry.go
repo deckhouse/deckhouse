@@ -17,6 +17,7 @@ package config
 import (
 	"fmt"
 	"math/rand"
+	"time"
 
 	"github.com/cloudflare/cfssl/csr"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -121,13 +122,16 @@ func newRegistryUser(name string) (*RegistryUser, error) {
 }
 
 func generateRegistryPassword() string {
-	passwordLength := 12
-	asciiStart := 33
-	asciiEnd := 126
+	const passwordLength = 16
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+	// Создание нового генератора случайных чисел
+	seed := time.Now().UnixNano()
+	rng := rand.New(rand.NewSource(seed))
 
 	password := make([]byte, passwordLength)
 	for i := range password {
-		password[i] = byte(rand.Intn(asciiEnd-asciiStart+1) + asciiStart)
+		password[i] = charset[rng.Intn(len(charset))]
 	}
 	return string(password)
 }
