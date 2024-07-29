@@ -108,9 +108,15 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		m.Registry.RegistryMode = m.DeckhouseConfig.RegistryMode
 
 		if m.DeckhouseConfig.RegistryMode != "" && m.DeckhouseConfig.RegistryMode != "Direct" {
+			var clusterDomain string
+			err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &clusterDomain)
+			if err != nil {
+				return nil, fmt.Errorf("unable to unmarshal clusterDomain from cluster configuration: %v", err)
+			}
+
 			internalRegistryData := RegistryData{
 				// The domain must be used in the address parameter (used when rendering templates when generating certificates)
-				Address:      "embedded-registry.d8-system.svc.cluster.local:5001",
+				Address:      fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
 				Path:         m.Registry.Path,
 				// These parameters are filled in in the method `PrepareAfterGlobalCacheInit`:
 				// Scheme:       "",
