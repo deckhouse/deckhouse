@@ -26,7 +26,7 @@ resource "decort_disk" "kubernetes_data_disk" {
 resource "decort_cb_kvmvm" "master_vm" {
   name = local.master_node_name
   driver = local.driver
-  rg_id = data.decort_rg_list.resource_group.items[0].id
+  rg_id = data.decort_rg_list.resource_group.items[0].rg_id
   cpu = local.master_cpus
   ram = local.master_ram_mb
   boot_disk_size = local.master_root_disk_size

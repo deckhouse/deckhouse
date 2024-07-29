@@ -14,7 +14,7 @@ resource "decort_resgroup" "resource_group" {
 
 resource "decort_vins" "vins" {
   name = local.vins_name
-  rg_id = decort_resgroup.resource_group.id
+  rg_id = decort_resgroup.resource_group.rg_id
   ipcidr = local.node_network_cidr
   ip {
     type = "DHCP"
