@@ -116,8 +116,8 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 
 			internalRegistryData := RegistryData{
 				// The domain must be used in the address parameter (used when rendering templates when generating certificates)
-				Address:      fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
-				Path:         m.Registry.Path,
+				Address: fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
+				Path:    m.Registry.Path,
 				// These parameters are filled in in the method `PrepareAfterGlobalCacheInit`:
 				// Scheme:       "",
 				// DockerCfg:    "",
