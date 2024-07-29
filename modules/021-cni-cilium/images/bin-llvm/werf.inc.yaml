@@ -1,6 +1,5 @@
 {{- $llvmRev := "llvmorg-10.0.0" }}
-{{- $llvmCacheRev := "llvmorg-10.0.0-v1" }}
-{{- $fromCacheVersion := "16" }}
+{{- $llvmCacheRev := "llvmorg-10.0.0-alt-v1" }}
 ---
 # #####################################################################
 # Build LLVM binaries (based on base-cilium-dev)
@@ -14,8 +13,7 @@
 # #####################################################################
 ---
 artifact: {{ $.ModuleName }}/llvm-artifact
-fromImage: {{ $.ModuleName }}/base-cilium-dev
-fromCacheVersion: {{ $fromCacheVersion }}
+from: {{ $.Images.BASE_ALT_DEV_CILIUM }}
 shell:
   beforeInstall:
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
