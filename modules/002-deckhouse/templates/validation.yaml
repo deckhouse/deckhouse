@@ -123,7 +123,7 @@ spec:
       operations:  ["CREATE", "UPDATE"]
       resources:   ["moduleconfigs"]    
   validations:
-    - expression: 'object.metadata.name == "deckhouse" && object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))'
+    - expression: '!(object.metadata.name == "deckhouse" && has(object.spec.settings.update) && has(object.spec.settings.update.windows) && object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) > int(string(w.to).replace(":", ""))))'
       reason: Forbidden
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
       messageExpression: '''Invalid update windows. Start time (windows.to) should be less than the end time of the update window (windows.from)'''         
