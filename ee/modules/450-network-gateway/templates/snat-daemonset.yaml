@@ -42,6 +42,8 @@ spec:
     metadata:
       labels:
         app: snat
+      annotations:
+        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
