@@ -44,6 +44,8 @@ spec:
       app: ingressgateway
   template:
     metadata:
+      annotations:
+        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
       labels:
         app: ingressgateway
         sidecar.istio.io/inject: "false"

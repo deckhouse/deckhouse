@@ -40,6 +40,8 @@ spec:
       app: node-termination-handler
   template:
     metadata:
+      annotations:
+        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
       labels:
         app: node-termination-handler
     spec:
