@@ -2288,19 +2288,6 @@ alerts:
         APF flow schema d8-serviceaccounts has rejected API requests.
       severity: "9"
       markupFormat: markdown
-    - name: KubernetesAPFRejectRequests
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/flow-schema.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
-      edition: ce
-      description: |
-        To show APF schema queue requests, use the expr `apiserver_flowcontrol_current_inqueue_requests{flow_schema="d8-serviceaccounts"}`.
-
-        Attention: This is an experimental alert!
-      summary: |
-        APF flow schema d8-serviceaccounts has rejected API requests.
-      severity: "9"
-      markupFormat: markdown
     - name: KubernetesVersionEndOfLife
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
       moduleUrl: 040-control-plane-manager
