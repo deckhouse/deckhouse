@@ -599,7 +599,7 @@ alerts:
         Prometheus is unable to scrape Grafana metrics.
       severity: "6"
       markupFormat: markdown
-    - name: D8IstioActualDataPlaneVersionNeDesired
+    - name: D8IstioActualDataPlaneVersionNotEqualDesired
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
       moduleUrl: 110-istio
       module: istio
