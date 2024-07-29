@@ -10,6 +10,7 @@ require (
 	github.com/golangci/golangci-lint v1.40.1
 	github.com/iancoleman/strcase v0.2.0
 	github.com/tidwall/gjson v1.14.4
+	github.com/yuin/goldmark v1.4.13
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2

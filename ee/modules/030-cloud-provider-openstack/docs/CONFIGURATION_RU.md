@@ -4,6 +4,8 @@ title: "Сloud provider — OpenStack: настройки"
 
 Модуль автоматически включается для всех облачных кластеров, развернутых в OpenStack.
 
+{% include module-alerts.liquid %}
+
 Количество и параметры процесса заказа машин в облаке настраиваются в custom resource [`NodeGroup`](../../modules/040-node-manager/cr.html#nodegroup) модуля `node-manager`, в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup).  Инстанс-класс для cloud-провайдера OpenStack — это custom resource [`OpenStackInstanceClass`](cr.html#openstackinstanceclass), в котором указываются конкретные параметры самих машин.
 
 Настройки модуля устанавливаются автоматически на основании выбранной схемы размещения. В большинстве случаев нет необходимости в ручной конфигурации модуля.

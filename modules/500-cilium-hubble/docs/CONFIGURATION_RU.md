@@ -2,6 +2,8 @@
 title: "Модуль cilium-hubble: настройки"
 ---
 
+{% include module-alerts.liquid %}
+
 {% include module-bundle.liquid %}
 
 Модуль останется отключенным вне зависимости от параметра `ciliumHubbleEnabled:`, если не включен модуль `cni-cilium`.

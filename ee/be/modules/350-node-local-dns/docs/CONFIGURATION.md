@@ -2,6 +2,8 @@
 title: "The node-local-dns module: configuration"
 ---
 
+{% include module-alerts.liquid %}
+
 {% include module-bundle.liquid %}
 
 The module does not require any configuration (it works right out-of-the-box).
