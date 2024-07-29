@@ -12,6 +12,11 @@ properties:
           Registry manager img full path
         x-example:
           - dev-registry.deckhouse.io/registryManager:latest
+  enableRegistryManager:
+    type: boolean
+    description: |
+      Registry manager enable flag
+    default: false
   cluster:
     type: object
     default: {}
