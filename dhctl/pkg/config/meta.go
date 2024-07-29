@@ -109,6 +109,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 
 		if m.DeckhouseConfig.RegistryMode != "" && m.DeckhouseConfig.RegistryMode != "Direct" {
 			internalRegistryData := RegistryData{
+				// The domain must be used in the address parameter (used when rendering templates when generating certificates)
 				Address:      "embedded-registry.d8-system.svc.cluster.local:5001",
 				Path:         m.Registry.Path,
 				// These parameters are filled in in the method `PrepareAfterGlobalCacheInit`:
