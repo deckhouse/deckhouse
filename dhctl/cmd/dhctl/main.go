@@ -61,9 +61,6 @@ func main() {
 		return nil
 	})
 
-	commands.DefineMirrorCommand(kpApp)
-	commands.DefineMirrorModulesCommand(kpApp)
-
 	commands.DefineServerCommand(kpApp)
 	commands.DefineSingleThreadedServerCommand(kpApp)
 
