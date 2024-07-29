@@ -18,4 +18,5 @@ resource "decort_vins" "vins" {
   ip {
     type = "DHCP"
   }
+  ext_net_id = local.extnet_id
 }

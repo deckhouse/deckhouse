@@ -5,7 +5,7 @@ data "decort_image" "os_image" {
   image_id = local.os_image_id
 }
 
-data "decort_resgroup" "resource_group" {
+data "decort_rg_list" "resource_group" {
   name = local.resource_group_name
 }
 
@@ -15,7 +15,7 @@ data "decort_vins_list" "vins" {
 
 resource "decort_disk" "kubernetes_data_disk" {
    disk_name = local.kubernetes_data_disk_name
-   account_id = data.decort_resgroup.resource_group.account_id
+   account_id = data.decort_rg_list.resource_group.items[0].account_id
    gid = local.grid
    size_max = local.master_etcd_disk_size
    type = "D"    # disk type, always use "D" for extra disks
@@ -26,7 +26,7 @@ resource "decort_disk" "kubernetes_data_disk" {
 resource "decort_cb_kvmvm" "master_vm" {
   name = local.master_node_name
   driver = local.driver
-  rg_id = data.decort_resgroup.resource_group.id
+  rg_id = data.decort_rg_list.resource_group.items[0].id
   cpu = local.master_cpus
   ram = local.master_ram_mb
   boot_disk_size = local.master_root_disk_size
