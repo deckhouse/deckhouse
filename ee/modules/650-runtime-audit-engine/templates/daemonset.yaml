@@ -71,9 +71,7 @@ spec:
       containers:
 
       - name: falco
-        # TODO(nabokihms): Fix 'Error response from daemon: invalid CapAdd: unknown capability: "CAP_BPF"'
-        # Migrate to capabilities: "BPF" "SYS_RESOURCE" "PERFMON" "SYS_PTRACE"
-        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
+          {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add"  (list . (list  "BPF" "SYS_RESOURCE" "PERFMON" "SYS_PTRACE")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "falco") }}
         args:
         - /usr/bin/falco
