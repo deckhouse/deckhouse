@@ -50,7 +50,7 @@ if [ ! -f "$registry_pki_path/auth.key" ]; then
 fi
 if [ ! -f "$registry_pki_path/auth.csr" ]; then
     openssl req -new -key "$registry_pki_path/auth.key" \
-    -subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=${discovered_node_ip}" \
+    -subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=system-registry" \
     -addext "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost,DNS:${internal_service_name}.d8-system.svc.cluster.local,DNS:${internal_service_name}.svc.cluster.local,DNS:${internal_service_name}.cluster.local,DNS:${internal_service_name}" \
     -out "$registry_pki_path/auth.csr"
 fi
@@ -66,7 +66,7 @@ if [ ! -f "$registry_pki_path/distribution.key" ]; then
 fi
 if [ ! -f "$registry_pki_path/distribution.csr" ]; then
     openssl req -new -key "$registry_pki_path/distribution.key" \
-    -subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=${discovered_node_ip}" \
+    -subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=system-registry" \
     -addext "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost,DNS:${internal_service_name}.d8-system.svc.cluster.local,DNS:${internal_service_name}.svc.cluster.local,DNS:${internal_service_name}.cluster.local,DNS:${internal_service_name}" \
     -out "$registry_pki_path/distribution.csr"
 fi
@@ -82,7 +82,7 @@ if [ ! -f "$registry_pki_path/seaweedfs.key" ]; then
 fi
 if [ ! -f "$registry_pki_path/seaweedfs.csr" ]; then
     openssl req -new -key "$registry_pki_path/seaweedfs.key" \
-    -subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=${discovered_node_ip}" \
+    -subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=system-registry" \
     -addext "subjectAltName=IP:${discovered_node_ip},IP:127.0.0.1,DNS:localhost" \
     -out "$registry_pki_path/seaweedfs.csr"
 fi
