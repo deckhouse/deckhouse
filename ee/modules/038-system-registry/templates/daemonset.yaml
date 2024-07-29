@@ -54,6 +54,11 @@ spec:
     {{- end }}
 {{- end }}
 
+
+#########################
+#       For test        #
+#########################
+{{- if $.Values.systemRegistry.enableRegistryManager  }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -180,6 +185,11 @@ spec:
           type: DirectoryOrCreate
       - name: tmp
         emptyDir: {}
+
+#########################
+#       For test        #
+#########################
+{{- end  }}
 
 ##### For specific registryMode
 {{- end }}
