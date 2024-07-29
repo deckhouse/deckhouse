@@ -15,6 +15,7 @@ locals {
   grid = lookup(var.providerClusterConfiguration, "grid", null)
   resource_group_name = join("-", [local.resource_name_prefix, "rg"])
   node_network_cidr = lookup(var.providerClusterConfiguration, "nodeNetworkCIDR", null)
+  nameservers = lookup(var.providerClusterConfiguration, "nameservers", [])
   vins_name = join("-", [local.resource_name_prefix, "vins"])
   extnet_id = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "externalNetworkId", null)
 }

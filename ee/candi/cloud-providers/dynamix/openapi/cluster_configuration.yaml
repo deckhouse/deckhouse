@@ -182,7 +182,7 @@ apiVersions:
             instanceClass:
               type: object
               additionalProperties: false
-              required: [numCPUs, memory, osImageId, pool, externalNetworkID, virtualNetworkID]
+              required: [numCPUs, memory, osImageId, pool, externalNetworkID]
               description: |
                 Partial contents of the fields of the.
               properties:
@@ -191,6 +191,14 @@ apiVersions:
         type: string
         description: |
           IP CIDR to be assigned to the internal segment of this ViNS.
+        x-unsafe: true
+      nameservers:
+        type: array
+        description: |
+          A list of IP addresses of the DNS servers.
+        items:
+          type: string
+        default: []
         x-unsafe: true
       layout:
         type: string

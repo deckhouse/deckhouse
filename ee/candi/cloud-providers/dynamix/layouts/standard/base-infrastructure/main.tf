@@ -20,4 +20,5 @@ resource "decort_vins" "vins" {
     type = "DHCP"
   }
   ext_net_id = local.extnet_id
+  dns = length(local.nameservers) > 0 ? local.nameservers : []
 }
