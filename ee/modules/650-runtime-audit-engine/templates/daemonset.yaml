@@ -188,6 +188,8 @@ spec:
           name: webhook-tls
         - name: rules-data
           mountPath: /etc/falco/rules.d
+        - name: proc-fs
+          mountPath: /host/proc
         - name: tmp
           mountPath: /tmp
         - mountPath: /etc/falco
