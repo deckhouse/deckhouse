@@ -70,6 +70,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
       - name: falco-driver-loader
+        {{ include "helm_lib_module_container_security_context_privileged" . }}
         image: {{ include "helm_lib_module_image" (list . "falcoDriverLoader") }}
         volumeMounts:
           - mountPath: /root/.falco
@@ -81,9 +82,12 @@ spec:
         env:
         - name: HOST_ROOT
           value: /host
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
       containers:
       - name: falco
-          {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add"  (list . (list  "BPF" "SYS_RESOURCE" "PERFMON" "SYS_PTRACE")) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add"  (list . (list  "BPF" "SYS_RESOURCE" "PERFMON" "SYS_PTRACE")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "falco") }}
         args:
         - /usr/bin/falco
