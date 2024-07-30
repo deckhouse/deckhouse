@@ -20,12 +20,12 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-      - containerName: "k8s-metacollector"
-        minAllowed:
-          {{- include "k8s-metacollector_resources" . | nindent 8 }}
-        maxAllowed:
-          cpu: 20m
-          memory: 50Mi
+    - containerName: "k8s-metacollector"
+      minAllowed:
+        {{- include "k8s-metacollector_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
   {{- end }}
 ---
 apiVersion: policy/v1
