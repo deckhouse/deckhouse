@@ -597,14 +597,16 @@ Follow these steps for manual loading images of modules, connected from the modu
      d8 mirror modules pull -d ./d8-modules -m $HOME/module_source.yml
      ```
 
-     To download only a specific set of modules of specific versions, use the `--filter` flag followed by the list of required modules and their versions separated by the `;` character.
+     To download only a specific set of modules of specific versions, use the `--filter` flag followed by the list of required modules and their minimal required versions separated by the `;` character.
 
      For example:
 
      ```shell
      d8 mirror modules pull -d /tmp/d8-modules -m $HOME/module_source.yml \
-       --filter='deckhouse-admin:v1.0.0;deckhouse-admin:v1.3.3; sds-drbd:v0.0.1'
+       --filter='deckhouse-admin@1.3.3; sds-drbd@0.0.1'
      ```
+
+     The command above will only pull the `deckhouse-admin` and `sds-drbd` modules. For `deckhouse-admin`, all available versions starting from `1.3.3` will be pulled; for `sds-drbd` — those starting from `0.0.1`.
 
 1. Upload the directory with the pulled images of the Deckhouse modules to a host with access to the air-gapped registry and install [Deckhouse CLI](deckhouse-cli/) tool.
 
@@ -690,24 +692,24 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
 
     ```shell
     usage: deckhouse-controller helper change-registry [<flags>] <new-registry>
-    
+
     Change registry for deckhouse images.
-    
+
     Flags:
-    --help               Show context-sensitive help (also try --help-long and --help-man).
-    --user=USER          User with pull access to registry.
-    --password=PASSWORD  Password/token for registry user.
-    --ca-file=CA-FILE    Path to registry CA.
-    --insecure           Use HTTP while connecting to new registry.
-    --dry-run            Don't change deckhouse resources, only print them.
-    --new-deckhouse-tag=NEW-DECKHOUSE-TAG
-    New tag that will be used for deckhouse deployment image (by default
-    current tag from deckhouse deployment will be used).
-    
+      --help               Show context-sensitive help (also try --help-long and --help-man).
+      --user=USER          User with pull access to registry.
+      --password=PASSWORD  Password/token for registry user.
+      --ca-file=CA-FILE    Path to registry CA.
+      --scheme=SCHEME      Used scheme while connecting to registry, http or https.
+      --dry-run            Don't change deckhouse resources, only print them.
+      --new-deckhouse-tag=NEW-DECKHOUSE-TAG
+                          New tag that will be used for deckhouse deployment image (by default
+                          current tag from deckhouse deployment will be used).
+
     Args:
-    <new-registry>  Registry that will be used for deckhouse images (example:
-    registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need
-    http - provide '--insecure' flag
+      <new-registry>  Registry that will be used for deckhouse images (example:
+                      registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need
+                      http - provide '--scheme' flag with http value
     ```
 
 * Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.

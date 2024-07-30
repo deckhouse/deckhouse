@@ -44,7 +44,7 @@ masterNodeGroup:
     additionalNetworks:
     - DEVOPS_36
     datastore: 3par_4_Lun105
-    rootDiskSize: 20
+    rootDiskSize: 50
     runtimeOptions:
       nestedHardwareVirtualization: false
 provider:

@@ -186,7 +186,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		}
 	}
 
-	err = deckhouse_release.NewDeckhouseReleaseController(ctx, mgr, dc, mm, dsContainer)
+	err = deckhouse_release.NewDeckhouseReleaseController(ctx, mgr, dc, mm, dsContainer, metricStorage)
 	if err != nil {
 		return nil, fmt.Errorf("new Deckhouse release controller: %w", err)
 	}

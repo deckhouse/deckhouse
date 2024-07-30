@@ -19,7 +19,6 @@ package deckhouse_release
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"io"
@@ -28,23 +27,17 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"text/template"
 	"time"
 
-	"github.com/Masterminds/sprig/v3"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/tidwall/sjson"
-	"helm.sh/helm/v3/pkg/releaseutil"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -129,6 +122,23 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 		require.NoError(suite.T(), err)
 		assert.YAMLEq(suite.T(), string(exp), string(got))
 	}
+}
+func (suite *ControllerTestSuite) setupController(
+	filename string,
+	initValues string,
+	mup *v1alpha1.ModuleUpdatePolicySpec,
+) {
+	suite.testDataFileName = filename
+	suite.ctr, suite.kubeClient = setupFakeController(suite.T(), filename, initValues, mup)
+}
+
+func (suite *ControllerTestSuite) setupControllerSettings(
+	filename string,
+	initValues string,
+	ds *helpers.DeckhouseSettings,
+) {
+	suite.testDataFileName = filename
+	suite.ctr, suite.kubeClient = setupControllerSettings(suite.T(), filename, initValues, ds)
 }
 
 func (suite *ControllerTestSuite) TestCreateReconcile() {
@@ -247,7 +257,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	suite.Run("Manual approval mode with canary process", func() {
 		mup := embeddedMUP.DeepCopy()
 		mup.Update.Mode = "Manual"
-
 		suite.setupController("manual-approval-mode-with-canary-process.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.36.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
@@ -607,76 +616,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 }
 
-func (suite *ControllerTestSuite) setupController(filename, values string, mup *v1alpha1.ModuleUpdatePolicySpec) {
-	ds := &helpers.DeckhouseSettings{
-		ReleaseChannel: mup.ReleaseChannel,
-	}
-	ds.Update.Mode = mup.Update.Mode
-	ds.Update.Windows = mup.Update.Windows
-	ds.Update.DisruptionApprovalMode = "Auto"
-
-	suite.setupControllerSettings(filename, values, ds)
-}
-
-func (suite *ControllerTestSuite) setupControllerSettings(filename, values string, ds *helpers.DeckhouseSettings) {
-	yamlDoc := suite.fetchTestFileData(filename, values)
-	manifests := releaseutil.SplitManifests(yamlDoc)
-
-	var initObjects = make([]client.Object, 0, len(manifests))
-	for _, manifest := range manifests {
-		obj := suite.assembleInitObject(manifest)
-		initObjects = append(initObjects, obj)
-	}
-
-	sc := runtime.NewScheme()
-	_ = v1alpha1.SchemeBuilder.AddToScheme(sc)
-	_ = appsv1.AddToScheme(sc)
-	_ = corev1.AddToScheme(sc)
-	cl := fake.NewClientBuilder().
-		WithScheme(sc).
-		WithObjects(initObjects...).
-		WithStatusSubresource(&v1alpha1.DeckhouseRelease{}).
-		Build()
-	dc := dependency.NewDependencyContainer()
-
-	rec := &deckhouseReleaseReconciler{
-		client:         cl,
-		dc:             dc,
-		logger:         log.New(),
-		moduleManager:  stubModulesManager{},
-		updateSettings: helpers.NewDeckhouseSettingsContainer(ds),
-	}
-
-	suite.ctr = rec
-	suite.kubeClient = cl
-}
-
-func (suite *ControllerTestSuite) assembleInitObject(obj string) client.Object {
-	var res client.Object
-	var typ runtime.TypeMeta
-
-	err := yaml.Unmarshal([]byte(obj), &typ)
-	require.NoError(suite.T(), err)
-
-	switch typ.Kind {
-	case "Secret":
-		res = unmarshal[corev1.Secret](obj, suite)
-	case "Pod":
-		res = unmarshal[corev1.Pod](obj, suite)
-	case "Deployment":
-		res = unmarshal[appsv1.Deployment](obj, suite)
-	case "DeckhouseRelease":
-		res = unmarshal[v1alpha1.DeckhouseRelease](obj, suite)
-	case "ConfigMap":
-		res = unmarshal[corev1.ConfigMap](obj, suite)
-
-	default:
-		require.Fail(suite.T(), "unknown Kind:"+typ.Kind)
-	}
-
-	return res
-}
-
 func (suite *ControllerTestSuite) fetchResults() []byte {
 	result := bytes.NewBuffer(nil)
 
@@ -723,66 +662,12 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	return result.Bytes()
 }
 
-func (suite *ControllerTestSuite) fetchTestFileData(filename, valuesJSON string) string {
-	dir := "./testdata"
-	data, err := os.ReadFile(filepath.Join(dir, filename))
-	require.NoError(suite.T(), err)
-
-	deckhouseDiscovery := `---
-apiVersion: v1
-kind: Secret
-metadata:
- name: deckhouse-discovery
- namespace: d8-system
-type: Opaque
-data:
-{{- if $.Values.global.discovery.clusterUUID }}
- clusterUUID: {{ $.Values.global.discovery.clusterUUID | b64enc }}
-{{- end }}
-`
-
-	deckhouseRegistry := `---
-apiVersion: v1
-kind: Secret
-metadata:
- name: deckhouse-registry
- namespace: d8-system
-data:
- clusterIsBootstrapped: {{ .Values.global.clusterIsBootstrapped | quote | b64enc }}
- imagesRegistry: {{ b64enc .Values.global.modulesImages.registry.base }}
-`
-
-	tmpl, err := template.New("manifest").
-		Funcs(sprig.TxtFuncMap()).
-		Parse(string(data) + deckhouseDiscovery + deckhouseRegistry)
-	require.NoError(suite.T(), err)
-
-	var values any
-	err = json.Unmarshal([]byte(valuesJSON), &values)
-	require.NoError(suite.T(), err)
-
-	var buf bytes.Buffer
-	err = tmpl.Execute(&buf, map[string]any{"Values": values})
-	require.NoError(suite.T(), err)
-
-	suite.testDataFileName = filename
-
-	return buf.String()
-}
-
 func (suite *ControllerTestSuite) getDeckhouseRelease(name string) *v1alpha1.DeckhouseRelease {
 	var release v1alpha1.DeckhouseRelease
 	err := suite.kubeClient.Get(context.TODO(), types.NamespacedName{Name: name}, &release)
 	require.NoError(suite.T(), err)
 
 	return &release
-}
-
-func unmarshal[T any](manifest string, suite *ControllerTestSuite) *T {
-	var obj T
-	err := yaml.Unmarshal([]byte(manifest), &obj)
-	require.NoError(suite.T(), err)
-	return &obj
 }
 
 type stubModulesManager struct{}

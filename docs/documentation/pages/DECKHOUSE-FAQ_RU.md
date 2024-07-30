@@ -598,14 +598,16 @@ Deckhouse поддерживает работу только с Bearer token-с�
      d8 mirror modules pull -d ./d8-modules -m $HOME/module_source.yml
      ```
 
-     Для загрузки только набора из определенных модулей конкретных версий используйте параметр `--filter`, передав набор необходимых модулей и их версий, разделенных символом `;`.
+     Для загрузки только набора из определенных модулей конкретных версий используйте параметр `--filter`, передав набор необходимых модулей и их минимальных версий, разделенных символом `;`.
 
      Пример:
   
      ```shell
      d8 mirror modules pull -d /tmp/d8-modules -m $HOME/module_source.yml \
-       --filter='deckhouse-admin:v1.0.0;deckhouse-admin:v1.3.3; sds-drbd:v0.0.1'
+       --filter='deckhouse-admin@1.3.3; sds-drbd@0.0.1'
      ```
+
+     Команда выше загрузит только модули `deckhouse-admin` и `sds-drbd`. Для `deckhouse-admin` будут загружены все доступные версии начиная с `1.3.3`, для `sds-drbd` — все доступные версии начиная с `0.0.1`.
 
 1. На хост с доступом к хранилищу, куда нужно загрузить образы, скопируйте директорию с загруженными образами модулей Deckhouse и установите [Deckhouse CLI](deckhouse-cli/).
 
@@ -692,24 +694,24 @@ Deckhouse поддерживает работу только с Bearer token-с�
 
     ```shell
     usage: deckhouse-controller helper change-registry [<flags>] <new-registry>
-    
+
     Change registry for deckhouse images.
-    
+
     Flags:
-    --help               Show context-sensitive help (also try --help-long and --help-man).
-    --user=USER          User with pull access to registry.
-    --password=PASSWORD  Password/token for registry user.
-    --ca-file=CA-FILE    Path to registry CA.
-    --insecure           Use HTTP while connecting to new registry.
-    --dry-run            Don't change deckhouse resources, only print them.
-    --new-deckhouse-tag=NEW-DECKHOUSE-TAG
-    New tag that will be used for deckhouse deployment image (by default
-    current tag from deckhouse deployment will be used).
-    
+      --help               Show context-sensitive help (also try --help-long and --help-man).
+      --user=USER          User with pull access to registry.
+      --password=PASSWORD  Password/token for registry user.
+      --ca-file=CA-FILE    Path to registry CA.
+      --scheme=SCHEME      Used scheme while connecting to registry, http or https.
+      --dry-run            Don't change deckhouse resources, only print them.
+      --new-deckhouse-tag=NEW-DECKHOUSE-TAG
+                          New tag that will be used for deckhouse deployment image (by default
+                          current tag from deckhouse deployment will be used).
+
     Args:
-    <new-registry>  Registry that will be used for deckhouse images (example:
-    registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need
-    http - provide '--insecure' flag
+      <new-registry>  Registry that will be used for deckhouse images (example:
+                      registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need
+                      http - provide '--scheme' flag with http value
     ```
 
 * Дождитесь перехода пода Deckhouse в статус `Ready`. Если под будет находиться в статусе `ImagePullBackoff`, перезапустите его.

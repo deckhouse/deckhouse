@@ -48,3 +48,21 @@ If you change the Cilium operating mode (the [tunnelMode](configuration.html#par
 ## A note about disabling the kube-proxy module
 
 Cilium has the same functionality as the `kube-proxy` module, so the latter is automatically disabled when the `cni-cilium` module is enabled.
+
+## A note about fault-tolerant Egress Gateway
+
+{% alert level="warning" %} Feature is only available in Enterprise Edition {% endalert %}
+
+### Basic mode
+
+Using pre-configured public IPs of egress-gateway nodes.
+
+<div data-presentation="../../presentations/021-cni-cilium/egressgateway_base_en.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1Gp8b82WQQnYr6te_zBROKnKmBicdhtX4SXNXDh3lB6Q/ --->
+
+### Virtual IP mode
+
+Allows you to dynamically assign additional IP addresses to nodes.
+
+<div data-presentation="../../presentations/021-cni-cilium/egressgateway_virtualip_en.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1jdn39uDFSraQIXVdrREBsRv-Lp4kPidhx4C-gvv1DVk/ --->

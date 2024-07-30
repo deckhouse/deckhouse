@@ -73,6 +73,11 @@ func (pc *Checker) Static() error {
 			skipFlag:       app.SSHForwardArgName,
 		},
 		{
+			fun:            pc.CheckStaticNodeSystemRequirements,
+			successMessage: "that node meets system requirements",
+			skipFlag:       app.SystemRequirementsArgName,
+		},
+		{
 			fun:            pc.CheckPythonAndItsModules,
 			successMessage: "python and required modules are installed",
 			skipFlag:       app.PythonChecksArgName,
@@ -96,7 +101,13 @@ func (pc *Checker) Static() error {
 }
 
 func (pc *Checker) Cloud() error {
-	return nil
+	return pc.do("Cloud deployment preflight checks", []checkStep{
+		{
+			fun:            pc.CheckCloudMasterNodeSystemRequirements,
+			successMessage: "cloud master node system requirements are met",
+			skipFlag:       app.SystemRequirementsArgName,
+		},
+	})
 }
 
 func (pc *Checker) Global() error {
