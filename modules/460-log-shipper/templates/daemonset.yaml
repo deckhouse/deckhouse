@@ -20,7 +20,7 @@ spec:
         {{- include "vector_reloader_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 20m
-        memory: 25Mi
+        memory: 15Mi
       {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
     {{- end }}
   {{- end }}
