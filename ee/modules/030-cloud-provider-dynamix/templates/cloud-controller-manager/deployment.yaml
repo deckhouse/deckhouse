@@ -80,7 +80,7 @@ spec:
           - --cloud-provider=dynamix
           - --allow-untagged-cloud=true
           - --configure-cloud-routes=false
-          - --controllers=cloud-node,cloud-node-lifecycle
+          - --controllers=cloud-node,cloud-node-lifecycle,service-lb-controller
           - --bind-address=127.0.0.1
           - --secure-port=10471
           - --v=4
@@ -124,6 +124,8 @@ spec:
               secretKeyRef:
                 name: dynamix-credentials
                 key: insecure
+          - name: DYNAMIX_RESOURCE_GROUP_NAME
+            value: "{{ .Values.global.clusterConfiguration.cloud.prefix }}-rg"
           {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
           livenessProbe:
             httpGet:

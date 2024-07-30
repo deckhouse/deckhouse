@@ -238,6 +238,14 @@ func CheckOrSetupArbitaryCNIModuleConfig(cfg *DeckhouseInstaller) error {
 		v := schemasStore.GetModuleConfigVersion("cni-simple-bridge")
 		cniMC.Spec.Version = v
 
+	case "dynamix":
+		cniMC.SetName("cni-cilium")
+		v := schemasStore.GetModuleConfigVersion("cni-cilium")
+		cniMC.Spec.Version = v
+		cniMC.Spec.Settings = SettingsValues{
+			"tunnelMode":     "VXLAN",
+			"masqueradeMode": "BPF",
+		}
 	// static or unknown provider
 	default:
 		cniMC.SetName("cni-cilium")

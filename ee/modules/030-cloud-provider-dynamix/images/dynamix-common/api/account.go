@@ -8,21 +8,15 @@ package api
 import (
 	"context"
 
-	"dynamix-common/retry"
-	decort "repository.basistech.ru/BASIS/decort-golang-sdk"
 	"repository.basistech.ru/BASIS/decort-golang-sdk/pkg/cloudapi/account"
 )
 
 type AccountService struct {
-	client  *decort.DecortClient
-	retryer retry.Retryer
+	*Service
 }
 
-func NewAccountService(client *decort.DecortClient) *AccountService {
-	return &AccountService{
-		client:  client,
-		retryer: retry.NewRetryer(),
-	}
+func NewAccountService(service *Service) *AccountService {
+	return &AccountService{service}
 }
 func (c *AccountService) GetAccountByName(ctx context.Context, name string) (*account.ItemAccount, error) {
 	var result *account.ItemAccount

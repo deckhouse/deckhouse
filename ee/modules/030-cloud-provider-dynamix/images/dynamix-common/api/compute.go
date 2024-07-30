@@ -7,24 +7,18 @@ package api
 
 import (
 	"context"
-	"k8s.io/klog/v2"
 	"net"
 
-	"dynamix-common/retry"
-	decort "repository.basistech.ru/BASIS/decort-golang-sdk"
+	"k8s.io/klog/v2"
 	"repository.basistech.ru/BASIS/decort-golang-sdk/pkg/cloudapi/compute"
 )
 
 type ComputeService struct {
-	client  *decort.DecortClient
-	retryer retry.Retryer
+	*Service
 }
 
-func NewComputeService(client *decort.DecortClient) *ComputeService {
-	return &ComputeService{
-		client:  client,
-		retryer: retry.NewRetryer(),
-	}
+func NewComputeService(service *Service) *ComputeService {
+	return &ComputeService{service}
 }
 
 func (c *ComputeService) GetVMByName(ctx context.Context, name string) (*compute.ItemCompute, error) {
