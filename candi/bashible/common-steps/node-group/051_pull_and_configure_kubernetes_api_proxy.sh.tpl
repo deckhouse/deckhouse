@@ -64,8 +64,8 @@ EOF
 
 if crictl version >/dev/null 2>/dev/null; then
   {{- $registryProxyAddress := "" }}
-  {{- if .normal.apiserverEndpoints }}
-    {{- range $key, $value := .normal.apiserverEndpoints }}
+  {{- if $.normal.apiserverEndpoints }}
+    {{- range $key, $value := $.normal.apiserverEndpoints }}
       {{- if eq $key 0 }}
         {{- $ipAddressAndPort := splitList ":" $value }}
         {{- $ipAddress := index $ipAddressAndPort 0 }}
@@ -88,8 +88,8 @@ if crictl version >/dev/null 2>/dev/null; then
     PROXY_RETRIEVED_IMAGE_FOR_KUBERNETES_API_PROXY={{ printf "%s%s@%s" $registryProxyAddress $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
     PROXY_RETRIEVED_IMAGE_FOR_PAUSE={{ printf "%s%s@%s" $registryProxyAddress $.registry.path (index $.images.common "pause") }}
 
-    crictl pull $PROXY_RETRIEVED_IMAGE_FOR_KUBERNETES_API_PROXY
-    crictl pull $PROXY_RETRIEVED_IMAGE_FOR_PAUSE
+    crictl pull --auth="{{ $.registry.auth | default "" }}" $PROXY_RETRIEVED_IMAGE_FOR_KUBERNETES_API_PROXY
+    crictl pull --auth="{{ $.registry.auth | default "" }}" $PROXY_RETRIEVED_IMAGE_FOR_PAUSE
     ctr --namespace=k8s.io image tag $PROXY_RETRIEVED_IMAGE_FOR_KUBERNETES_API_PROXY $ACTUAL_IMAGE_NAME_FOR_KUBERNETES_API_PROXY
     ctr --namespace=k8s.io image tag $PROXY_RETRIEVED_IMAGE_FOR_PAUSE $ACTUAL_IMAGE_NAME_FOR_PAUSE
     crictl rmi $PROXY_RETRIEVED_IMAGE_FOR_KUBERNETES_API_PROXY $PROXY_RETRIEVED_IMAGE_FOR_PAUSE
