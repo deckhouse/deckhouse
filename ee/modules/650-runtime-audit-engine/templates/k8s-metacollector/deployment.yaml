@@ -50,6 +50,9 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      serviceAccountName: k8s-metacollector
+      imagePullSecrets:
+      - name: deckhouse-registry
       containers:
       - image: {{ include "helm_lib_module_image" (list . "k8sMetacollector") }}
         name: k8s-metacollector
@@ -90,6 +93,3 @@ spec:
           {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "k8s-metacollector_resources" . | nindent 12 }}
           {{- end }}
-  serviceAccountName: k8s-metacollector
-  imagePullSecrets:
-    - name: deckhouse-registry
