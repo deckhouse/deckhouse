@@ -128,4 +128,51 @@ metallb:
       value: frontend
 ```
 
+## Пример для bare metal (балансировщик L2LoadBalancer)
+
+Модуль [l2-load-balancer](../381-l2-load-balancer/) на текущий момент доступен только в редакции Enterprise Edition Deckhouse.
+
+Включите модуль:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: l2-load-balancer
+spec:
+  enabled: true
+  version: 1
+```
+
+Создайте ресурс _L2LoadBalancer_:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: L2LoadBalancer
+metadata:
+  name: ingress
+spec:
+  addressPool:
+  - 192.168.2.100-192.168.2.150
+  nodeSelector:
+    node-role.kubernetes.io/loadbalancer: "" # селектор узлов-балансировщиков
+```
+
+Создайте ресурс _IngressNginxController_: 
+* В аннотации __network.deckhouse.io/l2-load-balancer-name__ указывается имя _L2LoadBalancer_ (в примере _L2LoadBalancer_ с именем _ingress_ был создани на предыдущем шаге)
+* Аннотация __network.deckhouse.io/l2-load-balancer-external-ips-count__ указывает сколько адресов будет выделено из пула, описанного в _L2LoadBalancer_
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+ name: main
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+  loadBalancer:
+    annotations:
+      network.deckhouse.io/l2-load-balancer-name: ingress
+      network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+```
+
 {% endraw %}
