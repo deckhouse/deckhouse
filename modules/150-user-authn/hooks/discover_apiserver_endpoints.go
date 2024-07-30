@@ -104,7 +104,7 @@ func discoverApiserverEndpoints(input *go_hook.HookInput) error {
 		targetPortPath = "userAuthn.internal.kubernetesApiserverTargetPort"
 	)
 
-	publishAPIEnabled := input.Values.Get("userAuthn.publishAPI.enable").Bool()
+	publishAPIEnabled := input.Values.Get("userAuthn.publishAPI.enabled").Bool()
 	if !publishAPIEnabled {
 		input.Values.Remove(addressesPath)
 		input.Values.Remove(targetPortPath)

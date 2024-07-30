@@ -12,4 +12,5 @@ positive:
           admin: []
           clusterEditor: []
           clusterAdmin: []
-        crds: []
+        clusterAuthRuleCrds: []
+        authRuleCrds: []

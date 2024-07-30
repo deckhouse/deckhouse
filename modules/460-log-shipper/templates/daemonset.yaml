@@ -5,37 +5,23 @@ memory: 25Mi
 
 {{- if .Values.logShipper.internal.activated }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-    {{- if eq .Values.logShipper.resourcesRequests.mode "VPA" }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: log-shipper-agent
   namespace: d8-{{ $.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+    {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
 spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: DaemonSet
-    name: log-shipper-agent
-  updatePolicy:
-    updateMode: {{ .Values.logShipper.resourcesRequests.vpa.mode | quote }}
-  resourcePolicy:
-    containerPolicies:
-    - containerName: "vector"
-      minAllowed:
-        cpu: {{ .Values.logShipper.resourcesRequests.vpa.cpu.min | quote }}
-        memory: {{ .Values.logShipper.resourcesRequests.vpa.memory.min | quote }}
-      maxAllowed:
-        cpu: {{ .Values.logShipper.resourcesRequests.vpa.cpu.max | quote }}
-        memory: {{ .Values.logShipper.resourcesRequests.vpa.memory.max | quote }}
+    {{- include "helm_lib_resources_management_vpa_spec"  (list "apps/v1" "DaemonSet" "log-shipper-agent" "vector" .Values.logShipper.resourcesRequests ) | nindent 2}}
+    {{- if eq (.Values.logShipper.resourcesRequests.mode) "VPA" }}
     - containerName: "vector-reloader"
       minAllowed:
         {{- include "vector_reloader_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 20m
         memory: 25Mi
-    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+      {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
     {{- end }}
   {{- end }}
 ---
@@ -105,15 +91,7 @@ spec:
             successThreshold: 1
             timeoutSeconds: 5
           resources:
-            requests:
-              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 14 }}
-              {{- if eq .Values.logShipper.resourcesRequests.mode "Static" }}
-              cpu: {{ .Values.logShipper.resourcesRequests.static.cpu | quote }}
-              memory: {{ .Values.logShipper.resourcesRequests.static.memory | quote }}
-              {{- else if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-              cpu: {{ .Values.logShipper.resourcesRequests.vpa.cpu.min | quote }}
-              memory: {{ .Values.logShipper.resourcesRequests.vpa.cpu.min | quote }}
-              {{- end }}
+            {{ include "helm_lib_resources_management_pod_resources" (list $.Values.logShipper.resourcesRequests "1024Mi") | nindent 12 }}
           volumeMounts:
           - name: var-log
             mountPath: /var/log/
@@ -236,4 +214,7 @@ spec:
         emptyDir: {}
       - name: reloader-run
         emptyDir: {}
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
 {{- end }}

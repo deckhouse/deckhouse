@@ -1,0 +1,52 @@
+{{- $binaries := "/usr/lib64/libnetfilter_conntrack.so* /sbin/ipset /sbin/ip /usr/sbin/conntrack" }}
+{{- $iptables_version := "1.8.10" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ .Images.BASE_ALT_DEV }}
+shell:
+  install:
+    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+    - |
+      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore ip6tables-nft ip6tables-nft-restore ip6tables-nft-save iptables-nft iptables-nft-restore iptables-nft-save; do
+        ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
+      done
+      # broken symlinks are not imported from the artifact
+      touch /iptables-wrapper
+---
+artifact: {{ .ModuleName }}/kube-router-artifact
+from: {{ .Images.BASE_GOLANG_20_ALPINE_DEV }}
+shell:
+  install:
+    - mkdir -p /src
+    - cd /src
+    - git clone --branch v2.0.1 --depth 1 {{ $.SOURCE_REPO }}/cloudnativelabs/kube-router.git .
+    - GIT_COMMIT=$(git describe --tags --dirty)
+    - BUILD_DATE=$(date +%Y-%m-%dT%H:%M:%S%z)
+    - export GOPROXY={{ $.GOPROXY }}
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-X github.com/cloudnativelabs/kube-router/v2/pkg/version.Version=${GIT_COMMIT} -X github.com/cloudnativelabs/kube-router/v2/pkg/version.BuildDate=${BUILD_DATE}" -o kube-router cmd/kube-router/kube-router.go
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/kube-router-artifact
+  add: /src/kube-router
+  to: /opt/bin/kube-router
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
+- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  add: /
+  to: /sbin/
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  before: setup
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /iptables-wrapper
+  before: setup
+docker:
+  ENTRYPOINT: ["/opt/bin/kube-router"]

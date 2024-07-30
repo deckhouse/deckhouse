@@ -34,16 +34,17 @@ import (
 	apimtypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
+	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
+	capiv1beta1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta1"
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/conditions"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/shared"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
-var (
-	// cache for event messages to avoid event spamming
-	// it's much harder to increment counter for existing event
-	ngStatusCache = make(map[string]string)
-)
+// cache for event messages to avoid event spamming
+// it's much harder to increment counter for existing event
+var ngStatusCache = make(map[string]string)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Settings: &go_hook.HookConfigSettings{
@@ -63,12 +64,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                   "ngs",
 			Kind:                   "NodeGroup",
 			ApiVersion:             "deckhouse.io/v1",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			FilterFunc:             updStatusFilterNodeGroup,
 		},
 		{
 			Name:                   "zones_count",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			ApiVersion:             "v1",
 			Kind:                   "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
@@ -83,7 +84,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:                   "mds",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			ApiVersion:             "machine.sapcloud.io/v1alpha1",
 			Kind:                   "MachineDeployment",
 			NamespaceSelector: &types.NamespaceSelector{
@@ -95,7 +96,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:                   "instances",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			ApiVersion:             "machine.sapcloud.io/v1alpha1",
 			Kind:                   "Machine",
 			NamespaceSelector: &types.NamespaceSelector{
@@ -106,8 +107,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: updStatusFilterMachine,
 		},
 		{
+			Name:                   "capi_instances",
+			WaitForSynchronization: pointer.Bool(false),
+			ApiVersion:             "cluster.x-k8s.io/v1beta1",
+			Kind:                   "Machine",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-cloud-instance-manager"},
+				},
+			},
+			FilterFunc: updStatusFilterCapiMachine,
+		},
+		{
 			Name:                   "nodes",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			ApiVersion:             "v1",
 			Kind:                   "Node",
 			LabelSelector: &v1.LabelSelector{
@@ -131,9 +144,18 @@ func updStatusFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 		return nil, err
 	}
 
+	var frozen bool
+	for _, c := range md.Status.Conditions {
+		if c.Type == v1alpha1.MachineDeploymentFrozen {
+			frozen = c.Status == v1alpha1.ConditionTrue
+			break
+		}
+	}
+
 	return statusMachineDeployment{
 		Name:                md.Name,
 		Replicas:            md.Spec.Replicas,
+		IsFrozen:            frozen,
 		NodeGroup:           md.Labels["node-group"],
 		LastMachineFailures: md.Status.FailedMachines,
 	}, nil
@@ -162,6 +184,7 @@ func updStatusFilterNode(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 		CloudInstanceGroup: cloudInstanceGroup,
 		IsReady:            isReady,
 		Checksum:           configurationChecksum,
+		NodeForConditions:  conditions.NodeToConditionsNode(&node),
 	}, nil
 }
 
@@ -192,8 +215,8 @@ func updStatusFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterRes
 		ZonesNum:   int32(zonesNum),
 		Error:      ng.Status.Error,
 
-		UID:             ng.UID,
-		ResourceVersion: ng.ResourceVersion,
+		UID:        ng.UID,
+		Conditions: ng.Status.Conditions,
 	}, nil
 }
 
@@ -206,6 +229,18 @@ func updStatusFilterMachine(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}
 
 	nodeGroup := machine.Spec.NodeTemplateSpec.Labels["node.deckhouse.io/group"]
+
+	return nodeGroup, nil
+}
+
+func updStatusFilterCapiMachine(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	machine := capiv1beta1.Machine{}
+	err := sdk.FromUnstructured(obj, &machine)
+	if err != nil {
+		return nil, err
+	}
+
+	nodeGroup := machine.Labels["node-group"]
 
 	return nodeGroup, nil
 }
@@ -274,6 +309,16 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 			instances[instanceNodeGroup] = 1
 		}
 	}
+	snap = input.Snapshots["capi_instances"]
+	for _, res := range snap {
+		instanceNodeGroup := res.(string)
+		if count, ok := instances[instanceNodeGroup]; ok {
+			count++
+			instances[instanceNodeGroup] = count
+		} else {
+			instances[instanceNodeGroup] = 1
+		}
+	}
 
 	// store configuration checksums for each node group
 	checksums := make(map[string]string)
@@ -300,8 +345,11 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 
 		// calculate nodes and their status
 		var nodesNum, readyNodesNum, uptodateNodesCount int32
+		nodesForCalcConditions := make([]*conditions.Node, 0, len(nodes))
+
 		for _, node := range nodes {
 			if node.CloudInstanceGroup == ngName {
+				nodesForCalcConditions = append(nodesForCalcConditions, node.NodeForConditions)
 				nodesNum++
 				if node.IsReady {
 					readyNodesNum++
@@ -328,9 +376,13 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 		var lastMachineFailures []*v1alpha1.MachineSummary
 
 		mds := mdMap[ngName]
+		hasFrozenMd := false
 		for _, md := range mds {
 			desiredMax += md.Replicas
 			lastMachineFailures = append(lastMachineFailures, md.LastMachineFailures...)
+			if !hasFrozenMd {
+				hasFrozenMd = md.IsFrozen
+			}
 		}
 
 		if minPerZone > desiredMax {
@@ -370,15 +422,39 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 
 		instancesCount := instances[ngName]
 
+		ngForConditions := conditions.NodeGroup{
+			Type:      nodeGroup.NodeType,
+			Desired:   desiredMax,
+			Instances: instancesCount,
+
+			HasFrozenMachineDeployment: hasFrozenMd,
+		}
+		errors := make([]string, 0, 2)
+		if len(nodeGroup.Error) > 0 {
+			errors = append(errors, nodeGroup.Error)
+		}
+		if len(failureReason) > 0 {
+			errors = append(errors, failureReason)
+		}
+		newConditions := conditions.CalculateNodeGroupConditions(
+			ngForConditions,
+			nodesForCalcConditions,
+			nodeGroup.Conditions,
+			errors,
+			int(minPerZone),
+		)
+
 		patch := buildUpdateStatusPatch(
 			nodesNum, readyNodesNum, uptodateNodesCount,
 			minPerZone, maxPerZone,
 			desiredMax, instancesCount,
 			nodeGroup.NodeType, statusMsg,
-			lastMachineFailures,
+			lastMachineFailures, newConditions,
 		)
 
-		input.PatchCollector.MergePatch(patch, "deckhouse.io/v1", "NodeGroup", "", ngName, object_patch.WithSubresource("/status"))
+		patchNodeGroupStatus(input.PatchCollector, ngName, patch)
+		// set CR processed status
+		input.PatchCollector.Filter(set_cr_statuses.SetProcessedStatus(applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", ngName, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
 	}
 
 	return nil
@@ -414,11 +490,10 @@ func buildEventV1(nodeGroup statusNodeGroup, eventType, reason, msg string, now 
 			GenerateName: "ng-" + nodeGroup.Name + "-",
 		},
 		Regarding: corev1.ObjectReference{
-			Kind:            "NodeGroup",
-			Name:            nodeGroup.Name,
-			UID:             nodeGroup.UID,
-			APIVersion:      "deckhouse.io/v1",
-			ResourceVersion: nodeGroup.ResourceVersion,
+			Kind:       "NodeGroup",
+			Name:       nodeGroup.Name,
+			UID:        nodeGroup.UID,
+			APIVersion: "deckhouse.io/v1",
 		},
 		Reason:              reason,
 		Note:                msg,
@@ -430,47 +505,6 @@ func buildEventV1(nodeGroup statusNodeGroup, eventType, reason, msg string, now 
 	}
 }
 
-func buildUpdateStatusPatch(
-	nodesNum, readyNodesNum, uptodateNodesCount,
-	minPerZone, maxPerZone,
-	desiredMax, instancesNum int32,
-	nodeType ngv1.NodeType, statusMsg string,
-	lastMachineFailures []*v1alpha1.MachineSummary,
-) interface{} {
-	ready := "True"
-	if len(statusMsg) > 0 {
-		ready = "False"
-	}
-
-	patch := map[string]interface{}{
-		"nodes":    nodesNum,
-		"ready":    readyNodesNum,
-		"upToDate": uptodateNodesCount,
-	}
-	if nodeType == ngv1.NodeTypeCloudEphemeral {
-		patch["min"] = minPerZone
-		patch["max"] = maxPerZone
-		patch["desired"] = desiredMax
-		patch["instances"] = instancesNum
-		patch["lastMachineFailures"] = lastMachineFailures
-
-		if len(lastMachineFailures) == 0 {
-			patch["lastMachineFailures"] = make([]interface{}, 0) // to make [] array in json result
-		}
-	}
-
-	patch["conditionSummary"] = map[string]interface{}{
-		"ready":         ready,
-		"statusMessage": statusMsg,
-	}
-
-	statusPatch := map[string]interface{}{
-		"status": patch,
-	}
-
-	return statusPatch
-}
-
 type statusNodeGroup struct {
 	Name       string
 	NodeType   ngv1.NodeType
@@ -479,12 +513,14 @@ type statusNodeGroup struct {
 	ZonesNum   int32
 	Error      string
 
+	Conditions []ngv1.NodeGroupCondition
+
 	// for event generation
-	UID             apimtypes.UID
-	ResourceVersion string
+	UID apimtypes.UID
 }
 
 type statusNode struct {
+	NodeForConditions  *conditions.Node
 	Name               string
 	CloudInstanceGroup string
 	IsReady            bool
@@ -493,6 +529,7 @@ type statusNode struct {
 
 type statusMachineDeployment struct {
 	Name                string
+	IsFrozen            bool
 	Replicas            int32
 	NodeGroup           string
 	LastMachineFailures []*v1alpha1.MachineSummary

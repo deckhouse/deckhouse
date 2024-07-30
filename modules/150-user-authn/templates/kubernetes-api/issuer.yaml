@@ -1,4 +1,4 @@
-{{- if and (.Values.userAuthn.publishAPI.enable) (eq .Values.userAuthn.publishAPI.https.mode "SelfSigned") (.Values.global.enabledModules | has "cert-manager") }}
+{{- if and (.Values.userAuthn.publishAPI.enabled) (eq .Values.userAuthn.publishAPI.https.mode "SelfSigned") (.Values.global.enabledModules | has "cert-manager") }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Issuer
@@ -9,6 +9,8 @@ metadata:
 spec:
   ca:
     secretName: kubernetes-api-ca-key-pair
+{{- end }}
+{{- if and (.Values.userAuthn.internal.selfSignedCA.cert) (.Values.userAuthn.internal.selfSignedCA.key) }}
 ---
 apiVersion: v1
 kind: Secret

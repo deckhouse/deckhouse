@@ -1,0 +1,6 @@
+kube-proxy:
+  fixes:
+    - summary: Fix `node.deckhouse.io/nodeport-bind-internal-ip` annotation behavior
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5199
+      impact: NodePort services on a nodes without annotation were open to the world.
+

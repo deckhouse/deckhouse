@@ -39,13 +39,13 @@ concurrency:
 jobs:
   close_dependabot_prs_for_forks:
     name: Autoclose Dependabot PRs for forks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ github.actor == 'dependabot[bot]' && github.repository != 'deckhouse/deckhouse' }}
     env:
       ENABLE_DEPENDABOT_IN_FORKS: ${{ secrets.ENABLE_DEPENDABOT_IN_FORKS }}
     steps:
       - name: Close PR
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           script: |
@@ -87,7 +87,7 @@ jobs:
       - name: Get PR info for push trigger
         id: push_info
         if: ${{ github.event_name == 'push' }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           script: |
             // Support for 'push' trigger: find PR by commit SHA and pass response to pr_props step.
@@ -126,7 +126,7 @@ jobs:
       - name: Get PR info for pull_request trigger
         id: pr_info
         if: ${{ startsWith(github.event_name, 'pull_request') }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           script: |
             // Support for 'pull_request' and 'pull_request_target' triggers:
@@ -164,7 +164,7 @@ jobs:
 
       - name: Check PR properties
         id: pr_props
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         env:
           PR_INFO: ${{ steps.push_info.outputs.pr_info || steps.pr_info.outputs.pr_info }}
         with:
@@ -215,8 +215,19 @@ jobs:
             const defaultEdition = process.env.WERF_ENV ? process.env.WERF_ENV : 'FE';
             const hasEE = pr.labels.some((l) => l.name === 'edition/ee');
             const hasCE = pr.labels.some((l) => l.name === 'edition/ce');
-            const edition = hasCE ? 'CE' : (hasEE ? 'EE' : defaultEdition);
-            core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}`);
+            const hasBE = pr.labels.some((l) => l.name === 'edition/be');
+            const hasSE = pr.labels.some((l) => l.name === 'edition/se');
+            let edition = defaultEdition;
+            if (hasCE) {
+              edition = 'CE';
+            } else if (hasEE) {
+              edition = 'EE';
+            } else if (hasBE) {
+              edition = 'BE';
+            } else if (hasSE) {
+              edition = 'SE';
+            }
+            core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}, 'edition/be':${hasBE}, 'edition/se':${hasSE}`);
             core.notice(`Enable '${edition}' edition for '${context.eventName}' trigger.`);
 
             // Construct head commit ref using pr number.
@@ -246,7 +257,7 @@ jobs:
       # Checkhout the head commit of the PR branch.
       - name: Checkout PR head commit
         if: steps.pr_props.outputs.should_check == 'true'
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ steps.pr_props.outputs.ref }}
 
@@ -281,7 +292,7 @@ jobs:
       # Stop workflow if external PR contains dangerous changes.
       - name: Fail workflow on dangerous changes
         if: ${{ steps.pr_props.outputs.should_check == 'true' && steps.changes.outputs.dangerous == 'true' }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           script: |
             core.setFailed('External PR contains dangerous changes.')
@@ -294,7 +305,7 @@ jobs:
     name: Prepare input for validation scripts
     needs:
       - pull_request_info
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       run_no_cyrillic: ${{ steps.check_labels.outputs.run_no_cyrillic }}
       label_no_cyrillic: ${{ steps.check_labels.outputs.label_no_cyrillic }}
@@ -304,17 +315,21 @@ jobs:
       label_copyright: ${{ steps.check_labels.outputs.label_copyright }}
       run_markdown: ${{ steps.check_labels.outputs.run_markdown }}
       label_markdown: ${{ steps.check_labels.outputs.label_markdown }}
+      run_grafana_dashboard: ${{ steps.check_labels.outputs.run_grafana_dashboard }}
+      label_grafana_dashboard: ${{ steps.check_labels.outputs.label_grafana_dashboard }}
+      run_release_requirements: ${{ steps.check_labels.outputs.run_release_requirements }}
+      label_release_requirements: ${{ steps.check_labels.outputs.label_release_requirements }}
     steps:
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
       - id: check_labels
         name: Check labels on push
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         env:
           PR_LABELS: ${{ needs.pull_request_info.outputs.labels }}
         with:
@@ -333,40 +348,10 @@ jobs:
           ./.github/scripts/validation_run.sh --download-only ./pr.diff
 
       - name: Upload diff as artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: pr_diff
           path: pr.diff
-
-  check-pr-milestone:
-    name: Check milestone
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check that a milestone is set for a pull request
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const prNumber = context.payload.pull_request.number;
-
-            const response = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber
-            });
-
-            if (response.status != 200 || !response.data) {
-              return core.setFailed(`Bad response on getting PR#${prNumber} : ${JSON.stringify(response)}`);
-            }
-
-            let pr = response.data;
-            core.debug(`response: ${pr}`)
-
-            if (pr.milestone) {
-              core.debug(`This pull request has a milestone: ${pr.milestone.title}`);
-            } else {
-              core.setFailed("The pull request has no milestone. Set a milestone for the pull request.");
-            }
 
   no_cyrillic_validation:
     name: No Cyrillic Validation
@@ -378,12 +363,12 @@ jobs:
       - discover
       - pull_request_info
     if: needs.discover.outputs.run_no_cyrillic == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
@@ -401,18 +386,18 @@ jobs:
           ./.github/scripts/validation_run.sh ./testing/validate_no_cyrillic.sh
 
   doc_validation:
-    name: Documentation Validation
+    name: Docs Validation (base)
 
     needs:
       - discover
       - pull_request_info
     if: needs.discover.outputs.run_doc_changes == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
@@ -429,6 +414,56 @@ jobs:
         run: |
           ./.github/scripts/validation_run.sh ./testing/validate_doc_changes.sh
 
+  doc_spell_check:
+    name: Docs Validation (spellcheck)
+    needs:
+      - discover
+      - pull_request_info
+    if: ${{ needs.discover.outputs.run_doc_changes == 'true' && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: ubuntu-24.04
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: pr_diff
+
+       # <template: spellcheck_template>
+      - name: Install werf
+        uses: werf/actions/install@v1.2
+
+      - name: Spell check
+        run: |
+          make lint-doc-spellcheck-pr
+       # </template: spellcheck_template>
+
   copyright_validation:
     name: Copyright Validation
 
@@ -436,12 +471,12 @@ jobs:
       - discover
       - pull_request_info
     if: needs.discover.outputs.run_copyright == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
@@ -458,6 +493,35 @@ jobs:
         run: |
           ./.github/scripts/validation_run.sh ./testing/validate_copyright.sh
 
+  grafana_dashboard_validation:
+    name: Grafana Dashboard Validation
+
+    needs:
+      - discover
+      - pull_request_info
+    if: needs.discover.outputs.run_grafana_dashboard == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: pr_diff
+
+      - name: Run check
+        env:
+          DIFF_PATH: ./pr.diff
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_grafana_dashboard }}
+        run: |
+          ./.github/scripts/validation_run.sh ./testing/validate_grafana_dashboard.sh
+
   markdown_linter:
     name: Markdown Linter
 
@@ -465,12 +529,12 @@ jobs:
       - discover
       - pull_request_info
     if: needs.discover.outputs.run_markdown == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
@@ -486,4 +550,34 @@ jobs:
           SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_markdown }}
         run: |
           make lint-markdown
+
+  release_requirements_validation:
+    name: Release Requirements Validation
+
+    needs:
+      - discover
+      - pull_request_info
+    if: needs.discover.outputs.run_release_requirements == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: pr_diff
+
+      - name: Run check
+        env:
+          DIFF_PATH: ./pr.diff
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_release_requirements }}
+        run: |
+          ./.github/scripts/validation_run.sh ./testing/validate_release_requirements.sh
+
 

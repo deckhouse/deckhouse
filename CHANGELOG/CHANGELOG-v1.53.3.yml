@@ -1,0 +1,6 @@
+common:
+  fixes:
+    - summary: Fix build of `csi-external-*` images.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6378
+      impact: '`csi-controller` pod will restart.'
+

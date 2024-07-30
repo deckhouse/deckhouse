@@ -5,25 +5,40 @@ type:
 search: prometheus remote write, how to connect to Prometheus, custom Grafana, prometheus remote write
 ---
 
+{% raw %}
+
 ## An example of the module configuration
 
 ```yaml
-prometheus: |
-  auth:
-    password: xxxxxx
-  retentionDays: 7
-  storageClass: rbd
-  nodeSelector:
-    node-role/example: ""
-  tolerations:
-  - key: dedicated
-    operator: Equal
-    value: example
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  version: 2
+  enabled: true
+  settings:
+    auth:
+      password: xxxxxx
+    retentionDays: 7
+    storageClass: rbd
+    nodeSelector:
+      node-role/example: ""
+    tolerations:
+    - key: dedicated
+      operator: Equal
+      value: example
 ```
 
 ## Writing Prometheus data to the longterm storage
 
-Prometheus supports remote_write'ing data from the local Prometheus to a separate longterm storage (e.g., [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). In Deckhouse, this mechanism is implemented using the `PrometheusRemoteWrite` Custom Resource.
+Prometheus supports remote_write'ing data from the local Prometheus to a separate longterm storage (e.g., [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). In Deckhouse, this mechanism is implemented using the `PrometheusRemoteWrite` custom resource.
+
+{% endraw -%}
+{% alert level="info" %}
+For VictoriaMetrics detailed information about how to send data to vmagent can be found in the VictoriaMetrics [documentation](https://docs.victoriametrics.com/vmagent/index.html#how-to-push-data-to-vmagent).
+{% endalert %}
+{% raw %}
 
 ### Example of the basic PrometheusRemoteWrite
 
@@ -106,6 +121,7 @@ metadata:
   namespace: d8-monitoring
 type: Opaque
 data:
+  # Basic-auth string is hashed using htpasswd.
   auth: Zm9vOiRhcHIxJE9GRzNYeWJwJGNrTDBGSERBa29YWUlsSDkuY3lzVDAK  # foo:bar
 ```
 
@@ -188,79 +204,112 @@ The `job` must complete successfully.
 
 ## Sending alerts to Telegram
 
-Prometheus-operator does not support sending alerts to Telegram directly, so Alertmanager is configured to send alerts via a webhook and deploy the application, which sends the received data to Telegram.
+Alertmanager supports sending alerts to Telegram directly.
 
-Deploy application:
+Create the Secret in the `d8-monitoring` namespace:
 
 ```yaml
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-   name: telegram-alertmanager
-   namespace: d8-monitoring
-   labels:
-     app: telegram
-spec:
-   template:
-     metadata:
-       name: telegram-alertmanager
-       labels:
-         app: telegram
-     spec:
-       containers:
-         - name: telegram-alertmanager
-           image: janwh/alertmanager-telegram
-           ports:
-             - containerPort: 8080
-           env:
-             - name: TELEGRAM_CHAT_ID
-               value: "-30490XXXXX"
-             - name: TELEGRAM_TOKEN
-               value: "562696849:AAExcuJ8H6z4pTlPuocbrXXXXXXXXXXXx"
-   replicas: 1
-   selector:
-     matchLabels:
-       app: telegram
----
 apiVersion: v1
-kind: Service
+kind: Secret
 metadata:
- labels:
-   app: telegram
- name: telegram-alertmanager
- namespace: d8-monitoring
-spec:
- type: ClusterIP
- selector:
-   app: telegram
- ports:
-   - protocol: TCP
-     port: 8080
+  name: telegram-bot-secret
+  namespace: d8-monitoring
+stringData:
+  token: "562696849:AAExcuJ8H6z4pTlPuocbrXXXXXXXXXXXx"
 ```
 
-`TELEGRAM_CHAT_ID` and `TELEGRAM_TOKEN` must be set on your own. [Read more](https://core.telegram.org/bots) about Telegram API.
-
-Deploy CRD CustomAlertManager:
+Deploy CustomAlertManager CR:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
 metadata:
-  name: webhook
+  name: telegram
+spec:
+  type: Internal
+  internal:
+    receivers:
+      - name: telegram
+        telegramConfigs:
+          - botToken:
+              name: telegram-bot-secret
+              key: token
+            chatID: -30490XXXXX
+    route:
+      groupBy:
+        - job
+      groupInterval: 5m
+      groupWait: 30s
+      receiver: telegram
+      repeatInterval: 12h
+```
+
+The fields `token` in the Secret and `chatID` in the `CustomAlertmanager` custom resource must be set on your own. [Read more](https://core.telegram.org/bots) about Telegram API.
+
+## Example of sending alerts to Slack with a filter
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: slack
 spec:
   internal:
     receivers:
-    - name: webhook
-      webhookConfigs:
-      - sendResolved: true
-        url: http://telegram-alertmanager:8080/alerts
+    - name: devnull
+    - name: slack
+      slackConfigs:
+      - apiURL:
+          key: apiURL
+          name: slack-apiurl
+        channel: {{ dig .Values.werf.env .Values.slack.channel._default .Values.slack.channel }} 
+        fields:
+        - short: true
+          title: Severity
+          value: '{{`{{  .CommonLabels.severity_level }}`}}'
+        - short: true
+          title: Status
+          value: '{{`{{ .Status }}`}}'
+        - title: Summary
+          value: '{{`{{ range .Alerts }}`}}{{`{{ .Annotations.summary }}`}} {{`{{ end }}`}}'
+        - title: Description
+          value: '{{`{{ range .Alerts }}`}}{{`{{ .Annotations.description }}`}} {{`{{ end }}`}}'
+        - title: Labels
+          value: '{{`{{ range .Alerts }}`}} {{`{{ range .Labels.SortedPairs }}`}}{{`{{ printf "%s:
+            %s\n" .Name .Value }}`}}{{`{{ end }}`}}{{`{{ end }}`}}'
+        - title: Links
+          value: '{{`{{ (index .Alerts 0).GeneratorURL }}`}}'
+        title: '{{`{{ .CommonLabels.alertname }}`}}'
     route:
       groupBy:
-      - job
-      groupInterval: 5m
-      groupWait: 30s
-      receiver: webhook
+      - '...'  
+      receiver: devnull
+      routes:
+        - matchers:
+          - matchType: =~
+            name: severity_level
+            value: "^[4-9]$"
+          receiver: slack
       repeatInterval: 12h
   type: Internal
 ```
+
+## Example of sending alerts to Opsgenie
+
+```yaml
+- name: opsgenie
+        opsgenieConfigs:
+          - apiKey:
+              key: data
+              name: opsgenie
+            description: |
+              {{ range .Alerts }}{{ .Annotations.summary }} {{ end }}
+              {{ range .Alerts }}{{ .Annotations.description }} {{ end }}
+            message: '{{ .CommonLabels.alertname }}'
+            priority: P1
+            responders:
+              - id: team_id
+                type: team
+```
+
+{% endraw %}

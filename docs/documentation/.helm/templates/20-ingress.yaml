@@ -20,13 +20,13 @@ metadata:
       ssi_silent_errors on;
       {{- include "rewrites" . | nindent 6 }}
 spec:
-  ingressClassName: "nginx"
+  ingressClassName: {{ pluck $.Values.web.dc_name $.Values.ingressClass | first | default $.Values.ingressClass._default | quote }}
   tls:
 {{- range $hosts }}
   - hosts:
       - {{ .URL }}
       - www.{{ .URL }}
-    secretName: tls-{{ .URL }}
+    secretName: star-{{ .URL | replace "." "-" }}
 {{- end }}
   rules:
 {{- range $hosts }}
@@ -57,7 +57,7 @@ metadata:
     nginx.ingress.kubernetes.io/auth-url: https://{{ $.Chart.Name }}-{{ .Lang }}-dex-authenticator.deckhouse-{{ $.Values.web.env }}.svc.cluster.local/dex-authenticator/auth
     nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
 spec:
-  ingressClassName: "nginx"
+  ingressClassName: {{ pluck $.Values.web.dc_name $.Values.ingressClass | first | default $.Values.ingressClass._default | quote }}
   tls:
   - hosts:
       - {{ .URL }}

@@ -8,7 +8,8 @@ locals {
   zone = element(tolist(setintersection(keys(local.volume_type_map), local.actual_zones)), var.nodeIndex)
   volume_type = local.volume_type_map[local.zone]
   flavor_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
-  root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "")
+  root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "") # Openstack can have disks predefined within vm flavours, so we do not set any defaults here
+  etcd_volume_size = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb
   additional_tags = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
 }
 
@@ -42,6 +43,7 @@ module "kubernetes_data" {
   prefix = local.prefix
   node_index = var.nodeIndex
   master_id = openstack_compute_instance_v2.master.id
+  volume_size = local.etcd_volume_size
   volume_type = local.volume_type
   volume_zone = module.volume_zone.zone
   tags = local.tags
@@ -51,7 +53,7 @@ locals {
   metadata_tags = merge(local.tags, local.additional_tags)
 }
 
-resource "openstack_blockstorage_volume_v2" "master" {
+resource "openstack_blockstorage_volume_v3" "master" {
   count = local.root_disk_size == "" ? 0 : 1
   name = join("-", [local.prefix, "master-root-volume", var.nodeIndex])
   size = local.root_disk_size
@@ -59,6 +61,7 @@ resource "openstack_blockstorage_volume_v2" "master" {
   metadata = local.metadata_tags
   volume_type = local.volume_type
   availability_zone = module.volume_zone.zone
+  enable_online_resize = true
   lifecycle {
     ignore_changes = [
       metadata,
@@ -82,7 +85,7 @@ resource "openstack_compute_instance_v2" "master" {
   }
 
   dynamic "block_device" {
-    for_each = local.root_disk_size == "" ? [] : list(openstack_blockstorage_volume_v2.master[0])
+    for_each = local.root_disk_size == "" ? [] : list(openstack_blockstorage_volume_v3.master[0])
     content {
       uuid = block_device.value["id"]
       boot_index = 0

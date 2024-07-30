@@ -1,3 +1,4 @@
+{{- if .Values.monitoringKubernetes.ebpfExporterEnabled }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -19,3 +20,4 @@ subjects:
 - kind: ServiceAccount
   name: ebpf-exporter
   namespace: d8-monitoring
+{{- end }}

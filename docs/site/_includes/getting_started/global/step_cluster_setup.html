@@ -19,7 +19,7 @@
       This tutorial assumes the use of a public domain pointing to a public cluster address.
       It is necessary to obtain <a href="https://letsencrypt.org/">Let's Encrypt</a> certificates for Deckhouse services.
       If the existing certificates (including Self-Signed ones) are used, you need to change the <a href="/documentation/v1/deckhouse-configure-global.html#parameters">global settings</a> in the <code>modules.https</code> section.<br />
-      We recommend using the <a href="https://nip.io/">nip.io</a> service (or similar) for testing if wildcard DNS records are unavailable to you for some reason.
+      We recommend using the <a href="https://sslip.io/">sslip.io</a> service (or similar) for testing if wildcard DNS records are unavailable to you for some reason.
     </span>
   </div>
 {%- endif %}
@@ -51,6 +51,8 @@
       type="text" id="proxyHttpURI"
       name="proxyHttpURI" placeholder="http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]"
       autocomplete="off"/>
+    <span class="info invalid-message invalid-message-main">Proxy address should match <code>http://proxy.company.my</code> or <code>http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]</code>.</span>
+    <span class="info invalid-message invalid-message-example-com">Please don't use the <code>proxy.company.my</code> domain name.</span>
     <span class="info">
          Leave it blank if you don't use the HTTP proxy server.
       </span>
@@ -65,6 +67,8 @@
       type="text" id="proxyHttpsURI"
       name="proxyHttpsURI" placeholder="http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]"
       autocomplete="off"/>
+    <span class="info invalid-message invalid-message-main">Proxy address should match <code>http://proxy.company.my</code> or <code>http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]</code>.</span>
+    <span class="info invalid-message invalid-message-example-com">Please don't use the <code>proxy.company.my</code> domain name.</span>
     <span class="info">
         Leave it blank if you don't use the HTTP proxy server.
       </span>
@@ -72,15 +76,17 @@
 
   <div class="form__row">
     <label class="label" title="List of IP addresses and domain names for which the proxy server is not used">
-        A comma-separated list of IP addresses and domain names for which a proxy server is not used. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com". (e.g. — <code>127.0.0.1, 192.168.0.0/24, example.com, ".example.com"</code>)
+        A comma-separated list of IP addresses and domain names for which a proxy server is not used. Also specify here the subnet of the cluster nodes. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com". (e.g. — <code>127.0.0.1, 192.168.0.0/24, example.com, ".example.com"</code>)
     </label>
     <input
       class="textfield"
       type="text" id="noProxyAddressList"
       name="noProxyAddressList" placeholder=""
       autocomplete="off"/>
+    <span class="info invalid-message invalid-message-main">The addresses must match the templates <code>127.0.0.1</code>, <code>192.168.0.0/24</code>, <code>example.com</code> and <code>".example.com"</code>.</span>
+    <span class="info invalid-message invalid-message-example-com">Please don't use the <code>example.com</code> domain name.</span>
       <span class="info">
-         Specify a list of IP addresses, networks, and domain names that can be accessed directly without using a proxy server. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com". Leave it blank if there are no such exceptions.
+         Specify a list of IP addresses, networks, and domain names that can be accessed directly without using a proxy server. Also specify here the subnet of the cluster nodes. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com".
       </span>
   </div>
 
@@ -93,7 +99,7 @@
 
   <div class="form__row">
     <label class="label" title="Specify the path prefix for Deckhouse container images">
-      The path prefix for Deckhouse container images (e.g., <code>registry.deckhouse.io/deckhouse/ce</code> for CE).
+      The path prefix for Deckhouse container images (e.g., <code>registry.deckhouse.io/deckhouse/ee</code> for Deckhouse EE).
     </label>
     <input
       class="textfield"
@@ -101,7 +107,7 @@
       name="registryImagesRepo" placeholder=""
       autocomplete="off" />
     <span class="info">
-       Note that Deckhouse container images of the corresponding edition (CE or EE) must be available at the specified address and path.
+       Note that Deckhouse container images must be available at the specified address and path.
     </span>
   </div>
 
@@ -115,7 +121,7 @@
       name="registryDockerCfg" placeholder=""
       autocomplete="off" />
     <span class="info">
-      It is a string from the Docker client configuration file (by default, the configuration file is <code>~/.docker/config.json</code>), Base64-encoded.<br />Read more about the parameter <a href="/documentation/v1/deckhouse-faq.html#configuring">in the documentation</a>.
+      It is a string from the Docker client configuration file (in Linux it is usually <code>$HOME/.docker/config.json</code>), Base64-encoded.<br />Read more about the parameter <a href="/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg">in the documentation</a>.
     </span>
   </div>
 

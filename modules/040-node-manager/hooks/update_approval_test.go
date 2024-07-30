@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -1100,7 +1100,7 @@ metadata:
     node.deckhouse.io/group: ng1
   annotations:
     update.node.deckhouse.io/approved: ""
-    update.node.deckhouse.io/disruption-required: ""
+    update.node.deckhouse.io/rolling-update: ""
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: Machine
@@ -1153,7 +1153,7 @@ metadata:
     node.deckhouse.io/group: ng1
   annotations:
     update.node.deckhouse.io/approved: ""
-    update.node.deckhouse.io/disruption-required: ""
+    update.node.deckhouse.io/rolling-update: ""
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: Machine
@@ -1206,7 +1206,7 @@ metadata:
     node.deckhouse.io/group: ng1
   annotations:
     update.node.deckhouse.io/approved: ""
-    update.node.deckhouse.io/disruption-required: ""
+    update.node.deckhouse.io/rolling-update: ""
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: Machine
@@ -1474,7 +1474,7 @@ metadata:
 
 		if draining {
 			state += `
-    update.node.deckhouse.io/draining: ""
+    update.node.deckhouse.io/draining: "bashible"
 `
 		}
 		if unschedulable {
@@ -1530,7 +1530,7 @@ metadata:
 
 		if drained {
 			state += `
-    update.node.deckhouse.io/drained: ""
+    update.node.deckhouse.io/drained: "bashible"
 `
 		}
 		state += `

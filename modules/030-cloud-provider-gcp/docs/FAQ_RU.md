@@ -11,10 +11,11 @@ title: "Cloud provider — GCP: FAQ"
 
 ## Добавление CloudStatic узлов в кластер
 
-Добавьте Network Tag, аналогичный префиксу кластера, к виртуальным машинам, которые вы хотите подключить к кластеру вручную.
+К виртуальным машинам, которые вы хотите добавить к кластеру в качестве узлов, добавьте `Network Tag`, аналогичный префиксу кластера.
 
 Префикс кластера можно узнать, воспользовавшись следующей командой:
 
 ```shell
-kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix
+kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
+  | base64 -d | grep prefix
 ```

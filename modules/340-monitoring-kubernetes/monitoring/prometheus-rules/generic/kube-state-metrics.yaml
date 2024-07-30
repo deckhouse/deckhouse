@@ -31,14 +31,10 @@
   # kube_persistentvolume_is_local migration.
   # The patch was not generic enough, but it is used in many alerts/panels.
   # This recording rule is aimed to avoid rewriting them.
-  #
-  # kube_persistentvolume_is_local {instance="", job="", persistentvolume="", scrape_endpoint="", storageclass=""} 0
-  - expr: max by (instance, job, persistentvolume, scrape_endpoint, storageclass) (kube_persistentvolume_info{local_path!~".+"} - 1)
-    record: kube_persistentvolume_is_local
-  - expr: max by (instance, job, persistentvolume, scrape_endpoint, storageclass) (kube_persistentvolume_info{host_path!~".+"} - 1)
-    record: kube_persistentvolume_is_local
-  # kube_persistentvolume_is_local {instance="", job="", persistentvolume="", scrape_endpoint="", storageclass=""} 1
-  - expr: max by (instance, job, persistentvolume, scrape_endpoint, storageclass) (kube_persistentvolume_info{local_path=~".+"})
-    record: kube_persistentvolume_is_local
-  - expr: max by (instance, job, persistentvolume, scrape_endpoint, storageclass) (kube_persistentvolume_info{host_path=~".+"})
+  - expr: |
+      max by (instance, job, persistentvolume, scrape_endpoint, storageclass) (
+          kube_persistentvolume_info{local_path=~".+"} or kube_persistentvolume_info{host_path=~".+"}
+        or
+          (kube_persistentvolume_info - 1)
+      )
     record: kube_persistentvolume_is_local

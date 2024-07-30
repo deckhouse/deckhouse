@@ -1,0 +1,23 @@
+candi:
+  features:
+    - summary: 'Upgraded patch versions of Kubernetes images: `v1.24.13`, `v1.25.9`, and `v1.26.4`.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4414
+      impact: '"Kubernetes control-plane components will restart, kubelet will restart"'
+  fixes:
+    - summary: Fix SELinux permissions Bashible step in clusters without Cilium.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4418
+operator-trivy:
+  fixes:
+    - summary: Fix operator ConfigMap to properly use digests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4449
+user-authz:
+  fixes:
+    - summary: >-
+        Fixed cluster_authorization_rule webhook so that it doesn't crash on fields with whitespaces
+        anymore
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4419
+virtualization:
+  features:
+    - summary: Enable snapshot feature in the `virtualization` module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4413
+

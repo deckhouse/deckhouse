@@ -74,8 +74,8 @@ var (
 			},
 		},
 		NameSelector:                 &types.NameSelector{MatchNames: []string{"d8-pki"}},
-		ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-		ExecuteHookOnEvents:          pointer.BoolPtr(false),
+		ExecuteHookOnSynchronization: pointer.Bool(false),
+		ExecuteHookOnEvents:          pointer.Bool(false),
 		FilterFunc:                   syncEtcdFilter,
 	}
 )

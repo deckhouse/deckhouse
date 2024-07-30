@@ -1,0 +1,13 @@
+properties:
+  testString:
+    type: string
+    description: Тестовая строка
+  testArray:
+    type: array
+    description: Тестовый массив
+    items:
+      type: string
+  testEnum:
+    type: string
+    enum: [ "a", "b" ]
+    description: Тестовое перечисление

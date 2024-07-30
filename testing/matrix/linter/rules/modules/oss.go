@@ -150,17 +150,23 @@ func parseProjectList(b []byte) ([]ossProject, error) {
 var skipOssChecks = map[string]struct{}{
 	// module name
 	"001-priority-class":                      {},
-	"003-deckhouse-config":                    {},
+	"005-external-module-manager":             {},
+	"039-registry-packages-proxy":             {},
+	"011-flow-schema":                         {},
 	"013-helm":                                {}, // helm in 002-deckhouse
-	"021-kube-proxy":                          {},
+	"036-kube-proxy":                          {},
+	"025-static-routing-manager":              {},
 	"030-cloud-provider-aws":                  {},
 	"030-cloud-provider-azure":                {},
 	"030-cloud-provider-gcp":                  {},
 	"030-cloud-provider-openstack":            {},
 	"030-cloud-provider-vsphere":              {},
+	"030-cloud-provider-vcd":                  {},
 	"030-cloud-provider-yandex":               {},
+	"030-cloud-provider-zvirt":                {},
 	"035-cni-simple-bridge":                   {},
 	"140-user-authz":                          {},
+	"160-multitenancy-manager":                {},
 	"340-extended-monitoring":                 {},
 	"340-monitoring-applications":             {},
 	"340-monitoring-custom":                   {},
@@ -174,7 +180,7 @@ var skipOssChecks = map[string]struct{}{
 	"500-okmeter":                             {},
 	"500-upmeter":                             {},
 	"600-secret-copier":                       {},
-	"810-deckhouse-web":                       {},
+	"810-documentation":                       {},
 }
 
 // TODO When lintignore files will be implemented in modules, detect "oss.yaml" line in it

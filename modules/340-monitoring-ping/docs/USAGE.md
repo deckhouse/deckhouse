@@ -25,4 +25,4 @@ spec:
     - host: youtube.com
 ```
 
-Note that Grafana uses the `name` field to display the related data. If the `name` field is skipped, you must fill in details to the `host` field (mandatory).
+> Grafana uses the `name` field to display the related data. If the `name` field is skipped, you must fill in details to the `host` field (mandatory).

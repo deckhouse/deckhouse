@@ -18,7 +18,7 @@ podSubnetCIDR: 10.111.0.0/16
 # [<en>] Address space of the cluster's services.
 # [<ru>] Адресное пространство для service’ов кластера.
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.23"
+kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
 ---
 # [<en>] Section for bootstrapping the Deckhouse cluster.
@@ -32,28 +32,61 @@ deckhouse:
   # [<en>] A special string with your token to access Docker registry (generated automatically for your license token).
   # [<ru>] Строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа).
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
-  releaseChannel: Stable
-  configOverrides:
-    global:
-      modules:
-        # [<en>] Template that will be used for system apps domains within the cluster.
-        # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
-        # [<en>] You can change it to your own or follow the steps in the guide and change it after installation.
-        # [<ru>] Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
-        # [<ru>] Например, Grafana для %s.example.com будет доступна на домене 'grafana.example.com'.
-        # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
-        publicDomainTemplate: "%s.example.com"
-    userAuthn:
-      controlPlaneConfigurator:
-        dexCAMode: DoNotNeed
-      publishAPI:
-        enable: true
-        https:
-          mode: Global
 ---
-# [<en>] Section containing the parameters of the cloud provider.
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+  settings:
+    bundle: Default
+    releaseChannel: Stable
+    logLevel: Info
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  version: 1
+  settings:
+    modules:
+      # [<en>] Template that will be used for system apps domains within the cluster.
+      # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
+      # [<en>] The domain MUST NOT match the one specified in the clusterDomain parameter of the ClusterConfiguration resource.
+      # [<en>] You can change it to your own or follow the steps in the guide and change it after installation.
+      # [<ru>] Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
+      # [<ru>] Например, Grafana для %s.example.com будет доступна на домене 'grafana.example.com'.
+      # [<ru>] Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
+      # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
+      publicDomainTemplate: "%s.example.com"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    controlPlaneConfigurator:
+      dexCAMode: DoNotNeed
+    # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
+    # [<ru>] https://deckhouse.ru/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
+    # [<en>] Enabling access to the API server through Ingress.
+    # [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
+    publishAPI:
+      enabled: true
+      https:
+        mode: Global
+        global:
+          kubeconfigGeneratorMasterCA: ""
+---
+# [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html
-# [<ru>] Секция, описывающая параметры облачного провайдера.
+# [<ru>] Настройки облачного провайдера..
 # [<ru>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
@@ -82,18 +115,23 @@ provider:
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
   domainName: users
+  # [<en>] OS_USER_DOMAIN_NAME variable from the openrc file.
+  # [<ru>] Переменная OS_USER_DOMAIN_NAME из файла openrc.
   password: *!CHANGE_PASSWORD*
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
   region: RegionOne
+  # [<en>] You might need to specify tenantName instead of tenantID.
+  # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-tenantname
+  # [<ru>] Возможно вам нужно указать tenantName вместо tenantID.
+  # [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-tenantname
+  # tenantName: PROJECT_NAME
   tenantID: *!CHANGE_PROJECT_ID*
   username: *!CHANGE_USERNAME*
 masterNodeGroup:
   replicas: 1
-  # [<en>] disk type array
-  # [<en>] https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#parameters-masternodegroup-volumetypemap
-  # [<ru>] Массив используемых типов дисков
-  # [<ru>] https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#parameters-masternodegroup-volumetypemap
+  # [<en>] Disk type array.
+  # [<ru>] Массив используемых типов дисков.
   volumeTypeMap:
     # [<en>] <availability zone>: <volume type>
     # [<ru>] <availability zone>: <volume type>

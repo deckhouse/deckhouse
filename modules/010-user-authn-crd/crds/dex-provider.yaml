@@ -22,7 +22,11 @@ spec:
           type: object
           required: ['spec']
           description: |
-            Defines the configuration for connecting a third-party provider.  With it, you can flexibly configure the integration of the account directory with Kubernetes.
+            Defines the configuration for connecting a third-party provider.
+
+            With it, you can flexibly configure the integration of the account directory with Kubernetes.
+
+            [Usage example...](usage.html#configuring-a-provider)
           properties:
             spec:
               type: object
@@ -105,7 +109,7 @@ spec:
                       description: 'Application secret key from GitLab.'
                     baseURL:
                       type: string
-                      example: 'https://gitlab.example.com'
+                      x-doc-examples: ['https://gitlab.example.com']
                       description: |
                         Base part of GitLab URL.
                     groups:
@@ -153,7 +157,7 @@ spec:
                       description: |
                         Optional parameter to include team groups.
 
-                        If enabled, the groups claim of dex id_token will looks like this:
+                        If enabled, the groups claim of Dex id_token will looks like this:
                         ```yaml
                         ["my_team", "my_team/administrators", "my_team/members"]
                         ```
@@ -171,7 +175,7 @@ spec:
                       description: 'Application secret key from Atlassian Crowd (Password).'
                     baseURL:
                       type: string
-                      example: 'https://crowd.example.com/crowd'
+                      x-doc-examples: ['https://crowd.example.com/crowd']
                       description: |
                         Base part of Attlassian Crowd URL.
                     groups:
@@ -193,10 +197,10 @@ spec:
                       description: |
                         Enables basic authorization for the Kubernetes API server.
 
-                        The username and password of the user from the application created in Crowd are used as credentials for basic authorization (you can enable it only if there is just one provider of the Crowd type).
+                        The username and password of the user from the application created in Crowd are used as credentials for basic authorization (you can enable it only if there is just one provider of the OIDC/Crowd type).
                         Works **only** if the `publishAPI` is enabled.
 
-                        Authorization and group data obtained from Crowd are stored in the cache for 10 seconds.
+                        Authorization and group data obtained from an IdP are stored in the cache for 10 seconds.
                 oidc: &oidc
                   type: object
                   required: ['clientID', 'clientSecret', 'issuer']
@@ -211,7 +215,7 @@ spec:
                       description: 'OIDC issuer application secret key.'
                     issuer:
                       type: string
-                      example: 'https://accounts.google.com'
+                      x-doc-examples: ['https://accounts.google.com']
                       description: |
                         Canonical URL of the provider, also used for configuration discovery.
                         This value MUST match the value returned in the provider config discovery.
@@ -224,7 +228,7 @@ spec:
                       type: boolean
                       description: |
                         Use POST requests to interact with the provider instead of including the token in the Basic Authorization header.
-                        Generally, dex automatically determines the type of request to make, while in some cases enabling this parameter can help.
+                        Generally, Dex automatically determines the type of request to make, while in some cases enabling this parameter can help.
                       default: false
                     getUserInfo:
                       type: boolean
@@ -269,7 +273,7 @@ spec:
                       type: array
                       default: ["openid", "profile", "email", "groups", "offline_access"]
                       description: |
-                        List of [additional scopes](https://github.com/dexidp/website/blob/main/content/docs/custom-scopes-claims-clients.md) to request in token response.
+                        List of [additional scopes](https://github.com/dexidp/website/blob/main/content/docs/configuration/custom-scopes-claims-clients.md) to request in token response.
                       items:
                         type: string
                     promptType:
@@ -283,11 +287,13 @@ spec:
                       type: string
                       description: |
                         A CA chain to validate the provider in PEM format.
-                      x-doc-example: |
-                        ```
-                        -----BEGIN CERTIFICATE-----
-                        MIIFaDC...
-                        -----END CERTIFICATE-----
+                      x-doc-examples:
+                      - |
+                        ```yaml
+                        rootCAData: |
+                          -----BEGIN CERTIFICATE-----
+                          MIIFaDC...
+                          -----END CERTIFICATE-----
                         ```
                     insecureSkipVerify:
                       type: boolean
@@ -296,6 +302,15 @@ spec:
                         If a custom certificate isn't provided, this option can be used to turn off
                         TLS certificate checks. As noted, it is insecure and shouldn't be used outside
                         of explorative phases.
+                    enableBasicAuth:
+                      type: boolean
+                      description: |
+                        Enables basic authorization for the Kubernetes API server.
+
+                        The username and password of the user from the application created in OIDC are used as credentials for basic authorization (you can enable it only if there is just one provider of the OIDC/Crowd type).
+                        Works **only** if the [publishAPI](https://deckhouse.io/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi) parameter is enabled.
+
+                        Authorization and group data obtained from an IdP are stored in the cache for 10 seconds.
                 ldap: &ldap
                   type: object
                   required: ['host', 'userSearch']
@@ -304,7 +319,7 @@ spec:
                   properties:
                     host:
                       type: string
-                      example: ldap.example.com:636
+                      x-doc-examples: ['ldap.example.com:636']
                       description: |
                         Host and optional port of the LDAP server in the form "host:port".
                         If the port is not supplied, it will be guessed based on "insecureNoSSL",
@@ -315,7 +330,7 @@ spec:
                       default: false
                       description: |
                         Following field is required if the LDAP host is not using TLS (port 389).
-                        This option inherently leaks passwords to anyone on the same network as dex.
+                        This option inherently leaks passwords to anyone on the same network as Dex.
                         Equals to false by default.
                     startTLS:
                       type: boolean
@@ -328,16 +343,18 @@ spec:
                       default: 'LDAP username'
                       description: |
                         The attribute to display in the provided password prompt. If unset, will display "LDAP Username".
-                      example: SSO Username
+                      x-doc-examples: ['SSO Username']
                     rootCAData:
                       type: string
                       description: |
                         A CA chain to validate the provider in PEM format.
-                      x-doc-example: |
-                        ```
-                        -----BEGIN CERTIFICATE-----
-                        MIIFaDC...
-                        -----END CERTIFICATE-----
+                      x-doc-examples:
+                      - |
+                        ```yaml
+                        rootCAData: |
+                          -----BEGIN CERTIFICATE-----
+                          MIIFaDC...
+                          -----END CERTIFICATE-----
                         ```
                     insecureSkipVerify:
                       type: boolean
@@ -348,14 +365,14 @@ spec:
                         of explorative phases.
                     bindDN:
                       type: string
-                      example: 'uid=serviceaccount,cn=users,dc=example,dc=com'
+                      x-doc-examples: ['uid=serviceaccount,cn=users,dc=example,dc=com']
                       description: |
                         The DN for an application service account. The connector uses
                         these credentials to search for users and groups. Not required if the LDAP
                         server provides access for anonymous auth.
                     bindPW:
                       type: string
-                      example: password
+                      x-doc-examples: ['password']
                       description: |
                         Password for read-only service account.
                         Please note that if the bind password contains a `$`, it has to be saved in an
@@ -367,34 +384,34 @@ spec:
                       properties:
                         baseDN:
                           type: string
-                          example: 'cn=users,dc=example,dc=com'
+                          x-doc-examples: ['cn=users,dc=example,dc=com']
                           description: 'BaseDN to start the search from.'
                         filter:
                           type: string
-                          example: '(objectClass=person)'
+                          x-doc-examples: ['(objectClass=person)']
                           description: 'Optional filter to apply when searching the directory.'
                         username:
                           type: string
-                          example: 'uid'
+                          x-doc-examples: ['uid']
                           description: |
                             Username attribute used for comparing user entries. This will be translated
                             and combined with the other filter as "(<attr>=<username>)".
                         idAttr:
                           type: string
-                          example: 'uid'
+                          x-doc-examples: ['uid']
                           description: |
-                            LDAP attribute that will be matched to dex user id entry.
+                            LDAP attribute that will be matched to Dex user id entry.
                         emailAttr:
                           type: string
-                          example: 'mail'
+                          x-doc-examples: ['mail']
                           description: |
-                            LDAP attribute that will be matched to dex user email entry.
+                            LDAP attribute that will be matched to Dex user email entry.
                             When an email address is not available, use another value unique to the user, like uid.
                         nameAttr:
                           type: string
-                          example: 'name'
+                          x-doc-examples: ['name']
                           description: |
-                            LDAP attribute that will be matched to dex user name entry.
+                            LDAP attribute that will be matched to Dex user name entry.
                             No default value provided.
                     groupSearch:
                       type: object
@@ -403,15 +420,15 @@ spec:
                       properties:
                         baseDN:
                           type: string
-                          example: 'cn=users,dc=example,dc=com'
+                          x-doc-examples: ['cn=users,dc=example,dc=com']
                           description: 'BaseDN to start the search from.'
                         filter:
                           type: string
-                          example: '(objectClass=person)'
+                          x-doc-examples: ['(objectClass=person)']
                           description: 'Optional filter to apply when searching the directory.'
                         nameAttr:
                           type: string
-                          example: 'name'
+                          x-doc-examples: ['name']
                           description: |
                             Represents group name.
                         userMatchers:
@@ -426,12 +443,12 @@ spec:
                             properties:
                               userAttr:
                                 type: string
-                                example: uid
+                                x-doc-examples: ['uid']
                                 description: |
                                   The name of the attribute that stores the user name.
                               groupAttr:
                                 type: string
-                                example: member
+                                x-doc-examples: ['member']
                                 description: |
                                   The name of the attribute that stores the group member names.
               oneOf:
@@ -482,7 +499,12 @@ spec:
           type: object
           required: ['spec']
           description: |
-            Defines the configuration for connecting a third-party provider.  With it, you can flexibly configure the integration of the account directory with Kubernetes.
+            Defines the configuration for connecting a third-party provider.
+
+            With it, you can flexibly configure the integration of the account directory with Kubernetes.
+
+            [Usage example...](usage.html#configuring-a-provider)
+
           properties:
             spec:
               type: object

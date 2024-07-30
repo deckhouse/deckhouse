@@ -23,30 +23,34 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            CR for setting remote cluster as trusted one.
+            Custom resource for setting remote cluster as trusted one.
+          x-doc-d8Revision: ee
           required:
           - spec
           properties:
             spec:
               type: object
+              x-doc-d8Revision: ee
               required:
               - trustDomain
               - metadataEndpoint
               properties:
                 trustDomain:
                   type: string
+                  x-doc-d8Revision: ee
                   description: |
                     The `TrustDomain` of the remote cluster.
 
                     A mandatory parameter, however, it isn't used currently since Istio cannot match TrustDomain with the root CA.
                   pattern: '^[0-9a-zA-Z._-]+$'
-                  example: 'cluster.local'
+                  x-doc-examples: ['cluster.local']
                 metadataEndpoint:
                   type: string
+                  x-doc-d8Revision: ee
                   description: |
                     HTTPS endpoint with remote cluster metadata.
                   pattern: '^(https|file)://[0-9a-zA-Z._/-]+$'
-                  example: 'https://istio.k8s.example.com/metadata/'
+                  x-doc-examples: ['https://istio.k8s.example.com/metadata/']
             status:
               type: object
               properties:

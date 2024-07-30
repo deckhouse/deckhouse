@@ -1,10 +1,8 @@
 {{- define "schedulerConfig" }}
-{{- if semverCompare ">= 1.23" .clusterConfiguration.kubernetesVersion }}
-apiVersion: kubescheduler.config.k8s.io/v1beta3
-{{- else if semverCompare "= 1.22" .clusterConfiguration.kubernetesVersion }}
-apiVersion: kubescheduler.config.k8s.io/v1beta2
+{{- if semverCompare ">= 1.29" .clusterConfiguration.kubernetesVersion }}
+apiVersion: kubescheduler.config.k8s.io/v1
 {{- else }}
-apiVersion: kubescheduler.config.k8s.io/v1beta1
+apiVersion: kubescheduler.config.k8s.io/v1beta3
 {{- end }}
 kind: KubeSchedulerConfiguration
 clientConnection:
@@ -13,9 +11,7 @@ profiles:
 - pluginConfig:
   - name: PodTopologySpread
     args:
-      {{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
       defaultingType: List
-      {{- end }}
       defaultConstraints:
       - maxSkew: 1
         topologyKey: topology.kubernetes.io/zone

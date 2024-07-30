@@ -1,0 +1,38 @@
+cloud-provider-vcd:
+  fixes:
+    - summary: Add validation for a virtual application name.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7817
+deckhouse-controller:
+  fixes:
+    - summary: Repeat queries to get CRD and apply conversation strategies.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7827
+      impact: Prevents a critical error from occurring in the cluster when starting or turning on modules.
+dhctl:
+  fixes:
+    - summary: Moved passwords to env for dhctl mirror examples.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7826
+docs:
+  features:
+    - summary: Refactor privileges list for vSphere provider.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7754
+ingress-nginx:
+  fixes:
+    - summary: >-
+        Add information of instance and pod to labels of the
+        NginxIngressDaemonSetReplicasUnavailable alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7814
+istio:
+  fixes:
+    - summary: Got rid of `istioMinimalVersion` requirement in `release.yaml` to fix the upgrading issue.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7815
+node-manager:
+  fixes:
+    - summary: Disable MCM for unsupported cloud providers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7817
+    - summary: kubelet resource reservation fixes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7788
+operator-trivy:
+  fixes:
+    - summary: Update trivy ConfigMap template.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7780
+

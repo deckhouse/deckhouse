@@ -30,7 +30,7 @@ import (
 
 func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("remove-deployment", "Delete deckhouse deployment.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
@@ -63,7 +63,7 @@ func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 
 func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("create-deployment", "Install deckhouse after terraform is applied successful.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineConfigFlags(cmd)
 	app.DefineKubeFlags(cmd)
@@ -74,7 +74,7 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		// Load deckhouse config
-		metaConfig, err := config.ParseConfig(app.ConfigPath)
+		metaConfig, err := config.ParseConfig(app.ConfigPaths)
 		if err != nil {
 			return err
 		}
@@ -84,7 +84,7 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 			return err
 		}
 
-		installConfig, err := deckhouse.PrepareDeckhouseInstallConfig(metaConfig)
+		installConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
 		if err != nil {
 			return err
 		}
@@ -116,6 +116,7 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 				return fmt.Errorf("deckhouse install: %v", err)
 			}
 			return nil
+
 		})
 		if err != nil {
 			return err

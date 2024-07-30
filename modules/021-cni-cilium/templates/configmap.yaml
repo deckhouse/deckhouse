@@ -10,6 +10,8 @@ data:
   cluster-name: default # make sense only for cluster mesh
 
   debug: {{ .Values.cniCilium.debugLogging | quote }}
+  pprof: "true"
+  pprof-address: "127.0.0.1"
 
   metrics: "+cilium_bpf_map_pressure"
 
@@ -31,20 +33,32 @@ data:
   {{- end }}
 
   {{- if eq .Values.cniCilium.internal.mode "VXLAN" }}
-  tunnel: "vxlan"
+  tunnel-protocol: "vxlan"
+  routing-mode: "tunnel"
   {{- else if eq .Values.cniCilium.internal.mode "DirectWithNodeRoutes" }}
-  tunnel: "disabled"
+  routing-mode: "native"
   auto-direct-node-routes: "true"
   {{- else if eq .Values.cniCilium.internal.mode "Direct" }}
-  tunnel: "disabled"
+  routing-mode: "native"
+  auto-direct-node-routes: "false"
   {{- else }}
     {{- fail (printf "unknown mode %s" .Values.cniCilium.internal.mode) }}
+  {{- end }}
+
+  {{- if has "virtualization" .Values.global.enabledModules }}
+  # Preserve default tunnel port 8472 for virtualization workloads
+  tunnel-port: "8469"
+  enable-ip-masq-agent: "true"
+  ip-masq-agent-config-path: /etc/config/ip-masq-agent
+  # Use stable MAC addresses for pods
+  endpoint-interface-host-mac: "f6:e1:74:94:b8:1b"
+  endpoint-interface-mac: "f6:e1:74:94:b8:1a"
   {{- end }}
 
   {{- if eq .Values.cniCilium.internal.masqueradeMode "BPF" }}
   enable-bpf-masquerade: "true"
   enable-ipv4-egress-gateway: "true"
-    {{- if or (eq .Values.cniCilium.internal.mode "DirectWithNodeRoutes") (eq .Values.cniCilium.internal.mode "Direct") }}
+    {{- if has .Values.cniCilium.internal.mode (list "Direct" "DirectWithNodeRoutes") }}
   # install-no-conntrack-iptables-rules requires the agent to run in direct routing mode
   install-no-conntrack-iptables-rules: "true"
     {{- end }}
@@ -65,14 +79,22 @@ data:
   kube-proxy-replacement: "strict"
   kube-proxy-replacement-healthz-bind-address: "0.0.0.0:10256"
 
-  enable-host-reachable-services: "true"
+  bpf-lb-sock: "true"
+  # required for service meshes (istio, linkerd, ...) to force opening sockets to original Service IPs
   bpf-lb-sock-hostns-only: "true"
   enable-health-check-nodeport: "true"
   node-port-bind-protection: "true"
   enable-auto-protect-node-port-range: "true"
+
+  # The older ciilum versions did it automatically. We will reconcider our ModuleConfig api.
+  {{- if eq .Values.cniCilium.internal.mode "VXLAN" }}
+  bpf-lb-mode: "snat"
+  {{- else }}
   bpf-lb-mode: {{ .Values.cniCilium.bpfLBMode | lower | quote }}
+  {{- end }}
   bpf-lb-algorithm: "random"
   bpf-lb-map-max: "512000"
+  bpf-lb-external-clusterip: "true"
   enable-service-topology: "true"
   netfilter-compatible-mode: "true"
 
@@ -84,6 +106,8 @@ data:
   enable-endpoint-health-checking: "true"
   enable-health-checking: "true"
   policy-audit-mode: {{ .Values.cniCilium.policyAuditMode | quote }}
+
+  enable-pmtu-discovery: "true"
 
   ipam: kubernetes
   k8s-require-ipv4-pod-cidr: "true"
@@ -118,3 +142,10 @@ data:
   # disabled since they may generate absurd amount of requests in count and size
   # we've found no use for status field of CNP and CCNP
   disable-cnp-status-updates: "true"
+
+  procfs: "/host/proc"
+
+  write-cni-conf-when-ready: /host/etc/cni/net.d/05-cilium.conflist
+  cni-exclusive: {{ .Values.cniCilium.internal.isIstioCNIEnabled | not | quote }}
+
+  skip-crd-creation: "true"

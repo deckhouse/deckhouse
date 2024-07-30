@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/cloudflare/cfssl/helpers"
@@ -45,9 +46,13 @@ var _ = Describe("ingress-nginx :: hooks :: order_certificates", func() {
 	selfSignedCA, _ := certificate.GenerateCA(logEntry, "kube-rbac-proxy-ca-key-pair")
 	cert, _ := certificate.GenerateSelfSignedCert(logEntry, "test", selfSignedCA, certificate.WithSigningDefaultExpiry(10*365*24*time.Hour))
 
+	selfSignedCAKey := addIndentsToMultilineString(selfSignedCA.Key, 4)
+	selfSignedCACert := addIndentsToMultilineString(selfSignedCA.Cert, 4)
+
 	Context(":: empty_cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.KubeStateSet(``)
+			f.BindingContexts.Set(f.GenerateScheduleContext("42 4 * * *"))
 			f.RunHook()
 		})
 		It(":: Should run successfully", func() {
@@ -57,6 +62,7 @@ var _ = Describe("ingress-nginx :: hooks :: order_certificates", func() {
 
 	Context(":: ready_cluster", func() {
 		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateScheduleContext("42 4 * * *"))
 			f.RunHook()
 		})
 		It(":: should_run_successfully", func() {
@@ -86,7 +92,7 @@ metadata:
 type: Opaque
 `, base64.StdEncoding.EncodeToString([]byte(cert.Cert)), base64.StdEncoding.EncodeToString([]byte(cert.Key)))
 
-			f.BindingContexts.Set(f.KubeStateSet(tlsAuthSecret))
+			f.KubeStateSet(tlsAuthSecret)
 
 			var secret *v1.Secret
 			err := yaml.Unmarshal([]byte(tlsAuthSecret), &secret)
@@ -95,6 +101,8 @@ type: Opaque
 			}
 
 			_, _ = f.KubeClient().CoreV1().Secrets("d8-ingress-nginx").Create(context.TODO(), secret, metav1.CreateOptions{})
+
+			f.BindingContexts.Set(f.GenerateScheduleContext("42 4 * * *"))
 
 			f.RunHook()
 		})
@@ -119,31 +127,64 @@ type: Opaque
 		})
 	})
 
+	Context(":: ready_cluster_with_one_ingress_controller_and_no_certificate", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(``)
+
+			kubeRBACProxyCA := fmt.Sprintf(`
+kubeRBACProxyCA:
+  cert: |
+%s
+  key: |
+%s
+`, selfSignedCACert, selfSignedCAKey)
+
+			f.ValuesSetFromYaml("global.internal.modules", []byte(kubeRBACProxyCA))
+
+			values := `
+internal:
+ ingressControllers:
+ - name: new-controller
+`
+			f.ValuesSetFromYaml("ingressNginx", []byte(values))
+
+			f.BindingContexts.Set(f.GenerateScheduleContext("42 4 * * *"))
+
+			f.RunHook()
+		})
+		It(":: should_run_successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It(":: certificate_must_be_valid", func() {
+			certNewController := f.ValuesGet("ingressNginx.internal.nginxAuthTLS.0")
+			Expect(certNewController.Exists()).To(BeTrue())
+			Expect(certNewController.Get("controllerName").String()).To(Equal("new-controller"))
+			Expect(certNewController.Get("data.key").Exists()).To(BeTrue())
+
+			certFromValues := certNewController.Get("data.cert").String()
+			parsedCert, err := helpers.ParseCertificatePEM([]byte(certFromValues))
+			if err != nil {
+				fmt.Printf("certificate parsing error: %v", err)
+			}
+
+			Expect(time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.UTC).Equal(parsedCert.NotBefore)).To(BeFalse())
+			Expect(time.Now().Before(parsedCert.NotAfter.AddDate(0, 0, -10))).To(BeTrue())
+		})
+	})
+
 	// this test could be deleted after release 1.42, with migration branch
 	Context(":: Cluster with one ingress controller and old certificate", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global.internal.modules",
-				[]byte(`
+			kubeRBACProxyCA := fmt.Sprintf(`
 kubeRBACProxyCA:
   cert: |
-    -----BEGIN CERTIFICATE-----
-    MIIBkDCCATagAwIBAgIUDGXWo+AstBRI13ivCyaZAMW5izcwCgYIKoZIzj0EAwIw
-    JjEkMCIGA1UEAxMba3ViZS1yYmFjLXByb3h5LWNhLWtleS1wYWlyMB4XDTIyMTIy
-    MTExMzgwMFoXDTMyMTIxODExMzgwMFowJjEkMCIGA1UEAxMba3ViZS1yYmFjLXBy
-    b3h5LWNhLWtleS1wYWlyMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEqVp3hnlr
-    357W/qJJ1e5z6FVImjYZ+KIy7Xp5cRkO+XIoprokfT/9Sha1Sj/ZVcLFULX7/+Ce
-    Du4JgfH0gghs56NCMEAwDgYDVR0PAQH/BAQDAgEGMA8GA1UdEwEB/wQFMAMBAf8w
-    HQYDVR0OBBYEFOp12nyTGftIcnhaKbLvC9DDjTAMMAoGCCqGSM49BAMCA0gAMEUC
-    IQDC2exDki8U+IiwEobMwtZe7U+j4uUGTZ8k5sUupQQo0wIgCjL0NQkmpip3oT05
-    wFf+8oOTNOKB2vjOjf7yj6KMPm4=
-    -----END CERTIFICATE-----
+%s
   key: |
-    -----BEGIN EC PRIVATE KEY-----
-    MHcCAQEEIHFJJij9PiFsjCw2AwcS4ay0EfKOXHPnKdTH9a8KEX5ioAoGCCqGSM49
-    AwEHoUQDQgAEqVp3hnlr357W/qJJ1e5z6FVImjYZ+KIy7Xp5cRkO+XIoprokfT/9
-    Sha1Sj/ZVcLFULX7/+CeDu4JgfH0gghs5w==
-    -----END EC PRIVATE KEY-----
-`))
+%s
+`, selfSignedCACert, selfSignedCAKey)
+
+			f.ValuesSetFromYaml("global.internal.modules", []byte(kubeRBACProxyCA))
 
 			values := `
 internal:
@@ -175,6 +216,8 @@ type: Opaque
 
 			_, _ = f.KubeClient().CoreV1().Secrets("d8-ingress-nginx").Create(context.TODO(), secret, metav1.CreateOptions{})
 
+			f.BindingContexts.Set(f.GenerateScheduleContext("42 4 * * *"))
+
 			f.RunHook()
 		})
 
@@ -200,3 +243,12 @@ type: Opaque
 	})
 
 })
+
+func addIndentsToMultilineString(s string, indentsCount int) string {
+	var newString string
+	indent := strings.Repeat(" ", indentsCount)
+	for _, line := range strings.Split(s, "\n") {
+		newString = fmt.Sprintf("%s%s%s\n", newString, indent, line)
+	}
+	return newString
+}

@@ -21,11 +21,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"sync"
 	"syscall"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
+
+// based on https://stackoverflow.com/a/43931246
+// https://regex101.com/r/qtIrSj/1
+var terraformLogsMatcher = regexp.MustCompile(`(\s+\[(TRACE|DEBUG|INFO|WARN|ERROR)\]\s+|Use TF_LOG=TRACE|there is no package|\-\-\-\-)`)
 
 type Executor interface {
 	Output(...string) ([]byte, error)
@@ -36,13 +42,13 @@ type Executor interface {
 func terraformCmd(args ...string) *exec.Cmd {
 	cmd := exec.Command("terraform", args...)
 	cmd.Env = append(
-		cmd.Env,
-		"TF_IN_AUTOMATION=yes", "TF_DATA_DIR="+filepath.Join(app.TmpDirName, "tf_dhctl"),
+		os.Environ(),
+		"TF_IN_AUTOMATION=yes",
+		"TF_DATA_DIR="+filepath.Join(app.TmpDirName, "tf_dhctl"),
 	)
-	if app.IsDebug {
-		// Debug mode is deprecated, however trace produces more useless information
-		cmd.Env = append(cmd.Env, "TF_LOG=DEBUG")
-	}
+
+	// always use dug log for write its to debug log file
+	cmd.Env = append(cmd.Env, "TF_LOG=DEBUG")
 
 	cmd.Env = append(
 		cmd.Env,
@@ -88,27 +94,41 @@ func (c *CMDExecutor) Exec(args ...string) (int, error) {
 		return c.cmd.ProcessState.ExitCode(), err
 	}
 
-	var errBuf bytes.Buffer
-	waitCh := make(chan error)
+	var (
+		wg     sync.WaitGroup
+		errBuf bytes.Buffer
+	)
+
+	wg.Add(2)
+
 	go func() {
+		defer wg.Done()
+
 		e := bufio.NewScanner(stderr)
 		for e.Scan() {
-			if app.IsDebug {
-				log.DebugLn(e.Text())
-			} else {
-				errBuf.WriteString(e.Text() + "\n")
+			txt := e.Text()
+			log.DebugLn(txt)
+
+			if !app.IsDebug {
+				if !terraformLogsMatcher.MatchString(txt) {
+					errBuf.WriteString(txt + "\n")
+				}
 			}
 		}
-
-		waitCh <- c.cmd.Wait()
 	}()
 
-	s := bufio.NewScanner(stdout)
-	for s.Scan() {
-		log.InfoLn(s.Text())
-	}
+	go func() {
+		defer wg.Done()
 
-	err = <-waitCh
+		s := bufio.NewScanner(stdout)
+		for s.Scan() {
+			log.InfoLn(s.Text())
+		}
+	}()
+
+	wg.Wait()
+
+	err = c.cmd.Wait()
 
 	exitCode := c.cmd.ProcessState.ExitCode() // 2 = exit code, if terraform plan has diff
 	if err != nil && exitCode != terraformHasChangesExitCode {

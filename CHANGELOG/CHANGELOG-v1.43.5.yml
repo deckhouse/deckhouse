@@ -1,0 +1,30 @@
+cni-cilium:
+  fixes:
+    - summary: Set correct MTU values in tunnel mode.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3836
+containerized-data-importer:
+  fixes:
+    - summary: Fix trace output in the enabled script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3815
+log-shipper:
+  fixes:
+    - summary: Make log-shipper-agents sending whole JSON message with metadata to Kafka destination.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3692
+monitoring-deckhouse:
+  fixes:
+    - summary: Remove confusing alert `ModuleConfigHasObsoleteVersion`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3798
+snapshot-controller:
+  fixes:
+    - summary: Fix trace output in the enabled script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3815
+virtualization:
+  features:
+    - summary: Allow to specify `affinity` and `topologySpreadConstraints`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3852
+  fixes:
+    - summary: Fix routes in host-gw mode
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3862
+    - summary: Some fixes regarding queue and panic when creating empty disks.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3822
+

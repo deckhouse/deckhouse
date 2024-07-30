@@ -32,9 +32,6 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  annotations:
-    helm.sh/hook: post-upgrade, post-install
-    helm.sh/hook-delete-policy: before-hook-creation
   name: snapshot-validation-webhook
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "snapshot-validation-webhook" )) | nindent 2 }}
@@ -67,7 +64,7 @@ spec:
         - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "snapshot-validation-webhook")) | nindent 6 }}
       containers:
@@ -80,7 +77,8 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "snapshotValidationWebhook") }}
         imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 4443
+        - name: webhook
+          containerPort: 4443
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
@@ -95,3 +93,4 @@ spec:
         - name: snapshot-validation-webhook-certs
           secret:
             secretName: snapshot-validation-webhook-certs
+      serviceAccountName: snapshot-controller

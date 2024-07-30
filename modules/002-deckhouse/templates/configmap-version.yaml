@@ -1,4 +1,4 @@
-{{/* Release channel, edition and version for 810-deckhouse-web module.  */}}
+{{/* Release channel, edition and version for 810-documentation module.  */}}
 ---
 apiVersion: v1
 kind: ConfigMap

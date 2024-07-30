@@ -23,28 +23,32 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            CR for setting remote cluster as trusted one.
+            Custom resource for setting remote cluster as trusted one.
+          x-doc-d8Revision: ee
           required:
           - spec
           properties:
             spec:
               type: object
+              x-doc-d8Revision: ee
               required:
               - metadataEndpoint
               properties:
                 enableIngressGateway:
                   type: boolean
                   default: true
+                  x-doc-d8Revision: ee
                   description: |
-                    Should Istio use ingressgateways to access remote Pods? 
-                    
+                    Should Istio use ingressgateways to access remote Pods?
+
                     If remote Pods are accessible directly from our cluster ("flat" network), it is efficient not to use extra hop.
                 metadataEndpoint:
                   type: string
+                  x-doc-d8Revision: ee
                   description: |
                     HTTPS endpoint with remote cluster metadata.
                   pattern: '^(https|file)://[0-9a-zA-Z._/-]+$'
-                  example: 'https://istio.k8s.example.com/metadata/'
+                  x-doc-examples: ['https://istio.k8s.example.com/metadata/']
             status:
               type: object
               properties:

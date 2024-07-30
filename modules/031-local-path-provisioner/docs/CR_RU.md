@@ -1,5 +1,5 @@
 ---
-title: "Модуль local-path-provisioner: Custom Resource"
+title: "Модуль local-path-provisioner: custom resources"
 ---
 
 <!-- SCHEMA -->

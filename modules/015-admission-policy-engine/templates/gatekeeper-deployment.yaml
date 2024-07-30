@@ -54,8 +54,8 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "webhook-handler")) | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "gatekeeper" "control-plane" "controller-manager")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       containers:
       - image: {{ include "helm_lib_module_image" (list . "gatekeeper") }}
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -70,7 +70,7 @@ spec:
         - --exempt-namespace=d8-{{ .Chart.Name }}
         - --operation=webhook
         - --operation=mutation-webhook
-        - --enable-external-data=false
+        - --enable-external-data=true
         - --log-mutations=false
         - --mutation-annotations=false
         - --disable-cert-rotation=true
@@ -177,7 +177,7 @@ metadata:
   namespace: d8-admission-policy-engine
   {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "controller-manager" "gatekeeper.sh/operation" "webhook" "gatekeeper.sh/system" "yes")) | nindent 2 }}
 spec:
-  minAvailable: 1
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
   selector:
     matchLabels:
       app: 'gatekeeper'

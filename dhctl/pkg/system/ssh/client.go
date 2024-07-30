@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -29,13 +28,28 @@ var (
 	agentInstance          *frontend.Agent
 )
 
-func initAgentInstance() (*frontend.Agent, error) {
+type SSHLoopHandler func(s *Client) error
+
+// initializeNewInstance disables singleton logic
+func initAgentInstance(
+	privateKeys []session.AgentPrivateKey,
+	initializeNewInstance bool,
+) (*frontend.Agent, error) {
 	var err error
+
+	if initializeNewInstance {
+		inst := frontend.NewAgent(&session.AgentSettings{
+			PrivateKeys: privateKeys,
+		})
+
+		err = inst.Start()
+		return inst, err
+	}
 
 	agentInstanceSingleton.Do(func() {
 		if agentInstance == nil {
 			inst := frontend.NewAgent(&session.AgentSettings{
-				PrivateKeys: app.SSHPrivateKeys,
+				PrivateKeys: privateKeys,
 			})
 
 			err = inst.Start()
@@ -43,19 +57,41 @@ func initAgentInstance() (*frontend.Agent, error) {
 				return
 			}
 			tomb.RegisterOnShutdown("Stop ssh-agent", func() {
-				agentInstance.Stop()
+				if agentInstance != nil {
+					agentInstance.Stop()
+				}
 			})
 
 			agentInstance = inst
 		}
 	})
 
+	if err != nil {
+		// NOTICE: agentInstance will remain nil forever in the case of err, so give it another try in the next possible init-retry
+		agentInstanceSingleton = sync.Once{}
+	}
+
 	return agentInstance, err
+}
+
+func NewClient(session *session.Session, privKeys []session.AgentPrivateKey) *Client {
+	return &Client{
+		Settings:    session,
+		PrivateKeys: privKeys,
+
+		// We use arbitrary privKeys param, so always reinitialize agent with privKeys
+		InitializeNewAgent: true,
+	}
 }
 
 type Client struct {
 	Settings *session.Session
 	Agent    *frontend.Agent
+
+	PrivateKeys        []session.AgentPrivateKey
+	InitializeNewAgent bool
+
+	kubeProxies []*frontend.KubeProxy
 }
 
 func (s *Client) Start() (*Client, error) {
@@ -63,7 +99,7 @@ func (s *Client) Start() (*Client, error) {
 		return nil, fmt.Errorf("possible bug in ssh client: session should be created before start")
 	}
 
-	a, err := initAgentInstance()
+	a, err := initAgentInstance(s.PrivateKeys, s.InitializeNewAgent)
 	if err != nil {
 		return nil, err
 	}
@@ -80,6 +116,11 @@ func (s *Client) Tunnel(ttype, address string) *frontend.Tunnel {
 	return frontend.NewTunnel(s.Settings, ttype, address)
 }
 
+// ReverseTunnel is used to open remote (R) tunnel
+func (s *Client) ReverseTunnel(address string) *frontend.ReverseTunnel {
+	return frontend.NewReverseTunnel(s.Settings, address)
+}
+
 // Command is used to run commands on remote server
 func (s *Client) Command(name string, arg ...string) *frontend.Command {
 	return frontend.NewCommand(s.Settings, name, arg...)
@@ -87,7 +128,9 @@ func (s *Client) Command(name string, arg ...string) *frontend.Command {
 
 // KubeProxy is used to start kubectl proxy and create a tunnel from local port to proxy port
 func (s *Client) KubeProxy() *frontend.KubeProxy {
-	return frontend.NewKubeProxy(s.Settings)
+	p := frontend.NewKubeProxy(s.Settings)
+	s.kubeProxies = append(s.kubeProxies, p)
+	return p
 }
 
 // File is used to upload and download files and directories
@@ -105,8 +148,39 @@ func (s *Client) Check() *frontend.Check {
 	return frontend.NewCheck(s.Settings)
 }
 
-// Stop stop client
+// Stop the client
 func (s *Client) Stop() {
-	// do nothing
 	// stop agent on shutdown because agent is singleton
+
+	if s.InitializeNewAgent {
+		s.Agent.Stop()
+		s.Agent = nil
+		s.Settings.AgentSettings = nil
+	}
+	for _, p := range s.kubeProxies {
+		p.StopAll()
+	}
+	s.kubeProxies = nil
+}
+
+// Loop Looping all available hosts
+func (s *Client) Loop(fn SSHLoopHandler) error {
+	var err error
+
+	resetSession := func() {
+		s.Settings = s.Settings.Copy()
+		s.Settings.ChoiceNewHost()
+	}
+	defer resetSession()
+	resetSession()
+
+	for range s.Settings.AvailableHosts() {
+		err = fn(s)
+		if err != nil {
+			return err
+		}
+		s.Settings.ChoiceNewHost()
+	}
+
+	return nil
 }

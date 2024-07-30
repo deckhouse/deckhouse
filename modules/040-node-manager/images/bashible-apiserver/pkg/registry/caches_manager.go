@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import (
 
 	"k8s.io/client-go/tools/cache"
 
-	"d8.io/bashible/pkg/template"
+	"bashible-apiserver/pkg/template"
 )
 
 type CachesManager interface {

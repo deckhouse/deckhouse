@@ -14,4 +14,5 @@
 # limitations under the License.
 
 set -Eeo pipefail
-cp toml-merge /usr/local/bin
+mkdir -p /opt/deckhouse/bin
+cp -f toml-merge /opt/deckhouse/bin

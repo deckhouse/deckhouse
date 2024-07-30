@@ -1,17 +1,17 @@
 {{- define "cloud-provider-storage-documentation-url" }}
 {{- if .Values.global.modules.publicDomainTemplate }}
   {{- if ( .Values.global.enabledModules | has "cloud-provider-aws") }}
-        [AWS storage documentation is here]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "deckhouse") }}/modules/030-cloud-provider-aws/configuration.html#storage).
+        [AWS storage documentation is here]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/modules/030-cloud-provider-aws/configuration.html#storage).
   {{- else if ( .Values.global.enabledModules | has "cloud-provider-gcp") }}
-        [GCP storage documentation is here]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "deckhouse") }}/modules/030-cloud-provider-gcp/configuration.html#storage).
+        [GCP storage documentation is here]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/modules/030-cloud-provider-gcp/configuration.html#storage).
   {{- else if ( .Values.global.enabledModules | has "cloud-provider-openstack") }}
-        [Openstack storage documentation is here]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "deckhouse") }}/modules/030-cloud-provider-openstack/configuration.html#storage).
+        [Openstack storage documentation is here]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/modules/030-cloud-provider-openstack/configuration.html#storage).
   {{- else if ( .Values.global.enabledModules | has "cloud-provider-vsphere") }}
-        [vSphere storage documentation is here]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "deckhouse") }}/modules/030-cloud-provider-vsphere/configuration.html#storage).
+        [vSphere storage documentation is here]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/modules/030-cloud-provider-vsphere/configuration.html#storage).
   {{- else if ( .Values.global.enabledModules | has "cloud-provider-yandex") }}
-        [Yandex storage documentation is here]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "deckhouse") }}/modules/030-cloud-provider-yandex/configuration.html#storage).
+        [Yandex storage documentation is here]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/modules/030-cloud-provider-yandex/configuration.html#storage).
   {{- else }}
-        [Find storage configuration documentation for your cloud-provider here]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "deckhouse") }}/kubernetes.html).
+        [Find storage configuration documentation for your cloud-provider here]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/kubernetes.html).
   {{- end }}
 {{- end }}
 {{- end }}

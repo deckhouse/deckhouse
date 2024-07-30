@@ -51,7 +51,7 @@
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
 
-  - alert: KubernetesDaemonSetReplicasUnavailable
+  - alert:  KubernetesDaemonSetReplicasUnavailable
     expr: |
       kube_daemonset_status_number_unavailable
       > on (namespace, daemonset)
@@ -67,13 +67,20 @@
       plk_create_group_if_not_exists__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
       plk_grouped_by__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
       summary: |-
-        Count of unavailable replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} above threshold.
+        Count of unavailable replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is above threshold.
       description: |-
-        Count of unavailable replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} above threshold.
+        Count of unavailable replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is above threshold.
         Currently at: {{ .Value }} unavailable replica(s)
         Threshold at: {{ printf "extended_monitoring_daemonset_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", daemonset=\"%s\"}" $labels.namespace $labels.daemonset | query | first | value }} unavailable replica(s)
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+
+        This command might help figuring out problematic nodes given you are aware where the DaemonSet should be scheduled in the first place (using label selector for pods might be of help, too):
+
+        ```
+        kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
+        ```
+
 
   - alert: KubernetesDaemonSetReplicasUnavailable
     expr: |
@@ -98,6 +105,12 @@
         Count of available replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is at zero.
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+
+        This command might help figuring out problematic nodes given you are aware where the DaemonSet should be scheduled in the first place (using label selector for pods might be of help, too):
+
+        ```
+        kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
+        ```
 
   - alert: KubernetesDaemonSetNotUpToDate
     expr: |

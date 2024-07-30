@@ -1,0 +1,45 @@
+candi:
+  features:
+    - summary: Add Deckhouse Kubernetes Platform Basic Вdition (BE).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7260
+    - summary: Add the ability to install packages from images inside an external module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7254
+  fixes:
+    - summary: Add validation pattern for the `imagesRepo` parameter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7169
+control-plane-manager:
+  features:
+    - summary: Kubernetes version 1.24 support will be removed in the next Deckhouse release (1.58).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7268
+deckhouse:
+  fixes:
+    - summary: Keep enabled modules without helm charts after converge.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7315
+descheduler:
+  fixes:
+    - summary: Set the number of replicas to 0 if we have only one node.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5221
+dhctl:
+  fixes:
+    - summary: Skip converge base infra if user does not want converge base infra
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7313
+docs:
+  features:
+    - summary: Add docs about Deckhouse Kubernetes Platform integration with Yandex Cloud Managed Services.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7209
+monitoring-kubernetes:
+  fixes:
+    - summary: >-
+        Add control of minimal Linux kernel version >= `5.8.0` for `ebpf_exporter` and a
+        corresponding alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7272
+prometheus:
+  fixes:
+    - summary: Fix alerts-receiver reconcile loop issue.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7287
+      impact: Alerts-receiver pod will be recreated.
+runtime-audit-engine:
+  fixes:
+    - summary: Add a description of how to check that the Kernel was built with the correct option.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7224
+

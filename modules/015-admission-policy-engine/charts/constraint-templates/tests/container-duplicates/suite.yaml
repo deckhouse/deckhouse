@@ -1,0 +1,27 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8containerduplicates
+tests:
+  - name: d8containerduplicates
+    template: ../../templates/operation/container-duplicates.yaml
+    constraint: constraint.yaml
+    cases:
+      - name: example-allowed
+        object: allowed.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed
+        object: disallowed.yaml
+        assertions:
+          - violations: yes
+            message: "Pod <disallowed> has duplicated container names: 'nginx'"
+      - name: example-allowed-envs-same-name-diff-containers
+        object: allowed_envs_same_name_diff_containers.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed-envs-same-name-same-container
+        object: disallowed_envs_same_name_same_container.yaml
+        assertions:
+          - violations: yes
+            message: "Container <nginx> in pod <disallowed> has duplicated env variable names: 'key1'"

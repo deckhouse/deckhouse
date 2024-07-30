@@ -3,7 +3,10 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -20,15 +23,15 @@
   },
   "editable": false,
   "fiscalYearStartMonth": 0,
-  "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1648719781890,
+  "iteration": 1675088603120,
   "links": [],
   "liveNow": false,
   "panels": [
     {
-      "cacheTimeout": null,
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -90,7 +93,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "expr": "(sum(up{job=\"kube-apiserver\"} == 1) / sum(up{job=\"kube-apiserver\"})) * 100",
@@ -105,8 +108,9 @@
       "type": "gauge"
     },
     {
-      "cacheTimeout": null,
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -168,7 +172,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "expr": "(sum(up{job=\"kube-controller-manager\"} == 1) / sum(up{job=\"kube-controller-manager\"})) * 100",
@@ -183,8 +187,9 @@
       "type": "gauge"
     },
     {
-      "cacheTimeout": null,
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -246,7 +251,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "expr": "(sum(up{job=\"kube-scheduler\"} == 1) / sum(up{job=\"kube-scheduler\"})) * 100",
@@ -261,7 +266,9 @@
       "type": "gauge"
     },
     {
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -293,6 +300,8 @@
       "id": 35,
       "options": {
         "displayMode": "gradient",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
         "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
@@ -304,7 +313,7 @@
         "showUnfilled": true,
         "text": {}
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "expr": "count(kube_namespace_created)",
@@ -418,8 +427,9 @@
       "type": "bargauge"
     },
     {
-      "cacheTimeout": null,
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -477,7 +487,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "expr": "count(up{job=\"kube-apiserver\"})",
@@ -490,8 +500,9 @@
       "type": "stat"
     },
     {
-      "cacheTimeout": null,
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -549,7 +560,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "expr": "count(up{job=\"kube-controller-manager\"})",
@@ -562,8 +573,9 @@
       "type": "stat"
     },
     {
-      "cacheTimeout": null,
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -621,7 +633,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "expr": "count(up{job=\"kube-scheduler\"})",
@@ -635,7 +647,9 @@
     },
     {
       "collapsed": false,
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -652,7 +666,9 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -679,7 +695,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -689,16 +705,14 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total{job=\"kube-apiserver\", instance=~\"$instance:.*\"}[$__interval_sx4])",
+          "expr": "rate(process_cpu_seconds_total{job=\"kube-apiserver\", instance=~\"$instance:.*\"}[$__rate_interval])",
           "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Kube-apiserver CPU Usage",
       "tooltip": {
         "shared": true,
@@ -707,9 +721,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -719,23 +731,17 @@
           "format": "short",
           "label": "CPU Usage",
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:567",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -743,7 +749,9 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -770,7 +778,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -786,9 +794,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Kube-apiserver Memory Usage",
       "tooltip": {
         "shared": true,
@@ -797,9 +803,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -807,25 +811,18 @@
         {
           "$$hashKey": "object:732",
           "format": "bytes",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:733",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -833,7 +830,9 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "description": "",
       "fieldConfig": {
         "defaults": {},
@@ -878,7 +877,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -889,16 +888,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by(verb) (rate(apiserver_request_total{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "expr": "sum by(verb) (rate(apiserver_request_total{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__rate_interval]))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Kube-apiserver requests rate",
       "tooltip": {
         "shared": true,
@@ -907,9 +904,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -917,29 +912,25 @@
         {
           "$$hashKey": "object:339",
           "format": "reqps",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:340",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -948,7 +939,8 @@
           },
           "custom": {
             "align": "auto",
-            "displayMode": "auto"
+            "displayMode": "auto",
+            "inspect": false
           },
           "mappings": [],
           "thresholds": {
@@ -1036,14 +1028,25 @@
       },
       "id": 47,
       "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
         "showHeader": true,
         "sortBy": []
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "exemplar": true,
-          "expr": "sum by(verb, resource, subresource) (rate(apiserver_request_total{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "expr": "sum by(verb, resource, subresource) (rate(apiserver_request_total{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__range]))",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -1051,8 +1054,6 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "Kube-apiserver requests rate",
       "transformations": [
         {
@@ -1088,7 +1089,9 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "description": "",
       "fieldConfig": {
         "defaults": {},
@@ -1137,7 +1140,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1148,16 +1151,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max by (verb) (rate(apiserver_response_sizes_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_response_sizes_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "expr": "max by (verb) (rate(apiserver_response_sizes_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__rate_interval])/rate(apiserver_response_sizes_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__rate_interval]))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Kube-apiserver response sizes",
       "tooltip": {
         "shared": true,
@@ -1166,9 +1167,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -1176,29 +1175,25 @@
         {
           "$$hashKey": "object:339",
           "format": "binBps",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:340",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -1207,7 +1202,8 @@
           },
           "custom": {
             "align": "auto",
-            "displayMode": "auto"
+            "displayMode": "auto",
+            "inspect": false
           },
           "mappings": [],
           "thresholds": {
@@ -1295,14 +1291,25 @@
       },
       "id": 48,
       "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
         "showHeader": true,
         "sortBy": []
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "exemplar": true,
-          "expr": "max by (verb, resource, subresource) (rate(apiserver_response_sizes_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_response_sizes_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "expr": "max by (verb, resource, subresource) (rate(apiserver_response_sizes_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__rate_interval])/rate(apiserver_response_sizes_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__range]))",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -1310,9 +1317,7 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Kube-apiserver responce sizes",
+      "title": "Kube-apiserver response sizes",
       "transformations": [
         {
           "id": "filterFieldsByName",
@@ -1365,10 +1370,8 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$ds_prometheus",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
+      "datasource": {
+        "uid": "$ds_prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1396,7 +1399,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1428,7 +1431,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__interval_sx4])) by (le)",
+          "expr": "sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__rate_interval])) by (le)",
           "format": "heatmap",
           "interval": "",
           "intervalFactor": 1,
@@ -1437,9 +1440,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Kube-apiserver latency bucket",
       "tooltip": {
         "shared": true,
@@ -1448,9 +1449,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -1458,29 +1457,25 @@
         {
           "$$hashKey": "object:286",
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:287",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -1489,7 +1484,8 @@
           },
           "custom": {
             "align": "auto",
-            "displayMode": "auto"
+            "displayMode": "auto",
+            "inspect": false
           },
           "mappings": [],
           "thresholds": {
@@ -1577,14 +1573,25 @@
       },
       "id": 49,
       "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
         "showHeader": true,
         "sortBy": []
       },
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "exemplar": true,
-          "expr": "max by (verb, resource, subresource) (rate(apiserver_request_duration_seconds_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_request_duration_seconds_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "expr": "max by (verb, resource, subresource) (rate(apiserver_request_duration_seconds_sum{verb!~\"CONNECT|WATCH\", subresource!~\"exec|log\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__range])/rate(apiserver_request_duration_seconds_count{verb!~\"CONNECT|WATCH\", subresource!~\"exec|log\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__range]))",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -1592,8 +1599,6 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "Kube-apiserver latency",
       "transformations": [
         {
@@ -1647,10 +1652,8 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$ds_prometheus",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
+      "datasource": {
+        "uid": "$ds_prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1678,7 +1681,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1710,7 +1713,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__interval_sx4])) by (le) / scalar(sum(rate(apiserver_request_duration_seconds_count{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__interval_sx4])))",
+          "expr": "sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__rate_interval])) by (le) / scalar(sum(rate(apiserver_request_duration_seconds_count{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__rate_interval])))",
           "format": "heatmap",
           "interval": "",
           "intervalFactor": 1,
@@ -1719,9 +1722,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Kube-apiserver latency bucket %",
       "tooltip": {
         "shared": true,
@@ -1730,9 +1731,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -1740,7 +1739,6 @@
         {
           "$$hashKey": "object:286",
           "format": "percentunit",
-          "label": null,
           "logBase": 1,
           "max": "1",
           "min": "0",
@@ -1749,16 +1747,12 @@
         {
           "$$hashKey": "object:287",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -1766,10 +1760,9 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$ds_prometheus",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1797,7 +1790,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1807,8 +1800,12 @@
       "steppedLine": true,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__interval_sx4])) by (instance, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__rate_interval])) by (instance, le))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1817,9 +1814,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Kube-apiserver latency time",
       "tooltip": {
         "shared": true,
@@ -1828,9 +1823,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -1838,25 +1831,18 @@
         {
           "$$hashKey": "object:286",
           "format": "s",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:287",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -1864,10 +1850,8 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$ds_prometheus",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
+      "datasource": {
+        "uid": "$ds_prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1895,7 +1879,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1932,7 +1916,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(etcd_request_duration_seconds_bucket{job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__interval_sx4])) by (le)",
+          "expr": "sum(rate(etcd_request_duration_seconds_bucket{job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__rate_interval])) by (le)",
           "format": "heatmap",
           "interval": "",
           "intervalFactor": 1,
@@ -1941,9 +1925,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Etcd requests latency bucket",
       "tooltip": {
         "shared": true,
@@ -1952,9 +1934,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -1962,25 +1942,18 @@
         {
           "$$hashKey": "object:286",
           "format": "ops",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:287",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -1988,10 +1961,8 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$ds_prometheus",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
+      "datasource": {
+        "uid": "$ds_prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -2019,7 +1990,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2030,7 +2001,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_request_duration_seconds_bucket{job=\"kube-apiserver\", instance=~\"$instance:6443\"}[$__interval_sx4])) by (instance, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_request_duration_seconds_bucket{job=\"kube-apiserver\", instance=~\"$instance:6443\"}[$__rate_interval])) by (instance, le))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -2039,9 +2010,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Etcd latency time",
       "tooltip": {
         "shared": true,
@@ -2050,9 +2019,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -2060,30 +2027,25 @@
         {
           "$$hashKey": "object:286",
           "format": "s",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:287",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": false
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
       "collapsed": false,
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -2100,7 +2062,9 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -2127,7 +2091,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2137,16 +2101,14 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total{job=\"kube-scheduler\", instance=~\"$instance:.*\"}[$__interval_sx4])",
+          "expr": "rate(process_cpu_seconds_total{job=\"kube-scheduler\", instance=~\"$instance:.*\"}[$__rate_interval])",
           "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Kube-scheduler CPU Usage",
       "tooltip": {
         "shared": true,
@@ -2155,9 +2117,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -2167,23 +2127,17 @@
           "format": "short",
           "label": "CPU Usage",
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:567",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -2191,7 +2145,9 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -2218,7 +2174,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2234,9 +2190,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Kube-scheduler Memory Usage",
       "tooltip": {
         "shared": true,
@@ -2245,9 +2199,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -2255,30 +2207,25 @@
         {
           "$$hashKey": "object:732",
           "format": "bytes",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:733",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
       "collapsed": false,
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -2295,7 +2242,9 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -2322,7 +2271,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2332,16 +2281,14 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total{job=\"kube-controller-manager\", instance=~\"$instance:.*\"}[$__interval_sx4])",
+          "expr": "rate(process_cpu_seconds_total{job=\"kube-controller-manager\", instance=~\"$instance:.*\"}[$__rate_interval])",
           "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Kube-controller-manager CPU Usage",
       "tooltip": {
         "shared": true,
@@ -2350,9 +2297,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -2362,23 +2307,17 @@
           "format": "short",
           "label": "CPU Usage",
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:567",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -2386,7 +2325,9 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$ds_prometheus",
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -2413,7 +2354,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.2.6",
+      "pluginVersion": "8.5.13",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2429,9 +2370,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Kube-controller-manager Memory Usage",
       "tooltip": {
         "shared": true,
@@ -2440,9 +2379,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -2450,30 +2387,23 @@
         {
           "$$hashKey": "object:732",
           "format": "bytes",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "$$hashKey": "object:733",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 32,
+  "schemaVersion": 36,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -2484,8 +2414,6 @@
           "text": "main",
           "value": "main"
         },
-        "description": null,
-        "error": null,
         "hide": 0,
         "includeAll": false,
         "label": "Prometheus",
@@ -2510,10 +2438,11 @@
             "$__all"
           ]
         },
-        "datasource": "$ds_prometheus",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
         "definition": "label_values(up{job=\"kube-apiserver\"}, instance)",
-        "description": null,
-        "error": null,
         "hide": 0,
         "includeAll": true,
         "label": "Instance",
@@ -2544,10 +2473,11 @@
             "$__all"
           ]
         },
-        "datasource": "$ds_prometheus",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
         "definition": "label_values(apiserver_request_total, resource)",
-        "description": null,
-        "error": null,
         "hide": 0,
         "includeAll": true,
         "label": "Resource",
@@ -2578,10 +2508,11 @@
             "$__all"
           ]
         },
-        "datasource": "$ds_prometheus",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
         "definition": "label_values(apiserver_request_total{verb!~\"CONNECT|WATCH\"}, verb)",
-        "description": null,
-        "error": null,
         "hide": 0,
         "includeAll": true,
         "label": "VERB",
@@ -2635,5 +2566,6 @@
   "timezone": "",
   "title": "Control Plane Status",
   "uid": "3yqtXDzia",
-  "version": 1
+  "version": 1,
+  "weekStart": ""
 }

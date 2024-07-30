@@ -18,11 +18,11 @@ package hooks
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	gcr "github.com/google/go-containerregistry/pkg/name"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
@@ -53,7 +53,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"deckhouse"},
 			},
-			ExecuteHookOnEvents: pointer.BoolPtr(false),
+			ExecuteHookOnEvents: pointer.Bool(false),
 			FilterFunc:          getDeploymentImage,
 		},
 	},
@@ -71,10 +71,11 @@ func parseDeckhouseImage(input *go_hook.HookInput) error {
 	}
 	image := deckhouseSnapshot[0].(string)
 
-	tagPosistion := strings.LastIndex(image, ":")
-	if len(image)-1 == tagPosistion {
-		return fmt.Errorf("can't parse image tag from deckhouse deployment")
+	imageRepoTag, err := gcr.NewTag(image)
+	if err != nil {
+		return fmt.Errorf("incorrect image: %s", image)
 	}
+	tag := imageRepoTag.TagStr()
 
 	// Set deckhouse image only if it was not set before, e.g. by stabilize_release_channel hook
 	if input.Values.Get(deckhouseImagePath).String() == "" {
@@ -82,7 +83,7 @@ func parseDeckhouseImage(input *go_hook.HookInput) error {
 			return fmt.Errorf("registry base path doesn't exist yet")
 		}
 		base := input.Values.Get(deckhouseBasePath).String()
-		input.Values.Set(deckhouseImagePath, fmt.Sprintf("%s:%s", base, image[tagPosistion+1:]))
+		input.Values.Set(deckhouseImagePath, fmt.Sprintf("%s:%s", base, tag))
 	}
 	return nil
 }

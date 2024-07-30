@@ -1,11 +1,19 @@
-{% unless page.hide_sidebar %}
-{%- assign sidebar = site.data.sidebars[page.sidebar].entries %}
-<ul class="sidebar" id="mysidebar">
-  {%- for entry in sidebar.folders %}
-    {% include sidebar_entry.html entry=entry folder_entry_class="sidebar__item sidebar__item_parent" item_entry_class="sidebar__item" %}
-  {%- endfor %}
-</ul>
+{%- unless page.hide_sidebar %}
+<div class="sidebar__wrapper-inner">
+  <nav class="sidebar__container">
+    {%- if page.toc_in_sidebar == true %}
+    {%- include toc_in_sidebar.html %}
+    {%- else %}
+    {%- assign sidebar = site.data.sidebars[page.sidebar].entries %}
+    <ul class="sidebar" id="mysidebar">
+      {%- for entry in sidebar.folders %}
+        {% include sidebar_entry.html entry=entry folder_entry_class="sidebar__item sidebar__item_parent" item_entry_class="sidebar__item" %}
+      {%- endfor %}
+    </ul>
 
-<!-- this highlights the active parent class in the navgoco sidebar. this is critical so that the parent expands when you're viewing a page. This must appear below the sidebar code above. Otherwise, if placed inside customscripts.js, the script runs before the sidebar code runs and the class never gets inserted.-->
-<script>$("li.active").parents('li').toggleClass("active");</script>
-{% endunless %}
+    <!-- this highlights the active parent class in the navgoco sidebar. this is critical so that the parent expands when you're viewing a page. This must appear below the sidebar code above. Otherwise, if placed inside customscripts.js, the script runs before the sidebar code runs and the class never gets inserted.-->
+    <script>$("li.active").parents('li').toggleClass("active");</script>
+    {%- endif %}
+  </nav>
+</div>
+{%- endunless %}

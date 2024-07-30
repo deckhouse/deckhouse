@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
@@ -63,6 +64,13 @@ func TestConfig(t *testing.T) {
 				}, false)
 
 				spec := v1alpha1.ClusterLogDestinationSpec{
+					Buffer: &v1alpha1.Buffer{
+						Type: "Disk",
+						Disk: v1alpha1.BufferDisk{
+							MaxSize: *resource.NewQuantity(268435488, resource.BinarySI),
+						},
+						WhenFull: "Block",
+					},
 					Loki: v1alpha1.LokiSpec{
 						Endpoint: "http://testmeip:9000",
 					},
@@ -91,6 +99,13 @@ func TestConfig(t *testing.T) {
 				spec := v1alpha1.ClusterLogDestinationSpec{
 					Logstash: v1alpha1.LogstashSpec{
 						Endpoint: "192.168.0.1:9000",
+					},
+					Buffer: &v1alpha1.Buffer{
+						Type: "Disk",
+						Disk: v1alpha1.BufferDisk{
+							MaxSize: *resource.NewQuantity(215, resource.BinarySI),
+						},
+						WhenFull: "Block",
 					},
 				}
 

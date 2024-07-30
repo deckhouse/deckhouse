@@ -50,8 +50,14 @@ var _ = Describe("Module :: user-authn :: helm template :: user", func() {
     email: user@example.com
     groups:
     - Everyone
-    password: userPassword
-    userID: user
+    password: $2a$10$7rxcwh8r2Rcnwc3jDysqhOrbskLBjtx1zvzWaQVPFO78DDAMZHhLC
+- encodedName: base64EncodedUser
+  name: base64UserName
+  spec:
+    email: base64@example.com
+    groups:
+    - Everyone
+    password: JDJhJDEwJDdyeGN3aDhyMlJjbndjM2pEeXNxaE9yYnNrTEJqdHgxenZ6V2FRVlBGTzc4RERBTVpIaExD
 - encodedName: encodedAdmin
   name: adminName
   spec:
@@ -59,8 +65,7 @@ var _ = Describe("Module :: user-authn :: helm template :: user", func() {
     groups:
     - Everyone
     - Admins
-    password: adminPassword
-    userID: admin
+    password: $2a$10$E/MjyzFi6GZkta9GHd8zCeuYigbLenXv18jkxOZ6vhoWsKnaxNJou
 `)
 			hec.HelmRender()
 		})
@@ -69,16 +74,24 @@ var _ = Describe("Module :: user-authn :: helm template :: user", func() {
 			Expect(userPassword.Exists()).To(BeTrue())
 			Expect(userPassword.Field("email").String()).To(Equal("user@example.com"))
 			Expect(userPassword.Field("username").String()).To(Equal("userName"))
-			Expect(userPassword.Field("userID").String()).To(Equal("user"))
-			Expect(userPassword.Field("hash").String()).To(Equal("dXNlclBhc3N3b3Jk"))
+			Expect(userPassword.Field("userID").String()).To(Equal("userName"))
+			Expect(userPassword.Field("hash").String()).To(Equal("JDJhJDEwJDdyeGN3aDhyMlJjbndjM2pEeXNxaE9yYnNrTEJqdHgxenZ6V2FRVlBGTzc4RERBTVpIaExD"))
 			Expect(userPassword.Field("groups").String()).To(MatchJSON(`["Everyone"]`))
+
+			base64Password := hec.KubernetesResource("Password", "d8-user-authn", "base64EncodedUser")
+			Expect(base64Password.Exists()).To(BeTrue())
+			Expect(base64Password.Field("email").String()).To(Equal("base64@example.com"))
+			Expect(base64Password.Field("username").String()).To(Equal("base64UserName"))
+			Expect(base64Password.Field("userID").String()).To(Equal("base64UserName"))
+			Expect(base64Password.Field("hash").String()).To(Equal("JDJhJDEwJDdyeGN3aDhyMlJjbndjM2pEeXNxaE9yYnNrTEJqdHgxenZ6V2FRVlBGTzc4RERBTVpIaExD"))
+			Expect(base64Password.Field("groups").String()).To(MatchJSON(`["Everyone"]`))
 
 			adminPassword := hec.KubernetesResource("Password", "d8-user-authn", "encodedAdmin")
 			Expect(adminPassword.Exists()).To(BeTrue())
 			Expect(adminPassword.Field("email").String()).To(Equal("admintest@example.com"))
 			Expect(adminPassword.Field("username").String()).To(Equal("adminName"))
-			Expect(adminPassword.Field("userID").String()).To(Equal("admin"))
-			Expect(adminPassword.Field("hash").String()).To(Equal("YWRtaW5QYXNzd29yZA=="))
+			Expect(adminPassword.Field("userID").String()).To(Equal("adminName"))
+			Expect(adminPassword.Field("hash").String()).To(Equal("JDJhJDEwJEUvTWp5ekZpNkdaa3RhOUdIZDh6Q2V1WWlnYkxlblh2MThqa3hPWjZ2aG9Xc0tuYXhOSm91"))
 			Expect(adminPassword.Field("groups").String()).To(MatchJSON(`["Everyone","Admins"]`))
 		})
 	})

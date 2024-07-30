@@ -73,17 +73,45 @@ func (t *TestCases) HaveHelmValuesCases() bool {
 	return len(t.Positive.HelmValues) > 0 || len(t.Negative.HelmValues) > 0
 }
 
+type edition struct {
+	Name       string `yaml:"name,omitempty"`
+	ModulesDir string `yaml:"modulesDir,omitempty"`
+}
+
+type editions struct {
+	Editions []edition `yaml:"editions,omitempty"`
+}
+
+func getPossiblePathToModules() []string {
+	content, err := os.ReadFile("/deckhouse/editions.yaml")
+	if err != nil {
+		panic(fmt.Sprintf("cannot read editions file: %v", err))
+	}
+
+	e := editions{}
+	err = yaml.Unmarshal(content, &e)
+	if err != nil {
+		panic(fmt.Errorf("cannot unmarshal editions file: %v", err))
+	}
+
+	modulesDir := make([]string, 0)
+	for i, ed := range e.Editions {
+		if ed.Name == "" {
+			panic(fmt.Sprintf("name for %d index is empty", i))
+		}
+		modulesDir = append(modulesDir, fmt.Sprintf("/deckhouse/%s/*/openapi", ed.ModulesDir))
+	}
+
+	return modulesDir
+}
+
 func GetAllOpenAPIDirs() ([]string, error) {
 	var (
 		dirs        []string
 		openAPIDirs []string
 	)
 
-	for _, possibleDir := range []string{
-		"/deckhouse/modules/*/openapi",
-		"/deckhouse/ee/modules/*/openapi",
-		"/deckhouse/ee/fe/modules/*/openapi",
-	} {
+	for _, possibleDir := range getPossiblePathToModules() {
 		globDirs, err := filepath.Glob(possibleDir)
 		if err != nil {
 			return nil, err
@@ -120,21 +148,21 @@ func TestCasesFromFile(filename string) (*TestCases, error) {
 	return &testCases, nil
 }
 
-func ValidatePositiveCase(validator *validation.ValuesValidator, moduleName string, schema validation.SchemaType, testValues map[string]interface{}, runFocused bool) error {
+func ValidatePositiveCase(schemaStorage *validation.SchemaStorage, moduleName string, schema validation.SchemaType, testValues map[string]interface{}, runFocused bool) error {
 	if _, hasFocus := testValues[FocusFieldName]; !hasFocus && runFocused {
 		return nil
 	}
 	delete(testValues, FocusFieldName)
-	return validator.ValidateValues(validation.ModuleSchema, schema, moduleName, utils.Values{moduleName: testValues})
+	return schemaStorage.Validate(schema, moduleName, utils.Values{moduleName: testValues})
 }
 
-func ValidateNegativeCase(validator *validation.ValuesValidator, moduleName string, schema validation.SchemaType, testValues map[string]interface{}, runFocused bool) error {
+func ValidateNegativeCase(validator *validation.SchemaStorage, moduleName string, schema validation.SchemaType, testValues map[string]interface{}, runFocused bool) error {
 	_, hasFocus := testValues[FocusFieldName]
 	if !hasFocus && runFocused {
 		return nil
 	}
 	delete(testValues, FocusFieldName)
-	err := validator.ValidateValues(validation.ModuleSchema, schema, moduleName, utils.Values{moduleName: testValues})
+	err := validator.Validate(schema, moduleName, utils.Values{moduleName: testValues})
 	if err == nil {
 		return fmt.Errorf("negative case error for %s values: test case should not pass validation: %+v", schema, ValuesToString(testValues))
 	}

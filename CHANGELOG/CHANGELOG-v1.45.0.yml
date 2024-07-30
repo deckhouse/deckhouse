@@ -1,0 +1,352 @@
+admission-policy-engine:
+  features:
+    - summary: >-
+        Add gatekeeper
+        [mutations](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation) support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3987
+  fixes:
+    - summary: Fix `requiredLabels` OperationPolicy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4264
+      impact: '`requiredLabel` unmarshalling leads to an error.'
+candi:
+  features:
+    - summary: 'Upgraded patch versions of Kubernetes images: `v1.24.12`, `v1.25.8`, `v1.26.3`.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4172
+      impact: Kubernetes control-plane components will restart, kubelet will restart.
+    - summary: 'Upgraded patch versions of Kubernetes images: `v1.23.17`, `v1.24.11`, `v1.25.7`, `v1.26.2`'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4012
+      impact: '"Kubernetes control-plane components will restart, kubelet will restart"'
+    - summary: Add support for Kubernetes `1.26`. Remove support for Kubernetes `1.21`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3760
+      impact: Kubernetes `1.21` is no longer supported.
+    - summary: Add ALT Linux support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3555
+    - summary: Switch from pulling container images by tag to pulling by sha256 checksum.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3318
+      impact: All system components will restart.
+  fixes:
+    - summary: Fix altlinux bundle after apply PR
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4316
+    - summary: Fix in bashible template.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4295
+    - summary: fix auhtn webhook config generation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4289
+    - summary: Update of selinux-policy and selinux-policy-targeted packages for Centos 9.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4227
+    - summary: fix bootstrap in air-gapped envs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4188
+    - summary: >-
+        Remove the `node-role.kubernetes.io/master` taint from the first control-plane node during
+        bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4159
+    - summary: Fix bootstrap after
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4082
+    - summary: add selinux policies for cilium
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4070
+cert-manager:
+  fixes:
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+ci:
+  features:
+    - summary: Add support for Kubernetes 1.26. Remove support for Kubernetes 1.21.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3760
+  fixes:
+    - summary: Fix build-and-test_pre-release.yml, cve-daily.yml and e2e-daily.yml workflow name rendering
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4145
+cloud-provider-aws:
+  fixes:
+    - summary: >-
+        The terraform provider was bumped to `4.50.0`, therefore there are new requirements for
+        deckhouse IAM user. It is necessary to allow the following actions:
+        `ec2:DescribeInstanceTypes`, `ec2:DescribeSecurityGroupRules`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4256
+      impact: >-
+        There are new requirements for the [deckhouse IAM
+        user](https://deckhouse.io/documentation/v1.45/modules/030-cloud-provider-aws/environment.html#json-policy)
+        in AWS. It is necessary to allow the following actions: `ec2:DescribeInstanceTypes`,
+        `ec2:DescribeSecurityGroupRules`.
+cloud-provider-vsphere:
+  features:
+    - summary: Add zones list to cloud discovery data.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4136
+cloud-provider-yandex:
+  fixes:
+    - summary: >-
+        Set `network_acceleration_type` to software accelerated, update netfilter parameters for new
+        Yandex nat instances.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4196
+    - summary: >-
+        Proper InternalIPs are not added to the routing table. Those that are physically present on
+        a VM in the cloud.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4114
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+cni-cilium:
+  features:
+    - summary: Bump `cilium` and `virt-cilium` to `v1.12.8`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4284
+      impact: All cilium-agent Pods will be restarted.
+containerized-data-importer:
+  features:
+    - summary: CDI `v1.56.0`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3956
+  fixes:
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+    - summary: Enable high availability
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3743
+dashboard:
+  fixes:
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+deckhouse:
+  fixes:
+    - summary: >-
+        Hours and minutes can be used simultaneously for the `minimalNotificationTime` field in
+        ModuleConfig CR.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4200
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+deckhouse-config:
+  fixes:
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+deckhouse-controller:
+  features:
+    - summary: Add commands to enable/disable modules without YAML editing.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4245
+deckhouse-web:
+  fixes:
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+delivery:
+  fixes:
+    - summary: Fix How to reset admin password instruction
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4108
+descheduler:
+  features:
+    - summary: >-
+        Descheduler module is configured via CRs now. Configuration from Deckhouse CM will get
+        migrated to the "default" Descheduler CR.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1585
+dhctl:
+  fixes:
+    - summary: Fix `kube-proxy` does not restart.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4274
+docs:
+  fixes:
+    - summary: Fix the Ansible script example for adding a node.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4216
+      impact: documentation
+extended-monitoring:
+  fixes:
+    - summary: Fix `image-availability-exporter` for Kubernetes 1.25+.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4331
+    - summary: Fix in extended monitoring module
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4292
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+flant-integration:
+  fixes:
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+global-hooks:
+  fixes:
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+ingress-nginx:
+  features:
+    - summary: Use `AdvancedDaemonSet` controller for smooth ingress-controller rollout.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4124
+      impact: Ingress-controller Pods will restart.
+    - summary: |-
+        Added Nginx Ingress controller `v1.6.4`.
+        - **nginx-controller**:
+          * Upgrade NGINX to `1.21.6`.
+          * Ingress-nginx now is using `Endpointslices` instead of `Endpoints`. 
+          * Update to Prometheus metric names; more information [available here]( https://github.com/kubernetes/ingress-nginx/pull/8728).
+          * Deprecated Kubernetes versions `1.20`-`1.21`. Added support for `1.25`. Currently supported versions are `1.22`, `1.23`, `1.24`, `1.25`.
+          * This release removes the `root` and `alias` directives in NGINX, which can avoid some potential security attacks.
+          * This release also brings a special new feature of deep inspection into objects. The inspection is a walk-through of all the specs, checking for possible attempts to escape configs. Currently, such an inspection only occurs for `networking.Ingress`.
+        - **nginx**:
+          * Feature: the "proxy_half_close" directive in the stream module.
+          * Feature: the "ssl_alpn" directive in the stream module.
+          * Feature: the "mp4_start_key_frame" directive in the ngx_http_mp4_module.
+          * Bugfix: requests might hang when using HTTP/2 and the "aio_write" directive.
+          * Bugfix: the security level, which is available in OpenSSL 1.1.0 or newer, did not affect the loading of the server certificates when set with "@SECLEVEL=N" in the "ssl_ciphers" directive.
+          * Security: 1-byte memory overwrite might occur during DNS server response processing if the "resolver" directive was used, allowing an attacker who is able to forge UDP packets from the DNS server to cause worker process crash or, potentially, arbitrary code execution (CVE-2021-23017).
+          * Feature: variables support in the "proxy_ssl_certificate", "proxy_ssl_certificate_key" "grpc_ssl_certificate", "grpc_ssl_certificate_key", "uwsgi_ssl_certificate", and "uwsgi_ssl_certificate_key" directives.
+          * Feature: the "max_errors" directive in the mail proxy module.
+          * Feature: the "fastopen" parameter of the "listen" directive in the Stream module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3923
+  fixes:
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+istio:
+  fixes:
+    - summary: Add registry secret for `d8-ingress-istio` namespace.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4244
+    - summary: Fix links deckhouse.io in D8IstioDeprecatedIstioVersionInstalled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4219
+    - summary: >-
+        Got rid of pod, instance and group excess labels in D8IstioDeprecatedIstioVersionInstalled
+        alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4048
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+kube-dns:
+  fixes:
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+linstor:
+  features:
+    - summary: Update LINSTOR to `v1.21.0` and related components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4098
+  fixes:
+    - summary: Add liveness container to check linstor nodes connectivity status.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4173
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+log-shipper:
+  features:
+    - summary: Multiline parser `Custom` type with user-provided regex.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4247
+    - summary: Add status codes and errors to the dashboard.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4117
+    - summary: >-
+        Add the `keyField` and `exclude` parameters to the `ClusterLogDestination` resource for
+        configuring rate limiting.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4099
+    - summary: Add buffer settings for vector config.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4095
+  fixes:
+    - summary: >-
+        Add multiline custom parser for `PodLoggingConfig` and add validation for multiline custom
+        parser when `startsWhen` and `endsWhen` params  are both provided
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4307
+      impact: '`log-shipper` Pods will restart.'
+    - summary: Make vector retrying request on startup with backoff.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4270
+    - summary: Fix using hyphens in the `extraLabels` keys field of the `ClusterLogDestination` spec.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4112
+loki:
+  features:
+    - summary: The new module. Based on the Grafana Loki project.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3735
+metallb:
+  fixes:
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+monitoring-deckhouse:
+  fixes:
+    - summary: Fix links to GitHub in `MigrationRequiredFromRBDInTreeProvisionerToCSIDriver` alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4008
+monitoring-kubernetes:
+  fixes:
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+node-manager:
+  features:
+    - summary: Show used `NodeGroups` in the `InstanceClass` status field.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4028
+    - summary: Add `NodeGroup` conditions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3990
+  fixes:
+    - summary: >-
+        Restrict changing `nodeType` for NodeGroups and remove stale status fields from static
+        NodeGroups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4257
+    - summary: Fix `WaitingForDisruptiveApproval` status calculating.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4250
+    - summary: Prevent changing bashible checksum if scale/downscale NodeGroup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4243
+    - summary: >-
+        Hours and minutes can be used simultaneously in the `spec.chaos.period` field of the
+        NodeGroup CR.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4200
+    - summary: >-
+        Add in `NodeRequiresDisruptionApprovalForUpdate` rules Prometheus 'No need to drain the
+        master'.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3975
+    - summary: (Reverted in 1.45.3!) Removed early-oom. Added kubelet memory reservation option.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3821
+openvpn:
+  fixes:
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+operator-prometheus:
+  fixes:
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+prometheus:
+  features:
+    - summary: Accelerate `grafana-dashboard-provisioner` hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3691
+  fixes:
+    - summary: Add kubectl in the `TargetSampleLimitExceeded` alert description.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4215
+    - summary: Fixed madison registration URI for flant-integration
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4057
+prometheus-metrics-adapter:
+  fixes:
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+snapshot-controller:
+  fixes:
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+testing:
+  features:
+    - summary: Execute module and matrix tests before building to unify local and GHA testing.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3740
+  fixes:
+    - summary: Fix in CVE daily tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4290
+tools:
+  fixes:
+    - summary: change-registry.sh script changes deckhouse initContainer image
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4139
+upmeter:
+  fixes:
+    - summary: Fix smoke-mini image generation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4272
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+user-authn:
+  features:
+    - summary: Custom login screen design.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4305
+  fixes:
+    - summary: Hours and minutes can be used simultaneously in the `spec.tls` field of the User CR.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4200
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+    - summary: The `discover_dex_ca` hook subscribes secret according to the used mode.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3842
+user-authz:
+  fixes:
+    - summary: Removed possible value Role in `ClusterAuthorizationRule#spec.additionalRoles`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4261
+    - summary: Disabled `NetworkPolicy` editing for Editors.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4217
+vertical-pod-autoscaler:
+  fixes:
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+virtualization:
+  features:
+    - summary: KubeVirt `v0.59.0`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3956
+  fixes:
+    - summary: Fix AdmissionReview for KubeVirt virtual machines
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4309
+    - summary: Support other `cloud-init` sources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4176
+    - summary: Set default bus to `virtio` for diskAttachments
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4142
+    - summary: Unset `virtio` bus for cloud-init drive
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4142
+    - summary: Deploy PDB as a normal helm resource, not a helm hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4016
+

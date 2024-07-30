@@ -12,10 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+function wait-kubelet-client-certificate() {
+  # Waiting till the file /var/lib/kubelet/pki/kubelet-client-current.pem generated
+  {{ if eq .runType "Normal" }}
+  attempt=0
+  until [ -f /var/lib/kubelet/pki/kubelet-client-current.pem ]; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "30" ]; then
+      bb-log-error "The file /var/lib/kubelet/pki/kubelet-client-current.pem was not generated in 5 minutes."
+      break
+    fi
+    bb-log-info "Waiting till the file /var/lib/kubelet/pki/kubelet-client-current.pem generated (10sec)..."
+    sleep 10
+  done
+  {{- else }}
+  true
+  {{- end }}
+}
+
 if bb-flag? kubelet-need-restart; then
 
 {{- if ne .runType "ImageBuilding" }}
   bb-log-warning "'kubelet-need-restart' flag was set, restarting kubelet."
+  if [ -f /var/lib/kubelet/cpu_manager_state ]; then rm /var/lib/kubelet/cpu_manager_state; fi
+  if [ -f /var/lib/kubelet/memory_manager_state ]; then rm /var/lib/kubelet/memory_manager_state; fi
   systemctl restart "kubelet.service"
   {{ if ne .runType "ClusterBootstrap" }}
   if [[ "${FIRST_BASHIBLE_RUN}" != "yes" ]] && ! bb-flag? reboot; then
@@ -37,12 +57,14 @@ if bb-flag? reboot; then
 fi
 
 if systemctl is-active --quiet "kubelet.service"; then
+  wait-kubelet-client-certificate
   exit 0
 fi
 
 bb-log-warning "Kubelet service is not running. Starting it..."
 if systemctl start "kubelet.service"; then
   bb-log-info "Kubelet has started."
+  wait-kubelet-client-certificate
 else
   bb-log-error "Kubelet has not started. Exit"
   exit 1

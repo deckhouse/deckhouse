@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -59,7 +58,9 @@ func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string, showD
 					case <-ctx.Done():
 						return
 					default:
-						_, _ = deckhouse.NewLogPrinter(kubeCl).Print(ctx)
+						_, _ = deckhouse.NewLogPrinter(kubeCl).
+							WithLeaderElectionAwarenessMode(types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-leader-election"}).
+							Print(ctx)
 					}
 				}
 			}()
@@ -364,13 +365,4 @@ func IsNodeExistsInCluster(kubeCl *client.KubernetesClient, nodeName string) (bo
 	})
 
 	return exists, err
-}
-
-func getIndexFromNodeName(name string) (int64, bool) {
-	index, err := strconv.ParseInt(name[strings.LastIndex(name, "-")+1:], 10, 64)
-	if err != nil {
-		log.ErrorLn(err)
-		return 0, false
-	}
-	return index, true
 }

@@ -5,7 +5,7 @@ title: "Модуль snapshot-controller: примеры конфигураци�
 ### Использование снапшотов
 
 Чтобы использовать снапшоты, необходимо указать конкретный `VolumeSnapshotClass`.
-Для того чтобы получить список доступных VolumeSnapshotClass в вашем кластере, выполните:
+Чтобы получить список доступных VolumeSnapshotClass в вашем кластере, выполните:
 
 ```shell
 kubectl get volumesnapshotclasses.snapshot.storage.k8s.io
@@ -19,7 +19,7 @@ kind: VolumeSnapshot
 metadata:
   name: my-first-snapshot
 spec:
-  volumeSnapshotClassName: linstor
+  volumeSnapshotClassName: sds-replicated-volume
   source:
     persistentVolumeClaimName: my-first-volume
 ```
@@ -32,7 +32,7 @@ $ kubectl describe volumesnapshots.snapshot.storage.k8s.io my-first-snapshot
 Spec:
   Source:
     Persistent Volume Claim Name:  my-first-snapshot
-  Volume Snapshot Class Name:      linstor
+  Volume Snapshot Class Name:      sds-replicated-volume
 Status:
   Bound Volume Snapshot Content Name:  snapcontent-b6072ab7-6ddf-482b-a4e3-693088136d2c
   Creation Time:                       2020-06-04T13:02:28Z
@@ -40,7 +40,7 @@ Status:
   Restore Size:                        500Mi
 ```
 
-Вы можете восстановить содержимое этого снапшота создав новый PVC. Для этого необходимо указать снапшот в качестве источника:
+Вы можете восстановить содержимое этого снапшота, создав новый PVC. Для этого необходимо указать снапшот в качестве источника:
 
 ```yaml
 apiVersion: v1
@@ -48,7 +48,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: my-first-volume-from-snapshot
 spec:
-  storageClassName: linstor-data-r2
+  storageClassName: sds-replicated-volume-data-r2
   dataSource:
     name: my-first-snapshot
     kind: VolumeSnapshot
@@ -62,9 +62,9 @@ spec:
 
 ### Клонирование CSI-томов
 
-Основываясь на концепции снапшотов, вы также можете осуществить клонирование persistent volumes, а точнее существующих persistent volume claims (PVC).
-Однако спецификация CSI не позволяет производить клонирование томов в пространстве имен и созданных со StorageClass, отличным от оригинального PVC.
-(обратитесь к [документации Kubernetes](https://kubernetes.io/docs/concepts/storage/volume-pvc-datasource/) чтобы узнать больше об ограничениях).
+Основываясь на концепции снапшотов, вы также можете осуществить клонирование Persistent Volumes, а точнее существующих PersistentVolumeClaims (PVC).
+Однако спецификация CSI не позволяет производить клонирование томов в пространстве имен и StorageClass'ах, отличных от оригинального PVC
+(обратитесь [к документации Kubernetes](https://kubernetes.io/docs/concepts/storage/volume-pvc-datasource/), чтобы узнать больше об ограничениях).
 
 Чтобы клонировать том, создайте новый PVC и укажите исходный PVC в `dataSource`:
 
@@ -74,7 +74,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: my-cloned-pvc
 spec:
-  storageClassName: linstor-data-r2
+  storageClassName: sds-replicated-volume-data-r2
   dataSource:
     name: my-origin-pvc
     kind: PersistentVolumeClaim

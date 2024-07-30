@@ -1,2 +1,0 @@
-{{- $parameters := dict "allowedSELinuxTypes" (list "container_t" "container_init_t" "container_kvm_t") }}
-{{- include "pod_security_standard_baseline" (list . "D8PSSSELinuxV2" $parameters ) }}

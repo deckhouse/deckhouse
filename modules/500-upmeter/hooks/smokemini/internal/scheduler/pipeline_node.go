@@ -18,7 +18,6 @@ package scheduler
 
 import (
 	"math/rand"
-	"time"
 
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
 )
@@ -66,7 +65,6 @@ func applyFilter(nodes []snapshot.Node, filter func(snapshot.Node) bool) []snaps
 type nodeShuffler struct{}
 
 func (f nodeShuffler) Filter(nodes []snapshot.Node, _ string) []snapshot.Node {
-	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(nodes), func(i, j int) { nodes[i], nodes[j] = nodes[j], nodes[i] })
 	return nodes
 }

@@ -3,6 +3,15 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
+{{ $ntpServers := list }}
+{{- range $value := .Values.chrony.ntpServers }}
+  {{- if regexMatch "(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$" $value }}
+    {{ $ntpServers = append $ntpServers $value }}
+  {{ else }}
+    {{ $ntpServers = append $ntpServers (printf "%s." ($value | trimSuffix ".")) }}
+  {{- end }}
+{{ end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -16,6 +25,28 @@ spec:
     apiVersion: "apps/v1"
     kind: DaemonSet
     name: chrony
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "chrony"
+      minAllowed:
+        {{- include "chrony_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 25m
+        memory: 50Mi
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: chrony-master
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony" "tier" "node" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: chrony-master
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
@@ -46,36 +77,70 @@ spec:
         tier: node
         app: chrony
     spec:
-      hostNetwork: true
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node.deckhouse.io/group
+                operator: NotIn
+                values:
+                - master
       dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
       imagePullSecrets:
       - name: deckhouse-registry
-      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       containers:
       - name: chrony
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_TIME" "CHOWN" "DAC_OVERRIDE" "FOWNER" "FSETID" "KILL" "SETGID" "SETUID" "SETPCAP" "NET_BIND_SERVICE" "NET_RAW" "SYS_CHROOT" "MKNOD" "AUDIT_WRITE" "SETFCAP")) | nindent 8 }}
+        securityContext:
+          capabilities:
+            add:
+            # SYS_TIME: Allows a process to modify the system time.
+            # Chrony is designed to adjust system time.
+            - SYS_TIME
+            # CHOWN: Allows changing the ownership of files and directories.
+            # Chrony can create /var/run/chrony folfer and change its owner.
+            - CHOWN
+            # DAC_OVERRIDE: Allows access to files and directories, even if the process isn't the owner.
+            # /entrypoint can remove /var/run/chrony/chronyd.pid file (UID/GID 64535:64535).
+            - DAC_OVERRIDE
+            # SETGID: Make arbitrary manipulations of process GIDs.
+            # Chrony can change its own process GID on the fly.
+            - SETGID
+            # SETUID: Make arbitrary manipulations of process UIDs.
+            # Chrony can change its own process UID on the fly.
+            - SETUID
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 0
+          runAsNonRoot: false
+          runAsUser: 0
         image: {{ include "helm_lib_module_image" (list . "chrony") }}
         env:
-{{ $ntpServers := list }}
-{{- range $value := .Values.chrony.ntpServers }}
-  {{- if regexMatch "(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$" $value }}
-    {{ $ntpServers = append $ntpServers $value }}
-  {{ else }}
-    {{ $ntpServers = append $ntpServers (printf "%s." ($value | trimSuffix ".")) }}
-  {{- end }}
-{{ end }}
+        - name: PATH
+          value: /opt/chrony-static/bin
+        - name: NTP_ROLE
+          value: sink
         - name: NTP_SERVERS
           value: {{ join " " $ntpServers | quote }}
+        - name: CHRONY_MASTERS_SERVICE
+          value: {{ printf "chrony-masters.d8-%s.svc.%s" .Chart.Name .Values.global.discovery.clusterDomain | quote }}
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         ports:
         - name: ntp
-          containerPort: 123
+          containerPort: 4234
           protocol: UDP
         livenessProbe:
           exec:
             command:
-            - chronyc
+            - /opt/chrony-static/bin/chronyc
             - tracking
           initialDelaySeconds: 30
           periodSeconds: 60
@@ -87,8 +152,13 @@ spec:
         - name: tzdata-config
           mountPath: /etc/timezone
           readOnly: true
-        - name: chrony
-          mountPath: /run/chrony
+        - name: etc-chrony
+          mountPath: /etc/chrony
+        - name: config
+          mountPath: /etc/chrony/chrony.conf.tpl
+          subPath: chrony.conf.tpl
+        - name: var-run
+          mountPath: /var/run
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -102,5 +172,129 @@ spec:
       - name: tzdata-config
         hostPath:
           path: /etc/timezone
-      - name: chrony
+      - name: etc-chrony
         emptyDir: {}
+      - name: var-run
+        emptyDir: {}
+      - name: config
+        configMap:
+          name: chrony
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: chrony-master
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony")) | nindent 2 }}
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: chrony-master
+  template:
+    metadata:
+      labels:
+        tier: node
+        app: chrony-master
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node.deckhouse.io/group
+                operator: In
+                values:
+                - master
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      imagePullSecrets:
+      - name: deckhouse-registry
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      containers:
+      - name: chrony
+        securityContext:
+          capabilities:
+            add:
+            # SYS_TIME: Allows a process to modify the system time.
+            # Chrony is designed to adjust system time.
+            - SYS_TIME
+            # CHOWN: Allows changing the ownership of files and directories.
+            # Chrony can create /var/run/chrony folfer and change its owner.
+            - CHOWN
+            # DAC_OVERRIDE: Allows access to files and directories, even if the process isn't the owner.
+            # /entrypoint can remove /var/run/chrony/chronyd.pid file (UID/GID 64535:64535).
+            - DAC_OVERRIDE
+            # SETGID: Make arbitrary manipulations of process GIDs.
+            # Chrony can change its own process GID on the fly.
+            - SETGID
+            # SETUID: Make arbitrary manipulations of process UIDs.
+            # Chrony can change its own process UID on the fly.
+            - SETUID
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 0
+          runAsNonRoot: false
+          runAsUser: 0
+        image: {{ include "helm_lib_module_image" (list . "chrony") }}
+        env:
+        - name: PATH
+          value: /opt/chrony-static/bin
+        - name: NTP_ROLE
+          value: source
+        - name: NTP_SERVERS
+          value: {{ join " " $ntpServers | quote }}
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        ports:
+        - name: ntp
+          containerPort: 4234
+          protocol: UDP
+        livenessProbe:
+          exec:
+            command:
+            - /opt/chrony-static/bin/chronyc
+            - tracking
+          initialDelaySeconds: 30
+          periodSeconds: 60
+          timeoutSeconds: 15
+        volumeMounts:
+        - name: tz-config
+          mountPath: /etc/localtime
+          readOnly: true
+        - name: tzdata-config
+          mountPath: /etc/timezone
+          readOnly: true
+        - name: etc-chrony
+          mountPath: /etc/chrony
+        - name: config
+          mountPath: /etc/chrony/chrony.conf.tpl
+          subPath: chrony.conf.tpl
+        - name: var-run
+          mountPath: /var/run
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "chrony_resources" . | nindent 12 }}
+  {{- end }}
+      volumes:
+      - name: tz-config
+        hostPath:
+          path: /etc/localtime
+      - name: tzdata-config
+        hostPath:
+          path: /etc/timezone
+      - name: etc-chrony
+        emptyDir: {}
+      - name: var-run
+        emptyDir: {}
+      - name: config
+        configMap:
+          name: chrony

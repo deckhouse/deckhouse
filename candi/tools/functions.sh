@@ -41,10 +41,3 @@ function check_yq() {
       return 1
     fi
 }
-
-function check_docker() {
-    if ! docker version &>/dev/null; then
-      >&2 echo "ERROR: docker is not installed"
-      return 1
-    fi
-}

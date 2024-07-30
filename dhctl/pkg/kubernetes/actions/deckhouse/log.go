@@ -26,6 +26,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -33,11 +34,12 @@ import (
 )
 
 var (
-	ErrListPods          = errors.New("No Deckhouse pod found.")
-	ErrMultiplePodsFound = errors.New("Multiple Deckhouse pods found.")
-	ErrTimedOut          = errors.New("Time is out waiting for Deckhouse readiness.")
-	ErrRequestFailed     = errors.New("Request failed. Probably pod was restarted during installation.")
-	ErrIncorrectNode     = errors.New("Deckhouse on wrong node")
+	ErrListPods      = errors.New("No Deckhouse pod found.")
+	ErrReadLease     = errors.New("No Deckhouse leader election lease found.")
+	ErrBadLease      = errors.New("Deckhouse leader election lease is malformed.")
+	ErrTimedOut      = errors.New("Time is out waiting for Deckhouse readiness.")
+	ErrRequestFailed = errors.New("Request failed. Probably pod was restarted during installation.")
+	ErrIncorrectNode = errors.New("Deckhouse on wrong node")
 )
 
 type logLine struct {
@@ -73,9 +75,14 @@ func isErrorLine(line *logLine) bool {
 			// We cannot skip this error in hook,
 			// because kube version needs for next installation steps
 			"Not found k8s versions",
-			// hook with creating master run immediately after deploy crd
-			// and we can get this message one time
-			"Create object: deckhouse.io/v1/NodeGroup//master: apiVersion 'deckhouse.io/v1', kind 'NodeGroup' is not supported by cluster",
+			// we can race between creating resources and deploy crds
+			// often we get only one error message per module
+			// it confuses users and we want hide it
+			"is not supported by cluster",
+			// all bootstrapped cloud clusters has this message
+			// it is normal because wait_for_all_master_nodes_to_become_initialized hook
+			// blocks main queue with this error
+			"timeout waiting for master nodes",
 		}
 		for _, p := range badSubStrings {
 			if strings.Contains(line.Message, p) {
@@ -134,6 +141,44 @@ func parseLogByLine(content []byte, action func(line *logLine) bool) {
 	}
 }
 
+type LogPrinter struct {
+	kubeCl *client.KubernetesClient
+
+	deckhousePod            *corev1.Pod
+	waitPodBecomeReady      bool
+	leaderElectionLeaseName types.NamespacedName
+
+	lastErrorTime time.Time
+
+	stopOutputNoMoreConvergeTasks bool
+
+	excludeNodeName string
+
+	deckhouseErrors []string
+}
+
+func NewLogPrinter(kubeCl *client.KubernetesClient) *LogPrinter {
+	return &LogPrinter{
+		kubeCl:          kubeCl,
+		deckhouseErrors: make([]string, 0),
+	}
+}
+
+func (d *LogPrinter) WaitPodBecomeReady() *LogPrinter {
+	d.waitPodBecomeReady = true
+	return d
+}
+
+func (d *LogPrinter) WithExcludeNode(nodeName string) *LogPrinter {
+	d.excludeNodeName = nodeName
+	return d
+}
+
+func (d *LogPrinter) WithLeaderElectionAwarenessMode(leaderElectionLease types.NamespacedName) *LogPrinter {
+	d.leaderElectionLeaseName = leaderElectionLease
+	return d
+}
+
 func (d *LogPrinter) printErrorsForTask(taskID string, errorTaskTime time.Time) {
 	if taskID == "" {
 		return
@@ -188,7 +233,8 @@ func (d *LogPrinter) printErrorsForTask(taskID string, errorTaskTime time.Time) 
 		}
 
 		if line.Level == "error" || line.Output == "stderr" {
-			log.ErrorF(line.String())
+			d.deckhouseErrors = append(d.deckhouseErrors, line.String())
+			log.DebugF("Error during Deckhouse converge: %s", line.String())
 		}
 		return true
 	})
@@ -220,35 +266,8 @@ func (d *LogPrinter) printLogsByLine(content []byte) {
 	})
 }
 
-type LogPrinter struct {
-	kubeCl *client.KubernetesClient
-
-	deckhousePod       *corev1.Pod
-	waitPodBecomeReady bool
-
-	lastErrorTime time.Time
-
-	stopOutputNoMoreConvergeTasks bool
-
-	excludeNodeName string
-}
-
-func NewLogPrinter(kubeCl *client.KubernetesClient) *LogPrinter {
-	return &LogPrinter{kubeCl: kubeCl}
-}
-
-func (d *LogPrinter) WaitPodBecomeReady() *LogPrinter {
-	d.waitPodBecomeReady = true
-	return d
-}
-
-func (d *LogPrinter) WithExcludeNode(nodeName string) *LogPrinter {
-	d.excludeNodeName = nodeName
-	return d
-}
-
 func (d *LogPrinter) GetPod() error {
-	pod, err := GetPod(d.kubeCl)
+	pod, err := GetPod(d.kubeCl, d.leaderElectionLeaseName)
 	if err != nil {
 		return err
 	}
@@ -299,7 +318,7 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 
 	logOptions := corev1.PodLogOptions{
 		Container: "deckhouse",
-		TailLines: int64Pointer(5),
+		TailLines: int64Pointer(10),
 
 		// kubelet certificate on master can be changed before finish Deckhouse installation
 		// and dhctl can not get logs from Deckhouse pod
@@ -311,6 +330,7 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 	for {
 		select {
 		case <-ctx.Done():
+			log.ErrorLn(strings.Join(d.deckhouseErrors, "\n"))
 			return false, ErrTimedOut
 		default:
 			ready, err := d.checkDeckhousePodReady()

@@ -15,25 +15,25 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 
-	"gopkg.in/alecthomas/kingpin.v2"
-	"sigs.k8s.io/yaml"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("converge-exporter", "Run terraform converge exporter.")
 	app.DefineKubeFlags(cmd)
 	app.DefineConvergeExporterFlags(cmd)
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
@@ -48,7 +48,7 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("check", "Check differences between state of Kubernetes cluster and Terraform state.")
 	app.DefineKubeFlags(cmd)
 	app.DefineOutputFlag(cmd)
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
@@ -69,30 +69,19 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		metaConfig.UUID, err = converge.GetClusterUUID(kubeCl)
+		metaConfig.UUID, err = state_terraform.GetClusterUUID(kubeCl)
 		if err != nil {
 			return err
 		}
 
-		statistic, err := converge.CheckState(kubeCl, metaConfig)
+		statistic, err := converge.CheckState(kubeCl, metaConfig, terraform.NewTerraformContext(), converge.CheckStateOptions{})
 		if err != nil {
 			return err
 		}
 
-		var data []byte
-		switch app.OutputFormat {
-		case "yaml":
-			data, err = yaml.Marshal(statistic)
-			if err != nil {
-				return err
-			}
-		case "json":
-			data, err = json.Marshal(statistic)
-			if err != nil {
-				return err
-			}
-		default:
-			return fmt.Errorf("Unknown output format %s", app.OutputFormat)
+		data, err := statistic.Format(app.OutputFormat)
+		if err != nil {
+			return fmt.Errorf("Failed to format check result: %w", err)
 		}
 
 		fmt.Print(string(data))

@@ -20,7 +20,7 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/cluster_configuration
   if [ $? -eq 0 ]; then
     # Apply schema
     echo "Generating schema ${schema_path} for ${module_path}/docs/CLUSTER_CONFIGURATION.md"
-    sed -i "/<!-- SCHEMA -->/i\{\{ site.data.schemas.${module_name}.cluster_configuration \| format_cluster_configuration \}\}" ${module_path}/docs/CLUSTER_CONFIGURATION.md
+    sed -i "/<!-- SCHEMA -->/i\{\{ site.data.schemas.${module_name}.cluster_configuration \| format_cluster_configuration: \"${module_name}\" \}\}" ${module_path}/docs/CLUSTER_CONFIGURATION.md
   else
     echo "WARNING: Schema ${schema_path} found but there is no '<!-- SCHEMA -->' placeholder in the ${module_path}/docs/CLUSTER_CONFIGURATION.md"
   fi

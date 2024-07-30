@@ -17,16 +17,15 @@ limitations under the License.
 package deckhouse_config
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
-	"github.com/flant/addon-operator/pkg/values/validation"
+	"github.com/flant/addon-operator/pkg/module_manager"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/module-manager/test/mock"
-	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
 const (
@@ -35,11 +34,6 @@ const (
 )
 
 func TestValidatorValidateCR(t *testing.T) {
-	// Latest version is 2.
-	conversion.RegisterFunc("global", 1, 2, func(settings *conversion.Settings) error {
-		return nil
-	})
-
 	tests := []struct {
 		name     string
 		manifest string
@@ -70,7 +64,7 @@ spec:
   settings:
     paramStr: val1
 `,
-			expectValid,
+			expectInvalid,
 		},
 		{
 			"settings-versions-enabled",
@@ -187,11 +181,6 @@ spec:
 }
 
 func TestValidatorValidate(t *testing.T) {
-	// Latest version is 2.
-	conversion.RegisterFunc("global", 1, 2, func(settings *conversion.Settings) error {
-		return nil
-	})
-
 	tests := []struct {
 		name     string
 		manifest string
@@ -221,6 +210,18 @@ spec:
 `,
 			expectValid,
 		},
+		{
+			"empty spec.settings with enabled:false",
+			`apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: flant-integration
+spec:
+  version: 1
+  enabled: false
+`,
+			expectValid,
+		},
 
 		// Invalid cases
 		{
@@ -238,17 +239,36 @@ spec:
 `,
 			expectInvalid,
 		},
+		{
+			"empty spec.settings with enabled:true",
+			`apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: flant-integration
+spec:
+  version: 1
+  enabled: true
+`,
+			expectInvalid,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			vv := validation.NewValuesValidator()
-			err := mock.AddOpenAPISchemas(vv, "global", "testdata/validator/global")
-			g.Expect(err).ShouldNot(HaveOccurred(), "should load OpenAPI", tt.manifest)
+			mmc := &module_manager.ModuleManagerConfig{
+				DirectoryConfig: module_manager.DirectoryConfig{
+					ModulesDir:     "testdata/validator",
+					GlobalHooksDir: "testdata/validator/global",
+				},
+			}
+			mm := module_manager.NewModuleManager(context.Background(), mmc)
 
-			v := NewConfigValidator(vv)
+			err := mm.Init()
+			g.Expect(err).ShouldNot(HaveOccurred(), "should init module manager")
+
+			v := NewConfigValidator(mm)
 			cfg, err := modCfgFromYAML(tt.manifest)
 			g.Expect(err).ShouldNot(HaveOccurred(), "should parse manifest: %s", tt.manifest)
 

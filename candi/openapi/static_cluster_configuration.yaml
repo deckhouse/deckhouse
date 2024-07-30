@@ -5,6 +5,12 @@ apiVersions:
     type: object
     description: |
       Parameters of a static (bare metal) cluster.
+
+      To change the `StaticClusterConfiguration` resource in a running cluster, run the following command:
+
+      ```shell
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+      ```
     additionalProperties: false
     required: [apiVersion, kind]
     x-examples:
@@ -26,7 +32,9 @@ apiVersions:
         description: |
           List of internal cluster networks.
 
-          Internal cluster networks connect Kubernetes components (kube-apiserver, kubelet, etc.).
+          Internal cluster networks connect Kubernetes components (`kube-apiserver`, `kubelet`, etc.).
+
+          The parameter can be omitted (and the `StaticClusterConfiguration` resource can be omitted) if each node in the cluster has only one network interface.
         items:
           type: string
           example: '192.168.42.0/24'

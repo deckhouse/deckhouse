@@ -1,0 +1,9 @@
+helm:
+  fixes:
+    - summary: Fix deprecated k8s resources metrics.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4751
+ingress-nginx:
+  fixes:
+    - summary: Add protection for ingress-nginx-controller daemonset migration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4734
+

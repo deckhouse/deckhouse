@@ -16,13 +16,14 @@ package infrastructure
 
 import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 type StateLoader interface {
 	PopulateMetaConfig() (*config.MetaConfig, error)
-	PopulateClusterState() ([]byte, map[string]converge.NodeGroupTerraformState, error)
+	PopulateClusterState() ([]byte, map[string]state.NodeGroupTerraformState, error)
 }
 
 type NodeGroupController interface {
@@ -34,14 +35,28 @@ type BaseInfraController interface {
 }
 
 type ClusterInfra struct {
-	stateLoader StateLoader
-	cache       state.Cache
+	stateLoader      StateLoader
+	cache            state.Cache
+	terraformContext *terraform.TerraformContext
+
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 }
 
-func NewClusterInfra(terraState StateLoader, cache state.Cache) *ClusterInfra {
+func NewClusterInfra(terraState StateLoader, cache state.Cache, terraformContext *terraform.TerraformContext) *ClusterInfra {
+	return NewClusterInfraWithOptions(terraState, cache, terraformContext, ClusterInfraOptions{})
+}
+
+type ClusterInfraOptions struct {
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
+}
+
+func NewClusterInfraWithOptions(terraState StateLoader, cache state.Cache, terraformContext *terraform.TerraformContext, opts ClusterInfraOptions) *ClusterInfra {
 	return &ClusterInfra{
-		stateLoader: terraState,
-		cache:       cache,
+		stateLoader:      terraState,
+		cache:            cache,
+		terraformContext: terraformContext,
+
+		PhasedExecutionContext: opts.PhasedExecutionContext,
 	}
 }
 
@@ -56,8 +71,16 @@ func (r *ClusterInfra) DestroyCluster(autoApprove bool) error {
 		return err
 	}
 
+	if r.PhasedExecutionContext != nil {
+		if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.AllNodesPhase, true, r.cache); err != nil {
+			return err
+		} else if shouldStop {
+			return nil
+		}
+	}
+
 	for nodeGroupName, nodeGroupStates := range nodesState {
-		ngController, err := NewNodesController(metaConfig, r.cache, nodeGroupName, nodeGroupStates.Settings)
+		ngController, err := NewNodesController(metaConfig, r.cache, nodeGroupName, nodeGroupStates.Settings, r.terraformContext)
 		if err != nil {
 			return err
 		}
@@ -69,5 +92,21 @@ func (r *ClusterInfra) DestroyCluster(autoApprove bool) error {
 		}
 	}
 
-	return NewBaseInfraController(metaConfig, r.cache).Destroy(clusterState, autoApprove)
+	if r.PhasedExecutionContext != nil {
+		if shouldStop, err := r.PhasedExecutionContext.SwitchPhase(phases.BaseInfraPhase, true, r.cache, nil); err != nil {
+			return err
+		} else if shouldStop {
+			return nil
+		}
+	}
+
+	if err := NewBaseInfraController(metaConfig, r.cache, r.terraformContext).Destroy(clusterState, autoApprove); err != nil {
+		return err
+	}
+
+	if r.PhasedExecutionContext != nil {
+		return r.PhasedExecutionContext.CompletePhase(r.cache, nil)
+	} else {
+		return nil
+	}
 }

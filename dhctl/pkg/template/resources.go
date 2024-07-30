@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"regexp"
 	"sort"
 	"strings"
 	"text/template"
@@ -26,6 +25,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 var kindOrderMap map[string]int
@@ -35,12 +37,12 @@ var bootstrapKindsOrder = []string{
 	"ResourceQuota",
 	"LimitRange",
 	"PodSecurityPolicy",
+	"ServiceAccount",
 	"Secret",
 	"ConfigMap",
 	"StorageClass",
 	"PersistentVolume",
 	"PersistentVolumeClaim",
-	"ServiceAccount",
 	"CustomResourceDefinition",
 	"ClusterRole",
 	"ClusterRoleBinding",
@@ -150,6 +152,11 @@ func ParseResourcesContent(content string, data map[string]interface{}) (Resourc
 
 		gvk := schema.FromAPIVersionAndKind(kubernetesResource.GetAPIVersion(), kubernetesResource.GetKind())
 
+		if gvk.Empty() || gvk.GroupVersion().Empty() || gvk.GroupKind().Empty() {
+			log.DebugF("Empty gvr for resource:\n%s\n", doc)
+			continue
+		}
+
 		resources = append(resources, &Resource{
 			GVK:    gvk,
 			Object: kubernetesResource,
@@ -161,7 +168,16 @@ func ParseResourcesContent(content string, data map[string]interface{}) (Resourc
 	return resources, nil
 }
 
-func ParseResources(path string, data map[string]interface{}) (Resources, error) {
+func (r Resources) String() string {
+	s := make([]string, 0)
+	for _, rr := range r {
+		s = append(s, fmt.Sprintf("%v", rr.Object.Object))
+	}
+
+	return strings.Join(s, ";")
+}
+
+func loadResources(path string, data map[string]interface{}) (Resources, error) {
 	fileContent, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("loading resources file: %v", err)
@@ -172,7 +188,16 @@ func ParseResources(path string, data map[string]interface{}) (Resources, error)
 	return ParseResourcesContent(content, data)
 }
 
+func ParseResources(path string, data map[string]interface{}) (Resources, error) {
+	resources, err := loadResources(path, data)
+	if err != nil {
+		return nil, err
+	}
+
+	return resources, nil
+}
+
 func BigFileSplit(content string) []string {
 	bigFileTmp := strings.TrimSpace(content)
-	return regexp.MustCompile(`(?:^|\s*\n)---\s*`).Split(bigFileTmp, -1)
+	return input.YAMLSplitRegexp.Split(bigFileTmp, -1)
 }

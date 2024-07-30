@@ -21,11 +21,13 @@ spec:
                     GCP [позволяет указывать](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) нестандартное количество CPU и RAM, например: `custom-8-40960` или `n2-custom-8-40960`.
                 capacity:
                   description: |
+                    Устарело: параметр больше не используется. Для переданного типа инстанса Deckhouse использует параметры, полученные из облака.
+
                     Емкость инстанса для *нестандартных* типов инстансов (параметр `machineType`).
 
-                    Используется cluster-autoscaler'ом при планировании только когда в NodeGroup'е еще нет узлов (при minPerZone равном 0). Если в NodeGroup уже есть узлы, то cluster-autoscaler использует при планировании фактические данные (CPU, memory) о мощности узла, и не использует данные параметра `capacity`.
+                    Используется cluster-autoscaler'ом при планировании, только когда в NodeGroup'е еще нет узлов (при minPerZone равном 0). Если в NodeGroup уже есть узлы, cluster-autoscaler использует при планировании фактические данные (CPU, memory) о мощности узла и не использует данные параметра `capacity`.
 
-                    Параметр необходимо указывать только для *нестандартных* типов инстансов. Параметры *стандартных* типов инстансов (`a2-highgpu-8g`, `c2-standard-8` и т.п.) заложены в Deckhouse.
+                    Параметр необходимо указывать только для *нестандартных* типов инстансов. Параметры *стандартных* типов инстансов (`a2-highgpu-8g`, `c2-standard-8` и т. п.) заложены в Deckhouse.
                   properties:
                     cpu:
                       description: Количество vCPU узла.
@@ -33,12 +35,14 @@ spec:
                       description: Количество памяти узла.
                 image:
                   description: |
-                    Образ, который будет использоваться в заказанных инстансах. Список образов можно найти [в документации](https://cloud.google.com/compute/docs/images#ubuntu).
+                    Образ, который будет использоваться в заказанных инстансах.
 
-                    > **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11`.
+                    Список доступных образов можно найти в [документации провайдера](https://cloud.google.com/compute/docs/images#ubuntu).
+
+                    Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации Deckhouse](https://deckhouse.ru/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
                 preemptible:
                   description: |
-                    Необходимость заказа preemptible-инстансов.
+                    Необходимость заказа preemptible-инстансов (прерываемых виртуальных машин).
                 diskType:
                   description: |
                     Тип созданного диска.

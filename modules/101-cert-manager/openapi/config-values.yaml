@@ -115,3 +115,18 @@ properties:
       Disable `letsencrypt` and `letsencrypt-staging` ClusterIssuer objects (if set to `true`).
     x-examples: [true, false]
 
+  maxConcurrentChallenges:
+    type: integer
+    format: int32
+    minimum: 0
+    description: |
+      The maximum number of challenges that can be scheduled as 'processing' at once. (default 60)
+    x-examples: [25]
+
+  enableCAInjector:
+    type: boolean
+    default: false
+    x-examples: [true, false]
+    description: |
+      Enable CAInjector. It only needs to inject CA certs into `ValidatingWebhookConfiguration`, `MutatingWebhookConfiguration`, `CustomResourceDefinition` and `APIService`.
+      Deckhouse does not use CAInjector, so you have to enable it only if you use custom CA injections in your services.

@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider — AWS: подготовка окружения"
+description: "Настройка AWS для работы облачного провайдера Deckhouse."
 ---
 
 Для работы `cloud-provider` и `machine-controller-manager` требуется доступ в API AWS из-под IAM-пользователя, который обладает достаточным набором прав.
@@ -56,6 +57,7 @@ title: "Cloud provider — AWS: подготовка окружения"
                 "ec2:DescribeInstanceAttribute",
                 "ec2:DescribeInstanceCreditSpecifications",
                 "ec2:DescribeInstances",
+                "ec2:DescribeInstanceTypes",
                 "ec2:DescribeInternetGateways",
                 "ec2:DescribeKeyPairs",
                 "ec2:DescribeNatGateways",
@@ -63,6 +65,7 @@ title: "Cloud provider — AWS: подготовка окружения"
                 "ec2:DescribeRegions",
                 "ec2:DescribeRouteTables",
                 "ec2:DescribeSecurityGroups",
+                "ec2:DescribeSecurityGroupRules",
                 "ec2:DescribeSubnets",
                 "ec2:DescribeTags",
                 "ec2:DescribeVolumesModifications",
@@ -146,9 +149,9 @@ title: "Cloud provider — AWS: подготовка окружения"
 
 Инструкции, как применить этот JSON-файл, ниже.
 
-## Настройка IAM через web-интерфейс
+## Настройка IAM через веб-интерфейс
 
-Для того чтобы настроить IAM через web-интерфейс, сначала создайте новую Policy и примените к ней созданный ранее JSON-файл:
+Чтобы настроить IAM через веб-интерфейс, сначала создайте новую политику (Policy) и примените к ней созданный ранее JSON-файл:
 
 1. Откройте `Identity and Access Management (IAM)`.
 1. Перейдите в раздел `Policies` и нажмите `Create Policy`.
@@ -162,9 +165,9 @@ title: "Cloud provider — AWS: подготовка окружения"
 1. Перейдите в раздел `Users` IAM и нажмите `Add users`.
 1. Задайте имя в поле `User name` (например, `deckhouse`).
 
-И примените к нему созданную Policy:
+Примените к нему созданную Policy:
 
-1. В разделе `Select AWS credential type`, выберите `Access key - Programmatic access`.
+1. В разделе `Select AWS credential type` выберите `Access key - Programmatic access`.
 1. Нажмите `Next: Permissions`.
 1. Выберите вкладку `Attach existing policies directly`.
 1. Введите в поле поиска (`Filter policies`) имя политики, указанное на предыдущих шагах (например, `D8CloudProviderAWS`), и в полученном списке отметьте checkbox напротив искомой политики.
@@ -173,21 +176,21 @@ title: "Cloud provider — AWS: подготовка окружения"
 
 Сохраните полученные `Access key ID` и `Secret access key`.
 
-> Проверьте есть ли у вашей учетной записи (и, соответственно, у созданного пользователя) доступ к нужным регионам. Для этого выберите необходимый регион в выпадающем списке в правом верхнем углу.
+> Проверьте, есть ли у вашей учетной записи (и, соответственно, у созданного пользователя) доступ к нужным регионам. Для этого выберите необходимый регион в выпадающем списке в правом верхнем углу.
 >
-> Если произойдет переключение в выбранный регион, то доступ к региону есть.
+> Если произойдет переключение в выбранный регион, доступ к региону есть.
 >
-> Если доступа к региону нет, то вы получите следующее сообщение (может отличаться):
+> Если доступа к региону нет, вы получите следующее сообщение (может отличаться):
 >
 > ![Разрешить использование региона](../../images/030-cloud-provider-aws/region_enable.png)
 >
-> В этом случае нажмите `Continue` для того, чтобы разрешить использование региона.
+> В этом случае нажмите `Continue`, чтобы разрешить использование региона.
 
 ## Настройка IAM через CLI
 
 Также IAM можно настроить через интерфейс командной строки.
 
-Для этого при помощи следующей команды сохраните JSON-спецификацию в файл `policy.json`:
+Для этого с помощью следующей команды сохраните JSON-спецификацию в файл `policy.json`:
 
 ```shell
 cat > policy.json << EOF
@@ -195,10 +198,10 @@ cat > policy.json << EOF
 EOF
 ```
 
-Затем создайте новую Policy с именем `D8CloudProviderAWS` и примечанием ARN, используя JSON-спецификацию из файла `policy.json`:
+Затем создайте новую Policy с именем `D8CloudProviderAWS` и примечанием `ARN`, используя JSON-спецификацию из файла `policy.json`:
 
 ```shell
-aws iam create-policy --policy-name D8Policy --policy-document file://policy.json
+aws iam create-policy --policy-name D8CloudProviderAWS --policy-document file://policy.json
 ```
 
 В ответ отобразится следующий текст:
@@ -206,9 +209,9 @@ aws iam create-policy --policy-name D8Policy --policy-document file://policy.jso
 ```yaml
 {
     "Policy": {
-        "PolicyName": "D8Policy",
+        "PolicyName": "D8CloudProviderAWS",
         "PolicyId": "AAA",
-        "Arn": "arn:aws:iam::123:policy/D8Policy",
+        "Arn": "arn:aws:iam::123:policy/D8CloudProviderAWS",
         "Path": "/",
         "DefaultVersionId": "v1",
         "AttachmentCount": 0,
@@ -263,7 +266,7 @@ aws iam create-access-key --user-name deckhouse
 Объедините `User` и `Policy`:
 
 ```shell
-aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8Policy
+aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8CloudProviderAWS
 ```
 
 ## Настройка IAM через Terraform
@@ -280,7 +283,7 @@ resource "aws_iam_access_key" "user" {
 }
 
 resource "aws_iam_policy" "policy" {
-  name        = "D8Policy"
+  name        = "D8CloudProviderAWS"
   path        = "/"
   description = "Deckhouse policy"
 

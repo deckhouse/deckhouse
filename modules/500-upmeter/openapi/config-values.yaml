@@ -10,9 +10,11 @@ properties:
         enum: [false]
     x-examples: [false, "default"]
     description: |
-      The name of the StorageClass to use. If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, either `global.StorageClass` or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
+      The name of the StorageClass to use. If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
 
-      **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in disk reprovisioning and data loss.
+      `global.discovery.defaultStorageClass` is applied during module activation, changing default StorageClass in cluster won't result in disk re-provisioning.
+
+      **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in disk re-provisioning and data loss.
 
       Setting it to `false` forces the use of an emptyDir volume.
   auth:
@@ -33,7 +35,7 @@ properties:
           externalAuthentication:
             type: object
             description: |
-              Parameters to enable external authentication based on the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+              Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the NGINX [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
               > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) module is enabled.
             properties:
@@ -71,7 +73,7 @@ properties:
           externalAuthentication:
             type: object
             description: |
-              Parameters to enable external authentication. Uses Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism which is based on the the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+              Parameters to enable external authentication. Uses NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism which is based on the the NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
             properties:
               authURL:
                 type: string
@@ -121,7 +123,7 @@ properties:
           externalAuthentication:
             type: object
             description: |
-              Parameters to enable external authentication. Uses Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism which is based on the the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+              Parameters to enable external authentication. Uses NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism which is based on the the NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
             properties:
               authURL:
                 type: string
@@ -162,13 +164,16 @@ properties:
             enum: [false]
         x-examples: [false, "default"]
         description: |
-          A storageClass to use when checking the health of disks.
+          A StorageClass to use when checking the health of disks.
 
-          If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, either `global.StorageClass` or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
+          If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
+
+          `global.discovery.defaultStorageClass` is applied during module activation, changing default StorageClass in cluster won't result in disk re-provisioning.
 
           Setting it to `false` forces the use of an emptyDir volume.
       ingressClass:
         type: string
+        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         description: |
           The class of the Ingress controller used for the smoke-mini.
 
@@ -195,7 +200,7 @@ properties:
               - `Disabled` — smoke-mini will work over HTTP only;
               - `CertManager` — smoke-mini will use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter.
               - `CustomCertificate` — smoke-mini will use HTTPS using the certificate from the `d8-system` namespace.
-              - `OnlyInURI` — smoke-mini will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
+              - `OnlyInURI` — smoke-mini will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
             enum:
               - "Disabled"
               - "CertManager"
@@ -272,7 +277,7 @@ properties:
           - `Disabled` — webui/status will work over HTTP only;
           - `CertManager` — webui/status will use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter.
           - `CustomCertificate` — webui/status will use HTTPS using the certificate from the `d8-system` namespace.
-          - `OnlyInURI` — webui/status will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
+          - `OnlyInURI` — webui/status will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
         enum:
           - "Disabled"
           - "CertManager"

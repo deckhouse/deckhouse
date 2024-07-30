@@ -59,7 +59,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "ClusterIssuers",
 			ApiVersion:                   "cert-manager.io/v1",
 			Kind:                         "ClusterIssuer",
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
 			LabelSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{

@@ -1,1 +1,0 @@
-{{- include "pod_security_standard_baseline" (list . "D8PSSPrivilegedContainer" ) }}

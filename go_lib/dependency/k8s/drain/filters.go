@@ -179,7 +179,8 @@ func (d *Helper) daemonSetFilter(pod corev1.Pod) PodDeleteStatus {
 	// management resource - including DaemonSet - is not found).
 	// Such pods will be deleted if --force is used.
 	controllerRef := metav1.GetControllerOf(&pod)
-	if controllerRef == nil || controllerRef.Kind != appsv1.SchemeGroupVersion.WithKind("DaemonSet").Kind {
+
+	if controllerRef == nil || controllerRef.Kind != appsv1.SchemeGroupVersion.WithKind("DaemonSet").Kind || (controllerRef.Kind == "DaemonSet" && controllerRef.APIVersion == "apps.kruise.io/v1alpha1") {
 		return MakePodDeleteStatusOkay()
 	}
 	// Any finished pod can be removed.

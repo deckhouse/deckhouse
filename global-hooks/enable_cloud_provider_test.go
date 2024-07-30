@@ -46,7 +46,7 @@ cloud:
 podSubnetCIDR: 10.111.0.0/16
 podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.21"
+kubernetesVersion: "1.29"
 `
 		return secretManifest(data)
 	}
@@ -68,9 +68,6 @@ kubernetesVersion: "1.21"
 	})
 
 	for provider, valueName := range cloudProviderNameToModule {
-		provider := provider
-		valueName := valueName
-
 		Context("Cluster has a d8-cluster-configuration secret with provider "+provider, func() {
 			provider := provider
 
@@ -123,9 +120,9 @@ clusterType: Static
 podSubnetCIDR: 10.244.0.0/16
 podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 192.168.0.0/16
-kubernetesVersion: "1.21"
+kubernetesVersion: "1.29"
 clusterDomain: cluster.local
-defaultCRI: Docker
+defaultCRI: Containerd
 
 `
 		BeforeEach(func() {

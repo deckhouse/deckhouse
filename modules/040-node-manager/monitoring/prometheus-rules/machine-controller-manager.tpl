@@ -18,7 +18,6 @@
       summary: The {{`{{$labels.pod}}`}} Pod is NOT Ready.
 
   - alert: D8MachineControllerManagerPodIsNotRunning
-    expr: max by (namespace, pod, phase) (kube_pod_status_phase{namespace="d8-cloud-instance-manager",phase!="Running",pod=~"machine-controller-manager-.*"} > 0)
     expr: absent(kube_pod_status_phase{namespace="d8-cloud-instance-manager",phase="Running",pod=~"machine-controller-manager-.*"})
     for: 10m
     labels:

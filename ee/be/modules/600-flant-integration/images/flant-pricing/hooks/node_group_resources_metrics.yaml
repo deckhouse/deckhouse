@@ -1,0 +1,34 @@
+# Copyright 2024 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+#
+# This is a config for node_group_resources_metrics.py hook.
+configVersion: v1
+kubernetes:
+  - name: nodes
+    group: main
+    queue: /node_group_resources_metrics
+    keepFullObjectsInMemory: false
+    waitForSynchronization: false
+    apiVersion: v1
+    kind: Node
+    labelSelector:
+      matchExpressions:
+        - key: "node.deckhouse.io/group"
+          operator: Exists
+    jqFilter: |
+      {
+          "node_group": .metadata.labels."node.deckhouse.io/group",
+          "capacity":   (.status.capacity // {})
+      }
+  - name: ngs
+    group: main
+    queue: /node_group_resources_metrics
+    keepFullObjectsInMemory: false
+    waitForSynchronization: false
+    apiVersion: deckhouse.io/v1
+    kind: NodeGroup
+    jqFilter: |
+      {
+          "name":         .metadata.name,
+          "nodeTemplate": (.spec.nodeTemplate // {})
+      }

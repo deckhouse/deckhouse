@@ -49,7 +49,7 @@ locals {
   node_group_name              = local.node_group.name
   machine_type                 = local.node_group.instanceClass.machineType
   image                        = local.node_group.instanceClass.image
-  disk_size_gb                 = lookup(local.node_group.instanceClass, "diskSizeGb", 20)
+  disk_size_gb                 = lookup(local.node_group.instanceClass, "diskSizeGb", 50)
   disk_type                    = lookup(local.node_group.instanceClass, "diskType", "pd-ssd")
   ssh_key                      = var.providerClusterConfiguration.sshKey
   ssh_user                     = "user"

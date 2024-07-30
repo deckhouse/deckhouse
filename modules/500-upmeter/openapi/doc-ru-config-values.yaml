@@ -1,22 +1,23 @@
 properties:
   storageClass:
     description: |
-      Имя storageClass'а, который использовать.
+      Имя storageClass'а, который будет использоваться.
 
-      * Если не указано — используется StorageClass существующей PVC, а если PVC пока нет — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
+      * Если не указано, используется StorageClass существующей PVC, а если PVC пока нет, используется или [глобальный StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет, данные сохраняются в emptyDir.
+      * `global.discovery.defaultStorageClass` применяется только при включении модуля, смена StorageClass по умолчанию в кластере не приведет к перезаказу диска.
       * **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск будет перезаказан, а все данные удалены.
-      * Если указать `false` — будет форсироваться использование emptyDir'а.
+      * Если указать `false`, будет форсироваться использование emptyDir'а.
   auth:
     description: |
-      Доступ к web-интерфейсу
+      Доступ к веб-интерфейсу.
     properties:
       status:
         description: |
-          Настройки доступа к web-интерфейсу.
+          Настройки доступа к веб-интерфейсу.
         properties:
           externalAuthentication:
             description: |
-              Параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+              Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля NGINX [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
               > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/).
             properties:
@@ -25,23 +26,23 @@ properties:
                   URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
               authSignInURL:
                 description: |
-                  URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
+                  URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP, отличный от 200).
           allowedUserGroups:
             description: |
               Группы доступа к просмотру интерфейса приложения.
 
               * Используется, если включен модуль `user-authn` или параметр `externalAuthentication`.
-              * **Внимание!** При использовании совместно с модулем user-authn необходимо также добавить разрешенные группы в соответствующее поле в настройках DexProvider.
+              * **Внимание!** При использовании совместно с модулем `user-authn` необходимо также добавить разрешенные группы в соответствующее поле в настройках DexProvider.
           whitelistSourceRanges:
             description: |
-              Список CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
+              Список адресов в формате CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
       webui:
         description: |
-          Настройки доступа к web-интерфейсу.
+          Настройки доступа к веб-интерфейсу.
         properties:
           externalAuthentication:
             description: |
-              Параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+              Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля NGINX [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
               > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/).
             properties:
@@ -50,35 +51,35 @@ properties:
                   URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
               authSignInURL:
                 description: |
-                  URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
+                  URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP, отличный от 200).
           allowedUserGroups:
             description: |
               Группы доступа к просмотру интерфейса приложения.
 
               * Используется, если включен модуль `user-authn` или параметр `externalAuthentication`.
-              * **Внимание!** При использовании совместно с модулем user-authn необходимо также добавить разрешенные группы в соответствующее поле в настройках DexProvider.
+              * **Внимание!** При использовании совместно с модулем `user-authn` необходимо также добавить разрешенные группы в соответствующее поле в настройках DexProvider.
           whitelistSourceRanges:
             description: |
-              Список CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
+              Список адресов в формате CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
   smokeMini:
     properties:
       auth:
         description: |
-          Настройки доступа к web-интерфейсу.
+          Настройки доступа к веб-интерфейсу.
         properties:
           externalAuthentication:
             description: |
-              Параметры для подключения внешней аутентификации. Используется механизм Nginx Ingress external-auth, работающей на основе модуля Nginx auth_request.
+              Параметры для подключения внешней аутентификации. Используется механизм NGINX Ingress `external-auth`, работающей на основе модуля NGINX `auth_request`.
             properties:
               authURL:
                 description: |
                   URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
               authSignInURL:
                 description: |
-                  URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
+                  URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP, отличный от 200).
           password:
             description: |
-              Пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
+              Пароль для HTTP-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
 
               Используется, если не включен параметр `externalAuthentication`.
           allowedUserGroups:
@@ -86,16 +87,17 @@ properties:
               Группы доступа к просмотру интерфейса приложения.
 
               * Используется, если включен модуль `user-authn` или параметр `externalAuthentication`.
-              * **Внимание!** При использовании совместно с модулем user-authn необходимо также добавить разрешенные группы в соответствующее поле в настройках DexProvider.
+              * **Внимание!** При использовании совместно с модулем `user-authn` необходимо также добавить разрешенные группы в соответствующее поле в настройках DexProvider.
           whitelistSourceRanges:
             description: |
-              Список CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
+              Список адресов в формате CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
       storageClass:
         description: |
-          storageClass для использования при проверке работоспособности дисков.
+          StorageClass для использования при проверке работоспособности дисков.
 
-          * Если не указано — используется StorageClass существующей PVC, а если PVC пока нет — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
-          * Если указать `false` — будет форсироваться использование emptyDir'а.
+          * Если не указано, используется StorageClass существующей PVC, а если PVC пока нет, используется или [глобальный StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет, данные сохраняются в emptyDir.
+          * `global.discovery.defaultStorageClass` применяется только при включении модуля, смена StorageClass по умолчанию в кластере не приведет к перезаказу диска.
+          * Если указать `false`, будет форсироваться использование emptyDir'а.
       ingressClass:
         description: |
           Класс Ingress-контроллера, который используется для smoke-mini.
@@ -103,17 +105,17 @@ properties:
           Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`
       https:
         description: |
-          Тип сертификата используемого для smoke-mini.
+          Тип сертификата, используемого для smoke-mini.
 
           При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
         properties:
           mode:
             description: |
               Режим работы HTTPS:
-              - `Disabled` — smoke-mini будут работать только по HTTP.
-              - `CertManager` — smoke-mini будут работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`.
-              - `CustomCertificate` — smoke-mini будут работать по https используя сертификат из namespace `d8-system`.
-              - `OnlyInURI` — smoke-mini будет работать по HTTP (подразумевая, что перед ними стоит внешний балансер, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
+              - `Disabled` — smoke-mini будут работать только по HTTP;
+              - `CertManager` — smoke-mini будут работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`.
+              - `CustomCertificate` — smoke-mini будут работать по HTTPS, используя сертификат из namespace `d8-system`.
+              - `OnlyInURI` — smoke-mini будет работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
           certManager:
             properties:
               clusterIssuerName:
@@ -125,20 +127,20 @@ properties:
             properties:
               secretName:
                 description: |
-                  Имя secret'а в namespace `d8-system`, который будет использоваться для smoke-mini.
+                  Имя Secret'а в namespace `d8-system`, который будет использоваться для smoke-mini.
 
-                  Секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+                  Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   disabledProbes:
     description: |
-      Массив строк из названий групп или определенных проб из группы. Названия можно подсмотреть в web-интерфейсе.
+      Массив строк из названий групп или определенных проб из группы. Названия можно подсмотреть в веб-интерфейсе.
 
       Пример:
 
       ```yaml
       disabledProbes:
-        - "synthetic/api" # отключить отдельную пробу
-        - "synthetic/"    # отключить группу проб
-        - control-plane   # или без /
+        - "synthetic/api" # Отключить отдельную пробу.
+        - "synthetic/"    # Отключить группу проб.
+        - control-plane   # Или без /.
       ```
   statusPageAuthDisabled:
     description: |
@@ -148,17 +150,17 @@ properties:
       Выключение smokeMini. Также отключает группу "synthetic".
   https:
     description: |
-      Тип сертификата используемого для веб-приложений webui и status.
+      Тип сертификата, используемого для веб-приложений webui и status.
 
       При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
     properties:
       mode:
         description: |
           Режим работы HTTPS:
-          - `Disabled` — webui/status будут работать только по HTTP.
-          - `CertManager` — webui/status будут работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`.
-          - `CustomCertificate` — webui/status будут работать по https используя сертификат из namespace `d8-system`.
-          - `OnlyInURI` — webui/status будет работать по HTTP (подразумевая, что перед ними стоит внешний балансер, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
+          - `Disabled` — webui/status будут работать только по HTTP;
+          - `CertManager` — webui/status будут работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
+          - `CustomCertificate` — webui/status будут работать по HTTPS, используя сертификат из namespace `d8-system`;
+          - `OnlyInURI` — webui/status будет работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         properties:
           clusterIssuerName:
@@ -170,16 +172,16 @@ properties:
         properties:
           secretName:
             description: |
-              Имя secret'а в namespace `d8-system`, который будет использоваться для webui/status.
+              Имя Secret'а в namespace `d8-system`, который будет использоваться для webui/status.
 
-              Секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   nodeSelector:
     description: |
-      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
-      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).

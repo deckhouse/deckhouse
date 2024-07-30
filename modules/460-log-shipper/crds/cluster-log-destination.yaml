@@ -24,7 +24,7 @@ spec:
           description: |
             Describes setting for a log storage, which you can use in many log sources.
 
-            `metadata.name` — is an upstream name, which you should use in CustomResource [ClusterLoggingConfig](https://deckhouse.io/documentation/v1/modules/460-log-shipper/cr.html#clusterloggingconfig).
+            `metadata.name` — is an upstream name, which you should use in custom resource [ClusterLoggingConfig](https://deckhouse.io/documentation/v1/modules/460-log-shipper/cr.html#clusterloggingconfig).
           properties:
             spec:
               type: object
@@ -77,10 +77,18 @@ spec:
                   required:
                     - type
                     - splunk
+                - properties:
+                    socket: {}
+                    type:
+                      enum:
+                        - Socket
+                  required:
+                  - type
+                  - socket
               properties:
                 type:
                   type: string
-                  enum: ["Loki", "Elasticsearch", "Logstash", "Vector", "Kafka", "Splunk"]
+                  enum: ["Loki", "Elasticsearch", "Logstash", "Vector", "Kafka", "Splunk", "Socket"]
                   description: Type of a log storage backend.
                 loki:
                   type: object
@@ -129,6 +137,12 @@ spec:
                                       - password
                             - required:
                                 - token
+                    tenantID:
+                      type: string
+                      description: |
+                        ID of a tenant.
+
+                        This option is used only for GrafanaCloud. When running Loki locally, a tenant ID is not required.
                     endpoint:
                       type: string
                       description: |
@@ -170,6 +184,13 @@ spec:
                           type: boolean
                           default: true
                           description: Verifies that the name of the remote host matches the name specified in the remote host's TLS certificate.
+                        verifyCertificate:
+                          type: boolean
+                          default: true
+                          description: |
+                            Validate the TLS certificate of the remote host.
+
+                            If set to `false`, the certificate is not checked in the Certificate Revocation Lists.
                 elasticsearch:
                   type: object
                   required:
@@ -365,6 +386,42 @@ spec:
                       items:
                         type: string
                         pattern: '^(.+)\:\d{1,5}$'
+                    encoding:
+                      type: object
+                      description: |
+                        How to encode the message.
+                      properties:
+                        codec:
+                          type: string
+                          enum: ["JSON", "CEF"]
+                          default: "JSON"
+                    keyField:
+                      type: string
+                      description: |
+                        Allows to set the [key_field](https://vector.dev/docs/reference/configuration/sinks/kafka/#key_field).
+                      x-doc-examples: ["host", "node", "namespace","parsed_data.app_info"]
+                    sasl:
+                      type: object
+                      description: Configuration for SASL authentication when interacting with Kafka.
+                      required:
+                        - mechanism
+                        - username
+                        - password
+                      properties:
+                        mechanism:
+                          type: string
+                          description: The SASL mechanism to use. Only PLAIN and SCRAM-based mechanisms are supported.
+                          enum: ["PLAIN", "SCRAM-SHA-256", "SCRAM-SHA-512"]
+                        username:
+                          type: string
+                          description: The SASL username.
+                          x-doc-examples:
+                            - "username"
+                        password:
+                          type: string
+                          description: The SASL password.
+                          x-doc-examples:
+                            - "qwerty"
                     tls:
                       type: object
                       description: Configures the TLS options for outgoing connections.
@@ -413,7 +470,7 @@ spec:
                     endpoint:
                       type: string
                       description: Base URL of the Splunk instance.
-                      x-examples:
+                      x-doc-examples:
                       - "https://http-inputs-hec.splunkcloud.com"
                     token:
                       type: string
@@ -460,6 +517,74 @@ spec:
                           type: boolean
                           default: true
                           description: Validate the TLS certificate of the remote host.
+                socket:
+                  type: object
+                  required:
+                    - address
+                    - mode
+                  properties:
+                    address:
+                      type: string
+                      pattern: '^.*:[1-9][0-9]+$'
+                      description: "Address of the socket."
+                    encoding:
+                      type: object
+                      description: "How to encode the message."
+                      properties:
+                        codec:
+                          type: string
+                          enum: ["Text", "JSON", "Syslog", "CEF"]
+                          default: "JSON"
+                    mode:
+                      type: string
+                      enum: ["TCP", "UDP"]
+                      descriptions: "The type of socket to use."
+                    tcp:
+                      type: object
+                      descriptions: "Configuration for TCP sockets."
+                      properties:
+                        tls:
+                          type: object
+                          description: Configures the TLS options for outgoing connections.
+                          properties:
+                            caFile:
+                              type: string
+                              description: Base64-encoded CA certificate in PEM format.
+                            clientCrt:
+                              type: object
+                              description: Configures the client certificate for outgoing connections.
+                              required:
+                                - crtFile
+                                - keyFile
+                              properties:
+                                crtFile:
+                                  type: string
+                                  description: |
+                                    Base64-encoded certificate in PEM format.
+
+                                    You must also set the `keyFile` parameter.
+                                keyFile:
+                                  type: string
+                                  format: password
+                                  description: |
+                                    Base64-encoded private key in PEM format (PKCS#8).
+
+                                    You must also set the `crtFile` parameter.
+                                keyPass:
+                                  type: string
+                                  format: string
+                                  description: Base64-encoded pass phrase used to unlock the encrypted key file.
+                        verifyHostname:
+                          type: boolean
+                          default: true
+                          description: Verifies that the name of the remote host matches the name specified in the remote host's TLS certificate.
+                        verifyCertificate:
+                          type: boolean
+                          default: true
+                          description: |
+                            Validate the TLS certificate of the remote host.
+
+                            If set to `false`, the certificate is not checked in the Certificate Revocation Lists.
                 vector:
                   type: object
                   required:
@@ -519,6 +644,78 @@ spec:
                       type: number
                       description: |
                         The number of records per minute.
+                    keyField:
+                      type: string
+                      description: The name of the log field whose value will be hashed to determine if the event should be rate limited.
+                    excludes:
+                      type: array
+                      description: |
+                        List of excludes for keyField.
+
+                        Only NOT matched log entries would be rate limited.
+                      x-doc-examples:
+                        - field: tier
+                          operator: Exists
+                        - field: foo
+                          operator: NotIn
+                          values:
+                          - dev
+                          - 42
+                          - "true"
+                          - "3.14"
+                        - field: bar
+                          operator: Regex
+                          values:
+                          - '^abc'
+                          - '^\d.+$'
+                      items:
+                        type: object
+                        required:
+                          - field
+                          - operator
+                        properties:
+                          field:
+                            description: Field name for filtering.
+                            type: string
+                          operator:
+                            type: string
+                            description: |
+                              Operator for log field comparations:
+                              * `In` — finds a substring in a string.
+                              * `NotIn` — is a negative version of the `In` operator.
+                              * `Regex` — is trying to match regexp over the field; only log events with matching fields will pass.
+                              * `NotRegex` — is a negative version of the `Regex` operator; log events without fields or with not matched fields will pass.
+                              * `Exists` — drops log event if it contains some fields.
+                              * `DoesNotExist` — drops log event if it does not contain some fields.
+                            enum:
+                              - In
+                              - NotIn
+                              - Regex
+                              - NotRegex
+                              - Exists
+                              - DoesNotExist
+                          values:
+                            type: array
+                            description: |
+                              Array of values or regexes for corresponding operations. Does not work for `Exists` and `DoesNotExist` operations.
+
+                              Fields a with float or boolean values will be converted to strings during comparison.
+                            items:
+                              x-kubernetes-int-or-string: true
+                              anyOf:
+                                - type: integer
+                                - type: string
+                        oneOf:
+                          - properties:
+                              operator:
+                                enum: ["Exists", "DoesNotExist"]
+                              values:
+                                maxItems: 0
+                          - properties:
+                              operator:
+                                enum: ["Regex", "NotRegex", "In", "NotIn"]
+                              values:
+                                minItems: 1
                 extraLabels:
                   type: object
                   description: |
@@ -538,17 +735,80 @@ spec:
                     - pod_owner
 
                     [More about field path notation...](https://vector.dev/docs/reference/configuration/field-path-notation/)
-                  example: |
-                    ```yaml
-                    extraLabels:
-                      forwarder: vector
+                  x-doc-examples:
+                    - forwarder: vector
                       key: value
-                      app_info: "{{ app }}"
-                      array_member: "{{ array[0] }}"
-                      symbol_escating_value: "{{ pay\.day }}"
-                    ```
+                      app_info: '{{ app }}'
+                      array_member: '{{ array[0] }}'
+                      symbol_escating_value: '{{ pay\.day }}'
+                  x-kubernetes-validations:
+                    - message: using reserved keys in extraLabels
+                      rule: '!([''pod'', ''pod_ip'', ''pod_owner'', ''parsed_data'', ''namespace'', ''image'', ''container'', ''node''].exists(k, k in self))'
                   additionalProperties:
                     type: string
                     anyOf:
                       - pattern: '^[a-zA-Z0-9_\-]+$'
                       - pattern: '^\{\{\ [a-zA-Z0-9\\\-][a-zA-Z0-9\[\]_\\\-\.]+\ \}\}$'
+                buffer:
+                  type: object
+                  oneOf:
+                    - properties:
+                        disk: {}
+                        type:
+                          enum:
+                            - Disk
+                      required:
+                        - disk
+                        - type
+                        - whenFull
+                      not:
+                        required: [memory]
+                    - properties:
+                        memory: {}
+                        type:
+                          enum:
+                            - Memory
+                      required:
+                        - memory
+                        - type
+                        - whenFull
+                      not:
+                        required: [disk]
+                  description: Buffer parameters.
+                  required: ["type"]
+                  properties:
+                    type:
+                      type: string
+                      description: The type of buffer to use.
+                      enum: ["Disk", "Memory"]
+                    disk:
+                      type: object
+                      description: Disk buffer parameters.
+                      properties:
+                        maxSize:
+                          description: |
+                            The maximum size of the buffer on disk.
+                            Must be at least ~256MB (268435488 bytes).
+
+                            You can express size as a plain integer or as a fixed-point number using one of these quantity suffixes: `E`, `P`, `T`, `G`, `M`, `k`, `Ei`, `Pi`, `Ti`, `Gi`, `Mi`, `Ki`.
+
+                            More about resource quantity:
+                            - [kubernetes quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/)
+                            - [memory resource units](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory)
+                          x-doc-examples: ["512Mi", 268435488]
+                          anyOf:
+                            - type: integer
+                            - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                    memory:
+                      type: object
+                      properties:
+                        maxEvents:
+                          description: The maximum number of events allowed in the buffer.
+                          type: number
+                    whenFull:
+                      type: string
+                      description: Event handling behavior when a buffer is full.
+                      enum: ["DropNewest", "Block"]
+                      default: "Block"

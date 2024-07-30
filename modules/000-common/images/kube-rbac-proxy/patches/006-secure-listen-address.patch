@@ -1,0 +1,16 @@
+diff --git a/main.go b/main.go
+index 563d2329..9aeb09e3 100644
+--- a/main.go
++++ b/main.go
+@@ -195,6 +195,11 @@ func main() {
+ 	if err != nil {
+ 		klog.Fatalf("Failed to parse CLI flags: %v", err)
+ 	}
++
++	if cfg.secureListenAddress == "" {
++		klog.Fatalf("--secure-listen-address flag is required")
++	}
++
+ 	kcfg := initKubeConfig(cfg.kubeconfigLocation)
+ 
+ 	upstreams, exludePaths, err := parseConfigFile(configFileName, cfg.upstream, cfg.upstreamCAFile)

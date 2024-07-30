@@ -102,7 +102,6 @@ bb-apt-install() {
         bb-apt-update
         bb-log-info "Installing packages '${PACKAGES_TO_INSTALL[@]}'"
         apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install --allow-change-held-packages --allow-downgrades -y ${PACKAGES_TO_INSTALL[@]}
-        bb-apt-hold ${PACKAGES_TO_INSTALL[@]}
         bb-exit-on-error "Failed to install packages '${PACKAGES_TO_INSTALL[@]}'"
         printf '%s\n' "${PACKAGES_TO_INSTALL[@]}" >> "$BB_APT_UNHANDLED_PACKAGES_STORE"
         NEED_FIRE=true
@@ -138,24 +137,6 @@ bb-apt-autoremove() {
     export DEBIAN_FRONTEND=noninteractive
     bb-log-info 'Autoremoving unused packages'
     apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" --purge -y autoremove
-}
-
-bb-apt-hold?() {
-    dpkg -s "$1" 2> /dev/null | grep -q '^Status:.\+installed'
-}
-
-bb-apt-hold() {
-    for PACKAGE in "$@"
-    do
-        apt-mark hold "$PACKAGE"
-    done
-}
-
-bb-apt-unhold() {
-    for PACKAGE in "$@"
-    do
-        apt-mark unhold "$PACKAGE"
-    done
 }
 
 bb-apt-package-upgrade?() {

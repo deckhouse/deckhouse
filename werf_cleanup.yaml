@@ -5,8 +5,12 @@ cleanup:
   - references:
       branch: /.*/
       limit:
-        in: 720h
+        in: 72h
+  - references:
+      branch: /release-.*/
+      limit:
+        in: 360h
   - references:
       tag: /.*/
       limit:
-        in: 720h
+        in: 360h

@@ -19,8 +19,8 @@
           ```
           Reproducing request to private endpoints (run from deckhouse pod):
           ```
-          KEY="$(deckhouse-controller module values istio -o json | jq -r .istio.internal.remoteAuthnKeypair.priv)"
-          LOCAL_CLUSTER_UUID="$(deckhouse-controller module values istio -o json | jq -r .global.discovery.clusterUUID)"
+          KEY="$(deckhouse-controller module values istio -o json | jq -r .internal.remoteAuthnKeypair.priv)"
+          LOCAL_CLUSTER_UUID="$(deckhouse-controller module values -g istio -o json | jq -r .global.discovery.clusterUUID)"
           REMOTE_CLUSTER_UUID="$(kubectl get istiofederation {{$labels.federation_name}} -o json | jq -r .status.metadataCache.public.clusterUUID)"
           TOKEN="$(deckhouse-controller helper gen-jwt --private-key-path <(echo "$KEY") --claim iss=d8-istio --claim sub=$LOCAL_CLUSTER_UUID --claim aud=$REMOTE_CLUSTER_UUID --claim scope=private-federation --ttl 1h)"
           curl -H "Authorization: Bearer $TOKEN" {{$labels.endpoint}}

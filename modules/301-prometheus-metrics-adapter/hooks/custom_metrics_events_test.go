@@ -269,7 +269,6 @@ var _ = Describe("Prometheus metrics adapter :: custom_metrics_events ::", func(
 		}
 
 		for _, mType := range metricTypesSetClusterWithNs() {
-			mType := mType
 			Context(fmt.Sprintf("Namespaced metrics: %s", mType), func() {
 				firstMetric := newMetricForTest(mType, ns1, genName("f", mType), genQuery("sum", mType))
 
@@ -319,7 +318,7 @@ var _ = Describe("Prometheus metrics adapter :: custom_metrics_events ::", func(
 					Expect(obj.Map()).To(HaveLen(0))
 				})
 
-				newClusterMetricStateGen := func(typeForNew, _ string) metricForTest {
+				newClusterMetricStateGen := func(_, _ string) metricForTest {
 					return newClusterMetricForTest(mType, genName("s", mType), genQuery("rate", mType))
 				}
 
@@ -405,8 +404,6 @@ var _ = Describe("Prometheus metrics adapter :: custom_metrics_events ::", func(
 		}
 
 		for _, mType := range metricTypesSetClusterWithNs() {
-			mType := mType
-
 			changeClusterQuery := func(metrics []metricForTest, index int, newQuery string) []metricForTest {
 				metricsWithChanged := make([]metricForTest, len(metrics))
 				copy(metricsWithChanged, metrics)
@@ -472,7 +469,6 @@ var _ = Describe("Prometheus metrics adapter :: custom_metrics_events ::", func(
 		}
 
 		for _, mType := range metricTypesSetClusterWithNs() {
-			mType := mType
 			DescribeTable("Deleting metric by kind",
 				assertDeleted,
 				Entry(fmt.Sprintf("Namespaced metrics: %s", mType), mType, namespacedMetricsSet),

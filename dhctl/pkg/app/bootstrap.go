@@ -25,8 +25,8 @@ var (
 	DevicePath     = ""
 
 	ResourcesPath    = ""
-	ResourcesTimeout = "15m"
-	DeckhouseTimeout = 10 * time.Minute
+	ResourcesTimeout = 15 * time.Minute
+	DeckhouseTimeout = 15 * time.Minute
 
 	PostBootstrapScriptTimeout = 10 * time.Minute
 	PostBootstrapScriptPath    = ""
@@ -71,15 +71,15 @@ Experimental. This feature may be deleted in the future.`).
 }
 
 func DefineResourcesFlags(cmd *kingpin.CmdClause, isRequired bool) {
-	cmd.Flag("resources", `Path to a file with declared Kubernetes resources in YAML format. It can be go-template file. Passed data contains next keys:
-  cloudDiscovery - the data discovered by applying Terrfarorm and getting its output. It depends on the cloud provider.
+	cmd.Flag("resources", `Path to a file with declared Kubernetes resources in YAML format.
+Deprecated. Please use --config flag multiple repeatedly for logical resources separation.
 `).
 		Envar(configEnvName("RESOURCES")).
 		StringVar(&ResourcesPath)
 	cmd.Flag("resources-timeout", "Timeout to create resources. Experimental. This feature may be deleted in the future.").
 		Envar(configEnvName("RESOURCES_TIMEOUT")).
-		Default(ResourcesTimeout).
-		StringVar(&ResourcesTimeout)
+		Default(ResourcesTimeout.String()).
+		DurationVar(&ResourcesTimeout)
 	if isRequired {
 		cmd.GetFlag("resources").Required()
 	}
@@ -111,4 +111,12 @@ func DefineDeckhouseInstallFlags(cmd *kingpin.CmdClause) {
 		Envar(configEnvName("MASTER_NODE_SELECTOR")).
 		Default("false").
 		BoolVar(&MasterNodeSelector)
+}
+
+func DefineConfigsForResourcesPhaseFlags(cmd *kingpin.CmdClause) {
+	// we need another flag for dhctl bootstrap-phase create-resources for backward compatibility
+	// because in another cases --config flag is required, and we do not want to add another flag in DefineConfigFlags
+	cmd.Flag("config", `Path to a file with bootstrap configuration and declared Kubernetes resources in YAML format.`).
+		Envar(configEnvName("CONFIG")).
+		StringsVar(&ConfigPaths)
 }

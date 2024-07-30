@@ -8,11 +8,11 @@
 {% if page.platform_code != 'existing' and page.platform_code != 'kind' %}
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-📚 Документация
+📚 <span class="cards-item__title-text">Документация</span>
 </h3>
 <div class="cards-item__text">
 <p>Документация по установленной в кластере версии Deckhouse.</p>
-<p>Имя веб-сервиса: {% include getting_started/global/partials/dns-template-title.html.liquid name="deckhouse" %}</p>
+<p>Имя веб-сервиса: {% include getting_started/global/partials/dns-template-title.html.liquid name="documentation" %}</p>
 </div>
 </div>
 {% endif %}
@@ -20,7 +20,7 @@
 {% if page.platform_code != 'kind' %}
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-📊 Мониторинг
+📊 <span class="cards-item__title-text">Мониторинг</span>
 </h3>
 <div class="cards-item__text">
 <p>Изучите дэшборды Grafana, поставляемые с Deckhouse.</p>
@@ -33,7 +33,7 @@
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-☸ Dashboard
+☸ <span class="cards-item__title-text">Dashboard</span>
 </h3>
 <div class="cards-item__text">
 <p>Получите доступ к Kubernetes Dashboard</p>
@@ -43,7 +43,7 @@
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-👌 Status page
+👌 <span class="cards-item__title-text">Status page</span>
 </h3>
 <div class="cards-item__text">
 <p>Узнайте общий статус Deckhouse и его компонентов.<br />
@@ -53,6 +53,21 @@
 Имя веб-сервиса: {% include getting_started/global/partials/dns-template-title.html.liquid name="upmeter" %}</p>
 </div>
 </div>
+
+{% if page.platform_code != 'kind' %}
+<div class="cards-item cards-item_inverse">
+<h3 class="cards-item__title text_h3">
+🏭 <span class="cards-item__title-text">Подготовка к production</span>
+</h3>
+<div class="cards-item__text" markdown="1">
+Подготовьте ваш кластер к приему продуктивного трафика.
+
+Воспользуйтесь нашим [чек-листом](/guides/production.html), чтобы убедиться, что вы ничего не забыли.
+</div>
+</div>
+
+<div style="width: 30%">&nbsp;</div>
+{%- endif %}
 
 {% if page.platform_code == 'kind' %}
 <div style="width: 30%">&nbsp;</div>
@@ -70,7 +85,7 @@
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-⟳ Настройка CI/CD-системы
+⟳ <span class="cards-item__title-text">Настройка CI/CD-системы</span>
 </h3>
 <div class="cards-item__text" markdown="1">
 [Создайте](/documentation/v1/modules/140-user-authz/usage.html#создание-serviceaccount-для-сервера-и-предоставление-ему-доступа) ServiceAccount, который будет осуществлять деплой в кластер, и выделите ему права.
@@ -81,7 +96,7 @@
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-🔀 Направляем трафик на приложение
+🔀 <span class="cards-item__title-text">Направляем трафик на приложение</span>
 </h3>
 <div class="cards-item__text" markdown="1">
 Создайте `Service` и `Ingress` для вашего приложения.
@@ -93,7 +108,7 @@
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-🔍 Мониторинг приложения
+🔍 <span class="cards-item__title-text">Мониторинг приложения</span>
 </h3>
 <div class="cards-item__text" markdown="1">
 Добавьте аннотации `prometheus.deckhouse.io/custom-target: "my-app"` и `prometheus.deckhouse.io/port: "80"` к созданному
@@ -117,7 +132,7 @@ Service'у.
 
 <div class="cards-item cards-item_inverse" style="width: 100%">
 <h3 class="cards-item__title text_h3">
-⚖ Управление узлами
+⚖ <span class="cards-item__title-text">Управление узлами</span>
 </h3>
 <div class="cards-item__text" markdown="1">
 {% if page.platform_type == 'cloud' %}
@@ -127,7 +142,7 @@ nodegroups`. Подробнее об этом в [документации](/doc
 Чтобы отмасштабировать существующие группы, вам достаточно изменить параметры `minPerZone` и `maxPerZone`. При этом,
 если они не равны, — у вас автоматически заработает автоскейлинг.
 
-Чтобы создать новые группы вам понадобится создать новый [InstanceClass](/documentation/v1/modules/030-cloud-provider-{{ page.platform_code | downcase }}/cr.html) и
+Чтобы создать новые группы вам понадобится создать новый [InstanceClass](/documentation/v1/modules/030-cloud-provider-{{ page.platform_code | regex_replace: "^(openstack)_.+$", "\1" | downcase }}/cr.html) и
 [NodeGroup](/documentation/v1/modules/040-node-manager/cr.html#nodegroup), которая на него
 ссылается.
 {% else %}
@@ -144,7 +159,7 @@ nodegroups`. Подробнее об этом в [документации](/doc
 <div markdown="1">
 ## Что дальше?
 
-Подробная информация о системе в целом и по каждому компоненту Deckhouse Platform расположена в
+Подробная информация о системе в целом и по каждому компоненту Deckhouse Kubernetes Platform расположена в
 [документации](/documentation/v1/).
 
 По всем возникающим вопросам вы всегда можете связаться с нашим [онлайн-сообществом](/community/about.html#online-community).

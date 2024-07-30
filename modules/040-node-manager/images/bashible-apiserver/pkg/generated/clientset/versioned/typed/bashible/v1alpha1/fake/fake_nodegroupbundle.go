@@ -19,9 +19,11 @@ limitations under the License.
 package fake
 
 import (
+	v1alpha1 "bashible-apiserver/pkg/apis/bashible/v1alpha1"
+	bashiblev1alpha1 "bashible-apiserver/pkg/generated/applyconfiguration/bashible/v1alpha1"
 	"context"
-
-	v1alpha1 "d8.io/bashible/pkg/apis/bashible/v1alpha1"
+	json "encoding/json"
+	"fmt"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -100,7 +102,7 @@ func (c *FakeNodeGroupBundles) Update(ctx context.Context, nodeGroupBundle *v1al
 // Delete takes name of the nodeGroupBundle and deletes it. Returns an error if one occurs.
 func (c *FakeNodeGroupBundles) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(nodegroupbundlesResource, name), &v1alpha1.NodeGroupBundle{})
+		Invokes(testing.NewRootDeleteActionWithOptions(nodegroupbundlesResource, name, opts), &v1alpha1.NodeGroupBundle{})
 	return err
 }
 
@@ -116,6 +118,27 @@ func (c *FakeNodeGroupBundles) DeleteCollection(ctx context.Context, opts v1.Del
 func (c *FakeNodeGroupBundles) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.NodeGroupBundle, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(nodegroupbundlesResource, name, pt, data, subresources...), &v1alpha1.NodeGroupBundle{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.NodeGroupBundle), err
+}
+
+// Apply takes the given apply declarative configuration, applies it and returns the applied nodeGroupBundle.
+func (c *FakeNodeGroupBundles) Apply(ctx context.Context, nodeGroupBundle *bashiblev1alpha1.NodeGroupBundleApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.NodeGroupBundle, err error) {
+	if nodeGroupBundle == nil {
+		return nil, fmt.Errorf("nodeGroupBundle provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(nodeGroupBundle)
+	if err != nil {
+		return nil, err
+	}
+	name := nodeGroupBundle.Name
+	if name == nil {
+		return nil, fmt.Errorf("nodeGroupBundle.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.
+		Invokes(testing.NewRootPatchSubresourceAction(nodegroupbundlesResource, *name, types.ApplyPatchType, data), &v1alpha1.NodeGroupBundle{})
 	if obj == nil {
 		return nil, err
 	}

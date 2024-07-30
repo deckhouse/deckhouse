@@ -1,4 +1,4 @@
-{{- $version := "7.80.0" }}
+{{- $version := "8.2.1" }}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
@@ -19,16 +19,21 @@ docker:
     curl: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_ALPINE }}
+from: {{ $.Images.BASE_ALPINE_DEV }}
 git:
-  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
     stageDependencies:
       setup:
       - '**/*'
 shell:
-  beforeInstall:
-  - apk add --no-cache curl
   setup:
-  - curl -sfL https://github.com/moparisthebest/static-curl/releases/download/v{{ $version }}/curl-amd64 --output /d8-curl
+  - export CC=clang
+  - git clone --depth 1 --branch curl-{{ $version | replace "." "_"}} {{ $.SOURCE_REPO }}/curl/curl.git
+  - cd /curl
+  - autoreconf -fi
+  - LDFLAGS="-static" PKG_CONFIG="pkg-config --static" ./configure --disable-shared --enable-static --disable-ldap --enable-ipv6 --enable-unix-sockets --with-ssl --with-libssh2
+  - make -j4 V=1 LDFLAGS="-static -all-static"
+  - strip src/curl
+  - mv src/curl /d8-curl
   - chmod +x /d8-curl /install /uninstall

@@ -1,0 +1,41 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedUsers
+metadata:
+  name: pod-security-standards
+spec:
+  enforcementAction: "deny"
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaceSelector:
+      matchExpressions:
+        - key: security.deckhouse.io/pod-policy
+          operator: In
+          values: 
+          - baseline
+          - restricted
+  parameters:
+    runAsUser:
+      rule: MustRunAs
+      ranges:
+      - min: 1
+        max: 10
+    runAsGroup:
+      rule: MustRunAs
+      ranges:
+      - min: 20
+        max: 200
+    fsGroup:
+      rule: MustRunAs
+      ranges:
+      - min: 10
+        max: 100
+    supplementalGroups:
+      rule: MustRunAs
+      ranges:
+      - min: 10
+        max: 100
+
+
+

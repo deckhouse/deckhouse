@@ -4,79 +4,111 @@ properties:
     description: Включает отладочный уровень логирования для компонентов Cilium.
   labelsRegex:
     description: |
-      Regex-ы лейблов для уменьшения [количества создаваемых identity](https://docs.cilium.io/en/stable/operations/performance/scalability/identity-relevant-labels/#limiting-identity-relevant-labels).
+      Cilium создает идентификаторы безопасности основываясь на лейблах сущностей k8s, чем больше лейблов участвует в этом процессе - тем более детализированно можно настроить доступы.
+      Но в кластерах больших объёмов излишняя детализация может создать большую нагрузку, и при помощи опции labelsRegex можно более явно указать - какие лейблы будут использоваться для политик безопасности,
+      а какими следует пренебречь. Подробнее об уменьшении количества создаваемых identity можно прочитать в [документации](https://docs.cilium.io/en/stable/operations/performance/scalability/identity-relevant-labels/#limiting-identity-relevant-labels)
 
-      Каждый лейбл должен задаваться в формате YAML quoted string с экранированием спецсимволов.
+      Каждый лейбл должен задаваться RegExp-выражением в формате YAML quoted string с экранированием спецсимволов.
   createNodeRoutes:
     description: |
-      Включает создание маршрутов к Pod'ам на других узлах.
+      Включает создание маршрутов к подам на других узлах.
 
       Все узлы должны находиться в одной сети L2.
   tunnelMode:
     description: |
       Режим работы туннеля.
 
-      > Внимание! После изменения параметра необходимо перезагрузить все узлы, иначе могут быть проблемы с доступностью Pod'ов.
+      > Внимание! После изменения параметра необходимо перезагрузить все узлы, иначе могут быть проблемы с доступностью подов.
+
+      > Внимание! Режим VXLAN не совместим со следующими режимами bpfLBMode: Hybrid, DSR. Если tunnelMode настроен на VXLAN, то bpfLBMode будет переопределён на SNAT автоматически.
   svcSourceRangeCheck:
     description: |
-      Включает проверку source IP и его соответствие loadBalancerSourceRanges Service'а.
+      Для сервисов с типом `loadBalancer` включает проверку source IP на его соответствие [loadBalancer.sourceRanges](../402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-loadbalancer-sourceranges).
+      Проверка не производится, если доступ производится изнутри кластера или параметр `sourceRanges` пуст/не указан.
+      Некоторые облачные провайдеры в своих реализациях loadBalancer поддерживают фильтрацию входящего траффика на основе параметра `sourceRanges`, в таком случае [документация по cilium](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#loadbalancer-source-ranges-checks)
+      рекомендует отключать проверку `svcSourceRangeCheck`.
 
-      Не включайте, если перед сервисами есть балансировщик или какие-либо виды SNAT.
+      Не включайте, если перед сервисами есть другой балансировщик или какие-либо виды SNAT.
   policyAuditMode:
     description: |
-      Отключает влияние сетевых политик на трафик. Запрещённые соединения логгируются.
+      Отключает влияние сетевых политик на трафик. Сетевые запросы, попавшие под запрет политик, просто логируются.
   bpfLBMode:
     description: |
-      Режим работы балансировщика eBPF.
+      Режим работы балансировщика eBPF:
+      - `SNAT` - траффик от клиента до пода (и обратно) проходит через NAT, соответственно теряется адрес отправителя.
+      - `DSR` - траффик от клиента до пода проходит с сохранением адреса отправителя, а обратно - согласно правилам роутинга (минуя балансировщик). Этот режим экономит сетевой траффик, уменьшает задержки, но работает только для TCP траффика.
+      - `Hybrid` - TCP траффик обрабатывается в режиме DSR, а UDP - в режиме SNAT.
   resourcesManagement:
     description: |
-      Настройки управления ресурсами cilium agent.
+      Настройки запросов (requests) и ограничений (limits) использования CPU и памяти подами агента cilium.
     properties:
       mode:
+        description: |
+          Режим управления ресурсами:
+          - `Static` — классический, с помощью указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-resourcesmanagement-static);
+          - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-resourcesmanagement-vpa).
       vpa:
         description: |
-          Параметры для режима VPA.
+          Настройка управления ресурсами в режиме `VPA`.
         properties:
           mode:
             description: |
               Режим работы VPA.
           cpu:
-            min:
-              description: |
-                Минимально допустимый requests для cpu.
-            max:
-              description: |
-                Максимально допустимый requests для cpu.
-            limitRatio:
-              description: |
-                Коэффициент для вычисления limits процессора. Опционально используется для подсчёта первичного limits процессора у Pod'а. VPA при своей работе сохраняет пропорцию limits/requests и при вычислении подходящего, актуального requests настраивает limits в том же соотношении.
+            description: |
+              Настройки VPA при работе с CPU.
+            properties:
+              min:
+                description: |
+                  Минимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
+              max:
+                description: |
+                  Максимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
+              limitRatio:
+                description: |
+                  Коэффициент расчета ограничений использования CPU относительно запросов (limits/requests).
+
+                  Применяется для расчета начальных ограничений использования CPU для пода (CPU limits).
+
+                  Если параметр указан, то VPA, при пересчете запросов CPU (CPU requests) будет пересчитывать ограничения использования CPU (CPU limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).
           memory:
-            min:
-              description: |
-                Минимально допустимый requests для memory.
-            max:
-              description: |
-                Максимально допустимый requests для memory.
-            limitRatio:
-              description: |
-                Коэффициент для вычисления limits процессора. Опционально используется для подсчёта первичного limits процессора у Pod'а. VPA при своей работе сохраняет пропорцию limits/requests и при вычислении подходящего, актуального requests настраивает limits в том же соотношении.
+            description: |
+               Настройка ограничений (limits) использования CPU и памяти.
+            properties:
+              min:
+                description: |
+                  Минимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
+              max:
+                description: |
+                  Максимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
+              limitRatio:
+                description: |
+                  Коэффициент расчета ограничений использования памяти относительно запросов (limits/requests).
+
+                  Применяется для расчета начальных ограничений использования памяти для пода (memory limits).
+
+                  Если параметр указан, то VPA, при пересчете запросов памяти (memory requests) будет пересчитывать ограничения использования памяти (memory limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).
       static:
         description: |
-          Настройки управления ресурсами в статическом режиме.
+          Настройка управления ресурсами в режиме `Static`.
         properties:
           requests:
+            description: |
+              Настройки запросов ресурсов (requests) подов.
             properties:
               cpu:
                 description: |
-                  Реквесты CPU.
+                  Настройка запроса CPU (CPU requests).
               memory:
                 description: |
-                  Реквесты памяти.
+                  Настройка запроса памяти (memory requests).
           limits:
+            description: |
+              Настройка ограничений (limits) использования CPU и памяти.
             properties:
               cpu:
                 description: |
-                  Лимиты CPU.
+                  Настройка ограничений использования CPU (CPU limits).
               memory:
                 description: |
-                  Лимиты памяти.
+                  Настройка ограничений использования памяти (memory limits).

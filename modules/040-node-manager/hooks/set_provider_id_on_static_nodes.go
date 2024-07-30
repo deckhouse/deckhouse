@@ -29,7 +29,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                   "nodes",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			ApiVersion:             "v1",
 			Kind:                   "Node",
 			FilterFunc:             setProviderIDNodeFilter,
@@ -55,7 +55,7 @@ func setProviderIDNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		}
 	}
 
-	if !hasUninitializedTaint && node.Spec.ProviderID == "" && node.Labels["node.deckhouse.io/type"] != "CloudEphemeral" {
+	if !hasUninitializedTaint && node.Spec.ProviderID == "" && node.Labels["node.deckhouse.io/type"] == "Static" {
 		needPatch = true
 	}
 

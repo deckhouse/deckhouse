@@ -28,21 +28,21 @@ func TestExecuteTemplate(t *testing.T) {
 nodeIP: "127.0.0.1"
 runType: "ClusterBootstrap"
 clusterConfiguration:
-  kubernetesVersion: "1.21"
+  kubernetesVersion: "1.29"
   clusterType: "Cloud"
   serviceSubnetCIDR: "127.0.0.1/24"
   podSubnetCIDR: "127.0.0.1/24"
   clusterDomain: "%s.example.com"
 k8s:
-  '1.21':
-    patch: 7
+  '1.29':
+    patch: 1
 extraArgs: {}
 `), &data)
 	if err != nil {
 		t.Errorf("Loading templates error: %v", err)
 	}
 
-	_, err = RenderTemplatesDir("/deckhouse/candi/control-plane-kubeadm/", data)
+	_, err = RenderTemplatesDir("/deckhouse/candi/control-plane-kubeadm/", data, nil)
 	if err != nil {
 		t.Errorf("Rendering templates error: %v", err)
 	}
@@ -58,7 +58,7 @@ nodeIP: "127.0.0.1"
 		t.Errorf("Loading templates error: %v", err)
 	}
 
-	rendered, err := RenderTemplatesDir("testdata/execute", data)
+	rendered, err := RenderTemplatesDir("testdata/execute", data, nil)
 	if err != nil {
 		t.Errorf("Rendering templates error: %v", err)
 	}

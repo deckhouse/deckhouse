@@ -1,0 +1,10 @@
+admission-policy-engine:
+  fixes:
+    - summary: Update Kubernetes Go client dependency to `0.26.4`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5454
+      impact: '`gatekeeper-audit` pod will be recreated.'
+docs:
+  fixes:
+    - summary: Added creating a backup before a potentially dangerous action.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5361
+

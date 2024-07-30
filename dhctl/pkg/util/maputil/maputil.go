@@ -33,11 +33,36 @@ func ExcludeKeys(m map[string]string, excludeKeys ...string) map[string]string {
 	return res
 }
 
-func Values(m map[string]string) []string {
-	keysList := make([]string, 0, len(m))
-	for _, v := range m {
-		keysList = append(keysList, v)
+func Join[K comparable, V any](dst map[K]V, sources ...map[K]V) {
+	for _, src := range sources {
+		for k, v := range src {
+			dst[k] = v
+		}
+	}
+}
+
+func Clone[K comparable, V any](in map[K]V) (out map[K]V) {
+	out = make(map[K]V)
+	for k, v := range in {
+		out[k] = v
+	}
+	return
+}
+
+func Keys[K comparable, V any](m map[K]V) []K {
+	keysList := make([]K, 0, len(m))
+	for k := range m {
+		keysList = append(keysList, k)
 	}
 
 	return keysList
+}
+
+func Values[K comparable, V any](m map[K]V) []V {
+	valuesList := make([]V, 0, len(m))
+	for _, v := range m {
+		valuesList = append(valuesList, v)
+	}
+
+	return valuesList
 }

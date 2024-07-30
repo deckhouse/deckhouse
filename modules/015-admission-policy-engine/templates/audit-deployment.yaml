@@ -60,7 +60,7 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       containers:
       - image: {{ include "helm_lib_module_image" (list . "gatekeeper") }}
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -78,7 +78,7 @@ spec:
         - --logtostderr
         - --health-addr=:9090
         - --prometheus-port=8888
-        - --enable-external-data=false
+        - --enable-external-data=true
         - --metrics-backend=prometheus
         - --disable-cert-rotation=true
         env:
@@ -208,7 +208,7 @@ metadata:
   namespace: d8-admission-policy-engine
   {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "audit-controller" "gatekeeper.sh/operation" "audit" "gatekeeper.sh/system" "yes")) | nindent 2 }}
 spec:
-  minAvailable: 1
+  minAvailable: 0
   selector:
     matchLabels:
       app: 'gatekeeper'

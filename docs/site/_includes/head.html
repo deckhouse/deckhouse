@@ -36,9 +36,9 @@
 {%- assign generated_title = title_parts | reverse | join: " / " %}
 <title>{{ generated_title }} | {{ site.site_title }}</title>
 {% if page.description %}
-    {%- assign description = page.description | strip_html | strip_newlines | strip | truncate: 160 %}
+    {%- assign description = page.description | strip_html | strip_newlines | strip | truncate: 200 %}
 {% else %}
-    {%- assign description = site.site_description[page.lang] | strip_html | strip_newlines | strip | truncate: 160 %}
+    {%- assign description = site.site_description[page.lang] | strip_html | strip_newlines | strip | truncate: 200 %}
 {% endif %}
 
 {%- if include.mode=='documentation' %}

@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,9 +28,11 @@ import (
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
-	"d8.io/bashible/pkg/apis/bashible/v1alpha1"
-	"d8.io/bashible/pkg/apiserver"
-	bashibleopenapi "d8.io/bashible/pkg/generated/openapi"
+	"bashible-apiserver/pkg/apiserver"
+	"bashible-apiserver/pkg/apiserver/readyz"
+	bashibleopenapi "bashible-apiserver/pkg/generated/openapi"
+
+	"bashible-apiserver/pkg/apis/bashible/v1alpha1"
 )
 
 // BashibleServerOptions contains state for master/api server
@@ -96,7 +98,7 @@ func (o *BashibleServerOptions) Complete() error {
 }
 
 // Config returns config for the api server given BashibleServerOptions
-func (o *BashibleServerOptions) Config() (*apiserver.Config, error) {
+func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Config, error) {
 	// TODO have a "real" external address
 	if err := o.RecommendedOptions.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", nil, []net.IP{net.ParseIP("127.0.0.1")}); err != nil {
 		return nil, fmt.Errorf("error creating self-signed certificates: %v", err)
@@ -104,15 +106,30 @@ func (o *BashibleServerOptions) Config() (*apiserver.Config, error) {
 
 	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
 
+	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIConfig(
+		bashibleopenapi.GetOpenAPIDefinitions,
+		openapi.NewDefinitionNamer(apiserver.Scheme))
+	serverConfig.OpenAPIV3Config.Info.Title = "Bashible"
+	serverConfig.OpenAPIV3Config.Info.Version = "0.1"
+	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
+		return nil, err
+	}
+
 	serverConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(
 		bashibleopenapi.GetOpenAPIDefinitions,
 		openapi.NewDefinitionNamer(apiserver.Scheme))
 	serverConfig.OpenAPIConfig.Info.Title = "Bashible"
 	serverConfig.OpenAPIConfig.Info.Version = "0.1"
-
 	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
 		return nil, err
 	}
+
+	deployInformer := serverConfig.SharedInformerFactory.Apps().V1().Deployments().Informer()
+	deployHealthChecker, err := readyz.NewDeploymentReadinessCheck(stopCh, deployInformer, "d8-system", "deckhouse")
+	if err != nil {
+		return nil, fmt.Errorf("readyz.NewDeploymentReadinessCheck: %w", err)
+	}
+	serverConfig.ReadyzChecks = append(serverConfig.ReadyzChecks, deployHealthChecker)
 
 	config := &apiserver.Config{
 		GenericConfig: serverConfig,
@@ -123,7 +140,7 @@ func (o *BashibleServerOptions) Config() (*apiserver.Config, error) {
 
 // RunBashibleServer starts a new BashibleServer given BashibleServerOptions
 func (o BashibleServerOptions) RunBashibleServer(stopCh <-chan struct{}) error {
-	config, err := o.Config()
+	config, err := o.Config(stopCh)
 	if err != nil {
 		return err
 	}

@@ -18,7 +18,7 @@ function _enable_sysctl_tuner_service() {
   systemctl enable sysctl-tuner.timer
 }
 
-bb-sync-file /usr/local/bin/sysctl-tuner - << "EOF"
+bb-sync-file /opt/deckhouse/bin/sysctl-tuner - << "EOF"
 #!/bin/bash
 
 # After multiplying this value by the number of cores of the node, we get `nf_conntrack_max`,
@@ -35,6 +35,9 @@ sysctl -w net.netfilter.nf_conntrack_max=$NF_CONNTRACK_MAX # set a limit on the 
 sysctl -w net.nf_conntrack_max=$NF_CONNTRACK_MAX
 echo $(( $NF_CONNTRACK_MAX / 4 )) > /sys/module/nf_conntrack/parameters/hashsize # set the proportional size of the hash table for search by contact
 
+# Prevent ipv4 forwarding from being disabled
+sysctl -w net.ipv4.conf.all.forwarding=1
+
 # http://www.brendangregg.com/blog/2017-12-31/reinvent-netflix-ec2-tuning.html
 sysctl -w vm.swappiness=0
 sysctl -w net.core.somaxconn=1000
@@ -47,7 +50,7 @@ sysctl -w net.ipv4.tcp_max_syn_backlog=8096
 sysctl -w net.ipv4.tcp_no_metrics_save=1 # do not cache TCP metrics for subsequent connections using the same (dst_ip, src_ip, dst_port, src_port) tuple, because it is harmful and unnecessary in modern WAN networks
 sysctl -w net.ipv4.tcp_slow_start_after_idle=0 # not needed in modern networks, because it begins to aggressively reduce TCP cwnd on idle connections
 sysctl -w net.ipv4.tcp_tw_reuse=1 # secure option to reuse TIME-WAIT socket on outgoing connection
-sysctl -w net.ipv4.ip_local_port_range="10500 65535" # we are using ports lower than 10500 for binding deckhouse modules components
+sysctl -w net.ipv4.ip_local_port_range="32768 61000" # the port range recommended parameter that is used by TCP and UDP traffic to choose the local port
 sysctl -w net.ipv4.neigh.default.gc_thresh1=16384 # fix neighbour: arp_cache: neighbor table overflow!
 sysctl -w net.ipv4.neigh.default.gc_thresh2=28672
 sysctl -w net.ipv4.neigh.default.gc_thresh3=32768
@@ -66,10 +69,18 @@ sysctl -w kernel.pid_max=2000000
 {{- if eq .bundle "centos" }}
 sysctl -w fs.may_detach_mounts=1 # For Centos to avoid problems with unmount when container stops # https://bugzilla.redhat.com/show_bug.cgi?id=1441737
 {{- end }}
+
 # kubelet parameters
 sysctl -w vm.overcommit_memory=1
-sysctl -w kernel.panic=10
 sysctl -w kernel.panic_on_oops=1
+
+# Default value for correct kubelet startup
+{{- $fencingTime := 10 }}
+{{- if eq (dig "fencing" "mode" "" .nodeGroup) "Watchdog" }}
+  # For fencing to work correctly, we need to block node restart in case of panic.
+  {{- $fencingTime = 0 }}
+{{- end }}
+sysctl -w kernel.panic={{ $fencingTime }}
 
 # we use tee for work with globs
 echo 256 | tee /sys/block/*/queue/nr_requests >/dev/null # put more in the request queue, increase throughput
@@ -80,7 +91,7 @@ echo 0 | tee /sys/kernel/mm/transparent_hugepage/use_zero_page >/dev/null
 echo 0 | tee /sys/kernel/mm/transparent_hugepage/khugepaged/defrag >/dev/null
 echo 0 | tee /proc/sys/net/ipv4/conf/*/rp_filter >/dev/null # disable reverse-path filtering on all interfaces
 EOF
-chmod +x /usr/local/bin/sysctl-tuner
+chmod +x /opt/deckhouse/bin/sysctl-tuner
 
 # Generate sysctl tuner unit
 bb-sync-file /etc/systemd/system/sysctl-tuner.timer - sysctl-tuner-service-changed << EOF
@@ -101,7 +112,7 @@ Description=Sysctl Tuner
 
 [Service]
 EnvironmentFile=/etc/environment
-ExecStart=/usr/local/bin/sysctl-tuner
+ExecStart=/opt/deckhouse/bin/sysctl-tuner
 EOF
 
 systemctl stop sysctl-tuner.timer

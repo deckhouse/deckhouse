@@ -1,8 +1,9 @@
 ---
 title: "Cloud provider — AWS: Layouts"
+description: "Schemes of placement and interaction of resources in AWS when working with the Deckhouse cloud provider."
 ---
 
-Three layouts are supported. Below is more information about each of them.
+Two layouts are supported. Below is more information about each of them.
 
 ## WithoutNAT
 
@@ -19,21 +20,24 @@ Example of the layout configuration:
 apiVersion: deckhouse.io/v1
 kind: AWSClusterConfiguration
 layout: WithoutNAT
+vpcNetworkCIDR: "10.241.0.0/16"
+nodeNetworkCIDR: "10.241.32.0/20"
+sshPublicKey: <SSH_PUBLIC_KEY>
 provider:
-  providerAccessKeyId: MYACCESSKEY
-  providerSecretAccessKey: mYsEcReTkEy
+  providerAccessKeyId: '<AWS_ACCESS_KEY>'
+  providerSecretAccessKey: '<AWS_SECRET_ACCESS_KEY>'
   region: eu-central-1
 masterNodeGroup:
   replicas: 1
   instanceClass:
-    # type of the instance
+    # Type of the instance.
     instanceType: m5.xlarge
     # Amazon Machine Image ID
     # AMI Catalog in the AWS console: EC2 -> AMI Catalog
     ami: ami-0caef02b518350c8b
-    # master node VM disk size
+    # Master node VM disk size.
     diskSizeGb: 30
-    # master node VM disk type to use
+    # Master node VM disk type to use.
     diskType: gp3
 nodeGroups:
   - name: mydb
@@ -45,10 +49,7 @@ nodeGroups:
       instanceType: t2.medium
       ami: ami-0caef02b518350c8b
     additionalTags:
-      backup: me
-vpcNetworkCIDR: "10.241.0.0/16"
-nodeNetworkCIDR: "10.241.32.0/20"
-sshPublicKey: <SSH_PUBLIC_KEY>
+      backup: srv1
 tags:
   team: rangers
 ```
@@ -71,8 +72,8 @@ apiVersion: deckhouse.io/v1
 kind: AWSClusterConfiguration
 layout: WithNAT
 provider:
-  providerAccessKeyId: MYACCESSKEY
-  providerSecretAccessKey: mYsEcReTkEy
+  providerAccessKeyId: '<AWS_ACCESS_KEY>'
+  providerSecretAccessKey: '<AWS_SECRET_ACCESS_KEY>'
   region: eu-central-1
 withNAT:
   bastionInstance:
@@ -86,14 +87,14 @@ masterNodeGroup:
   # If there is more than one master node, the etcd cluster will be set up automatically.
   replicas: 1
   instanceClass:
-    # type of the instance
+    # Type of the instance.
     instanceType: m5.xlarge
-    # Amazon Machine Image ID
+    # Amazon Machine Image ID.
     # AMI Catalog in the AWS console: EC2 -> AMI Catalog
     ami: ami-0caef02b518350c8b
-    # master node VM disk size
+    # Master node VM disk size.
     diskSizeGb: 30
-    # master node VM disk type to use
+    # Master node VM disk type to use.
     diskType: gp3
 nodeGroups:
   - name: mydb

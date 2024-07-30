@@ -33,8 +33,8 @@ locals {
 }
 
 resource "aws_ebs_volume" "kubernetes_data" {
-  size            = 150 # To achieve io rate burst limit 450iops, average io rate for etcd is 300iops
-  type            = "gp2"
+  size            = var.node_group.instanceClass.etcdDisk.sizeGb
+  type            = var.node_group.instanceClass.etcdDisk.type
   tags = merge(var.tags, {
     Name = "${var.prefix}-kubernetes-data-${var.node_index}"
   })
@@ -73,6 +73,7 @@ resource "aws_instance" "master" {
   root_block_device {
     volume_size = var.root_volume_size
     volume_type = var.root_volume_type
+    tags        = var.tags
   }
 
   tags = merge(var.tags, {

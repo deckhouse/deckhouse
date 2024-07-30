@@ -17,9 +17,11 @@
 set -Eeo pipefail
 shopt -s failglob
 
-# This script generates the report that contains all known CVEs for base images.
-# Base images are used to deploy binaries.
-# Thus, every CVE found by this script will be present in the full release report multiple times.
+source tools/cve/trivy-wrapper.sh
+
+# This script generates full base image CVE scan report
+# for a checked image_versions.yml in `out/` directory in HTML format.
+# Also, this script generates `out/.trivyignore` file to exclude found CVEs from `d8-images.sh` scan.
 #
 # Usage: OPTION=<value> base-images.sh
 #
@@ -31,21 +33,26 @@ fi
 
 # Hack to get the base images list.
 # We need to figure out the proper way to store this images and avoid template rendering.
-function base_images_tags {
-  base_images=$(grep . $(pwd)/candi/image_versions.yml) # non empty lines
-  base_images=$(grep -v "#" <<< "$base_images") # remove comments
 
-  reg_path=$(grep "REGISTRY_PATH" <<< ${base_images} | awk '{ print $2 }' | jq -r)
+function registryPath() {
+    grep "REGISTRY_PATH" <<<"$base_images" | awk '{ print $2 }' | tr -d '"'
+}
 
-  base_images=$(grep -v "REGISTRY_PATH" <<< "$base_images") # Not an image
-  base_images=$(grep -v "BASE_GOLANG" <<< "$base_images") # golang images are used for multistage builds
-  base_images=$(grep -v "BASE_RUST" <<< "$base_images") # rust images are used for multistage builds
-  base_images=$(grep -v "BASE_JEKYLL" <<< "$base_images") # images to build docs
-  base_images=$(grep -v "BASE_NODE" <<< "$base_images") # js bundles compilation
+function base_images_tags() {
+  base_images=$(grep . "$(pwd)/candi/image_versions.yml") # non empty lines
+  base_images=$(grep -v "#" <<<"$base_images")            # remove comments
 
-  base_images=$(awk '{ print $2 }' <<< "$base_images") # pick an actual images address
-  base_images=$(jq -sr --arg reg "$reg_path" 'map(. | "\($reg)\(.)") | .[]' <<< "$base_images") # "string" -> registry.deckhouse.io/base_images/string
+  reg_path=$(grep "REGISTRY_PATH" <<<"$base_images" | awk '{ print $2 }' | tr -d '"')
 
+  base_images=$(grep -v "REGISTRY_PATH" <<<"$base_images") # Not an image
+  base_images=$(grep -v "BASE_GOLANG" <<<"$base_images")   # golang images are used for multistage builds
+  base_images=$(grep -v "BASE_JEKYLL" <<<"$base_images")   # images to build docs
+  base_images=$(grep -v "BASE_NODE" <<<"$base_images")     # js bundles compilation
+
+  base_images=$(awk '{ print $2 }' <<<"$base_images")                                          # pick an actual images address
+  base_images=$(tr -d '"' <<<"$base_images") # "string" -> registry.deckhouse.io/base_images/string
+
+  echo "$reg_path"
   echo "$base_images"
 }
 
@@ -53,13 +60,33 @@ function __main__() {
   echo "Severity: $SEVERITY"
   echo ""
 
-  for image in $(base_images_tags) ; do
+  base_images_tags
+
+  WORKDIR=$(mktemp -d)
+  BASE_IMAGES_RAW=$(base_images_tags)
+  REGISTRY=$(echo "$BASE_IMAGES_RAW" | head -n 1)
+  BASE_IMAGES=$(echo "$BASE_IMAGES_RAW" | tail -n +2)
+  mkdir -p out/
+  htmlReportHeader > out/base-images.html
+
+  for image in $BASE_IMAGES; do
+    # Some of our base images contain no layers.
+    # Trivy cannot scan such images because docker never implemented exporting them.
+    # We should not attempt to scan images that cannot be exported.
+    # Fixes https://github.com/deckhouse/deckhouse/issues/5020
+    docker manifest inspect $image | jq -e '.layers | length > 0' > /dev/null || continue
+
     echo "----------------------------------------------"
     echo "👾 Image: $image"
     echo ""
 
-    trivy image --timeout 10m --severity=$SEVERITY "$image"
+    trivyGetCVEListForImage -r "$REGISTRY" -i "$image" > "$WORKDIR/$(echo "$image" | tr "/" "_").cve"
+    trivyGetHTMLReportPartForImage -r "$REGISTRY" -i "$image" -l "$(echo "$image" | cut -d@ -f1)" >> out/base-images.html
   done
+
+  find "$WORKDIR" -type f -exec cat {} + | uniq | sort > out/.trivyignore
+  rm -r "$WORKDIR"
+  htmlReportFooter >> out/base-images.html
 }
 
 __main__

@@ -1,0 +1,13 @@
+candi:
+  fixes:
+    - summary: Revert migration to cgroupfs driver for containerd CRI.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5514
+helm:
+  fixes:
+    - summary: Find and notify deprecated helm releases for the current Kubernetes version + 2.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5535
+user-authn:
+  fixes:
+    - summary: Use global discovered `publishAPI` cert by default for generated kubeconfigs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5505
+

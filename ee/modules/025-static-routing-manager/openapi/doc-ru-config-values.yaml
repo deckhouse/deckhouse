@@ -1,0 +1,8 @@
+type: object
+properties:
+  logLevel:
+    description: Уровень логирования модуля `static-routing-manager`.
+  routingTableIDMin:
+    description: Минимальное значение, которое можно выбрать в качестве iproute table ID для ресурсов `RoutingTable` без явного указания `spec.ipRoutingTableID`.
+  routingTableIDMax:
+    description: Максимальное значение, которое можно выбрать в качестве iproute table ID для ресурсов `RoutingTable` без явного указания `spec.ipRoutingTableID`.

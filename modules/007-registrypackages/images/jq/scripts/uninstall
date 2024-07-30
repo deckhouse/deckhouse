@@ -14,4 +14,4 @@
 # limitations under the License.
 
 set -Eeo pipefail
-rm -f /usr/local/bin/jq
+rm -f /opt/deckhouse/bin/jq

@@ -77,7 +77,7 @@ metadata:
 `
 	)
 
-	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.16.15", "kubernetesVersions":["1.16.15"], "clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}},"nodeManager":{"internal": {}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.16.15", "kubernetesVersions":["1.16.15"], "clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}},"nodeManager":{"internal": {"cloudProvider": {"machineClassKind":"some"}}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineSet", true)
@@ -116,6 +116,19 @@ metadata:
 		It("Hook must not fail; flag must be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("nodeManager.internal.machineControllerManagerEnabled").String()).To(Equal("true"))
+		})
+	})
+
+	Context("Cluster with CloudEphemeral NG only and without machine class", func() {
+		BeforeEach(func() {
+			f.ValuesSet("nodeManager.internal.cloudProvider.machineClassKind", "")
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(nodeGroupCloudEphemeral, 1))
+			f.RunHook()
+		})
+
+		It("Hook must not fail; flag must not be set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.machineControllerManagerEnabled").Exists()).To(BeFalse())
 		})
 	})
 

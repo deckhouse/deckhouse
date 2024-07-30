@@ -1,21 +1,18 @@
-{{- $version := "1.10.1" }}
+{{- $version := "1.12.3" }}
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ $.Images.BASE_ALPINE }}
+fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /build/cert-manager/_bin/server/controller-linux-amd64
   to: /bin/cert-manager-controller
   before: setup
-shell:
-  beforeInstall:
-  - apk add --no-cache ca-certificates
 docker:
   ENTRYPOINT: ["/bin/cert-manager-controller"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
 git:
-- add: /modules/101-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
@@ -30,8 +27,8 @@ shell:
   install:
   - mkdir /build
   - cd /build
-  - git clone -b "v{{ $version }}" --single-branch --depth=1 https://github.com/jetstack/cert-manager.git
+  - git clone -b "v{{ $version }}" --single-branch --depth=1 {{ $.SOURCE_REPO }}/jetstack/cert-manager.git
   - cd /build/cert-manager
-  - test -d /patches && for patchfile in /patches/*.patch ; do patch -p1 < ${patchfile}; done
+  - git apply /patches/*.patch --verbose
   - export RELEASE_VERSION="v{{ $version }}-flant"
-  - make CTR=jq _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64
+  - GOPROXY={{ $.GOPROXY }} make CTR=jq _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64

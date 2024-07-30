@@ -20,30 +20,37 @@ spec:
     name: some-group-name
   accessLevel: PrivilegedUser
   portForwarding: true
-  # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition)
+  # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition).
   allowAccessToSystemNamespaces: false
-  # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition)
-  limitNamespaces:
-  - review-.*
-  - stage
+  # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition).
+  namespaceSelector:
+    labelSelector:
+      matchExpressions:
+      - key: stage
+        operator: In
+        values:
+        - test
+        - review
+      matchLabels:
+        team: frontend
 ```
 
 ## Создание пользователя
 
 В Kubernetes есть две категории пользователей:
 
-* ServiceAccount'ы, учёт которых ведёт сам Kubernetes через API.
-* Остальные пользователи, чей учёт ведёт не сам Kubernetes, а некоторый внешний софт, который настраивает администратор кластера – существует множество механизмов аутентификации и, соответственно, множество способов заводить пользователей. В настоящий момент поддерживается два способа аутентификации:
-  * Через модуль [user-authn](../../modules/150-user-authn/).
-  * С помощью сертификатов.
+* ServiceAccount'ы, учет которых ведет сам Kubernetes через API.
+* Остальные пользователи, учет которых ведет не сам Kubernetes, а некоторый внешний софт, который настраивает администратор кластера, — существует множество механизмов аутентификации и, соответственно, множество способов заводить пользователей. В настоящий момент поддерживаются два способа аутентификации:
+  * через модуль [user-authn](../../modules/150-user-authn/);
+  * с помощью сертификатов.
 
-При выпуске сертификата для аутентификации, нужно указать в нем имя (`CN=<имя>`), необходимое количество групп (`O=<группа>`) и подписать его с помощью корневого CA кластера. Именно этим механизмом вы аутентифицируетесь в кластере, когда например используете kubectl на bastion-узле.
+При выпуске сертификата для аутентификации нужно указать в нем имя (`CN=<имя>`), необходимое количество групп (`O=<группа>`) и подписать его с помощью корневого CA-кластера. Именно этим механизмом вы аутентифицируетесь в кластере, когда, например, используете kubectl на bastion-узле.
 
 ### Создание ServiceAccount для сервера и предоставление ему доступа
 
-Может быть необходимо выдать постоянный доступ к Kubernetes API для сервера, например, чтобы CI-система могла выкладывать приложения в кластер.
+Создание ServiceAccount с доступом к Kubernetes API может потребоваться, например, при настройке развертывания приложений через CI-системы.  
 
-1. Создайте `ServiceAccount` в namespace `d8-service-accounts` (имя можно изменить):
+1. Создайте ServiceAccount, например в namespace `d8-service-accounts`:
 
    ```shell
    kubectl create -f - <<EOF
@@ -64,7 +71,7 @@ spec:
    EOF
    ```
 
-2. Дайте необходимые `ServiceAccount` права (используя custom resource [ClusterAuthorizationRule](cr.html#clusterauthorizationrule)):
+1. Дайте необходимые ServiceAccount права (используя custom resource [ClusterAuthorizationRule](cr.html#clusterauthorizationrule)):
 
    ```shell
    kubectl create -f - <<EOF
@@ -78,90 +85,95 @@ spec:
        name: gitlab-runner-deploy
        namespace: d8-service-accounts
      accessLevel: SuperAdmin
-     # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition)
+     # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition).
      allowAccessToSystemNamespaces: true      
    EOF
    ```
 
-   Если в конфигурации Deckhouse включен режим multitenancy (доступно только в версии Enterprise Edition), то, чтобы дать SA доступ в системные namespace'ы укажите `allowAccessToSystemNamespaces: true`.
+   Если в конфигурации Deckhouse включен режим мультитенантности (параметр [enableMultiTenancy](configuration.html#parameters-enablemultitenancy), доступен только в Enterprise Edition), настройте доступные для ServiceAccount пространства имен (параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
 
-3. Сгенерируйте `kube-config`, подставив свои значения переменных в начале:
+1. Определите значения переменных (они будут использоваться далее), выполнив следующие команды (**подставьте свои значения**):
 
    ```shell
-   cluster_name=my-cluster
-   user_name=gitlab-runner-deploy.my-cluster
-   context_name=${cluster_name}-${user_name}
-   file_name=kube.config
+   export CLUSTER_NAME=my-cluster
+   export USER_NAME=gitlab-runner-deploy.my-cluster
+   export CONTEXT_NAME=${CLUSTER_NAME}-${USER_NAME}
+   export FILE_NAME=kube.config
    ```
 
-   * Секция `cluster`:
-     * Если есть доступ напрямую до API-сервера, то используйте его IP:
-       1. Получите CA кластера Kubernetes:
+1. Сгенерируйте секцию `cluster` в файле конфигурации kubectl:
 
-          ```shell
-          kubectl get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
-          ```
+   Используйте один из следующих вариантов доступа к API-серверу кластера:
 
-       2. Сгенерируйте секцию с IP API-сервера:
+   * Если есть прямой доступ до API-сервера:
+     1. Получите сертификат CA кластера Kubernetes:
 
-          ```shell
-          kubectl config set-cluster $cluster_name --embed-certs=true \
-            --server=https://$(kubectl get ep kubernetes -o json | jq -rc '.subsets[0] | "\(.addresses[0].ip):\(.ports[0].port)"') \
-            --certificate-authority=/tmp/ca.crt \
-            --kubeconfig=$file_name
-          ```
+        ```shell
+        kubectl get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
+        ```
 
-     * Если прямого доступа до API-сервера нет, то [включите](../../modules/150-user-authn/configuration.html#параметры) `publishAPI` с `whitelistSourceRanges`. Либо через отдельный Ingress-controller укажите адреса, только с которых будут идти запросы: при помощи опции `ingressClass` с конечным списком `SourceRange` укажите в настройках контроллера список CIDR в параметре `acceptRequestsFrom`.
+     1. Сгенерируйте секцию `cluster` (используется IP-адрес API-сервера для доступа):
 
-     * Если используется непубличный CA:
+        ```shell
+        kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
+          --server=https://$(kubectl get ep kubernetes -o json | jq -rc '.subsets[0] | "\(.addresses[0].ip):\(.ports[0].port)"') \
+          --certificate-authority=/tmp/ca.crt \
+          --kubeconfig=$FILE_NAME
+        ```
 
-       1. Получите его из Secret'а с сертификатом для домена `api.%s`:
+   * Если прямого доступа до API-сервера нет, то используйте один следующих вариантов:
+      * включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](../150-user-authn/configuration.html#parameters-publishapi)), и укажите адреса с которых будут идти запросы (параметр [whitelistSourceRanges](../150-user-authn/configuration.html#parameters-publishapi-whitelistsourceranges));
+      * укажите адреса с которых будут идти запросы в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](../402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
 
-          ```shell
-          kubectl -n d8-user-authn get secrets -o json \
-            $(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath="{.spec.tls[0].secretName}") \
-            | jq -rc '.data."ca.crt" // .data."tls.crt"' \
-            | base64 -d > /tmp/ca.crt
-          ```
+   * Если используется непубличный CA:
 
-       2. И сгенерируйте секцию с внешним доменом и CA:
+     1. Получите сертификат CA из Secret'а с сертификатом, который используется для домена `api.%s`:
 
-          ```shell
-          kubectl config set-cluster $cluster_name --embed-certs=true \
-            --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
-            --certificate-authority=/tmp/ca.crt \
-            --kubeconfig=$file_name
-          ```
+        ```shell
+        kubectl -n d8-user-authn get secrets -o json \
+          $(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath="{.spec.tls[0].secretName}") \
+          | jq -rc '.data."ca.crt" // .data."tls.crt"' \
+          | base64 -d > /tmp/ca.crt
+        ```
 
-     * Если CA публичный, просто сгенерируйте секцию с внешним доменом:
+     2. Сгенерируйте секцию `cluster` (используется внешний домен и CA для доступа):
 
-       ```shell
-       kubectl config set-cluster $cluster_name \
-         --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
-         --kubeconfig=$file_name
-       ```
+        ```shell
+        kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
+          --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
+          --certificate-authority=/tmp/ca.crt \
+          --kubeconfig=$FILE_NAME
+        ```
 
-   * Секция `user` с токеном из Secret'а `ServiceAccount`:
+   * Если используется публичный CA. Сгенерируйте секцию `cluster` (используется внешний домен для доступа):
 
      ```shell
-     kubectl config set-credentials $user_name \
-       --token=$(kubectl -n d8-service-accounts get secret gitlab-runner-deploy-token -o json |jq -r '.data["token"]' | base64 -d) \
-       --kubeconfig=$file_name
+     kubectl config set-cluster $CLUSTER_NAME \
+       --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
+       --kubeconfig=$FILE_NAME
      ```
 
-   * Секция `context` для связи:
+1. Сгенерируйте секцию `user` с токеном из Secret'а ServiceAccount в файле конфигурации kubectl:
 
-     ```shell
-     kubectl config set-context $context_name \
-       --cluster=$cluster_name --user=$user_name \
-       --kubeconfig=$file_name
-     ```
+   ```shell
+   kubectl config set-credentials $USER_NAME \
+     --token=$(kubectl -n d8-service-accounts get secret gitlab-runner-deploy-token -o json |jq -r '.data["token"]' | base64 -d) \
+     --kubeconfig=$FILE_NAME
+   ```
 
-   * Установите контекст по умолчанию для только что созданного kubeconfig файла:
+1. Сгенерируйте контекст в файле конфигурации kubectl:
 
-     ```shell
-     kubectl config use-context $context_name --kubeconfig=$file_name
-     ```
+   ```shell
+   kubectl config set-context $CONTEXT_NAME \
+     --cluster=$CLUSTER_NAME --user=$USER_NAME \
+     --kubeconfig=$FILE_NAME
+   ```
+
+1. Установите сгенерированный контекст как используемый по умолчанию в файле конфигурации kubectl:
+
+   ```shell
+   kubectl config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
+   ```
 
 ### Создание пользователя с помощью клиентского сертификата
 
@@ -231,17 +243,17 @@ spec:
   portForwarding: true
 ```
 
-### Настройка `kube-apiserver` для работы в режиме multi-tenancy
+## Настройка `kube-apiserver` для работы в режиме multi-tenancy
 
-Режим multi-tenancy, позволяющий ограничивать доступ к namespace, включается [параметром](configuration.html) `enableMultiTenancy` модуля.
+Режим multi-tenancy, позволяющий ограничивать доступ к namespace, включается параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) модуля.
 
 Работа в режиме multi-tenancy требует включения [плагина авторизации Webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) и выполнения настройки `kube-apiserver`. Все необходимые для работы режима multi-tenancy действия **выполняются автоматически** модулем [control-plane-manager](../../modules/040-control-plane-manager/), никаких ручных действий не требуется.
 
 Изменения манифеста `kube-apiserver`, которые произойдут после включения режима multi-tenancy:
 
-* Исправление аргумента `--authorization-mode`. Перед методом RBAC добавится метод Webhook (например — `--authorization-mode=Node,Webhook,RBAC`).
-* Добавление аргумента `--authorization-webhook-config-file=/etc/kubernetes/authorization-webhook-config.yaml`.
-* Добавление `volumeMounts`:
+* исправление аргумента `--authorization-mode`. Перед методом RBAC добавится метод Webhook (например — `--authorization-mode=Node,Webhook,RBAC`);
+* добавление аргумента `--authorization-webhook-config-file=/etc/kubernetes/authorization-webhook-config.yaml`;
+* добавление `volumeMounts`:
 
   ```yaml
   - name: authorization-webhook-config
@@ -249,7 +261,7 @@ spec:
     readOnly: true
   ```
 
-* Добавление `volumes`:
+* добавление `volumes`:
 
   ```yaml
   - name: authorization-webhook-config
@@ -262,11 +274,11 @@ spec:
 
 Необходимо выполнить следующую команду, в которой будут указаны:
 
-* `resourceAttributes` (как в RBAC) — к чему мы проверяем доступ
-* `user` — имя пользователя
-* `groups` — группы пользователя
+* `resourceAttributes` (как в RBAC) — к чему мы проверяем доступ;
+* `user` — имя пользователя;
+* `groups` — группы пользователя.
 
-> При совместном использовании с модулем `user-authn`, группы и имя пользователя можно посмотреть в логах Dex — `kubectl -n d8-user-authn logs -l app=dex` (видны только при авторизации)
+> При совместном использовании с модулем `user-authn` группы и имя пользователя можно посмотреть в логах Dex — `kubectl -n d8-user-authn logs -l app=dex` (видны только при авторизации).
 
 ```shell
 cat  <<EOF | 2>&1 kubectl  create --raw  /apis/authorization.k8s.io/v1/subjectaccessreviews -f - | jq .status
@@ -298,7 +310,7 @@ EOF
 }
 ```
 
-Если в кластере включен режим **multitenancy**, то нужно выполнить еще одну проверку, чтобы убедиться, что у пользователя есть доступ в namespace:
+Если в кластере включен режим **multi-tenancy**, нужно выполнить еще одну проверку, чтобы убедиться, что у пользователя есть доступ в namespace:
 
 ```shell
 cat  <<EOF | 2>&1 kubectl --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml create --raw / -f - | jq .status
@@ -327,7 +339,7 @@ EOF
 }
 ```
 
-Сообщение `allowed: false` значит что webhook не блокирует запрос. В случае блокировки запроса webhook'ом вы получите, например, следующее сообщение:
+Сообщение `allowed: false` значит, что webhook не блокирует запрос. В случае блокировки запроса webhook'ом вы получите, например, следующее сообщение:
 
 ```json
 {
@@ -339,7 +351,7 @@ EOF
 
 ## Настройка прав высокоуровневых ролей
 
-Если требуется добавить прав для определённой [высокоуровневой роли](./#ролевая-модель), то достаточно создать ClusterRole с аннотацией `user-authz.deckhouse.io/access-level: <AccessLevel>`.
+Если требуется добавить прав для определенной [высокоуровневой роли](./#ролевая-модель), достаточно создать ClusterRole с аннотацией `user-authz.deckhouse.io/access-level: <AccessLevel>`.
 
 Пример:
 

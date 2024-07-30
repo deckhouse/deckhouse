@@ -50,11 +50,11 @@ func (s Slice) WithoutKey(key string) Slice {
 func (s Slice) Merge(in []v1.Taint) Slice {
 	resMap := make(Map)
 	for _, t := range s {
-		resMap[t.Key] = t
+		resMap[t.ToString()] = t
 	}
 
 	for _, t := range in {
-		resMap[t.Key] = t
+		resMap[t.ToString()] = t
 	}
 
 	// Sort keys and return taints as an array.

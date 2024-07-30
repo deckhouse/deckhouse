@@ -15,7 +15,11 @@
         "pod_node_name": "node",
         "pod_owner": "pod_owner"
       },
-      "glob_minimum_cooldown_ms": 1000
+      "node_annotation_fields": {
+        "node_labels": "node_labels"
+      },
+      "glob_minimum_cooldown_ms": 1000,
+      "use_apiserver_cache": true
     },
     "cluster_logging_config/testsource:foot": {
       "type": "kubernetes_logs",
@@ -32,7 +36,11 @@
         "pod_node_name": "node",
         "pod_owner": "pod_owner"
       },
-      "glob_minimum_cooldown_ms": 1000
+      "node_annotation_fields": {
+        "node_labels": "node_labels"
+      },
+      "glob_minimum_cooldown_ms": 1000,
+      "use_apiserver_cache": true
     }
   },
   "sinks": {
@@ -44,6 +52,11 @@
       ],
       "healthcheck": {
         "enabled": false
+      },
+      "buffer": {
+        "max_size": 268435488,
+        "type": "disk",
+        "when_full": "block"
       },
       "address": "192.168.0.1:9000",
       "encoding": {

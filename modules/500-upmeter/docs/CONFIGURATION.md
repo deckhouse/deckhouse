@@ -15,7 +15,7 @@ Use kubectl to see password:
 kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.webui.password'
 ```
 
-Delete secret to re-generate password:
+Delete the Secret to re-generate password:
 
 ```shell
 kubectl -n d8-upmeter delete secret/basic-auth-webui
@@ -27,10 +27,10 @@ Use kubectl to see password for status page:
 kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.status.password'
 ```
 
-Delete secret to re-generate password for status page:
+Delete the Secret to re-generate password for status page:
 
 ```shell
 kubectl -n d8-upmeter delete secret/basic-auth-status
 ```
 
-> **Note!** `auth.status.password` and `auth.webui.password` parameters are deprecated.
+> **Note!** The `auth.status.password` and `auth.webui.password` parameters are deprecated.

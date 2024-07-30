@@ -3,14 +3,15 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
+git:
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
-  - jq
   - install
   - uninstall
+  - jq
   before: setup
 docker:
   LABEL:
@@ -21,14 +22,19 @@ docker:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_ALPINE }}
 git:
-  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-    to: /
-    stageDependencies:
-      setup:
-      - '**/*'
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  includePaths:
+  - install
+  - uninstall
+  stageDependencies:
+    setup:
+    - '**/*'
+import:
+- artifact: jq
+  add: /usr/bin/jq
+  to: /jq
+  before: setup
 shell:
-  beforeInstall:
-  - apk add --no-cache curl
   setup:
-  - curl -sfL https://github.com/stedolan/jq/releases/download/jq-{{ $version }}/jq-linux64 --output /jq
   - chmod +x /jq /install /uninstall

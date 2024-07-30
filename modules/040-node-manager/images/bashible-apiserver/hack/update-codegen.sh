@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # Copyright 2017 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +15,6 @@
 
 set -o errexit
 set -o nounset
-set -o pipefail
 
 SCRIPT_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 export GOPATH=${GOPATH:-$(go env | grep GOPATH | cut -d= -f2 | tr -d '"')}
@@ -32,22 +30,36 @@ CODEGEN_PKG=$($PY -c "import os.path; print (os.path.relpath('${CODEGEN_PKG_ABS}
 #   Fixing failing code generation when OPENAPI_EXTRA_PACKAGES array is not defined
 export OPENAPI_EXTRA_PACKAGES=${OPENAPI_EXTRA_PACKAGES:-(())}
 
+# Note (Yuriy Losev)
+# kube_codegen.sh is a new script intended to run kubernetes code generators (deepcopy, defaulter, etc)
+# this script exists for generators >= 0.28 version, so, if we use kube-client < 0.28
+# we are running this script from our repo, otherwise - from upstream
+if [ -z "${CODEGEN_PKG}/kube_codegen.sh" ]; then
+  source "${CODEGEN_PKG}/kube_codegen.sh"
+else
+  source "${SCRIPT_ROOT}/hack/kube_codegen.sh"
+fi
+
 # generate the code with:
 # --output-base    because this script should also be able to run inside the vendor dir of
 #                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
 
-bash "${CODEGEN_PKG}/generate-groups.sh" all \
-  bashible-apiserver/pkg/generated bashible-apiserver/pkg/apis \
-  "bashible:v1alpha1" \
-  --output-base "${SCRIPT_ROOT}/.." \
-  --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
+kube::codegen::gen_helpers \
+    --input-pkg-root bashible-apiserver/pkg/apis \
+    --output-base "${SCRIPT_ROOT}/.." \
+    --boilerplate "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
 
-bash "${CODEGEN_PKG}/generate-internal-groups.sh" "deepcopy,defaulter,conversion,openapi" \
-  bashible-apiserver/pkg/generated bashible-apiserver/pkg/apis bashible-apiserver/pkg/apis \
-  "bashible:v1alpha1" \
-  --output-base "${SCRIPT_ROOT}/.." \
-  --go-header-file "${SCRIPT_ROOT}/hack/boilerplate.go.txt"
+kube::codegen::gen_openapi \
+    --input-pkg-root bashible-apiserver/pkg/apis \
+    --output-pkg-root bashible-apiserver/pkg/generated \
+    --output-base "${SCRIPT_ROOT}/.." \
+    --report-filename "${SCRIPT_ROOT}/hack/openapi_violation_exceptions.list" \
+    --boilerplate "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
 
-# To use your own boilerplate text append:
-#   --go-header-file "${SCRIPT_ROOT}/hack/custom-boilerplate.go.txt"
+kube::codegen::gen_client \
+    --with-applyconfig \
+    --input-pkg-root bashible-apiserver/pkg/apis \
+    --output-pkg-root bashible-apiserver/pkg/generated \
+    --output-base "${SCRIPT_ROOT}/.." \
+    --boilerplate "${SCRIPT_ROOT}"/hack/boilerplate.go.txt

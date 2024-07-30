@@ -72,6 +72,30 @@ spec:
   type: ExternalName
   externalName: d8-kube-dns.kube-system.svc.cluster.local
 `
+		stateD = `
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-dns
+  namespace: kube-system
+  labels:
+    k8s-app: kube-dns
+spec:
+  clusterIP: 192.168.0.10
+`
+		stateE = `
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-dns-upstream
+  namespace: kube-system
+  labels:
+    k8s-app: kube-dns
+spec:
+  clusterIP: 192.168.0.42
+`
 	)
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
@@ -120,6 +144,30 @@ spec:
 
 		It("should fail", func() {
 			Expect(f).NotTo(ExecuteSuccessfully())
+		})
+	})
+
+	Context("Cluster started with kube-dns service name and clusterIP = '192.168.0.10'", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateD))
+			f.RunHook()
+		})
+
+		It("global.discovery.clusterDNSAddress must be '192.168.0.10'", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.clusterDNSAddress").String()).To(Equal("192.168.0.10"))
+		})
+
+		Context("Adding another clusterIP with same labels", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(stateE))
+				f.RunHook()
+			})
+
+			It("global.discovery.clusterDNSAddress must be same as previous'192.168.0.10'", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("global.discovery.clusterDNSAddress").String()).To(Equal("192.168.0.42"))
+			})
 		})
 	})
 })

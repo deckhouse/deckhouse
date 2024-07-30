@@ -1,3 +1,3 @@
 # Alertmanager
 
-Image with Alertmanager v0.24.0.
+Image with Alertmanager v0.25.0.

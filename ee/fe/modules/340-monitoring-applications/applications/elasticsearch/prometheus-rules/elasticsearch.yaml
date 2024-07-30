@@ -1,0 +1,70 @@
+- name: applications.elasticsearch
+  rules:
+  - alert: ElasticSearchClusterRed
+    expr: max by (namespace,cluster) (elasticsearch_cluster_health_status{color="red"})  > 0
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      description: |
+        Check cluster status in elk namespace of Elasticsearch grafana dashboard.
+      summary: Elasticsearch changed health status to Red.
+
+  - alert: ElasticSearchClusterYellow
+    expr: max by (namespace,cluster) (elasticsearch_cluster_health_status{color="yellow"})  > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      description: |
+        Check cluster status in elk namespace of Elasticsearch grafana dashboard.
+      summary: Elasticsearch changed health status to Yellow.
+
+  - alert: ElasticSearchDiskPressure80
+    expr: round((1-(elasticsearch_filesystem_data_available_bytes/elasticsearch_filesystem_data_size_bytes))*100) > 80
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      description: |
+        Used disk space on {{`{{ $labels.name }}`}} over 80%. Cluster will be switched to read-only mode. Currently used  {{`{{ $value }}`}} %
+      summary: Used disk space over 80%.
+
+  - alert: ElasticSearchDiskPressure90
+    expr: max by (namespace,name,cluster) (round((1-(elasticsearch_filesystem_data_available_bytes/elasticsearch_filesystem_data_size_bytes))*100)) > 90
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      description: |
+        Used disk space on {{`{{ $labels.name }}`}} over 90%. Cluster will be switched to read-only mode. Currently used  {{`{{ $value }}`}} %
+      summary: Used disk space over 90%.
+
+  - alert: ElasticHighCpuUsage
+    expr: max by (namespace,name,cluster) (elasticsearch_process_cpu_percent) > 90
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      description: |
+        Elasticsearch CPU load on {{`{{ $labels.name }}`}} over 90%. Currently consumed {{`{{ $value }}`}} % CPU
+      summary: Elasticsearch average CPU load over 90%.
+
+  - alert: ElasticsearchHeapTooHigh
+    expr:  max by (namespace,name,cluster) (elasticsearch_jvm_memory_used_bytes{area="heap"} / elasticsearch_jvm_memory_max_bytes{area="heap"})  > 0.9
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      description: The heap usage is over 90% for 15m
+      summary: Elasticsearch node {{$labels.node}} heap usage is high

@@ -1,6 +1,0 @@
-# Schema for version 2
-x-version: 2
-type: object
-properties:
-  paramStr:
-    type: string

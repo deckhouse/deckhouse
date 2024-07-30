@@ -119,7 +119,7 @@ def main():
 
   myDnsmasqConfig.addNetwork(network)
 
-  open('/etc/dnsmasq.d/deckhouse-network-gateway.conf', 'w').write(myDnsmasqConfig.render())
+  open('/etc/dnsmasq.conf.d/deckhouse-network-gateway.conf', 'w').write(myDnsmasqConfig.render())
 
 if __name__ == '__main__':
   main()

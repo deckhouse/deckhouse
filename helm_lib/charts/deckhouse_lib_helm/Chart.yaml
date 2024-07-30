@@ -1,0 +1,5 @@
+apiVersion: v2
+description: Helm utils template definitions for Deckhouse modules.
+name: deckhouse_lib_helm
+type: library
+version: 1.28.0

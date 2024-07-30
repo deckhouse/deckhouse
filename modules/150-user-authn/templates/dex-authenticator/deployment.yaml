@@ -44,9 +44,6 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  annotations:
-    helm.sh/hook: post-upgrade, post-install
-    helm.sh/hook-delete-policy: before-hook-creation
   name: {{ $crd.name }}-dex-authenticator
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
@@ -100,38 +97,28 @@ spec:
 {{- end }}
       {{- include "helm_lib_priority_class" (tuple $context "cluster-low") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list $context (dict "app" "dex-authenticator" "name" $crd.name)) | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       imagePullSecrets:
       - name: registry-dex-authenticator
       volumes:
       - name: tls
         emptyDir: {}
       initContainers:
-      - command: ["bash", "-c"]
-        args:
-        - |
-          ca=$(jo CN=dex-authenticator key="$(jo algo=ecdsa size=256)" ca="$(jo expirty=87600h)" | cfssl gencert -initca -)
-          ca_cert=$(echo $ca | jq .cert -r)
-
-          config='{"signing":{"default":{"expiry":"87600h","usages":["signing","key encipherment","requestheader-client"]}}}'
-
-          cert=$(jo CN=dex-authenticator hosts="$(jo -a {{ $crd.name }}-dex-authenticator.{{ $crd.namespace }} {{ $crd.name }}-dex-authenticator.{{ $crd.namespace }}.svc)" key="$(jo algo=ecdsa size=256)" | cfssl gencert -ca=<(echo $ca | jq .cert -r) -ca-key=<(echo $ca | jq .key -r) -config=<(echo $config) -)
-
-          echo $cert | jq .key -r > /certs/tls.key
-          echo $cert | jq .cert -r > /certs/tls.crt
-          echo $ca_cert > /certs/ca.crt
-        image: {{ include "helm_lib_module_image" (list $context "cfssl") }}
-        name: cfssl
+      - args:
+        - {{ $crd.name }}-dex-authenticator.{{ $crd.namespace }}
+        - {{ $crd.name }}-dex-authenticator.{{ $crd.namespace }}.svc
+        image: {{ include "helm_lib_module_image" (list $context "selfSignedGenerator") }}
+        name: self-signed-generator
         volumeMounts:
         - name: tls
           mountPath: "/certs"
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
       containers:
       - name: dex-authenticator
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $context "dexAuthenticator") }}
         args:
         - --provider=oidc
@@ -163,8 +150,17 @@ spec:
         - --silence-ping-logging
         - --session-store-type=redis
         - --redis-connection-url=redis://127.0.0.1/
-        - --cookie-refresh={{ $context.Values.userAuthn.idTokenTTL | default "10m" }}
-        - --cookie-expire={{ $crd.spec.keepUsersLoggedInFor | default "168h" }} # 7 days
+    {{- $idTokenTTL := $context.Values.userAuthn.idTokenTTL | default "10m" }}
+    {{- $keepUsersLoggedInFor := $crd.spec.keepUsersLoggedInFor | default "168h" }} # 7 days
+    {{- $delta := now }}
+        - --cookie-refresh={{ $idTokenTTL }}
+    {{- if gt ($delta | mustDateModify $keepUsersLoggedInFor | unixEpoch) ($delta | mustDateModify $idTokenTTL | unixEpoch) }}
+        - --cookie-expire={{ $keepUsersLoggedInFor }}
+    {{- else }}
+        - --cookie-expire={{ duration (add (sub ($delta | mustDateModify $idTokenTTL | unixEpoch) ($delta | unixEpoch)) 1) }}
+    {{- end }}
+        - --insecure-oidc-allow-unverified-email=true
+        - --approval-prompt=basic
         env:
         - name: OAUTH2_PROXY_CLIENT_SECRET
           valueFrom:
@@ -176,6 +172,8 @@ spec:
             secretKeyRef:
               name: dex-authenticator-{{ $crd.name }}
               key: cookie-secret
+        - name: TRUSTED_ROOT_CA_FILE
+          value: /certs/ca.crt
         volumeMounts:
         - name: tls
           mountPath: "/opt/dex-authenticator/tls"
@@ -183,9 +181,7 @@ spec:
         readinessProbe:
           exec:
             command:
-            - curl
-            - -f
-            - -k
+            - /url-exec-prober
             - https://dex.d8-user-authn/.well-known/openid-configuration
           initialDelaySeconds: 5
           periodSeconds: 5
@@ -204,11 +200,12 @@ spec:
             {{- include "dex_authenticator_resources" . | nindent 12 }}
   {{- end }}
         ports:
-        - containerPort: 8443
+        - name: dex-https
+          containerPort: 8443
           protocol: TCP
       - name: redis
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list $context "dexAuthenticatorRedis") }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list $context "redisStatic") }}
         args:
           - "--save"
           - ""

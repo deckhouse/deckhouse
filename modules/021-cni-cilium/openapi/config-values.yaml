@@ -7,9 +7,11 @@ properties:
   labelsRegex:
     type: array
     description: |
-      Labels regexes to reduce [identity cardinality](https://docs.cilium.io/en/stable/operations/performance/scalability/identity-relevant-labels/#limiting-identity-relevant-labels).
+      Cilium creates security identifiers based on the k8s entity labels. The more labels are involved in this process, the higher the access granularity that can be achieved.
+      However, in large clusters, excessive granularity can create a heavy load. You can use the `labelsRegex` option to explicitly specify which labels are to be used for security policies,
+      and which labels are to be neglected. Refer to the [documentation](https://docs.cilium.io/en/stable/operations/performance/scalability/identity-relevant-labels/#limiting-identity-relevant-labels) to learn more about reducing the identity cardinality
 
-      Each label should be set in the format of YAML quoted string with special symbols escaping.
+      Each label must be specified by a RegExp expression in YAML quoted string format. Note that special characters must be escaped.
     x-doc-examples:
       - ["k8s:!app\\.kubernetes\\.io", "k8s:io\\.cilium\\.k8s\\.policy"]
     items:
@@ -28,28 +30,36 @@ properties:
       Tunnel mode.
 
       > Note! After changing the parameter, it is necessary to restart all nodes, otherwise, there may be problems with the availability of Pods!
+
+      > Note! VXLAN mode is not compatible with following bpfLBMode modes: Hybrid, DSR. bpfLBMode will be overriden to SNAT if the tunnelMode is VXLAN.
   svcSourceRangeCheck:
     type: boolean
     default: false
     description: |
-      Check source IP and validate it against Service's "loadBalancerSourceRanges".
+      For services of the `loadBalancer` type, enables checking the source IP for compliance with [loadBalancer.sourceRanges](../402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-loadbalancer-sourceranges).
+      The check is not performed if access is made from within the cluster or the `sourceRanges` parameter is empty/not specified.
+      Some cloud providers support filtering of incoming traffic based on the `sourceRanges` parameter in their loadBalancer implementations. In such cases, the [cilium documentation](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#loadbalancer-source-ranges-checks)
+      recommends disabling the `svcSourceRangeCheck` option.
 
-      Do not enable behind a load balancer that performs any form of SNAT.
+      Do not enable if another balancer or any type of SNAT is running in front of the services.
   policyAuditMode:
     type: boolean
     default: false
     description: |
-      Do not enforce any Network Policy. Only log allowed/disallowed connections.
+      Do not enforce any Network Policy. Just log allowed/disallowed connections.
   bpfLBMode:
     type: string
     default: "Hybrid"
     enum: ["SNAT", "Hybrid", "DSR"]
     description: |
-      eBPF LoadBalancer mode.
+      eBPF LoadBalancer mode:
+      - `SNAT` - traffic from the client to the pod (and back) passes through NAT, and accordingly the sender's address is lost.
+      - `DSR` - traffic from the client to the pod passes with the sender's address preserved, and back - according to the routing rules (bypassing the balancer). This mode saves network traffic and reduces delays, but only works for TCP traffic.
+      - `Hybrid` - TCP traffic is processed in DSR mode, and UDP traffic is processed in SNAT mode.
 
   resourcesManagement:
     description: |
-      cilium agent resources requests options.
+      Settings for CPU and memory requests and limits by cilium agent pods.
     default: {}
     oneOf:
     - properties:
@@ -84,30 +94,32 @@ properties:
       mode:
         type: string
         description: |
-          The mode for managing resource requests. Classical `Static` requests/limit or `VPA`.
+          Resource management mode:
+          - `Static` is a classic one. In it, you specify requests/limits. The parameters of this mode are defined in the [static](#parameters-resourcesmanagement-static) parameter section;
+          - `VPA` mode uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-resourcesmanagement-vpa) parameter section.
         enum: ['VPA', 'Static']
         default: 'VPA'
       vpa:
         type: object
         default: {}
         description: |
-          Parameters of the VPA mode.
+          Resource management options for the `VPA` mode.
         properties:
           mode:
             type: string
             description: |
-              The VPA usage mode.
+              VPA operating mode.
             enum: ['Initial', 'Auto']
             default: 'Initial'
           cpu:
             type: object
             default: {}
             description: |
-              CPU-related parameters.
+              CPU-related VPA settings.
             properties:
               max:
                 description: |
-                  Maximum allowed CPU requests.
+                  The maximum value that the VPA can set for the CPU requests.
                 default: 4
                 oneOf:
                 - type: string
@@ -115,7 +127,7 @@ properties:
                 - type: number
               min:
                 description: |
-                  Minimum allowed CPU requests.
+                  The minimum value that the VPA can set for the CPU requests.
                 default: '100m'
                 oneOf:
                 - type: string
@@ -125,16 +137,20 @@ properties:
                 type: number
                 examples: [1.5]
                 description: |
-                  The coefficient to calculate cpu limits. It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
+                  The CPU limits/requests ratio.
+
+                  This ratio is used for calculating the initial CPU limits for a pod.
+
+                  If this parameter is set, the VPA will recalculate the CPU limits while maintaining the specified limits/requests ratio.
           memory:
             type: object
             default: {}
             description: |
-              The amount of memory requested.
+              Memory-related VPA settings.
             properties:
               max:
                 description: |
-                  Maximum allowed memory requests.
+                  The maximum memory requests the VPA can set.
                 default: '4Gi'
                 oneOf:
                 - type: string
@@ -142,8 +158,8 @@ properties:
                 - type: number
               min:
                 description: |
-                  Minimum allowed memory requests.
-                default: '512Mi'
+                  The minimum memory requests the VPA can set.
+                default: '128Mi'
                 oneOf:
                 - type: string
                   pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
@@ -152,16 +168,20 @@ properties:
                 type: number
                 examples: [1.5]
                 description: |
-                  The coefficient to calculate memory limits. It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
+                  The memory limits/requests ratio.
+
+                  This ratio is used for calculating the initial memory limits for a pod.
+
+                  If this parameter is set, the VPA will recalculate the memory limits while maintaining the specified limits/requests ratio.
       static:
         type: object
         description: |
-          Static resource management settings.
+          Resource management options for the `Static` mode.
         properties:
           requests:
             type: object
             description: |
-              Requests configuration.
+              Resource requests settings for pods.
             properties:
               cpu:
                 oneOf:
@@ -169,18 +189,18 @@ properties:
                   pattern: "^[0-9]+m?$"
                 - type: number
                 description: |
-                  CPU requests.
+                  Configuring CPU requests.
               memory:
                 oneOf:
                 - type: string
                   pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                 - type: number
                 description: |
-                  Memory requests.
+                  Configuring memory requests.
           limits:
             type: object
             description: |
-              Limits configuration.
+              Configuring CPU and memory limits.
             properties:
               cpu:
                 oneOf:
@@ -188,11 +208,11 @@ properties:
                   pattern: "^[0-9]+m?$"
                 - type: number
                 description: |
-                  CPU limits.
+                  Configuring CPU limits.
               memory:
                 oneOf:
                 - type: string
                   pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                 - type: number
                 description: |
-                  Memory limits.
+                  Configuring memory limits.

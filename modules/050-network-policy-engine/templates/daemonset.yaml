@@ -57,10 +57,10 @@ spec:
         - --run-firewall=true
         - --run-service-proxy=false
         - --metrics-path=/metrics
-        - --metrics-port=10445
+        - --metrics-port=4213
         - --health-port=10444
         ports:
-        - containerPort: 10445
+        - containerPort: 4213
           name: http-metrics
         env:
         - name: NODE_NAME
@@ -77,6 +77,9 @@ spec:
         - name: lib-modules
           mountPath: /lib/modules
           readOnly: true
+        - name: xtables-lock
+          mountPath: /run/xtables.lock
+          readOnly: false
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
@@ -90,3 +93,7 @@ spec:
       - name: lib-modules
         hostPath:
           path: /lib/modules
+      - name: xtables-lock
+        hostPath:
+          path: /run/xtables.lock
+          type: FileOrCreate

@@ -43,6 +43,11 @@ type setPriorityNodeGroup struct {
 	Priority *int32
 }
 
+const (
+	minPriority = 1
+	allNGsMask  = ".*"
+)
+
 func setPriorityFilterNG(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var ng ngv1.NodeGroup
 
@@ -81,6 +86,7 @@ func handleSetPriorities(input *go_hook.HookInput) error {
 	}
 
 	if len(priorities) > 0 {
+		priorities[minPriority] = append(priorities[minPriority], allNGsMask)
 		input.Values.Set("nodeManager.internal.clusterAutoscalerPriorities", priorities)
 	} else {
 		input.Values.Remove("nodeManager.internal.clusterAutoscalerPriorities")

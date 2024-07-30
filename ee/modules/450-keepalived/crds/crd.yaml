@@ -21,9 +21,9 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            The CustomResource for configuring keepalived clusters.
+            The custom resource for configuring keepalived clusters.
 
-            Each `KeepalivedInstance` CR defines a single keepalived cluster.
+            Each `KeepalivedInstance` custom resource defines a single keepalived cluster.
 
             `metadata.name` — the name of the cluster (used in pod names).
           required:
@@ -72,7 +72,7 @@ spec:
                         x-doc-default: "Equal"
                       tolerationSeconds:
                         description: |
-                          Specifies the period (in seconds) that the scheduler waits before evicting a Pod from a node if 
+                          Specifies the period (in seconds) that the scheduler waits before evicting a Pod from a node if
                           the toleration no longer matches the taint (**only** applicable to the `NoExecute` effect, otherwise ignored).
 
                           If the parameter **is not set**, the Pod will not be evicted from the node if the toleration no longer matches the taint. If the parameter **is set to zero** (or negative), the Pod will be evicted immediately if the toleration no longer matches the taint.
@@ -137,7 +137,7 @@ spec:
 
                               **A mandatory parameter** if `detectionStrategy` = `NetworkAddress`.
                             pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
-                            example: '192.168.42.0/24'
+                            x-doc-examples: ['192.168.42.0/24']
                         oneOf:
                           - properties:
                               detectionStrategy:
@@ -171,7 +171,7 @@ spec:
                               type: string
                               description: |
                                 One of the group addresses.
-                              example: '192.168.42.15/32'
+                              x-doc-examples: ['192.168.42.15/32']
                               pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
                             interface:
                               type: object
@@ -202,7 +202,7 @@ spec:
 
                                     **A mandatory parameter** if `virtualIPaddresses[].detectionStrategy` = `NetworkAddress`.
                                   pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
-                                  example: '192.168.42.0/24'
+                                  x-doc-examples: ['192.168.42.0/24']
                               oneOf:
                                 - properties:
                                     detectionStrategy:

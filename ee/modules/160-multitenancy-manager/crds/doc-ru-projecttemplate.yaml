@@ -1,0 +1,44 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает шаблон проекта.
+
+            На этот ресурс ссылается другой пользовательский ресурс — [Project](cr.html#project).
+          properties:
+            spec:
+              properties:
+                parametersSchema:
+                  description: |
+                    Одна из схем параметров для валидации параметров проекта.
+
+                    На данный момент поддерживается только схема OpenAPI v3.
+                  properties:
+                    openAPIV3Schema:
+                      description: |
+                        Спецификация OpenAPI для [параметров шаблона](#project-v1alpha2-spec-parameters).
+
+                        Используется для проверки правильности параметров, передаваемых при создании нового проекта.
+                resourcesTemplate:
+                  description: |
+                    Шаблон, определяющий ресурсы в формате [`go template`](https://pkg.go.dev/text/template), создаваемые при настройке нового проекта.
+
+                    Шаблоны полностью совместимы со всеми [функциями `helm`](https://helm.sh/docs/chart_template_guide/function_list/).
+
+                    Узнайте больше о [создании изолированной среды...](usage.html#создание-проекта)
+
+                    В шаблонах доступны следующие параметры:
+                    - `{{ .projectName }}` — имя `Project`, для которого рендерится шаблон.
+                    - `{{ .projectTemplateName }}` — имя `ProjectTemplate`.
+                    - `{{ .parameters }}` — словарь пользовательских значений, описанных в параметре [.spec.parametersSchema](cr.html#projecttemplate-v1alpha1-spec-parametersschema) и определенных в параметре [.spec.parameters](cr.html#project-v1alpha2-spec-parameters).
+
+                    > **Примечание!** Указание полей `.metadata.namespace` для объектов является необязательным,
+                    > так как в это поле автоматически устанавливается значение с именем созданного проекта.
+            status:
+              properties:
+                message:
+                  description: Сообщение, указывающее на причину появления текущего статуса.
+                ready:
+                  description: Готовность шаблона к использованию. Указывает на то, что шаблон успешно прошел проверку.

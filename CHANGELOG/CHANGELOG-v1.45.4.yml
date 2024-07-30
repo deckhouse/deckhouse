@@ -1,0 +1,9 @@
+external-module-manager:
+  fixes:
+    - summary: Fix chmod permissions for external modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4388
+user-authn:
+  fixes:
+    - summary: Fix the job image path.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4385
+

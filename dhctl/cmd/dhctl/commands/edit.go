@@ -16,17 +16,15 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
-	"gopkg.in/alecthomas/kingpin.v2"
-	apiv1 "k8s.io/api/core/v1"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
@@ -34,15 +32,18 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
+const allowUnsafeAnnotation = "deckhouse.io/allow-unsafe"
+
 func connectionFlags(parent *kingpin.CmdClause) {
 	app.DefineKubeFlags(parent)
-	app.DefineSSHFlags(parent)
+	app.DefineSSHFlags(parent, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(parent)
 }
 
-func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string, manifest func([]byte) *apiv1.Secret) *kingpin.CmdClause {
+func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) *kingpin.CmdClause {
 	cmd := parent.Command(name, fmt.Sprintf("Edit %s in Kubernetes cluster.", name))
 	app.DefineEditorConfigFlags(cmd)
+	app.DefineSanityFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		sshClient, err := ssh.NewInitClientFromFlags(true)
@@ -68,10 +69,9 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string, 
 			return err
 		}
 
-		doc := manifest(modifiedData)
-		content, err := json.Marshal(doc)
-		if err != nil {
-			return err
+		// This flag is validating by webhooks to allow editing unsafe resource's fields.
+		if app.SanityCheck {
+			addUnsafeAnnotation(config)
 		}
 
 		return log.Process(
@@ -81,17 +81,45 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string, 
 					log.InfoLn("Configurations are equal. Nothing to update.")
 					return nil
 				}
-				return retry.NewLoop(
-					fmt.Sprintf("Update %s secret", name), 5, 5*time.Second).Run(func() error {
-					_, err = kubeCl.CoreV1().
-						Secrets("kube-system").
-						Patch(context.TODO(), secret, types.MergePatchType, content, metav1.PatchOptions{})
-					return err
-				})
+
+				config.Data[dataKey] = modifiedData
+
+				return retry.
+					NewLoop(fmt.Sprintf("Update %s secret", name), 5, 5*time.Second).
+					Run(func() error {
+						_, err = kubeCl.CoreV1().
+							Secrets("kube-system").
+							Update(context.TODO(), config, metav1.UpdateOptions{})
+						if err != nil {
+							return err
+						}
+
+						if app.SanityCheck {
+							log.InfoLn("Remove allow-unsafe annotation")
+							removeUnsafeAnnotation(config)
+
+							_, err = kubeCl.CoreV1().
+								Secrets("kube-system").
+								Update(context.TODO(), config, metav1.UpdateOptions{})
+						}
+
+						return err
+					})
 			})
 	})
 
 	return cmd
+}
+
+func addUnsafeAnnotation(doc *v1.Secret) {
+	if doc.Annotations == nil {
+		doc.Annotations = make(map[string]string)
+	}
+	doc.Annotations[allowUnsafeAnnotation] = "true"
+}
+
+func removeUnsafeAnnotation(doc *v1.Secret) {
+	delete(doc.Annotations, allowUnsafeAnnotation)
 }
 
 func DefineEditCommands(parent *kingpin.CmdClause, wConnFlags bool) {
@@ -112,7 +140,6 @@ func DefineEditClusterConfigurationCommand(parent *kingpin.CmdClause) *kingpin.C
 		"cluster-configuration",
 		"d8-cluster-configuration",
 		"cluster-configuration.yaml",
-		manifests.SecretWithClusterConfig,
 	)
 }
 
@@ -122,9 +149,6 @@ func DefineEditProviderClusterConfigurationCommand(parent *kingpin.CmdClause) *k
 		"provider-cluster-configuration",
 		"d8-provider-cluster-configuration",
 		"cloud-provider-cluster-configuration.yaml",
-		func(data []byte) *apiv1.Secret {
-			return manifests.SecretWithProviderClusterConfig(data, nil)
-		},
 	)
 }
 
@@ -134,6 +158,5 @@ func DefineEditStaticClusterConfigurationCommand(parent *kingpin.CmdClause) *kin
 		"static-cluster-configuration",
 		"d8-static-cluster-configuration",
 		"static-cluster-configuration.yaml",
-		manifests.SecretWithStaticClusterConfig,
 	)
 }

@@ -1,10 +1,13 @@
 ---
 title: "Модуль upmeter"
+webIfaces:
+- name: status
+- name: upmeter
 ---
 
-Модуль собирает статистику по типам доступности для компонентов кластера и Deckhouse. Позволяет оценивать степень выполнения SLA на эти компоненты, показывает данные о доступности в web-интерфейсе и предоставляет web-страницу статуса работы компонентов кластера.
+Модуль собирает статистику по типам доступности для компонентов кластера и Deckhouse. Позволяет оценивать степень выполнения SLA на эти компоненты, показывает данные о доступности в веб-интерфейсе и предоставляет веб-страницу статуса работы компонентов кластера.
 
-С помощью Custom Resource [UpmeterRemoteWrite](cr.html#upmeterremotewrite) можно экспортировать метрики доступности по протоколу [Prometheus Remote Write](https://docs.sysdig.com/en/docs/installation/prometheus-remote-write/).
+С помощью custom resource [UpmeterRemoteWrite](cr.html#upmeterremotewrite) можно экспортировать метрики доступности по протоколу [Prometheus Remote Write](https://docs.sysdig.com/en/docs/installation/prometheus-remote-write/).
 
 ## Состав модуля
 
@@ -36,8 +39,8 @@ title: "Модуль upmeter"
 
 ### Интерфейс
 
-Пример web-интерфейса:
-![Пример web-интерфейса](../../images/500-upmeter/image1.png)
+Пример веб-интерфейса:
+![Пример веб-интерфейса](../../images/500-upmeter/image1.png)
 
 Пример графиков по метрикам из upmeter в Grafana:
 ![Пример графиков по метрикам из upmeter в Grafana](../../images/500-upmeter/image2.png)

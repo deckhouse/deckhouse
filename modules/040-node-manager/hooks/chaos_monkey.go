@@ -46,9 +46,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "ngs",
 			ApiVersion:                   "deckhouse.io/v1",
 			Kind:                         "NodeGroup",
-			WaitForSynchronization:       pointer.BoolPtr(false),
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization:       pointer.Bool(false),
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
 			FilterFunc:                   chaosFilterNodeGroup,
 		},
 		{
@@ -63,18 +63,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					},
 				},
 			},
-			WaitForSynchronization:       pointer.BoolPtr(false),
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization:       pointer.Bool(false),
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
 			FilterFunc:                   chaosFilterNode,
 		},
 		{
 			Name:                         "machines",
 			ApiVersion:                   "machine.sapcloud.io/v1alpha1",
 			Kind:                         "Machine",
-			WaitForSynchronization:       pointer.BoolPtr(false),
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization:       pointer.Bool(false),
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
 			FilterFunc:                   chaosFilterMachine,
 		},
 	},
@@ -87,7 +87,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleChaosMonkey)
 
 func handleChaosMonkey(input *go_hook.HookInput) error {
-	random := time.Now().Unix()
+	random := time.Now().UnixNano()
 	testRandomSeed := os.Getenv("D8_TEST_RANDOM_SEED")
 	if testRandomSeed != "" {
 		res, _ := strconv.ParseInt(testRandomSeed, 10, 64)

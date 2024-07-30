@@ -120,6 +120,7 @@ metadata:
 			          "kind": "Node",
 			          "metadata": {
 			            "annotations": {
+			              "cluster-autoscaler.kubernetes.io/scale-down-disabled": "true",
 			              "node-manager.deckhouse.io/last-applied-node-template": "{\"annotations\":{},\"labels\":{},\"taints\":[]}"
 			            },
 			            "labels": {
@@ -421,6 +422,7 @@ metadata:
   name: wor-ker
   annotations:
     a: a
+    cluster-autoscaler.kubernetes.io/scale-down-disabled: "true"
     node-manager.deckhouse.io/last-applied-node-template: '{"annotations":{"a":"a"},"labels":{"a":"a"},"taints":[{"key":"a","effect":"NoSchedule"}]}'
   labels:
     a: a
@@ -898,6 +900,83 @@ spec:
 		It("Metric 'd8_nodegroup_taint_missing' should appear", func() {
 			// collected metrics should have 'd8_nodegroup_taint_missing' metric
 			Expect(metricEqual(f.MetricsCollector.CollectedMetrics(), "d8_nodegroup_taint_missing", pointer.Float64(1))).To(BeTrue())
+		})
+	})
+
+	Context("NG Cloud Node with different taint effects", func() {
+		BeforeEach(func() {
+			state := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: wor-ker
+spec:
+  nodeType: CloudEphemeral
+  nodeTemplate:
+    taints:
+    - effect: NoExecute
+      key: node-role
+      value: monitoring
+    - effect: NoSchedule
+      key: node-role
+      value: monitoring
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: wor-ker
+  labels:
+    node.deckhouse.io/group: wor-ker
+    node-role.kubernetes.io/wor-ker: ""
+spec:
+  taints:
+  - effect: NoExecute
+    key: node-role
+    value: monitoring
+  - effect: NoSchedule
+    key: node-role
+    value: monitoring
+  - effect: NoSchedule
+    key: node.deckhouse.io/uninitialized
+`
+			f.BindingContexts.Set(f.KubeStateSet(state))
+			f.RunHook()
+		})
+
+		It("Deletes taint node.deckhouse.io/uninitialized when ng and node have one taint with different effects", func() {
+			expectedJSON := `
+            {
+              "apiVersion": "v1",
+              "kind": "Node",
+              "metadata": {
+                "labels": {
+                  "node.deckhouse.io/group": "wor-ker",
+                  "node-role.kubernetes.io/wor-ker": ""
+                },
+                "name": "wor-ker"
+              },
+                "spec": {
+                  "taints": [
+                    {
+                      "effect": "NoExecute",
+                      "key": "node-role",
+                      "value": "monitoring"
+                    },
+                    {
+                      "effect": "NoSchedule",
+                      "key": "node-role",
+                      "value": "monitoring"
+                    }
+                  ]
+                }
+              }
+          `
+			Expect(f).To(ExecuteSuccessfully())
+			n := f.KubernetesGlobalResource("Node", "wor-ker")
+			Expect(n.Parse().DropFields("status", "metadata.creationTimestamp")).
+				To(MatchJSON(expectedJSON))
+			Expect(f.MetricsCollector.CollectedMetrics()).Should(HaveLen(1), "should have only expire metric for managed node")
 		})
 	})
 })

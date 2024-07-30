@@ -2,31 +2,30 @@ description: Обязательных настроек нет.
 properties:
   nodeSelector:
     description: |
-      Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
-      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   cloudflareAPIToken:
     description: |
-      [API Tokens](https://cert-manager.io/docs/configuration/acme/dns01/cloudflare/#api-tokens) позволяют использовать ключи, привязанные к определенным DNS зонам.
+      [API Tokens](https://cert-manager.io/docs/configuration/acme/dns01/cloudflare/#api-tokens) позволяют использовать ключи, привязанные к определенным DNS-зонам.
 
-      API Tokens are recommended for higher security, since they have more restrictive permissions and are more easily revocable.
       Рекомендуется использовать API Tokens для более высокой безопасности, поскольку они имеют более строгие разрешения и могут быть легко отозваны.
 
-      Способ проверки того, что домены указанные в ресурсе Certificate, для которых заказывается сертификат,
-      находятся под управлением `cert-manager` у DNS провайдера Cloudflare. Проверка происходит добавлением специальных
-      TXT записей для домена [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/).
+      Способ проверки того, что домены, указанные в ресурсе Certificate, для которых заказывается сертификат,
+      находятся под управлением `cert-manager` у DNS-провайдера Cloudflare. Проверка происходит путем добавления специальных
+      TXT-записей для домена [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/).
   cloudflareGlobalAPIKey:
     description: |
-      Cloudflare Global API key для управления DNS записями.
+      Cloudflare Global API key для управления DNS-записями.
 
-      Способ проверки того, что домены указанные в ресурсе Certificate, для которых заказывается сертификат,
-      находятся под управлением `cert-manager` у DNS провайдера Cloudflare. Проверка происходит добавлением специальных
-      TXT записей для домена [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/).
+      Способ проверки того, что домены, указанные в ресурсе Certificate, для которых заказывается сертификат,
+      находятся под управлением `cert-manager` у DNS-провайдера Cloudflare. Проверка происходит путем добавления специальных
+      TXT-записей для домена [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/).
   cloudflareEmail:
     description: |
       Почтовый ящик проекта, на который выдавались доступы для управления Cloudflare.
@@ -45,13 +44,20 @@ properties:
   cloudDNSServiceAccount:
     description: |
       Service Account для [Google Cloud](usage.html#заказ-wildcard-сертификата-с-dns-в-google)
-      из того-же проекта с ролью Администратора DNS.
+      из того же проекта с ролью Администратора DNS.
   email:
     description: |
       Почтовый ящик проекта, на который LetsEncrypt будет слать уведомления.
   cleanupOrphanSecrets:
     description: |
-      Удалять секрет с сертификатом автоматически, если соответствующий ресурс Certificate удален из кластера.
+      Удалять Secret с сертификатом автоматически, если соответствующий ресурс Certificate удален из кластера.
   disableLetsencrypt:
     description: |
       Не создавать ClusterIssuer `letsencrypt` и `letsencrypt-staging` в кластере (если `true`).
+  maxConcurrentChallenges:
+    description: |
+      Максимальное количество одновременных Challenges в статусе `Processing`
+  enableCAInjector:
+    description: |
+      Включить CAInjector. Он необходим только для инъекции CA-сертификатов в `ValidatingWebhookConfiguration`, `MutatingWebhookConfiguration`, `CustomResourceDefinition` и `APIService`.
+      Deckhouse не использует CAInjector, поэтому включать нужно только в том случае, если вы используете в своих сервисах пользовательские инъекции CA.

@@ -10,9 +10,10 @@ spec:
   jobLabel: app
   podMetricsEndpoints:
   - port: self
+    path: "/metrics"
     relabelings:
     - sourceLabels: [__meta_kubernetes_pod_container_port_number]
-      regex: "9650"
+      regex: "4222"
       action: keep
     - regex: endpoint|namespace|container
       action: labeldrop
@@ -25,14 +26,15 @@ spec:
     - sourceLabels: [__name__]
       regex: 'deckhouse_module_hook_run_seconds_bucket|deckhouse_kube_jq_filter_duration_seconds_bucket|deckhouse_kube_event_duration_seconds_bucket|deckhouse_helm_operation_seconds_bucket|deckhouse_module_hook_run_sys_cpu_seconds_bucket|deckhouse_module_hook_run_user_cpu_seconds_bucket|deckhouse_tasks_queue_action_duration_seconds_bucket|deckhouse_module_helm_seconds_bucket|deckhouse_module_run_seconds_bucket'
       action: drop
-  - port: custom
+  - port: self
+    path: "/metrics/hooks"
     relabelings:
     - regex: endpoint|namespace|container
       action: labeldrop
     - targetLabel: tier
       replacement: cluster
     - targetLabel: scrape_source
-      replacement: custom
+      replacement: hooks
   selector:
     matchLabels:
       app: deckhouse

@@ -1,0 +1,81 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.12.0
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    cluster.x-k8s.io/provider: infrastructure-static
+    cluster.x-k8s.io/v1beta1: v1alpha1
+  name: staticclusters.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    kind: StaticCluster
+    listKind: StaticClusterList
+    plural: staticclusters
+    singular: staticcluster
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: StaticCluster is the Schema for the Cluster API Provider Static
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: StaticClusterSpec defines the desired state of StaticCluster
+              properties:
+                controlPlaneEndpoint:
+                  description: APIEndpoint represents a reachable Kubernetes API endpoint.
+                  properties:
+                    host:
+                      description: The hostname on which the API server is serving.
+                      type: string
+                    port:
+                      description: The port on which the API server is serving.
+                      format: int32
+                      type: integer
+                  required:
+                    - host
+                    - port
+                  type: object
+              type: object
+            status:
+              description: StaticClusterStatus defines the observed state of StaticCluster
+              properties:
+                failureMessage:
+                  description: |
+                    FailureMessage will be set in the event that there is a terminal problem
+                    reconciling the StaticCluster and will contain a more verbose string suitable
+                    for logging and human consumption.
+                  type: string
+                failureReason:
+                  description: |
+                    FailureReason will be set in the event that there is a terminal problem
+                    reconciling the StaticCluster and will contain a succinct value suitable
+                    for machine interpretation.
+                  type: string
+                ready:
+                  description: |
+                    Ready denotes that the static cluster (infrastructure) is ready.
+                  type: boolean
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

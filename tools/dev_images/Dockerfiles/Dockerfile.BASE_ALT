@@ -1,0 +1,27 @@
+ARG DISTRO
+FROM $DISTRO
+COPY additional_tools/alt/binary_replace.sh /
+RUN apt-get update &&\
+    apt-get install -y GeoIP-Lite-Country autoconf automake bash bash-completion bind-utils bpftool btrfs-progs ca-certificates \
+    ceph ceph-devel ceph-fuse clang15.0 cmake conntrack-tools curl diffutils dos2unix doxygen e2fsprogs elfutils-devel \
+    flex gcc gcc-c++ gettext git glibc glibc-devel glibc-devel-static grep gsettings-desktop-schemas gsettings-desktop-schemas-data \
+    inotify-tools iproute2 ipset iptables iptables-nft jq libGeoIP libGeoIP-devel libICE libSM libX11 libX11-locales libXau \
+    libXdmcp libXext libXpm libXt libaio-devel libaom3 libbrotli-devel libcap-utils libcurl-devel libdav1d libde265 libdeflate \
+    libedit-devel libfontconfig1 libfreetype libgd3 libgd3-devel libgdbm-devel libgdk-pixbuf libgdk-pixbuf-locales libgio libgraphite2 \
+    libharfbuzz libheif libjbig2.1 libjpeg liblmdb-devel liblua5.3-devel libmaxminddb libmaxminddb-devel libpcre-devel libpcre16 \
+    libpng16 librav1e libssl-devel libstdc++-devel libstdc++-devel-static libstdc++10-devel-static libtiff5 libtool libwebp7 \
+    libx265-199 libxcb libxml2-devel libxslt libxslt-devel libyajl libyajl-devel libyaml-cpp0 llvm lua5.1 lua5.1-luarocks make \
+    mount nfs-utils nvme openssh-clients parted patch pcretest perl-FindBin-libs perl-Pod-Usage perl-devel pip pkg-config protobuf-compiler \
+    python3 python3-module-six python3-modules-sqlite3 rbd-nbd rpm-build shared-mime-info tzdata udev unzip util-linux \
+    vim-console which xfsprogs yajl zlib-devel &&\
+    # Download devel packages for liblua5.1 but not install. This package is needed to build ingress-nginx-controller/luarocks-builder
+    apt-get install -y liblua5.1-devel --download-only &&\
+    /usr/bin/pip3 install pyroute2
+# RUST
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&\
+    source "$HOME/.cargo/env" &&\
+    rustup install 1.70.0
+# GOLANG
+RUN rm -rf /usr/local/go &&\
+    curl -sSfL https://go.dev/dl/go1.21.6.linux-amd64.tar.gz -o - | tar -C /usr/local -zxvf -
+ENV PATH=${PATH}:/usr/local/go/bin

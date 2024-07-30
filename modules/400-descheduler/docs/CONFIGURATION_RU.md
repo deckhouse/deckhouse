@@ -2,6 +2,8 @@
 title: "Модуль descheduler: настройки"
 ---
 
-У модуля нет обязательных настроек.
+{% include module-alerts.liquid %}
 
-<!-- SCHEMA -->
+{% include module-bundle.liquid %}
+
+У модуля нет обязательных настроек.

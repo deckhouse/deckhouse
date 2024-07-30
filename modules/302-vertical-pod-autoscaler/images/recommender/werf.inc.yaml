@@ -1,0 +1,10 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/vertical-pod-autoscaler-artifact
+  add: /recommender
+  to: /recommender
+  before: setup
+docker:
+  ENTRYPOINT: ["/recommender"]

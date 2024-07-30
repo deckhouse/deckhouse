@@ -23,34 +23,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_StatusSeries_Add(t *testing.T) {
-	tests := []struct {
-		name    string
-		size    int
-		before  int
-		wantErr bool
-	}{
-		{name: "1 -> 0/0", size: 0, before: 0, wantErr: true},
-		{name: "1 -> 0/1", size: 1, before: 0, wantErr: false},
-		{name: "1 -> 0/2", size: 2, before: 0, wantErr: false},
-		{name: "1 -> 1/2", size: 2, before: 1, wantErr: false},
-		{name: "1 -> 2/2", size: 2, before: 2, wantErr: true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ss := NewStatusSeries(tt.size)
-			for i := 1; i <= tt.before; i++ {
-				ss.Add(Unknown)
-			}
-
-			if err := ss.Add(Unknown); (err != nil) != tt.wantErr {
-				t.Errorf("StatusSeries.Add() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
 func Test_StatusSeries_Stats(t *testing.T) {
 	type data struct {
 		size int
@@ -152,8 +124,8 @@ func Test_StatusSeries_Stats(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// prepare the data
 			ss := NewStatusSeries(tt.data.size)
-			for _, s := range tt.data.add {
-				ss.Add(s)
+			for i, s := range tt.data.add {
+				ss.AddI(i, s)
 			}
 
 			if got := ss.Stats(); !reflect.DeepEqual(got, tt.want) {
@@ -431,11 +403,11 @@ func Test_StatusSeries_Merge(t *testing.T) {
 			// setup series data
 			dst := NewStatusSeries(tt.args.dstSize)
 			src := NewStatusSeries(tt.args.srcSize)
-			for _, s := range tt.args.dstAdd {
-				dst.Add(s)
+			for i, s := range tt.args.dstAdd {
+				dst.AddI(i, s)
 			}
-			for _, s := range tt.args.srcAdd {
-				src.Add(s)
+			for i, s := range tt.args.srcAdd {
+				src.AddI(i, s)
 			}
 
 			// assert merging error
@@ -456,10 +428,10 @@ func Test_StatusSeries_Clean(t *testing.T) {
 	// setup
 	size := 5
 	ss := NewStatusSeries(size)
-	ss.Add(Unknown)
-	ss.Add(Up)
-	ss.Add(Down)
-	ss.Add(Up)
+	ss.AddI(0, Unknown)
+	ss.AddI(1, Up)
+	ss.AddI(2, Down)
+	ss.AddI(3, Up)
 
 	// action
 	ss.Clean()
@@ -481,10 +453,10 @@ func Test_MergeStatusSeries(t *testing.T) {
 	someData := NewStatusSeries(size)
 	misSized := NewStatusSeries(size + 1)
 	for i := 0; i < size; i++ {
-		someData.Add(Up)
-		misSized.Add(Up)
+		someData.AddI(i, Up)
+		misSized.AddI(i, Up)
 	}
-	misSized.Add(Up) // one extra status
+	misSized.AddI(size, Up) // one extra status
 
 	tests := []struct {
 		name    string
@@ -554,5 +526,26 @@ func Test_MergeStatusSeries(t *testing.T) {
 			// assert the content
 			assert.Equal(t, got.series, tt.want.series)
 		})
+	}
+}
+
+func Test_StatusSeries_AddI(t *testing.T) {
+	{
+		s := NewStatusSeries(4)
+		s.AddI(3, Up)
+		assert.Equal(t, s.series, []Status{nodata, nodata, nodata, Up})
+	}
+
+	{
+		s := NewStatusSeries(4)
+		s.AddI(1, Up)
+		assert.Equal(t, s.series, []Status{nodata, Up, nodata, nodata})
+	}
+
+	{
+		s := NewStatusSeries(4)
+		err := s.AddI(4, Up)
+		assert.Equal(t, s.series, []Status{nodata, nodata, nodata, nodata})
+		assert.ErrorIs(t, err, ErrIndexTooBig)
 	}
 }

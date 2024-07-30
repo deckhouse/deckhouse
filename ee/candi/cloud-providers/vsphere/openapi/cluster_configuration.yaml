@@ -5,11 +5,64 @@ apiVersions:
     type: object
     additionalProperties: false
     description: |
-      A structure describing the configuration of a cloud cluster in vSphere.
+      Describes the configuration of a cloud cluster in vSphere.
 
-      The cloud provider uses this structure for its configuration if a cluster's control plane is hosted in the cloud.
+      Used by the cloud provider if a cluster's control plane is hosted in the cloud.
 
-      It is located in the `d8-provider-cluster-configuration` Secret in the `kube-system` namespace.
+      Run the following command to change the configuration in a running cluster:
+
+      ```shell
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit provider-cluster-configuration
+      ```
+    x-doc-search: |
+      ProviderClusterConfiguration
+    x-unsafe-rules: [deleteZones]
+    x-examples:
+      - apiVersion: deckhouse.io/v1
+        kind: VsphereClusterConfiguration
+        sshPublicKey: "<SSH_PUBLIC_KEY>"
+        layout: Standard
+        vmFolderPath: 'folder/prefix'
+        regionTagCategory: k8s-region
+        zoneTagCategory: k8s-zone
+        region: region2
+        zones:
+          - region2-a
+        externalNetworkNames:
+          - net3-k8s
+        internalNetworkNames:
+          - K8S_3
+        internalNetworkCIDR: 172.16.2.0/24
+        baseResourcePool: kubernetes/cloud
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            numCPUs: 4
+            memory: 8192
+            template: Templates/ubuntu-focal-20.04
+            mainNetwork: net3-k8s
+            additionalNetworks:
+              - K8S_3
+            datastore: lun10
+            rootDiskSize: 50
+            runtimeOptions:
+              nestedHardwareVirtualization: false
+        nodeGroups:
+          - name: worker
+            replicas: 1
+            zones:
+              - ru-central1-a
+            instanceClass:
+              numCPUs: 4
+              memory: 8192
+              template: Templates/ubuntu-focal-20.04
+              datastore: lun10
+              mainNetwork: net3-k8s
+        provider:
+          server: '<SERVER>'
+          username: '<USERNAME>'
+          password: '<PASSWORD>'
+          insecure: true
     required: [apiVersion, kind, masterNodeGroup, regionTagCategory, zoneTagCategory, sshPublicKey, vmFolderPath, region, zones, layout, provider]
     properties:
       apiVersion:
@@ -26,12 +79,14 @@ apiVersions:
           The definition of the master's NodeGroup.
 
           > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
+        x-unsafe-rules: [updateMasterImage]
         properties:
           replicas:
             type: integer
             minimum: 1
             description: |
               The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
+            x-unsafe-rules: [updateReplicas]
           zones:
             type: array
             items:
@@ -86,7 +141,7 @@ apiVersions:
                   Root disk size in GiB to use in vSphere VirtualMachines.
 
                   The disk will be automatically enlarged if its size in the template is less than specified.
-                example: 20
+                example: 50
               resourcePool:
                 type: string
                 description: |
@@ -95,7 +150,7 @@ apiVersions:
               mainNetworkIPAddresses:
                 type: array
                 description: |
-                  A list of static IP addresses (with a CIDR prefix) sequentially allocated to master nodes in the `mainNetwork`.
+                  A list of static IP addresses (with a CIDR prefix) sequentially allocated to nodes in the `mainNetwork`.
 
                   By default, the DHCP client is enabled.
                 x-examples:
@@ -197,7 +252,7 @@ apiVersions:
                   description: |
                     A list of labels to attach to cluster resources.
 
-                    The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                    The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
                   x-examples:
                   - environment: production
                     app: warp-drive-ai
@@ -206,7 +261,7 @@ apiVersions:
                 annotations:
                   type: object
                   description: |
-                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
                   x-examples:
                   - ai.fleet.com/discombobulate: "true"
                   additionalProperties:
@@ -214,7 +269,7 @@ apiVersions:
                 taints:
                   type: array
                   description: |
-                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object.
+                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
                     > **Caution!** Only the `effect`, `key`, `values`  fields are available.
                   x-examples:
@@ -255,12 +310,15 @@ apiVersions:
         description: |
           The name of the tag category used to identify the region (vSphere Datacenter).
         default: "k8s-region"
+        x-unsafe: true
       zoneTagCategory:
         type: string
         description: |
           The name of the tag category used to identify the zone (vSphere Cluster).
         default: "k8s-zone"
+        x-unsafe: true
       disableTimesync:
+        x-doc-default: true
         type: boolean
         description: |
           Disable time synchronization on the vSphere side.
@@ -275,6 +333,7 @@ apiVersions:
         x-examples:
         - - MAIN-1
           - public
+        x-unsafe: true
       internalNetworkNames:
         type: array
         items:
@@ -284,6 +343,7 @@ apiVersions:
         x-examples:
         - - KUBE-3
           - devops-internal
+        x-unsafe: true
       internalNetworkCIDR:
         type: string
         description: |
@@ -293,16 +353,25 @@ apiVersions:
 
           The `internalNetworkCIDR` is used if `additionalNetworks` are defined in `masterInstanceClass`.
         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+        x-unsafe: true
       vmFolderPath:
         type: string
         description: |
           The path to the VirtualMachine Folder where the cloned VMs will be created.
         x-examples:
           - "dev/test"
+        x-unsafe: true
+      vmFolderExists:
+        type: boolean
+        default: false
+        description: |
+          Set the value to `true` if the path specified in `vmFolderPath` exists. Installing more than one cluster in a folder is not possible.
+        x-unsafe: true
       region:
         type: string
         description: |
           Is a tag added to the vSphere Datacenter where all actions will occur: provisioning VirtualMachines, storing virtual disks on datastores, connecting to the network.
+        x-unsafe: true
       zones:
         type: array
         description: |
@@ -315,6 +384,7 @@ apiVersions:
         type: string
         description: |
           A path (relative to vSphere Cluster) to the existing parent `resourcePool` for all `resourcePool` created in each zone.
+        x-unsafe: true
       useNestedResourcePool:
         type: boolean
         description: |
@@ -326,6 +396,7 @@ apiVersions:
           The way resources are located in the cloud.
 
           Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vsphere/layouts.html) about possible provider layouts.
+        x-unsafe: true
       provider:
         type: object
         additionalProperties: false
@@ -418,14 +489,14 @@ apiVersions:
           loadBalancerClass:
             type: array
             description: |
-              Additional section to define Load Balancer Classes (to use class, set annotation `loadbalancer.vmware.io/class: <class name>` to SVC).
+              Additional section to define Load Balancer Classes (set annotation `loadbalancer.vmware.io/class: <CLASS NAME>` to SVC to use the class).
             items:
               required: [name, ipPoolName]
               properties:
                 name:
                   type: string
                   description: |
-                    Load Balancer Class name to use in SVC annotation `loadbalancer.vmware.io/class: <class name>`.
+                    Load Balancer Class name to use in SVC annotation `loadbalancer.vmware.io/class: <CLASS NAME>`.
                 ipPoolName:
                   type: string
                   description: |

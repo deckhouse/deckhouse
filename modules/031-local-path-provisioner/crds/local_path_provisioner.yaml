@@ -34,14 +34,14 @@ spec:
                   type: string
                 description: |
                   Select nodeGroups for storageClass allowedTopologies.
-                example:
-                - master
-                - worker
+                x-doc-examples:
+                - - master
+                  - worker
               path:
                 type: string
                 description: |
                   Node root path for PV's.
-                example: "/opt/local-path-provisioner"
+                x-doc-examples: ["/opt/local-path-provisioner"]
               reclaimPolicy:
                 type: string
                 enum: ["Retain", "Delete"]

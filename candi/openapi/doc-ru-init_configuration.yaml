@@ -14,12 +14,14 @@ apiVersions:
             description: |
               Адрес container registry с образами Deckhouse.
 
-              Укажите, если используется редакция Enterprise Edition Deckhouse или сторонний container registry (например прокси-сервер в закрытом окружении).
+              Укажите, если используется редакция Enterprise Edition Deckhouse или сторонний container registry (например, прокси-сервер в закрытом окружении).
 
               Адрес учитывает используемую редакцию Deckhouse. Публичный адрес container registry для Deckhouse Enterprise Edition — `registry.deckhouse.io/deckhouse/ee`.
           registryDockerCfg:
             description: |
-              Строка с правами доступа к стороннему registry, зашифрованная в Base64.
+              Строка авторизации из файла конфигурации Docker-клиента (в Linux обычно это `$HOME/.docker/config.json`) для доступа к стороннему container registry, закодированная в Base64.
+
+              Например, для доступа к container registry `registry.company.my` под пользователем `user` с паролем `P@ssw0rd` это будет `eyJhdXRocyI6eyJyZWdpc3RyeS5jb21wYW55Lm15Ijp7ImF1dGgiOiJkWE5sY2pwUVFITnpkekJ5WkFvPSJ9fX0K` (строка `{"auths":{"registry.company.my":{"auth":"dXNlcjpQQHNzdzByZAo="}}}` в Base64).
           registryCA:
             description: |
               Корневой сертификат, которым можно проверить сертификат container registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).
@@ -27,17 +29,40 @@ apiVersions:
             description: Протокол доступа к container registry (HTTP или HTTPS).
           releaseChannel:
             description: |
-              Устанавливаемый в кластере [канал обновлений](../modules/002-deckhouse/configuration.html#parameters-releasechannel) Deckhouse.
+              Используйте параметр [releaseChannel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) ModuleConfig 'deckhouse' вместо этого параметра.
+
+              Устанавливаемый в кластере канал обновлений Deckhouse.
+          devBranch:
+            description: |
+              Параметр используется для нужд разработки. Будет заменен на аргумент CLI-команды.
           bundle:
             description: |
-              Устанавливаемый в кластере [вариант поставки](../modules/002-deckhouse/configuration.html#parameters-bundle) Deckhouse.
+              Используйте параметр [bundle](../modules/002-deckhouse/configuration.html#parameters-bundle) ModuleConfig 'deckhouse' вместо этого параметра.
+
+              Устанавливаемый в кластере вариант поставки Deckhouse.
           logLevel:
             description: |
-              [Уровень логирования](../modules/002-deckhouse/configuration.html#parameters-loglevel) Deckhouse.
+              Используйте параметр [logLevel](../modules/002-deckhouse/configuration.html#parameters-loglevel) ModuleConfig 'deckhouse' вместо этого параметра.
+
+              Уровень логирования Deckhouse.
           configOverrides:
             description: |
+              Вместо этого параметра, используйте ресурсы ModuleConfig для настройки модулей.
+
               Начальная [конфигурация Deckhouse](/documentation/v1/#конфигурация-deckhouse).
 
-              Структура, указанная в параметре, будет перенесена в ConfigMap `deckhouse` (в пространстве имен `d8-system`) без изменений.
+              Укажите здесь параметры конфигурации Deckhouse, с которыми он должен запуститься после установки.
 
-              Укажите здесь любые параметры конфигурации Deckhouse, с которыми он должен запуститься после установки.
+              Структура, указанная в параметре, будет использована для создания [глобальной конфигурации Deckhouse](../deckhouse-configure-global.html) (moduleConfig `global`) и [настроек модулей](../#настройка-модуля) (moduleConfig `<module-name>`).
+
+              Формат структуры:
+              ```yaml
+              configOverrides:
+                global:
+                  ... секция глобальных параметров
+                <moduleName>Enabled: true|false
+                <moduleName>:
+                  ... секция параметров модуля
+              ```
+
+              **Внимание!** В `configOverrides` для включения/отключения модуля и указания его настроек используется название модуля в **camelCase** (например, `userAuthn`). После установки Deckhouse для управления модулем используется ресурс moduleConfig с названием модуля в **snake-case** (например, `user-authn`).

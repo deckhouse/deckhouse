@@ -1,17 +1,21 @@
 properties:
   autoConvergerEnabled:
     description: |
-      Включает проверку состояния Terraform'а и примененине недеструктивных изменений.
+      Включает периодическую проверку состояния Terraform'а и применение недеструктивных изменений.
+
+      Периодичность проверки задается параметром [autoConvergerPeriod](#parameters-autoconvergerperiod).
   autoConvergerPeriod:
     description: |
       Промежуток времени, через который проверяется состояние Terraform'а.
+
+      Задается в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
   nodeSelector:
     description: |
-      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
-      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+      Структура, аналогичная`spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).

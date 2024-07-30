@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 	"hash"
 	"sort"
 
+	"github.com/mohae/deepcopy"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/yaml"
 )
@@ -37,11 +38,12 @@ type ContextBuilder struct {
 	registryData     registry
 	clusterInputData inputData
 	versionMap       map[string]interface{}
-	imagesTags       map[string]map[string]string // module: { image_name: tag }
+	imagesDigests    map[string]map[string]string // module: { image_name: tag }
 
 	// debug function injection
 	emitStepsOutput func(string, string, map[string]string)
 
+	moduleSourcesCA        map[string]string
 	nodeUserConfigurations map[string][]*UserConfiguration
 }
 
@@ -50,6 +52,7 @@ func NewContextBuilder(ctx context.Context, stepsStorage *StepsStorage) *Context
 		ctx:                    ctx,
 		stepsStorage:           stepsStorage,
 		nodeUserConfigurations: make(map[string][]*UserConfiguration),
+		moduleSourcesCA:        make(map[string]string),
 	}
 
 	return cb
@@ -87,7 +90,7 @@ func (cb *ContextBuilder) SetRegistryData(rd registry) {
 }
 
 func (cb *ContextBuilder) SetImagesData(data map[string]map[string]string) {
-	cb.imagesTags = data
+	cb.imagesDigests = data
 }
 
 func (cb *ContextBuilder) SetVersionMapData(data map[string]interface{}) {
@@ -131,7 +134,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 	bb := BashibleContextData{
 		bashibleContexts: make(map[string]interface{}),
 		VersionMap:       cb.versionMap,
-		Images:           cb.imagesTags,
+		Images:           cb.imagesDigests,
 		Registry:         cb.registryData,
 		Proxy:            cb.clusterInputData.Proxy,
 	}
@@ -144,17 +147,20 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		versionMapWrapper: versionMapFromMap(cb.versionMap),
 		RunType:           "Normal",
 		Normal: normal{
-			BootstrapTokenPath: "/var/lib/bashible/bootstrap-token",
 			ClusterDomain:      cb.clusterInputData.ClusterDomain,
 			ClusterDNSAddress:  cb.clusterInputData.ClusterDNSAddress,
+			BootstrapTokens:    cb.clusterInputData.BootstrapTokens,
 			ApiserverEndpoints: cb.clusterInputData.APIServerEndpoints,
 			KubernetesCA:       cb.clusterInputData.KubernetesCA,
+			ModuleSourcesCA:    cb.moduleSourcesCA,
 		},
-		Registry: cb.registryData,
-		Images:   cb.imagesTags,
-		Proxy:    cb.clusterInputData.Proxy,
+		Registry:      cb.registryData,
+		Images:        cb.imagesDigests,
+		Proxy:         cb.clusterInputData.Proxy,
+		PackagesProxy: cb.clusterInputData.PackagesProxy,
 	}
 
+	cb.clusterInputData.AllowedBundles = append(cb.clusterInputData.AllowedBundles, "common") // temporary hack for using single bundle boostrap for all bundles
 	for _, bundle := range cb.clusterInputData.AllowedBundles {
 		for _, ng := range cb.clusterInputData.NodeGroups {
 			checksumCollector, ok := hashMap[ng.Name()]
@@ -167,7 +173,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 			bundleNgContext := cb.newBundleNGContext(ng, cb.clusterInputData.Freq, bundle, cb.clusterInputData.CloudProvider, commonContext)
 			bb.bashibleContexts[bundleContextName] = bundleNgContext
 
-			bashibleContext, err := cb.newBashibleContext(checksumCollector, bundle, ng, cb.clusterInputData.APIServerEndpoints, cb.versionMap, &bundleNgContext)
+			bashibleContext, err := cb.newBashibleContext(checksumCollector, bundle, ng, cb.versionMap, &bundleNgContext)
 			if err != nil {
 				errorsMap[bundleContextName] = err
 			}
@@ -202,17 +208,21 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 	return bb, ngMap, errorsMap
 }
 
-func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, bundle string, ng nodeGroup, clusterMasterAddresses []string, versionMap map[string]interface{}, bundleNgContext *bundleNGContext) (bashibleContext, error) {
+func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, bundle string, ng nodeGroup, versionMap map[string]interface{}, bundleNgContext *bundleNGContext) (bashibleContext, error) {
 	bc := bashibleContext{
 		KubernetesVersion: ng.KubernetesVersion(),
 		Bundle:            bundle,
-		Normal:            map[string][]string{"apiserverEndpoints": clusterMasterAddresses},
-		NodeGroup:         ng,
-		RunType:           "Normal",
+		Normal: map[string]interface{}{
+			"apiserverEndpoints": bundleNgContext.tplContextCommon.Normal.ApiserverEndpoints,
+		},
+		NodeGroup: ng,
+		RunType:   "Normal",
 
-		Images:   cb.imagesTags,
-		Registry: &cb.registryData,
-		Proxy:    cb.clusterInputData.Proxy,
+		Images:            cb.imagesDigests,
+		Registry:          &cb.registryData,
+		Proxy:             cb.clusterInputData.Proxy,
+		CloudProviderType: cb.getCloudProvider(),
+		PackagesProxy:     cb.clusterInputData.PackagesProxy,
 	}
 
 	err := cb.generateBashibleChecksum(checksumCollector, bc, bundleNgContext, versionMap)
@@ -224,12 +234,15 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, bundle
 }
 
 func (cb *ContextBuilder) generateBashibleChecksum(checksumCollector hash.Hash, bc bashibleContext, bundleNgContext *bundleNGContext, versionMap map[string]interface{}) error {
+	err := bc.AddToChecksum(checksumCollector)
+	if err != nil {
+		return err
+	}
+
 	bcData, err := yaml.Marshal(bc)
 	if err != nil {
 		return errors.Wrap(err, "marshal bashibleContext failed")
 	}
-
-	checksumCollector.Write(bcData)
 
 	var res map[string]interface{}
 
@@ -433,9 +446,38 @@ type bashibleContext struct {
 	RunType               string      `json:"runType" yaml:"runType"` // Normal
 
 	// Enrich with images and registry
-	Images   map[string]map[string]string `json:"images" yaml:"images"`
-	Registry *registry                    `json:"registry" yaml:"registry"`
-	Proxy    map[string]interface{}       `json:"proxy" yaml:"proxy"`
+	Images            map[string]map[string]string `json:"images" yaml:"images"`
+	Registry          *registry                    `json:"registry" yaml:"registry"`
+	Proxy             map[string]interface{}       `json:"proxy" yaml:"proxy"`
+	CloudProviderType string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
+	PackagesProxy     map[string]interface{}       `json:"packagesProxy" yaml:"packagesProxy"`
+}
+
+func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {
+	cpy := deepcopy.Copy(bc)
+	bcCopy := cpy.(*bashibleContext)
+
+	cloudInstancesRaw, ok := bcCopy.NodeGroup["cloudInstances"]
+	if ok {
+		cloudInstances, ok := cloudInstancesRaw.(map[string]interface{})
+		if ok {
+			// remove counter for prevent updating nodes while upscale
+			delete(cloudInstances, "maxPerZone")
+			delete(cloudInstances, "maxSurgePerZone")
+			delete(cloudInstances, "maxUnavailablePerZone")
+			delete(cloudInstances, "minPerZone")
+			delete(cloudInstances, "zones")
+		}
+	}
+
+	bcData, err := yaml.Marshal(bcCopy)
+	if err != nil {
+		return errors.Wrap(err, "marshal bashibleContext for checksum collect failed")
+	}
+
+	checksumCollector.Write(bcData)
+
+	return nil
 }
 
 // for appropriate marshalling
@@ -453,7 +495,8 @@ type tplContextCommon struct {
 	Images   map[string]map[string]string `json:"images" yaml:"images"`
 	Registry registry                     `json:"registry" yaml:"registry"`
 
-	Proxy map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	Proxy         map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	PackagesProxy map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
 }
 
 type bundleNGContext struct {
@@ -480,11 +523,12 @@ type bundleK8sVersionContext struct {
 }
 
 type normal struct {
-	BootstrapTokenPath string   `json:"bootstrapTokenPath" yaml:"bootstrapTokenPath"`
-	ClusterDomain      string   `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress  string   `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	ApiserverEndpoints []string `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	KubernetesCA       string   `json:"kubernetesCA" yaml:"kubernetesCA"`
+	ClusterDomain      string            `json:"clusterDomain" yaml:"clusterDomain"`
+	ClusterDNSAddress  string            `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
+	BootstrapTokens    map[string]string `json:"bootstrapTokens" yaml:"bootstrapTokens"`
+	ApiserverEndpoints []string          `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
+	KubernetesCA       string            `json:"kubernetesCA" yaml:"kubernetesCA"`
+	ModuleSourcesCA    map[string]string `json:"moduleSourcesCA" yaml:"moduleSourcesCA"`
 }
 
 type registry struct {
@@ -518,6 +562,8 @@ type inputData struct {
 	ClusterDNSAddress         string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
 	CloudProvider             interface{}            `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
 	Proxy                     map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	BootstrapTokens           map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
+	PackagesProxy             map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
 	APIServerEndpoints        []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
 	KubernetesCA              string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
 	AllowedBundles            []string               `json:"allowedBundles" yaml:"allowedBundles"`

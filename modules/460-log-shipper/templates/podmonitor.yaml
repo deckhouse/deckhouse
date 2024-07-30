@@ -36,7 +36,6 @@ spec:
     # Vector has a problem with internal metrics registry grows unbounded.
     # Drop metrics with high cardinality labels here to avoid overloading Prometheus instances.
     # https://github.com/vectordotdev/vector/issues/11995
-    - sourceLabels: [file]
-      regex: '.+'
-      action: drop
+    - regex: file
+      action: labeldrop
 {{- end }}

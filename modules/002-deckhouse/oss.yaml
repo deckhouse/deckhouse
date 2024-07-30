@@ -1,13 +1,13 @@
 - name: Shell operator
   link: https://github.com/flant/shell-operator
   description: A tool for running event-driven scripts in a Kubernetes cluster
-  logo: https://i.imgur.com/YrbED7T.png
+  logo: /images/logos/shell-operator-small.png
   licence: Apache License 2.0
 
 - name: Addon operator
   link: https://github.com/flant/addon-operator
   description: A tool to combine Helm charts with hooks and values storage to transform charts into smart modules that configure themselves and respond to changes in the cluster.
-  logo: https://i.imgur.com/UQW1wXJ.png
+  logo: /images/logos/addon-operator-small.png
   licence: Apache License 2.0
 
 - name: Helm
@@ -19,7 +19,7 @@
 - name: JQ
   link: https://github.com/stedolan/jq
   description: A lightweight and flexible command-line JSON processor.
-  logo: https://stedolan.github.io/jq/jq.png
+  logo: /images/logos/jq.svg
   licence: Mixed (https://github.com/stedolan/jq/blob/master/COPYING)
 
 - name: image-syncer

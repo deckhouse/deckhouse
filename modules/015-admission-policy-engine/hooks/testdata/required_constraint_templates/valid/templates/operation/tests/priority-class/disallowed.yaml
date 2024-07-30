@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed
+  namespace: default
+spec:
+  priorityClassName: "bar"
+  containers:
+    - name: nginx
+      image: nginx

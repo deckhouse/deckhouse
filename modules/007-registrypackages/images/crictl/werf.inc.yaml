@@ -20,17 +20,23 @@ docker:
     crictl: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_ALPINE }}
+{{- if semverCompare ">=1.30" $version }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+{{- else }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
+{{- end }}
 git:
-  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
     stageDependencies:
       setup:
       - '**/*'
 shell:
-  beforeInstall:
-  - apk add --no-cache curl
   setup:
-  - curl -sfL https://github.com/kubernetes-sigs/cri-tools/releases/download/v{{ $version }}.0/crictl-v{{ $version }}.0-linux-amd64.tar.gz --output - | tar -zxvf -
+  - export GOPROXY={{ $.GOPROXY }}
+  - git clone --depth 1 --branch v{{ $version }}.0 {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git
+  - cd /cri-tools
+  - make install crictl
+  - mv /usr/local/bin/crictl /crictl
   - chmod +x /crictl /install /uninstall
 {{- end }}

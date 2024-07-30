@@ -1,0 +1,22 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8HostNetwork
+metadata:
+  name: security-policy
+spec:
+  enforcementAction: "deny"
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaceSelector:
+      matchExpressions:
+        - key: security.deckhouse.io/pod-policy
+          operator: In
+          values: 
+          - baseline
+          - restricted
+  parameters:
+    allowHostNetwork: true
+    ranges:
+    - min: 20000
+      max: 30000

@@ -1,74 +1,24 @@
+{{- /*
+We're not using distroless image for now to support ceph utilities
+that we include for now to support in-tree Ceph Volume Provisioner
+ */}}
+
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- $patch := toString $value.patch }}
-  {{- $v := semver $version }}
+  {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_UBUNTU }}
+fromImage: common/distroless
 import:
 - image: common/pause
   add: /pause
   to: /pause
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+- artifact: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kube-controller-manager
   to: /usr/bin/kube-controller-manager
   before: setup
-shell:
-  beforeInstall:
-  - apt-get update
-  - apt install ca-certificates apt-transport-https gnupg gnupg2 gnupg1 curl -y
-  - curl -sL 'https://download.ceph.com/keys/release.asc' | apt-key add -
-  - echo deb https://download.ceph.com/debian-pacific/ bionic main | tee /etc/apt/sources.list.d/ceph.list
-  - apt-get update
-  - apt-get install -y ceph-common
-  - touch /etc/ceph/ceph.conf /etc/ceph/ceph.keyring
-  - apt-get purge -y --auto-remove curl apt-transport-https gnupg gnupg2 gnupg1
-  - rm -rf /var/lib/apt/lists/*
 docker:
-  ENV:
-    DEBIAN_FRONTEND: noninteractive
-    container: docker
   ENTRYPOINT: ["/usr/bin/kube-controller-manager"]
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.25" $version }}
-from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
-    {{- else if semverCompare ">=1.24" $version }}
-from: {{ $.Images.BASE_GOLANG_18_ALPINE }}
-    {{- else if semverCompare ">=1.23" $version }}
-from: {{ $.Images.BASE_GOLANG_17_ALPINE }}
-    {{- else if semverCompare ">=1.21" $version }}
-from: {{ $.Images.BASE_GOLANG_16_ALPINE }}
-    {{- end }}
-git:
-- add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-      - '**/*'
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  beforeInstall:
-  - apk add --no-cache make bash git mercurial patch rsync gcc musl-dev
-  install:
-  - mkdir /src
-  - wget https://github.com/kubernetes/kubernetes/archive/v{{ printf "%s.%s" $version $patch }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
-  - cd /src
-  - |
-    cat <<EOF > .kube-version
-    KUBE_GIT_VERSION='v{{ printf "%s.%s" $version $patch }}'
-    KUBE_GIT_MAJOR='{{ $v.Major }}'
-    KUBE_GIT_MINOR='{{ $v.Minor }}'
-    KUBE_GIT_COMMIT='0000000000000000000000000000000000000000'
-    KUBE_GIT_TREE_STATE='archive'
-    EOF
-  - export KUBE_GIT_VERSION_FILE=.kube-version
-  - |
-    if [ -d "/patches/{{ $version }}" ]; then
-      for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
-    fi
-  - make all WHAT=cmd/kube-controller-manager
 {{- end }}

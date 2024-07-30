@@ -13,11 +13,11 @@
 # limitations under the License.
 
 {!{- $enableWorkflowOnTestRepos := false -}!}
-{!{- $workflowName := "Daily e2e tests" -}!}
+{!{- $workflowName := "Daily e2e tests" }!}
 name: '{!{ $workflowName }!}'
 on:
   schedule:
-  - cron: '0 3 * * 1-5'
+  - cron: '0 1 * * 1-5'
   workflow_dispatch:
 
 env:
@@ -48,8 +48,8 @@ jobs:
 
 {!{/* Jobs for each CRI and Kubernetes version */}!}
 {!{- $criName := "Containerd" -}!}
-{!{- $kubernetesVersion := "1.23" -}!}
-{!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "Static" -}!}
+{!{- $kubernetesVersion := "1.27" -}!}
+{!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "vCloudDirector" "Static" -}!}
 {!{- if $enableWorkflowOnTestRepos -}!}
 {!{-   $providerNames = slice "AWS" "OpenStack" "Azure" -}!}
 {!{- end -}!}

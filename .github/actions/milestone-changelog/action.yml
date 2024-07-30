@@ -14,12 +14,12 @@ runs:
       id: args
       shell: bash
       run: |
-        echo "::set-output name=milestone_title::${{ fromJSON(inputs.milestone).title }}"
-        echo "::set-output name=milestone_number::${{ fromJSON(inputs.milestone).number }}"
+        echo "milestone_title=${{ fromJSON(inputs.milestone).title }}" >> $GITHUB_OUTPUT
+        echo "milestone_number=${{ fromJSON(inputs.milestone).number }}" >> $GITHUB_OUTPUT
 
     - name: Find possible sections in project structure
       id: sections
-      uses: actions/github-script@v5
+      uses: actions/github-script@v6.4.1
       with:
         result-encoding: string
         script: |
@@ -28,6 +28,8 @@ runs:
             ".",
             "modules",
             "ee/modules",
+            "ee/be/modules",
+            "ee/se/modules",
             "ee/fe/modules"
           ]
           const excludePatterns = [
@@ -50,6 +52,7 @@ runs:
         allowed_sections: |
           ${{ steps.sections.outputs.result }}
           ci:low
+          dependabot:low
           testing:low
           tools:low
 
@@ -89,7 +92,7 @@ runs:
         body: |
           ${{ steps.changelog.outputs.release_markdown }}
 
-          See [CHANGELOG ${{ steps.changelog.outputs.minor_version }}](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-${{ steps.changelog.outputs.minor_version }}.md) for more details.
+          For more information, see the [changelog](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-${{ steps.changelog.outputs.minor_version }}.md) and minor version [release changes](https://github.com/deckhouse/deckhouse/releases/tag/${{ steps.changelog.outputs.minor_version }}.0).
         labels: changelog, auto
         token: ${{ inputs.token }}
         delete-branch: true

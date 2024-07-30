@@ -33,10 +33,19 @@ func Test(t *testing.T) {
 const (
 	globalValues = `
   enabledModules: ["vertical-pod-autoscaler-crd"]
+  clusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    kind: ClusterConfiguration
+    clusterType: Static
+    clusterDomain: "cluster.local"
+    kubernetesVersion: "1.27"
+    serviceSubnetCIDR: "10.222.0.0/16"
+    podSubnetCIDR: "10.111.0.0/16"
   modules:
     placement: {}
   discovery:
-    kubernetesVersion: 1.23.5
+    kubernetesVersion: 1.24.5
+    clusterDomain: "cluster.local"
     d8SpecificNodeCountByRole:
       worker: 3
       master: 3
@@ -64,16 +73,64 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
 			registrySecret := f.KubernetesResource("Secret", "d8-chrony", "deckhouse-registry")
 
 			chronyDaemonSetTest := f.KubernetesResource("DaemonSet", "d8-chrony", "chrony")
+			chronyMasterDaemonsetTest := f.KubernetesResource("DaemonSet", "d8-chrony", "chrony-master")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(chronyDaemonSetTest.Exists()).To(BeTrue())
-			Expect(chronyDaemonSetTest.Field("spec.template.spec.containers.0.env.0").String()).To(MatchJSON(`
-  {
-    "name": "NTP_SERVERS",
-    "value": "pool.ntp.org. ntp.ubuntu.com."
-  }
+			Expect(chronyMasterDaemonsetTest.Exists()).To(BeTrue())
+			Expect(chronyDaemonSetTest.Field("spec.template.spec.containers.0.env").String()).To(MatchJSON(`
+        [
+		  {
+            "name": "PATH",
+            "value": "/opt/chrony-static/bin"
+          },
+          {
+            "name": "NTP_ROLE",
+            "value": "sink"
+          },
+          {
+            "name": "NTP_SERVERS",
+            "value": "pool.ntp.org. ntp.ubuntu.com."
+          },
+          {
+            "name": "CHRONY_MASTERS_SERVICE",
+            "value": "chrony-masters.d8-chrony.svc.cluster.local"
+          },
+          {
+            "name": "HOST_IP",
+            "valueFrom": {
+              "fieldRef": {
+                "fieldPath": "status.hostIP"
+              }
+            }
+          }
+        ]
+`))
+			Expect(chronyMasterDaemonsetTest.Field("spec.template.spec.containers.0.env").String()).To(MatchJSON(`
+        [
+          {
+            "name": "PATH",
+            "value": "/opt/chrony-static/bin"
+          },
+          {
+            "name": "NTP_ROLE",
+            "value": "source"
+          },
+          {
+            "name": "NTP_SERVERS",
+            "value": "pool.ntp.org. ntp.ubuntu.com."
+          },
+          {
+            "name": "HOST_IP",
+            "valueFrom": {
+              "fieldRef": {
+                "fieldPath": "status.hostIP"
+              }
+            }
+          }
+        ]
 `))
 
 		})

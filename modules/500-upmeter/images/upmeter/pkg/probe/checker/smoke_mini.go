@@ -258,7 +258,6 @@ func lookupAndShuffleIPs(name string, resolveTimeout time.Duration) ([]string, e
 	}
 
 	// shuffle
-	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(ips), func(i, j int) { ips[i], ips[j] = ips[j], ips[i] })
 
 	return ips, nil

@@ -110,3 +110,9 @@ func (a *SSHAgent) Start() error {
 	})
 	return nil
 }
+
+func (a *SSHAgent) Stop() {
+	if a.Executor != nil {
+		a.Executor.Stop()
+	}
+}

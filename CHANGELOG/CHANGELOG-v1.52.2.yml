@@ -1,0 +1,5 @@
+user-authn:
+  fixes:
+    - summary: Fix generation a self signed certificate for `crowd-basic-auth-proxy`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6074
+

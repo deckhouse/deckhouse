@@ -4,21 +4,46 @@
   {{- if $value.ccm.azure }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_ALPINE }}
+fromImage: common/distroless
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    add: /usr/local/bin/cloud-controller-manager
-    to: /usr/local/bin/cloud-controller-manager
+    add: /src/bin/azure-cloud-controller-manager
+    to: /usr/local/bin/azure-cloud-controller-manager
     before: setup
-shell:
-  beforeInstall:
-    - apk add --no-cache ca-certificates
 docker:
-  ENV:
-    container: docker
-  ENTRYPOINT: ["/usr/local/bin/cloud-controller-manager"]
+  ENTRYPOINT: ["/usr/local/bin/azure-cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: mcr.microsoft.com/oss/kubernetes/azure-cloud-controller-manager:{{ $value.ccm.azure }}
+    {{- if semverCompare ">=1.30" $version }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE }}
+    {{- else if semverCompare "=1.29" $version }}
+from: {{ $.Images.BASE_GOLANG_21_ALPINE }}
+    {{- else if semverCompare ">=1.27" $version }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+    {{- else if semverCompare "=1.26" $version }}
+from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
+    {{- end }}
+git:
+  - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  beforeInstall:
+    - apk add --no-cache make bash git mercurial patch rsync
+  install:
+    - mkdir /src
+    - cd /src
+    - wget https://github.com/kubernetes-sigs/cloud-provider-azure/archive/{{ $value.ccm.azure }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
+    - test -d /patches/{{ $version }} && git apply /patches/{{ $version }}/*.patch --verbose
+    - hack/pkg-config.sh > .pkg_config
+    - export VERSION={{ $value.ccm.azure }}
+    - make bin/azure-cloud-controller-manager
+    - chown 64535:64535 /src/bin/azure-cloud-controller-manager
+    - chmod 0755 /src/bin/azure-cloud-controller-manager
   {{- end }}
 {{- end }}

@@ -166,6 +166,15 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 {% endraw %}
 [Here](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#x509-client-certs) you can read more about how certificate authentication works.
 
+## How do I configure an external load balancer to check if IngressNginxController is available?
+
+In case an `IngressNginxController` is deployed behind a load balancer, it is advisable to configure your load balancer so that it would check
+the availability of the IngressNginxController's endpoints via a health check mechanism, periodically sending either HTTP-requests or TCP-packets.
+While it is possible to test the endpoints simply by checking if a relevant TCP port is open, we recommend implementing HTTP checks with the following parameters:
+- Protocol: `HTTP`
+- Path: `/healthz`
+- Port: `80` (or relevant [httpPort](cr.html#ingressnginxcontroller-v1-spec-hostport-httpport) value in case of using `HostPort` inlet).
+
 ## How do I configure MetalLB to be accessible from the internal network only?
 
 Below is an example of a MetalLB config with access from the internal network only.
@@ -204,7 +213,7 @@ spec:
 
 HPA is set with attributes `minReplicas` and `maxReplicas` in a [IngressNginxController CR](cr.html#ingressnginxcontroller).
 
-The IngressNginxController is deployed using Daemonset. Daemonset does not provide horizontal scaling capabilities, so `hpa-scaler` Deployment will be created with the HPA resource, which is observing custom metric `prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa`. If CPU utilization exceeds 50%, the HPA-controller scales `hpa-scaler` Deployment with a new replica (with respect to `minReplicas` and `maxReplicas`).
+The IngressNginxController is deployed using DaemonSet. DaemonSet does not provide horizontal scaling capabilities, so `hpa-scaler` Deployment will be created with the HPA resource, which is observing custom metric `prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa`. If CPU utilization exceeds 50%, the HPA-controller scales `hpa-scaler` Deployment with a new replica (with respect to `minReplicas` and `maxReplicas`).
 
 `hpa-scaler` Deployment has HardPodAntiAffinity, and it will order a new Node (inside its NodeGroup), where one more ingress-controller will be set.
 

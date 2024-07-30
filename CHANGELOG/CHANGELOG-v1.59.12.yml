@@ -1,0 +1,5 @@
+istio:
+  fixes:
+    - summary: Set `trafficRedirectionSetupMode` option to `InitContainer` by default.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8394
+

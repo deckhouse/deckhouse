@@ -27,7 +27,7 @@ Basic features:
 ### Preparations
 
 The first step is setting up a host.
-Only `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11` OS are supported.
+Only `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 10`, `Debian 11`, `Debian 12` OS are supported.
 
 * **Bare metal** - provide SSH access to the host and sudo access.
 * **Cloud provider** - ensure that Deckhouse supports your cloud.
@@ -50,7 +50,7 @@ cloud:
   prefix: main
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.21"
+kubernetesVersion: "1.27"
 cri: "Containerd"
 clusterDomain: "cluster.local"
 ---
@@ -102,7 +102,7 @@ provider:
   tenantName: xxx
   username: xxx
   password: xxx
-  region: HetznerFinland
+  region: SomeRegion
 ```
 
 ### Bootstrap Kubernetes cluster
@@ -112,11 +112,11 @@ For example, use a docker image from the Flant docker registry:
 
 1. Pull a fresh Docker image for desired release channel (we picked the Alpha channel for an example)
 
-    ```bash
-    docker pull registry.deckhouse.io/deckhouse/fe/install:alpha
-    ```
+   ```bash
+   docker pull registry.deckhouse.io/deckhouse/fe/install:alpha
+   ```
 
-    **NOTE!** It is required to have Deckhouse license key to download FE images.
+   > **Note!** It is required to have Deckhouse license key to download FE images.
 
 2. Run docker container and connect the terminal session to it:
 
@@ -130,7 +130,7 @@ For example, use a docker image from the Flant docker registry:
        bash
      ```
 
-     > MacOS users do not need to mount the .ssh folder to the `/tmp`.
+     > macOS users do not need to mount the .ssh folder to the `/tmp`.
      > Because of Docker for MAc specific features it is more convenient to mount it to the `/root`.
 3. Execute cluster bootstrap:
 
@@ -194,7 +194,7 @@ We have to wait for a cluster to become bootstrapped (create one non-master node
 
 In this case, Deckhouse-candi creates `OpenStackInstanceClass` and `NodeGroup` resources, then waits for the possibility to create `IngressNginxController`, and then deploy it.
 
-> NOTE: You can run separate resources creating process by executing `bootstrap-phase create-resources`.
+> **Note!** You can run separate resources creating process by executing `bootstrap-phase create-resources`.
 
 ## Converge infrastructure
 

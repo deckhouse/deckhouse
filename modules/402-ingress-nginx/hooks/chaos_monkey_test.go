@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/typed/core/v1/fake"
@@ -124,7 +124,7 @@ spec:
 	f.KubeStateSet(``)
 
 	Context("with not ready DaemonSet", func() {
-		var createdEviction *policyv1beta1.Eviction
+		var createdEviction *policyv1.Eviction
 
 		BeforeEach(func() {
 			f.KubeStateSet(ingressNginxControllerMainInitialYAML + daemonsetControllerMainInitialYAML(false))
@@ -147,7 +147,7 @@ spec:
 	})
 
 	Context("with ready DaemonSet", func() {
-		var createdEviction *policyv1beta1.Eviction
+		var createdEviction *policyv1.Eviction
 
 		BeforeEach(func() {
 			f.KubeStateSet(ingressNginxControllerMainInitialYAML + daemonsetControllerMainInitialYAML(true))
@@ -171,7 +171,7 @@ spec:
 	})
 
 	Context("with ready DaemonSet with one pod", func() {
-		var createdEviction *policyv1beta1.Eviction
+		var createdEviction *policyv1.Eviction
 
 		BeforeEach(func() {
 			f.KubeStateSet(ingressNginxControllerMainInitialYAML + daemonsetControllerMainInitialYAML(true))
@@ -200,13 +200,13 @@ func createPod(kubeClient client.KubeClient, spec string) {
 	_, _ = kubeClient.CoreV1().Pods(pod.Namespace).Create(context.TODO(), &pod, metav1.CreateOptions{})
 }
 
-func registerEvictionReactor(evictionObjPtr **policyv1beta1.Eviction) {
+func registerEvictionReactor(evictionObjPtr **policyv1.Eviction) {
 	dependency.TestDC.K8sClient.CoreV1().(*fake.FakeCoreV1).PrependReactor("create", "pods", func(action ktest.Action) (bool, runtime.Object, error) {
 		if action.GetSubresource() != "eviction" {
 			return false, nil, nil
 		}
 
-		*evictionObjPtr = action.(ktest.CreateAction).GetObject().(*policyv1beta1.Eviction)
+		*evictionObjPtr = action.(ktest.CreateAction).GetObject().(*policyv1.Eviction)
 
 		return true, nil, nil
 	})

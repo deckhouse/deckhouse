@@ -1,10 +1,28 @@
-# Based on https://github.com/prometheus/node_exporter/blob/v0.18.1/Dockerfile
-ARG BASE_ALPINE
-FROM prom/node-exporter:v0.18.1@sha256:a2f29256e53cc3e0b64d7a472512600b2e9410347d53cdc85b49f659c17e02ee as artifact
+ARG BASE_DISTROLESS
+ARG BASE_GOLANG_22_ALPINE_DEV
 
-FROM $BASE_ALPINE
-COPY --from=artifact /bin/node_exporter /bin
+FROM $BASE_GOLANG_22_ALPINE_DEV as artifact
+
+ARG GOPROXY
+ARG SOURCE_REPO
+
+ENV GOPROXY=${GOPROXY} \
+    SOURCE_REPO=${SOURCE_REPO} \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
+
+RUN git clone --depth 1 --branch v1.8.1 ${SOURCE_REPO}/prometheus/node_exporter.git /node_exporter
+WORKDIR /node_exporter/
+
+RUN go mod tidy
+RUN go build -ldflags="-s -w" -o node_exporter node_exporter.go && \
+    chown -R 64535:64535 /node_exporter/ && \
+    chmod 0700 /node_exporter/node_exporter
+
+FROM $BASE_DISTROLESS
+COPY --from=artifact /node_exporter/node_exporter /bin
 
 EXPOSE      9100
-USER        nobody
+
 ENTRYPOINT  [ "/bin/node_exporter" ]

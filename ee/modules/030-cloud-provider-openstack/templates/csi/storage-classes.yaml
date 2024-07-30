@@ -9,6 +9,6 @@ metadata:
 provisioner: cinder.csi.openstack.org
 parameters:
   type: {{ $storageClass.type | quote }}
-allowVolumeExpansion: {{ $.Values.cloudProviderOpenstack.internal.supportsOnlineDiskResize | default false }}
+allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
 {{- end }}

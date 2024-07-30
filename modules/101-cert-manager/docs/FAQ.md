@@ -3,6 +3,7 @@ title: "The cert-manager module: FAQ"
 ---
 
 {% raw %}
+
 ## How do I check the certificate status?
 
 ```console
@@ -51,17 +52,19 @@ default            example-com                     13m
 
 ## What types of certificates are supported?
 
-Currently, the module supports the following two ClusterIssuers:
+Currently the module installs the following ClusterIssuers:
 * letsencrypt
 * letsencrypt-staging
+* selfsigned
+* selfsigned-no-trust
 
 ## Does the legacy tls-acme annotation work?
 
 Yes, it works! The dedicated component (`cert-manager-ingress-shim`) automatically creates `Certificate` resources based on these annotations (in the same namespaces as those of Ingress resources with annotations).
 
-**Caution!** The Certificate for a particular annotation is linked to the existing Ingress resource. The additional records are put into the existing Ingress resource instead of creating a separate one. Thus, the process will fail if authentication or whitelist is set for the primary Ingress. In this case, you shouldn't use the annotation; use the Certificate instead.
-
-**Caution!** If you switched to the Certificate instead of annotation, then you need to delete the annotation-based Certificate. Otherwise, the same Secret will be updated for both Certificates (this may lead to exceeding the Let's Encrypt limits).
+> **Caution!** The Certificate for a particular annotation is linked to the existing Ingress resource. The additional records are put into the existing Ingress resource instead of creating a separate one. Thus, the process will fail if authentication or whitelist is set for the primary Ingress. In this case, you shouldn't use the annotation; use the Certificate instead.
+>
+> **Caution!** If you switched to the Certificate instead of annotation, then you need to delete the annotation-based Certificate. Otherwise, the same Secret will be updated for both Certificates (this may lead to exceeding the Let's Encrypt limits).
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -178,6 +181,71 @@ After configuring PKI and enabling Kubernetes [authorization](../../modules/140-
   EOF
   ```
 
+## How do I use a custom or interim CA to issue certificates?
+
+Follow the steps below to use a custom or interim CA:
+
+- Generate a certificate (if necessary):
+
+  ```shell
+  openssl genrsa -out rootCAKey.pem 2048
+  openssl req -x509 -sha256 -new -nodes -key rootCAKey.pem -days 3650 -out rootCACert.pem
+  ```
+
+- In the `d8-cert-manager` namespace, create a secret containing certificate file data.
+
+  An example of creating a secret with kubectl:
+
+  ```shell
+  kubectl create secret tls internal-ca-key-pair -n d8-cert-manager --key="rootCAKey.pem" --cert="rootCACert.pem"
+  ```
+
+  An example of creating a secret from a YAML file (the contents of the certificate files must be Base64-encoded):
+
+  ```yaml
+  apiVersion: v1
+  data:
+    tls.crt: <OUTPUT OF `cat rootCACert.pem | base64 -w0`>
+    tls.key: <OUTPUT OF `cat rootCAKey.pem | base64 -w0`>
+  kind: Secret
+  metadata:
+    name: internal-ca-key-pair
+    namespace: d8-cert-manager
+  type: Opaque
+  ```
+
+  You can use any name you like for the secret.
+
+- Create a ClusterIssuer using the secret you created earlier:
+
+  ```yaml
+  apiVersion: cert-manager.io/v1
+  kind: ClusterIssuer
+  metadata:
+    name: inter-ca
+  spec:
+    ca:
+      secretName: internal-ca-key-pair    # Name of the secret you created earlier.
+  ```
+
+  You can use any name as your ClusterIssuer name.
+
+You can now use the created ClusterIssuer to issue certificates for all Deckhouse components or a particular component.
+
+For example, to issue certificates for all Deckhouse components, specify the ClusterIssuer name in the [clusterIssuerName](../../deckhouse-configure-global.html#parameters-modules-https-certmanager-clusterissuername) global parameter (`kubectl edit mc global`):
+
+  ```yaml
+  spec:
+    settings:
+      modules:
+        https:
+          certManager:
+            clusterIssuerName: inter-ca
+          mode: CertManager
+        publicDomainTemplate: '%s.<public_domain_template>'
+    version: 1
+  ```
+
 ## How to secure cert-manager credentials?
 
 If you don't want to store credentials in the Deckhouse configuration (security reasons, for example), feel free to create
@@ -241,4 +309,5 @@ For example, you can create your own ClusterIssuer for a [route53](https://aws.a
     - www.example.com
   EOF
   ```
+
 {% endraw %}

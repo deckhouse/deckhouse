@@ -1,0 +1,120 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clusteralerts.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: prometheus
+    app: alerts-receiver
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: clusteralerts
+    singular: clusteralert
+    kind: ClusterAlert
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+      - name: Alert
+        type: string
+        jsonPath: .alert.name
+      - name: Severity
+        type: string
+        jsonPath: .alert.severityLevel
+      - name: Age
+        type: date
+        jsonPath: .status.startsAt
+      - name: Last received
+        type: date
+        jsonPath: .status.lastUpdateTime
+      - name: Status
+        type: string
+        jsonPath: .status.alertStatus
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Resource to display Prometheus alerts.
+          required:
+            - alert
+          properties:
+            metadata:
+              type: object
+              properties:
+                name:
+                  type: string
+                  pattern: "^[a-z0-9]+$"
+                  maxLength: 64
+                  description: |
+                    Alert identifier (fingerprint) as it calculated by Alertmanager.
+            status:
+              type: object
+              required: []
+              properties:
+                alertStatus:
+                  type: string
+                  description: Current alert status.
+                startsAt:
+                  type: string
+                  format: date-time
+                  description: Timestamp of alert creation.
+                lastUpdateTime:
+                  type: string
+                  format: date-time
+                  description: Timestamp of last status update for operation.
+            alert:
+              type: object
+              description: |
+                Alert description.
+              required:
+                - name
+                - labels
+              properties:
+                name:
+                  type: string
+                  description: |
+                    Alert name.
+                severityLevel:
+                  x-kubernetes-int-or-string: true
+                  description: |
+                    Severity level.
+
+                    Optional.
+                  x-doc-example: 4
+                summary:
+                  type: string
+                  description: |
+                    Alert summary.
+
+                    Optional.
+                description:
+                  type: string
+                  description: |
+                    Alert description.
+
+                    Optional.
+                labels:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  x-kubernetes-preserve-unknown-fields: true
+                  description: |
+                    Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                  x-doc-examples:
+                  - alertname: "NginxIngressSslExpired"
+                    class: "ingress-nginx.deckhouse.io/nginx"
+                annotations:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  x-kubernetes-preserve-unknown-fields: true
+                  description: |
+                    Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                  x-doc-examples:
+                  - summary: "Certificate has expired."

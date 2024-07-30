@@ -2,23 +2,28 @@ type: object
 properties:
   debugLogging:
     description: Включает отладочный уровень логирования для компонентов Hubble.
+  ingressClass:
+    description: |
+      Класс Ingress-контроллера, который используется для Hubble.
+
+      Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
   nodeSelector:
     description: |
-      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
-      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   auth:
     description: |
-      Опции, связанные с аутентификацией и авторизацией доступа к web-интерфейсу Hubble.
+      Опции, связанные с аутентификацией и авторизацией доступа к веб-интерфейсу Hubble.
     properties:
       externalAuthentication:
         description: |
-          Параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+          Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
           > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/).
         properties:
@@ -29,14 +34,14 @@ properties:
               Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
           authSignInURL:
             description: |
-              URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
+              URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP, отличный от 200).
       allowedUserGroups:
         description: |
-          Список групп, пользователям которых разрешен доступ к web-интерфейсу Hubble.
+          Список групп, пользователям которых разрешен доступ к веб-интерфейсу Hubble.
 
           Используется, если включен модуль `user-authn` или задан параметр `externalAuthentication`.
       whitelistSourceRanges:
-        description: Список адресов (CIDR) которым разрешен доступ к web-интерфейсу Hubble.
+        description: Список адресов (CIDR), которым разрешен доступ к веб-интерфейсу Hubble.
   https:
     description: |
       Тип используемого сертификата.
@@ -45,11 +50,11 @@ properties:
     properties:
       mode:
         description: |
-          Режим работы HTTPS:
-          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`;
-          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имён `d8-system`;
-          - `Disabled` — доступ только по HTTP;
-          - `OnlyInURI` — доступ по HTTP, подразумевая, что перед web-интерфейсом стоит внешний HTTPS-балансер, который терминирует HTTPS и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой.
+          Режимы работы HTTPS:
+          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`.
+          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имен `d8-system`.
+          - `Disabled` — доступ только по HTTP.
+          - `OnlyInURI` — доступ по HTTP, подразумевая, что перед веб-интерфейсом стоит внешний HTTPS-балансер, который терминирует HTTPS и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         description: "Настройки для certmanager."
         properties:
@@ -61,6 +66,6 @@ properties:
         properties:
           secretName:
             description: |
-              Имя Secret'а в пространстве имён `d8-system`, который будет использоваться для web-интерфейса Hubble.
+              Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для веб-интерфейса Hubble.
 
               Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).

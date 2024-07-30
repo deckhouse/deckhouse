@@ -1,58 +1,41 @@
 type: object
 properties:
   storageClass:
-    type: object
     properties:
       provision:
         description: |
-          Создание дополнительных StorageClass или переопределение параметров создаваемых по-умолчанию.
-        type: array
+          Создание дополнительных StorageClass или переопределение параметров, создаваемых по умолчанию.
         items:
-          type: object
           properties:
             name:
-              type: string
               description: |
                 Имя будущего класса.
             type:
-              type: string
-              enum: ["gp3", "gp2", "sc1", "st1", "io1", "io2"]
               description: |
-                Тип диска, `gp3`, `gp2`, `sc1`, `st1` или `io1`, `io2`.
+                Тип диска.
             iopsPerGB:
-              type: string
               description: |
                 I/O операций в секунду на каждый Гб для дисков типа `io1` или `io2` (у дисков `gp2` этот параметр `3`):
                   * **Внимание!** Если это значение, умноженное на размер запрошенного диска, будет меньше 100 или больше 64000, создание такого диска завершится ошибкой.
-                  * Подробное описание типов дисков и их IOPS вы найдёте [в официальной документации](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html).
+                  * Подробное описание типов дисков и их IOPS вы найдете [в официальной документации](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html).
             iops:
-              type: string
               description: |
                 I/O операций в секунду для дисков типа `gp3`:
-                  * Допустимые значения: от `"3000"` до `"16000"`.
-                  * Если не задан, будет использоваться значение 3000, согласно [документации](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html).
+                  * Допустимые значения: от `3000` до `16000`.
+                  * Если не задан, будет использоваться значение 3000 согласно [документации](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html).
                   * Изменение этого параметра не приводит к изменению аналогичных параметров для уже созданных дисков. Их необходимо править вручную через консоль управления AWS.
             throughput:
-              type: string
               description: |
                 Пропускная способность в MiB/s для дисков типа `gp3`:
-                  * Допустимые значения: от `"125"` до `"1000"`.
-                  * Если не задан, будет использоваться значение 125, согласно [документации](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html).
+                  * Допустимые значения: от `125` до `1000`.
+                  * Если не задан, будет использоваться значение 125 согласно [документации](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html).
                   * Изменение этого параметра не приводит к изменению аналогичных параметров для уже созданных дисков. Их необходимо править вручную через консоль управления AWS.
       exclude:
-        type: array
-        items:
-          type: string
         description: |
-          Полные имена (или regex выражения имён) StorageClass, которые не будут созданы в кластере.
-        x-examples:
-        - ["sc.*", "st1"]
+          Полные имена (или regex выражения имен) StorageClass, которые не будут созданы в кластере.
       default:
-        type: string
         description: |
           Имя StorageClass, который будет использоваться в кластере по умолчанию:
-            * Если не задан, фактическим StorageClass по умолчанию будет либо:
-              * Присутствующий в кластере произвольный StorageClass с default аннотацией.
-              * Лексикографически первый StorageClass из создаваемых модулем.
-        x-examples:
-        - "gp3"
+            * Если не задан, фактическим StorageClass по умолчанию будет:
+              * присутствующий в кластере произвольный StorageClass с default-аннотацией;
+              * лексикографически первый StorageClass из создаваемых модулем.

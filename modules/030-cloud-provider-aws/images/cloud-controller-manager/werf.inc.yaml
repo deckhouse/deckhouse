@@ -3,32 +3,27 @@
   {{- if $value.ccm.aws }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_ALPINE }}
+fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/aws-cloud-controller-manager
   to: /usr/local/bin/aws-cloud-controller-manager
   before: setup
-shell:
-  beforeInstall:
-  - apk add --no-cache ca-certificates
 docker:
-  ENV:
-    container: docker
   ENTRYPOINT: ["/usr/local/bin/aws-cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.25" $version }}
+    {{- if semverCompare ">=1.30" $version }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE }}
+    {{- else if semverCompare "=1.29" $version }}
+from: {{ $.Images.BASE_GOLANG_21_ALPINE }}
+    {{- else if semverCompare ">=1.27" $version }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+    {{- else if semverCompare "=1.26" $version }}
 from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
-    {{- else if semverCompare ">=1.24" $version }}
-from: {{ $.Images.BASE_GOLANG_18_ALPINE }}
-  {{- else if semverCompare ">=1.23" $version }}
-from: {{ $.Images.BASE_GOLANG_17_ALPINE }}
-    {{- else if semverCompare ">=1.21" $version }}
-from: {{ $.Images.BASE_GOLANG_16_ALPINE }}
     {{- end }}
 git:
-- add: /modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
@@ -41,10 +36,12 @@ shell:
   - apk add --no-cache make bash git mercurial patch rsync
   install:
   - mkdir /src
-  - wget https://github.com/kubernetes/cloud-provider-aws/archive/{{ $value.ccm.aws }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
+  - wget https://github.com/kubernetes/cloud-provider-aws/archive/refs/tags/{{ $value.ccm.aws }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
   - cd /src
-  - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
+  - git apply /patches/{{ $version }}/*.patch --verbose
   - export VERSION={{ $value.ccm.aws }}
   - make aws-cloud-controller-manager
+  - chown 64535:64535 /src/aws-cloud-controller-manager
+  - chmod 0755 /src/aws-cloud-controller-manager
   {{- end }}
 {{- end }}

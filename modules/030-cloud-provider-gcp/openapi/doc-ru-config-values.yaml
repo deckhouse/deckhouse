@@ -1,22 +1,14 @@
 type: object
 properties:
   storageClass:
-    type: object
     properties:
       exclude:
-        type: array
-        items:
-          type: string
         description: |
-          Полные имена (или regex выражения имён) StorageClass, которые не будут созданы в кластере.
-        x-examples:
-        - ["pd-standard.*", "pd-ssd-replicated"]
+          Полные имена (или regex выражения имен) StorageClass, которые не будут созданы в кластере.
       default:
-        type: string
         description: |
           Имя StorageClass, который будет использоваться в кластере по умолчанию.
-            * Если параметр не задан, фактическим StorageClass по умолчанию будет либо:
-              * Присутствующий в кластере StorageClass по умолчанию (имеющий аннотацию ([storageclass.kubernetes.io/is-default-class: "true"](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/#changing-the-default-storageclass)).
-              * Первый StorageClass из создаваемых модулем (в порядке из таблицы выше).
-        x-examples:
-        - "pd-ssd-not-replicated"
+
+          Если параметр не задан, фактическим StorageClass по умолчанию будет следующим:
+          * присутствующий в кластере StorageClass по умолчанию (имеющий аннотацию ([storageclass.kubernetes.io/is-default-class: "true"](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/#changing-the-default-storageclass)));
+          * первый StorageClass из создаваемых модулем (в порядке из таблицы выше).

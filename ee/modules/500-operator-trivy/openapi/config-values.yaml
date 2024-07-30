@@ -1,0 +1,86 @@
+type: object
+properties:
+  storageClass:
+    type: string
+    x-examples: [ "ceph-ssd", "false" ]
+    description: |
+      The name of the StorageClass to use.
+
+      `false` — forces the `emptyDir` usage. Manually delete the old PVC and restart Pod, after setting the parameter.
+  severities:
+    type: array
+    description: |
+      Filter vulnerability reports by their severities.
+
+    items:
+      type: string
+      enum:
+        - UNKNOWN
+        - LOW
+        - MEDIUM
+        - HIGH
+        - CRITICAL
+    x-example:
+      severities:
+        - UNKNOWN
+        - CRITICAl
+  linkCVEtoBDU:
+    type: boolean
+    default: false
+    description: |
+      Convert vulnerability reports. Convert CVE database vulnerabilities to BDU database records.
+
+    x-doc-default: false
+    x-examples: [true, false]
+  tolerations:
+    type: array
+    description: |
+      Optional `tolerations` for `operator-trivy` and scan jobs.
+
+      The same as `spec.tolerations` for the Kubernetes pod.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+    x-examples:
+    -
+      - key: "key1"
+        operator: "Equal"
+        value: "value1"
+        effect: "NoSchedule"
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    x-kubernetes-preserve-unknown-fields: true
+    x-examples:
+      - disktype: ssd
+    description: |
+      Optional `nodeSelector` for `operator-trivy` and scan jobs.
+
+      The same as `spec.nodeSelector` for the Kubernetes pod.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+  reportResourceLabels:
+    type: array
+    description: |
+      A list of additional labels for marking Trivi's reports (VulnerabilityReport).
+      
+      The values of these labels will correspond to the values of the scanned resources' labels.
+    items:
+      type: string
+    x-example:
+      - app
+      - env

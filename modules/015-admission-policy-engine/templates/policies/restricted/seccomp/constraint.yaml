@@ -1,2 +1,0 @@
-{{- $parameters := dict "allowedProfiles" (list "RuntimeDefault" "Localhost") "allowedLocalhostFiles" (list "*") }}
-{{- include "pod_security_standard_restricted" (list . "D8PSSSeccomp" $parameters ) }}

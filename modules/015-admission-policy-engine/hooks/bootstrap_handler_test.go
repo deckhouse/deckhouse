@@ -17,95 +17,200 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+	"os"
+
+	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
+
+const testRoot = "testdata/required_constraint_templates"
 
 var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handler", func() {
 	f := HookExecutionConfigInit(
 		`{"admissionPolicyEngine": {"internal": {"bootstrapped": false} } }`,
 		`{"admissionPolicyEngine":{}}`,
 	)
+	f.RegisterCRD("templates.gatekeeper.sh", "v1", "ConstraintTemplate", true)
 	Context("fresh cluster", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			err := setTestChartPath(fmt.Sprintf("%s/empty/templates", testRoot))
+			Expect(err).To(BeNil())
 			f.RunHook()
 		})
-		It("should keep bootstrapped flag as false", func() {
+		It("should keep bootstrapped flag as false and have d8_admission_policy_engine_not_bootstrapped metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.bootstrapped").Bool()).To(BeFalse())
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  "d8_admission_policy_engine_not_bootstrapped",
+				Action: "expire",
+			}))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_admission_policy_engine_not_bootstrapped",
+				Group:  "d8_admission_policy_engine_not_bootstrapped",
+				Action: "set",
+				Value:  pointer.Float64(1),
+				Labels: map[string]string{},
+			}))
 		})
 	})
 
-	Context("Deployment not ready", func() {
+	Context("Some constraint templates are missing", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(notReadyDeployment)
+			f.KubeStateSet(constraintTemplate1)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			err := setTestChartPath(fmt.Sprintf("%s/valid/templates", testRoot))
+			Expect(err).To(BeNil())
 			f.RunHook()
 		})
-		It("should keep bootstrapped flag as false", func() {
+		It("should keep bootstrapped flag as false and have d8_admission_policy_engine_not_bootstrapped metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.bootstrapped").Bool()).To(BeFalse())
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  "d8_admission_policy_engine_not_bootstrapped",
+				Action: "expire",
+			}))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_admission_policy_engine_not_bootstrapped",
+				Group:  "d8_admission_policy_engine_not_bootstrapped",
+				Action: "set",
+				Value:  pointer.Float64(1),
+				Labels: map[string]string{},
+			}))
 		})
 	})
 
-	Context("Deployment is ready ready", func() {
+	Context("Required constraint templates are in place, but CRDs aren't created", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(readyDeployment)
+			f.KubeStateSet(constraintTemplate1 + constraintTemplate2)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			err := setTestChartPath(fmt.Sprintf("%s/valid/templates", testRoot))
+			Expect(err).To(BeNil())
 			f.RunHook()
 		})
-		It("should keep bootstrapped flag as true", func() {
+		It("should keep bootstrapped flag as false and have d8_admission_policy_engine_not_bootstrapped metric", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.bootstrapped").Bool()).To(BeFalse())
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  "d8_admission_policy_engine_not_bootstrapped",
+				Action: "expire",
+			}))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_admission_policy_engine_not_bootstrapped",
+				Group:  "d8_admission_policy_engine_not_bootstrapped",
+				Action: "set",
+				Value:  pointer.Float64(1),
+				Labels: map[string]string{},
+			}))
+		})
+	})
+
+	Context("Required constraint templates are in place, but some CRD's failed to be created", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(constraintTemplate1 + statusNotCreated + constraintTemplate2 + statusCreated)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			err := setTestChartPath(fmt.Sprintf("%s/valid/templates", testRoot))
+			Expect(err).To(BeNil())
+			f.RunHook()
+		})
+		It("should keep bootstrapped flag as false and have d8_admission_policy_engine_not_bootstrapped metric", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.bootstrapped").Bool()).To(BeFalse())
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  "d8_admission_policy_engine_not_bootstrapped",
+				Action: "expire",
+			}))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_admission_policy_engine_not_bootstrapped",
+				Group:  "d8_admission_policy_engine_not_bootstrapped",
+				Action: "set",
+				Value:  pointer.Float64(1),
+				Labels: map[string]string{},
+			}))
+		})
+	})
+
+	Context("Required constraint templates are in place, all CRD's are created", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(constraintTemplate1 + statusCreated + constraintTemplate2 + statusCreated)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			err := setTestChartPath(fmt.Sprintf("%s/valid/templates", testRoot))
+			Expect(err).To(BeNil())
+			f.RunHook()
+		})
+		It("should keep bootstrapped flag as true and have no d8_admission_policy_engine_not_bootstrapped metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.bootstrapped").Bool()).To(BeTrue())
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(1))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  "d8_admission_policy_engine_not_bootstrapped",
+				Action: "expire",
+			}))
 		})
 	})
 })
 
-var readyDeployment = `
-apiVersion: apps/v1
-kind: Deployment
+func setTestChartPath(path string) error {
+	return os.Setenv("D8_TEST_CHART_PATH", path)
+}
+
+var constraintTemplate1 = `
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
 metadata:
+  name: d8priorityclass
   labels:
-    app: gatekeeper
-    app.kubernetes.io/managed-by: Helm
-    control-plane: controller-manager
     heritage: deckhouse
     module: admission-policy-engine
-  name: gatekeeper-controller-manager
-  namespace: d8-admission-policy-engine
-spec:
-  progressDeadlineSeconds: 600
-  replicas: 1
-status:
-  availableReplicas: 1
-  observedGeneration: 1
-  readyReplicas: 1
-  replicas: 1
-  updatedReplicas: 1
+    security.deckhouse.io: operation-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Required Priority Class"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: "Required Priority Class"
 `
 
-var notReadyDeployment = `
-apiVersion: apps/v1
-kind: Deployment
+var constraintTemplate2 = `
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
 metadata:
+  name: d8readonlyrootfilesystem
   labels:
-    app: gatekeeper
-    app.kubernetes.io/managed-by: Helm
-    control-plane: controller-manager
     heritage: deckhouse
     module: admission-policy-engine
-  name: gatekeeper-controller-manager
-  namespace: d8-admission-policy-engine
-spec:
-  progressDeadlineSeconds: 600
-  replicas: 1
+    security.deckhouse.io: security-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Read Only Root Filesystem"
+    metadata.gatekeeper.sh/version: 1.0.0
+`
+
+var statusCreated = `
 status:
-  availableReplicas: 0
-  readyReplicas: 0
-  replicas: 1
-  updatedReplicas: 1
+  created: true
+`
+
+var statusNotCreated = `
+status:
+  created: false
 `

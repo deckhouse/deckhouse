@@ -22,12 +22,16 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
-// DecodeDataFromSecret returns data section from Secret. If possible, top level keys are converted from JSON.
-func DecodeDataFromSecret(obj *unstructured.Unstructured) (map[string]interface{}, error) {
+// decodeDataFromSecret returns data section from Secret. If possible, top level keys are converted from JSON.
+func decodeDataFromSecret(obj *unstructured.Unstructured) (map[string]interface{}, error) {
 	secret := new(v1.Secret)
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
@@ -58,19 +62,20 @@ func DecodeDataFromSecret(obj *unstructured.Unstructured) (map[string]interface{
 	return res, nil
 }
 
-// SemverMajMin is a Go implementation of this bash snippet:
+// semverMajMin is a Go implementation of this bash snippet:
 //
 //	function semver::majmin() {
 //	  echo "$(echo $1 | cut -d. -f1,2)"
 //	}
-func SemverMajMin(ver *semver.Version) string {
+func semverMajMin(ver *semver.Version) string {
 	if ver == nil {
 		return ""
 	}
 	return fmt.Sprintf("%d.%d", ver.Major(), ver.Minor())
 }
 
-func SemverMin(versions []*semver.Version) *semver.Version {
+// semverMin is a function that finds the minimum semver in a slice.
+func semverMin(versions []*semver.Version) *semver.Version {
 	if len(versions) == 0 {
 		return nil
 	}
@@ -81,4 +86,81 @@ func SemverMin(versions []*semver.Version) *semver.Version {
 		}
 	}
 	return res
+}
+
+func patchNodeGroupStatus(patcher *object_patch.PatchCollector, nodeGroupName string, patch interface{}) {
+	patcher.MergePatch(patch, "deckhouse.io/v1", "NodeGroup", "", nodeGroupName, object_patch.WithSubresource("/status"))
+}
+
+func setNodeGroupStatus(patcher *object_patch.PatchCollector, nodeGroupName string, statusField string, value interface{}) {
+	statusPatch := map[string]interface{}{
+		"status": map[string]interface{}{
+			statusField: value,
+		},
+	}
+	patchNodeGroupStatus(patcher, nodeGroupName, statusPatch)
+}
+func conditionsToPatch(conditions []ngv1.NodeGroupCondition) []map[string]interface{} {
+	res := make([]map[string]interface{}, 0, len(conditions))
+
+	for _, cc := range conditions {
+		res = append(res, cc.ToMap())
+	}
+
+	return res
+}
+
+const (
+	minStatusField                 = "min"
+	maxStatusField                 = "max"
+	desiredStatusField             = "desired"
+	instancesStatusField           = "instances"
+	lastMachineFailuresStatusField = "lastMachineFailures"
+)
+
+func buildUpdateStatusPatch(
+	nodesNum, readyNodesNum, uptodateNodesCount, minPerZone, maxPerZone, desiredMax, instancesNum int32,
+	nodeType ngv1.NodeType, statusMsg string,
+	lastMachineFailures []*v1alpha1.MachineSummary,
+	newConditions []ngv1.NodeGroupCondition,
+) interface{} {
+	ready := "True"
+	if len(statusMsg) > 0 {
+		ready = "False"
+	}
+
+	patch := map[string]interface{}{
+		"nodes":                        nodesNum,
+		"ready":                        readyNodesNum,
+		"upToDate":                     uptodateNodesCount,
+		minStatusField:                 nil,
+		maxStatusField:                 nil,
+		desiredStatusField:             nil,
+		instancesStatusField:           nil,
+		lastMachineFailuresStatusField: nil,
+	}
+	if nodeType == ngv1.NodeTypeCloudEphemeral {
+		patch[minStatusField] = minPerZone
+		patch[maxStatusField] = maxPerZone
+		patch[desiredStatusField] = desiredMax
+		patch[instancesStatusField] = instancesNum
+		patch[lastMachineFailuresStatusField] = lastMachineFailures
+
+		if len(lastMachineFailures) == 0 {
+			patch[lastMachineFailuresStatusField] = make([]interface{}, 0) // to make [] array in json result
+		}
+	}
+
+	patch["conditionSummary"] = map[string]interface{}{
+		"ready":         ready,
+		"statusMessage": statusMsg,
+	}
+
+	patch["conditions"] = conditionsToPatch(newConditions)
+
+	statusPatch := map[string]interface{}{
+		"status": patch,
+	}
+
+	return statusPatch
 }

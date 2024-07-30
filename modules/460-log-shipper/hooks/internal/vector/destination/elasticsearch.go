@@ -76,13 +76,6 @@ type ElasticsearchBulk struct {
 func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Elasticsearch {
 	spec := cspec.Elasticsearch
 
-	// Disable buffer. It is buggy. Vector developers know about problems with buffer.
-	// More info about buffer rewriting here - https://github.com/vectordotdev/vector/issues/9476
-	// common.Buffer = buffer{
-	//	Size: 100 * 1024 * 1024, // 100MiB in bytes for vector persistent queue
-	//	Type: "disk",
-	// }
-
 	bulkAction := "index"
 	mode := "bulk"
 
@@ -111,6 +104,7 @@ func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec) *El
 			Name:   ComposeName(name),
 			Type:   "elasticsearch",
 			Inputs: set.New(),
+			Buffer: buildVectorBuffer(cspec.Buffer),
 		},
 		Auth: ElasticsearchAuth{
 			AwsAccessKey:  decodeB64(spec.Auth.AwsAccessKey),

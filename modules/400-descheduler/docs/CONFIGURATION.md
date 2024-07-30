@@ -2,6 +2,8 @@
 title: "The descheduler module: configuration"
 ---
 
-The module does not have any mandatory parameters.
+{% include module-alerts.liquid %}
 
-<!-- SCHEMA -->
+{% include module-bundle.liquid %}
+
+The module does not have any mandatory parameters.

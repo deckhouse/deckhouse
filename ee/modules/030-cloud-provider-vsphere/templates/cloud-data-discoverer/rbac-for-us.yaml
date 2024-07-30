@@ -1,0 +1,106 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cloud-data-discoverer
+  namespace: d8-cloud-provider-vsphere
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-data-discoverer")) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cloud-provider-vsphere:cloud-data-discoverer
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-data-discoverer")) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - instancetypescatalogs
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumes
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:cloud-provider-vsphere:cloud-data-discoverer:secret-reader
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-data-discoverer")) | nindent 2 }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    resourceNames:
+      - d8-provider-cluster-configuration
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    resourceNames:
+      - d8-cloud-provider-discovery-data
+    verbs:
+      - get
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cloud-provider-vsphere:cloud-data-discoverer
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-data-discoverer")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:cloud-provider-vsphere:cloud-data-discoverer
+subjects:
+- kind: ServiceAccount
+  name: cloud-data-discoverer
+  namespace: d8-cloud-provider-vsphere
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:cloud-provider-vsphere:cloud-data-discoverer:secret-reader
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-data-discoverer")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:cloud-provider-vsphere:cloud-data-discoverer:secret-reader
+subjects:
+  - kind: ServiceAccount
+    name: cloud-data-discoverer
+    namespace: d8-cloud-provider-vsphere
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cloud-provider-vsphere:cloud-data-discoverer:d8-rbac-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-data-discoverer")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+- kind: ServiceAccount
+  name: cloud-data-discoverer
+  namespace: d8-cloud-provider-vsphere

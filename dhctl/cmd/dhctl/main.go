@@ -17,7 +17,10 @@ package main
 import (
 	"fmt"
 	"os"
+	"path"
 	"runtime/trace"
+	"strings"
+	"time"
 
 	terminal "golang.org/x/term"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -25,14 +28,20 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 func main() {
 	_ = os.Mkdir(app.TmpDirName, 0o755)
+
+	initGlobalVars()
 
 	tomb.RegisterOnShutdown("Trace", EnableTrace())
 	tomb.RegisterOnShutdown("Restore terminal if needed", restoreTerminal())
@@ -50,6 +59,12 @@ func main() {
 		fmt.Printf("%s %s\n", app.AppName, app.AppVersion)
 		return nil
 	})
+
+	commands.DefineMirrorCommand(kpApp)
+	commands.DefineMirrorModulesCommand(kpApp)
+
+	commands.DefineServerCommand(kpApp)
+	commands.DefineSingleThreadedServerCommand(kpApp)
 
 	bootstrap.DefineBootstrapCommand(kpApp)
 	bootstrapPhaseCmd := kpApp.Command("bootstrap-phase", "Commands to run a single phase of the bootstrap process.")
@@ -121,8 +136,47 @@ func main() {
 		commands.DefineWaitDeploymentReadyCommand(deckhouseCmd)
 	}
 
+	runApplication(kpApp)
+}
+
+func runApplication(kpApp *kingpin.Application) {
 	kpApp.Action(func(c *kingpin.ParseContext) error {
 		log.InitLogger(app.LoggerType)
+		if app.DoNotWriteDebugLogFile {
+			return nil
+		}
+
+		if c.SelectedCommand == nil {
+			return nil
+		}
+
+		logPath := app.DebugLogFilePath
+
+		if logPath == "" {
+			cmdStr := strings.Join(strings.Fields(c.SelectedCommand.FullCommand()), "")
+			logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
+			logPath = path.Join(app.TmpDirName, logFile)
+		}
+
+		outFile, err := os.Create(logPath)
+		if err != nil {
+			return err
+		}
+
+		err = log.WrapWithTeeLogger(outFile, 1024)
+		if err != nil {
+			return err
+		}
+
+		log.InfoF("Debug log file: %s\n", logPath)
+
+		tomb.RegisterOnShutdown("Finalize logger", func() {
+			if err := log.FlushAndClose(); err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to flush and close log file: %v\n", err)
+				return
+			}
+		})
+
 		return nil
 	})
 
@@ -196,4 +250,25 @@ func restoreTerminal() func() {
 	}
 
 	return func() { _ = terminal.Restore(fd, state) }
+}
+
+func initGlobalVars() {
+	// get current path
+	pwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	// set path to ssh and terraform binaries
+	if err := os.Setenv("PATH", fmt.Sprintf("%s/bin:%s", pwd, os.Getenv("PATH"))); err != nil {
+		panic(err)
+	}
+
+	// set relative path to config and template files
+	config.InitGlobalVars(pwd)
+	commands.InitGlobalVars(pwd)
+	app.InitGlobalVars(pwd)
+	terraform.InitGlobalVars(pwd)
+	manifests.InitGlobalVars(pwd)
+	template.InitGlobalVars(pwd)
 }

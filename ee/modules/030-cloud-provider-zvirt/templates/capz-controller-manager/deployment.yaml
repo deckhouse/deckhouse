@@ -1,0 +1,128 @@
+{{- $providerClusterConfiguration := .Values.cloudProviderZvirt.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
+{{- define "zvirt_controller_manager_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: capz-controller-manager
+  namespace: d8-cloud-provider-zvirt
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capz-controller-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: capz-controller-manager
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "capz-controller-manager"
+      minAllowed:
+        {{- include "zvirt_controller_manager_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+{{- end }}
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: capz-controller-manager
+  namespace: d8-cloud-provider-zvirt
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capz-controller-manager")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: capz-controller-manager
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capz-controller-manager
+  namespace: d8-cloud-provider-zvirt
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capz-controller-manager")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: capz-controller-manager
+      cluster.x-k8s.io/provider: infrastructure-zvirt
+      control-plane: controller-manager
+  template:
+    metadata:
+      labels:
+        app: capz-controller-manager
+        cluster.x-k8s.io/provider: infrastructure-zvirt
+        control-plane: controller-manager
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "capz-controller-manager")) | nindent 6 }}
+      serviceAccountName: capz-controller-manager
+      imagePullSecrets:
+        - name: deckhouse-registry
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: capz-controller-manager
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "capzControllerManager") }}
+        imagePullPolicy: IfNotPresent
+        args:
+          - "--leader-elect"
+        env:
+          - name: ZVIRT_API_URL
+            valueFrom:
+              secretKeyRef:
+                name: capi-zvirt-credentials
+                key: server
+          - name: ZVIRT_USER
+            valueFrom:
+              secretKeyRef:
+                name: capi-zvirt-credentials
+                key: username
+          - name: ZVIRT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: capi-zvirt-credentials
+                key: password
+          - name: ZVIRT_CONNECT_INSECURE
+            valueFrom:
+              secretKeyRef:
+                name: capi-zvirt-credentials
+                key: insecure
+          - name: ZVIRT_CA_BUNDLE
+            valueFrom:
+              secretKeyRef:
+                name: capi-zvirt-credentials
+                key: caBundle
+          - name: ZVIRT_VM_TAGS
+            value: {{ join "-" (list "cluster" .Values.global.discovery.clusterUUID) | quote }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "zvirt_controller_manager_resources" . | nindent 12 }}
+{{- end }}

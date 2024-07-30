@@ -9,23 +9,23 @@ title: "Модуль cert-manager: примеры конфигурации"
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: example-com                          # имя сертификата, через него потом можно смотреть статус
+  name: example-com                          # Имя сертификата, через него потом можно смотреть статус.
   namespace: default
 spec:
-  secretName: example-com-tls                # название секрета, в который положить приватный ключ и сертификат
+  secretName: example-com-tls                # Название Secret'а, в который положить приватный ключ и сертификат.
   issuerRef:
-    kind: ClusterIssuer                      # ссылка на "выдаватель" сертификатов, см. подробнее ниже
+    kind: ClusterIssuer                      # Ссылка на "выдаватель" сертификатов, см. подробнее ниже.
     name: letsencrypt
-  commonName: example.com                    # основной домен сертификата
-  dnsNames:                                  # дополнительыне домены сертификата (Как минимум одно DNS имя или IP-адрес должен быть указан)
+  commonName: example.com                    # Основной домен сертификата.
+  dnsNames:                                  # Дополнительные домены сертификата (как минимум одно DNS-имя или IP-адрес должны быть указаны).
   - www.example.com
   - admin.example.com
 ```
 
 При этом:
-* создается отдельный Ingress-ресурс на время прохождения challenge'а (соответственно аутентификация и whitelist основного Ingress не будут мешать),
-* можно заказать один сертификат на несколько Ingress-ресурсов (и он не отвалится при удалении того, в котором была аннотация `tls-acme`),
-* можно заказать сертификат с дополнительными именами (как в примере),
+* создается отдельный Ingress-ресурс на время прохождения challenge'а (соответственно, аутентификация и whitelist основного Ingress не будут мешать);
+* можно заказать один сертификат на несколько Ingress-ресурсов (и он не отвалится при удалении того, в котором была аннотация `tls-acme`);
+* можно заказать сертификат с дополнительными именами (как в примере);
 * можно валидировать разные домены, входящие в один сертификат, через разные Ingress-контроллеры.
 
 Подробнее можно прочитать [в документации cert-manager](https://cert-manager.io/docs/tutorials/acme/http-validation/).
@@ -37,7 +37,7 @@ spec:
    * В самом верху страницы написана ваша почта под `Email Address`.
    * В самом низу страницы жмем на кнопку `View` напротив `Global API Key`.
 
-   В результате чего мы получаем ключ для взаимодействия с API Cloudflare и почту на которую зарегистрирован аккаунт.
+   В результате этого мы получаем ключ для взаимодействия с API Cloudflare и почту, на которую зарегистрирован аккаунт.
 
 2. Редактируем [настройки модуля cert-manager](configuration.html) и добавляем такую секцию:
 
@@ -55,7 +55,7 @@ spec:
      cloudflareEmail: some@mail.somedomain
    ```
 
-   После чего, Deckhouse автоматически создаст ClusterIssuer и Secret для Cloudflare в namespace `d8-cert-manager`.
+   После этого Deckhouse автоматически создаст ClusterIssuer и Secret для Cloudflare в namespace `d8-cert-manager`.
 
    * Конфигурация с помощью [APIToken](https://cert-manager.io/docs/configuration/acme/dns01/cloudflare/#api-tokens) является рекомендуемой и более безопасной.
 
@@ -142,7 +142,7 @@ spec:
      route53SecretAccessKey: RCUasBv4xW8Gt53MX/XuiSfrBROYaDjeFsP4rM3/
    ```
 
-   После чего, Deckhouse автоматически создаст ClusterIssuer и Secret для route53 в namespace `d8-cert-manager`.
+   После этого Deckhouse автоматически создаст ClusterIssuer и Secret для route53 в namespace `d8-cert-manager`.
 
 3. Создаем Certificate с проверкой с помощью провайдера route53. Данная возможность появится только при указании настроек `route53AccessKeyID` и `route53SecretAccessKey` в Deckhouse:
 
@@ -164,13 +164,13 @@ spec:
 
 ## Заказ wildcard-сертификата с DNS в Google
 
-1. Создаем сервис-аккаунт с необходимой ролью.
+1. Создаем ServiceAccount с необходимой ролью:
 
    * Заходим на [страницу управления политиками](https://console.cloud.google.com/iam-admin/serviceaccounts).
    * Выбираем нужный проект.
-   * Создаем сервис-аккаунт с желаемым названием, например `dns01-solver`.
-   * Заходим в созданный сервис-аккаунт.
-   * Создаём ключ по кнопке "Добавить ключ".
+   * Создаем ServiceAccount с желаемым названием, например `dns01-solver`.
+   * Заходим в созданный ServiceAccount.
+   * Создаем ключ по кнопке «Добавить ключ».
    * Будет скачан `.json`-файл с данными ключа имени.
    * Закодируем полученный файл в строку **base64**:
 
@@ -180,7 +180,7 @@ spec:
 
 2. Сохраняеем полученную **base64**-строку в параметр модуля `cloudDNSServiceAccount`.
 
-   После чего, Deckhouse автоматически создаст ClusterIssuer и Secret для cloudDNS в namespace `d8-cert-manager`.
+   После этого Deckhouse автоматически создаст ClusterIssuer и Secret для cloudDNS в namespace `d8-cert-manager`.
 
 3. Создаем Certificate с валидацией через cloudDNS:
 
@@ -201,21 +201,21 @@ spec:
 
 ## Заказ self-signed-сертификата
 
-Все еще проще, чем с LetsEncypt. Просто меняем `letsencrypt` на `selfsigned`:
+Все еще проще, чем с LetsEncrypt. Просто меняем `letsencrypt` на `selfsigned`:
 
 ```yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: example-com                          # имя сертификата, через него потом можно смотреть статус
+  name: example-com                          # Имя сертификата, через него потом можно смотреть статус.
   namespace: default
 spec:
-  secretName: example-com-tls                # название секрета, в который положить приватный ключ и сертификат
+  secretName: example-com-tls                # Название Secret'а, в который положить приватный ключ и сертификат.
   issuerRef:
-    kind: ClusterIssuer                      # ссылка на "выдаватель" сертификатов, см. подробнее ниже
+    kind: ClusterIssuer                      # Ссылка на "выдаватель" сертификатов, см. подробнее ниже.
     name: selfsigned
-  commonName: example.com                    # основной домен сертификата
-  dnsNames:                                  # дополнительные домены сертификата, указывать не обязательно
+  commonName: example.com                    # Основной домен сертификата.
+  dnsNames:                                  # Дополнительные домены сертификата, указывать необязательно.
   - www.example.com
   - admin.example.com
 ```

@@ -33,7 +33,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                   "nodes",
 			ApiVersion:             "v1",
 			Kind:                   "Node",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			LabelSelector: &v1.LabelSelector{
 				MatchExpressions: []v1.LabelSelectorRequirement{
 					{
@@ -48,7 +48,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                   "control_plane_manager",
 			ApiVersion:             "v1",
 			Kind:                   "Pod",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"kube-system"},
@@ -85,13 +85,13 @@ func updateApprovalFilterNode(unstructured *unstructured.Unstructured) (go_hook.
 	}
 
 	var isApproved bool
-	_, ok := node.Annotations["control-plane-manger.deckhouse.io/approved"]
+	_, ok := node.Annotations["control-plane-manager.deckhouse.io/approved"]
 	if ok {
 		isApproved = true
 	}
 
 	var isWaiting bool
-	_, ok = node.Annotations["control-plane-manger.deckhouse.io/waiting-for-approval"]
+	_, ok = node.Annotations["control-plane-manager.deckhouse.io/waiting-for-approval"]
 	if ok {
 		isWaiting = true
 	}
@@ -193,7 +193,7 @@ var (
 	removeApprovedPatch = map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
-				"control-plane-manger.deckhouse.io/approved": nil,
+				"control-plane-manager.deckhouse.io/approved": nil,
 			},
 		},
 	}
@@ -201,8 +201,8 @@ var (
 	approvedPatch = map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
-				"control-plane-manger.deckhouse.io/approved":             "",
-				"control-plane-manger.deckhouse.io/waiting-for-approval": nil,
+				"control-plane-manager.deckhouse.io/approved":             "",
+				"control-plane-manager.deckhouse.io/waiting-for-approval": nil,
 			},
 		},
 	}

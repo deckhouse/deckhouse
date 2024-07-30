@@ -9,7 +9,7 @@ spec:
   ports:
     - name: validating-webhook
       port: 443
-      targetPort: 9680
+      targetPort: validating-http
       protocol: TCP
   selector:
     app: webhook-handler
@@ -24,7 +24,7 @@ spec:
   ports:
     - name: conversion-webhook
       port: 443
-      targetPort: 9681
+      targetPort: conversion-http
       protocol: TCP
   selector:
     app: webhook-handler

@@ -95,6 +95,7 @@ metadata:
 spec:
   certificateOwnerRef: false
   secretName: ingress-tls-webui
+  {{ include "helm_lib_module_generate_common_name" (list . .Chart.Name) | nindent 2 }}
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . .Chart.Name) }}
   issuerRef:

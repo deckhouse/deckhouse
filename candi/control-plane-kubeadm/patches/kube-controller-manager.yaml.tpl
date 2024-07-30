@@ -19,7 +19,7 @@ metadata:
 spec:
   containers:
     - name: kube-controller-manager
-      image: {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager $imageWithVersion) }}
+      image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager $imageWithVersion) }}
     {{- end }}
   {{- end }}
 {{- end }}
@@ -75,9 +75,3 @@ metadata:
   namespace: kube-system
 spec:
   dnsPolicy: ClusterFirstWithHostNet
-# TODO remove after Docker support is dropped
-{{- if semverCompare "> 1.21" .clusterConfiguration.kubernetesVersion }}
-  securityContext:
-    seccompProfile:
-      type: Unconfined
-{{- end }}

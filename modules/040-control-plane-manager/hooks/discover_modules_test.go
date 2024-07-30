@@ -89,10 +89,25 @@ metadata:
   labels:
     control-plane-configurator: ""
 `
+
+		auditFullConfigMapAdded = `
+---
+apiVersion: v1
+data:
+  url: https://audit-webhook.url
+  ca: audit-webhook-ca
+kind: ConfigMap
+metadata:
+  name: cm
+  namespace: d8-runtime-audit-engine
+  labels:
+    control-plane-configurator: ""
+`
 	)
 	const values = `
 controlPlaneManager:
-  internal: {}
+  internal:
+    audit: {}
   apiserver:
     authn: {}
     authz: {}
@@ -240,6 +255,32 @@ global:
 					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcIssuerAddress").Exists()).ToNot(BeTrue())
 					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.webhookURL").Exists()).ToNot(BeTrue())
 					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.webhookCA").Exists()).ToNot(BeTrue())
+				})
+
+				Context("Audit ConfigMap was added", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSet(auditFullConfigMapAdded))
+						f.RunHook()
+					})
+
+					It("controlPlaneManager.x values must be filled with data from ConfigMap", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						Expect(f.ValuesGet("controlPlaneManager.internal.audit.webhookURL").String()).To(Equal("https://audit-webhook.url"))
+						Expect(f.ValuesGet("controlPlaneManager.internal.audit.webhookCA").String()).To(Equal("audit-webhook-ca"))
+					})
+
+					Context("ConfigMaps were deleted", func() {
+						BeforeEach(func() {
+							f.BindingContexts.Set(f.KubeStateSet(""))
+							f.RunHook()
+						})
+
+						It("Hook must execute successfully, and all values should be unset", func() {
+							Expect(f).To(ExecuteSuccessfully())
+							Expect(f.ValuesGet("controlPlaneManager.internal.audit.webhookURL").Exists()).To(BeFalse())
+							Expect(f.ValuesGet("controlPlaneManager.internal.audit.webhookCA").Exists()).To(BeFalse())
+						})
+					})
 				})
 			})
 		})

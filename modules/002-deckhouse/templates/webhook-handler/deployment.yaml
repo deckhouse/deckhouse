@@ -48,10 +48,10 @@ spec:
         checksum/config: {{ include (print $.Template.BasePath "/webhook-handler/secret.yaml") . | sha256sum }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "webhook-handler")) | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       serviceAccountName: webhook-handler
       imagePullSecrets:
       - name: deckhouse-registry
@@ -74,6 +74,10 @@ spec:
           value: /certs/tls.key
         - name: VALIDATING_WEBHOOK_CA
           value: /certs/ca.crt
+        {{- if not .Values.global.clusterIsBootstrapped }}
+        - name: VALIDATING_WEBHOOK_FAILURE_POLICY
+          value: Ignore
+        {{- end }}
         - name: CONVERSION_WEBHOOK_SERVICE_NAME
           value: conversion-webhook-handler
         - name: CONVERSION_WEBHOOK_CONFIGURATION_NAME
@@ -96,8 +100,10 @@ spec:
             name: conversion-http
             protocol: TCP
         livenessProbe:
-          tcpSocket:
-            port: validating-http
+          httpGet:
+            port: 9680
+            path: /healthz
+            scheme: HTTPS
           initialDelaySeconds: 5
           periodSeconds: 10
         resources:

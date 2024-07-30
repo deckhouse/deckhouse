@@ -1,0 +1,217 @@
+admission-policy-engine:
+  features:
+    - summary: Images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5522
+candi:
+  features:
+    - summary: Images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5625
+  fixes:
+    - summary: AWS node's `root_block_device` is now marked with tags from `AWSClusterConfiguration`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5650
+    - summary: Fix migration of cluster from one edition to another.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5603
+    - summary: Changed the command output for `yum versionlock delete` if it is dnf.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5492
+    - summary: Fixes when /opt/deckhouse/bin not in the PATH
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5406
+    - summary: Fix wait `apt update`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5314
+cloud-provider-azure:
+  features:
+    - summary: Add `serviceEndpoints` parameter in a provider cluster configuration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5659
+cloud-provider-openstack:
+  fixes:
+    - summary: Fix `ignoreVolumeMicroversion` parameter appliance for Kubernetes version > 1.24.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5778
+cloud-provider-yandex:
+  features:
+    - summary: Add storage class for the new disk type — `network-ssd-io-m3`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5684
+common:
+  features:
+    - summary: Added "deckhouse" user to distroless image
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5518
+    - summary: Added "deckhouse" user to distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5502
+control-plane-manager:
+  fixes:
+    - summary: >-
+        Path for kubeconfig symlink is now constructed using $HOME variable instead of /root if
+        possible.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5626
+deckhouse:
+  features:
+    - summary: Remove images copier from deckhouse module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5713
+      impact: >-
+        The
+        [instruction](https://github.com/deckhouse/deckhouse/blob/f0ccf1b0d472455ca05ff0748e5ba6c634967a7f/modules/002-deckhouse/docs/internal/IMAGE_COPIER.md)
+        for copying images no longer work. Use `d8-pull/d8-push` or `dhctl mirror` with
+        `deckhouse-controller helper change-registry`.
+    - summary: Set ready and converging status for module configs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5641
+    - summary: Start debug HTTP API server next to socket server.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5570
+    - summary: Move ModuleConfig handling to the `deckhouse` module. Delete the module `deckhouse-config`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5566
+  fixes:
+    - summary: Handle orphan deckhouse Endpoints and EndpointSlices
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5620
+    - summary: >-
+        Made it possible to configure `minimalNotificationTime` without configuring the notification
+        webhook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5491
+    - summary: Automatically update Deckhouse minor versions step by step.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5453
+deckhouse-controller:
+  fixes:
+    - summary: Skip defaulting an array without items schema to prevent panic
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5711
+    - summary: Add Prometeus logs to the debugging information.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5616
+    - summary: Improve the readability of raw debugging information.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5499
+docs:
+  fixes:
+    - summary: Improved description of text snippets about pulling and pushing images.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5628
+    - summary: Add info about how to edit `StaticClusterConfiguration`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5624
+    - summary: Fix doc extended monitoring.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5612
+    - summary: Fix spec.labelFilter field in doc
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5591
+extended-monitoring:
+  features:
+    - summary: Images are based on a distroless image (part 2).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5547
+    - summary: Images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5451
+external-module-manager:
+  features:
+    - summary: >-
+        Deploy the `deckhouse` modules source. It will make it possible to enable modules developed
+        by the Deckhouse team but distributed separately.
+
+
+        The most awaited module that can be enabled now is the `deckhouse-admin` module — a
+        convenient web-interface to administer deckhouse clusters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5710
+      impact: >-
+        Deploy the `deckhouse` modules source. It will make it possible to enable modules developed
+        by the Deckhouse team but distributed separately.
+
+
+        The most awaited module that can be enabled now is the `deckhouse-admin` module — a
+        convenient web-interface to administer deckhouse clusters.
+    - summary: Rename custom resources ExternalModule* -> Module*
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5599
+    - summary: Support custom CA for `ExternalModuleSource`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5498
+  fixes:
+    - summary: Add the check to prevent nil pointer dereference to the modules migration hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5793
+    - summary: Fix race condition while handling source on Deckhouse startup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5598
+flant-integration:
+  fixes:
+    - summary: Take values from the `clusterConfiguration` parameter instead of the global parameter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5681
+    - summary: Change `sum` to `avg` in `controller_metrics` hook and refactor utils.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5517
+global-hooks:
+  fixes:
+    - summary: >-
+        Remove hostname from the deckhouse endpoints/endpointslices to avoid managed cluster
+        problems.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5734
+    - summary: Fix modules migration webhook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5718
+    - summary: Fix global hooks order.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5631
+linstor:
+  features:
+    - summary: Update linstor controller version to `1.24.1`. Update DRBD version to `9.2.5`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5469
+      impact: Linstor controller and piraeus operator will restart.
+  fixes:
+    - summary: Fix rare issues with building the DRBD module when changing the kernels.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5758
+    - summary: >-
+        Revert the commit that updated the versions of Linstor and DRBD (revert
+        https://github.com/deckhouse/deckhouse/pull/5469 ).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5755
+log-shipper:
+  features:
+    - summary: Images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5523
+  fixes:
+    - summary: Add an example about collecting logs without strings.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5646
+loki:
+  features:
+    - summary: Images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5391
+monitoring-applications:
+  fixes:
+    - summary: change expression for ip_forwarding
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5586
+    - summary: Change expression to `process_virtual_memory`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5543
+monitoring-kubernetes:
+  features:
+    - summary: Images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5378
+  fixes:
+    - summary: Revert `node-exporter` `kube-rbac-proxy` liveness probe.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5642
+    - summary: Fix freezes for `node-exporter`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5558
+operator-trivy:
+  features:
+    - summary: Use customized trivy binary.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5399
+  fixes:
+    - summary: Fix constant creation and deletion of node-collector pods.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5688
+    - summary: >-
+        Fix handling empty list in operator trivy deployment in `OPERATOR_TARGET_NAMESPACES` env
+        (set `default` value).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5662
+prometheus:
+  features:
+    - summary: Images are based now on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5783
+      impact: alertmanager, prometheus, grafana, trickster pods will be restarted.
+    - summary: Images are based now on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5402
+      impact: alertmanager, prometheus, grafana, trickster pods will be restarted.
+  fixes:
+    - summary: Fix external auth handling for alertmanager.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5706
+prometheus-metrics-adapter:
+  features:
+    - summary: All images are now based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5519
+runtime-audit-engine:
+  features:
+    - summary: Base `falcosidekick` image on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5623
+      impact: '`runtime-audit-engine` pod will restart.'
+  fixes:
+    - summary: Add read-only root for the `falco` container.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5664
+      impact: '`runtime-audit-engine` pods should be restarted.'
+testing:
+  fixes:
+    - summary: Disable Linstor tests in a static e2e environment.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5605
+user-authz:
+  features:
+    - summary: >-
+        A new parameter `.spec.namespaceSelector` was added to Cluster Authorization Rule spec. The
+        `.spec.limitNamespaces` parameter was marked as deprecated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4666
+

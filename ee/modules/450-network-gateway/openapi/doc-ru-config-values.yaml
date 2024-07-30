@@ -3,19 +3,19 @@ properties:
     description: |
       Cелектор, который идентифицирует узлы, на которых будут настроены правила iptables и на которых будет работать DHCP-сервер.
 
-      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod. Pod'ы инстанса унаследуют это поле как есть.
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes. Поды инстанса унаследуют это поле как есть.
   tolerations:
     description: |
-      Toleration'ы для Pod'ов c DHCP и с настройщиками iptables.
+      Toleration'ы для подов c DHCP и с настройщиками iptables.
 
-      Стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Pod'ы инстанса унаследуют это поле как есть.
+      Стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
   subnet:
     description: |
       Адрес локальной подсети, которую должен обслуживать шлюз.
 
       На основе этого адреса будут сформированы DHCP-опции для выдачи клиентам:
-      * Пул адресов — номера с 50 по последний.
-      * Роутер — первый адрес в подсети.
+      * пул адресов — номера с 50 по последний;
+      * роутер — первый адрес в подсети.
   publicAddress:
     description: Адрес, на который будет заменен src-адрес исходящих из локальной сети пакетов.
   disableDHCP:
@@ -29,8 +29,10 @@ properties:
         description: Список search-доменов.
   storageClass:
     description: |
-      Имя storageClass'а, который использовать для хранения DHCP lease.
+      Имя StorageClass'а, который будет использоваться для хранения DHCP lease.
 
-      Если не указано — используется StorageClass существующей PVC, а если PVC пока нет — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
+      Если не указано, используется StorageClass существующей PVC, а если PVC пока нет, используется или глобальный [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет, данные сохраняются в emptyDir.
 
-      Dnsmasq, на котором основан наш DHCP-сервер имеет свои механизмы защиты от дублирования IP-адресов в случае утери базы с lease-ами, но лучше её не терять.
+      `global.discovery.defaultStorageClass` применяется только при включении модуля, смена StorageClass по умолчанию в кластере не приведет к перезаказу диска.
+
+      Dnsmasq, на котором основан наш DHCP-сервер, имеет свои механизмы защиты от дублирования IP-адресов в случае утери базы с lease'ами, но лучше ее не терять.

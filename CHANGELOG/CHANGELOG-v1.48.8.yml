@@ -1,0 +1,7 @@
+cloud-provider-openstack:
+  fixes:
+    - summary: >-
+        Remove 'minLength: 1' requirement from mainNetwork and defaultImageName properties in
+        OpenAPI specification.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5386
+

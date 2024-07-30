@@ -1,6 +1,6 @@
 {{- $context := . }}
 {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
-  {{- if or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") }}
+  {{- if or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough")}}
     {{ $annotations := "" }}
     {{ $sourceRanges := "" }}
     {{- if and (eq $crd.spec.inlet "LoadBalancer") $crd.spec.loadBalancer }}
@@ -9,6 +9,9 @@
     {{- else if and (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") $crd.spec.loadBalancerWithProxyProtocol }}
       {{ $annotations = $crd.spec.loadBalancerWithProxyProtocol.annotations }}
       {{ $sourceRanges = $crd.spec.loadBalancerWithProxyProtocol.sourceRanges  }}
+    {{- else if and (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough") $crd.spec.loadBalancerWithSSLPassthrough }}
+      {{ $annotations = $crd.spec.loadBalancerWithSSLPassthrough.annotations }}
+      {{ $sourceRanges = $crd.spec.loadBalancerWithSSLPassthrough.sourceRanges  }}
     {{- end }}
 ---
 apiVersion: v1
@@ -16,7 +19,7 @@ kind: Service
 metadata:
   name: {{ $crd.name }}-load-balancer
   namespace: d8-ingress-nginx
-  {{- include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $crd.name )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $crd.name "deckhouse-service-type" "provider-managed" )) | nindent 2 }}
     {{- if $annotations }}
   annotations:
       {{- range $key, $value := $annotations }}

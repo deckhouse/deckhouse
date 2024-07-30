@@ -117,7 +117,9 @@ var _ = Describe("Module :: local-path-provisioner :: helm template ::", func() 
                 "node":"DEFAULT_PATH_FOR_NON_LISTED_NODES",
                 "paths":["/opt/local-path-provisioner"]
         }
-        ]
+        ],
+		"setupCommand": "/manager",
+        "teardownCommand": "/manager"
 }`))
 			Expect(lppSCTest.Field("allowedTopologies").String()).To(MatchJSON(`
 [
@@ -147,7 +149,9 @@ var _ = Describe("Module :: local-path-provisioner :: helm template ::", func() 
 			"node":"DEFAULT_PATH_FOR_NON_LISTED_NODES",
 			"paths":["/local"]
 		}
-		]
+		],
+		"setupCommand": "/manager",
+        "teardownCommand": "/manager"
 }`))
 			Expect(lppSCTest2.Field("allowedTopologies").String()).To(MatchJSON(`
 [
@@ -176,7 +180,9 @@ var _ = Describe("Module :: local-path-provisioner :: helm template ::", func() 
 			"node":"DEFAULT_PATH_FOR_NON_LISTED_NODES",
 			"paths":["/local3"]
 		}
-		]
+		],
+		"setupCommand": "/manager",
+        "teardownCommand": "/manager"
 }`))
 			Expect(lppSCTest3.Field("allowedTopologies").Exists()).To(BeFalse())
 		})

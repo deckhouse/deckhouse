@@ -19,7 +19,7 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/crds/.*.yaml$' -print | grep 
   if [ $? -eq 0 ]; then
     # Apply schema
     echo "OK: Generating schema ${schema_path} for ${module_path}/docs/CR.md"
-    sed -i "/<!-- SCHEMA -->/i\{\{ site.data.schemas.${module_name}.${schema_path_relative} \| format_crd \}\}" ${module_path}/docs/CR.md
+    sed -i "/<!-- SCHEMA -->/i\{\{ site.data.schemas.${module_name}.${schema_path_relative} \| format_crd: \"${module_name}\" \}\}" ${module_path}/docs/CR.md
   else
     echo "WARNING: Schema ${schema_path} found but there is no '<!-- SCHEMA -->' placeholder in the ${module_path}/docs/CR.md"
   fi

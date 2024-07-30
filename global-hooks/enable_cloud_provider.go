@@ -33,6 +33,8 @@ var (
 		"Yandex":    "cloudProviderYandex",
 		"vSphere":   "cloudProviderVsphere",
 		"Azure":     "cloudProviderAzure",
+		"VCD":       "cloudProviderVcd",
+		"Zvirt":     "cloudProviderZvirt",
 	}
 )
 

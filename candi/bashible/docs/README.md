@@ -5,7 +5,7 @@ title: System Configuration Framework - Bashible
 ## Description
 
 Bashible consists of small bash scripts, that are called `steps`.
-* Each step describes some task, e.g., docker installation, kubelet installation.
+* Each step describes some task, e.g., cri installation, kubelet installation.
 
 * Steps are executed in the alphabetic order. Because of it, they are named with a number prefix, e.g., `010_step_...`.
 
@@ -14,6 +14,7 @@ Bashible consists of small bash scripts, that are called `steps`.
   * Use the same code for different purposes: installation, daily routine, vm image creation
 
 * Step files, and the bashible entrypoint are located in the `/var/lib/bashible` directory.
+  * Also, there is a bashible entrypoint for EE version in the `./ee/candi/bashible` directory. 
 
 * Bashible is periodically executing on a Node by systemd unit timer.  
 
@@ -86,7 +87,7 @@ clusterBootstrap:
   clusterDNSAddress: 10.222.0.10
   clusterDomain: cluster.local
   nodeIP: 192.168.199.23
-kubernetesVersion: "1.21"
+kubernetesVersion: "1.27"
 cri: "Containerd"
 nodeGroup:
   cloudInstances:
@@ -105,7 +106,7 @@ nodeGroup:
   zones:
   - nova
 k8s:
-  '1.21':
+  '1.23':
     patch: 10
     bashible:
       ubuntu:

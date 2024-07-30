@@ -146,12 +146,13 @@ $(document).ready(function(){
 // GDPR
 
 $(document).ready(function(){
-    var $gdpr = $('.gdpr');
-    var $gdpr_button = $('.gdpr__button');
-    var gdpr_status = $.cookie('gdpr-status');
+    const $gdpr = $('.gdpr');
+    const $gdpr_button = $('.gdpr__button');
+    const gdpr_status = $.cookie('gdpr-status');
+    const cmplz_banner_status = $.cookie('cmplz_banner-status');
 
-    if (!gdpr_status || gdpr_status != 'accepted') {
-        $gdpr.show();
+    if ((!gdpr_status || gdpr_status !== 'accepted') && cmplz_banner_status !== 'dismissed') {
+        $gdpr.css('display', 'flex');
     }
 
     $gdpr_button.on('click', function() {
@@ -160,64 +161,94 @@ $(document).ready(function(){
     })
 });
 
-//Fixed sidebar
-window.onload = function() {
-  const headerHeight = $('.header').height();
-  const breadcrumbs = $('.breadcrumbs-container');
-  const breadcrumbsHeight = breadcrumbs.height();
-  const fullBreadcrumbsHeight = breadcrumbs.outerHeight(true);
-  const breadcrumbsMarginTop = parseInt(breadcrumbs.css('margin-top'), 10);
-  const sidebarWrapperInner = $('.sidebar__wrapper-inner');
-  const sidebar = $('.sidebar__container');
-  let sidebarOffsetTop = 0
-  if (sidebar.length > 0) {
-    sidebarOffsetTop = sidebar.offset().top - breadcrumbsHeight + breadcrumbsMarginTop;
-  }
-  const footerHeight = $('.footer').height();
-  const docHeight = $(document).height();
-  const screenHeight = $(window).outerHeight();
-  let bottomFixPoint = docHeight - (footerHeight + screenHeight);
+$(document).ready(function(){
+  const tables = $('table');
 
-  if ($(window).scrollTop() > breadcrumbsHeight + breadcrumbsMarginTop) {
-    sidebarWrapperInner.css({
-      top: `${headerHeight + breadcrumbsMarginTop}px`
-    });
+  if (tables.length === 0) {
+    return;
+  }
+
+  tables.each((_, table) => {
+    $(table).wrap("<div class='table-wrapper'></div>")
+  })
+});
+
+const openDiagram = function () {
+  const button = $('[data-open-scheme]');
+  const wrap = $('.functionality-block__diagram-wrap')
+  const wrapHeight = wrap.height()
+  const imageHeight = $('.functionality-block__diagram-wrap img').height();
+
+  $(button).click(() => {
+    if (wrap.hasClass('open')) {
+      wrap.removeClass('open');
+      wrap.height(wrapHeight);
+      button.attr('data-open-scheme') === 'ru' ? button.text('Подробнее') : button.text('Show');
+    } else {
+      wrap.addClass('open');
+      wrap.height(imageHeight);
+      button.attr('data-open-scheme') === 'ru' ? button.text('Скрыть') : button.text('Hide');
+    }
+  })
+}
+
+function changeHandler(e) {
+  e.style.color = "#02003E";
+  if (e.value === "telegram") {
+    $('.nickname.hidden').removeClass('hidden');
+    $('.nickname input').attr('required', 'required');
   } else {
-    setTopOffset($(window).scrollTop(), sidebarOffsetTop, sidebarWrapperInner, headerHeight, breadcrumbsHeight, breadcrumbsMarginTop, fullBreadcrumbsHeight);
-  }
-
-  setFooterOffset($(window).scrollTop(), bottomFixPoint, sidebarWrapperInner, screenHeight, footerHeight, docHeight);
-
-  $(window).scroll(function() {
-    const scrolled = $(this).scrollTop();
-    bottomFixPoint = $(document).height() - (footerHeight + screenHeight);
-
-    setTopOffset(scrolled, sidebarOffsetTop, sidebarWrapperInner, headerHeight, breadcrumbsHeight, breadcrumbsMarginTop, fullBreadcrumbsHeight);
-
-    setFooterOffset(scrolled, bottomFixPoint, sidebarWrapperInner, screenHeight, footerHeight, docHeight)
-  });
-};
-
-function setTopOffset(scrolled, offsetTop, sidebarWrapper, headerHeight, breadcrumbsHeight, breadcrumbsMarginTop, fullBreadcrumbsHeight) {
-  if (scrolled > offsetTop) {
-    sidebarWrapper.css({
-      top: `${headerHeight + breadcrumbsMarginTop}px`
-    });
-  } else if (scrolled < offsetTop && scrolled < breadcrumbsHeight + breadcrumbsMarginTop) {
-    sidebarWrapper.css({
-      top: `${headerHeight + fullBreadcrumbsHeight - scrolled}px`,
-    });
+    $('.nickname').addClass('hidden');
+    $('.nickname.hidden input').removeAttr('required');
   }
 }
 
-function setFooterOffset(scrolled, bottomFixPoint, sidebarWrapper, screenHeight, footerHeight, docHeight) {
-  if (scrolled > bottomFixPoint) {
-    sidebarWrapper.css({
-      bottom: `${scrolled + screenHeight + footerHeight + 25 - docHeight}px`
-    })
-  } else if (scrolled < bottomFixPoint) {
-    sidebarWrapper.css({
-      bottom: `25px`
-    })
+document.addEventListener('DOMContentLoaded', () => {
+  let header = document.querySelector('header');
+  let lastScrollTop = 0;
+  let topOffsetToTransform = 25;
+
+  const headerTransforms = () => {
+    let top = window.scrollY
+
+    changeShadow(top)
+    changeOffset(top)
+
+    lastScrollTop = top
   }
-}
+
+  window.onscroll = headerTransforms
+
+  const changeShadow = (top) => {
+    if (!header.classList.contains('header_float') && top >=
+      topOffsetToTransform) {
+      header.classList.add('header_float')
+    }
+    else if (header.classList.contains('header_float') && top <
+      topOffsetToTransform) {
+      header.classList.remove('header_float')
+    }
+  }
+
+  const changeOffset = (top) => {
+    const notificationBar = header.querySelector('.notification-bar')
+
+    if (notificationBar === null) {
+      return
+    }
+
+    if (lastScrollTop < top && !header.classList.contains('header_small') && top >
+      topOffsetToTransform) {
+      header.classList.add('header_small')
+      header.style.transform = `translateY(-${notificationBar.offsetHeight}px)`
+    }
+    else if (lastScrollTop > top && header.classList.contains('header_small')) {
+      header.classList.remove('header_small')
+      header.removeAttribute('style')
+    }
+  }
+})
+
+window.addEventListener("load", function() {
+  openDiagram()
+});

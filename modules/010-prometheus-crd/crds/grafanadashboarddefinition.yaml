@@ -22,7 +22,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            The resource for storing and managing Grafana Dashboards
+            The resource for storing and managing Grafana dashboards.
           required:
             - spec
           properties:
@@ -36,7 +36,7 @@ spec:
                   type: string
                   description: |
                     What folder to use for a dashboard. If the folder does not exist, it will be created.
-                  example: 'My Folder'
+                  x-doc-examples: ['My Folder']
                 definition:
                   type: string
                   pattern: '^[ \t\n]*\{(.|\n)*\}[ \t\n]*$'

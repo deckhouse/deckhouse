@@ -82,6 +82,7 @@ layout: WithNATInstance
 masterNodeGroup:
   instanceClass:
     cores: 2
+    etcdDiskSizeGb: 10
     imageID: test
     memory: 4096
     platform: standard-v2
@@ -97,6 +98,9 @@ withNATInstance:
   internalSubnetID: test
   natInstanceExternalAddress: 84.201.160.148
   exporterAPIKey: ""
+  natInstanceResources:
+    cores: 2
+    memory: 2048
 nodeNetworkCIDR: 84.201.160.148/31
 sshPublicKey: ssh-rsa AAAAAbbbb
 `
@@ -212,7 +216,7 @@ ru-central1-c: test
 		It("All values should be gathered from discovered data", func() {
 			Expect(d).To(Not(ExecuteSuccessfully()))
 
-			Expect(d.GoHookError.Error()).To(ContainSubstring(`validate cloud-provider-cluster-configuration.yaml: config validation: Document validation failed`))
+			Expect(d.GoHookError.Error()).To(ContainSubstring(`validate cloud-provider-cluster-configuration.yaml: Config document validation failed: Document validation failed`))
 			Expect(d.GoHookError.Error()).Should(ContainSubstring(`must validate one and only one schema (oneOf). Found none valid`))
 			Expect(d.GoHookError.Error()).Should(ContainSubstring(`layout should be one of [Standard WithoutNAT]`))
 			// Expect(d.GoHookError.Error()).Should(ContainSubstring(`.masterNodeGroup is required`))

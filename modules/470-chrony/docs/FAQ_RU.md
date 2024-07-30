@@ -4,11 +4,11 @@ type:
   - instruction
 ---
 
-## Как запретить использование chrony и использовать ntp-демоны на узлах?
+## Как запретить использование chrony и использовать NTP-демоны на узлах?
 
 1. [Выключите](configuration.html) модуль chrony.
 
-1. Создайте `NodeGroupConfiguration` custom step чтобы включить NTP-демоны на узлах (пример для `systemd-timesyncd`):
+1. Создайте `NodeGroupConfiguration` custom step, чтобы включить NTP-демоны на узлах (пример для `systemd-timesyncd`):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+
+# Copyright 2023 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source /shell_lib.sh
+
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetes:
+  - name: instances
+    apiVersion: deckhouse.io/v1alpha1
+    kind: StaticInstance
+    queue: "instances"
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    jqFilter: |
+      {
+        "name": .metadata.name,
+        "address": .spec.address,
+      }
+  - name: sshCredentials
+    apiVersion: deckhouse.io/v1alpha1
+    kind: SSHCredentials
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    jqFilter: |
+      {
+        "name": .metadata.name,
+      }
+kubernetesValidating:
+- name: staticinstances-unique.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["staticinstances"]
+    scope:       "Cluster"
+EOF
+}
+
+function __main__() {
+  name=$(context::jq -r '.review.request.object.metadata.name')
+  address=$(context::jq -r '.review.request.object.spec.address')
+  credentialsName=$(context::jq -r '.review.request.object.spec.credentialsRef.name')
+
+  if instanceWithTheSameAddress="$(context::jq -er --arg name "$name" --arg address "$address" '.snapshots.instances[].filterResult | select(.name != $name) | select(.address == $address) | .name' 2>&1)"; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"staticinstances.deckhouse.io \"$name\", static instance \"$instanceWithTheSameAddress\" is already using the address \"$address\"" }
+EOF
+    return 0
+  fi
+
+  if ! context::jq -er --arg name "$credentialsName" '.snapshots.sshCredentials[].filterResult | select(.name == $name) | length == 1' >/dev/null 2>&1; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"staticinstances.deckhouse.io \"$name\", ssh credentials \"$credentialsName\" does not exist" }
+EOF
+    return 0
+  fi
+
+  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true}
+EOF
+
+}
+
+hook::run "$@"

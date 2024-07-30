@@ -1,0 +1,11 @@
+candi:
+  fixes:
+    - summary: Send bootstrap logs to console in case of manual bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6332
+    - summary: Improve bashible steps running order.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6307
+tools:
+  fixes:
+    - summary: To successfully run CVE tests, the Trivy image was excluded from the scan
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6347
+

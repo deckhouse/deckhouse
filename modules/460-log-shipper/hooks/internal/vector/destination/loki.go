@@ -33,11 +33,13 @@ type Loki struct {
 
 	Encoding Encoding `json:"encoding,omitempty"`
 
+	TenantID string `json:"tenant_id,omitempty"`
+
 	Endpoint string `json:"endpoint"`
 
 	Auth LokiAuth `json:"auth,omitempty"`
 
-	TLS CommonTLS `json:"tls,omitempty"`
+	TLS CommonTLS `json:"tls"`
 
 	Labels map[string]string `json:"labels,omitempty"`
 
@@ -56,18 +58,12 @@ type LokiAuth struct {
 func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 	spec := cspec.Loki
 
-	// Disable buffer. It is buggy. Vector developers know about problems with buffer.
-	// More info about buffer rewriting here - https://github.com/vectordotdev/vector/issues/9476
-	// common.Buffer = buffer{
-	//	Size: 100 * 1024 * 1024, // 100MiB in bytes for vector persistent queue
-	//	Type: "disk",
-	// }
-
 	// default labels
 	//
 	// Asterisk is required here to expand all pod labels
 	// See https://github.com/vectordotdev/vector/pull/12041
 	labels := map[string]string{
+		// Kubernetes logs labels
 		"namespace":    "{{ namespace }}",
 		"container":    "{{ container }}",
 		"image":        "{{ image }}",
@@ -76,7 +72,13 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 		"pod_ip":       "{{ pod_ip }}",
 		"stream":       "{{ stream }}",
 		"pod_labels_*": "{{ pod_labels }}",
+		"node_group":   "{{ node_group }}",
 		"pod_owner":    "{{ pod_owner }}",
+		// File labels
+		// TODO(nabokihms): think about removing this label and always use the `node` labels.
+		//   If we do this right now, it will break already working setups.
+		"host": "{{ host }}",
+		// "file": "{{ file }}", The file label is excluded due to potential cardinality bomb
 	}
 
 	var dataField string
@@ -115,6 +117,7 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 			Name:   ComposeName(name),
 			Type:   "loki",
 			Inputs: set.New(),
+			Buffer: buildVectorBuffer(cspec.Buffer),
 		},
 		Auth: LokiAuth{
 			User:     spec.Auth.User,
@@ -125,6 +128,7 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 		TLS:      tls,
 		Labels:   labels,
 		Endpoint: spec.Endpoint,
+		TenantID: spec.TenantID,
 		Encoding: Encoding{
 			Codec:           "text",
 			TimestampFormat: "rfc3339",

@@ -17,6 +17,9 @@ limitations under the License.
 package v1
 
 import (
+	"time"
+
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -67,6 +70,9 @@ type NodeGroupSpec struct {
 	// CRI parameters. Optional.
 	CRI CRI `json:"cri,omitempty"`
 
+	// staticInstances. Optional.
+	StaticInstances *StaticInstances `json:"staticInstances,omitempty"`
+
 	// cloudInstances. Optional.
 	CloudInstances CloudInstances `json:"cloudInstances,omitempty"`
 
@@ -87,6 +93,9 @@ type NodeGroupSpec struct {
 
 	// Kubelet settings for nodes. Optional.
 	Kubelet Kubelet `json:"kubelet,omitempty"`
+
+	// Fencing settings for nodes. Optional.
+	Fencing Fencing `json:"fencing,omitempty"`
 }
 
 type CRI struct {
@@ -123,6 +132,27 @@ type Docker struct {
 type NotManaged struct {
 	// Set custom path to CRI socket
 	CriSocketPath *string `json:"criSocketPath,omitempty"`
+}
+
+// StaticInstances is an extra parameters for NodeGroup with type Static.
+type StaticInstances struct {
+	// Label selector for StaticInstance resources. Optional.
+	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
+
+	// Minimal amount of instances for the group. Required.
+	Count int32 `json:"count"`
+}
+
+type InfrastructureTemplateReference struct {
+	// Kind of a InfrastructureTemplateReference resource: StaticMachineTemplate
+	Kind string `json:"kind,omitempty"`
+
+	// Name of a InfrastructureTemplateReference resource.
+	Name string `json:"name,omitempty"`
+}
+
+func (i InfrastructureTemplateReference) IsEmpty() bool {
+	return i.Kind == "" && i.Name == ""
 }
 
 // CloudInstances is an extra parameters for NodeGroup with type Cloud.
@@ -281,10 +311,121 @@ type Kubelet struct {
 	// How many rotated log files to store before deleting them.
 	// Default: '4'
 	ContainerLogMaxFiles int `json:"containerLogMaxFiles,omitempty"`
+
+	ResourceReservation KubeletResourceReservation `json:"resourceReservation"`
+
+	TopologyManager KubeletTopologyManager `json:"topologyManager"`
 }
 
+type KubeletTopologyManager struct {
+	// https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/
+	// usage topology
+	// Default: False
+	Enabled *bool `json:"enabled,omitempty"`
+	// Default: Container
+	// +optional
+	Scope KubeletTopologyManagerScope `json:"scope,omitempty"`
+	// Default: 'None'
+	// +optional
+	Policy KubeletTopologyManagerPolicy `json:"policy,omitempty"`
+}
+
+type KubeletTopologyManagerScope string
+
+const (
+	KubeletTopologyManagerScopeContainer KubeletTopologyManagerScope = "Container"
+	KubeletTopologyManagerScopePod       KubeletTopologyManagerScope = "Pod"
+)
+
+type KubeletTopologyManagerPolicy string
+
+const (
+	KubeletTopologyManagerPolicyNone           KubeletTopologyManagerPolicy = "None"
+	KubeletTopologyManagerPolicyBestEffort     KubeletTopologyManagerPolicy = "BestEffort"
+	KubeletTopologyManagerPolicyRestricted     KubeletTopologyManagerPolicy = "Restricted"
+	KubeletTopologyManagerPolicySingleNumaNode KubeletTopologyManagerPolicy = "SingleNumaNode"
+)
+
+type KubeletResourceReservation struct {
+	Mode KubeletResourceReservationMode `json:"mode"`
+
+	Static *KubeletStaticResourceReservation `json:"static,omitempty"`
+}
+
+type KubeletStaticResourceReservation struct {
+	CPU              resource.Quantity `json:"cpu,omitempty"`
+	Memory           resource.Quantity `json:"memory,omitempty"`
+	EphemeralStorage resource.Quantity `json:"ephemeralStorage,omitempty"`
+}
+
+type KubeletResourceReservationMode string
+
+const (
+	KubeletResourceReservationModeOff    KubeletResourceReservationMode = "Off"
+	KubeletResourceReservationModeAuto   KubeletResourceReservationMode = "Auto"
+	KubeletResourceReservationModeStatic KubeletResourceReservationMode = "Static"
+)
+
 func (k Kubelet) IsEmpty() bool {
-	return k.MaxPods == nil && k.RootDir == "" && k.ContainerLogMaxSize == "" && k.ContainerLogMaxFiles == 0
+	return k.MaxPods == nil && k.RootDir == "" && k.ContainerLogMaxSize == "" && k.ContainerLogMaxFiles == 0 &&
+		k.ResourceReservation.Mode == "" && k.ResourceReservation.Static == nil
+}
+
+type Fencing struct {
+	// Set custom settings for fencing controller
+	Mode string `json:"mode,omitempty"`
+}
+
+func (f Fencing) IsEmpty() bool {
+	return f.Mode == ""
+}
+
+type NodeGroupConditionType string
+
+const (
+	NodeGroupConditionTypeReady                        = "Ready"
+	NodeGroupConditionTypeUpdating                     = "Updating"
+	NodeGroupConditionTypeWaitingForDisruptiveApproval = "WaitingForDisruptiveApproval"
+	NodeGroupConditionTypeScaling                      = "Scaling"
+	NodeGroupConditionTypeError                        = "Error"
+)
+
+type ConditionStatus string
+
+const (
+	ConditionTrue  ConditionStatus = "True"
+	ConditionFalse ConditionStatus = "False"
+)
+
+type NodeGroupCondition struct {
+	// Type is the type of the condition.
+	Type NodeGroupConditionType `json:"type"`
+	// Status is the status of the condition.
+	// Can be True, False
+	Status ConditionStatus `json:"status"`
+	// Last time the condition transitioned from one status to another.
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+	// Human-readable message indicating details about last transition.
+	// +optional
+	Message string `json:"message,omitempty"`
+}
+
+func (c *NodeGroupCondition) ToMap() map[string]interface{} {
+	res := map[string]interface{}{
+		"type":   c.Type,
+		"status": c.Status,
+	}
+
+	if c.Message != "" {
+		res["message"] = c.Message
+	}
+
+	if !c.LastTransitionTime.IsZero() {
+		res["lastTransitionTime"] = c.LastTransitionTime.Format(time.RFC3339)
+	}
+
+	return res
 }
 
 type NodeGroupStatus struct {
@@ -320,6 +461,12 @@ type NodeGroupStatus struct {
 
 	// Status' summary.
 	ConditionSummary ConditionSummary `json:"conditionSummary,omitempty"`
+
+	// The current version of kubernetes on the nodes, or the version to which the nodes will be upgraded.
+	KubernetesVersion string `json:"kubernetesVersion,omitempty"`
+
+	// Current nodegroup conditions
+	Conditions []NodeGroupCondition `json:"conditions,omitempty"`
 }
 
 type MachineFailure struct {

@@ -26,11 +26,13 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v2"
 )
 
 // Check that structures which are used by FilterFunc don't have unexported fields
@@ -44,11 +46,10 @@ func TestValidationHookStructExportedFields(t *testing.T) {
 		require.NoError(t, err)
 
 		funcReturnStructs, structsDeclaration := inspectNodes(node)
-
 		result := checkStructFields(fset, structsDeclaration, funcReturnStructs)
 
 		for _, res := range result {
-			assert.Equal(t, res.ExportedFields, res.TotalFields, "File '%s' has struct (%s:%d) with unexported fields.\n", res.FileName, res.Name, res.Line)
+			assert.Equal(t, res.TotalFields, res.ExportedFields, "File '%s' has struct (%s:%d) with unexported fields.\n", res.FileName, res.Name, res.Line)
 		}
 	}
 }
@@ -62,13 +63,41 @@ type structCheckResult struct {
 	Line     int
 }
 
+type edition struct {
+	Name       string `yaml:"name,omitempty"`
+	ModulesDir string `yaml:"modulesDir,omitempty"`
+}
+
+type editions struct {
+	Editions []edition `yaml:"editions,omitempty"`
+}
+
+func getPossiblePathToModules() []string {
+	content, err := os.ReadFile("/deckhouse/editions.yaml")
+	if err != nil {
+		panic(fmt.Sprintf("cannot read editions file: %v", err))
+	}
+
+	e := editions{}
+	err = yaml.Unmarshal(content, &e)
+	if err != nil {
+		panic(fmt.Errorf("cannot unmarshal editions file: %v", err))
+	}
+
+	modulesDir := make([]string, 0)
+	for i, ed := range e.Editions {
+		if ed.Name == "" {
+			panic(fmt.Sprintf("name for %d index is empty", i))
+		}
+		modulesDir = append(modulesDir, fmt.Sprintf("/deckhouse/%s/*/hooks", ed.ModulesDir))
+	}
+
+	return modulesDir
+}
+
 func collectGoHooks() []string {
 	var hookDirs []string
-	for _, possibleDir := range []string{
-		"/deckhouse/modules/*/hooks",
-		"/deckhouse/ee/modules/*/hooks",
-		"/deckhouse/ee/fe/modules/*/hooks",
-	} {
+	for _, possibleDir := range getPossiblePathToModules() {
 		result, err := filepath.Glob(possibleDir)
 		if err != nil {
 
@@ -114,58 +143,21 @@ func checkStructFields(fset *token.FileSet, structs map[string]*ast.StructType, 
 			continue
 		}
 
+		var totalField int
+
+		walker := structWalker(&totalField, false)
+		ast.Inspect(structSpec, walker)
+
 		sc := structCheckResult{
 			Name:           structName,
-			TotalFields:    structSpec.Fields.NumFields(),
+			TotalFields:    totalField,
 			ExportedFields: 0,
 			Line:           fset.Position(structSpec.Pos()).Line,
 			FileName:       fset.File(structSpec.Pos()).Name(),
 		}
 
-		for _, fields := range structSpec.Fields.List {
-			switch f := fields.Type.(type) {
-			case *ast.StarExpr:
-				switch f.X.(type) {
-				case *ast.SelectorExpr:
-					if len(fields.Names) == 0 {
-						// for embedded fields, like
-						// type MyStruct struct { *corev1.Node }
-						if inField, ok := f.X.(*ast.SelectorExpr); ok {
-							if inField.Sel.IsExported() {
-								sc.ExportedFields++
-							}
-						}
-					} else {
-						for _, field := range fields.Names {
-							if field.IsExported() {
-								sc.ExportedFields++
-							}
-						}
-					}
-
-				default:
-					for _, field := range fields.Names {
-						if field.IsExported() {
-							sc.ExportedFields++
-						}
-					}
-				}
-
-			case *ast.SelectorExpr:
-				// embedded fields
-				if f.Sel.IsExported() {
-					sc.ExportedFields++
-				}
-
-			default:
-				// direct fields
-				for _, field := range fields.Names {
-					if field.IsExported() {
-						sc.ExportedFields++
-					}
-				}
-			}
-		}
+		walker = structWalker(&sc.ExportedFields, true)
+		ast.Inspect(structSpec, walker)
 
 		result = append(result, sc)
 	}
@@ -281,6 +273,9 @@ func parseFilterFuncDeclaration(fn *ast.FuncDecl) string {
 
 					// called with new(Struct)
 				case *ast.CallExpr:
+					if len(rhs0.Args) == 0 {
+						return ""
+					}
 					ident, ok := rhs0.Args[0].(*ast.Ident)
 					if !ok {
 						return ""
@@ -289,11 +284,15 @@ func parseFilterFuncDeclaration(fn *ast.FuncDecl) string {
 					return ident.Name
 
 				case *ast.IndexExpr:
-					// it's some built in types, like getting value := map[string][]byte
-					// pass
+				// it's some built in types, like getting value := map[string][]byte
+				// pass
+
+				case *ast.BinaryExpr:
+				// it's a boolean type: true/false
+				// pass
 
 				default:
-					fmt.Println("Unknown type", rhs0)
+					fmt.Println("Unknown type", reflect.TypeOf(assign.Rhs[0]))
 				}
 			}
 
@@ -368,4 +367,165 @@ func filterSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 		require.Equal(t, 1, result[0].ExportedFields)
 		require.Equal(t, 2, result[0].TotalFields)
 	})
+
+	t.Run("test embeded struct", func(t *testing.T) {
+		t.Parallel()
+		src := `package foo
+
+import (
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"time"
+)
+
+type barBaz struct {
+  Name string
+  X string
+}
+
+type fooBar struct {
+  barBaz
+  XXX *barBaz
+  ZXC barBaz
+  Num int
+}
+
+func filterSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+    bz := barBaz{Name: "qqqq", X: "asd"}
+	return fooBar{barBaz: barBaz{Name: "lalala", X: "foor"}, XXX: &bz, ZXC: bz, Num: 3}, nil
+}`
+
+		fset := token.NewFileSet()
+		node, err := parser.ParseFile(fset, "", src, parser.AllErrors)
+		require.NoError(t, err)
+
+		funcResults, structs := inspectNodes(node)
+
+		result := checkStructFields(fset, structs, funcResults)
+
+		require.Len(t, result, 1)
+		require.Equal(t, 5, result[0].TotalFields)
+		require.Equal(t, 5, result[0].ExportedFields)
+	})
+
+	t.Run("test named fields", func(t *testing.T) {
+		t.Parallel()
+		src := `package foo
+
+import (
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"time"
+)
+
+type barBaz struct {
+  Name string
+  X string
+}
+
+type fooBar struct {
+  XXX *barBaz
+  ZXC barBaz
+  Num map[string]interface{}
+}
+
+func filterSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+    bz := barBaz{Name: "qqqq", X: "str"}
+	return fooBar{XXX: &bz, ZXC: bz, Num: map[string]interface{}{"a":"b"}}, nil
+}`
+
+		fset := token.NewFileSet()
+		node, err := parser.ParseFile(fset, "", src, parser.AllErrors)
+		require.NoError(t, err)
+
+		funcResults, structs := inspectNodes(node)
+
+		result := checkStructFields(fset, structs, funcResults)
+
+		require.Len(t, result, 1)
+		require.Equal(t, 3, result[0].TotalFields)
+		require.Equal(t, 3, result[0].ExportedFields)
+	})
+
+	t.Run("test named fields with private struct", func(t *testing.T) {
+		t.Parallel()
+		src := `package foo
+
+import (
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"time"
+)
+
+type barBaz struct {
+  name string
+  x string
+}
+
+type fooBar struct {
+  XXX *barBaz
+  ZXC barBaz
+  Num map[string]interface{}
+}
+
+func filterSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+    bz := barBaz{name: "qqqq", x: "str"}
+	return fooBar{XXX: &bz, ZXC: bz, Num: map[string]interface{}{"a":"b"}}, nil
+}`
+
+		fset := token.NewFileSet()
+		node, err := parser.ParseFile(fset, "", src, parser.AllErrors)
+		require.NoError(t, err)
+
+		funcResults, structs := inspectNodes(node)
+
+		result := checkStructFields(fset, structs, funcResults)
+
+		require.Len(t, result, 1)
+		require.Equal(t, 3, result[0].TotalFields)
+		require.Equal(t, 3, result[0].ExportedFields)
+	})
+}
+
+func structWalker(fieldCounter *int, onlyExported bool) func(n ast.Node) bool {
+	return func(n ast.Node) bool {
+		switch t := n.(type) {
+		case *ast.Field:
+			if len(t.Names) == 0 {
+				// embeded types
+				switch tt := t.Type.(type) {
+				case *ast.Ident:
+					if tt.Obj != nil {
+						switch ttt := tt.Obj.Decl.(type) {
+						case *ast.TypeSpec:
+							switch tttt := ttt.Type.(type) {
+							case *ast.StructType:
+								for _, field := range tttt.Fields.List {
+									for _, name := range field.Names {
+										if onlyExported {
+											if name.IsExported() {
+												*fieldCounter++
+											}
+										} else {
+											*fieldCounter++
+										}
+									}
+								}
+								return false
+							}
+						}
+					}
+				}
+			} else {
+				for _, name := range t.Names {
+					if onlyExported {
+						if name.IsExported() {
+							*fieldCounter++
+						}
+					} else {
+						*fieldCounter++
+					}
+				}
+				return false
+			}
+		}
+		return true
+	}
 }

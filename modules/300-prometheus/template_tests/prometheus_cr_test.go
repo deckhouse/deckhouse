@@ -88,6 +88,11 @@ internal:
     spec:
       url: https://test-remote-write-bearer-token.domain.com/api/v1/write
       bearerToken: xxx
+  - name: test-remote-write-custom-ca
+    spec:
+      url: https://test-remote-write-custom-ca.domain.com/api/v1/write
+      tlsConfig:
+        ca: CRTCRTCRT
   vpa:
     longtermMaxCPU: 2933m
     longtermMaxMemory: 2200Mi
@@ -123,11 +128,21 @@ scrapeInterval: 30s
       key: password
 - url: https://test-remote-write-bearer-token.domain.com/api/v1/write
   bearerToken: xxx
+- url: https://test-remote-write-custom-ca.domain.com/api/v1/write
+  tlsConfig:
+    ca:
+      configMap:
+        key: ca.crt
+        name: d8-prometheus-remote-write-ca-test-remote-write-custom-ca
 `))
 			rwSecret := f.KubernetesResource("Secret", "d8-monitoring", "d8-prometheus-remote-write-test-remote-write-basic-auth")
 			Expect(rwSecret.Exists()).To(BeTrue())
 			Expect(rwSecret.Field("data.username").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("user"))))
 			Expect(rwSecret.Field("data.password").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("pass"))))
+
+			rwCAConfigMap := f.KubernetesResource("ConfigMap", "d8-monitoring", "d8-prometheus-remote-write-ca-test-remote-write-custom-ca")
+			Expect(rwCAConfigMap.Exists()).To(BeTrue())
+			Expect(rwCAConfigMap.Field("data").String()).To(Equal(`{"ca.crt":"CRTCRTCRT"}`))
 		})
 	})
 })

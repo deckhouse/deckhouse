@@ -20,12 +20,14 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/iancoleman/strcase"
-	"github.com/peterbourgon/mergemap"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -42,17 +44,20 @@ type MetaConfig struct {
 
 	ClusterConfig     map[string]json.RawMessage `json:"clusterConfiguration"`
 	InitClusterConfig map[string]json.RawMessage `json:"-"`
+	ModuleConfigs     []*ModuleConfig            `json:"-"`
 
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
-	VersionMap map[string]interface{} `json:"-"`
-	Images     ImagesTags             `json:"-"`
-	Registry   RegistryData           `json:"-"`
-	UUID       string                 `json:"clusterUUID,omitempty"`
+	VersionMap       map[string]interface{} `json:"-"`
+	Images           imagesDigests          `json:"-"`
+	Registry         RegistryData           `json:"-"`
+	UUID             string                 `json:"clusterUUID,omitempty"`
+	InstallerVersion string                 `json:"-"`
+	ResourcesYAML    string                 `json:"-"`
 }
 
-type ImagesTags map[string]map[string]interface{}
+type imagesDigests map[string]map[string]interface{}
 
 type RegistryData struct {
 	Address   string `json:"address"`
@@ -84,6 +89,9 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
 		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
 
+		if err := validateRegistryDockerCfg(m.DeckhouseConfig.RegistryDockerCfg); err != nil {
+			return nil, err
+		}
 		m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
 		m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
 		m.Registry.CA = m.DeckhouseConfig.RegistryCA
@@ -117,6 +125,33 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
 	}
 
+	if cloud.Provider == "Yandex" {
+		var masterNodeGroup YandexMasterNodeGroupSpec
+		if err := json.Unmarshal(m.ProviderClusterConfig["masterNodeGroup"], &masterNodeGroup); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
+		}
+
+		if masterNodeGroup.Replicas > 0 &&
+			masterNodeGroup.Replicas != len(masterNodeGroup.InstanceClass.ExternalIPAddresses) {
+			return nil, fmt.Errorf("number of masterNodeGroup.replicas should be equal to the length of masterNodeGroup.instanceClass.externalIPAddresses")
+		}
+
+		nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
+		if ok {
+			var yandexNodeGroups []YandexNodeGroupSpec
+			if err := json.Unmarshal(nodeGroups, &yandexNodeGroups); err != nil {
+				return nil, fmt.Errorf("unable to unmarshal node groups from provider cluster configuration: %v", err)
+			}
+
+			for _, nodeGroup := range yandexNodeGroups {
+				if nodeGroup.Replicas > 0 &&
+					nodeGroup.Replicas != len(nodeGroup.InstanceClass.ExternalIPAddresses) {
+					return nil, fmt.Errorf(`number of nodeGroups["%s"].replicas should be equal to the length of nodeGroups["%s"].instanceClass.externalIPAddresses`, nodeGroup.Name, nodeGroup.Name)
+				}
+			}
+		}
+	}
+
 	m.TerraNodeGroupSpecs = []TerraNodeGroupSpec{}
 	nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
 	if ok {
@@ -138,36 +173,44 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 	return m, nil
 }
 
-// MergeDeckhouseConfig returns deckhouse config merged from different sources
-func (m *MetaConfig) MergeDeckhouseConfig(configs ...[]byte) map[string]interface{} {
-	deckhouseModuleConfig := map[string]interface{}{
-		"logLevel": m.DeckhouseConfig.LogLevel,
-		"bundle":   m.DeckhouseConfig.Bundle,
+func validateRegistryDockerCfg(cfg string) error {
+	// cause CE version might have empty registryDockerCfg field
+	if cfg == "" {
+		return nil
 	}
 
-	if m.DeckhouseConfig.ReleaseChannel != "" {
-		deckhouseModuleConfig["releaseChannel"] = m.DeckhouseConfig.ReleaseChannel
+	regcrd, err := base64.StdEncoding.DecodeString(cfg)
+	if err != nil {
+		return fmt.Errorf("unable to decode registryDockerCfg: %w", err)
 	}
 
-	baseDeckhouseConfig := map[string]interface{}{"deckhouse": deckhouseModuleConfig}
-	if len(configs) == 0 {
-		return mergemap.Merge(baseDeckhouseConfig, m.DeckhouseConfig.ConfigOverrides)
+	var creds struct {
+		Auths map[string]interface{} `json:"auths"`
 	}
 
-	var firstConfig map[string]interface{}
-	_ = json.Unmarshal(configs[0], &firstConfig)
-
-	for _, configRaw := range configs[1:] {
-		var config map[string]interface{}
-		_ = json.Unmarshal(configRaw, &config)
-
-		firstConfig = mergemap.Merge(firstConfig, config)
+	if err = json.Unmarshal(regcrd, &creds); err != nil {
+		return fmt.Errorf("unable to unmarshal docker credentials: %w", err)
 	}
 
-	firstConfig = mergemap.Merge(firstConfig, m.DeckhouseConfig.ConfigOverrides)
-	firstConfig = mergemap.Merge(firstConfig, baseDeckhouseConfig)
+	// The regexp match string with this pattern:
+	// ^([a-z]|\d)+ - string starts with a [a-z] letter or a number
+	// (\.?|\-?) - next symbol might be '.' or '-' and repeated zero or one times
+	// (([a-z]|\d)+(\.|\-|))* - middle part of string might have [a-z] letters, numbers, '.' or ':',
+	// and moreover '.' or ':' symbols can't be doubled or goes next to each other
+	// ([a-z]|\d+|([a-z]|\d)\:\d+)$ - string might be ended by [a-z] letter or number (if we have single host) or
+	// [a-z] letter or number with ':' symbol, and moreover there might be only numbers after ':' symbol
+	regx, err := regexp.Compile(`^([a-z]|\d)+(\.?|\-?)(([a-z]|\d)+(\.|\-|))*([a-z]|\d+|([a-z]|\d)\:\d+)$`)
+	if err != nil {
+		return fmt.Errorf("unable to compile regexp by pattern: %w", err)
+	}
 
-	return firstConfig
+	for k := range creds.Auths {
+		if !regx.MatchString(k) {
+			return fmt.Errorf("invalid registryDockerCfg. Your auths host \"%s\" should be similar to \"your.private.registry.example.com\"", k)
+		}
+	}
+
+	return nil
 }
 
 func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {
@@ -358,6 +401,11 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 	}
 
 	configForBashibleBundleTemplate["runType"] = "ClusterBootstrap"
+
+	if m.ClusterType == CloudClusterType {
+		configForBashibleBundleTemplate["provider"] = m.ProviderName
+	}
+
 	configForBashibleBundleTemplate["bundle"] = bundle
 	configForBashibleBundleTemplate["cri"] = data["defaultCRI"]
 	configForBashibleBundleTemplate["kubernetesVersion"] = data["kubernetesVersion"]
@@ -378,6 +426,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 	images := m.Images
 	configForBashibleBundleTemplate["images"] = images.ConvertToMap()
 
+	configForBashibleBundleTemplate["packagesProxy"] = map[string]interface{}{"addresses": []string{"127.0.0.1:5444"}}
 	return configForBashibleBundleTemplate, nil
 }
 
@@ -407,7 +456,7 @@ func (m *MetaConfig) CachePath() string {
 }
 
 func (m *MetaConfig) DeepCopy() *MetaConfig {
-	out := MetaConfig{}
+	out := &MetaConfig{}
 
 	if m.ClusterConfig != nil {
 		config := make(map[string]json.RawMessage, len(m.ClusterConfig))
@@ -467,7 +516,7 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 		out.UUID = m.UUID
 	}
 
-	return m
+	return out
 }
 
 func (m *MetaConfig) LoadVersionMap(filename string) error {
@@ -489,48 +538,18 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 }
 
 func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
-	type dockerCfg struct {
-		Auths map[string]struct {
-			Auth     string `json:"auth"`
-			Username string `json:"username"`
-			Password string `json:"password"`
-		} `json:"auths"`
-	}
-
-	var (
-		registryAuth string
-		dc           dockerCfg
-	)
-
 	log.DebugF("registry data: %v\n", m.Registry)
 
-	if m.Registry.DockerCfg != "" {
-		bytes, err := base64.StdEncoding.DecodeString(m.Registry.DockerCfg)
-		if err != nil {
-			return nil, fmt.Errorf("cannot base64 decode docker cfg: %v", err)
-		}
-
-		log.DebugF("parse registry data: dockerCfg after base64 decode = %s\n", bytes)
-		err = json.Unmarshal(bytes, &dc)
-		if err != nil {
-			return nil, fmt.Errorf("cannot unmarshal docker cfg: %v", err)
-		}
-
-		if registry, ok := dc.Auths[m.Registry.Address]; ok {
-			switch {
-			case registry.Auth != "":
-				registryAuth = registry.Auth
-			case registry.Username != "" && registry.Password != "":
-				auth := fmt.Sprintf("%s:%s", registry.Username, registry.Password)
-				registryAuth = base64.StdEncoding.EncodeToString([]byte(auth))
-			default:
-				log.DebugF("auth or username with password not found in dockerCfg %s for %s. Use empty string", bytes, m.Registry.Address)
-			}
-		}
-	}
-
 	ret := m.Registry.ConvertToMap()
-	ret["auth"] = registryAuth
+
+	if m.Registry.DockerCfg != "" {
+		auth, err := m.Registry.Auth()
+		if err != nil {
+			return nil, err
+		}
+
+		ret["auth"] = auth
+	}
 
 	return ret, nil
 }
@@ -571,7 +590,7 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	p.NoProxy = append(p.NoProxy, "127.0.0.1", "169.254.169.254", string(clusterDomain), string(podSubnetCIDR), string(serviceSubnetCIDR))
+	p.NoProxy = append(p.NoProxy, "127.0.0.1", "169.254.169.254", clusterDomain, podSubnetCIDR, serviceSubnetCIDR)
 
 	ret := make(map[string]interface{})
 	if p.HttpProxy != "" {
@@ -585,20 +604,31 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	return ret, nil
 }
 
-func (m *MetaConfig) LoadImagesTags(filename string) error {
-	var imagesTags ImagesTags
+func (m *MetaConfig) LoadImagesDigests(filename string) error {
+	var imagesDigests imagesDigests
 
-	imagesTagsJSONFile, err := os.ReadFile(filename)
+	imagesDigestsJSONFile, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("%s file load: %v", filename, err)
 	}
 
-	err = yaml.Unmarshal(imagesTagsJSONFile, &imagesTags)
+	err = yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigests)
 	if err != nil {
 		return fmt.Errorf("%s file unmarshal: %v", filename, err)
 	}
 
-	m.Images = imagesTags
+	m.Images = imagesDigests
+
+	return nil
+}
+
+func (m *MetaConfig) LoadInstallerVersion() error {
+	rawFile, err := os.ReadFile(app.VersionFile)
+	if err != nil {
+		return err
+	}
+
+	m.InstallerVersion = strings.TrimSpace(string(rawFile))
 
 	return nil
 }
@@ -611,6 +641,46 @@ func (r *RegistryData) ConvertToMap() map[string]interface{} {
 		"ca":        r.CA,
 		"dockerCfg": r.DockerCfg,
 	}
+}
+
+func (r *RegistryData) Auth() (string, error) {
+	type dockerCfg struct {
+		Auths map[string]struct {
+			Auth     string `json:"auth"`
+			Username string `json:"username"`
+			Password string `json:"password"`
+		} `json:"auths"`
+	}
+
+	var (
+		registryAuth string
+		dc           dockerCfg
+	)
+
+	bytes, err := base64.StdEncoding.DecodeString(r.DockerCfg)
+	if err != nil {
+		return "", fmt.Errorf("cannot base64 decode docker cfg: %v", err)
+	}
+
+	log.DebugF("parse registry data: dockerCfg after base64 decode = %s\n", bytes)
+	err = json.Unmarshal(bytes, &dc)
+	if err != nil {
+		return "", fmt.Errorf("cannot unmarshal docker cfg: %v", err)
+	}
+
+	if registry, ok := dc.Auths[r.Address]; ok {
+		switch {
+		case registry.Auth != "":
+			registryAuth = registry.Auth
+		case registry.Username != "" && registry.Password != "":
+			auth := fmt.Sprintf("%s:%s", registry.Username, registry.Password)
+			registryAuth = base64.StdEncoding.EncodeToString([]byte(auth))
+		default:
+			log.DebugF("auth or username with password not found in dockerCfg %s for %s. Use empty string", bytes, r.Address)
+		}
+	}
+
+	return registryAuth, nil
 }
 
 func getDNSAddress(serviceCIDR string) string {
@@ -643,10 +713,18 @@ func getDNSAddress(serviceCIDR string) string {
 	return clusterDNS
 }
 
-func (i *ImagesTags) ConvertToMap() map[string]interface{} {
+func (i *imagesDigests) ConvertToMap() map[string]interface{} {
 	res := make(map[string]interface{})
 	for k, v := range *i {
 		res[k] = v
 	}
 	return res
+}
+
+func GetIndexFromNodeName(name string) (int, error) {
+	index, err := strconv.Atoi(name[strings.LastIndex(name, "-")+1:])
+	if err != nil {
+		return 0, err
+	}
+	return index, nil
 }

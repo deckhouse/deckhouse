@@ -1,0 +1,9 @@
+operator-trivy:
+  fixes:
+    - summary: Streamline reference to trivy-db image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3999
+snapshot-controller:
+  fixes:
+    - summary: Added a list of csi drivers that support snapshots to the documentation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4765
+

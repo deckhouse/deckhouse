@@ -44,8 +44,12 @@ func filterNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 
 var (
 	onEventExec    = true
-	memoryPerPod   = int64(15) * 1024 * 1024 // in Megabytes
-	milliCPUPerPod = int64(20)               // in milli cpu
+	memoryPerPod   = int64(15) * 1024 * 1024                                 // in Megabytes
+	milliCPUPerPod = int64(20)                                               // in milli cpu
+	minMem         = resource.NewQuantity(1000*1024*1024, resource.BinarySI) // for reference see modules/300-prometheus/templates/prometheus/prometheus.yaml
+	minCPU         = resource.NewMilliQuantity(200, resource.DecimalSI)      // for reference see modules/300-prometheus/templates/prometheus/prometheus.yaml
+	minLongtermMem = resource.NewQuantity(500*1024*1024, resource.BinarySI)  // for reference see modules/300-prometheus/templates/prometheus/longterm/prometheus.yaml
+	minLongtermCPU = resource.NewMilliQuantity(50, resource.DecimalSI)       // for reference see modules/300-prometheus/templates/prometheus/longterm/prometheus.yaml
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -88,9 +92,25 @@ func calculateNodesCapacity(input *go_hook.HookInput) error {
 	maxMem := resource.NewQuantity(totalPodsMemory/1, resource.BinarySI)
 	maxCPU := resource.NewMilliQuantity(totalPodsCPU/1, resource.DecimalSI)
 
-	// calculate longterm prometheus
+	if maxMem.Cmp(*minMem) == -1 {
+		maxMem = minMem
+	}
+
+	if maxCPU.Cmp(*minCPU) == -1 {
+		maxCPU = minCPU
+	}
+
+	// calculate longterm prometheus usage
 	maxLongtermMem := resource.NewQuantity(totalPodsMemory/3, resource.BinarySI)
 	maxLongtermCPU := resource.NewMilliQuantity(totalPodsCPU/3, resource.DecimalSI)
+
+	if maxLongtermMem.Cmp(*minLongtermMem) == -1 {
+		maxLongtermMem = minLongtermMem
+	}
+
+	if maxLongtermCPU.Cmp(*minLongtermCPU) == -1 {
+		maxLongtermCPU = minLongtermCPU
+	}
 
 	input.Values.Set("prometheus.internal.vpa.maxMemory", maxMem.String())
 	input.Values.Set("prometheus.internal.vpa.maxCPU", maxCPU.String())

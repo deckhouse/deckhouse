@@ -3,11 +3,24 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
+    description: |
+      Describes the configuration of a cloud cluster in Azure.
+
+      Used by the cloud provider if a cluster's control plane is hosted in the cloud.
+
+      Run the following command to change the configuration in a running cluster:
+
+      ```shell
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit provider-cluster-configuration
+      ```
+    x-doc-search: |
+      ProviderClusterConfiguration
+    x-unsafe-rules: [deleteZones]
     x-examples:
-      - layout: Standard
-        apiVersion: deckhouse.io/v1
+      - apiVersion: deckhouse.io/v1
         kind: AzureClusterConfiguration
-        sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>
+        layout: Standard
+        sshPublicKey: "<SSH_PUBLIC_KEY>"
         vNetCIDR: 10.0.0.0/16
         subnetCIDR: 10.0.0.0/24
         masterNodeGroup:
@@ -15,9 +28,10 @@ apiVersions:
           instanceClass:
             machineSize: Standard_D4ds_v4
             urn: Canonical:UbuntuServer:18.04-LTS:18.04.202207120
+            enableExternalIP: false
         provider:
-          location: "westeurope"
           subscriptionId: "<SUBSCRIPTION_ID>"
+          location: "westeurope"
           clientId: "<CLIENT_ID>"
           clientSecret: "<CLIENT_SECRET>"
           tenantId: "<TENANT_ID>"
@@ -37,6 +51,7 @@ apiVersions:
           Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-azure/layouts.html) about possible provider layouts.
         type: string
         enum: [Standard]
+        x-unsafe: true
       standard:
         description: |
           Settings for the [`Standard`](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-azure/layouts.html#standard) layout.
@@ -57,21 +72,29 @@ apiVersions:
         items:
           type: string
         description: |
-          A list of CIDR's allowed to connect to nodes via ssh.
+          A list of CIDR's allowed to connect to nodes via SSH.
 
           By default, `*`.
       vNetCIDR:
         description: |
-          An address space of the virtual network in the [CIDR](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing) format.
+          An address space of the [virtual network](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-vnet-plan-design-arm#virtual-networks) in the [CIDR](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing) format.
+
+          A virtual network is a virtual, isolated portion of the Azure public network. Each virtual network is dedicated to your subscription.
+
+          **Caution!** If you are setting up peering, using vpn or linking networks of other clusters, network address spaces should not overlap.
         type: string
         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
         example: 10.0.0.0/16
+        x-unsafe: true
       subnetCIDR:
         description: |
-          A subnet from the `vNetCIDR` address space for cluster nodes.
+          A [subnet](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-vnet-plan-design-arm#subnets) from the `vNetCIDR` address space for cluster nodes.
+
+          A virtual network can be segmented into one or more subnets up to the limits.
         type: string
         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
         example: 10.1.2.0/24
+        x-unsafe: true
       peeredVNets:
         description: |
           An array of `VNets` to merge with the cluster network.
@@ -90,18 +113,31 @@ apiVersions:
               description: |
                 The name of the VNet.
               type: string
+      serviceEndpoints:
+        description: |
+          The list of Service endpoints to associate with the subnet.
+
+          Virtual Network (VNet) service endpoint provides secure and direct connectivity to Azure services over an optimized route over the Azure backbone network. Endpoints allow you to secure your critical Azure service resources to only your virtual networks. Service Endpoints enables private IP addresses in the VNet to reach the endpoint of an Azure service without needing a public IP address on the VNet. More information about Service Endpoints can be found in the [official documentation](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-service-endpoints-overview).
+        type: array
+        items:
+          type: string
+          enum: [Microsoft.AzureActiveDirectory, Microsoft.AzureCosmosDB, Microsoft.ContainerRegistry, Microsoft.EventHub, Microsoft.KeyVault, Microsoft.ServiceBus, Microsoft.Sql, Microsoft.Storage, Microsoft.Storage.Global, Microsoft.Web]
       masterNodeGroup:
         description: |
           The definition of the master's NodeGroup.
 
           > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
         required: [replicas, instanceClass]
+        x-unsafe-rules: [updateMasterImage]
         properties:
           replicas:
             description: |
-              The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
+              The number of master nodes to create.
+
+              It is important to have an odd number of masters to ensure a quorum.
             type: integer
             minimum: 1
+            x-unsafe-rules: [updateReplicas]
           zones:
             description: |
               A list of zones where master nodes can be created.
@@ -122,8 +158,8 @@ apiVersions:
               Partial contents of the [AzureInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass) fields.
             type: object
             required: [machineSize, urn]
-            properties: &instanceClassProperties
-              machineSize:
+            properties:
+              machineSize: &instanceClassMachineSize
                 description: |
                   The type of instances to provision.
 
@@ -134,7 +170,7 @@ apiVersions:
                   ```
                 type: string
                 example: Standard_F4
-              urn:
+              urn: &instanceClassUrn
                 description: |
                   The VM image to use for an instance.
 
@@ -146,11 +182,11 @@ apiVersions:
                   az vm image list --location westeurope --publisher OpenLogic --all --sku 7.5 -o table
                   ```
 
-                  **By default:** The image specified in `AzureCloudDiscoveryData` is used (the master of the cluster is based on this image).
+                  By default, the image specified in `AzureCloudDiscoveryData` is used (the master of the cluster is based on this image).
 
-                  > **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11` are supported and tested to work.
+                  The list of OS and their versions supported by Deckhouse can be found in the [documentation](https://deckhouse.ru/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
                 type: string
-              enableExternalIP:
+              enableExternalIP: &instanceClassEnableExternalIP
                 description: |
                   Defines whether to enable external IP for an instance or not.
 
@@ -158,14 +194,14 @@ apiVersions:
                 type: boolean
                 enum: [true, false]
                 x-doc-default: false
-              diskSizeGb:
+              diskSizeGb: &instanceClassDiskSizeGb
                 description: |
-                  Instance root disk size in gigabytes.
+                  Instance root disk size in gibibytes.
                 example: 40
                 type: integer
-              diskType:
+              diskType: &instanceClassDiskType
                 description: |
-                  The type of the volume to create.
+                  The type of the volumes to create.
 
                   You can view a list of available volume types using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
 
@@ -174,7 +210,13 @@ apiVersions:
                   ```
                 example: StandardSSD_LRS
                 type: string
-              additionalTags:
+              etcdDiskSizeGb:
+                description: |
+                  Etcd disk size in gibibytes.
+                example: 20
+                default: 20
+                type: integer
+              additionalTags: &instanceClassAdditionalTags
                 description: |
                   The additional tags to attach to the instances created (in addition to those specified in the cloud provider configuration).
                 x-doc-example: |
@@ -185,7 +227,7 @@ apiVersions:
                 type: object
                 additionalProperties:
                   type: string
-              acceleratedNetworking:
+              acceleratedNetworking: &instanceClassAcceleratedNetworking
                 type: boolean
                 default: false
                 description: |
@@ -229,7 +271,7 @@ apiVersions:
                   description: |
                     A list of labels to attach to cluster resources.
 
-                    The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                    The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
 
                     Note that you have to re-create all the machines to add new tags if tags were modified in the running cluster.
 
@@ -245,7 +287,7 @@ apiVersions:
                     type: string
                 annotations:
                   description: |
-                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
                   x-doc-example: |
                     ```yaml
                     annotations:
@@ -256,7 +298,7 @@ apiVersions:
                     type: string
                 taints:
                   description: |
-                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object.
+                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
                     > **Caution!** Only the `effect`, `key`, `values`  fields are available.
                   x-doc-example: |
@@ -283,7 +325,13 @@ apiVersions:
               required: [machineSize, urn]
               type: object
               properties:
-                <<: *instanceClassProperties
+                machineSize: *instanceClassMachineSize
+                urn: *instanceClassUrn
+                enableExternalIP: *instanceClassEnableExternalIP
+                diskSizeGb: *instanceClassDiskSizeGb
+                diskType: *instanceClassDiskType
+                additionalTags: *instanceClassAdditionalTags
+                acceleratedNetworking: *instanceClassAcceleratedNetworking
       tags:
         description: |
           A list of tags in the `key: value` format to attach to all cluster resources.
@@ -306,10 +354,12 @@ apiVersions:
               az account list-locations -o table
               ```
             type: string
+            x-unsafe: true
           subscriptionId:
             description: |
               The ID of the subscription.
             type: string
+            x-unsafe: true
           clientId:
             description: |
               The client ID.
@@ -317,11 +367,14 @@ apiVersions:
           clientSecret:
             description: |
               The client's secret.
+
+              Keep in mind the expiration date of the secret. By default, it is valid for one year. Refer to the [official documentation](https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-app-service-certificate?tabs=portal#renew-an-app-service-certificate) to create a service account with a longer secret expiration date.
             type: string
           tenantId:
             description: |
               The ID of the tenant.
             type: string
+            x-unsafe: true
       zones:
         description: |
           The globally restricted set of zones that this Cloud Provider works with.

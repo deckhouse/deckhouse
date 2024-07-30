@@ -4,9 +4,11 @@ title: "Cloud provider — GCP: настройки"
 
 Модуль настраивается автоматически, исходя из выбранной схемы размещения, определяемой в параметрах структуры [GCPClusterConfiguration](cluster_configuration.html). В большинстве случаев нет необходимости ручной конфигурации модуля.
 
-Количество и параметры процесса заказа машин в облаке настраиваются в custom resource [`NodeGroup`](../../modules/040-node-manager/cr.html#nodegroup) модуля node-manager, в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup). Инстанс-класс для cloud-провайдера GCP — это custom resource [`GCPInstanceClass`](cr.html#gcpinstanceclass), в котором указываются конкретные параметры самих машин.
+{% include module-alerts.liquid %}
 
-Модуль автоматически создаёт StorageClass'ы, покрывающие все варианты дисков в GCP:
+Количество и параметры процесса заказа машин в облаке настраиваются в custom resource [`NodeGroup`](../../modules/040-node-manager/cr.html#nodegroup) модуля `node-manager`, в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup). Инстанс-класс для cloud-провайдера GCP — это custom resource [`GCPInstanceClass`](cr.html#gcpinstanceclass), в котором указываются конкретные параметры самих машин.
+
+Модуль автоматически создает StorageClass'ы, покрывающие все варианты дисков в GCP:
 
 | Тип | Репликация | Имя StorageClass |
 |---|---|---|
@@ -17,6 +19,6 @@ title: "Cloud provider — GCP: настройки"
 | ssd | none | pd-ssd-not-replicated |
 | ssd | regional | pd-ssd-replicated |
 
-Также он позволяет отфильтровать ненужные StorageClass'ы, указав их в параметре `exclude`.
+Также он позволяет отфильтровать ненужные StorageClass'ы, для этого нужно указать их в параметре `exclude`.
 
 {% include module-settings.liquid %}

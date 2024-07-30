@@ -1,4 +1,4 @@
-{{- define "prometheus_resources" }}
+{{- define "prometheus_resources" }} # for reference see modules/300-prometheus/hooks/detect_vpa_max.go
 cpu: 200m
 memory: 1000Mi
 {{- end }}
@@ -51,15 +51,35 @@ spec:
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
   image: {{ include "helm_lib_module_image" (list . "prometheus") }}
-  version: v2.36.2
+  version: v2.45.2
   enableRemoteWriteReceiver: true
   enableFeatures:
   - memory-snapshot-on-shutdown # https://ganeshvernekar.com/blog/prometheus-tsdb-snapshot-on-shutdown/
+  - extra-scrape-metrics # https://prometheus.io/docs/prometheus/2.44/feature_flags/#extra-scrape-metrics usage scrape_sample_limit
   imagePullSecrets:
   - name: deckhouse-registry
   listenLocal: true
   query:
     maxSamples: 100000000
+    lookbackDelta: {{ mul (.Values.global.discovery.prometheusScrapeInterval | default 30) 2 }}s
+  additionalArgs:
+    - name: scrape.timestamp-tolerance
+      value: 10ms
+  initContainers:
+  - command:
+    - sh
+    - -c
+    - chown -vfR 64535:64535 /prometheus-db/
+    image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
+    imagePullPolicy: IfNotPresent
+    name: fix-permissions
+    securityContext:
+      runAsNonRoot: false
+      runAsUser: 0
+    volumeMounts:
+    - mountPath: /prometheus-db
+      name: prometheus-main-db
+      subPath: prometheus-db
   containers:
   - name: prometheus
     startupProbe:
@@ -131,6 +151,9 @@ spec:
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
   externalLabels:
+{{- with .Values.prometheus.externalLabels }}
+    {{- . | toYaml | nindent 4 }}
+{{- end }}
     prometheus: deckhouse
   prometheusExternalLabelName: ""
   replicaExternalLabelName: ""
@@ -143,14 +166,18 @@ spec:
       prometheus.deckhouse.io/monitor-watcher-enabled: "true"
   ruleNamespaceSelector:
     matchLabels:
-      heritage: deckhouse
+      prometheus.deckhouse.io/rules-watcher-enabled: "true"
+  scrapeConfigNamespaceSelector:
+    matchLabels:
+      prometheus.deckhouse.io/scrape-configs-watcher-enabled: "true"
   probeNamespaceSelector:
     matchLabels:
-      heritage: deckhouse
+      prometheus.deckhouse.io/probe-watcher-enabled: "true"
   podMetadata:
+    labels:
+      threshold.extended-monitoring.deckhouse.io/disk-bytes-warning: "94"
+      threshold.extended-monitoring.deckhouse.io/disk-bytes-critical: "96"
     annotations:
-      threshold.extended-monitoring.flant.com/disk-bytes-warning: "97"
-      threshold.extended-monitoring.flant.com/disk-bytes-critical: "99"
       checksum/kube-rbac-proxy: {{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
   serviceMonitorSelector:
     matchLabels:
@@ -159,6 +186,9 @@ spec:
     matchLabels:
       prometheus: main
   probeSelector:
+    matchLabels:
+      prometheus: main
+  scrapeConfigSelector:
     matchLabels:
       prometheus: main
   secrets:
@@ -194,8 +224,13 @@ spec:
     {{- .spec.writeRelabelConfigs | toYaml | nindent 4 }}
     {{- end }}
     {{- if .spec.tlsConfig }}
+      {{- $tlsConfig := .spec.tlsConfig | deepCopy }}
+      {{- if .spec.tlsConfig.ca }}
+        {{- $_ := unset $tlsConfig "ca" }}
+        {{- $_ = set $tlsConfig "ca" (dict "configMap" (dict "name" (printf "d8-prometheus-remote-write-ca-%s" .name) "key" "ca.crt")) }}
+      {{- end }}
     tlsConfig:
-      {{- .spec.tlsConfig | toYaml | nindent 6 }}
+      {{- $tlsConfig | toYaml | nindent 6 }}
     {{- end }}
   {{- end }}
 {{- end }}
@@ -247,10 +282,10 @@ spec:
 {{- if .Values.global.modules.publicDomainTemplate }}
   externalUrl: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}/prometheus/
 {{- end }}
-  {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 2 }}
-    fsGroup: 2000
+  {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 2 }}
+    fsGroup: 64535
   {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 2 }}
-  {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 2 }}
+  {{- include "helm_lib_tolerations" (tuple . "monitoring" "without-storage-problems") | nindent 2 }}
   {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 2 }}
 {{- $storageClass := .Values.prometheus.internal.prometheusMain.effectiveStorageClass }}
 {{- if $storageClass }}

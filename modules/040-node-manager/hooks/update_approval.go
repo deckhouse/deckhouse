@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -50,14 +50,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		shared.ConfigurationChecksumHookConfig(),
 		{
 			Name:                   "ngs",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			ApiVersion:             "deckhouse.io/v1",
 			Kind:                   "NodeGroup",
 			FilterFunc:             updateApprovalNodeGroupFilter,
 		},
 		{
 			Name:                   "nodes",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			ApiVersion:             "v1",
 			Kind:                   "Node",
 			LabelSelector: &v1.LabelSelector{
@@ -290,7 +290,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 	}
 
 	for _, node := range ar.nodes {
-		if !(node.IsDisruptionRequired && !node.IsDraining) {
+		if !((node.IsDisruptionRequired || node.IsRollingUpdate) && !node.IsDraining) {
 			continue
 		}
 
@@ -347,7 +347,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 			patch = map[string]interface{}{
 				"metadata": map[string]interface{}{
 					"annotations": map[string]interface{}{
-						"update.node.deckhouse.io/draining": "",
+						drainingAnnotationKey: "bashible",
 					},
 				},
 			}
@@ -406,7 +406,7 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 					"update.node.deckhouse.io/waiting-for-approval": nil,
 					"update.node.deckhouse.io/disruption-required":  nil,
 					"update.node.deckhouse.io/disruption-approved":  nil,
-					"update.node.deckhouse.io/drained":              nil,
+					drainedAnnotationKey:                            nil,
 				},
 			},
 		}
@@ -438,6 +438,7 @@ type updateApprovalNode struct {
 	IsUnschedulable      bool
 	IsDraining           bool
 	IsDrained            bool
+	IsRollingUpdate      bool
 }
 
 type updateNodeGroup struct {
@@ -489,7 +490,7 @@ func updateApprovalNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.Filt
 		if ng.Spec.Disruptions.Automatic.DrainBeforeApproval != nil {
 			ung.Disruptions.Automatic.DrainBeforeApproval = ng.Spec.Disruptions.Automatic.DrainBeforeApproval
 		} else {
-			ung.Disruptions.Automatic.DrainBeforeApproval = pointer.BoolPtr(true)
+			ung.Disruptions.Automatic.DrainBeforeApproval = pointer.Bool(true)
 		}
 	}
 
@@ -504,7 +505,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 		return nil, err
 	}
 
-	var isApproved, isWaitingForApproval, isDisruptionRequired, isDraining, isReady, isDrained, isDisruptionApproved bool
+	var isApproved, isWaitingForApproval, isDisruptionRequired, isDraining, isReady, isDrained, isDisruptionApproved, isRollingUpdate bool
 
 	if _, ok := node.Annotations["update.node.deckhouse.io/approved"]; ok {
 		isApproved = true
@@ -512,10 +513,14 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 	if _, ok := node.Annotations["update.node.deckhouse.io/waiting-for-approval"]; ok {
 		isWaitingForApproval = true
 	}
+	if _, ok := node.Annotations["update.node.deckhouse.io/rolling-update"]; ok {
+		isRollingUpdate = true
+	}
 	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-required"]; ok {
 		isDisruptionRequired = true
 	}
-	if _, ok := node.Annotations["update.node.deckhouse.io/draining"]; ok {
+	// This annotation is now only used by bashible, there are other means to drain the node manually.
+	if v, ok := node.Annotations[drainingAnnotationKey]; ok && v == "bashible" {
 		isDraining = true
 	}
 	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-approved"]; ok {
@@ -529,7 +534,8 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 	if !ok {
 		nodeGroup = ""
 	}
-	if _, ok := node.Annotations["update.node.deckhouse.io/drained"]; ok {
+	// This annotation is now only used by bashible, there are other means to drain the node manually.
+	if v, ok := node.Annotations[drainedAnnotationKey]; ok && v == "bashible" {
 		isDrained = true
 	}
 
@@ -552,6 +558,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 		IsUnschedulable:       node.Spec.Unschedulable,
 		IsWaitingForApproval:  isWaitingForApproval,
 		IsDrained:             isDrained,
+		IsRollingUpdate:       isRollingUpdate,
 	}
 
 	return n, nil
@@ -570,6 +577,12 @@ func calculateNodeStatus(node updateApprovalNode, ng updateNodeGroup, desiredChe
 	case node.IsApproved && node.IsDisruptionRequired && node.IsDraining:
 		return "DrainingForDisruption"
 
+	case node.IsDraining:
+		return "Draining"
+
+	case node.IsDrained:
+		return "Drained"
+
 	case node.IsApproved && node.IsDisruptionRequired && ng.Disruptions.ApprovalMode == "Automatic":
 		return "WaitingForDisruptionApproval"
 
@@ -582,11 +595,17 @@ func calculateNodeStatus(node updateApprovalNode, ng updateNodeGroup, desiredChe
 	case node.IsApproved:
 		return "Approved"
 
+	case node.ConfigurationChecksum == "":
+		return "UpdateFailedNoConfigChecksum"
+
 	case node.ConfigurationChecksum != desiredChecksum:
 		return "ToBeUpdated"
 
 	case node.ConfigurationChecksum == desiredChecksum:
 		return "UpToDate"
+
+	case node.IsRollingUpdate:
+		return "RollingUpdate"
 
 	default:
 		return "Unknown"
@@ -594,8 +613,8 @@ func calculateNodeStatus(node updateApprovalNode, ng updateNodeGroup, desiredChe
 }
 
 var metricStatuses = []string{
-	"WaitingForApproval", "Approved", "DrainingForDisruption", "WaitingForDisruptionApproval",
-	"WaitingForManualDisruptionApproval", "DisruptionApproved", "ToBeUpdated", "UpToDate",
+	"WaitingForApproval", "Approved", "DrainingForDisruption", "Draining", "Drained", "WaitingForDisruptionApproval",
+	"WaitingForManualDisruptionApproval", "DisruptionApproved", "ToBeUpdated", "UpToDate", "UpdateFailedNoConfigChecksum",
 }
 
 func setNodeStatusesMetrics(input *go_hook.HookInput, nodeName, nodeGroup, nodeStatus string) {

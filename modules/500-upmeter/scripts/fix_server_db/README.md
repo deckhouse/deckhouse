@@ -20,7 +20,7 @@ time="2021-05-20T10:22:50Z" level=fatal msg="cannot start server: database not c
 ### 1. Migrate
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- /modules/500-upmeter/scripts/fix_server_db/migrate.sh
+kubectl -n d8-system exec -ti svc/deckhouse-leader -- /modules/500-upmeter/scripts/fix_server_db/migrate.sh
 ```
 
 ### 2. Optionally observe the state
@@ -35,7 +35,7 @@ watch kubectl -n d8-upmeter get po -l app=upmeter -o wide
 ## How it helps
 
 The fix is based on vacuuming sqlite file since it has too much unneccessary
-data and prevents migrations from runnung. ON the migrations, the database file
+data and prevents migrations from running. ON the migrations, the database file
 doubles in size. Given PVC size is 1G, and the DB size is 600M, migration cannot
 run.
 

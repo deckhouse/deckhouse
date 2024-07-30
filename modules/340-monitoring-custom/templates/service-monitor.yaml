@@ -6,7 +6,7 @@ metadata:
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
 spec:
-  sampleLimit: 1000
+  sampleLimit: 5000
   endpoints:
   # HTTP target with samples limited to 1000
   - relabelings:
@@ -15,7 +15,7 @@ spec:
     {{- include "endpoint_by_service_port_name" "http" | nindent 4 }}
     {{- include "base_relabeling" "service" | nindent 4 }}
 
-  # HTTPS target with samples limited to 1000
+  # HTTPS target with samples limited to 5000
   - scheme: https
     {{- include "tls_config" "" | nindent 4 }}
     relabelings:
@@ -25,7 +25,7 @@ spec:
     {{- include "base_relabeling" "service" | nindent 4 }}
 
     {{- if .Values.monitoringCustom.internal.prometheusScraperIstioMTLSEnabled }}
-  # Istio mTLS target with samples limited to 1000
+  # Istio mTLS target with samples limited to 5000
   - scheme: https
     {{- include "tls_config" "prometheus-scraper-istio-mtls" | nindent 4 }}
     relabelings:

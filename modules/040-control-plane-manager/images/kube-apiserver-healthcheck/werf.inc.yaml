@@ -1,6 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ $.Images.BASE_ALPINE }}
+fromImage: common/distroless
 import:
 - image: common/pause
   add: /pause
@@ -14,9 +14,9 @@ docker:
   ENTRYPOINT: ["/usr/local/bin/kube-apiserver-healthcheck"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_16_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE }}
 git:
-- add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/
   to: /src
   includePaths:
   - go.mod
@@ -26,8 +26,8 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - apk add --no-cache make bash git mercurial patch rsync
   install:
   - cd /src
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o kube-apiserver-healthcheck main.go
+  - GOPROXY={{ env "GOPROXY" }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o kube-apiserver-healthcheck main.go
+  - chown 64535:64535 kube-apiserver-healthcheck
+  - chmod 0700 kube-apiserver-healthcheck

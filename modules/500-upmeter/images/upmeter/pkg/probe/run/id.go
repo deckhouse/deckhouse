@@ -20,7 +20,6 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/spaolacci/murmur3"
 )
@@ -56,7 +55,6 @@ func nodeNameHash(nodeName string) string {
 }
 
 func randomAlphaNum(count int) string {
-	rand.Seed(time.Now().UnixNano())
 	res := make([]byte, count)
 
 	for i := 0; i < count; i++ {

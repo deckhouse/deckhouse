@@ -70,23 +70,25 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
-      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       shareProcessNamespace: true
       imagePullSecrets:
       - name: deckhouse-registry
       # hardcoded, because kube-dns is a critical component and system-cluster-critical priority class exists by default
       priorityClassName: system-cluster-critical
       serviceAccountName: d8-kube-dns
-      {{- include "helm_lib_tolerations" (tuple . "any-node-with-no-csi") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-no-csi") | nindent 6 }}
       containers:
       - name: coredns
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "coredns") }}
-        args: [ "-conf", "/etc/coredns/Corefile", "-dns.port", "5353" ]
+        args: [ "-conf", "/etc/coredns/Corefile", "-dns.port", "5353", "-pidfile", "/tmp/coredns.pid" ]
         volumeMounts:
         - name: config-volume
           mountPath: /etc/coredns
           readOnly: true
+        - name: tmp
+          mountPath: /tmp
         ports:
         - containerPort: 5353
           name: dns
@@ -127,7 +129,9 @@ spec:
           name: https-metrics
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
-          value: "0.0.0.0"
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             upstreams:
@@ -155,6 +159,8 @@ spec:
           items:
           - key: Corefile
             path: Corefile
+      - name: tmp
+        emptyDir: {}
       affinity:
         nodeAffinity:
 {{- if .Values.kubeDns.internal.specificNodeType }}

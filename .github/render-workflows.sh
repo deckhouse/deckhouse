@@ -53,7 +53,7 @@ cat <<'SCRIPT_END' | docker run -i --rm \
   -v ${volumesRoot}/workflow_templates:/in/workflow_templates \
   -v ${volumesRoot}/workflows:/out/workflows \
   --entrypoint=ash \
-  hairyhenderson/gomplate:v3.10.0-alpine - || dockerExit=1
+  hairyhenderson/gomplate:v3.11.7-alpine - || dockerExit=1
 
 # Render each file in workflow_templates
 # directory and copy to /out/workflows

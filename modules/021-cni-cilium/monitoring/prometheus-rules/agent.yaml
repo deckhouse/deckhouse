@@ -6,15 +6,39 @@
     labels:
       d8_module: cni-cilium
       d8_component: agent
+      severity_level: "4"
       tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_grouped_by__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
       plk_create_group_if_not_exists__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
-      summary: Some nodes' health endpoints are not reachable by agent {{ $labels.namespace }}/{{ $labels.pod }}.
+      summary: Some node's health endpoints are not reachable by agent {{ $labels.namespace }}/{{ $labels.pod }}.
       description: |
         Check what's going on: `kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}`
+
+  - alert: CiliumAgentMetricNotFound
+    expr: (count by (namespace,pod) (cilium_unreachable_health_endpoints) OR count by (namespace,pod) (cilium_endpoint_state)) != 1
+    for: 5m
+    labels:
+      d8_module: cni-cilium
+      d8_component: agent
+      severity_level: "4"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_grouped_by__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
+      plk_create_group_if_not_exists__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
+      summary: Some of the metrics are not coming from the agent {{ $labels.namespace }}/{{ $labels.pod }}.
+      description: |
+        Use the following commands to check what's going on:
+        - `kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}`
+        - `kubectl -n {{ $labels.namespace }} exec -ti {{ $labels.pod }} cilium-health status`
+
+        We need to cross-check the metrics with the neighboring agent.
+        Also the absence of metrics is an indirect sign that new pods cannot be created on the node because of the inability to connect to the agent.
+        It is important to get a more specific way of determining the above situation and create a more accurate alert for the inability to connect new pods to the agent.
 
   - alert: CiliumAgentEndpointsNotReady
     expr: sum by (namespace, pod) (cilium_endpoint_state{endpoint_state="ready"} / cilium_endpoint_state) < 0.5
@@ -22,6 +46,7 @@
     labels:
       d8_module: cni-cilium
       d8_component: agent
+      severity_level: "4"
       tier: cluster
     annotations:
       plk_protocol_version: "1"
@@ -38,6 +63,8 @@
     labels:
       d8_module: cni-cilium
       d8_component: agent
+      severity_level: "4"
+      experimental: "true"
       tier: cluster
     annotations:
       plk_protocol_version: "1"
@@ -47,29 +74,13 @@
       summary: eBPF map {{ $labels.map_name }} is more than 90% full in agent {{ $labels.namespace }}/{{ $labels.pod }}.
       description: We've reached resource limit of eBPF maps. Consult with vendor for possible remediation steps.
 
-  - alert: CiliumAgentMapOperationFailures
-    expr: sum by (namespace, pod, map_name, operation) (increase(cilium_bpf_map_ops_total{outcome="fail"}[5m])) > 0
-    for: 20m
-    labels:
-      d8_module: cni-cilium
-      d8_component: agent
-      tier: cluster
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_grouped_by__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
-      plk_create_group_if_not_exists__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
-      summary: Errors occurred during {{ $labels.map_name }} eBPF map update by operation {{ $labels.operation }} in agent {{ $labels.namespace }}/{{ $labels.pod }}.
-      description: |
-        Cilium Agent is experiencing errors updating BPF maps on Agent Pod {{ $labels.pod }}.
-        Effects may vary depending on map type(s) being affected however this is likely to cause issues with Cilium.
-
   - alert: CiliumAgentPolicyImportErrors
     expr: sum by (namespace, pod) (rate(cilium_policy_import_errors_total[2m]) > 0)
     for: 5m
     labels:
       d8_module: cni-cilium
       d8_component: agent
+      severity_level: "4"
       tier: cluster
     annotations:
       plk_protocol_version: "1"

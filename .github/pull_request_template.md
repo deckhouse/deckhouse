@@ -16,6 +16,16 @@
   If it fixes an obvious bug, please tell users about the impact and effect of the problem.
 -->
 
+## Why do we need it in the patch release (if we do)?
+
+<!---
+Describe why the changes need to be backported into the patch release.
+
+If it doesn't matter whether the changes will be backported into the patch release, specify "Not necessarily".
+
+Delete the section if the PR is for release, and not for the patch release.
+-->
+
 ## What is the expected result?
 <!---
   How can one check these changes after applying?  
@@ -33,8 +43,7 @@
 <!---
   Describe the changes so they will be included in a release changelog.
 
-  Find examples and documentation below, or visit the instruction page on the repo wiki
-  https://github.com/deckhouse/deckhouse/wiki/How-to-add-to-changelog
+  Find examples and documentation below, or visit the [Guidelines for working with PRs](https://github.com/deckhouse/deckhouse/wiki/Guidelines-for-working-with-PRs).
 -->
 
 ```changes

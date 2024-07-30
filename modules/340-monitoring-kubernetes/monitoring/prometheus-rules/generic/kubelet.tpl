@@ -45,16 +45,12 @@
       description: Prometheus failed to scrape {{ `{{ $value }}` }}% of kubelets.
       summary: Many kubelets cannot be scraped
   - alert: K8SKubeletTooManyPods
-{{- if semverCompare "<1.19" .Values.global.discovery.kubernetesVersion }}
-    expr: kubelet_running_pod_count > on(node) (kube_node_status_capacity{resource="pods",unit="integer"}) * 0.9
-{{- else }}
-    expr: kubelet_running_pods > on(node) (kube_node_status_capacity{resource="pods",unit="integer"}) * 0.9
-{{- end }}
+    expr: kubelet_running_pods > on(node) (kube_node_status_capacity{job="kube-state-metrics",resource="pods",unit="integer"}) * 0.9
     for: 10m
     labels:
       severity_level: "7"
     annotations:
       plk_protocol_version: "1"
       description: Kubelet {{ `{{ $labels.node }}` }} is running {{ `{{ $value }}` }} pods, close
-        to the limit of {{ `{{ printf "kube_node_status_capacity{resource=\"pods\",unit=\"integer\",node=\"%s\"}" $labels.node | query | first | value }}` }}
+        to the limit of {{ `{{ printf "kube_node_status_capacity{job=\"kube-state-metrics\",resource=\"pods\",unit=\"integer\",node=\"%s\"}" $labels.node | query | first | value }}` }}
       summary: Kubelet is close to pod limit

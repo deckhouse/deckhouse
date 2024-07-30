@@ -1,0 +1,5 @@
+cni-flannel:
+  fixes:
+    - summary: flannel's entrypoint now correctly passes arguments to the flannel itself.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4837
+

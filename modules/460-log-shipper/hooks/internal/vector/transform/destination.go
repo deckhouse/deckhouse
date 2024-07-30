@@ -30,10 +30,23 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 	case v1alpha1.DestElasticsearch, v1alpha1.DestLogstash:
 		transforms = append(transforms, DeDotTransform())
 		fallthrough
-	case v1alpha1.DestVector, v1alpha1.DestKafka:
+	case v1alpha1.DestSocket, v1alpha1.DestVector, v1alpha1.DestKafka:
 		if len(dest.Spec.ExtraLabels) > 0 {
 			transforms = append(transforms, ExtraFieldTransform(dest.Spec.ExtraLabels))
 		}
+
+		switch v1alpha1.EncodingCodecCEF {
+		case dest.Spec.Kafka.Encoding.Codec, dest.Spec.Socket.Encoding.Codec:
+			transforms = append(transforms, CEFNameAndSeverity())
+		}
+	}
+
+	if dest.Spec.Type == v1alpha1.DestSocket && dest.Spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecSyslog {
+		transforms = append(transforms, SyslogEncoding())
+	}
+
+	if dest.Spec.Type == v1alpha1.DestSplunk {
+		transforms = append(transforms, DateTime())
 	}
 
 	if dest.Spec.Type == v1alpha1.DestElasticsearch && dest.Spec.Elasticsearch.DataStreamEnabled {
@@ -41,7 +54,11 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 	}
 
 	if dest.Spec.RateLimit.LinesPerMinute != nil {
-		transforms = append(transforms, ThrottleTransform(dest.Spec.RateLimit))
+		transform, err := ThrottleTransform(dest.Spec.RateLimit)
+		if err != nil {
+			return nil, err
+		}
+		transforms = append(transforms, transform)
 	}
 
 	switch dest.Spec.Type {

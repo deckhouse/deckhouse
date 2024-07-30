@@ -21,4 +21,4 @@ limitations under the License.
 // +groupName=bashible.deckhouse.io
 
 // Package v1alpha1 is the v1alpha1 version of the API.
-package v1alpha1 // import "d8.io/bashible/pkg/apis/bashible/v1alpha1"
+package v1alpha1 // import "bashible-apiserver/pkg/apis/bashible/v1alpha1"

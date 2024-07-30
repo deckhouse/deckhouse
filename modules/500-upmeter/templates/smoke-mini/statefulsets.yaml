@@ -41,7 +41,7 @@ metadata:
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "smoke-mini")) | nindent 2 }}
   annotations:
-    node: {{ $sts.node }}
+    node: {{ $sts.node | quote }}
     {{- if ne ($sts.zone) "NONE" }}
     zone: {{ $sts.zone | quote }}
     {{- end }}
@@ -75,7 +75,7 @@ spec:
                 - {{ $sts.node | quote }}
       {{- include "helm_lib_tolerations" (tuple $context "any-node") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple $context "cluster-medium") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs" $context | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" $context | nindent 6 }}
       containers:
       - name: smoke-mini
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $context | nindent 8 }}

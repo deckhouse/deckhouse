@@ -1,0 +1,64 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8allowedclusterroles
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: security-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Allowed cluster roles"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Controls what cluster roles are allowed to be bind to users.
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8AllowedClusterRoles
+      validation:
+        openAPIV3Schema:
+          type: object
+          description: >-
+            Controls what cluster roles are allowed to be bind to users.
+          properties:
+            allowedClusterRoles:
+              type: array
+              description: "A list of allowed cluster roles to bind to users."
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.security_policies
+
+        violation[{"msg": msg, "details": {}}] {
+          input.review.object.kind == "RoleBinding"
+          input.review.object.roleRef.kind == "ClusterRole"
+
+          allowedRoles := get_allowed_roles(input)
+          roleRefName := input.review.object.roleRef.name
+          not input_parameters_allowed_roles(allowedRoles, roleRefName)
+
+          msg := sprintf("ClusterRole \"%v\" is not in list of allowed roles %v", [roleRefName, allowedRoles])
+        }
+
+        get_allowed_roles(arg) = out {
+          not arg.parameters
+          out = []
+        }
+        get_allowed_roles(arg) = out {
+          not arg.parameters.allowedClusterRoles
+          out = []
+        }
+        get_allowed_roles(arg) = out {
+          out = arg.parameters.allowedClusterRoles
+        }
+
+        input_parameters_allowed_roles(allowedRoles, roleRefName) {
+          # An empty list means all Roles are blocked
+          allowedRoles == []
+        }
+        input_parameters_allowed_roles(allowedRoles, roleRefName) {
+          allowedRoles[_] == roleRefName  
+        }

@@ -21,6 +21,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 )
@@ -32,6 +34,8 @@ type SSH struct {
 	Env         []string
 	CommandName string
 	CommandArgs []string
+
+	ExitWhenTunnelFailure bool
 }
 
 func NewSSH(sess *session.Session) *SSH {
@@ -45,6 +49,11 @@ func (s *SSH) WithEnv(env ...string) *SSH {
 
 func (s *SSH) WithArgs(args ...string) *SSH {
 	s.Args = args
+	return s
+}
+
+func (s *SSH) WithExitWhenTunnelFailure(yes bool) *SSH {
+	s.ExitWhenTunnelFailure = yes
 	return s
 }
 
@@ -63,20 +72,22 @@ func (s *SSH) Cmd() *exec.Cmd {
 	//   ANSIBLE_SSH_ARGS="${ANSIBLE_SSH_ARGS:-"-C
 	//   -o ControlMaster=auto
 	//  -o ControlPersist=600s"}
-	//
-	// -o StrictHostKeyChecking=accept-new
-	// -o UserKnownHostsFile=$(pwd)/.konverge/$terraform_workspace/.ssh_known_hosts"
 	args := []string{
 		// ssh args for bastion here
 		"-C", // compression
 		"-o", "ControlMaster=auto",
 		"-o", "ControlPersist=600s",
-		"-o", "StrictHostKeyChecking=accept-new",
-		"-o", "UserKnownHostsFile=.ssh_known_hosts",
-		"-o", "ServerAliveInterval=7",
-		"-o", "ServerAliveCountMax=2",
-		"-o", "ConnectTimeout=5",
+		"-o", "StrictHostKeyChecking=no",
+		"-o", "UserKnownHostsFile=/dev/null",
+		"-o", "GlobalKnownHostsFile=/dev/null",
+		"-o", "ServerAliveInterval=10",
+		"-o", "ServerAliveCountMax=3",
+		"-o", "ConnectTimeout=15",
 		"-o", "PasswordAuthentication=no",
+	}
+
+	if app.IsDebug {
+		args = append(args, "-vvv")
 	}
 
 	if s.Session.ExtraArgs != "" {
@@ -89,6 +100,8 @@ func (s *SSH) Cmd() *exec.Cmd {
 	if len(s.Args) > 0 {
 		args = append(args, s.Args...)
 	}
+
+	exitOnForwardFailureSet := false
 
 	// add bastion options
 	//  if [[ "x$ssh_bastion_host" != "x" ]] ; then
@@ -109,6 +122,11 @@ func (s *SSH) Cmd() *exec.Cmd {
 			"-o", fmt.Sprintf("ProxyCommand=ssh %s -W %%h:%%p %s", bastion, strings.Join(args, " ")),
 			"-o", "ExitOnForwardFailure=yes",
 		}...)
+		exitOnForwardFailureSet = true
+	}
+
+	if !exitOnForwardFailureSet && s.ExitWhenTunnelFailure {
+		args = append(args, "-o", "ExitOnForwardFailure=yes")
 	}
 
 	// add destination: user, host and port
@@ -131,6 +149,8 @@ func (s *SSH) Cmd() *exec.Cmd {
 		args = append(args, "--" /* cmd.Path */, s.CommandName)
 		args = append(args, s.CommandArgs...)
 	}
+
+	log.DebugF("SSH arguments %v\n", args)
 
 	sshCmd := exec.Command("ssh", args...)
 	sshCmd.Env = env

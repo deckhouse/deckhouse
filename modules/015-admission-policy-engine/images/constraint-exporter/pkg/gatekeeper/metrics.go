@@ -33,7 +33,7 @@ var (
 	ConstraintViolation = prometheus.NewDesc(
 		prometheus.BuildFQName(prefix, "", "constraint_violations"),
 		"OPA violations for all constraints",
-		[]string{"kind", "name", "violating_kind", "violating_name", "violating_namespace", "violation_msg", "violation_enforcement"}, nil,
+		[]string{"kind", "name", "violating_kind", "violating_name", "violating_namespace", "violation_msg", "violation_enforcement", "source_type"}, nil,
 	)
 	ConstraintInformation = prometheus.NewDesc(
 		prometheus.BuildFQName(prefix, "", "constraint_information"),
@@ -46,7 +46,7 @@ func ExportViolations(constraints []Constraint) []prometheus.Metric {
 	m := make([]prometheus.Metric, 0)
 	for _, c := range constraints {
 		for _, v := range c.Status.Violations {
-			metric := prometheus.MustNewConstMetric(ConstraintViolation, prometheus.GaugeValue, 1, c.Meta.Kind, c.Meta.Name, v.Kind, v.Name, v.Namespace, v.Message, v.EnforcementAction)
+			metric := prometheus.MustNewConstMetric(ConstraintViolation, prometheus.GaugeValue, 1, c.Meta.Kind, c.Meta.Name, v.Kind, v.Name, v.Namespace, v.Message, v.EnforcementAction, c.Meta.SourceType)
 			m = append(m, metric)
 		}
 	}

@@ -8,4 +8,6 @@ You can configure the number and parameters of provisioning machines in the clou
 
 The module automatically creates StorageClasses that are available in AWS: `gp3`, `gp2`, `sc1`, and `st1`. It lets you configure disks with the required IOPS. Also, it can filter out the unnecessary StorageClasses (you can do this via the `exclude` parameter).
 
+{% include module-alerts.liquid %}
+
 {% include module-settings.liquid %}

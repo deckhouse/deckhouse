@@ -1,33 +1,36 @@
 ---
 title: "Managing nodes: FAQ"
 search: add a node to the cluster, set up a GPU-enabled node, ephemeral nodes
+description: Managing nodes of a Kubernetes cluster. Adding or removing nodes in a cluster. Changing the CRI of the node.
 ---
 {% raw %}
 
-## How do I add a static node to a cluster?
+## How do I add a master nodes to a cloud cluster (single-master to a multi-master)?
 
-To add a new static node (e.g., VM or bare metal server) to the cluster, follow these steps:
+See [the control-plane-manager module FAQ...](../040-control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
 
-1. Use an existing one or create a new [NodeGroup](cr.html#nodegroup) custom resource ([example](examples.html#an-example-of-the-static-nodegroup-configuration) of the `NodeGroup` called `worker`). The [nodeType](cr.html#nodegroup-v1-spec-nodetype) parameter for static nodes in the NodeGroup must be `Static` or `CloudStatic`.
-2. Get the Base64-encoded script code to add and configure the node.
+## How do I reduce the number of master nodes in a cloud cluster (multi-master to single-master)?
 
-   Example of getting a Base64-encoded script code to add a node to the NodeGroup `worker`:
+See [the control-plane-manager module FAQ...](../040-control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master)
 
-   ```shell
-   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
-   ```
+## Static nodes
 
-3. Pre-configure the new node according to the specifics of your environment. For example:
-   - Add all the necessary mount points to the `/etc/fstab` file (NFS, Ceph, etc.);
-   - Install the necessary packages (e.g., `ceph-common`);
-   - Configure network connectivity between the new node and the other nodes of the cluster.
-4. Connect to the new node over SSH and run the following command by inserting the Base64 string got in step 2:
+<span id="how-do-i-add-a-static-node-to-a-cluster"></span>
 
-   ```shell
-   echo <Base64-CODE> | base64 -d | bash
-   ```
+You can add a static node to the cluster manually ([an example](examples.html#manually)) or by using [Cluster API Provider Static](#how-do-i-add-a-static-node-to-a-cluster-cluster-api-provider-static).
 
-## How do I add a batch of static nodes to a cluster?
+### How do I add a static node to a cluster (Cluster API Provider Static)?
+
+To add a static node to a cluster (bare metal server or virtual machine), follow these steps:
+
+1. Prepare the required resources — servers/virtual machines, install specific OS packages, add mount points, configure the network, etc.
+1. Create the [SSHCredentials](cr.html#sshcredentials) resource.
+1. Create the [StaticInstance](cr.html#staticinstance) resource.
+1. Create the [NodeGroup](cr.html#nodegroup) resource with the `Static` [nodeType](cr.html#nodegroup-v1-spec-nodetype), specify the [desired number of nodes](cr.html#nodegroup-v1-spec-staticinstances-count) in the group and, if necessary, the [filter](cr.html#nodegroup-v1-spec-staticinstances-labelselector) for `StaticInstance`.
+
+[An example](examples.html#using-the-cluster-api-provider-static) of adding a static node.
+
+### How do I add a batch of static nodes to a cluster manually?
 
 Use an existing one or create a new [NodeGroup](cr.html#nodegroup) custom resource ([example](examples.html#an-example-of-the-static-nodegroup-configuration) of the `NodeGroup` called `worker`). The [nodeType](cr.html#nodegroup-v1-spec-nodetype) parameter for static nodes in the NodeGroup must be `Static` or `CloudStatic`.
 
@@ -36,17 +39,25 @@ You can automate the bootstrap process with any automation platform you prefer. 
 1. Pick up one of Kubernetes API Server endpoints. Note that this IP must be accessible from nodes that are being added to the cluster:
 
    ```shell
-   kubectl get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
+   kubectl -n default get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
    ```
 
-2. Get Kubernetes API token for special `ServiceAccount` that Deckhouse manages:
+   Check the K8s version. If the version >= 1.25, create `node-group` token:
+
+   ```shell
+   kubectl create token node-group --namespace d8-cloud-instance-manager --duration 1h
+   ```
+
+   Save the token you got and add it to the `token:` field of the Ansible playbook in the next steps.
+
+1. If the Kubernetes version is smaller than 1.25, get a Kubernetes API token for a special ServiceAccount that Deckhouse manages:
 
    ```shell
    kubectl -n d8-cloud-instance-manager get $(kubectl -n d8-cloud-instance-manager get secret -o name | grep node-group-token) \
      -o json | jq '.data.token' -r | base64 -d && echo ""
    ```
 
-3. Create Ansible playbook with `vars` replaced with values from previous steps:
+1. Create Ansible playbook with `vars` replaced with values from previous steps:
 
    ```yaml
    - hosts: all
@@ -74,6 +85,8 @@ You can automate the bootstrap process with any automation platform you prefer. 
          when: bootstrapped.stat.exists == False
        - name: Run bootstrap.sh
          shell: "{{ bootstrap_secret.json.data['bootstrap.sh'] | b64decode }}"
+         args:
+           executable: /bin/bash
          ignore_errors: yes
          when: bootstrapped.stat.exists == False
        - name: wait
@@ -82,7 +95,7 @@ You can automate the bootstrap process with any automation platform you prefer. 
          when: bootstrapped.stat.exists == False
    ```
 
-4. Specify one more `node_group` variable. This variable must be the same as the name of `NodeGroup` to which node will belong. Variable can be passed in different ways, for example, by using an inventory file.:
+1. Specify one more `node_group` variable. This variable must be the same as the name of `NodeGroup` to which node will belong. Variable can be passed in different ways, for example, by using an inventory file.:
 
    ```text
    [system]
@@ -100,43 +113,54 @@ You can automate the bootstrap process with any automation platform you prefer. 
    node_group=worker
    ```
 
-5. Run the playbook with the inventory file.
+1. Run the playbook with the inventory file.
 
-## How to put an existing cluster node under the node-manager's control?
+### How do I clean up a static node manually?
 
-To make an existing Node controllable by the `node-manager`, perform the following steps:
+> This method is valid for both manually configured nodes (using the bootstrap script) and nodes configured using CAPS.
 
-1. Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a [`NodeGroup` called `worker`](examples.html#an-example-of-the-static-nodegroup-configuration).
-2. Get the script for installing and configuring the node: `kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."adopt.sh"' -r`
-3. Connect to the new node over SSH and run the following command using the data from the secret: `echo <base64> | base64 -d | bash`
+To decommission a node from the cluster and clean up the server (VM), run the following command on the node:
+
+```shell
+bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
+```
+
+### Can I delete a StaticInstance?
+
+A `StaticInstance` that is in the `Pending` state can be deleted with no adverse effects.
+
+To delete a `StaticInstance` in any state other than `Pending` (`Runnig`, `Cleaning`, `Bootstraping`), you need to:
+1. Add the label `"node.deckhouse.io/allow-bootstrap": "false"` to the `StaticInstance`.
+1. Wait until the `StaticInstance` status becomes `Pending`.
+1. Delete the `StaticInstance`.
+1. Decrease the `NodeGroup.spec.staticInstances.count` field by 1.
+
+### How do I change the IP address of a StaticInstance?
+
+You cannot change the IP address in the `StaticInstance` resource. If an incorrect address is specified in `StaticInstance`, you have to [delete the StaticInstance](#can-i-delete-a-staticinstance) and create a new one.
+
+### How do I migrate a manually configured static node under CAPS control?
+
+You need to [clean up the node](#how-do-i-clean-up-a-static-node-manually), then [hand over](#how-do-i-add-a-static-node-to-a-cluster-cluster-api-provider-static) the node under CAPS control.
 
 ## How do I change the NodeGroup of a static node?
 
-To switch an existing static node to another NodeGroup, you need to change its group label:
+Note that if a node is under [CAPS](./#cluster-api-provider-static) control, you **cannot** change the `NodeGroup` membership of such a node. The only alternative is to [delete StaticInstance](#can-i-delete-a-staticinstance) and create a new one.
+
+To switch an existing [manually created](./#working-with-static-nodes) static node to another `NodeGroup`, you need to change its group label:
 
 ```shell
 kubectl label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
 kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 ```
 
-The changes will not be applied instantly. One of the deckhouse hooks is responsible for updating the state of NodeGroup objects. It subscribes to node changes.
-
-## How do I take a node out of the node-manager's control?
-
-To take a node out of `node-manager` control, you need to:
-
-1. Stop the bashible service and timer: `systemctl stop bashible.timer bashible.service`.
-2. Delete bashible scripts: `rm -rf /var/lib/bashible`;
-3. Remove annotations and labels from the node:
-
-   ```shell
-   kubectl annotate node <node_name> node.deckhouse.io/configuration-checksum- update.node.deckhouse.io/waiting-for-approval- update.node.deckhouse.io/disruption-approved- update.node.deckhouse.io/disruption-required- update.node.deckhouse.io/approved- update.node.deckhouse.io/draining- update.node.deckhouse.io/drained-
-   kubectl label node <node_name> node.deckhouse.io/group-
-   ```
+Applying the changes will take some time.
 
 ## How to clean up a node for adding to the cluster?
 
 This is only needed if you have to move a static node from one cluster to another. Be aware these operations remove local storage data. If you just need to change a NodeGroup, follow [this instruction](#how-do-i-change-the-nodegroup-of-a-static-node).
+
+> **Note!** Evict resources from the node and remove the node from LINSTOR/DRBD using the [instruction](/modules/sds-replicated-volume/stable/faq.html#how-do-i-evict-resources-from-a-node) if the node you are cleaning up has LINSTOR/DRBD storage pools.
 
 1. Delete the node from the Kubernetes cluster:
 
@@ -145,100 +169,65 @@ This is only needed if you have to move a static node from one cluster to anothe
    kubectl delete node <node>
    ```
 
-1. Stop all the services and running containers:
+1. Run cleanup script on the node:
 
    ```shell
-   systemctl stop kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
-   systemctl stop bashible.service bashible.timer
-   systemctl stop kubelet.service
-   systemctl stop containerd
-   systemctl list-units --full --all | grep -q docker.service && systemctl stop docker
-   kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
+   bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
    ```
 
-1. Unmount all mounted partitions:
-
-   ```shell
-   for i in $(mount -t tmpfs | grep /var/lib/kubelet | cut -d " " -f3); do umount $i ; done
-   ```
-
-1. Delete all directories and files:
-
-   ```shell
-   rm -rf /var/lib/bashible
-   rm -rf /var/cache/registrypackages
-   rm -rf /etc/kubernetes
-   rm -rf /var/lib/kubelet
-   rm -rf /var/lib/docker
-   rm -rf /var/lib/containerd
-   rm -rf /etc/cni
-   rm -rf /var/lib/cni
-   rm -rf /var/lib/etcd
-   rm -rf /etc/systemd/system/kubernetes-api-proxy*
-   rm -rf /etc/systemd/system/bashible*
-   rm -rf /etc/systemd/system/sysctl-tuner*
-   rm -rf /etc/systemd/system/kubelet*
-   ```
-
-1. Delete all interfaces:
-
-   ```shell
-   ifconfig cni0 down
-   ifconfig flannel.1 down
-   ifconfig docker0 down
-   ip link delete cni0
-   ip link delete flannel.1
-   ```
-
-1. Cleanup systemd:
-
-   ```shell
-   systemctl daemon-reload
-   systemctl reset-failed
-   ```
-
-1. Reboot the node.
-
-1. Start CRI:
-
-   ```shell
-   systemctl start containerd
-   systemctl list-units --full --all | grep -q docker.service && systemctl start docker
-   ```
-
-1. [Run](#how-do-i-add-a-static-node-to-a-cluster) the `bootstrap.sh` script.
-1. Turn on all the services:
-
-   ```shell
-   systemctl start kubelet.service
-   systemctl start kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
-   systemctl start bashible.service bashible.timer
-   ```
+1. [Run](#how-do-i-add-a-static-node-to-a-cluster) the `bootstrap.sh` script after reboot of the node.
 
 ## How do I know if something went wrong?
 
-The `node-manager` module creates the `bashible` service on each node. You can browse its logs using the following command:
+If a node in a nodeGroup is not updated (the value of `UPTODATE` when executing the `kubectl get nodegroup` command is less than the value of `NODES`) or you assume some other problems that may be related to the `node-manager` module, then you need to look at the logs of the `bashible` service. The `bashible` service runs on each node managed by the `node-manager` module.
+
+To view the logs of the `bashible` service on a specific node, run the following command:
 
 ```shell
 journalctl -fu bashible
+```
+
+Example of output when the `bashible` service has performed all necessary actions:
+
+```console
+May 25 04:39:16 kube-master-0 systemd[1]: Started Bashible service.
+May 25 04:39:16 kube-master-0 bashible.sh[1976339]: Configuration is in sync, nothing to do.
+May 25 04:39:16 kube-master-0 systemd[1]: bashible.service: Succeeded.
 ```
 
 ## How do I know what is running on a node while it is being created?
 
 You can analyze `cloud-init` to find out what's happening on a node during the bootstrapping process:
 
-- Find the node that is currently bootstrapping: `kubectl -n d8-cloud-instance-manager get machine | grep Pending`
-- To show details about a specific `machine`, enter: `kubectl -n d8-cloud-instance-manager describe machine kube-2-worker-01f438cf-757f758c4b-r2nx2`
-  You will see the following information:
+1. Find the node that is currently bootstrapping:
 
-  ```shell
-  Status:
-    Bootstrap Status:
-      Description:   Use 'nc 192.168.199.115 8000' to get bootstrap logs.
-      Tcp Endpoint:  192.168.199.115
-  ```
+   ```shell
+   kubectl get instances | grep Pending
+   ```
 
-- Run the `nc 192.168.199.115 8000`command to see `cloud-init` logs and determine the cause of the problem on the node.
+   An example:
+
+   ```shell
+   $ kubectl get instances | grep Pending
+   dev-worker-2a6158ff-6764d-nrtbj   Pending   46s
+   ```
+
+1. Get information about connection parameters for viewing logs:
+
+   ```shell
+   kubectl get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+   ```
+
+   An example:
+
+   ```shell
+   $ kubectl get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+   bootstrapStatus:
+     description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
+     logsEndpoint: 192.168.199.178:8000
+   ```
+
+1. Run the command you got (`nc 192.168.199.115 8000` according to the example above) to see `cloud-init` logs and determine the cause of the problem on the node.
 
 The logs of the initial node configuration are located at `/var/log/cloud-init-output.log`.
 
@@ -273,7 +262,7 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
-  
+
     desired_version="5.15.0-53-generic"
 
     bb-event-on 'bb-package-installed' 'post-install'
@@ -281,13 +270,13 @@ spec:
       bb-log-info "Setting reboot flag due to kernel was updated"
       bb-flag-set reboot
     }
-  
+
     version_in_use="$(uname -r)"
-  
+
     if [[ "$version_in_use" == "$desired_version" ]]; then
       exit 0
     fi
-  
+
     bb-deckhouse-get-disruptive-update-approval
     bb-apt-install "linux-image-${desired_version}"
 ```
@@ -321,7 +310,7 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
-  
+
     desired_version="3.10.0-1160.42.2.el7.x86_64"
 
     bb-event-on 'bb-package-installed' 'post-install'
@@ -329,13 +318,13 @@ spec:
       bb-log-info "Setting reboot flag due to kernel was updated"
       bb-flag-set reboot
     }
-  
+
     version_in_use="$(uname -r)"
-  
+
     if [[ "$version_in_use" == "$desired_version" ]]; then
       exit 0
     fi
-  
+
     bb-deckhouse-get-disruptive-update-approval
     bb-yum-install "kernel-${desired_version}"
 ```
@@ -348,7 +337,6 @@ spec:
 | cloudInstances.classReference         | -                          | +                 | -               |
 | cloudInstances.maxSurgePerZone        | -                          | -                 | -               |
 | cri.containerd.maxConcurrentDownloads | -                          | -                 | +               |
-| cri.docker.maxConcurrentDownloads     | +                          | -                 | +               |
 | cri.type                              | - (NotManaged) / + (other) | -                 | -               |
 | disruptions                           | -                          | -                 | -               |
 | kubelet.maxPods                       | -                          | -                 | +               |
@@ -372,7 +360,7 @@ To force the redeployment of all Machines, you need to add/modify the `manual-ro
 
 ## How do I allocate nodes to specific loads?
 
-> **Note** that you cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the `NodeGroup`. It is reserved for **Deckhouse** components. Please, use the `dedicated` or `dedicated.client.com` keys.
+> **Note!** You cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the `NodeGroup`. It is reserved for **Deckhouse** components. Please, use the `dedicated` or `dedicated.client.com` keys.
 
 There are two ways to solve this problem:
 
@@ -447,33 +435,11 @@ mcmEmergencyBrake: true
 
 ## How do I restore the master node if kubelet cannot load the control plane components?
 
-Such a situation may occur if images of the control plane components on the master were deleted in a cluster that has a single master node (e.g., the directory `/var/lib/docker` (`/var/lib/containerd`) was deleted if Docker (container) is used). In this case, kubelet cannot pull images of the control plane components when restarted since the master node lacks authorization parameters required for accessing `registry.deckhouse.io`.
+Such a situation may occur if images of the control plane components on the master were deleted in a cluster that has a single master node (e.g., the directory `/var/lib/containerd` was deleted). In this case, kubelet cannot pull images of the control plane components when restarted since the master node lacks authorization parameters required for accessing `registry.deckhouse.io`.
 
 Below is an instruction on how you can restore the master node.
 
-### Docker
-
-Execute the following command to restore the master node in any cluster running under Deckhouse:
-
-```shell
-kubectl -n d8-system get secrets deckhouse-registry -o json |
-jq -r '.data.".dockerconfigjson"' | base64 -d |
-jq -r 'del(.auths."registry.deckhouse.io".username, .auths."registry.deckhouse.io".password)'
-```
-
-Copy the output of the command and add it to the `/root/.docker/config.json` file on the corrupted master.
-Next, you need to pull images of control plane components to the corrupted master:
-
-```shell
-for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
-  docker pull $image
-done
-```
-
-You need to restart kubelet after pulling the images.
-Please, pay attention that you must **delete the changes made to the `/root/.docker/config.json` file after restoring the master node!**
-
-### Containerd
+### containerd
 
 Execute the following command to restore the master node in any cluster running under Deckhouse:
 
@@ -496,7 +462,9 @@ You need to restart `kubelet` after pulling the images.
 
 ## How to change CRI for NodeGroup?
 
-Set NodeGroup `cri.type` to `Docker` or `Containerd`.
+> **Note!** CRI can only be switched from `Containerd` to `NotManaged` and back (the [cri.type](cr.html#nodegroup-v1-spec-cri-type) parameter).
+
+Set NodeGroup `cri.type` to `Containerd` or `NotManaged`.
 
 NodeGroup YAML example:
 
@@ -513,19 +481,19 @@ spec:
 
 Also, this operation can be done with patch:
 
-* For Containerd:
+* For `Containerd`:
 
   ```shell
   kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
   ```
 
-* For Docker:
+* For `NotManaged`:
 
   ```shell
-  kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"Docker"}}}'
+  kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
   ```
 
-> **Note!** You cannot set `cri.type` for NodeGroups, created using `dhctl` (e.g. the `master` NodeGroup).
+> **Note!** While changing `cri.type` for NodeGroups, created using `dhctl`, you must change it in `dhctl config edit provider-cluster-configuration` and in `NodeGroup` object.
 
 After setting up a new CRI for NodeGroup, the node-manager module drains nodes one by one and installs a new CRI on them. Node update
 is accompanied by downtime (disruption). Depending on the `disruption` setting for NodeGroup, the node-manager module either automatically allows
@@ -533,22 +501,22 @@ node updates or requires manual confirmation.
 
 ## How to change CRI for the whole cluster?
 
-> **Note!** Docker is deprecated, CRI can only be switched from Docker to Containerd. It's prohibited to switch from Containerd to Docker.
+> **Note!** CRI can only be switched from `Containerd` to `NotManaged` and back (the [cri.type](cr.html#nodegroup-v1-spec-cri-type) parameter).
 
 It is necessary to use the `dhctl` utility to edit the `defaultCRI` parameter in the `cluster-configuration` config.
 
-Also, this operation can be done with patch:
-* For Containerd
+Also, this operation can be done with the following patch:
+* For `Containerd`:
 
   ```shell
-  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Docker/Containerd/" | base64 -w0)"
+  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/NotManaged/Containerd/" | base64 -w0)"
   kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
-* For Docker
+* For `NotManaged`:
 
   ```shell
-  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/Docker/" | base64 -w0)"
+  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/NotManaged/" | base64 -w0)"
   kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
@@ -577,7 +545,7 @@ When changing the CRI in the cluster, additional steps are required for the mast
 
 ## How to add node configuration step?
 
-Additional node configuration steps are set by custom resource `NodeGroupConfiguration`.
+Additional node configuration steps are set via the [NodeGroupConfiguration](cr.html#nodegroupconfiguration) custom resource.
 
 ## How to use containerd with Nvidia GPU support?
 
@@ -640,7 +608,7 @@ spec:
     EOF
   nodeGroups:
   - gpu
-  weight: 49
+  weight: 31
 ```
 
 Create NodeGroupConfiguration for Nvidia drivers setup on NodeGroup `gpu`.
@@ -670,11 +638,12 @@ spec:
     # See the License for the specific language governing permissions and
     # limitations under the License.
 
-    distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-    curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | sudo apt-key add -
-    curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-    apt-get update
-    apt-get install -y nvidia-container-toolkit nvidia-driver-525-server
+    if [ ! -f "/etc/apt/sources.list.d/nvidia-container-toolkit.list" ]; then
+      distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+      curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | sudo apt-key add -
+      curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    fi
+    bb-apt-install nvidia-container-toolkit nvidia-driver-535-server
   nodeGroups:
   - gpu
   weight: 30
@@ -705,9 +674,11 @@ spec:
     # See the License for the specific language governing permissions and
     # limitations under the License.
 
-    distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
-    curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
-    yam install -y nvidia-container-toolkit nvidia-driver
+    if [ ! -f "/etc/yum.repos.d/nvidia-container-toolkit.repo" ]; then
+      distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
+      curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
+    fi
+    bb-yum-install nvidia-container-toolkit nvidia-driver
   nodeGroups:
   - gpu
   weight: 30
@@ -799,11 +770,11 @@ Test PASSED
 Done
 ```
 
-## How to deploy custom containerd configuration ?
+## How to deploy custom containerd configuration?
 
 Bashible on nodes merges main deckhouse containerd config with configs from `/etc/containerd/conf.d/*.toml`.
 
-### How to add additional registry auth ?
+### How to add additional registry auth?
 
 Deploy `NodeGroupConfiguration` script:
 
@@ -844,6 +815,7 @@ spec:
           [plugins."io.containerd.grpc.v1.cri".registry.configs]
             [plugins."io.containerd.grpc.v1.cri".registry.configs."artifactory.proxy".auth]
               auth = "AAAABBBCCCDDD=="
+    EOF
   nodeGroups:
     - "*"
   weight: 49
@@ -893,4 +865,128 @@ Once the `worker-spot` NodeGroup reaches its maximum (5 nodes in the example abo
 
 Note that node templates (labels/taints) for `worker` and `worker-spot` NodeGroups must be the same (or at least suitable for the load that triggers the cluster scaling process).
 
+## How to interpret Node Group states?
+
+**Ready** — the node group contains the minimum required number of scheduled nodes with the status ```Ready``` for all zones.
+
+Example 1. A group of nodes in the ``Ready`` state:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node1
+  labels:
+    node.deckhouse.io/group: ng1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+```
+
+Example 2. A group of nodes in the ``Not Ready`` state:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 2
+status:
+  conditions:
+  - status: "False"
+    type: Ready
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node1
+  labels:
+    node.deckhouse.io/group: ng1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+```
+
+**Updating** — a node group contains at least one node in which there is an annotation with the prefix ```update.node.deckhouse.io``` (for example, ```update.node.deckhouse.io/waiting-for-approval```).
+
+**WaitingForDisruptiveApproval** - a node group contains at least one node that has an annotation ```update.node.deckhouse.io/disruption-required``` and
+there is no annotation ```update.node.deckhouse.io/disruption-approved```.
+
+**Scaling** — calculated only for node groups with the type ```CloudEphemeral```. The state ```True``` can be in two cases:
+
+1. When the number of nodes is less than the *desired number of nodes* in the group, i.e. when it is necessary to increase the number of nodes in the group.
+1. When a node is marked for deletion or the number of nodes is greater than the *desired number of nodes*, i.e. when it is necessary to reduce the number of nodes in the group.
+
+The *desired number of nodes* is the sum of all replicas in the node group.
+
+Example. The desired number of nodes is 2:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 2
+status:
+...
+  desired: 2
+...
+```
+
+**Error** — contains the last error that occurred when creating a node in a node group.
+
+## How do I make werf ignore the Ready conditions in a node group?
+
+[werf](https://werf.io) checks the ```Ready``` status of resources and, if available, waits for the value to become ```True```.
+
+Creating (updating) a [nodeGroup](cr.html#nodegroup) resource in a cluster can take a significant amount of time to create the required number of nodes. When deploying such a resource in a cluster using werf (e.g., as part of a CI/CD process), deployment may terminate when resource readiness timeout is exceeded. To make werf ignore the nodeGroup status, the following `nodeGroup` annotations must be added:
+
+```yaml
+metadata:
+  annotations:
+    werf.io/fail-mode: IgnoreAndContinueDeployProcess
+    werf.io/track-termination-mode: NonBlocking
+```
+
+## What is an Instance resource?
+
+An Instance resource contains a description of an implementation-independent ephemeral machine resource. For example, machines created by MachineControllerManager or Cluster API Provider Static will have a corresponding Instance resource.
+
+The object does not contain a specification. The status contains:
+1. A link to the InstanceClass if it exists for this implementation;
+1. A link to the Kubernetes Node object;
+1. Current machine status;
+1. Information on how to view [machine creation logs](#how-do-i-know-what-is-running-on-a-node-while-it-is-being-created) (at the machine creation stage).
+
+When a machine is created/deleted, the Instance object is created/deleted accordingly.
+You cannot create an Instance resource yourself, but you can delete it. In this case, the machine will be removed from the cluster (the removal process depends on implementation details.
+
 {% endraw %}
+
+## When is a node reboot required?
+
+Node reboots may be required after configuration changes. For example, after changing certain sysctl settings, specifically when modifying the `kernel.yama.ptrace_scope` parameter (e.g., using `astra-ptrace-lock enable/disable` in the Astra Linux distribution).

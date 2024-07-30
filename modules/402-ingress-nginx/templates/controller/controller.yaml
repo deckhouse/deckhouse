@@ -4,7 +4,7 @@
 {{- $name := index . 2 }}
 {{- $failover := index . 3 }}
 {{- $crdChecksum := toJson $crd | sha256sum }}
-{{- $loadBalancer := (or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol")) }}
+{{- $loadBalancer := (or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough")) }}
 {{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
 {{- $kubernetesVersion := $context.Values.global.discovery.kubernetesVersion }}
 
@@ -12,28 +12,17 @@
 {{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
 {{- $hostPort := $crd.spec.hostPort | default dict }}
 {{- $hostPortWithProxyProtocol := $crd.spec.hostPortWithProxyProtocol | default dict }}
+{{- $hostPortWithSSLPassthrough := $crd.spec.hostPortWithSSLPassthrough | default dict }}
+{{- $gracePeriod := 0 }}
 {{- $defaultGracePeriod := 60 }}
 {{- if $loadBalancer }}
   {{- $defaultGracePeriod = 120 }}
 {{- else if eq $crd.spec.inlet "HostWithFailover" }}
   {{- $defaultGracePeriod = 0 }}
 {{- end }}
+{{- $gracePeriod = (kindIs "invalid" $crd.spec.waitLoadBalancerOnTerminating) | ternary $defaultGracePeriod $crd.spec.waitLoadBalancerOnTerminating }}
 {{- $defaultSSLCertificate := $crd.spec.defaultSSLCertificate | default dict }}
 {{- $defaultSSLCertificateSecretRef := $defaultSSLCertificate.secretRef | default dict }}
-
----
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: controller-{{ $name }}
-  namespace: d8-ingress-nginx
-  {{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | nindent 2 }}
-spec:
-  maxUnavailable: 1
-  selector:
-    matchLabels:
-      app: controller
-      name: {{ $name }}
 
 {{- if ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -45,7 +34,7 @@ metadata:
   {{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | nindent 2 }}
 spec:
   targetRef:
-    apiVersion: "apps/v1"
+    apiVersion: "apps.kruise.io/v1alpha1"
     kind: DaemonSet
     name: controller-{{ $name }}
     {{- if eq ($resourcesRequests.mode | default "") "VPA" }}
@@ -69,17 +58,28 @@ spec:
     {{- end }}
 {{- end }}
 ---
-apiVersion: apps/v1
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: controller-{{ $name }}
+  namespace: d8-ingress-nginx
+  {{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name)) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: controller
+      name: {{ $name }}
+---
+apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   name: controller-{{ $name }}
   namespace: d8-ingress-nginx
-  {{- include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name)) | nindent 2 }}
   {{- if eq $crd.spec.inlet "HostWithFailover" }}
     {{- if $failover }}
     ingress-nginx-failover: ""
-    {{- else }}
-    ingress-nginx-safe-update: ""
     {{- end }}
   {{- end }}
   annotations:
@@ -88,19 +88,10 @@ metadata:
     ingress-nginx-controller.deckhouse.io/checksum: {{ $crdChecksum }}
 spec:
   revisionHistoryLimit: 3
-  {{- if $loadBalancer }}
-  minReadySeconds: 30
-  {{- end }}
+{{/*  OpenKruise controller can handle minReadySeconds even for HostWithFailover inlet (while hook can't) */}}
+{{/*  We want to add some delay to avoid immediately pod rollout and give some time for traffic to be handled */}}
+  minReadySeconds: 60
   updateStrategy:
-  {{- if eq $crd.spec.inlet "HostWithFailover" }}
-    {{- if not $failover }}
-    type: OnDelete
-    {{- else }}
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 1
-    {{- end}}
-  {{- else }}
     type: RollingUpdate
     {{- if $loadBalancer }}
     rollingUpdate:
@@ -111,6 +102,12 @@ spec:
       maxUnavailable: 1
       maxSurge: 0
     {{- end }}
+  {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+{{/*  Extra functionality by kruise-controller  https://openkruise.io/docs/user-manuals/advanceddaemonset#lifecycle-hook*/}}
+  lifecycle:
+    preDelete:
+      labelsHandler:
+        ingress.deckhouse.io/block-deleting: "true"
   {{- end }}
   selector:
     matchLabels:
@@ -119,6 +116,9 @@ spec:
   template:
     metadata:
       labels:
+      {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+        ingress.deckhouse.io/block-deleting: "true"
+      {{- end }}
       {{- if $crd.spec.enableIstioSidecar }}
         sidecar.istio.io/inject: "true"
       {{- end }}
@@ -128,6 +128,8 @@ spec:
       annotations:
         traffic.sidecar.istio.io/includeInboundPorts: ""
         traffic.sidecar.istio.io/includeOutboundIPRanges: {{ $context.Values.global.discovery.serviceSubnet | quote }}
+        inject.istio.io/templates: "sidecar,d8-hold-istio-proxy-termination-until-application-stops"
+        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
       {{- end }}
     spec:
   {{- if $crd.spec.nodeSelector }}
@@ -175,7 +177,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /controller/healthz
-            port: 10354
+            port: 4207
             scheme: HTTPS
           initialDelaySeconds: 30
           timeoutSeconds: 5
@@ -184,7 +186,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /controller/healthz
-            port: 10354
+            port: 4207
             scheme: HTTPS
           initialDelaySeconds: 10
           periodSeconds: 2
@@ -202,7 +204,7 @@ spec:
         - --publish-service=d8-ingress-nginx/{{ $crd.name }}-load-balancer
         {{- end }}
         # sleep before shutting down the nginx, required by cloud LoadBalancers to terminate gracefully.
-        - --shutdown-grace-period={{ $crd.spec.waitLoadBalancerOnTerminating | default $defaultGracePeriod }}
+        - --shutdown-grace-period={{ $gracePeriod }}
         {{- if or (ne $crd.spec.inlet "HostWithFailover") (and (eq $crd.spec.inlet "HostWithFailover") ($failover)) }}
         # we don't disable it if validation is disabled because it will lead to deployment rollout
         - --validating-webhook=:8443
@@ -216,6 +218,9 @@ spec:
         {{- if eq "nginx" $crd.spec.ingressClass }}
         - --watch-ingress-without-class=true
         {{- end }}
+        {{- if and $crd.spec.annotationValidationEnabled (eq $controllerVersion "1.9") }}
+        - --enable-annotation-validation=true
+        {{- end }}
   {{- if $crd.spec.customErrors }}
         - --default-backend-service={{ $crd.spec.customErrors.namespace }}/{{ $crd.spec.customErrors.serviceName }}
   {{- end }}
@@ -227,20 +232,14 @@ spec:
     {{- end }}
         - --healthz-host=127.0.0.1
         - --election-id={{ printf "ingress-controller-leader-%s" $crd.spec.ingressClass }}
+        {{- if or (eq $crd.spec.inlet "HostPortWithSSLPassthrough") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough")}}
+        - --enable-ssl-passthrough
+        {{- end }}
         lifecycle:
-  {{- if or (eq $crd.spec.inlet "HostPort")  (eq $crd.spec.inlet "HostPortWithProxyProtocol") }}
-          postStart:
-            exec:
-              command: [ "/bin/bash", "-c", "echo -n ok > /tmp/healthz" ]
-          preStop:
-            exec:
-              command: [ "/bin/bash", "-c", "rm -f /tmp/healthz && /wait-shutdown" ]
-  {{- else }}
           preStop:
             exec:
               command:
                 - /wait-shutdown
-  {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 12 }}
@@ -264,7 +263,30 @@ spec:
           hostPort: {{ $hostPortWithProxyProtocol.httpPort }}
     {{- end }}
   {{- end }}
+  {{- if eq $crd.spec.inlet "HostPortWithSSLPassthrough"}}
+    {{- if $hostPortWithSSLPassthrough.httpPort }}
+          hostPort: {{ $hostPortWithSSLPassthrough.httpPort }}
+    {{- end }}
+  {{- end }}
         - containerPort: 443
+          protocol: TCP
+  {{- if eq $crd.spec.inlet "HostPort"}}
+    {{- if $hostPort.httpsPort }}
+          hostPort: {{ $hostPort.httpsPort }}
+    {{- end }}
+  {{- end }}
+  {{- if eq $crd.spec.inlet "HostPortWithSSLPassthrough"}}
+    {{- if $hostPortWithSSLPassthrough.httpsPort }}
+          hostPort: {{ $hostPortWithSSLPassthrough.httpsPort }}
+    {{- end }}
+  {{- end }}
+  {{- if eq $crd.spec.inlet "HostPortWithProxyProtocol"}}
+    {{- if $hostPortWithProxyProtocol.httpsPort }}
+          hostPort: {{ $hostPortWithProxyProtocol.httpsPort }}
+    {{- end }}
+  {{- end }}
+        - containerPort: 443
+          protocol: UDP
   {{- if eq $crd.spec.inlet "HostPort"}}
     {{- if $hostPort.httpsPort }}
           hostPort: {{ $hostPort.httpsPort }}
@@ -281,6 +303,25 @@ spec:
           name: webhook
   {{- end }}
         volumeMounts:
+  {{- if eq $controllerVersion "1.9" }}
+        - mountPath: /chroot/var/lib/nginx/body
+          name: client-body-temp-path
+        - mountPath: /chroot/var/lib/nginx/fastcgi
+          name: fastcgi-temp-path
+        - mountPath: /chroot/var/lib/nginx/proxy
+          name: proxy-temp-path
+        - mountPath: /chroot/var/lib/nginx/scgi
+          name: scgi-temp-path
+        - mountPath: /chroot/var/lib/nginx/uwsgi
+          name: uwsgi-temp-path
+        - mountPath: /chroot/etc/nginx/ssl/
+          name: secret-nginx-auth-tls
+        - mountPath: /chroot/tmp/nginx/
+          name: tmp-nginx
+        - mountPath: /chroot/etc/nginx/webhook-ssl/
+          name: webhook-cert
+          readOnly: true
+  {{- else }}
         - mountPath: /var/lib/nginx/body
           name: client-body-temp-path
         - mountPath: /var/lib/nginx/fastcgi
@@ -293,9 +334,12 @@ spec:
           name: uwsgi-temp-path
         - mountPath: /etc/nginx/ssl/
           name: secret-nginx-auth-tls
+        - mountPath: /tmp/nginx/
+          name: tmp-nginx
         - mountPath: /etc/nginx/webhook-ssl/
           name: webhook-cert
           readOnly: true
+  {{- end }}
       - image: {{ include "helm_lib_module_image" (list $context "protobufExporter") }}
         name: protobuf-exporter
         resources:
@@ -307,9 +351,9 @@ spec:
           - mountPath: /var/files
             name: telemetry-config-file
       - name: kube-rbac-proxy
-        image: {{ include "helm_lib_module_common_image" (list $context "kubeRbacProxy") }}
+        image: {{ include "helm_lib_module_image" (list $context "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):10354"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4207"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -343,8 +387,15 @@ spec:
                   resource: daemonsets
                   subresource: prometheus-protobuf-metrics
                   name: ingress-nginx
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /controller-probe
+              - -server
+              - 127.0.0.1:10254
         ports:
-        - containerPort: 10354
+        - containerPort: 4207
           name: https-metrics
         resources:
           requests:
@@ -352,6 +403,8 @@ spec:
             cpu: 10m
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       volumes:
+      - name: tmp-nginx
+        emptyDir: {}
       - name: client-body-temp-path
         emptyDir: {}
       - name: fastcgi-temp-path

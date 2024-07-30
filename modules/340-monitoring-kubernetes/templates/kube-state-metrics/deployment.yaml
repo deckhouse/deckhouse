@@ -53,7 +53,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "kube-state-metrics")) | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       containers:
       - name: kube-state-metrics
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -64,7 +64,7 @@ spec:
         - "--telemetry-host=127.0.0.1"
         - "--telemetry-port=8082"
         - "--resources=certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,limitranges,namespaces,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,verticalpodautoscalers"
-        - "--metric-labels-allowlist=cronjobs=[*],deployments=[*],daemonsets=[*],ingresses=[*],jobs=[*],namespaces=[*],nodes=[*],pods=[*],persistentvolumes=[*],secrets=[*],services=[*],statefulsets=[*],storageclasses=[*]"
+        - "--metric-labels-allowlist=configmaps=[*],cronjobs=[*],deployments=[*],daemonsets=[*],ingresses=[*],jobs=[*],namespaces=[*],nodes=[*],pods=[*],persistentvolumes=[*],secrets=[*],services=[*],statefulsets=[*],storageclasses=[*]" # TODO(nabokihms): try =*=[*] https://github.com/kubernetes/kube-state-metrics/pull/1823
         - "--metric-denylist=^.*_annotations" # reduce metrics quantity because we do not provide allowed annotations list
         - "--use-apiserver-cache"
         livenessProbe:
@@ -96,7 +96,9 @@ spec:
           name: https-metrics
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
-          value: "0.0.0.0"
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             excludePaths:

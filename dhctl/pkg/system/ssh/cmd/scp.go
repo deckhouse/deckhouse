@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 )
@@ -80,14 +81,25 @@ func (s *SCP) SCP() *SCP {
 	// env := append(os.Environ(), s.Env...)
 	env := append(os.Environ(), s.Session.AgentSettings.AuthSockEnv())
 
+	// set absolute path to the ssh binary, because scp contains predefined absolute path to ssh binary (/ssh/bin/ssh) as we set in the building process of the static ssh utils
+	sshPathArgs := []string{"-S", fmt.Sprintf("%s/bin/ssh", os.Getenv("PWD"))}
+
 	args := []string{
 		// ssh args for bastion here
 		"-C", // compression
 		"-o", "ControlMaster=auto",
 		"-o", "ControlPersist=600s",
-		"-o", "StrictHostKeyChecking=accept-new",
-		"-o", "UserKnownHostsFile=.ssh_known_hosts",
+		"-o", "StrictHostKeyChecking=no",
+		"-o", "UserKnownHostsFile=/dev/null",
+		"-o", "GlobalKnownHostsFile=/dev/null",
 		"-o", "PasswordAuthentication=no",
+		"-o", "ServerAliveInterval=10",
+		"-o", "ServerAliveCountMax=3",
+		"-o", "ConnectTimeout=15",
+	}
+
+	if app.IsDebug {
+		args = append(args, "-vvv")
 	}
 
 	if s.Session.ExtraArgs != "" {
@@ -153,7 +165,8 @@ func (s *SCP) SCP() *SCP {
 		dstPath,
 	}...)
 
-	s.scpCmd = exec.Command("scp", args...)
+	scpArgs := append(sshPathArgs, args...)
+	s.scpCmd = exec.Command("scp", scpArgs...)
 	s.scpCmd.Env = env
 	// scpCmd.Stdout = os.Stdout
 	// scpCmd.Stderr = os.Stderr

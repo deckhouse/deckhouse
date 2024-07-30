@@ -1,0 +1,32 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: chrony
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony")) | nindent 2 }}
+data:
+  chrony.conf.tpl: |-
+    {{`user deckhouse
+    cmdport 0
+    driftfile /var/run/chrony/chrony.drift
+    makestep 1.0 -1
+    rtcsync
+    bindaddress {{ .HostIP }}
+    port 4234
+    cmdallow 127/8
+
+    {{ if (eq .NTPRole "source") }}
+    local stratum 5
+    allow
+    {{ else if (eq .NTPRole "sink") }}
+    local stratum 9
+    allow 127/8
+    allow {{ .HostIP }}/32
+    pool {{ .ChronyMastersService }} iburst port 4234
+    {{ end }}
+
+    {{ range .NTPServers }}
+    pool {{ . }} iburst
+    {{ end }}
+    `}}

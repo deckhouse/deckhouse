@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider — AWS: Preparing environment"
+description: "Configuring AWS for Deckhouse cloud provider operation."
 ---
 
 To use the `cloud-provider` and `machine-controller-manager` modules, you must access the AWS API as an IAM user with a sufficient set of privileges.
@@ -55,6 +56,7 @@ First, prepare a JSON file with the configuration of the necessary privileges:
                 "ec2:DescribeInstanceAttribute",
                 "ec2:DescribeInstanceCreditSpecifications",
                 "ec2:DescribeInstances",
+                "ec2:DescribeInstanceTypes",
                 "ec2:DescribeInternetGateways",
                 "ec2:DescribeKeyPairs",
                 "ec2:DescribeNatGateways",
@@ -62,6 +64,7 @@ First, prepare a JSON file with the configuration of the necessary privileges:
                 "ec2:DescribeRegions",
                 "ec2:DescribeRouteTables",
                 "ec2:DescribeSecurityGroups",
+                "ec2:DescribeSecurityGroupRules",
                 "ec2:DescribeSubnets",
                 "ec2:DescribeTags",
                 "ec2:DescribeVolumesModifications",
@@ -195,7 +198,7 @@ EOF
 Create a new Policy based on the specification created above with `D8CloudProviderAWS` as a policy name and the ARN identifier:
 
 ```shell
-aws iam create-policy --policy-name D8Policy --policy-document file://policy.json
+aws iam create-policy --policy-name D8CloudProviderAWS --policy-document file://policy.json
 ```
 
 You will see the following:
@@ -203,9 +206,9 @@ You will see the following:
 ```yaml
 {
     "Policy": {
-        "PolicyName": "D8Policy",
+        "PolicyName": "D8CloudProviderAWS",
         "PolicyId": "AAA",
-        "Arn": "arn:aws:iam::123:policy/D8Policy",
+        "Arn": "arn:aws:iam::123:policy/D8CloudProviderAWS",
         "Path": "/",
         "DefaultVersionId": "v1",
         "AttachmentCount": 0,
@@ -260,7 +263,7 @@ You will see the following:
 Attach the specified `Policy` to the specified `User`:
 
 ```shell
-aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8Policy
+aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8CloudProviderAWS
 ```
 
 ## Configuring IAM via Terraform
@@ -277,7 +280,7 @@ resource "aws_iam_access_key" "user" {
 }
 
 resource "aws_iam_policy" "policy" {
-  name        = "D8Policy"
+  name        = "D8CloudProviderAWS"
   path        = "/"
   description = "Deckhouse policy"
 

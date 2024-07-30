@@ -3,47 +3,54 @@
   {{- if $value.csi.openstack }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_UBUNTU }}
+fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/cinder-csi-plugin
   to: /bin/cinder-csi-plugin
   before: setup
-shell:
-  beforeInstall:
-  - apt update
-  - apt install ca-certificates e2fsprogs mount xfsprogs udev -y
-  - rm -rf /var/lib/apt/lists/*
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+  includePaths:
+  - '**/*'
 docker:
-  ENV:
-    DEBIAN_FRONTEND: noninteractive
-    container: docker
   ENTRYPOINT: ["/bin/cinder-csi-plugin"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.25" $version }}
+    {{- if semverCompare ">=1.30" $version }}
+from: {{ $.Images.BASE_GOLANG_22_BULLSEYE }}
+    {{- else if semverCompare "=1.29" $version }}
+from: {{ $.Images.BASE_GOLANG_21_BULLSEYE }}
+    {{- else if semverCompare ">=1.27" $version }}
+from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
+    {{- else if semverCompare "=1.26" $version }}
 from: {{ $.Images.BASE_GOLANG_19_BUSTER }}
-    {{- else if semverCompare ">=1.23" $version }}
-from: {{ $.Images.BASE_GOLANG_17_BUSTER }}
-    {{- else }}
-from: {{ $.Images.BASE_GOLANG_BUSTER }}
     {{- end }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   beforeInstall:
-  - apt update
-  - apt install git mercurial rsync patch -y
+  - apt update && apt-get install -y --no-install-recommends ca-certificates git make
   install:
-  - git clone https://github.com/kubernetes/cloud-provider-openstack.git /src
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - mkdir -p /src
+  - git clone {{ $.SOURCE_REPO }}/kubernetes/cloud-provider-openstack.git /src
   - cd /src
   - git checkout tags/{{ $value.csi.openstack }}
   - git config --global user.email "builder@deckhouse.io"
-    {{- if or (semverCompare "1.23" $version) (semverCompare "1.24" $version) }}
-  - git cherry-pick 03db687b95ea168e0de9609a7eaad43243f88944
-    {{- end }}
   - export VERSION={{ $value.csi.openstack }}
   - make cinder-csi-plugin
   {{- end }}
 {{- end }}
+---
+{{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs*" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
+shell:
+  setup:
+    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate

@@ -56,18 +56,21 @@ spec:
     metadata:
       labels:
         app: grafana
+        threshold.extended-monitoring.deckhouse.io/container-throttling-warning: "40"
       annotations:
+        {{- if (dig "grafana" "customLogo" "enabled" false .Values.prometheus.internal) }}
+        checksum/custom-logo: {{ .Values.prometheus.internal.grafana.customLogo.checksum | quote }}
+        {{- end }}
         checksum/datasources: {{ include (print $.Template.BasePath "/grafana/secret-datasources-list.yaml") . | sha256sum }}
         checksum/dashboards-list-custom: {{ include (print $.Template.BasePath "/grafana/cm-dashboards-list-custom.yaml") . | sha256sum }}
         checksum/alerts-channels: {{ include (print $.Template.BasePath "/grafana/grafana-alerts-channels.yaml") . | sha256sum }}
         checksum/kube-rbac-proxy: {{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
-        threshold.extended-monitoring.flant.com/container-throttling-warning: "40"
     spec:
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "grafana")) | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       serviceAccountName: grafana
       imagePullSecrets:
       - name: deckhouse-registry
@@ -159,6 +162,11 @@ spec:
           mountPath: /etc/grafana/plugins
         - name: tmp
           mountPath: /tmp
+        {{- if (dig "grafana" "customLogo" "enabled" false .Values.prometheus.internal) }}
+        - mountPath: /usr/share/grafana/public/img/deckhouse-logo.svg
+          name: whitelabel-logo
+          subPath: deckhouse-logo.svg
+        {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 12 }}
@@ -212,7 +220,9 @@ spec:
         - "--livez-path=/livez"
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
-          value: "0.0.0.0"
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             excludePaths:
@@ -277,3 +287,12 @@ spec:
         emptyDir: {}
       - name: plugins
         emptyDir: {}
+      {{- if (dig "grafana" "customLogo" "enabled" false .Values.prometheus.internal) }}
+      - name: whitelabel-logo
+        configMap:
+          defaultMode: 292
+          name: whitelabel-custom-logo
+          items:
+            - key: grafanaLogo
+              path: deckhouse-logo.svg
+      {{- end }}

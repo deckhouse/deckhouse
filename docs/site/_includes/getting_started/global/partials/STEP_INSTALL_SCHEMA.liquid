@@ -1,6 +1,6 @@
 {%- include getting_started/global/partials/NOTICES.liquid %}
 
-{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' %}
+{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' or page.platform_code == 'zvirt' %}
 
 The minimal preset will be used during the installation:
 {%- assign preset=site.data.getting_started.data.presets.minimal %}
@@ -8,10 +8,11 @@ The minimal preset will be used during the installation:
 {{ preset.description[page.lang] }}
 </div>
 
-{%- assign layout = site.data.getting_started.data.installTypes[page.platform_code].layout %}
+{%- assign layout_platform_code = page.platform_code | regex_replace: "^(openstack)_.+$", "\1" %}
+{%- assign layout = site.data.getting_started.data.installTypes[layout_platform_code].layout %}
 {%- offtopic title="Used layout..." %}
-{%- capture layout_path %}getting_started/{{ page.platform_code }}/layouts/{{ layout.code | upcase }}{% if page.lang == 'ru' %}_RU{% endif %}.md{% endcapture %}
-{%- capture layout_doc_path %}../../documentation/v1/modules/030-cloud-provider-{{ page.platform_code }}/layouts.html{% endcapture %}
+{%- capture layout_path %}getting_started/{{ layout_platform_code }}/layouts/{{ layout.code | upcase }}{% if page.lang == 'ru' %}_RU{% endif %}.md{% endcapture %}
+{%- capture layout_doc_path %}../../documentation/v1/modules/030-cloud-provider-{{ layout_platform_code }}/layouts.html{% endcapture %}
 Layout is the way how resources are located and communicate in the cloud. There are several pre-defined layouts, which you can learn more about in [the documentation]({{ layout_doc_path }}).
 
 The `{{ layout.name }}` layout will be used during the installation.
@@ -31,7 +32,7 @@ If you want to install Deckhouse into a **new** cluster, we recommend going back
 
 Kubernetes clusters have their own particularities and differences depending on the specific cloud provider, just like clusters deployed manually. The best strategy for installing Deckhouse in such clusters is to install the minimal Deckhouse configuration first, and then enable the necessary modules.
 
-This guide covers installing Deckhouse in a **minimal** configuration, with the [internal documentation module](/documentation/v1/modules/810-deckhouse-web/) (for a sample web application) and [cert-manager](/documentation/v1/modules/101-cert-manager/) module enabled.
+This guide covers installing Deckhouse in a **minimal** configuration, with the [internal documentation module](/documentation/v1/modules/810-documentation/) (for a sample web application) and [cert-manager](/documentation/v1/modules/101-cert-manager/) module enabled.
 
 After completing all the steps in this guide, you will be able to enable all the modules of interest on your own. Please, refer to the [documentation](/documentation/v1/) to learn more or reach out to the Deckhouse [community](/community/about.html).
 
@@ -43,6 +44,9 @@ Installation in a private environment is generally similar to installation on [b
 
 Scheme of Deckhouse installation in a private environment:<br />
 <img src="/images/gs/private-env-schema.svg" alt="Scheme of Deckhouse installation in a private environment">
+
+{% alert %}An internal repository of OS packages is necessary to install curl on future cluster nodes (if there is no access to the official repositories via a proxy server).
+{% endalert %}
 {% endif %}
 
 ## Installation requirements
@@ -82,29 +86,53 @@ Scheme of Deckhouse installation in a private environment:<br />
   <p>The Kubernetes versions and OS of cluster nodes should be on <a href="../../documentation/v1/supported_versions.html">the list of supported</a>.</p>
   <p>During the installation, the Deckhouse installer running on the <strong>personal computer</strong> (see step 1) will connect to the cluster and deploy Deckhouse.</p>
   <p><strong>Note</strong> that master node-based installation is not currently supported.</p>
-{%- elsif page.platform_type == 'cloud' %}
+{%- elsif page.platform_type == 'cloud' and page.platform_code != 'zvirt' %}
   <p><strong>Cloud Provider Resources.</strong></p>
    {% offtopic title="Minimum recommended resources..." %}
    - 8 CPU cores
    - 16 GB of RAM
    - 100 GB of disk space
+   {%- if page.platform_code == 'aws' %}
+   - Linux kernel version >= `5.7`
+   {%- endif %}
+   {% endofftopic %}
+{%- elsif page.platform_code == 'zvirt' %}
+  <p><strong>Hypervisor Resources.</strong></p>
+   {% offtopic title="Minimum recommended resources..." %}
+   - 8 CPU cores
+   - 16 GB of RAM
+   - 100 GB of disk space
+   {%- if page.platform_code == 'aws' %}
+   - Linux kernel version >= `5.7`
+   {%- endif %}
    {% endofftopic %}
 {%- elsif page.platform_type == 'baremetal' %}
    <p><strong>Physical server or virtual machine for the master node.</strong></p>
    {% offtopic title="Requirements..." %}
    - at least 4 CPU cores
    - at least 8 GB of RAM
-   - at least 40 GB of disk space for the cluster and etcd data
+   - at least 60 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS)
    - [supported OS](/documentation/v1/supported_versions.html)
+   - Linux kernel version >= `5.7`
+   - **Unique hostname** within servers (virtual machines) of the cluster
    {% if page.platform_code == "bm-private" %}
    - access to a proxy registry or to a private container image registry containing Deckhouse images
-   - access to a proxy server for downloading deb/rpm OS packages (if necessary)
+   - access to the default OS package repositories (via a proxy server or an internal package repository server);
    {%- else %}
    - HTTPS access to the `registry.deckhouse.io` container image registry
+   - access to the default package repositories for the operating system you are using;
    {%- endif %}
    - SSH key access from the **personal computer** (section 1)
+   - network access from the **personal computer** (section 1) via port <code>22322/TCP</code>
    - container runtime packages, such as containerd or docker, should not be installed on the node
+   - `cloud-utils` and `cloud-init` packages should be installed on the node
    {% endofftopic %}
 {%- endif %}
 </li>
+{% if page.platform_type == "baremetal" or page.platform_type == "baremetal" %}
+<li>
+   <p><strong>Physical server or virtual machine for the worker node.</strong></p>
+   <p>The requirements are similar to the requirements for the master node but also depend on the applications running on the nodes.</p>
+</li>
+{%- endif %}
 </ol>

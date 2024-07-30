@@ -40,7 +40,7 @@ positive:
             d:
               effectiveStorageClass: default
               image: dev-registry.deckhouse.io/sys/deckhouse-oss:7ae695a87e999c762df8011581f23b2fa7f8ed980476913eea00d121-1630074529969
-              node: dev2-worker-small-391f2ede-79fcd-f64bd
+              node: "12345" # number, intentionally
               zone: nova
             e:
               effectiveStorageClass: default

@@ -1,0 +1,69 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/shell-operator
+import:
+- artifact: tini-artifact
+  add: /tini/tini-static
+  to: /sbin/tini
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /usr/bin
+  to: /usr/bin
+  before: install
+  includePaths:
+  - python3
+  - python3.9
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /usr/lib/python3
+  to: /usr/lib/python3
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /usr/lib64/python3
+  to: /usr/lib64/python3
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /usr/lib64/python3.9
+  to: /usr/lib64/python3.9
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /usr/local/lib/python3
+  to: /usr/local/lib/python3
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /usr/local/lib64/python3
+  to: /usr/local/lib64/python3
+  before: install
+- artifact: {{ $.ModuleName }}/falco-artifact
+  add: /falco-package
+  to: /
+  includePaths:
+  - usr/bin/
+  - usr/share/
+  before: install
+git:
+- add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
+  to: /hooks
+  stageDependencies:
+    install:
+    - '**/*'
+docker:
+  ENV:
+    SHELL_OPERATOR_HOOKS_DIR: "/hooks"
+    LOG_TYPE: json
+    PYTHONPATH: "/hooks"
+  ENTRYPOINT: ["tini", "--", "/shell-operator"]
+  CMD: ["start"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
+git:
+- add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
+  to: /requirements.txt
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - export SOURCE_REPO={{ .SOURCE_REPO }}
+  - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
+  - pip3 install -f file:///wheels --no-index -r /requirements.txt

@@ -17,26 +17,6 @@ deckhouse:
   imagesRepo: dev-registry.deckhouse.io/sys/deckhouse-oss
   registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
   devBranch: '${DEV_BRANCH}'
-  configOverrides:
-    flantIntegrationEnabled: false
-    global:
-      modules:
-        publicDomainTemplate: "%s.k8s.smoke.flant.com"
-    keepalivedEnabled: true
-    networkGatewayEnabled: true
-    networkGateway:
-      nodeSelector:
-        node-role.kubernetes.io/control-plane: ""
-      tolerations:
-      - operator: Exists
-      publicAddress: 10.220.203.240
-      subnet: 172.16.25.0/24
-      dns:
-        servers:
-        - 10.80.44.235
-        - 10.220.8.235
-        search:
-        - ${VSPHERE_BASE_DOMAIN}
 ---
 apiVersion: deckhouse.io/v1
 kind: VsphereClusterConfiguration
@@ -59,12 +39,12 @@ masterNodeGroup:
   instanceClass:
     numCPUs: 4
     memory: 8192
-    template: Templates/ubuntu-focal-20.04-packer
+    template: Templates/ubuntu-jammy-22.04-packer
     mainNetwork: msk3-k8s-1203
     additionalNetworks:
     - DEVOPS_36
     datastore: 3par_4_Lun105
-    rootDiskSize: 20
+    rootDiskSize: 50
     runtimeOptions:
       nestedHardwareVirtualization: false
 provider:
@@ -72,3 +52,58 @@ provider:
   username: dvadm@vsphere.local
   password: '${VSPHERE_PASSWORD}'
   insecure: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: flant-integration
+spec:
+  enabled: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: keepalived
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: network-gateway
+spec:
+  enabled: true
+  version: 1
+  settings:
+    nodeSelector:
+      node-role.kubernetes.io/control-plane: ""
+    tolerations:
+      - operator: Exists
+    publicAddress: 10.220.203.240
+    subnet: 172.16.25.0/24
+    dns:
+      servers:
+        - 10.80.44.235
+        - 10.220.8.235
+      search:
+        - ${VSPHERE_BASE_DOMAIN}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  enabled: true
+  settings:
+    modules:
+      publicDomainTemplate: "%s.k8s.smoke.flant.com"
+  version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  version: 2
+  enabled: true
+  settings:

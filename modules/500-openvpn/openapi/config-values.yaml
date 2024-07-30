@@ -59,24 +59,16 @@ properties:
   tunnelNetwork:
     type: string
     description: |
-      Tunnel network for TCP OpenVPN server.
+      Tunnel network for OpenVPN server.
     x-doc-default: '172.25.175.0/24'
     default: '172.25.175.0/24'
     x-examples: ["172.25.175.0/24", "172.25.178.0/255.255.255.0"]
-  udpTunnelNetwork:
-    type: string
-    description: |
-      Tunnel network for UDP OpenVPN server.
-    x-doc-default: '172.25.176.0/24'
-    default: '172.25.176.0/24'
-    x-examples: ["172.25.176.0/24", "172.25.179.0/255.255.255.0"]
   pushDefaultGatewayToClient:
     type: boolean
     default: false
     x-doc-default: false
     description: |
       Routing all client traffic through the VPN. A default route will be added to clients.
-    x-examples: [false, true]
   pushToClientRoutes:
     type: array
     items:
@@ -109,7 +101,7 @@ properties:
       externalAuthentication:
         type: object
         description: |
-          Parameters to enable external authentication based on the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+          Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
           > **Note!** External authentication is enabled automatically if the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) module is enabled.
         properties:
@@ -143,9 +135,9 @@ properties:
       An IP address or a domain clients use to connect to the OpenVPN server.
 
       By default, data from an `openvpn-external` service are used.
-    x-examples: ["1.2.3.4"]
   ingressClass:
     type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
     description: |
       The class of the Ingress controller used for the OpenVPN admin panel.
 
@@ -169,7 +161,7 @@ properties:
           * `CertManager` — the OpenVPN admin panel will use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter.
           * `CustomCertificate` — the OpenVPN admin panel will use the certificate from the `d8-system` namespace for HTTPS.
           * `Disabled` — in this mode, the OpenVPN admin panel works over HTTP only.
-          * `OnlyInURI` — the OpenVPN admin panel will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) will be generated using the HTTPS scheme.
+          * `OnlyInURI` — the OpenVPN admin panel will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
       certManager:
         type: object
         properties:
@@ -189,6 +181,12 @@ properties:
               The name of the Secret in the `d8-system` namespace to use with the OpenVPN admin panel (this Secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format).
 
             x-doc-default: 'false'
+  highAvailability:
+    type: boolean
+    description: |
+      Manually enable the high availability mode.
+
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
   nodeSelector:
     type: object
     description: |
@@ -220,11 +218,17 @@ properties:
   tcpEnabled:
     type: boolean
     default: true
-    x-examples: [true, false]
   udpEnabled:
     type: boolean
     default: false
-    x-examples: [true, false]
+  pmacctEnabled:
+    description: |
+      Enable logging of user's activity via VPN in JSON format.
+
+      All connections within `tun` interfaces will be collected via `libpcap` and logged
+      as `{"event_type": "purge", "ip_src": "172.25.175.10", "ip_dst": "10.222.0.10", "port_src": 32172, "port_dst": 53, "ip_proto": "udp", "packets": 1, "bytes": 53}`
+    type: boolean
+    default: false
 oneOf:
   - properties:
       tcpEnabled:

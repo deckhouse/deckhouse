@@ -1,75 +1,31 @@
-bashible:
-  redos: &redos
-    '7.3':
-      docker:
-        desiredVersion: "docker-ce-19.03.15-3.el7.x86_64"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io-1.4.6-3.1.el7.x86_64"
-          allowedPattern: "containerd.io-1.[1234]"
-      containerd:
-        desiredVersion: "containerd.io-1.6.14-3.1.el7.x86_64"
-        allowedPattern: ""
-  alteros: &alteros
-    '7':
-      docker:
-        desiredVersion: "docker-ce-19.03.15-3.el7.x86_64"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io-1.4.6-3.1.el7.x86_64"
-          allowedPattern: "containerd.io-1.[1234]"
-      containerd:
-        desiredVersion: "containerd.io-1.6.14-3.1.el7.x86_64"
-        allowedPattern: ""
-  astra: &astra
-    '1.7':
-      docker:
-        desiredVersion: "docker-ce=5:20.10.12~3-0~debian-buster"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.4.6-1"
-          allowedPattern: "containerd.io=1.[234]"
-      containerd:
-        desiredVersion: "containerd.io=1.6.14-1"
-        allowedPattern: ""
 k8s:
-  '1.21':
-    bashible:
-      redos:
-        !!merge <<: *redos
-      alteros:
-        !!merge <<: *alteros
-      astra:
-        !!merge <<: *astra
-  '1.22':
-    bashible:
-      redos:
-        !!merge <<: *redos
-      alteros:
-        !!merge <<: *alteros
-      astra:
-        !!merge <<: *astra
-  '1.23':
-    bashible:
-      redos:
-        !!merge <<: *redos
-      alteros:
-        !!merge <<: *alteros
-      astra:
-        !!merge <<: *astra
-  '1.24':
-    bashible:
-      redos:
-        !!merge <<: *redos
-      alteros:
-        !!merge <<: *alteros
-      astra:
-        !!merge <<: *astra
   '1.25':
-    bashible:
-      redos:
-        !!merge <<: *redos
-      alteros:
-        !!merge <<: *alteros
-      astra:
-        !!merge <<: *astra
+    clusterApi:
+      vcd: v1.2.0
+    ccm:
+      vcd: 1.4.1
+  '1.26':
+    clusterApi:
+      vcd: v1.2.0
+    ccm:
+      vcd: 1.4.1
+  '1.27':
+    clusterApi:
+      vcd: v1.2.0
+    ccm:
+      vcd: 1.4.1
+  '1.28':
+    clusterApi:
+      vcd: v1.2.0
+    ccm:
+      vcd: 1.4.1
+  '1.29':
+    clusterApi:
+      vcd: v1.2.0
+    ccm:
+      vcd: 1.4.1
+  '1.30':
+    clusterApi:
+      vcd: v1.2.0
+    ccm:
+      vcd: 1.4.1

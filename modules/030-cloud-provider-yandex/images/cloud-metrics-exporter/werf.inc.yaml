@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ .Images.BASE_ALPINE }}
+fromImage: common/distroless
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/exporter
@@ -10,9 +10,9 @@ docker:
   ENTRYPOINT: [ "/exporter"]
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_16_ALPINE }}
+from: {{ .Images.BASE_GOLANG_19_ALPINE }}
 git:
-- add: /modules/030-{{ .ModuleName }}/images/{{ .ImageName }}
+- add: /{{ .ModulePath }}modules/030-{{ .ModuleName }}/images/{{ .ImageName }}
   to: /src
   excludePaths:
     - "**/*.md"
@@ -29,22 +29,18 @@ git:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
-
-ansible:
+shell:
   beforeInstall:
-    - apk:
-        name: git
-        update_cache: yes
-    - command: rm -rf /var/cache/apk/*
+  - |
+    apk upgrade --available --no-cache && \
+    apk add --no-cache ca-certificates git make
   install:
-    - shell: go mod download
-      args:
-        chdir: /src
+  - cd /src
+  - go mod download
   setup:
-    - shell: go build -ldflags="-s -w" -o exporter .
-      args:
-        chdir: /src
-      environment:
-        GOOS: "linux"
-        GOARCH: "amd64"
-        CGO_ENABLED: "0"
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - cd /src
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o exporter .
+  - chown 64535:64535 /src/exporter
+  - chmod 0755 /src/exporter

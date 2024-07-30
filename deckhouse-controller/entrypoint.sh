@@ -17,6 +17,31 @@
 set -o pipefail
 set -e
 
+PID=0
+EXITCODE=0
+
+signal_handler() {
+  echo "{\"level\":\"warning\", \"msg\": \"Catch signal ${1}\"}"
+  case "${1}" in
+  "SIGUSR1" | "SIGUSR2")
+    kill "${PID}"
+    wait "${PID}"
+    run_deckhouse
+    ;;
+  *)
+    kill -"${1}" "${PID}"
+    ;;
+  esac
+}
+
+run_deckhouse() {
+  /usr/bin/deckhouse-controller start &
+  PID="${!}"
+  echo "{\"level\":\"info\", \"msg\": \"New deckhouse PID ${PID}\"}"
+  wait "${PID}"
+  EXITCODE="${?}"
+}
+
 declare -A bundles_map; bundles_map=( ["Default"]="default" ["Minimal"]="minimal" ["Managed"]="managed" )
 
 bundle=${DECKHOUSE_BUNDLE:-Default}
@@ -32,6 +57,15 @@ cat <<EOF
 {"msg": "-- Starting Deckhouse using bundle $bundle --"}
 EOF
 
-cat ${MODULES_DIR}/values-${bundles_map[$bundle]}.yaml >> ${MODULES_DIR}/values.yaml
+coreModulesDir=$(echo ${MODULES_DIR} | awk -F ":" '{print $1}')
+cat "${coreModulesDir}"/values-"${bundles_map[$bundle]}".yaml > /tmp/values.yaml
 
-exec /sbin/tini -- /usr/bin/deckhouse-controller start
+set +o pipefail
+set +e
+
+for SIG in SIGUSR1 SIGUSR2 SIGINT SIGTERM SIGHUP SIGQUIT; do
+  trap "signal_handler ${SIG}" "${SIG}"
+done
+
+run_deckhouse
+exit "${EXITCODE}"

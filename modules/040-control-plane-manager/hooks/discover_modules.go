@@ -34,7 +34,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "ConfigMap",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-user-authn", "d8-user-authz"},
+					MatchNames: []string{"d8-user-authn", "d8-user-authz", "d8-runtime-audit-engine"},
 				},
 			},
 			LabelSelector: &v1.LabelSelector{
@@ -65,7 +65,7 @@ type discoveryCM struct {
 
 func handleAuthDiscoveryModules(input *go_hook.HookInput) error {
 	snap := input.Snapshots["auth-cm"]
-	var authZData, authNData map[string]string
+	var authZData, authNData, auditData map[string]string
 
 	for _, s := range snap {
 		cm := s.(discoveryCM)
@@ -75,6 +75,9 @@ func handleAuthDiscoveryModules(input *go_hook.HookInput) error {
 
 		case "d8-user-authz":
 			authZData = cm.Data
+
+		case "d8-runtime-audit-engine":
+			auditData = cm.Data
 		}
 	}
 
@@ -88,6 +91,9 @@ func handleAuthDiscoveryModules(input *go_hook.HookInput) error {
 		userAuthnOIDCIssuerURLPath     = "controlPlaneManager.apiserver.authn.oidcIssuerURL"
 		userAuthnOIDCIssuerAddressPath = "controlPlaneManager.apiserver.authn.oidcIssuerAddress"
 		userAuthnOIDCIssuerCAPath      = "controlPlaneManager.apiserver.authn.oidcCA"
+
+		runtimeAuditWebhookURLPath = "controlPlaneManager.internal.audit.webhookURL"
+		runtimeAuditWebhookCAPath  = "controlPlaneManager.internal.audit.webhookCA"
 	)
 
 	authzWebhookURLExists := input.ConfigValues.Exists(userAuthzWebhookURLPath)
@@ -142,5 +148,12 @@ func handleAuthDiscoveryModules(input *go_hook.HookInput) error {
 		}
 	}
 
+	if len(auditData) > 0 {
+		input.Values.Set(runtimeAuditWebhookURLPath, auditData["url"])
+		input.Values.Set(runtimeAuditWebhookCAPath, auditData["ca"])
+	} else {
+		input.Values.Remove(runtimeAuditWebhookURLPath)
+		input.Values.Remove(runtimeAuditWebhookCAPath)
+	}
 	return nil
 }

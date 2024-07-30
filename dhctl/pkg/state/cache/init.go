@@ -15,9 +15,12 @@
 package cache
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -38,16 +41,21 @@ var (
 
 var globalCache state.Cache = &cache.DummyCache{}
 
-func choiceCache(identity string) (state.Cache, error) {
+func choiceCache(identity string, opts CacheOptions) (state.Cache, error) {
 	tmpDir := filepath.Join(app.CacheDir, stringsutil.Sha256Encode(identity))
 	log.DebugF("Cache dir %s\n", tmpDir)
 	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
-		return nil, fmt.Errorf("can't create cache directory: %w", err)
+		return nil, fmt.Errorf("Can't create cache directory: %w", err)
 	}
 
 	if app.CacheKubeNamespace == "" {
+		if opts.ResetInitialState {
+			return cache.NewStateCacheWithInitialState(tmpDir, opts.InitialState)
+		}
 		return cache.NewStateCache(tmpDir)
 	}
+
+	log.DebugLn("Use kubernetes state cache")
 
 	kubeCl := client.NewKubernetesClient()
 	err := kubeCl.Init(&client.KubernetesInitParams{
@@ -84,16 +92,31 @@ func choiceCache(identity string) (state.Cache, error) {
 	return k8sCache, nil
 }
 
-func initCache(identity string) error {
+func initCache(identity string, opts CacheOptions) error {
 	var err error
-	once.Do(func() {
-		globalCache, err = choiceCache(identity)
-	})
+
+	if opts.ResetInitialState {
+		globalCache, err = choiceCache(identity, opts)
+	} else {
+		once.Do(func() {
+			globalCache, err = choiceCache(identity, opts)
+		})
+	}
+
 	return err
 }
 
+type CacheOptions struct {
+	InitialState      map[string][]byte
+	ResetInitialState bool
+}
+
 func Init(identity string) error {
-	return initCache(identity)
+	return initCache(identity, CacheOptions{})
+}
+
+func InitWithOptions(identity string, opts CacheOptions) error {
+	return initCache(identity, opts)
 }
 
 func Global() state.Cache {
@@ -102,4 +125,31 @@ func Global() state.Cache {
 
 func Dummy() state.Cache {
 	return &cache.DummyCache{}
+}
+
+func GetCacheIdentityFromKubeconfig(
+	kubeconfigPath string,
+	kubeconfigContext string,
+) string {
+	if kubeconfigPath == "" {
+		return ""
+	}
+
+	builder := strings.Builder{}
+	builder.WriteString("kubeconfig")
+
+	h := sha256.New()
+	h.Write([]byte(kubeconfigPath))
+
+	builder.WriteString("-")
+
+	if kubeconfigContext == "" {
+		builder.WriteString(hex.EncodeToString(h.Sum(nil)))
+		return builder.String()
+	}
+
+	h.Write([]byte(kubeconfigContext))
+	builder.WriteString(hex.EncodeToString(h.Sum(nil)))
+
+	return builder.String()
 }

@@ -7,8 +7,8 @@ title: "Модуль admission-policy-engine: FAQ"
 > Pod Security Standards реагируют на label `security.deckhouse.io/pod-policy: restricted` или `security.deckhouse.io/pod-policy: baseline`.
 
 Чтобы расширить политику Pod Security Standards, добавив к существующим проверкам политики свои собственные, необходимо:
-- Создать шаблон проверки (ресурс `ConstraintTemplate`).
-- Привязать его к политике `restricted` или `baseline`.
+- создать шаблон проверки (ресурс `ConstraintTemplate`);
+- привязать его к политике `restricted` или `baseline`.
 
 Пример шаблона для проверки адреса репозитория образа контейнера:
 
@@ -68,10 +68,60 @@ spec:
   parameters:
     repos:
       - "mycompany.registry.com"
- ```
+```
 
-Пример демонстрирует настройку проверки адреса репозитория в поле `image` у всех Pod'ов, создающихся в пространстве имен, имеющих label `security.deckhouse.io/pod-policy: restricted`. Если адрес в поле `image` создаваемого Pod'а начинается не с `mycompany.registry.com`, Pod создан не будет.
+Пример демонстрирует настройку проверки адреса репозитория в поле `image` у всех подов, создающихся в пространстве имен, имеющих label `security.deckhouse.io/pod-policy: restricted`. Если адрес в поле `image` создаваемого пода начинается не с `mycompany.registry.com`, под создан не будет.
 
-Подробнее о шаблонах и языке политик можно узнать в [документации Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/howto/).
+Подробнее о шаблонах и языке политик можно узнать [в документации Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/howto/).
 
-Больше примеров описания проверок для расширения политики можно найти в [библиотеке](https://github.com/open-policy-agent/gatekeeper-library/tree/master/src/general) Gatekeeper.
+Больше примеров описания проверок для расширения политики можно найти [в библиотеке Gatekeeper](https://github.com/open-policy-agent/gatekeeper-library/tree/master/src/general).
+
+## Что, если несколько политик (операционных или безопасности) применяются на один объект?
+
+В таком случае необходимо, чтобы конфигурация объекта соответствовала всем политикам, которые на него распространяются.
+
+Например, рассмотрим две следующие политики безопасности:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: foo
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          name: test
+  policies:
+    readOnlyRootFilesystem: true
+    requiredDropCapabilities:
+    - MKNOD
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: bar
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          name: test
+  policies:
+    requiredDropCapabilities:
+    - NET_BIND_SERVICE
+```
+
+Тогда для выполнения требований приведенных политик безопасности в спецификации контейнера нужно указать:
+
+```yaml
+    securityContext:
+      capabilities:
+        drop:
+          - MKNOD
+          - NET_BIND_SERVICE
+      readOnlyRootFilesystem: true
+```

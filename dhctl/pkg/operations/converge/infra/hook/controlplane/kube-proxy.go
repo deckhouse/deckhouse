@@ -102,7 +102,7 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 		}
 
 		if kubeCl.KubeProxy != nil {
-			kubeCl.KubeProxy.Stop()
+			kubeCl.KubeProxy.Stop(0)
 		}
 
 		if kubeCl.SSHClient != nil {

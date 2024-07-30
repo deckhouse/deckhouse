@@ -12,18 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $experimentalOption := "" -}}
-{{- if semverCompare "<1.22" .kubernetesVersion -}}
-  {{- $experimentalOption = "--experimental-patches /var/lib/bashible/kubeadm/patches" -}}
-{{- end }}
-
 mkdir -p /etc/kubernetes/deckhouse/kubeadm/patches/
 cp /var/lib/bashible/kubeadm/patches/* /etc/kubernetes/deckhouse/kubeadm/patches/
 kubeadm init phase certs all --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase kubeconfig all --config /var/lib/bashible/kubeadm/config.yaml
-kubeadm init phase etcd local --config /var/lib/bashible/kubeadm/config.yaml {{ $experimentalOption }}
-kubeadm init phase control-plane all --config /var/lib/bashible/kubeadm/config.yaml {{ $experimentalOption }}
+kubeadm init phase etcd local --config /var/lib/bashible/kubeadm/config.yaml
+kubeadm init phase control-plane all --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase mark-control-plane --config /var/lib/bashible/kubeadm/config.yaml
+
+# CIS becnhmark purposes
+chmod 600 /etc/kubernetes/pki/*.{crt,key} /etc/kubernetes/pki/etcd/*.{crt,key}
+
 # This phase add 'node.kubernetes.io/exclude-from-external-load-balancers' label to node
 # with this label we cannot use target load balancers to control-plane nodes, so we manually remove them
 if ! bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf label node "$(hostname)" node.kubernetes.io/exclude-from-external-load-balancers-; then
@@ -48,3 +47,4 @@ if [ ! -f /root/.kube/config ]; then
   mkdir -p /root/.kube
   ln -s /etc/kubernetes/admin.conf /root/.kube/config
 fi
+

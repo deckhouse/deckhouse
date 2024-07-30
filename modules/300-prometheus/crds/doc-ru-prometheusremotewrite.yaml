@@ -4,7 +4,7 @@ spec:
       schema: &schema
         openAPIV3Schema:
           description: |
-            Ресурс для включения `remote_write` данных из локального Prometheus в отдельный longterm storage (например: [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)).
+            Ресурс для включения `remote_write` данных из локального Prometheus в отдельный longterm storage (например, [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)).
 
             Таких ресурсов в кластере может быть любое количество.
           properties:
@@ -36,13 +36,13 @@ spec:
                           Действие, выполняемое при соответствии регулярному выражению.
                       modulus:
                         description: |
-                          Модуль для хеширования значений исходного лейбла.
+                          Модуль для хэширования значений исходного лейбла.
                       regex:
                         description: |
                           Регулярное выражение для применения к извлеченному значению.
                       replacement:
                         description: |
-                          На что заменять, в случае соответствия шаблону регулярного выражения.
+                          На что заменять в случае соответствия шаблону регулярного выражения.
 
                           Доступны regexp-группы.
                       separator:
@@ -63,6 +63,8 @@ spec:
                   properties:
                     insecureSkipVerify:
                       description: Отключить проверку сертификата.
+                    ca:
+                      description: Сертификат ЦС (CA), используемый при проверке сертификата API-сервера.
       additionalPrinterColumns: &additionalPrinterColumns
         - name: URL
           type: string

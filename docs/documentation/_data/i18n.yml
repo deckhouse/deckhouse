@@ -56,9 +56,15 @@ common:
   deprecated_parameter:
     en: Deprecated
     ru: Параметр устарел
+  deprecated_resource:
+    en: Deprecated resource. Support for the resource might be removed in a later release.
+    ru: Устаревший ресурс. Поддержка ресурса может быть исключена в следующих версиях.
   deprecated_parameter_hint:
     en: Support for the parameter might be removed in a later release.
     ru: Поддержка параметра может быть исключена в следующих версиях.
+  for_example:
+    en: for example
+    ru: например
   example:
     en: example
     ru: пример
@@ -92,9 +98,30 @@ common:
   documents_found:
     en: Documents found
     ru: Найдено документов
-  empty_search_result:
-    en: No documents found
-    ru: Документов не найдено
+  parameters:
+    en: Parameters
+    ru: Параметры
+  parameters_found:
+    en: Parameters found
+    ru: Найдено параметров
+  parameters_and_resources_found:
+    en: Parameters and resources found
+    ru: Найдено параметров и ресурсов
+  empty_search_documents_result:
+    en: Documents not found.
+    ru: Документов не найдено.
+  empty_search_parameters_resources_result:
+    en: Parameters and resources not found.
+    ru: Параметров и ресурсов не найдено.
+  no_description:
+    en: There is no description...
+    ru: Нет описания...
+  documentation:
+    en: Documentation
+    ru: Документация
+  platform:
+    en: Platform
+    ru: Платформа
   search_placeholder_text:
     en: Search...
     ru: Поиск...
@@ -131,10 +158,73 @@ common:
   linux_distro:
     en: Linux Distribution
     ru: Дистрибутив Linux
+  for_domain_template:
+    en: for the domain template
+    ru: для шаблона доменов
+  module_web_ifaces:
+    en: Web interfaces associated with the module
+    ru: Веб-интерфейсы, связанные с модулем
+  role:
+    en: role
+    ru: роль
+  includes_rules_from:
+    en: includes all rules from the role
+    ru: включает все правила из роли
+  deckhouse:
+    en: deckhouse
+    ru: deckhouse
+  module:
+    en: module
+    ru: модуль
+  modules:
+    en: modules
+    ru: модули
+  alert_description_template:
+    en: Alert description template
+    ru: Шаблон описания алерта
+  alert_summary:
+    en: Alert summary
+    ru: Краткое описание
+  alert_severity:
+    en: "Alert severity<br/><br/>S1 – highest<br/>S9 – lowest"
+    ru: "Критичность (severity) алерта<br/><br/>S1 – самая высокая<br/>S9 – самая низкая"
+  alert_edition:
+    en: The minimum DKP edition in which the alert is available
+    ru: Минимальная редакция DKP, в которой доступен алерт
+  module_has_the_following_alerts:
+    en: The following alerts are implemented in the module
+    ru: В модуле реализованы следующие алерты
+  module_has_1_alert:
+    en: The module has [%d alert](%url).
+    ru: В модуле реализован [%d алерт](%url).
+  module_has_2_to_4_alerts:
+    en: The module has [%d alerts](%url).
+    ru: В модуле реализовано [%d алерта](%url).
+  module_has_number_of_alerts:
+    en: The module has [%d alerts](%url).
+    ru: В модуле реализовано [%d алертов](%url).
+  module_alerts_title:
+    en: Alerts
+    ru: Алерты
+
+comparison:
+  except_parameters:
+    en: "Except for the following parameters:<br />"
+    ru: "Кроме следующих параметров:<br />"
+
 features:
   experimental:
-    en: This feature is actively developed. It might significantly change in the future.
-    ru: Находится в процессе активного развития. Функциональность может существенно измениться.
+    en: The functionality of the module might significantly change. Compatibility with future versions is not guaranteed.
+    ru: Функциональность модуля может сильно измениться. Совместимость с будущими версиями не гарантируется
+  preview:
+    en: The functionality of the module might change, but the main features will remain. Compatibility with future versions is guaranteed, but might require additional migration steps.
+    ru: Функциональность модуля может измениться, но основные возможности сохранятся. Совместимость с будущими версиями обеспечивается, но может потребовать дополнительных действий по миграции.
+  deprecated:
+    en: The module is deprecated.
+    ru: Модуль устарел.
+  temporaryDeprecated:
+    en: The current version of the module is deprecated, a new version will be published soon.
+    ru: Текущая версия модуля устарела, скоро будет опубликована новая версия.
   proprietaryOkmeter:
     en: This feature requires an <a href="https://okmeter.io">Okmeter</a> license.
     ru: Для этого компонента требуется лицензия <a href="https://okmeter.io">Okmeter</a>.

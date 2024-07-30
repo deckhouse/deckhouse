@@ -1,14 +1,26 @@
 # Based on https://github.com/open-policy-agent/gatekeeper/blob/master/Dockerfile
-ARG BASE_ALPINE
-FROM openpolicyagent/gatekeeper:v3.10.0@sha256:ab55e50d7a188472b87bc336066c217ccde2b123042d0b30b3cb01bb9cfe04aa as base
+ARG BASE_GOLANG_20_ALPINE_DEV
+ARG BASE_DISTROLESS
 
+FROM $BASE_GOLANG_20_ALPINE_DEV as build
 
-FROM $BASE_ALPINE
+ARG GOPROXY
+ARG SOURCE_REPO
 
-COPY --from=base /manager /bin/gatekeeper
+ENV GOPROXY=${GOPROXY} \
+    SOURCE_REPO=${SOURCE_REPO} \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
 
-RUN apk add --no-cache ca-certificates
+WORKDIR /src
 
+RUN git clone --depth 1 --branch v3.13.0 ${SOURCE_REPO}/open-policy-agent/gatekeeper.git .
+RUN go build -mod vendor -ldflags="-s -w" -o gatekeeper
+
+RUN chown 64535:64535 gatekeeper
+RUN chmod 0700 gatekeeper
+
+FROM $BASE_DISTROLESS
+COPY --from=build /src/gatekeeper /bin/gatekeeper
 ENTRYPOINT ["/bin/gatekeeper"]
-
-

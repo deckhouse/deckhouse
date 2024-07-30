@@ -3,7 +3,7 @@
 #
 
 # <template: e2e_workflow_template>
-name: 'e2e destroy failed: OpenStack'
+name: 'destroy cluster: OpenStack'
 on:
   workflow_dispatch:
     inputs:
@@ -67,1300 +67,20 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
 
 
   # <template: e2e_run_job_template>
-  run_docker_1_20:
-    name: "e2e destroy failed: OpenStack, Docker, Kubernetes 1.20"
-    if: ${{ github.event.inputs.cri == 'docker' && github.event.inputs.k8s_version == '1.20' && github.event.inputs.layout == 'Standard' }}
-    env:
-      PROVIDER: OpenStack
-      CRI: Docker
-      LAYOUT: Standard
-      KUBERNETES_VERSION: "1.20"
-      EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
-    steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
-      # </template: started_at_output>
-
-      # <template: checkout_from_event_ref_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-        with:
-          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
-          fetch-depth: 0
-      # </template: checkout_from_event_ref_step>
-      # <template: update_comment_on_start>
-      - name: Update comment on start
-        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const name = 'e2e destroy failed: OpenStack, Docker, Kubernetes 1.20';
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnStart({github, context, core, name})
-
-      # </template: update_comment_on_start>
-
-
-      # <template: login_dev_registry_step>
-      - name: Check dev registry credentials
-        id: check_dev_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
-      - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
-      - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-      # </template: werf_install_step>
-
-      - name: Setup
-        id: setup
-        env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
-          DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
-          INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
-        run: |
-          # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
-
-          INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
-
-          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
-          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
-
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
-
-          arrPath=(${INSTALL_IMAGE_PATH//:/ })
-          DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
-
-          echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=install-image-full::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${DECKHOUSE_IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-
-          echo '::echo::off'
-
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
-      - name: Cleanup bootstrapped cluster
-        if: ${{ success() }}
-        id: cleanup_cluster
-        env:
-          PROVIDER: OpenStack
-          CRI: Docker
-          LAYOUT: Standard
-          KUBERNETES_VERSION: "1.20"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
-          PREFIX: ${{ github.event.inputs.cluster_prefix }}
-          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
-          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
-        # <template: e2e_run_template>
-          LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
-          COMMENT_ID: ${{ inputs.comment_id }}
-          GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-        run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
-            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
-            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
-            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
-            PREFIX=${PREFIX}
-            PROVIDER=${PROVIDER}
-            CRI=${CRI}
-            LAYOUT=${LAYOUT}
-            KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-          "
-
-          ls -lh $(pwd)/testing
-
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
-
-        # </template: e2e_run_template>
-
-      - name: Remove failed cluster label
-        if: ${{ success() }}
-        uses: actions-ecosystem/action-remove-labels@v1
-        with:
-          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
-          number: ${{ github.event.inputs.issue_number }}
-          labels: "e2e/cluster/failed"
-
-      - name: Cleanup temp directory
-        if: always()
-        env:
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-        run: |
-          echo "Remove temporary directory '${TMPPATH}' ..."
-          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
-            rm -rf "${TMPPATH}"
-          else
-            echo Not a directory.
-          fi
-
-      # <template: update_comment_on_finish>
-      - name: Update comment on finish
-        id: update_comment_on_finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        env:
-          NEEDS_CONTEXT: ${{ toJSON(needs) }}
-          JOB_CONTEXT: ${{ toJSON(job) }}
-          STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const statusConfig = 'job,separate';
-            const name = 'e2e destroy failed: OpenStack, Docker, Kubernetes 1.20';
-            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
-            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
-            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
-            let jobNames = null
-            if (process.env.JOB_NAMES) {
-              jobNames = JSON.parse(process.env.JOB_NAMES);
-            }
-
-            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
-            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
-            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
-            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
-      # </template: update_comment_on_finish>
-  # </template: e2e_run_job_template>
-
-  # <template: e2e_run_job_template>
-  run_docker_1_21:
-    name: "e2e destroy failed: OpenStack, Docker, Kubernetes 1.21"
-    if: ${{ github.event.inputs.cri == 'docker' && github.event.inputs.k8s_version == '1.21' && github.event.inputs.layout == 'Standard' }}
-    env:
-      PROVIDER: OpenStack
-      CRI: Docker
-      LAYOUT: Standard
-      KUBERNETES_VERSION: "1.21"
-      EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
-    steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
-      # </template: started_at_output>
-
-      # <template: checkout_from_event_ref_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-        with:
-          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
-          fetch-depth: 0
-      # </template: checkout_from_event_ref_step>
-      # <template: update_comment_on_start>
-      - name: Update comment on start
-        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const name = 'e2e destroy failed: OpenStack, Docker, Kubernetes 1.21';
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnStart({github, context, core, name})
-
-      # </template: update_comment_on_start>
-
-
-      # <template: login_dev_registry_step>
-      - name: Check dev registry credentials
-        id: check_dev_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
-      - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
-      - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-      # </template: werf_install_step>
-
-      - name: Setup
-        id: setup
-        env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
-          DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
-          INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
-        run: |
-          # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
-
-          INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
-
-          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
-          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
-
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
-
-          arrPath=(${INSTALL_IMAGE_PATH//:/ })
-          DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
-
-          echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=install-image-full::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${DECKHOUSE_IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-
-          echo '::echo::off'
-
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
-      - name: Cleanup bootstrapped cluster
-        if: ${{ success() }}
-        id: cleanup_cluster
-        env:
-          PROVIDER: OpenStack
-          CRI: Docker
-          LAYOUT: Standard
-          KUBERNETES_VERSION: "1.21"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
-          PREFIX: ${{ github.event.inputs.cluster_prefix }}
-          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
-          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
-        # <template: e2e_run_template>
-          LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
-          COMMENT_ID: ${{ inputs.comment_id }}
-          GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-        run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
-            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
-            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
-            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
-            PREFIX=${PREFIX}
-            PROVIDER=${PROVIDER}
-            CRI=${CRI}
-            LAYOUT=${LAYOUT}
-            KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-          "
-
-          ls -lh $(pwd)/testing
-
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
-
-        # </template: e2e_run_template>
-
-      - name: Remove failed cluster label
-        if: ${{ success() }}
-        uses: actions-ecosystem/action-remove-labels@v1
-        with:
-          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
-          number: ${{ github.event.inputs.issue_number }}
-          labels: "e2e/cluster/failed"
-
-      - name: Cleanup temp directory
-        if: always()
-        env:
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-        run: |
-          echo "Remove temporary directory '${TMPPATH}' ..."
-          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
-            rm -rf "${TMPPATH}"
-          else
-            echo Not a directory.
-          fi
-
-      # <template: update_comment_on_finish>
-      - name: Update comment on finish
-        id: update_comment_on_finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        env:
-          NEEDS_CONTEXT: ${{ toJSON(needs) }}
-          JOB_CONTEXT: ${{ toJSON(job) }}
-          STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const statusConfig = 'job,separate';
-            const name = 'e2e destroy failed: OpenStack, Docker, Kubernetes 1.21';
-            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
-            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
-            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
-            let jobNames = null
-            if (process.env.JOB_NAMES) {
-              jobNames = JSON.parse(process.env.JOB_NAMES);
-            }
-
-            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
-            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
-            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
-            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
-      # </template: update_comment_on_finish>
-  # </template: e2e_run_job_template>
-
-  # <template: e2e_run_job_template>
-  run_docker_1_22:
-    name: "e2e destroy failed: OpenStack, Docker, Kubernetes 1.22"
-    if: ${{ github.event.inputs.cri == 'docker' && github.event.inputs.k8s_version == '1.22' && github.event.inputs.layout == 'Standard' }}
-    env:
-      PROVIDER: OpenStack
-      CRI: Docker
-      LAYOUT: Standard
-      KUBERNETES_VERSION: "1.22"
-      EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
-    steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
-      # </template: started_at_output>
-
-      # <template: checkout_from_event_ref_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-        with:
-          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
-          fetch-depth: 0
-      # </template: checkout_from_event_ref_step>
-      # <template: update_comment_on_start>
-      - name: Update comment on start
-        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const name = 'e2e destroy failed: OpenStack, Docker, Kubernetes 1.22';
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnStart({github, context, core, name})
-
-      # </template: update_comment_on_start>
-
-
-      # <template: login_dev_registry_step>
-      - name: Check dev registry credentials
-        id: check_dev_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
-      - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
-      - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-      # </template: werf_install_step>
-
-      - name: Setup
-        id: setup
-        env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
-          DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
-          INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
-        run: |
-          # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
-
-          INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
-
-          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
-          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
-
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
-
-          arrPath=(${INSTALL_IMAGE_PATH//:/ })
-          DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
-
-          echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=install-image-full::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${DECKHOUSE_IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-
-          echo '::echo::off'
-
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
-      - name: Cleanup bootstrapped cluster
-        if: ${{ success() }}
-        id: cleanup_cluster
-        env:
-          PROVIDER: OpenStack
-          CRI: Docker
-          LAYOUT: Standard
-          KUBERNETES_VERSION: "1.22"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
-          PREFIX: ${{ github.event.inputs.cluster_prefix }}
-          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
-          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
-        # <template: e2e_run_template>
-          LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
-          COMMENT_ID: ${{ inputs.comment_id }}
-          GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-        run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
-            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
-            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
-            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
-            PREFIX=${PREFIX}
-            PROVIDER=${PROVIDER}
-            CRI=${CRI}
-            LAYOUT=${LAYOUT}
-            KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-          "
-
-          ls -lh $(pwd)/testing
-
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
-
-        # </template: e2e_run_template>
-
-      - name: Remove failed cluster label
-        if: ${{ success() }}
-        uses: actions-ecosystem/action-remove-labels@v1
-        with:
-          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
-          number: ${{ github.event.inputs.issue_number }}
-          labels: "e2e/cluster/failed"
-
-      - name: Cleanup temp directory
-        if: always()
-        env:
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-        run: |
-          echo "Remove temporary directory '${TMPPATH}' ..."
-          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
-            rm -rf "${TMPPATH}"
-          else
-            echo Not a directory.
-          fi
-
-      # <template: update_comment_on_finish>
-      - name: Update comment on finish
-        id: update_comment_on_finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        env:
-          NEEDS_CONTEXT: ${{ toJSON(needs) }}
-          JOB_CONTEXT: ${{ toJSON(job) }}
-          STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const statusConfig = 'job,separate';
-            const name = 'e2e destroy failed: OpenStack, Docker, Kubernetes 1.22';
-            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
-            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
-            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
-            let jobNames = null
-            if (process.env.JOB_NAMES) {
-              jobNames = JSON.parse(process.env.JOB_NAMES);
-            }
-
-            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
-            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
-            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
-            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
-      # </template: update_comment_on_finish>
-  # </template: e2e_run_job_template>
-
-  # <template: e2e_run_job_template>
-  run_docker_1_23:
-    name: "e2e destroy failed: OpenStack, Docker, Kubernetes 1.23"
-    if: ${{ github.event.inputs.cri == 'docker' && github.event.inputs.k8s_version == '1.23' && github.event.inputs.layout == 'Standard' }}
-    env:
-      PROVIDER: OpenStack
-      CRI: Docker
-      LAYOUT: Standard
-      KUBERNETES_VERSION: "1.23"
-      EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
-    steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
-      # </template: started_at_output>
-
-      # <template: checkout_from_event_ref_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-        with:
-          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
-          fetch-depth: 0
-      # </template: checkout_from_event_ref_step>
-      # <template: update_comment_on_start>
-      - name: Update comment on start
-        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const name = 'e2e destroy failed: OpenStack, Docker, Kubernetes 1.23';
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnStart({github, context, core, name})
-
-      # </template: update_comment_on_start>
-
-
-      # <template: login_dev_registry_step>
-      - name: Check dev registry credentials
-        id: check_dev_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
-      - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
-      - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-      # </template: werf_install_step>
-
-      - name: Setup
-        id: setup
-        env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
-          DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
-          INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
-        run: |
-          # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
-
-          INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
-
-          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
-          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
-
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
-
-          arrPath=(${INSTALL_IMAGE_PATH//:/ })
-          DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
-
-          echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=install-image-full::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${DECKHOUSE_IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-
-          echo '::echo::off'
-
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
-      - name: Cleanup bootstrapped cluster
-        if: ${{ success() }}
-        id: cleanup_cluster
-        env:
-          PROVIDER: OpenStack
-          CRI: Docker
-          LAYOUT: Standard
-          KUBERNETES_VERSION: "1.23"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
-          PREFIX: ${{ github.event.inputs.cluster_prefix }}
-          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
-          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
-        # <template: e2e_run_template>
-          LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
-          COMMENT_ID: ${{ inputs.comment_id }}
-          GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-        run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
-            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
-            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
-            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
-            PREFIX=${PREFIX}
-            PROVIDER=${PROVIDER}
-            CRI=${CRI}
-            LAYOUT=${LAYOUT}
-            KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-          "
-
-          ls -lh $(pwd)/testing
-
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
-
-        # </template: e2e_run_template>
-
-      - name: Remove failed cluster label
-        if: ${{ success() }}
-        uses: actions-ecosystem/action-remove-labels@v1
-        with:
-          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
-          number: ${{ github.event.inputs.issue_number }}
-          labels: "e2e/cluster/failed"
-
-      - name: Cleanup temp directory
-        if: always()
-        env:
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-        run: |
-          echo "Remove temporary directory '${TMPPATH}' ..."
-          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
-            rm -rf "${TMPPATH}"
-          else
-            echo Not a directory.
-          fi
-
-      # <template: update_comment_on_finish>
-      - name: Update comment on finish
-        id: update_comment_on_finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        env:
-          NEEDS_CONTEXT: ${{ toJSON(needs) }}
-          JOB_CONTEXT: ${{ toJSON(job) }}
-          STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const statusConfig = 'job,separate';
-            const name = 'e2e destroy failed: OpenStack, Docker, Kubernetes 1.23';
-            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
-            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
-            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
-            let jobNames = null
-            if (process.env.JOB_NAMES) {
-              jobNames = JSON.parse(process.env.JOB_NAMES);
-            }
-
-            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
-            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
-            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
-            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
-      # </template: update_comment_on_finish>
-  # </template: e2e_run_job_template>
-
-  # <template: e2e_run_job_template>
-  run_docker_1_24:
-    name: "e2e destroy failed: OpenStack, Docker, Kubernetes 1.24"
-    if: ${{ github.event.inputs.cri == 'docker' && github.event.inputs.k8s_version == '1.24' && github.event.inputs.layout == 'Standard' }}
-    env:
-      PROVIDER: OpenStack
-      CRI: Docker
-      LAYOUT: Standard
-      KUBERNETES_VERSION: "1.24"
-      EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
-    steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
-      # </template: started_at_output>
-
-      # <template: checkout_from_event_ref_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-        with:
-          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
-          fetch-depth: 0
-      # </template: checkout_from_event_ref_step>
-      # <template: update_comment_on_start>
-      - name: Update comment on start
-        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const name = 'e2e destroy failed: OpenStack, Docker, Kubernetes 1.24';
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnStart({github, context, core, name})
-
-      # </template: update_comment_on_start>
-
-
-      # <template: login_dev_registry_step>
-      - name: Check dev registry credentials
-        id: check_dev_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
-      - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
-      - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-      # </template: werf_install_step>
-
-      - name: Setup
-        id: setup
-        env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
-          DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
-          INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
-        run: |
-          # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
-
-          INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
-
-          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
-          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
-
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
-
-          arrPath=(${INSTALL_IMAGE_PATH//:/ })
-          DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
-
-          echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=install-image-full::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${DECKHOUSE_IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-
-          echo '::echo::off'
-
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
-      - name: Cleanup bootstrapped cluster
-        if: ${{ success() }}
-        id: cleanup_cluster
-        env:
-          PROVIDER: OpenStack
-          CRI: Docker
-          LAYOUT: Standard
-          KUBERNETES_VERSION: "1.24"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
-          PREFIX: ${{ github.event.inputs.cluster_prefix }}
-          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
-          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
-        # <template: e2e_run_template>
-          LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
-          COMMENT_ID: ${{ inputs.comment_id }}
-          GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-        run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
-            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
-            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
-            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
-            PREFIX=${PREFIX}
-            PROVIDER=${PROVIDER}
-            CRI=${CRI}
-            LAYOUT=${LAYOUT}
-            KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            TMP_DIR_PATH=${TMP_DIR_PATH}
-          "
-
-          ls -lh $(pwd)/testing
-
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
-
-        # </template: e2e_run_template>
-
-      - name: Remove failed cluster label
-        if: ${{ success() }}
-        uses: actions-ecosystem/action-remove-labels@v1
-        with:
-          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
-          number: ${{ github.event.inputs.issue_number }}
-          labels: "e2e/cluster/failed"
-
-      - name: Cleanup temp directory
-        if: always()
-        env:
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-        run: |
-          echo "Remove temporary directory '${TMPPATH}' ..."
-          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
-            rm -rf "${TMPPATH}"
-          else
-            echo Not a directory.
-          fi
-
-      # <template: update_comment_on_finish>
-      - name: Update comment on finish
-        id: update_comment_on_finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        env:
-          NEEDS_CONTEXT: ${{ toJSON(needs) }}
-          JOB_CONTEXT: ${{ toJSON(job) }}
-          STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const statusConfig = 'job,separate';
-            const name = 'e2e destroy failed: OpenStack, Docker, Kubernetes 1.24';
-            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
-            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
-            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
-            let jobNames = null
-            if (process.env.JOB_NAMES) {
-              jobNames = JSON.parse(process.env.JOB_NAMES);
-            }
-
-            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
-            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
-            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
-            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
-      # </template: update_comment_on_finish>
-  # </template: e2e_run_job_template>
-
-  # <template: e2e_run_job_template>
-  run_containerd_1_20:
-    name: "e2e destroy failed: OpenStack, Containerd, Kubernetes 1.20"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.20' && github.event.inputs.layout == 'Standard' }}
+  run_containerd_1_26:
+    name: "destroy cluster: OpenStack, Containerd, Kubernetes 1.26"
+    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.26' && github.event.inputs.layout == 'Standard' }}
     env:
       PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: Standard
-      KUBERNETES_VERSION: "1.20"
+      KUBERNETES_VERSION: "1.26"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
@@ -1370,12 +90,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -1383,11 +103,12 @@ jobs:
       # <template: update_comment_on_start>
       - name: Update comment on start
         if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
-            const name = 'e2e destroy failed: OpenStack, Containerd, Kubernetes 1.20';
+            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.26';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -1401,9 +122,12 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -1418,9 +142,12 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -1428,7 +155,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -1439,7 +166,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -1475,10 +202,10 @@ jobs:
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
 
           echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=install-image-full::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${DECKHOUSE_IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+          echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -1498,7 +225,7 @@ jobs:
           PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.20"
+          KUBERNETES_VERSION: "1.26"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -1531,6 +258,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1544,12 +274,9 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -1575,6 +302,17 @@ jobs:
           else
             echo Not a directory.
           fi
+          if [ -n $USER_RUNNER_ID ]; then
+            echo "Fix temp directories owner..."
+            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+            chown -R $USER_RUNNER_ID /tmp || true
+          else
+            echo "Fix temp directories permissions..."
+            chmod -f -R 777 "$(pwd)/testing" || true
+            chmod -f -R 777 "/deckhouse/testing" || true
+            chmod -f -R 777 /tmp || true
+          fi
 
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1584,12 +322,13 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'e2e destroy failed: OpenStack, Containerd, Kubernetes 1.20';
+            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.26';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -1609,14 +348,14 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_containerd_1_21:
-    name: "e2e destroy failed: OpenStack, Containerd, Kubernetes 1.21"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.21' && github.event.inputs.layout == 'Standard' }}
+  run_containerd_1_27:
+    name: "destroy cluster: OpenStack, Containerd, Kubernetes 1.27"
+    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.27' && github.event.inputs.layout == 'Standard' }}
     env:
       PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: Standard
-      KUBERNETES_VERSION: "1.21"
+      KUBERNETES_VERSION: "1.27"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
@@ -1626,12 +365,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -1639,11 +378,12 @@ jobs:
       # <template: update_comment_on_start>
       - name: Update comment on start
         if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
-            const name = 'e2e destroy failed: OpenStack, Containerd, Kubernetes 1.21';
+            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.27';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -1657,9 +397,12 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -1674,9 +417,12 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -1684,7 +430,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -1695,7 +441,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -1731,10 +477,10 @@ jobs:
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
 
           echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=install-image-full::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${DECKHOUSE_IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+          echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -1754,7 +500,7 @@ jobs:
           PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.21"
+          KUBERNETES_VERSION: "1.27"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -1787,6 +533,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1800,12 +549,9 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -1831,6 +577,17 @@ jobs:
           else
             echo Not a directory.
           fi
+          if [ -n $USER_RUNNER_ID ]; then
+            echo "Fix temp directories owner..."
+            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+            chown -R $USER_RUNNER_ID /tmp || true
+          else
+            echo "Fix temp directories permissions..."
+            chmod -f -R 777 "$(pwd)/testing" || true
+            chmod -f -R 777 "/deckhouse/testing" || true
+            chmod -f -R 777 /tmp || true
+          fi
 
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1840,12 +597,13 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'e2e destroy failed: OpenStack, Containerd, Kubernetes 1.21';
+            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.27';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -1865,14 +623,14 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_containerd_1_22:
-    name: "e2e destroy failed: OpenStack, Containerd, Kubernetes 1.22"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.22' && github.event.inputs.layout == 'Standard' }}
+  run_containerd_1_28:
+    name: "destroy cluster: OpenStack, Containerd, Kubernetes 1.28"
+    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.28' && github.event.inputs.layout == 'Standard' }}
     env:
       PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: Standard
-      KUBERNETES_VERSION: "1.22"
+      KUBERNETES_VERSION: "1.28"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
@@ -1882,12 +640,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -1895,11 +653,12 @@ jobs:
       # <template: update_comment_on_start>
       - name: Update comment on start
         if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
-            const name = 'e2e destroy failed: OpenStack, Containerd, Kubernetes 1.22';
+            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.28';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -1913,9 +672,12 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -1930,9 +692,12 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -1940,7 +705,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -1951,7 +716,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -1987,10 +752,10 @@ jobs:
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
 
           echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=install-image-full::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${DECKHOUSE_IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+          echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -2010,7 +775,7 @@ jobs:
           PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.22"
+          KUBERNETES_VERSION: "1.28"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -2043,6 +808,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2056,12 +824,9 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -2087,6 +852,17 @@ jobs:
           else
             echo Not a directory.
           fi
+          if [ -n $USER_RUNNER_ID ]; then
+            echo "Fix temp directories owner..."
+            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+            chown -R $USER_RUNNER_ID /tmp || true
+          else
+            echo "Fix temp directories permissions..."
+            chmod -f -R 777 "$(pwd)/testing" || true
+            chmod -f -R 777 "/deckhouse/testing" || true
+            chmod -f -R 777 /tmp || true
+          fi
 
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -2096,12 +872,13 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'e2e destroy failed: OpenStack, Containerd, Kubernetes 1.22';
+            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.28';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -2121,14 +898,14 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_containerd_1_23:
-    name: "e2e destroy failed: OpenStack, Containerd, Kubernetes 1.23"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.23' && github.event.inputs.layout == 'Standard' }}
+  run_containerd_1_29:
+    name: "destroy cluster: OpenStack, Containerd, Kubernetes 1.29"
+    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.29' && github.event.inputs.layout == 'Standard' }}
     env:
       PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: Standard
-      KUBERNETES_VERSION: "1.23"
+      KUBERNETES_VERSION: "1.29"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
@@ -2138,12 +915,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -2151,11 +928,12 @@ jobs:
       # <template: update_comment_on_start>
       - name: Update comment on start
         if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
-            const name = 'e2e destroy failed: OpenStack, Containerd, Kubernetes 1.23';
+            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.29';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -2169,9 +947,12 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -2186,9 +967,12 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -2196,7 +980,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -2207,7 +991,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -2243,10 +1027,10 @@ jobs:
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
 
           echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=install-image-full::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${DECKHOUSE_IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+          echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -2266,7 +1050,7 @@ jobs:
           PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.23"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -2299,6 +1083,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2312,12 +1099,9 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -2343,6 +1127,17 @@ jobs:
           else
             echo Not a directory.
           fi
+          if [ -n $USER_RUNNER_ID ]; then
+            echo "Fix temp directories owner..."
+            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+            chown -R $USER_RUNNER_ID /tmp || true
+          else
+            echo "Fix temp directories permissions..."
+            chmod -f -R 777 "$(pwd)/testing" || true
+            chmod -f -R 777 "/deckhouse/testing" || true
+            chmod -f -R 777 /tmp || true
+          fi
 
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -2352,12 +1147,13 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'e2e destroy failed: OpenStack, Containerd, Kubernetes 1.23';
+            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.29';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -2377,14 +1173,14 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_containerd_1_24:
-    name: "e2e destroy failed: OpenStack, Containerd, Kubernetes 1.24"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.24' && github.event.inputs.layout == 'Standard' }}
+  run_containerd_1_30:
+    name: "destroy cluster: OpenStack, Containerd, Kubernetes 1.30"
+    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.30' && github.event.inputs.layout == 'Standard' }}
     env:
       PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: Standard
-      KUBERNETES_VERSION: "1.24"
+      KUBERNETES_VERSION: "1.30"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
@@ -2394,12 +1190,12 @@ jobs:
         id: started_at
         run: |
           unixTimestamp=$(date +%s)
-          echo "::set-output name=started_at::${unixTimestamp}"
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -2407,11 +1203,12 @@ jobs:
       # <template: update_comment_on_start>
       - name: Update comment on start
         if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
-            const name = 'e2e destroy failed: OpenStack, Containerd, Kubernetes 1.24';
+            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.30';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -2425,9 +1222,12 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -2442,9 +1242,12 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
       - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
@@ -2452,7 +1255,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
       - name: Login to Github Container Registry
-        uses: docker/login-action@v1.10.0
+        uses: docker/login-action@v2.1.0
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
@@ -2463,7 +1266,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v1.2
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -2499,10 +1302,10 @@ jobs:
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
 
           echo '::echo::on'
-          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=install-image-full::${INSTALL_IMAGE_NAME}"
-          echo "::set-output name=deckhouse-image-tag::${DECKHOUSE_IMAGE_TAG}"
-          echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+          echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -2522,7 +1325,7 @@ jobs:
           PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.24"
+          KUBERNETES_VERSION: "1.30"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -2555,6 +1358,9 @@ jobs:
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
 
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2568,12 +1374,9 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v ${TMP_DIR_PATH}:/tmp \
-            --user $(id -u):$(id -u) \
-            -v /etc/group:/etc/group:ro \
-            -v /etc/passwd:/etc/passwd:ro \
-            -v /etc/shadow:/etc/shadow:ro \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -2599,6 +1402,17 @@ jobs:
           else
             echo Not a directory.
           fi
+          if [ -n $USER_RUNNER_ID ]; then
+            echo "Fix temp directories owner..."
+            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+            chown -R $USER_RUNNER_ID /tmp || true
+          else
+            echo "Fix temp directories permissions..."
+            chmod -f -R 777 "$(pwd)/testing" || true
+            chmod -f -R 777 "/deckhouse/testing" || true
+            chmod -f -R 777 /tmp || true
+          fi
 
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -2608,12 +1422,288 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'e2e destroy failed: OpenStack, Containerd, Kubernetes 1.24';
+            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.30';
+            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
+            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
+
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
+      # </template: update_comment_on_finish>
+  # </template: e2e_run_job_template>
+
+  # <template: e2e_run_job_template>
+  run_containerd_automatic:
+    name: "destroy cluster: OpenStack, Containerd, Kubernetes Automatic"
+    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == 'Automatic' && github.event.inputs.layout == 'Standard' }}
+    env:
+      PROVIDER: OpenStack
+      CRI: Containerd
+      LAYOUT: Standard
+      KUBERNETES_VERSION: "Automatic"
+      EVENT_LABEL: ${{ github.event.label.name }}
+    runs-on: [self-hosted, e2e-common]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_from_event_ref_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
+          fetch-depth: 0
+      # </template: checkout_from_event_ref_step>
+      # <template: update_comment_on_start>
+      - name: Update comment on start
+        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        uses: actions/github-script@v6.4.1
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
+          script: |
+            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes Automatic';
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnStart({github, context, core, name})
+
+      # </template: update_comment_on_start>
+
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
+
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+          DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
+          INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
+        run: |
+          # Create tmppath for test script.
+          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
+          fi
+
+          INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
+
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
+
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          arrPath=(${INSTALL_IMAGE_PATH//:/ })
+          DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
+
+          echo '::echo::on'
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+          echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+
+          echo '::echo::off'
+
+      - name: "Download state"
+        id: download_artifact_with_state
+        uses: dawidd6/action-download-artifact@v2.23.0
+        with:
+          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          run_id: ${{github.event.inputs.run_id}}
+          name: ${{github.event.inputs.state_artifact_name}}
+          path: ${{ steps.setup.outputs.tmp-dir-path}}
+
+      - name: Cleanup bootstrapped cluster
+        if: ${{ success() }}
+        id: cleanup_cluster
+        env:
+          PROVIDER: OpenStack
+          CRI: Containerd
+          LAYOUT: Standard
+          KUBERNETES_VERSION: "Automatic"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ github.event.inputs.cluster_prefix }}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
+        # <template: e2e_run_template>
+          LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+        run: |
+          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
+            PREFIX=${PREFIX}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+          "
+
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
+
+          docker run --rm \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+            -e USER_RUNNER_ID=${user_runner_id} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMP_DIR_PATH}:/tmp \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+
+        # </template: e2e_run_template>
+
+      - name: Remove failed cluster label
+        if: ${{ success() }}
+        uses: actions-ecosystem/action-remove-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ github.event.inputs.issue_number }}
+          labels: "e2e/cluster/failed"
+
+      - name: Cleanup temp directory
+        if: always()
+        env:
+          TMPPATH: ${{ steps.setup.outputs.tmppath}}
+        run: |
+          echo "Remove temporary directory '${TMPPATH}' ..."
+          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
+            rm -rf "${TMPPATH}"
+          else
+            echo Not a directory.
+          fi
+          if [ -n $USER_RUNNER_ID ]; then
+            echo "Fix temp directories owner..."
+            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+            chown -R $USER_RUNNER_ID /tmp || true
+          else
+            echo "Fix temp directories permissions..."
+            chmod -f -R 777 "$(pwd)/testing" || true
+            chmod -f -R 777 "/deckhouse/testing" || true
+            chmod -f -R 777 /tmp || true
+          fi
+
+      # <template: update_comment_on_finish>
+      - name: Update comment on finish
+        id: update_comment_on_finish
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        env:
+          NEEDS_CONTEXT: ${{ toJSON(needs) }}
+          JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
+        uses: actions/github-script@v6.4.1
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
+          script: |
+            const statusConfig = 'job,separate';
+            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes Automatic';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -2635,17 +1725,17 @@ jobs:
 
   last_comment:
     name: Update comment on finish
-    needs: ["started_at","run_docker_1_20","run_docker_1_21","run_docker_1_22","run_docker_1_23","run_docker_1_24","run_containerd_1_20","run_containerd_1_21","run_containerd_1_22","run_containerd_1_23","run_containerd_1_24"]
+    needs: ["started_at","run_containerd_1_26","run_containerd_1_27","run_containerd_1_28","run_containerd_1_29","run_containerd_1_30","run_containerd_automatic"]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     env:
       JOB_NAMES: |
-        {"run_containerd_1_20":"e2e destroy failed: OpenStack, Containerd, Kubernetes 1.20","run_containerd_1_21":"e2e destroy failed: OpenStack, Containerd, Kubernetes 1.21","run_containerd_1_22":"e2e destroy failed: OpenStack, Containerd, Kubernetes 1.22","run_containerd_1_23":"e2e destroy failed: OpenStack, Containerd, Kubernetes 1.23","run_containerd_1_24":"e2e destroy failed: OpenStack, Containerd, Kubernetes 1.24","run_docker_1_20":"e2e destroy failed: OpenStack, Docker, Kubernetes 1.20","run_docker_1_21":"e2e destroy failed: OpenStack, Docker, Kubernetes 1.21","run_docker_1_22":"e2e destroy failed: OpenStack, Docker, Kubernetes 1.22","run_docker_1_23":"e2e destroy failed: OpenStack, Docker, Kubernetes 1.23","run_docker_1_24":"e2e destroy failed: OpenStack, Docker, Kubernetes 1.24"}
+        {"run_containerd_1_26":"destroy cluster: OpenStack, Containerd, Kubernetes 1.26","run_containerd_1_27":"destroy cluster: OpenStack, Containerd, Kubernetes 1.27","run_containerd_1_28":"destroy cluster: OpenStack, Containerd, Kubernetes 1.28","run_containerd_1_29":"destroy cluster: OpenStack, Containerd, Kubernetes 1.29","run_containerd_1_30":"destroy cluster: OpenStack, Containerd, Kubernetes 1.30","run_containerd_automatic":"destroy cluster: OpenStack, Containerd, Kubernetes Automatic"}
     steps:
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.5.2
 
       # </template: checkout_step>
       # <template: update_comment_on_finish>
@@ -2656,12 +1746,13 @@ jobs:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
           STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.4.1
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
           script: |
             const statusConfig = 'workflow,final,no-skipped,restore-separate';
-            const name = 'e2e destroy failed: OpenStack';
+            const name = 'destroy cluster: OpenStack';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);

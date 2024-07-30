@@ -17,11 +17,11 @@ locals {
 
   kube_a_v4_cidr_block = local.should_create_subnets ? cidrsubnet(var.node_network_cidr, ceil(log(3, 2)), 0) : null
   kube_b_v4_cidr_block = local.should_create_subnets ? cidrsubnet(var.node_network_cidr, ceil(log(3, 2)), 1) : null
-  kube_c_v4_cidr_block = local.should_create_subnets ? cidrsubnet(var.node_network_cidr, ceil(log(3, 2)), 2) : null
+  kube_d_v4_cidr_block = local.should_create_subnets ? cidrsubnet(var.node_network_cidr, ceil(log(3, 2)), 3) : null
 
   not_have_existing_subnet_a = local.should_create_subnets || (lookup(var.existing_zone_to_subnet_id_map, "ru-central1-a", null) == null)
   not_have_existing_subnet_b = local.should_create_subnets || (lookup(var.existing_zone_to_subnet_id_map, "ru-central1-b", null) == null)
-  not_have_existing_subnet_c = local.should_create_subnets || (lookup(var.existing_zone_to_subnet_id_map, "ru-central1-c", null) == null)
+  not_have_existing_subnet_d = local.should_create_subnets || (lookup(var.existing_zone_to_subnet_id_map, "ru-central1-d", null) == null)
 
   is_with_nat_instance = var.layout == "WithNATInstance"
   is_standard          = var.layout == "Standard"
@@ -40,9 +40,9 @@ data "yandex_vpc_subnet" "kube_b" {
   subnet_id = var.existing_zone_to_subnet_id_map.ru-central1-b
 }
 
-data "yandex_vpc_subnet" "kube_c" {
-  count     = local.not_have_existing_subnet_c ? 0 : 1
-  subnet_id = var.existing_zone_to_subnet_id_map.ru-central1-c
+data "yandex_vpc_subnet" "kube_d" {
+  count     = local.not_have_existing_subnet_d ? 0 : 1
+  subnet_id = var.existing_zone_to_subnet_id_map.ru-central1-d
 }
 
 resource "yandex_vpc_gateway" "kube" {
@@ -124,13 +124,13 @@ resource "yandex_vpc_subnet" "kube_b" {
   labels = var.labels
 }
 
-resource "yandex_vpc_subnet" "kube_c" {
+resource "yandex_vpc_subnet" "kube_d" {
   count          = local.should_create_subnets ? 1 : 0
-  name           = "${var.prefix}-c"
+  name           = "${var.prefix}-d"
   network_id     = var.network_id
-  v4_cidr_blocks = [local.kube_c_v4_cidr_block]
+  v4_cidr_blocks = [local.kube_d_v4_cidr_block]
   route_table_id = yandex_vpc_route_table.kube.id
-  zone           = "ru-central1-c"
+  zone           = "ru-central1-d"
 
   dynamic "dhcp_options" {
     for_each = (var.dhcp_domain_name != null) || (var.dhcp_domain_name_servers != null) ? [1] : []

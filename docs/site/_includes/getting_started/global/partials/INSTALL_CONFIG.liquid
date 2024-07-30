@@ -6,7 +6,7 @@
 {% endif %}
 
 <div markdown="1">
-  The recommended settings for a Deckhouse Platform {% if revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %} installation are generated below:
+  The recommended settings for a Deckhouse Kubernetes Platform {% if revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %} installation are generated below:
 - `config.yml` — a file with the configuration needed to bootstrap the cluster. Contains the installer parameters, {% if page. platform_type== 'cloud' %}cloud provider related parameters (such as credentials, instance type, etc){% else %} access parameters{% endif %}, and the initial cluster parameters.
 {% if page.platform_type == 'cloud' %}- `resources.yml` — description of the resources that must be installed after the installation (nodes description, Ingress controller description, etc).{% endif %}
 
@@ -27,7 +27,7 @@ Create the `config.yml` file.
 {% endsnippetcut %}
 
 {%- if page.platform_type == 'existing' %}
-{% offtopic title="About nodeSelector, taints и tolerations..." %}
+{% offtopic title="About nodeSelector, taints and tolerations..." %}
 You can control on which nodes the Deckhouse core components will run by setting  `nodeSelector`/`tolerations` in the `configOverrides.deckhouse` parameter of the installation configuration. You can also specify cluster node taints in the `configOverrides.global.modules.placement.customTolerationKeys` array so that Deckhouse can automatically add the appropriate `toleration` to its components.
 
 > Below is an example of setting `nodeSelector`/`tolerations` for the `deckhouse` module and specifying tolerations for other Deckhouse components in the `customTolerationKeys` array (do not copy this example without adapting it to your configuration as the values will be different):

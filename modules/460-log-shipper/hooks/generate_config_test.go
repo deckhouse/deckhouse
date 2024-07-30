@@ -128,6 +128,8 @@ spec:
 		Entry("Multinamespace source with one destination", "one-dest"),
 		Entry("Namespaced source", "namespaced-source"),
 		Entry("Namespaced with multiline", "multiline"),
+		Entry("Namespaced with multiline custom parser", "multiline-custom-pods"),
+		Entry("Multiline custom parser", "multiline-custom"),
 		Entry("Simple pair with datastream", "pair-datastream"),
 		Entry("Simple pair for ES 5.X", "es-5x"),
 		Entry("Throttle Transform", "throttle"),
@@ -135,7 +137,11 @@ spec:
 		Entry("File to Vector", "file-to-vector"),
 		Entry("File to Kafka", "file-to-kafka"),
 		Entry("File to Kafka with client certificate authentication", "file-to-kafka-tls"),
+		Entry("File to Loki", "file-to-loki"),
+		Entry("File to Socket", "file-to-socket"),
+		Entry("File to Socket", "file-to-socket-cef"),
 		Entry("File to Splunk", "file-to-splunk"),
 		Entry("Two sources to single destination", "many-to-one"),
+		Entry("Throttle Transform with filter", "throttle-with-filter"),
 	)
 })

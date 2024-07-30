@@ -18,6 +18,7 @@ package template_tests
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -43,7 +44,7 @@ discovery:
   d8SpecificNodeCountByRole:
     master: 3
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
-  kubernetesVersion: 1.21.8
+  kubernetesVersion: 1.29.8
 clusterConfiguration:
   apiVersion: deckhouse.io/v1
   cloud:
@@ -53,7 +54,7 @@ clusterConfiguration:
   clusterType: Cloud
   defaultCRI: Docker
   kind: ClusterConfiguration
-  kubernetesVersion: "1.21"
+  kubernetesVersion: "1.29"
   podSubnetCIDR: 10.111.0.0/16
   podSubnetNodeCIDRPrefix: "24"
   serviceSubnetCIDR: 10.222.0.0/16
@@ -71,16 +72,37 @@ allowedBundles:
   - "centos"
   - "debian"
 allowedKubernetesVersions:
-  - "1.21"
-  - "1.22"
-  - "1.23"
-  - "1.24"
-  - "1.25"
+  - "1.26"
+  - "1.27"
+  - "1.28"
+  - "1.29"
+  - "1.30"
 mcmEmergencyBrake: false
+`
+
+const nodeManagerValues = `
+internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
 `
 
 const nodeManagerAWS = `
 internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+
   clusterAutoscalerPriorities:
     "50":
     - ^xxx-staging-[0-9a-zA-Z]+$
@@ -120,7 +142,7 @@ internal:
       iops: 42
       instanceType: t2.medium
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.29"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -137,6 +159,14 @@ internal:
 
 const nodeManagerAzure = `
 internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -167,23 +197,59 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.29"
     cri:
       type: "Docker"
     cloudInstances:
       classReference:
-        kind: GCPInstanceClass
+        kind: AzureInstanceClass
         name: worker
       maxPerZone: 5
       minPerZone: 2
       zones:
       - zonea
       - zoneb
+  - name: aaa
+    instanceClass:
+      acceleratedNetworking: false
+      machineSize: test
+      urn: test
+    nodeType: CloudEphemeral
+    cloudInstances:
+      classReference:
+        kind: AzureInstanceClass
+        name: aaa
+      maxPerZone: 1
+      minPerZone: 1
+      zones:
+      - zonea
+  - name: bbb
+    instanceClass:
+      acceleratedNetworking: true
+      machineSize: bbb
+      urn: zzz
+    nodeType: CloudEphemeral
+    cloudInstances:
+      classReference:
+        kind: AzureInstanceClass
+        name: bbb
+      maxPerZone: 1
+      minPerZone: 1
+      zones:
+      - zonea
   machineControllerManagerEnabled: true
 `
 
 const nodeManagerGCP = `
 internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -214,7 +280,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.29"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -231,6 +297,14 @@ internal:
 
 const faultyNodeManagerOpenstack = `
 internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -260,7 +334,7 @@ internal:
     instanceClass:
       flavorName: m1.large
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.29"
     cri:
       type: "Docker"
     cloudInstances:
@@ -277,6 +351,14 @@ internal:
 
 const nodeManagerOpenstack = `
 internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -316,7 +398,7 @@ internal:
       - mynetwork
       - mynetwork2
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.29"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -338,7 +420,7 @@ internal:
         aaa: bbb
         ccc: ddd
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.29"
     cri:
       type: "Docker"
     cloudInstances:
@@ -354,6 +436,14 @@ internal:
 
 const nodeManagerVsphere = `
 internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -388,7 +478,7 @@ internal:
         nestedHardwareVirtualization: true
         memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.29"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -415,7 +505,7 @@ internal:
         nestedHardwareVirtualization: false
         memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.29"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -432,6 +522,14 @@ internal:
 
 const nodeManagerYandex = `
 internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -473,7 +571,7 @@ internal:
       additionalLabels: # optional
         my: label
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.29"
     cri:
       type: "Docker"
     cloudInstances:
@@ -490,6 +588,14 @@ internal:
 
 const nodeManagerStatic = `
 internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -499,13 +605,114 @@ internal:
   nodeGroups:
   - name: worker
     nodeType: Static
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.29"
     cri:
       type: "Containerd"
 `
 
+const (
+	nodeManagerStaticInstances = `
+internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  machineDeployments: {}
+  instancePrefix: myprefix
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+  kubernetesCA: myclusterca
+  bootstrapTokens:
+    worker: myworker
+  nodeGroups:
+  - name: worker
+    nodeType: Static
+    staticInstances:
+      labelSelector:
+        matchLabels:
+          node-group: worker
+    kubernetesVersion: "1.23"
+    cri:
+      type: "Containerd"
+`
+	nodeManagerStaticInstancesStaticMachineTemplate = `
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: StaticMachineTemplate
+metadata:
+  namespace: d8-cloud-instance-manager
+  name: worker
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    node-group: worker
+spec:
+  template:
+    metadata:
+      labels:
+        heritage: deckhouse
+        module: node-manager
+        node-group: worker
+    spec:
+      labelSelector:
+        matchLabels:
+          node-group: worker
+`
+	nodeManagerStaticInstancesMachineDeployment = `
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  namespace: d8-cloud-instance-manager
+  name: worker
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    node-group: worker
+spec:
+  clusterName: static
+  replicas: 0
+  template:
+    spec:
+      bootstrap:
+        dataSecretName: manual-bootstrap-for-worker
+      clusterName: static
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: StaticMachineTemplate
+        name: worker
+  selector: {}
+`
+)
+
+const openstackCIMPath = "/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager"
+const openstackCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/openstack"
+const vsphereCIMPath = "/deckhouse/ee/modules/030-cloud-provider-vsphere/cloud-instance-manager"
+const vsphereCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/vsphere"
+const vcdCAPIPath = "/deckhouse/ee/modules/030-cloud-provider-vcd/capi"
+const vcdCAPISymlink = "/deckhouse/modules/040-node-manager/capi/vcd"
+
 var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	f := SetupHelmConfig(``)
+
+	BeforeSuite(func() {
+		err := os.Symlink(openstackCIMPath, openstackCIMSymlink)
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Symlink(vsphereCIMPath, vsphereCIMSymlink)
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Symlink(vcdCAPIPath, vcdCAPISymlink)
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	AfterSuite(func() {
+		err := os.Remove(openstackCIMSymlink)
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Remove(vsphereCIMSymlink)
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Remove(vcdCAPISymlink)
+		Expect(err).ShouldNot(HaveOccurred())
+	})
 
 	BeforeEach(func() {
 		f.ValuesSetFromYaml("global", globalValues)
@@ -514,7 +721,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 	Context("Prometheus rules", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues)
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerValues)
 			setBashibleAPIServerTLSValues(f)
 			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd", "operator-prometheus-crd"]`)
 		})
@@ -620,7 +827,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-instance-manager")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
@@ -661,7 +867,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
 
-			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
@@ -712,7 +917,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-instance-manager")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
@@ -753,7 +957,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
 
-			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
@@ -817,7 +1020,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-instance-manager")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
@@ -861,7 +1063,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
 
-			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
@@ -946,7 +1147,6 @@ ccc: ddd
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-instance-manager")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
@@ -994,7 +1194,6 @@ ccc: ddd
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
 
-			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
@@ -1061,7 +1260,6 @@ ccc: ddd
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-instance-manager")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
@@ -1102,7 +1300,6 @@ ccc: ddd
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
 
-			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
@@ -1153,7 +1350,6 @@ ccc: ddd
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-instance-manager")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
@@ -1195,7 +1391,6 @@ ccc: ddd
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
 
-			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
@@ -1233,6 +1428,105 @@ ccc: ddd
 
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
+
+			assertBashibleAPIServerTLS(f)
+		})
+	})
+
+	Context("Static instances", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerStaticInstances)
+			setBashibleAPIServerTLSValues(f)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
+
+			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
+			userAuthzClusterRoleClusterEditor := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:cluster-editor")
+			userAuthzClusterRoleClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:cluster-admin")
+
+			mcmDeploy := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "machine-controller-manager")
+			mcmServiceAccount := f.KubernetesResource("ServiceAccount", "d8-cloud-instance-manager", "machine-controller-manager")
+			mcmRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "machine-controller-manager")
+			mcmRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "machine-controller-manager")
+			mcmClusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:machine-controller-manager")
+			mcmClusterRoleBinding := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:node-manager:machine-controller-manager")
+
+			clusterAutoscalerDeploy := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "cluster-autoscaler")
+			clusterAutoscalerServiceAccount := f.KubernetesResource("ServiceAccount", "d8-cloud-instance-manager", "cluster-autoscaler")
+			clusterAutoscalerRole := f.KubernetesResource("Role", "d8-cloud-instance-manager", "cluster-autoscaler")
+			clusterAutoscalerRoleBinding := f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "cluster-autoscaler")
+			clusterAutoscalerClusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:cluster-autoscaler")
+			clusterAutoscalerClusterRoleBinding := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:node-manager:cluster-autoscaler")
+
+			machineClassA := f.KubernetesResource("OpenstackMachineClass", "d8-cloud-instance-manager", "worker-02320933")
+			machineClassSecretA := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-02320933")
+			machineDeploymentA := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
+			machineClassB := f.KubernetesResource("OpenstackMachineClass", "d8-cloud-instance-manager", "worker-6bdb5b0d")
+			machineClassSecretB := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-6bdb5b0d")
+			machineDeploymentB := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-6bdb5b0d")
+
+			bashibleSecrets := map[string]object_store.KubeObject{}
+			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
+
+			bootstrapSecrets := map[string]object_store.KubeObject{}
+			bootstrapSecrets["manual-bootstrap-for-worker"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "manual-bootstrap-for-worker")
+
+			roles := map[string]object_store.KubeObject{}
+			roles["bashible"] = f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
+			roles["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
+
+			roleBindings := map[string]object_store.KubeObject{}
+			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
+			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
+
+			staticMachineTemplate := f.KubernetesResource("StaticMachineTemplate", "d8-cloud-instance-manager", "worker")
+			staticMachineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "worker")
+
+			Expect(registrySecret.Exists()).To(BeTrue())
+
+			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
+			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
+			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
+
+			Expect(mcmDeploy.Exists()).To(BeFalse())
+			Expect(mcmServiceAccount.Exists()).To(BeFalse())
+			Expect(mcmRole.Exists()).To(BeFalse())
+			Expect(mcmRoleBinding.Exists()).To(BeFalse())
+			Expect(mcmClusterRole.Exists()).To(BeFalse())
+			Expect(mcmClusterRoleBinding.Exists()).To(BeFalse())
+
+			Expect(clusterAutoscalerDeploy.Exists()).To(BeFalse())
+			Expect(clusterAutoscalerServiceAccount.Exists()).To(BeFalse())
+			Expect(clusterAutoscalerRole.Exists()).To(BeFalse())
+			Expect(clusterAutoscalerRoleBinding.Exists()).To(BeFalse())
+			Expect(clusterAutoscalerClusterRole.Exists()).To(BeFalse())
+			Expect(clusterAutoscalerClusterRoleBinding.Exists()).To(BeFalse())
+
+			Expect(machineClassA.Exists()).To(BeFalse())
+			Expect(machineClassSecretA.Exists()).To(BeFalse())
+			Expect(machineDeploymentA.Exists()).To(BeFalse())
+
+			Expect(machineClassB.Exists()).To(BeFalse())
+			Expect(machineClassSecretB.Exists()).To(BeFalse())
+			Expect(machineDeploymentB.Exists()).To(BeFalse())
+
+			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
+
+			Expect(bootstrapSecrets["manual-bootstrap-for-worker"].Exists()).To(BeTrue())
+
+			Expect(roles["bashible"].Exists()).To(BeTrue())
+			Expect(roles["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
+
+			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
+			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
+
+			Expect(staticMachineTemplate.ToYaml()).To(MatchYAML(nodeManagerStaticInstancesStaticMachineTemplate))
+			Expect(staticMachineDeployment.ToYaml()).To(MatchYAML(nodeManagerStaticInstancesMachineDeployment))
 
 			assertBashibleAPIServerTLS(f)
 		})
@@ -1336,6 +1630,30 @@ ccc: ddd
 				assertValues(mcls, "spec.tags")
 			})
 
+			It("spec.properties.networkProfile.acceleratedNetworking is not set (default true)", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "worker-02320933")
+				Expect(t.Exists()).To(BeTrue())
+				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").Bool()).To(Equal(true))
+			})
+
+			It("spec.properties.networkProfile.acceleratedNetworking is set to true", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "bbb-02320933")
+				Expect(t.Exists()).To(BeTrue())
+				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").Bool()).To(Equal(true))
+			})
+
+			It("spec.properties.networkProfile.acceleratedNetworking is set to false", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "aaa-02320933")
+				Expect(t.Exists()).To(BeTrue())
+				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").Bool()).To(Equal(false))
+			})
+
 			// Important! If checksum changes, the MachineDeployments will re-deploy!
 			// All nodes in MD will reboot! If you're not sure, don't change it.
 			It("preserves checksum", func() {
@@ -1404,6 +1722,207 @@ ccc: ddd
 				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
 				checksum := machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()
 				Expect(checksum).To(Equal("55b0c5ac9c7e72252f509bc825f5046e198eab25ebd80efa3258cfb38e881359"))
+			})
+		})
+	})
+
+	Context("CAPI", func() {
+		assertClusterResources := func(f *Config, clusterName string) {
+			cluster := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", clusterName)
+			Expect(cluster.Exists()).To(BeTrue())
+
+			Expect(cluster.Field("spec.clusterNetwork.pods.cidrBlocks.0").String()).To(Equal("10.111.0.0/16"))
+			Expect(cluster.Field("spec.clusterNetwork.services.cidrBlocks.0").String()).To(Equal("10.222.0.0/16"))
+			Expect(cluster.Field("spec.clusterNetwork.serviceDomain").String()).To(Equal("cluster.local"))
+
+			Expect(cluster.Field("spec.controlPlaneRef.apiVersion").String()).To(Equal("infrastructure.cluster.x-k8s.io/v1alpha1"))
+			Expect(cluster.Field("spec.controlPlaneRef.kind").String()).To(Equal("DeckhouseControlPlane"))
+			Expect(cluster.Field("spec.controlPlaneRef.namespace").String()).To(Equal("d8-cloud-instance-manager"))
+			Expect(cluster.Field("spec.controlPlaneRef.name").String()).To(Equal(fmt.Sprintf("%s-control-plane", clusterName)))
+
+			controlPlane := f.KubernetesResource("DeckhouseControlPlane", "d8-cloud-instance-manager", fmt.Sprintf("%s-control-plane", clusterName))
+			Expect(controlPlane.Exists()).To(BeTrue())
+
+			healthCheck := f.KubernetesResource("MachineHealthCheck", "d8-cloud-instance-manager", fmt.Sprintf("%s-machine-health-check", clusterName))
+			Expect(healthCheck.Exists()).To(BeTrue())
+			Expect(healthCheck.Field("spec.clusterName").String()).To(Equal(clusterName))
+
+			capiDeploy := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "capi-controller-manager")
+			Expect(capiDeploy.Exists()).To(BeTrue())
+		}
+
+		Context("VCD", func() {
+			const nodeManagerVCD = `
+internal:
+  capiControllerManagerEnabled: true
+  bootstrapTokens:
+    worker: mytoken
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  machineDeployments: {}
+  instancePrefix: myprefix
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+  kubernetesCA: myclusterca
+  cloudProvider:
+    type: vcd
+    machineClassKind: ""
+    capiClusterKind: "VCDCluster"
+    capiClusterAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2"
+    capiClusterName: "app"
+    capiMachineTemplateKind: "VCDMachineTemplate"
+    capiMachineTemplateAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2"
+    vcd:
+      sshPublicKey: ssh-rsa AAAAA
+      organization: org
+      virtualDataCenter: dc
+      virtualApplicationName: app
+      server: https://localhost:5000
+      username: user
+      password: pass
+      insecure: true
+  nodeGroups:
+  - name: worker
+    nodeCapacity:
+      cpu: "2"
+      memory: "2Gi"
+    instanceClass:
+      rootDiskSizeGb: 20
+      sizingPolicy: s-c572-MSK1-S1-vDC1
+      storageProfile: vHDD
+      template: Ubuntu
+      placementPolicy: policy
+    nodeType: CloudEphemeral
+    kubernetesVersion: "1.24"
+    cri:
+      type: "Docker"
+    cloudInstances:
+      classReference:
+        kind: VcdInstanceClass
+        name: worker
+      maxPerZone: 5
+      minPerZone: 4
+      zones:
+      - zonea
+      - zoneb
+  - name: worker-big
+    nodeCapacity:
+      cpu: "2"
+      memory: "2Gi"
+    instanceClass:
+      rootDiskSizeGb: 20
+      sizingPolicy: s-c572-MSK1-S1-vDC1
+      storageProfile: vHDD
+      template: catalog/Ubuntu
+      placementPolicy: policy
+    nodeType: CloudEphemeral
+    kubernetesVersion: "1.24"
+    cri:
+      type: "Docker"
+    cloudInstances:
+      classReference:
+        kind: VcdInstanceClass
+        name: worker
+      maxPerZone: 5
+      minPerZone: 4
+      zones:
+      - zonea
+  machineControllerManagerEnabled: false
+`
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerVCD)
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("Everything must render properly", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				assertVCDCluster := func(f *Config) {
+					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "capi-user-credentials")
+					Expect(secret.Exists()).To(BeTrue())
+					Expect(secret.Field("data.username").String()).To(Equal("dXNlcg==")) // user
+					Expect(secret.Field("data.password").String()).To(Equal("cGFzcw==")) // pass
+
+					vcdCluster := f.KubernetesResource("VCDCluster", "d8-cloud-instance-manager", "app")
+					Expect(vcdCluster.Exists()).To(BeTrue())
+					Expect(vcdCluster.Field("spec.site").String()).To(Equal("https://localhost:5000"))
+					Expect(vcdCluster.Field("spec.org").String()).To(Equal("org"))
+					Expect(vcdCluster.Field("spec.ovdc").String()).To(Equal("dc"))
+
+					Expect(vcdCluster.Field("spec.proxyConfigSpec.httpProxy").String()).To(Equal("https://example.com"))
+					Expect(vcdCluster.Field("spec.proxyConfigSpec.httpsProxy").String()).To(Equal("https://example.com"))
+					Expect(vcdCluster.Field("spec.proxyConfigSpec.noProxy").AsStringSlice()).To(Equal([]string{
+						"127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16", "example.com",
+					}))
+				}
+
+				type mdParams struct {
+					name         string
+					templateName string
+				}
+
+				assertMachineDeploymentAndItsDeps := func(f *Config, d mdParams) {
+					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
+					Expect(md.Exists()).To(BeTrue())
+
+					Expect(md.Field("spec.clusterName").String()).To(Equal("app"))
+					Expect(md.Field("spec.template.spec.clusterName").String()).To(Equal("app"))
+					Expect(md.Field("spec.template.spec.bootstrap.dataSecretName").String()).To(Equal(d.templateName))
+					Expect(md.Field("spec.template.spec.infrastructureRef.name").String()).To(Equal(d.templateName))
+
+					annotations := md.Field("metadata.annotations").Map()
+					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size"].String()).To(Equal("4"))
+					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size"].String()).To(Equal("5"))
+					Expect(annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"].String()).To(Equal("2"))
+					Expect(annotations["capacity.cluster-autoscaler.kubernetes.io/memory"].String()).To(Equal("2Gi"))
+
+					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", d.templateName)
+					Expect(secret.Exists()).To(BeTrue())
+
+					vcdTemplate := f.KubernetesResource("VCDMachineTemplate", "d8-cloud-instance-manager", d.templateName)
+					Expect(vcdTemplate.Exists()).To(BeTrue())
+
+					Expect(vcdTemplate.Field("spec.template.spec.diskSize").String()).To(Equal("21474836480"))
+					Expect(vcdTemplate.Field("spec.template.spec.sizingPolicy").String()).To(Equal("s-c572-MSK1-S1-vDC1"))
+					Expect(vcdTemplate.Field("spec.template.spec.placementPolicy").String()).To(Equal("policy"))
+					Expect(vcdTemplate.Field("spec.template.spec.storageProfile").String()).To(Equal("vHDD"))
+					Expect(vcdTemplate.Field("spec.template.spec.template").String()).To(Equal("Ubuntu"))
+
+					Expect(vcdTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
+					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
+				}
+
+				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
+				Expect(registrySecret.Exists()).To(BeTrue())
+
+				assertClusterResources(f, "app")
+
+				assertVCDCluster(f)
+
+				// zonea
+				assertMachineDeploymentAndItsDeps(f, mdParams{
+					name:         "myprefix-worker-02320933",
+					templateName: "worker-6656f66e",
+				})
+
+				// zoneb
+				assertMachineDeploymentAndItsDeps(f, mdParams{
+					name:         "myprefix-worker-6bdb5b0d",
+					templateName: "worker-d30762c9",
+				})
+
+				vcdTemplateWithCatalog := f.KubernetesResource("VCDMachineTemplate", "d8-cloud-instance-manager", "worker-big-c10b569f")
+				Expect(vcdTemplateWithCatalog.Exists()).To(BeTrue())
+				Expect(vcdTemplateWithCatalog.Field("spec.template.spec.template").String()).To(Equal("Ubuntu"))
+				Expect(vcdTemplateWithCatalog.Field("spec.template.spec.catalog").String()).To(Equal("catalog"))
 			})
 		})
 	})

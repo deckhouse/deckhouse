@@ -101,6 +101,7 @@ metadata:
 spec:
   certificateOwnerRef: false
   secretName: ingress-tls-status
+  {{ include "helm_lib_module_generate_common_name" (list . "status") | nindent 2 }}
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "status") }}
   issuerRef:

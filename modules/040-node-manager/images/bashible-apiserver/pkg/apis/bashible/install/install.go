@@ -20,8 +20,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-	"d8.io/bashible/pkg/apis/bashible"
-	"d8.io/bashible/pkg/apis/bashible/v1alpha1"
+	"bashible-apiserver/pkg/apis/bashible"
+	"bashible-apiserver/pkg/apis/bashible/v1alpha1"
 )
 
 // Install registers the API group and adds types to a scheme

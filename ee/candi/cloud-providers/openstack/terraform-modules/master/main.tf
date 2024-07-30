@@ -2,27 +2,35 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  metadata_tags = merge(var.tags, var.additional_tags)
+  metadata_tags       = merge(var.tags, var.additional_tags)
+  server_group_policy = lookup(var.server_group, "policy", "")
 }
 
 data "openstack_images_image_v2" "master" {
   name = var.image_name
 }
 
-resource "openstack_blockstorage_volume_v2" "master" {
-  count             = var.root_disk_size == "" ? 0 : 1
-  name              = join("-", [var.prefix, "master-root-volume", var.node_index])
-  size              = var.root_disk_size
-  image_id          = data.openstack_images_image_v2.master.id
-  metadata          = local.metadata_tags
-  volume_type       = var.volume_type
-  availability_zone = var.volume_zone
+resource "openstack_blockstorage_volume_v3" "master" {
+  count                = var.root_disk_size == "" ? 0 : 1
+  name                 = join("-", [var.prefix, "master-root-volume", var.node_index])
+  size                 = var.root_disk_size
+  image_id             = data.openstack_images_image_v2.master.id
+  metadata             = local.metadata_tags
+  volume_type          = var.volume_type
+  availability_zone    = var.volume_zone
+  enable_online_resize = true
   lifecycle {
     ignore_changes = [
       metadata,
       availability_zone,
     ]
   }
+}
+
+resource "openstack_compute_servergroup_v2" "master" {
+  count    = local.server_group_policy == "AntiAffinity" ? 1 : 0
+  name     = var.prefix
+  policies = ["anti-affinity"]
 }
 
 resource "openstack_compute_instance_v2" "master" {
@@ -43,7 +51,7 @@ resource "openstack_compute_instance_v2" "master" {
   }
 
   dynamic "block_device" {
-    for_each = var.root_disk_size == "" ? [] : list(openstack_blockstorage_volume_v2.master[0])
+    for_each = var.root_disk_size == "" ? [] : list(openstack_blockstorage_volume_v3.master[0])
     content {
       uuid                  = block_device.value["id"]
       boot_index            = 0
@@ -60,6 +68,20 @@ resource "openstack_compute_instance_v2" "master" {
   }
 
   metadata = local.metadata_tags
+
+  dynamic "scheduler_hints" {
+    for_each = (
+      local.server_group_policy == "AntiAffinity" ?
+        list(openstack_compute_servergroup_v2.master[0]) :
+      local.server_group_policy == "ManuallyManaged" ?
+        list({"id": lookup(var.server_group.manuallyManaged, "id", "")}) :
+      []
+   )
+
+    content {
+      group = scheduler_hints.value["id"]
+    }
+  }
 }
 
 resource "openstack_compute_floatingip_v2" "master" {
@@ -79,4 +101,3 @@ resource "openstack_compute_floatingip_associate_v2" "master" {
     ]
   }
 }
-

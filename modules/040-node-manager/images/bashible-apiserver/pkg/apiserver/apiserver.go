@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -31,15 +31,13 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/client-go/dynamic/dynamicinformer"
-	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
 
-	"d8.io/bashible/pkg/apis/bashible"
-	"d8.io/bashible/pkg/apis/bashible/install"
-	bashibleregistry "d8.io/bashible/pkg/registry"
-	"d8.io/bashible/pkg/template"
+	"bashible-apiserver/pkg/apis/bashible"
+	"bashible-apiserver/pkg/apis/bashible/install"
+	bashibleregistry "bashible-apiserver/pkg/registry"
+	"bashible-apiserver/pkg/template"
 )
 
 var (
@@ -130,7 +128,7 @@ func (c completedConfig) New() (*BashibleServer, error) {
 
 	// Config hardcode, could be put to `ExtraConfig`
 	const (
-		templatesRootDir = "/bashible/templates"
+		templatesRootDir = "/deckhouse/candi"
 		resyncTimeout    = 30 * time.Minute
 	)
 
@@ -155,21 +153,6 @@ func (c completedConfig) New() (*BashibleServer, error) {
 	}
 
 	return s, nil
-}
-
-// newBashibleInformerFactory creates informer factory for particular namespace and label selector.
-// Bashible apiserver is expected to use single namespace and only related resources.
-func newBashibleInformerFactory(kubeClient kubernetes.Interface, resync time.Duration, namespace, labelSelector string) (informers.SharedInformerFactory, error) {
-	factory := informers.NewSharedInformerFactoryWithOptions(
-		kubeClient,
-		resync,
-		informers.WithNamespace(namespace),
-		informers.WithTweakListOptions(func(opts *metav1.ListOptions) {
-			opts.LabelSelector = labelSelector
-		}),
-	)
-
-	return factory, nil
 }
 
 func newNodeGroupConfigurationInformerFactory(kubeClient client.Client, resync time.Duration) dynamicinformer.DynamicSharedInformerFactory {

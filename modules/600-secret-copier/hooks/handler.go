@@ -258,8 +258,12 @@ func createSecret(k8 k8s.Client, secret *Secret) error {
 		Data: secret.Data,
 		Type: secret.Type,
 	}
+
+	// Ignore error if target namespace is in Terminating phase
 	if _, err := k8.CoreV1().Secrets(secret.Namespace).Create(context.TODO(), s, metav1.CreateOptions{}); err != nil {
-		return formatSecretOperationError(secret, err, "create")
+		if !errors.HasStatusCause(err, v1.NamespaceTerminatingCause) {
+			return formatSecretOperationError(secret, err, "create")
+		}
 	}
 
 	return nil

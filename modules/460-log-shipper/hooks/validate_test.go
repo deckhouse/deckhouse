@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"testing"
@@ -27,7 +28,10 @@ func TestValidateConfigWithVector(t *testing.T) {
 		t.Skip("Do not run this on CI")
 	}
 
-	dockerImage := "timberio/vector:0.27.0-debian"
+	containerImage := os.Getenv("D8_LOG_SHIPPER_VECTOR_VALIDATE_IMAGE")
+	if containerImage == "" {
+		containerImage = "timberio/vector:0.31.0-debian"
+	}
 
 	script := `
 	set -e
@@ -38,28 +42,30 @@ func TestValidateConfigWithVector(t *testing.T) {
 	  vector validate --config-json $file --config-json "${path}/__default-config.json";
 	done`
 
-	cmd := exec.Command(
-		"docker",
-		"run",
-		"-t",
-		"-v", "/deckhouse:/deckhouse",
-		"-e", "VECTOR_SELF_POD_NAME=test", // to avoid warnings, this variable is set in the container env section
-		"-e", "VECTOR_SELF_NODE_NAME=test",
-		"-e", "KUBERNETES_SERVICE_HOST=127.0.0.1",
-		"-e", "KUBERNETES_SERVICE_PORT=6443",
-		"--entrypoint", "bash",
-		// Kubernetes in-cluster config values required for validation
-		"-v", "/dev/null:/var/run/secrets/kubernetes.io/serviceaccount/token",
-		"-v", "/dev/null:/var/run/secrets/kubernetes.io/serviceaccount/namespace",
-		"-v", "/dev/null:/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
-		dockerImage,
-		"-c", script,
-	)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	t.Run(fmt.Sprintf("Executing from the %q image", containerImage), func(t *testing.T) {
+		cmd := exec.Command(
+			"docker",
+			"run",
+			"-t",
+			"-v", "/deckhouse:/deckhouse",
+			"-e", "VECTOR_SELF_POD_NAME=test", // to avoid warnings, this variable is set in the container env section
+			"-e", "VECTOR_SELF_NODE_NAME=test",
+			"-e", "KUBERNETES_SERVICE_HOST=127.0.0.1",
+			"-e", "KUBERNETES_SERVICE_PORT=6443",
+			"--entrypoint", "bash",
+			// Kubernetes in-cluster config values required for validation
+			"-v", "/dev/null:/var/run/secrets/kubernetes.io/serviceaccount/token",
+			"-v", "/dev/null:/var/run/secrets/kubernetes.io/serviceaccount/namespace",
+			"-v", "/dev/null:/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+			containerImage,
+			"-c", script,
+		)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 
-	if err := cmd.Run(); err != nil {
-		t.Fatalf(err.Error())
-	}
+		if err := cmd.Run(); err != nil {
+			t.Fatalf(err.Error())
+		}
+	})
 }

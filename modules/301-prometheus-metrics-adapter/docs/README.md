@@ -5,11 +5,11 @@ search: autoscaler, HorizontalPodAutoscaler
 
 This module allows [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) and [VPA](../../modules/302-vertical-pod-autoscaler/) autoscalers base their decisions on various metrics.
 
-It installs an [implementation](https://github.com/DirectXMan12/k8s-prometheus-adapter) of the Kubernetes [resource metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/resource-metrics-api.md), [custom metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/custom-metrics-api.md), and [external metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/external-metrics-api.md) to get Prometheus metrics.
+It installs an [implementation](https://github.com/kubernetes-sigs/prometheus-adapter) of the Kubernetes [resource metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/resource-metrics-api.md), [custom metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/custom-metrics-api.md), and [external metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/external-metrics-api.md) to get Prometheus metrics.
 
 As a result:
 - `kubectl top` can collect Prometheus metrics via the adapter;
-- [autoscaling/v2beta2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#metricspec-v2beta2-autoscaling) can be used for scaling applications (HPA);
+- [autoscaling/v2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#objectmetricsource-v2-autoscaling) can be used for scaling applications (HPA);
 - Prometheus data can be obtained using the Kubernetes API and utilized in other modules (Vertical Pod Autoscaler, etc.).
 
 The following parameters serve as a basis for scaling:

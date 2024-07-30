@@ -1,0 +1,30 @@
+---
+# Source: kruise/templates/manager.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: kruise-webhook-service
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kruise")) | nindent 2 }}
+spec:
+  ports:
+    - port: 443
+      targetPort: webhook-server
+  selector:
+    control-plane: controller-manager
+    app: kruise
+---
+# Source: kruise/templates/manager.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: kruise-state-metrics
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kruise")) | nindent 2 }}
+spec:
+  ports:
+    - port: 8443
+      targetPort: https-metrics
+  selector:
+    control-plane: controller-manager
+    app: kruise

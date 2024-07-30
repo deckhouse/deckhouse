@@ -8,8 +8,10 @@ locals {
   zone                 = element(tolist(setintersection(keys(local.volume_type_map), local.actual_zones)), var.nodeIndex)
   volume_type          = local.volume_type_map[local.zone]
   flavor_name          = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
-  root_disk_size       = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "")
+  root_disk_size       = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "") # Openstack can have disks predefined within vm flavours, so we do not set any defaults here
+  etcd_volume_size     = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb
   additional_tags      = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
+  server_group         = lookup(var.providerClusterConfiguration.masterNodeGroup, "serverGroup", {})
 }
 
 module "network_security_info" {
@@ -25,21 +27,23 @@ module "volume_zone" {
 }
 
 module "master" {
-  source              = "../../../terraform-modules/master"
-  prefix              = local.prefix
-  node_index          = var.nodeIndex
-  cloud_config        = var.cloudConfig
-  flavor_name         = local.flavor_name
-  root_disk_size      = local.root_disk_size
-  additional_tags     = local.additional_tags
-  image_name          = local.image_name
-  keypair_ssh_name    = data.openstack_compute_keypair_v2.ssh.name
-  network_port_ids    = list(local.network_security ? openstack_networking_port_v2.master_internal_with_security[0].id : openstack_networking_port_v2.master_internal_without_security[0].id)
-  floating_ip_network = lookup(local.standard, "bastion", {}) == {} ? data.openstack_networking_network_v2.external.name : ""
-  tags                = local.tags
-  zone                = local.zone
-  volume_type         = local.volume_type
-  volume_zone = module.volume_zone.zone
+  source                = "../../../terraform-modules/master"
+  prefix                = local.prefix
+  node_index            = var.nodeIndex
+  cloud_config          = var.cloudConfig
+  flavor_name           = local.flavor_name
+  root_disk_size        = local.root_disk_size
+  additional_tags       = local.additional_tags
+  image_name            = local.image_name
+  keypair_ssh_name      = data.openstack_compute_keypair_v2.ssh.name
+  network_port_ids      = list(local.network_security ? openstack_networking_port_v2.master_internal_with_security[0].id : openstack_networking_port_v2.master_internal_without_security[0].id)
+  internal_network_cidr = local.internal_network_cidr
+  floating_ip_network   = lookup(local.standard, "bastion", {}) == {} ? data.openstack_networking_network_v2.external.name : ""
+  tags                  = local.tags
+  zone                  = local.zone
+  volume_type           = local.volume_type
+  volume_zone           = module.volume_zone.zone
+  server_group          = local.server_group
 }
 
 module "kubernetes_data" {
@@ -47,6 +51,7 @@ module "kubernetes_data" {
   prefix      = local.prefix
   node_index  = var.nodeIndex
   master_id   = module.master.id
+  volume_size = local.etcd_volume_size
   volume_type = local.volume_type
   volume_zone = module.volume_zone.zone
   tags        = local.tags

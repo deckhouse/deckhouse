@@ -1,0 +1,94 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    meta.helm.sh/release-name: deckhouse
+    meta.helm.sh/release-namespace: d8-system
+    modules.deckhouse.io/registry-spec-checksum: 81fdf7f3b8420e50645c30d01c2f052c
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/release-exists
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    heritage: deckhouse
+    module: deckhouse
+  name: deckhouse
+  resourceVersion: "1000"
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: registry.deckhouse.io/deckhouse/ee/modules
+    scheme: HTTPS
+  releaseChannel: ""
+status:
+  message: Some errors occurred. Inspect status for details
+  moduleErrors:
+  - error: |-
+      fetch image error: fetch image error: GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/baz/release/manifests/alpha:
+            MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]
+    name: baz
+  modules:
+  - name: bar
+  - name: baz
+    policy: deckhouse-baz
+  - name: foo
+  modulesCount: 3
+  syncTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  labels:
+    module: bar
+    modules.deckhouse.io/update-policy: ""
+    release-checksum: 853ae90f0351324bd73ea615e6487517
+    source: deckhouse
+  name: bar-v1.2.3
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: deckhouse
+    uid: ""
+  resourceVersion: "1"
+spec:
+  moduleName: bar
+  version: 1.2.3
+  weight: 900
+status:
+  approved: false
+  message: ""
+  pullDuration: 0s
+  size: 0
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  labels:
+    module: foo
+    modules.deckhouse.io/update-policy: ""
+    release-checksum: 853ae90f0351324bd73ea615e6487517
+    source: deckhouse
+  name: foo-v1.2.3
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: deckhouse
+    uid: ""
+  resourceVersion: "1"
+spec:
+  moduleName: foo
+  version: 1.2.3
+  weight: 900
+status:
+  approved: false
+  message: ""
+  pullDuration: 0s
+  size: 0
+  transitionTime: null

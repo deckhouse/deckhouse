@@ -27,18 +27,26 @@ package template_tests
 import (
 	"encoding/base64"
 	"fmt"
+	"regexp"
+	"sort"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "")
 }
+
+var (
+	zonesRE   = regexp.MustCompile(`--zone=([a-z]+)`)
+	projectRE = regexp.MustCompile(`--project=([a-z\-]+)`)
+)
 
 const globalValues = `
   clusterConfiguration:
@@ -48,9 +56,9 @@ const globalValues = `
       provider: GCP
     clusterDomain: cluster.local
     clusterType: "Cloud"
-    defaultCRI: Docker
+    defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.23"
+    kubernetesVersion: "1.29"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -62,7 +70,7 @@ const globalValues = `
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.23.0
+    kubernetesVersion: 1.29.0
 `
 
 const moduleValues = `
@@ -87,22 +95,37 @@ const moduleValues = `
       type: pd-ssd
       replicationType: regional-pd
     providerClusterConfiguration:
-      sshKey: mysshkey
+      apiVersion: deckhouse.io/v1
+      kind: GCPClusterConfiguration
+      layout: WithoutNAT
+      sshKey: "mysshkey"
+      subnetworkCIDR: 10.160.0.0/16
+      masterNodeGroup:
+        replicas: 1
+        zones:
+          - test-a
+        instanceClass:
+          machineType: n1-standard-4
+          image: ubuntu
+          diskSizeGB: 20
+          disableExternalIP: false
       provider:
         region: myregion
-        serviceAccountJSON: mysvcacckey
+        serviceAccountJSON: '{"project_id": "test"}'
     providerDiscoveryData:
-      disableExternalIP: true
-      instances:
-        diskSizeGb: 50
-        diskType: disk-type
-        image: image
-        networkTags: ["tag1", "tag2"]
-        labels:
-          test: test
+      apiVersion: deckhouse.io/v1
+      kind: GCPCloudDiscoveryData
       networkName: mynetname
       subnetworkName: mysubnetname
       zones: ["zonea", "zoneb"]
+      disableExternalIP: false
+      instances:
+        image: image
+        diskSizeGb: 50
+        diskType: disk-type
+        networkTags: ["tag1", "tag2"]
+        labels:
+            test: test
 `
 
 var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
@@ -158,7 +181,7 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 			// user story #1
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
 			expectedProviderRegistrationJSON := `{
-          "disableExternalIP": true,
+          "disableExternalIP": false,
           "diskSizeGb": 50,
           "diskType": "disk-type",
           "image": "image",
@@ -171,7 +194,7 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
             "tag2"
           ],
           "region": "myregion",
-          "serviceAccountJSON": "mysvcacckey",
+          "serviceAccountJSON": "{\"project_id\": \"test\"}",
           "sshKey": "mysshkey",
           "subnetworkName": "mysubnetname"
         }`
@@ -266,4 +289,96 @@ storageclass.kubernetes.io/is-default-class: "true"
 		})
 	})
 
+	Context("Cloud data discoverer", func() {
+		deployment := func(f *Config) object_store.KubeObject {
+			return f.KubernetesResource("Deployment", "d8-cloud-provider-gcp", "cloud-data-discoverer")
+		}
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderGcp", moduleValues)
+			f.ValuesSet("cloudProviderGcp.internal.providerClusterConfiguration.provider.serviceAccountJSON", `{"project_id": "my-proj"}`)
+			f.HelmRender()
+		})
+
+		It("Should render cloud data discoverer deployment with two containers", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			d := deployment(f)
+			Expect(d.Exists()).To(BeTrue())
+
+			Expect(d.Field("spec.template.spec.containers.0.name").String()).To(Equal("cloud-data-discoverer"))
+			Expect(d.Field("spec.template.spec.containers.1.name").String()).To(Equal("kube-rbac-proxy"))
+		})
+
+		It("Should render all zones in arguments", func() {
+			d := deployment(f)
+			Expect(d.Exists()).To(BeTrue())
+
+			args := d.Field("spec.template.spec.containers.0.args").Array()
+			zones := make([]string, 0, 2)
+
+			for _, a := range args {
+				found := zonesRE.FindAllStringSubmatch(a.String(), -1)
+				if len(found) > 0 {
+					zones = append(zones, found[0][1])
+				}
+			}
+
+			sort.Strings(zones)
+
+			Expect(zones).To(Equal([]string{"zonea", "zoneb"}))
+		})
+
+		It("Should render project in arguments", func() {
+			d := deployment(f)
+			Expect(d.Exists()).To(BeTrue())
+
+			args := d.Field("spec.template.spec.containers.0.args").Array()
+
+			project := ""
+			for _, a := range args {
+				found := projectRE.FindAllStringSubmatch(a.String(), -1)
+				if len(found) > 0 {
+					project = found[0][1]
+				}
+			}
+			Expect(project).To(Equal("my-proj"))
+		})
+
+		Context("vertical-pod-autoscaler-crd module enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd"]`)
+				f.ValuesSetFromYaml("cloudProviderGcp", moduleValues)
+				f.HelmRender()
+			})
+
+			It("Should render VPA resource", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				d := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-gcp", "cloud-data-discoverer")
+				Expect(d.Exists()).To(BeTrue())
+			})
+		})
+
+		Context("vertical-pod-autoscaler-crd module disabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("global.enabledModules", `[]`)
+				f.ValuesSetFromYaml("cloudProviderGcp", moduleValues)
+				f.HelmRender()
+			})
+
+			It("Should render VPA resource", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				d := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-gcp", "cloud-data-discoverer")
+				Expect(d.Exists()).To(BeFalse())
+			})
+		})
+	})
 })

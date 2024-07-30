@@ -7,6 +7,11 @@ properties:
         description: |
           Настройки выпуска ServiceAccount'ов.
         properties:
+          issuer:
+            description: |
+              Издатель ServiceAccount'ов. Это URL API-сервера. Значения этого поля используются как `iss` claim токена и для проверки JWT-токенов ServiceAccount.
+
+              **Обратите внимание**, что все поды в кластере, использующие токены ServiceAccount, должны быть перезапущены при изменении этой опции.
           additionalAPIAudiences:
             description: |
               Список API audience'ов, которые следует добавить при создании токенов ServiceAccount.
@@ -14,8 +19,10 @@ properties:
         description: |
           Список включенных дополнительных [admission plugin'ов](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers).
 
-          **Обратите внимание**, что помимо включенных по умолчанию в Kubernetes admission plugin'ов, также всегда включены (без возможности отключения) следующие admission plugin'ы:
-          - `ExtendedResourceToleration`
+          **Обратите внимание**, что, помимо включенных по умолчанию в Kubernetes admission plugin'ов, также всегда включены (без возможности отключения) следующие admission plugin'ы:
+          - `ExtendedResourceToleration`;
+          - `PodNodeSelector`;
+          - `PodTolerationRestriction`;
           - `EventRateLimit`, который использует следующую конфигурацию:
 
             ```yaml
@@ -33,7 +40,7 @@ properties:
         description: |
           Прослушивание на `0.0.0.0`.
 
-          По умолчанию API-сервер слушает на hostIP, который обычно соответствует Internal адресу узла, но это зависит от типа кластера (Static или Cloud) и выбранной схемы размещения (layout).
+          По умолчанию API-сервер слушает на hostIP, который обычно соответствует Internal-адресу узла, но это зависит от типа кластера (Static или Cloud) и выбранной схемы размещения (layout).
       certSANs:
         description: |
           Массив строк, список дополнительных [SANs](https://en.wikipedia.org/wiki/Subject_Alternative_Name), с которыми будет сгенерирован сертификат API-сервера.
@@ -71,6 +78,8 @@ properties:
           webhookCacheTTL:
             description: |
               Продолжительность кэширования ответов от аутентификационного webhook'a.
+
+              Задается в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
       authz:
         description: |
           Параметры авторизации клиентов Kubernetes API.
@@ -79,10 +88,10 @@ properties:
         properties:
           webhookURL:
             description: |
-              URL авторизациионного webhook'а.
+              URL webhook'а авторизации.
           webhookCA:
             description: |
-              CA авторизациионного webhook'a.
+              CA webhook'а авторизации.
       loadBalancer:
         description: |
           Создание сервиса `kube-system/d8-control-plane-apiserver` с типом `LoadBalancer`.
@@ -90,21 +99,21 @@ properties:
           annotations:
             description: |
               Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
-              > **Внимание!** Модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа Load Balancer'а применяются только при создании сервиса, то для обновления подобных параметров вам необходимо будет удалить и добавить параметр `apiserver.loadBalancer`.
+              > **Внимание!** Модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа LoadBalancer'а применяются только при создании сервиса, для обновления подобных параметров вам необходимо будет удалить и добавить параметр `apiserver.loadBalancer`.
           sourceRanges:
             description: |
               Список CIDR, которым разрешен доступ к API.
 
-              Облачный провайдер может не поддерживать данную опцию и игнорировать её.
+              Облачный провайдер может не поддерживать данную опцию и игнорировать ее.
           port:
             description: |
               Внешний порт TCP-балансировщика.
       auditPolicyEnabled:
         description: |
-          Применять [дополнительные политики аудита](faq.html#как-настроить-дополнительные-политики-аудита) с конфигурацией из Secret'а `kube-system/audit-policy`.
+          Применяет [дополнительные политики аудита](faq.html#как-настроить-дополнительные-политики-аудита) с конфигурацией из Secret'а `kube-system/audit-policy`.
       basicAuditPolicyEnabled:
         description: |
-          Применять базовые политики аудита Deckhouse.
+          Применяет базовые политики аудита Deckhouse.
       auditLog:
         description: |
           Параметры аудита.
@@ -129,7 +138,7 @@ properties:
         description: |
           [quota-backend-bytes](https://etcd.io/docs/v3.5/dev-guide/limit/#storage-size-limit) параметр.
           Deckhouse автоматически управляет `quota-backend-bytes` параметром.
-          Если параметр `maxDbSize` установлен, то Deckhouse будет использовать это значение для параметра `quota-backend-bytes` etcd.
+          Если параметр `maxDbSize` установлен, Deckhouse будет использовать это значение для параметра `quota-backend-bytes` etcd.
 
           Минимальное значение: 512MB.
 
@@ -141,8 +150,8 @@ properties:
           Массив имен внешних etcd member'ов (эти member'ы не будут удаляться).
   nodeMonitorGracePeriodSeconds:
     description: |
-      Число секунд, через которое узел перейдёт в состояние `Unreachable` при потере с ним связи.
+      Число секунд, через которое узел перейдет в состояние `Unreachable` при потере с ним связи.
   failedNodePodEvictionTimeoutSeconds:
     description: |
-      Количество секунд, по прошествии которых с узла в статусе `Unreachable` будут удалены Pod'ы.
-      > **Важно!** При изменении этого параметра потребуется перезапуск Pod'ов.
+      Количество секунд, по прошествии которых с узла в статусе `Unreachable` будут удалены поды.
+      > **Важно!** При изменении этого параметра потребуется перезапуск подов.

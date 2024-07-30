@@ -32,6 +32,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/autoscaler/capacity"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
@@ -41,6 +43,9 @@ const (
 	CRITypeDocker           = "Docker"
 	CRITypeContainerd       = "Containerd"
 	NodeGroupDefaultCRIType = CRITypeContainerd
+
+	errorStatusField       = "error"
+	kubeVersionStatusField = "kubernetesVersion"
 )
 
 type InstanceClassCrdInfo struct {
@@ -89,7 +94,7 @@ func applyMachineDeploymentCrdFilter(obj *unstructured.Unstructured) (go_hook.Fi
 }
 
 func applyCloudProviderSecretKindZonesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secretData, err := DecodeDataFromSecret(obj)
+	secretData, err := decodeDataFromSecret(obj)
 	if err != nil {
 		return nil, err
 	}
@@ -98,6 +103,17 @@ func applyCloudProviderSecretKindZonesFilter(obj *unstructured.Unstructured) (go
 		"instanceClassKind": secretData["instanceClassKind"],
 		"zones":             secretData["zones"],
 	}, nil
+}
+
+func applyInstanceTypesCatalog(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	c := v1alpha1.InstanceTypesCatalog{}
+
+	err := sdk.FromUnstructured(obj, &c)
+	if err != nil {
+		return nil, err
+	}
+
+	return capacity.NewInstanceTypesCatalog(c.InstanceTypes), nil
 }
 
 var getCRDsHookConfig = &go_hook.HookConfig{
@@ -151,6 +167,15 @@ var getCRDsHookConfig = &go_hook.HookConfig{
 				MatchNames: []string{"d8-node-manager-cloud-provider"},
 			},
 			FilterFunc: applyCloudProviderSecretKindZonesFilter,
+		},
+		{
+			Name:       "instance_types_catalog",
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "InstanceTypesCatalog",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{v1alpha1.CloudDiscoveryDataResourceName},
+			},
+			FilterFunc: applyInstanceTypesCatalog,
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
@@ -223,7 +248,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		}
 	}
 
-	controlPlaneMinVersion := SemverMin(controlPlaneKubeVersions)
+	controlPlaneMinVersion := semverMin(controlPlaneKubeVersions)
 
 	// Default zones. Take them from input.Snapshots["machine_deployments"]
 	// and from input.Snapshots["cloud_provider_secret"].zones
@@ -258,9 +283,20 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	// Expire node_group_info metric.
 	input.MetricsCollector.Expire("")
 
+	iCatalogRaw := input.Snapshots["instance_types_catalog"]
+	var instanceTypeCatalog *capacity.InstanceTypesCatalog
+
+	if len(iCatalogRaw) == 1 {
+		instanceTypeCatalog = iCatalogRaw[0].(*capacity.InstanceTypesCatalog)
+	} else {
+		instanceTypeCatalog = capacity.NewInstanceTypesCatalog(nil)
+	}
+
 	for _, v := range input.Snapshots["ngs"] {
 		nodeGroup := v.(NodeGroupCrdInfo)
 		ngForValues := nodeGroupForValues(nodeGroup.Spec.DeepCopy())
+		// set observed status fields
+		input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(v, applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", nodeGroup.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
 		// Copy manualRolloutID and name.
 		ngForValues["name"] = nodeGroup.Name
 		ngForValues["manualRolloutID"] = nodeGroup.ManualRolloutID
@@ -298,7 +334,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				}
 
 				input.LogEntry.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
-				setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, errorMsg)
+				setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
 				continue
 			}
 
@@ -326,7 +362,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				}
 
 				input.LogEntry.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
-				setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, errorMsg)
+				setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
 				continue
 			}
 
@@ -335,10 +371,10 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			if nodeGroup.Spec.CloudInstances.MinPerZone != nil && nodeGroup.Spec.CloudInstances.MaxPerZone != nil {
 				if *nodeGroup.Spec.CloudInstances.MinPerZone == 0 && *nodeGroup.Spec.CloudInstances.MaxPerZone > 0 {
 					// capacity calculation required only for scaling from zero, we can save some time in the other cases
-					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec)
+					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec, instanceTypeCatalog)
 					if err != nil {
 						input.LogEntry.Errorf("Calculate capacity failed for: %s with spec: %v. Error: %s", nodeGroupInstanceClassKind, instanceClassSpec, err)
-						setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types. ScaleFromZero would not work until you set a capacity spec into the %s/%s", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name))
+						setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types. ScaleFromZero would not work until you set a capacity spec into the %s/%s", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name))
 						continue
 					}
 
@@ -363,7 +399,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					errorMsg := fmt.Sprintf("unknown cloudInstances.zones: %v", unknownZones)
 					input.LogEntry.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
 
-					setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, errorMsg)
+					setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
 					continue
 				}
 			}
@@ -395,7 +431,10 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				effectiveKubeVer = controlPlaneMinVersion
 			}
 		}
-		ngForValues["kubernetesVersion"] = SemverMajMin(effectiveKubeVer)
+		effectiveKubeVerMajMin := semverMajMin(effectiveKubeVer)
+		ngForValues[kubeVersionStatusField] = effectiveKubeVerMajMin
+
+		setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, kubeVersionStatusField, effectiveKubeVerMajMin)
 
 		// Detect CRI type. Default CRI type is 'Docker' for Kubernetes version less than 1.19.
 		v1_19_0, _ := semver.NewVersion("1.19.0")
@@ -433,6 +472,11 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		cri.Type = newCRIType
 		ngForValues["cri"] = cri
 
+		fencing, ok := ngForValues["fencing"].(ngv1.Fencing)
+		if ok {
+			ngForValues["fencing"] = fencing
+		}
+
 		// Calculate update epoch
 		// updateEpoch is a value that changes every 4 hour for a particular NodeGroup in the cluster.
 		// Values are spread over 4 hour window to update nodes at different times.
@@ -443,7 +487,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		ngForValues["updateEpoch"] = updateEpoch
 
 		// Reset status error for current NodeGroup.
-		setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, "")
+		setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, "")
 
 		ngBytes, _ := cljson.Marshal(ngForValues)
 		finalNodeGroups = append(finalNodeGroups, json.RawMessage(ngBytes))
@@ -468,6 +512,9 @@ func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{
 	if !nodeGroupSpec.CRI.IsEmpty() {
 		res["cri"] = nodeGroupSpec.CRI
 	}
+	if nodeGroupSpec.StaticInstances != nil {
+		res["staticInstances"] = *nodeGroupSpec.StaticInstances
+	}
 	if !nodeGroupSpec.CloudInstances.IsEmpty() {
 		res["cloudInstances"] = nodeGroupSpec.CloudInstances
 	}
@@ -486,17 +533,10 @@ func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{
 	if !nodeGroupSpec.Kubelet.IsEmpty() {
 		res["kubelet"] = nodeGroupSpec.Kubelet
 	}
-
-	return res
-}
-
-func setNodeGroupErrorStatus(patcher *object_patch.PatchCollector, nodeGroupName, message string) {
-	statusErrorPatch := map[string]interface{}{
-		"status": map[string]interface{}{
-			"error": message,
-		},
+	if !nodeGroupSpec.Fencing.IsEmpty() {
+		res["fencing"] = nodeGroupSpec.Fencing
 	}
-	patcher.MergePatch(statusErrorPatch, "deckhouse.io/v1", "NodeGroup", "", nodeGroupName, object_patch.WithSubresource("/status"))
+	return res
 }
 
 var epochTimestampAccessor = func() int64 {
@@ -512,7 +552,7 @@ var detectInstanceClassKind = func(input *go_hook.HookInput, config *go_hook.Hoo
 		}
 	}
 
-	return getCRDsHookConfig.Kubernetes[0].Kind, fromSecret
+	return config.Kubernetes[0].Kind, fromSecret
 }
 
 const EpochWindowSize int64 = 4 * 60 * 60 // 4 hours

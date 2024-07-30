@@ -1,0 +1,5 @@
+- name: Ceph CSI
+  link: https://github.com/ceph/ceph-csi
+  description: Ceph Container Storage Interface (CSI) driver for RBD and CephFS.
+  logo: /images/logos/ceph.png
+  licence: Apache License Version 2.0

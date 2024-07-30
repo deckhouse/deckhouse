@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-
-# Copyright 2021 Flant CJSC
+# Copyright 2023 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#    http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -37,7 +36,7 @@ function __main__() {
 
   context::jq -r '.review.request.object.spec' | yq eval -P - > "$rules_yaml"
   # Capture stderr to variable, ignoring stdout.
-  if ! check_result=$(promtool check rules "$rules_yaml" 2>&1 >/dev/null); then
+  if ! check_result=$(promtool check rules "$rules_yaml" 2>&1); then
     # Remove first line "  FAILED:" from the output.
     # Remove filename from each line of the output.
     message=$(echo "$check_result" | tail -n +2 | cut -d " " -f2-)

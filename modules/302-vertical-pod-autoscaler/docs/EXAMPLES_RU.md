@@ -5,16 +5,23 @@ title: "Модуль vertical-pod-autoscaler: примеры"
 ## Настройка модуля
 
 ```yaml
-verticalPodAutoscaler: |
-  nodeSelector:
-    node-role/example: ""
-  tolerations:
-  - key: dedicated
-    operator: Equal
-    value: example
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: vertical-pod-autoscaler
+spec:
+  version: 1
+  enabled: true
+  settings:
+    nodeSelector:
+      node-role/example: ""
+    tolerations:
+    - key: dedicated
+      operator: Equal
+      value: example
 ```
 
-## Пример минимального CR `VerticalPodAutoscaler`
+## Пример минимального custom resource `VerticalPodAutoscaler`
 
 ```yaml
 apiVersion: autoscaling.k8s.io/v1
@@ -28,7 +35,7 @@ spec:
     name: my-app
 ```
 
-## Пример полного CR `VerticalPodAutoscaler`
+## Пример полного custom resource `VerticalPodAutoscaler`
 
 ```yaml
 apiVersion: autoscaling.k8s.io/v1

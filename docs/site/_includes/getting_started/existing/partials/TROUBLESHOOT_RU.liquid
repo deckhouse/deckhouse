@@ -24,7 +24,7 @@
 {% endofftopic %}
 
 {% offtopic title="В кластере нет Ingress-контроллера..." %}
-Для работы модуля `deckhouse-web`, предоставляющего WEB-интерфейс к документации кластера, необходимо наличие в кластере Ingress-контроллера. Если в вашем кластере нет Ingress-контролллера, вы можете использовать модуль [ingress-nginx](/documentation/v1/modules/402-ingress-nginx/) следующим способом:
+Для работы модуля `documentation` (`deckhouse-web` в Deckhouse версии 1.45 и старее), предоставляющего веб-интерфейс к документации кластера, необходимо наличие в кластере Ingress-контроллера. Если в вашем кластере нет Ingress-контролллера, вы можете использовать модуль [ingress-nginx](/documentation/v1/modules/402-ingress-nginx/) следующим способом:
 <ul>
   <li><p>Включите модуль <code>ingress-nginx</code>, выполнив следующую команду:</p>
 {% snippetcut selector="enable-ingress" %}
@@ -52,10 +52,6 @@ kubectl create -f ingress-nginx-controller.yml
 {% endsnippetcut %}
 </li>
 </ul>
-{% endofftopic %}
-
-{% offtopic title="Кластер в EKS AWS (Amazon Elastic Kubernetes Service)" %}
-Установка Deckhouse в существующий кластер EKS AWS в настоящий момент не поддерживается.
 {% endofftopic %}
 
 

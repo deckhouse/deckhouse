@@ -15,14 +15,14 @@ properties:
       The Deckhouse [bundle](../../#module-bundles) defines a set of modules enabled by default.
       - `Default` — the recommended set of modules for cluster operation: monitoring, authorization control, networking and other needs.
       - `Managed` — the bundle aimed at clusters managed by cloud providers (e.g., Google Kubernetes Engine).
-      - `Minimal` — the minimum possible bundle option (includes a single module — this one).
+      - `Minimal` — the minimum possible bundle option (includes a single module — this one). **Note** that several basic modules are not included in the set of modules `Minimal` (for example, the CNI module). Deckhouse with the set of modules `Minimal` without the basic modules will be able to work only in an already deployed cluster.
     default: "Default"
   releaseChannel:
     type: string
     enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid"]
     x-examples: ["Stable"]
     description: |
-      Desirable Deckhouse release channel (Deckhouse will [switch](https://deckhouse.io/documentation/v1/deckhouse-faq.html#change-the-release-channel) to it when such an opportunity appears).
+      Desirable Deckhouse release channel (Deckhouse will [switch](https://deckhouse.io/documentation/v1/deckhouse-faq.html#what-happens-when-the-release-channel-changes) to it when such an opportunity appears).
 
       The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
   update:
@@ -54,7 +54,7 @@ properties:
             Deckhouse minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the update windows or (if no update windows are set) as they appear on the corresponding release channel;
           - `Manual` — to change a minor version of Deckhouse (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required.
 
-            To confirm the update, edit [custom resource 'DeckhouseRelease'](https://deckhouse.io/documentation/v1/modules/002-deckhouse/cr.html), which corresponds to the version by setting the `approved' field to 'true'.
+            To confirm the update, edit [custom resource 'DeckhouseRelease'](../../cr.html#deckhouserelease), which corresponds to the version by setting the `approved' field to 'true'.
         enum:
           - 'Auto'
           - 'Manual'
@@ -67,7 +67,7 @@ properties:
         description: |
           Deckhouse release update disruption mode:
           - `Auto` — approves release with disruptions (potentially dangerous changes) automatically.
-          - `Manual` — requires manual release confirmation (set annotation `release.deckhouse.io/disruption-approved=true`).
+          - `Manual` — requires manual release confirmation (set the `release.deckhouse.io/disruption-approved=true` annotation on the appropriate [DeckhouseRelease](../../cr.html#deckhouserelease) resource to apply the update).
       windows:
         type: array
         description: |
@@ -113,11 +113,9 @@ properties:
       notification:
         type: object
         description: |
-          Settings for sending notifications of scheduled Deckhouse updates.
+          Settings for notifications of scheduled Deckhouse updates.
 
-          Notifications are sent **only** when the [automatic update mode](#parameters-update-mode) is set.
-
-          Alerts are sent **only** for Deckhouse minor version changes — no alerts are sent for patch version changes.
+          Has the effect **only** when the [automatic update mode](#parameters-update-mode) is set and **only** for Deckhouse minor version changes (for patch version changes the `notifications` parameter settings are ignored).
         x-examples:
         - webhook: https://release-webhook.mydomain.com
           minimalNotificationTime: 8h
@@ -131,7 +129,7 @@ properties:
 
               The POST request will be sent on the webhook URL after a new minor version of Deckhouse appears on the update channel before it is applied to the cluster.
 
-              > Use the [minimalNotificationTime](#parameters-update-notification-minimalnotificationtime) parameter if necessary to set the minimum time that must elapse before updating from the moment of notification.
+              > Use the [minimalNotificationTime](#parameters-update-notification-minimalnotificationtime) parameter if necessary to set the minimum time that must pass before updating from the moment a new minor version appears on the release channel used.
 
               Example of the POST request payload (`Content-Type: application/json`):
 
@@ -157,14 +155,16 @@ properties:
             description: Skip TLS certificate verification while webhook request.
           minimalNotificationTime:
             type: string
-            pattern: '^[0-9]+[mh]{1}$'
+            pattern: '^([0-9]+h([0-9]+m)?|[0-9]+m)$'
             x-doc-example: '6h'
             description: |
-              The minimum time that must pass from the notification before the update.
+              The minimum time that must pass before updating from the moment a new minor version appears on the release channel used.
 
-              The update mechanism ensures that Deckhouse will not be updated before the specified time.
+              It is specified as a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
 
-              When using update windows, the Deckhouse update after the notification will happen at the nearest possible update window, but not before the time specified in `minimalNotificationTime` expires.
+              The update mechanism ensures that Deckhouse will not be updated until a specified period of time has passed.
+
+              When using update windows, the Deckhouse update will happen at the nearest possible update window but not before the time specified in `minimalNotificationTime` expires.
           auth:
             type: object
             oneOf:
@@ -235,3 +235,11 @@ properties:
           format: int64
         value:
           type: string
+
+  highAvailability:
+    type: boolean
+    x-examples: [true]
+    description: |
+      Manually enable the high availability mode.
+
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.

@@ -1,0 +1,26 @@
+control-plane-manager:
+  fixes:
+    - summary: Fix errors in control-plane-manager converge and preflight checks.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4822
+      impact: control-plane-manager will restart.
+extended-monitoring:
+  fixes:
+    - summary: Send one `ExtendedMonitoringDeprecatatedAnnotation` alert per cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4829
+ingress-nginx:
+  fixes:
+    - summary: >-
+        Fixed incorrect indentation of resources block in `kube-rbac-proxy` container of
+        `kruise-controller-manager` deployment.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4738
+linstor:
+  fixes:
+    - summary: Fix `kernel-headers` cleanup script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4726
+    - summary: Support Debian 11.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4724
+prometheus:
+  fixes:
+    - summary: Fixed `d8_prometheus_fs` metrics.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4805
+

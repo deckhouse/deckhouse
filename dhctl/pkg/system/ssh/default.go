@@ -33,8 +33,14 @@ func NewClientFromFlags() *Client {
 		ExtraArgs:      app.SSHExtraArgs,
 	})
 
+	keys := make([]session.AgentPrivateKey, 0, len(app.SSHPrivateKeys))
+	for _, key := range app.SSHPrivateKeys {
+		keys = append(keys, session.AgentPrivateKey{Key: key})
+	}
+
 	return &Client{
-		Settings: settings,
+		Settings:    settings,
+		PrivateKeys: keys,
 	}
 }
 

@@ -17,11 +17,11 @@ package manifests
 import (
 	"encoding/base64"
 	"fmt"
-	"strconv"
+	"os"
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
+	addonOpUtils "github.com/flant/addon-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -33,6 +33,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
+
+var imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 
 const (
 	deckhouseRegistrySecretName = "deckhouse-registry"
@@ -52,9 +54,28 @@ type DeckhouseDeploymentParams struct {
 
 	DeployTime time.Time
 
-	IsSecureRegistry   bool
-	MasterNodeSelector bool
-	KubeadmBootstrap   bool
+	IsSecureRegistry       bool
+	MasterNodeSelector     bool
+	KubeadmBootstrap       bool
+	ExternalModulesEnabled bool // TODO remove this after integrating external-module-manager into deckhouse-controller
+}
+
+type imagesDigests map[string]map[string]interface{}
+
+func loadImagesDigests(filename string) (imagesDigests, error) {
+	var imagesDigestsDict imagesDigests
+
+	imagesDigestsJSONFile, err := os.ReadFile(filename)
+	if err != nil {
+		return imagesDigestsDict, fmt.Errorf("%s file load: %v", filename, err)
+	}
+
+	err = yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigestsDict)
+	if err != nil {
+		return imagesDigestsDict, fmt.Errorf("%s file unmarshal: %v", filename, err)
+	}
+
+	return imagesDigestsDict, nil
 }
 
 func GetDeckhouseDeployTime(deployment *appsv1.Deployment) time.Time {
@@ -148,6 +169,15 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 }
 
 func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
+	initContainerImage := params.Registry
+	imagesDigestsDict, err := loadImagesDigests(imagesDigestsJSON)
+	if err != nil {
+		log.ErrorLn(err)
+	} else {
+		imageSplitIndex := strings.LastIndex(params.Registry, ":")
+		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["common"]["alpine"].(string))
+	}
+
 	deckhouseDeployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "deckhouse",
@@ -162,7 +192,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			RevisionHistoryLimit: pointer.Int32Ptr(2),
+			RevisionHistoryLimit: pointer.Int32(2),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": "deckhouse",
@@ -174,6 +204,8 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		},
 	}
 
+	hostPathDirectory := apiv1.HostPathDirectoryOrCreate
+
 	deckhousePodTemplate := apiv1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: deckhouseDeployment.Spec.Selector.MatchLabels,
@@ -182,6 +214,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			HostNetwork:        true,
 			DNSPolicy:          apiv1.DNSDefault,
 			ServiceAccountName: "deckhouse",
+			SecurityContext: &apiv1.PodSecurityContext{
+				RunAsUser:    pointer.Int64(0),
+				RunAsNonRoot: pointer.Bool(false),
+			},
 			Tolerations: []apiv1.Toleration{
 				{Operator: apiv1.TolerationOpExists},
 			},
@@ -198,19 +234,12 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 						EmptyDir: &apiv1.EmptyDirVolumeSource{Medium: apiv1.StorageMediumMemory},
 					},
 				},
-			},
-			Affinity: &apiv1.Affinity{
-				NodeAffinity: &apiv1.NodeAffinity{
-					RequiredDuringSchedulingIgnoredDuringExecution: &apiv1.NodeSelector{
-						NodeSelectorTerms: []apiv1.NodeSelectorTerm{
-							{
-								MatchExpressions: []apiv1.NodeSelectorRequirement{
-									{
-										Key:      ConvergeLabel,
-										Operator: apiv1.NodeSelectorOpDoesNotExist,
-									},
-								},
-							},
+				{
+					Name: "external-modules",
+					VolumeSource: apiv1.VolumeSource{
+						HostPath: &apiv1.HostPathVolumeSource{
+							Path: "/var/lib/deckhouse/external-modules",
+							Type: &hostPathDirectory,
 						},
 					},
 				},
@@ -233,13 +262,46 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			ProbeHandler: apiv1.ProbeHandler{
 				HTTPGet: &apiv1.HTTPGetAction{
 					Path: "/ready",
-					Port: intstr.FromInt(9650),
+					Port: intstr.FromInt(4222),
 				},
 			},
 		},
 		Ports: []apiv1.ContainerPort{
-			{Name: "self", ContainerPort: 9650},
-			{Name: "custom", ContainerPort: 9651},
+			{Name: "self", ContainerPort: 4222},
+			{Name: "custom", ContainerPort: 4223},
+		},
+		VolumeMounts: []apiv1.VolumeMount{
+			{
+				Name:      "tmp",
+				ReadOnly:  false,
+				MountPath: "/tmp",
+			},
+			{
+				Name:      "kube",
+				ReadOnly:  false,
+				MountPath: "/.kube",
+			},
+			{
+				Name:      "external-modules",
+				ReadOnly:  false,
+				MountPath: "/deckhouse/external-modules",
+			},
+		},
+	}
+
+	deckhouseInitContainer := apiv1.Container{
+		Name:            "init-external-modules",
+		Image:           initContainerImage,
+		ImagePullPolicy: apiv1.PullAlways,
+		Command: []string{
+			"sh", "-c", "mkdir -p /deckhouse/external-modules/modules && chown -hR 64535 /deckhouse/external-modules /deckhouse/external-modules/modules && chmod 0700 /deckhouse/external-modules /deckhouse/external-modules/modules",
+		},
+		VolumeMounts: []apiv1.VolumeMount{
+			{
+				Name:      "external-modules",
+				ReadOnly:  false,
+				MountPath: "/deckhouse/external-modules",
+			},
 		},
 	}
 
@@ -259,6 +321,14 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		{
 			Name:  "HELM_HOST",
 			Value: "127.0.0.1:44434",
+		},
+		{
+			Name:  "ADDON_OPERATOR_LISTEN_PORT",
+			Value: "4222",
+		},
+		{
+			Name:  "ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT",
+			Value: "4223",
 		},
 		{
 			Name:  "HELM3LIB",
@@ -293,8 +363,16 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Value: params.LogLevel,
 		},
 		{
+			Name:  "LOG_TYPE",
+			Value: "json",
+		},
+		{
 			Name:  "DECKHOUSE_BUNDLE",
 			Value: params.Bundle,
+		},
+		{
+			Name:  "DEBUG_HTTP_SERVER_ADDR",
+			Value: "127.0.0.1:9652",
 		},
 	}
 
@@ -302,6 +380,25 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	deckhouseContainer.Env = deckhouseContainerEnv
 	deckhousePodTemplate.Spec.Containers = []apiv1.Container{deckhouseContainer}
 	deckhouseDeployment.Spec.Template = deckhousePodTemplate
+
+	modulesDirs := []string{
+		"/deckhouse/modules",
+	}
+
+	if params.ExternalModulesEnabled {
+		const externalModulesDir = "/deckhouse/external-modules/modules"
+		modulesDirs = append(modulesDirs, externalModulesDir)
+		deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
+		deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
+			Name:  "EXTERNAL_MODULES_DIR",
+			Value: externalModulesDir,
+		})
+	}
+
+	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
+		Name:  "MODULES_DIR",
+		Value: strings.Join(modulesDirs, addonOpUtils.PathsSeparator),
+	})
 
 	return ParameterizeDeckhouseDeployment(deckhouseDeployment, params)
 }
@@ -312,9 +409,7 @@ func DeckhouseNamespace(name string) *apiv1.Namespace {
 			Name: name,
 			Labels: map[string]string{
 				"heritage": "deckhouse",
-			},
-			Annotations: map[string]string{
-				"extended-monitoring.flant.com/enabled": "",
+				"extended-monitoring.deckhouse.io/enabled": "",
 			},
 		},
 		Spec: apiv1.NamespaceSpec{
@@ -420,51 +515,8 @@ func DeckhouseRegistrySecret(registry config.RegistryData) *apiv1.Secret {
 	return ret
 }
 
-func DeckhouseConfigMap(deckhouseConfig map[string]interface{}) *apiv1.ConfigMap {
-	configMap := apiv1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "deckhouse",
-			Labels: map[string]string{
-				"heritage": "deckhouse",
-			},
-		},
-	}
-
-	var allErrs *multierror.Error
-
-	configMapData := make(map[string]string, len(deckhouseConfig))
-	for setting, data := range deckhouseConfig {
-		if strings.HasSuffix(setting, "Enabled") {
-			boolData, ok := data.(bool)
-			if !ok {
-				allErrs = multierror.Append(allErrs,
-					fmt.Errorf("deckhouse config map validation: %q must be bool, option will be skipped", setting),
-				)
-			} else {
-				configMapData[setting] = strconv.FormatBool(boolData)
-			}
-			continue
-		}
-
-		convertedData, err := yaml.Marshal(data)
-		if err != nil {
-			allErrs = multierror.Append(allErrs, fmt.Errorf("preparing deckhouse config map error (probably validation bug): %v", err))
-			continue
-		}
-		configMapData[setting] = string(convertedData)
-	}
-
-	err := allErrs.ErrorOrNil()
-	if err != nil {
-		log.ErrorLn(err)
-	}
-
-	configMap.Data = configMapData
-	return &configMap
-}
-
 func generateSecret(name, namespace string, data map[string][]byte, labels map[string]string) *apiv1.Secret {
-	preparedLabels := map[string]string{"heritage": "deckhouse", "name": name}
+	preparedLabels := map[string]string{"heritage": "deckhouse"}
 	for key, value := range labels {
 		preparedLabels[key] = value
 	}
@@ -586,6 +638,22 @@ func ClusterUUIDConfigMap(uuid string) *apiv1.ConfigMap {
 	}
 }
 
+const (
+	CommanderUUIDCmKey       = "commander-uuid"
+	CommanderUUIDCm          = "d8-commander-uuid"
+	CommanderUUIDCmNamespace = "kube-system"
+)
+
+func CommanderUUIDConfigMap(uuid string) *apiv1.ConfigMap {
+	return &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      CommanderUUIDCm,
+			Namespace: CommanderUUIDCmNamespace,
+		},
+		Data: map[string]string{CommanderUUIDCmKey: uuid},
+	}
+}
+
 func KubeDNSService(ipAddress string) *apiv1.Service {
 	return &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -615,4 +683,8 @@ func KubeDNSService(ipAddress string) *apiv1.Service {
 			},
 		},
 	}
+}
+
+func InitGlobalVars(pwd string) {
+	imagesDigestsJSON = pwd + "/deckhouse/candi/images_digests.json"
 }

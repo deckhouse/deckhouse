@@ -10,7 +10,7 @@ rewrite ^/(.+)/modules/040-control-plane-manager/usage.html$ /$1/modules/040-con
 rewrite ^/(.+)/modules/040-node-manager/usage.html$ /$1/modules/040-node-manager/examples.html redirect;
 rewrite ^/(.+)/modules/042-kube-dns/usage.html$ /$1/modules/042-kube-dns/examples.html redirect;
 rewrite ^/(.+)/modules/050-network-policy-engine/usage.html$ /$1/modules/050-network-policy-engine/examples.html redirect;
-rewrite ^/(.+)/modules/099-ceph-csi/usage.html$ /$1/modules/099-ceph-csi/examples.html redirect;
+rewrite ^/(.+)/modules/031-ceph-csi/usage.html$ /$1/modules/031-ceph-csi/examples.html redirect;
 rewrite ^/(.+)/modules/110-istio/usage.html$ /$1/modules/110-istio/examples.html redirect;
 rewrite ^/(.+)/modules/302-vertical-pod-autoscaler/usage.html$ /$1/modules/302-vertical-pod-autoscaler/examples.html redirect;
 rewrite ^/(.+)/modules/303-prometheus-pushgateway/usage.html$ /$1/modules/303-prometheus-pushgateway/examples.html redirect;
@@ -27,5 +27,5 @@ rewrite ^/(.+)/modules/500-okmeter/usage.html$ /$1/modules/500-okmeter/examples.
 rewrite ^/(.+)/modules/500-openvpn/usage.html$ /$1/modules/500-openvpn/examples.html redirect;
 rewrite ^/(.+)/modules/500-upmeter/usage.html$ /$1/modules/500-upmeter/examples.html redirect;
 rewrite ^/(.+)/modules/600-namespace-configurator/usage.html$ /$1/modules/600-namespace-configurator/examples.html redirect;
-rewrite ^/(.+)/modules/810-deckhouse-web/usage.html$ /$1/modules/810-deckhouse-web/examples.html redirect;
+rewrite ^/(.+)/modules/810-deckhouse-web/(.*)$ /$1/modules/810-documentation/$2 redirect;
 {{- end }}

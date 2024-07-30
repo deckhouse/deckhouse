@@ -104,7 +104,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -164,7 +164,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -537,7 +537,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -586,7 +586,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -649,7 +649,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max by (cluster_version) (etcd_cluster_version{job=\"kube-etcd3\"})",
+          "expr": "max by (server_version) (etcd_server_version{job=\"kube-etcd3\"})",
           "instant": true,
           "interval": "",
           "legendFormat": "{{ version }}",
@@ -922,7 +922,7 @@
           "links": [
             {
               "title": "",
-              "url": "https://deckhouse.io/documentation/v1/modules/${__data.fields.module_name}"
+              "url": "http://${__data.fields.docs_url}/modules/${__data.fields.module_name}"
             }
           ],
           "mappings": [],
@@ -945,6 +945,18 @@
             "matcher": {
               "id": "byName",
               "options": "module_name"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "docs_url"
             },
             "properties": [
               {
@@ -977,7 +989,7 @@
         {
           "editorMode": "code",
           "exemplar": false,
-          "expr": "max by (module, module_name) (label_replace(deckhouse_binding_count{module!=\"\", module!~\".+-crd\"}, \"module_name\", \"$1\", \"hook\", \"([0-9]+[A-Za-z-]+).*\"))",
+          "expr": "(\nmax by (module, module_name, docs_url) (\n(\n    label_replace(deckhouse_web_interfaces{job=\"deckhouse\", name=\"docs\"}, \"docs_url\", \"$1/en\", \"url\", \"(.*)\")\n)\n    + on (job) group_right(docs_url)\n(\n    label_replace(deckhouse_binding_count{module!=\"\", module!~\".+-crd\", module!=\"helm\", module!=\"deckhouse-config\", module!=\"basic-auth\", module!=\"monitoring-applications\"}, \"module_name\", \"$1\", \"hook\", \"([0-9]+[A-Za-z-]+).*\")\n)\n)\nand on() (deckhouse_web_interfaces{job=\"deckhouse\", name=\"docs\"} >0)\n)\nor on()\n(max by (module, module_name, docs_url) (\nlabel_replace(label_replace(deckhouse_binding_count{module!=\"\", module!~\".+-crd\", module!=\"helm\", module!=\"deckhouse-config\", module!=\"basic-auth\", module!=\"monitoring-applications\"}, \"module_name\", \"$1\", \"hook\", \"([0-9]+[A-Za-z-]+).*\"), \"docs_url\", \"deckhouse.io/documentation/v1\", \"\", \"\")\n))\n",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -994,9 +1006,21 @@
             "include": {
               "names": [
                 "module",
-                "module_name"
+                "module_name",
+                "docs_url"
               ]
             }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "module"
+              }
+            ]
           }
         }
       ],
@@ -1076,7 +1100,7 @@
                   {
                     "targetBlank": true,
                     "title": "",
-                    "url": "https://${__data.fields.url}"
+                    "url": "${__data.fields.url}"
                   }
                 ]
               }
@@ -1189,7 +1213,7 @@
       "type": "table"
     },
     {
-      "description": "Difference between the last timestamp in the Prometheus tsdb and the current time. It shows how far in the past users can see.",
+      "description": "Difference between the oldest timestamp in the Prometheus tsdb and the current time. It shows how far in the past Prometheus instance collect the stats.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1296,7 +1320,7 @@
         {
           "editorMode": "code",
           "exemplar": false,
-          "expr": "max by (service) (time() - prometheus_tsdb_lowest_timestamp_seconds) / 60 / 60 / 24",
+          "expr": "max by (service) (time() - prometheus_tsdb_lowest_timestamp_seconds{service=~\"prometheus|prometheus-longterm\", namespace=\"d8-monitoring\"}) / 60 / 60 / 24",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -1304,7 +1328,7 @@
           "refId": "A"
         }
       ],
-      "title": "Metrics Interval",
+      "title": "Oldest metrics in Prometheus",
       "transformations": [
         {
           "id": "filterFieldsByName",
@@ -1324,7 +1348,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1384,7 +1408,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1403,7 +1427,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "description": "Intervals in which Deckhouse can start its updating. No Data means that Deckhouse can be updated anytime.",
       "fieldConfig": {
@@ -1493,7 +1517,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -1552,7 +1576,27 @@
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "label": "Prometheus",
+        "multi": false,
+        "name": "ds_prometheus",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
   },
   "time": {
     "from": "now-3h",

@@ -1,0 +1,68 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry-modules-watcher
+  annotations:
+    "werf.io/replicas-on-creation": "1"
+  labels:
+    app: registry-modules-watcher
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: registry-modules-watcher
+  template:
+    metadata:
+      labels:
+        app: registry-modules-watcher
+      annotations:
+        checksum/auths: {{ .Values.global.moduleWatcherAuths | sha256sum }}
+    spec:
+      imagePullSecrets:
+        - name: deckhouse-registry-site
+      priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
+      serviceAccountName: modules-watcher
+      containers:
+        - name: registry-modules-watcher
+          command:
+            - /app/registry-modules-watcher
+            - --watch-registries={{ (pluck .Values.werf.env .Values.moduleWatcher.registries | first | default .Values.moduleWatcher.registries._default) | join "," }}
+            - --scan-interval={{ pluck .Values.werf.env .Values.moduleWatcher.scanInterval | first | default .Values.moduleWatcher.scanInterval._default }}
+            - --v={{ pluck .Values.werf.env .Values.moduleWatcher.logLevel | first | default .Values.moduleWatcher.logLevel._default }}
+          image: {{ index .Values.werf.image "registry-modules-watcher" }}
+          {{- include "resources" . | nindent 10 }}
+          env:
+            - name: REGISTRY_AUTHS
+              valueFrom:
+                secretKeyRef:
+                  key: .dockerconfigjson
+                  name: watch-registry-auths
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: watch-registry-auths
+  labels:
+    app: registry-modules-watcher
+data:
+  .dockerconfigjson: {{ .Values.global.moduleWatcherAuths }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: registry-modules-watcher
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: registry-modules-watcher
+  updatePolicy:
+    updateMode: "Auto"

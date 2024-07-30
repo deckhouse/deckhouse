@@ -18,4 +18,4 @@ limitations under the License.
 // +groupName=bashible.deckhouse.io
 
 // Package bashible is the internal version of the API.
-package bashible // import "d8.io/bashible/pkg/apis/bashible"
+package bashible // import "bashible-apiserver/pkg/apis/bashible"

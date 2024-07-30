@@ -135,7 +135,7 @@
       summary: Prometheus has failing rule evaluations.
 
   - alert: PrometheusNotConnectedToAlertmanager
-    expr: prometheus_notifications_alertmanagers_discovered < 1
+    expr: prometheus_notifications_alertmanagers_discovered{service="prometheus"} < 1
     for: 10m
     labels:
       severity_level: "5"

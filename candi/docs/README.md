@@ -28,7 +28,7 @@ clusterType: Static
 podSubnetCIDR: 10.111.0.0/16
 podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: 1.21
+kubernetesVersion: 1.27
 defaultCRI: "Containerd"
 clusterDomain: cluster.local
 ---
@@ -74,9 +74,9 @@ There are three variants of terraforming:
 
 * `static-node` — creates a static node.
 
-> Terraform state will be saved in the secret in d8-system namespace after each terraform pipeline execution.
+Terraform state will be saved in the secret in d8-system namespace after each terraform pipeline execution.
 
-**Attention!!** dhctl do not use terraform for bare metal clusters, it is required to pass `--ssh-host` to connect instead.
+> **Note!** dhctl do not use terraform for bare metal clusters, it is required to pass `--ssh-host` to connect instead.
 
 #### Static-cluster
 
@@ -100,7 +100,7 @@ If every node in cluster has only one network interface `StaticClusterConfigurat
 * **Detect bashible bundle**: execute `/candi/bashible/detect_bundle.sh` to get a bashible bundle name from the host.
 * **Execute bootstrap.sh and bootstrap-network.sh**: scripts to install basdic software (jq, curl) and st up the network.
 
-**Attention!!** dhctl will check the ssh connection first.
+> **Note!** dhctl will check the ssh connection first.
 
 #### Bashible Bundle
 
@@ -132,7 +132,7 @@ After successfully connection to the Kubernetes API, `dhctl` creates or updates:
 * Secrets with terraform state
   * `d8-cluster-terraform-state`
   * `d8-node-terraform-state-.*`
-  
+
 After installation ends, `dhctl` will wait for the `deckhouse` pod to become `Ready`.
 Readiness probe is working the way that deckhouse become ready only if there is no task to install or update a module.
 

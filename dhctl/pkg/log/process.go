@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flant/logboek"
+	"github.com/werf/logboek/pkg/types"
 )
 
 type processStack struct {
@@ -42,40 +42,43 @@ func (s *processStack) pop() *logProcessDescriptor {
 }
 
 type prettyProcessLogger struct {
-	processes *processStack
+	processes     *processStack
+	logboekLogger types.LoggerInterface
 }
 
-func newPrettyProcessLogger() *prettyProcessLogger {
+func newPrettyProcessLogger(logboekLogger types.LoggerInterface) *prettyProcessLogger {
 	return &prettyProcessLogger{
-		processes: &processStack{},
+		processes:     &processStack{},
+		logboekLogger: logboekLogger,
 	}
 }
 
 func (l *prettyProcessLogger) LogProcessStart(msg string) {
 	// we do not need to store message and date, because logboek store it itself
 	// we use stack for prevent panic from logboek
-	l.processes.push(&logProcessDescriptor{})
-
-	logboek.LogProcessStart(msg, BoldStartOptions())
+	proc := l.logboekLogger.LogProcess(msg).Options(BoldStartOptions)
+	l.processes.push(&logProcessDescriptor{LogboekProcess: proc})
+	proc.Start()
 }
 
 func (l *prettyProcessLogger) LogProcessFail() {
 	p := l.processes.pop()
 	if p != nil {
-		logboek.LogProcessFail(BoldFailOptions())
+		p.LogboekProcess.Fail()
 	}
 }
 
 func (l *prettyProcessLogger) LogProcessEnd() {
 	p := l.processes.pop()
 	if p != nil {
-		logboek.LogProcessEnd(BoldEndOptions())
+		p.LogboekProcess.End()
 	}
 }
 
 type logProcessDescriptor struct {
-	StartedAt time.Time
-	Msg       string
+	StartedAt      time.Time
+	Msg            string
+	LogboekProcess types.LogProcessInterface
 }
 
 func (d *logProcessDescriptor) formatTime() string {

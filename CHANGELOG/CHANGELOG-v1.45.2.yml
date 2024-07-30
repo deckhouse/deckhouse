@@ -1,0 +1,5 @@
+ingress-nginx:
+  fixes:
+    - summary: Fix RBAC rules for `kruise-controller`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4353
+

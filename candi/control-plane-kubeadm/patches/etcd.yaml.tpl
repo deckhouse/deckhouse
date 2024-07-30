@@ -16,7 +16,7 @@ metadata:
 spec:
   containers:
     - name: etcd
-      image: {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "etcd") }}
+      image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "etcd") }}
     {{- end }}
   {{- end }}
 {{- end }}

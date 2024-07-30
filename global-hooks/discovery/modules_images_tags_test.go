@@ -42,16 +42,30 @@ var _ = Describe("Global hooks :: discovery :: modules_images_tags ", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.GenerateOnStartupContext())
 
-				const content = `{"basicAuth": {"nginx": "valid-tag"}}`
+				const content = `{"basicAuth": {"nginx": "valid-digest"}}`
 				err := writeTagsTMPFile(content)
 				Expect(err).To(BeNil())
 				f.RunHook()
 			})
 
-			It("Should set tags files content as object into 'global.modulesImages.tags'", func() {
+			It("Should set tags files content as object into 'global.modulesImages.digests'", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				tag := f.ValuesGet("global.modulesImages.tags.basicAuth.nginx").String()
-				Expect(tag).To(Equal(`valid-tag`))
+				tag := f.ValuesGet("global.modulesImages.digests").String()
+				Expect(tag).To(MatchJSON(`
+{
+	"basicAuth": {
+	  "nginx": "valid-digest"
+	},
+	"double": {
+          "srv": "sourced-module-digest"
+        },
+	"testLocal": {
+	  "test": "valid-digest"
+	},
+	"testTest": {
+	  "test": "valid-digest"
+	}
+}`))
 			})
 		})
 
@@ -89,7 +103,7 @@ var _ = Describe("Global hooks :: discovery :: modules_images_tags ", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.GenerateOnStartupContext())
 
-				const content = `{"basicAuth": {"nginx": "valid-tag"}`
+				const content = `{"basicAuth": {"nginx": "valid-digest"}`
 				err := writeTagsTMPFile(content)
 				Expect(err).To(BeNil())
 				f.RunHook()
@@ -97,6 +111,34 @@ var _ = Describe("Global hooks :: discovery :: modules_images_tags ", func() {
 
 			It("Should return error", func() {
 				Expect(f).NotTo(ExecuteSuccessfully())
+			})
+		})
+
+		Context("Should save the embedded module's digest, not the sourced one", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.GenerateOnStartupContext())
+
+				const content = `{"double": {"srv": "embedded-module-digest"}}`
+				err := writeTagsTMPFile(content)
+				Expect(err).To(BeNil())
+				f.RunHook()
+			})
+
+			It("Should set tags files content as object into 'global.modulesImages.digests'", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				tag := f.ValuesGet("global.modulesImages.digests").String()
+				Expect(tag).To(MatchJSON(`
+{
+	"double": {
+          "srv": "embedded-module-digest"
+        },
+	"testLocal": {
+	  "test": "valid-digest"
+	},
+	"testTest": {
+	  "test": "valid-digest"
+	}
+}`))
 			})
 		})
 
@@ -112,5 +154,5 @@ func writeTagsTMPFile(content string) error {
 		return err
 	}
 
-	return os.Setenv("D8_TAGS_TMP_FILE", tmpfile.Name())
+	return os.Setenv("D8_DIGESTS_TMP_FILE", tmpfile.Name())
 }

@@ -98,7 +98,7 @@ spec:
       }
     ]
   },
-  "allowAccessToKubernetes": false,
+  "allowAccessToKubernetes": true,
   "encodedName": "orsxg5bnorsxg5bnmrsxqllbov2gqzlooruwgylun5zmx4u44scceizf",
   "credentials": {
     "cookieSecret": "testNexttestNexttestNext",
@@ -218,7 +218,7 @@ data:
     "applicationIngressClassName": "nginx",
     "sendAuthorizationHeader": false
   },
-  "allowAccessToKubernetes": false,
+  "allowAccessToKubernetes": true,
   "encodedName": "orsxg5bnmq4c23lpnzuxi33snfxgollemv4c2ylvorugk3tunfrwc5dpolf7fhheqqrcgji",
   "credentials": {
     "cookieSecret": "testNexttestNexttestNext",

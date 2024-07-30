@@ -17,10 +17,6 @@ limitations under the License.
 package template_tests
 
 import (
-	"fmt"
-	"os/exec"
-	"strings"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -32,7 +28,7 @@ const (
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation policies", func() {
-	f := SetupHelmConfig(`{admissionPolicyEngine: {podSecurityStandards: {}, internal: {"operationPolicies": [
+	f := SetupHelmConfig(`{admissionPolicyEngine: {podSecurityStandards: {}, internal: {"bootstrapped": true, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
 {
 	"metadata":{"name":"genpolicy"},
 	"spec":{
@@ -43,17 +39,32 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			"requiredLabels": {
 				"labels": [
 					{ "key": "foo" },
-					{ "key": "bar", "allowRegex": "^[a-zA-Z]+.agilebank.demo$" }
+					{ "key": "bar", "allowedRegex": "^[a-zA-Z]+.agilebank.demo$" }
 				],
 				"watchKinds": ["/Pod", "networking.k8s.io/Ingress"]
+			},
+            "requiredAnnotations": {
+				"annotations": [
+					{ "key": "foo" },
+					{ "key": "bar", "allowedRegex": "^[a-zA-Z]+.myapp.demo$" }
+				],
+				"watchKinds": ["/Namespace"]
 			},
 			"requiredProbes":["livenessProbe","readinessProbe"],
 			"maxRevisionHistoryLimit":3,
 			"imagePullPolicy":"Always",
 			"priorityClassNames":["foo","bar"],
-			"checkHostNetworkDNSPolicy":true
+			"checkHostNetworkDNSPolicy":true,
+			"checkContainerDuplicates":true,
+			"replicaLimits":{
+					"minReplicas":1,
+					"maxReplicas":10
+			}
 		},
-		"match":{"namespaceSelector":{"matchNames":["default"]}}}}], trackedResources: [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}], webhook: {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
+		"match":{"namespaceSelector":{"matchNames":["default"]}}}}],
+		"trackedConstraintResources": [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
+		"trackedMutateResources": [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
+		"webhook": {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
 
 	Context("Cluster with operation policies", func() {
 		BeforeEach(func() {
@@ -74,24 +85,10 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			Expect(f.KubernetesGlobalResource("D8PriorityClass", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8DNSPolicy", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8RequiredLabels", testPolicyName).Exists()).To(BeTrue())
-		})
-	})
+			Expect(f.KubernetesGlobalResource("D8RequiredAnnotations", testPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8ContainerDuplicates", testPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8ReplicaLimits", testPolicyName).Exists()).To(BeTrue())
 
-	Context("Test policies", func() {
-		BeforeEach(func() {
-			if !gatorAvailable() {
-				Skip("gator binary is not available")
-			}
-		})
-
-		It("Should pass tests", func() {
-			gatorCLI := exec.Command("gator", "verify", "-v", "/deckhouse/modules/015-admission-policy-engine/charts/constraint-templates/templates/operation-policy/test_samples/...")
-			res, err := gatorCLI.CombinedOutput()
-			if err != nil {
-				output := strings.ReplaceAll(string(res), "deckhouse/modules/015-admission-policy-engine/charts/constraint-templates/templates/operation-policy/test_samples", "")
-				fmt.Println(output)
-				Fail("Gatekeeper policy tests failed:" + err.Error())
-			}
 		})
 	})
 })

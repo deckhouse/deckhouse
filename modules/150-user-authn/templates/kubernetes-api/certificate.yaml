@@ -9,6 +9,7 @@ metadata:
 spec:
   certificateOwnerRef: false
   secretName: {{ include "publish_api_certificate_name" . }}
+  {{ include "helm_lib_module_generate_common_name" (list . "api") | nindent 2 }}
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "api") }}
   issuerRef:

@@ -8,11 +8,11 @@ Essentials
 {% if page.platform_code != 'existing' and page.platform_code != 'kind' %}
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-📚 Documentation
+📚 <span class="cards-item__title-text">Documentation</span>
 </h3>
 <div class="cards-item__text">
 <p>The documentation for the installed in your cluster version of Deckhouse.</p>
-<p>Web service name: {% include getting_started/global/partials/dns-template-title.html.liquid name="deckhouse" %}</p>
+<p>Web service name: {% include getting_started/global/partials/dns-template-title.html.liquid name="documentation" %}</p>
 </div>
 </div>
 {% endif %}
@@ -20,7 +20,7 @@ Essentials
 {% if page.platform_code != 'kind' %}
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-📊 Monitoring
+📊 <span class="cards-item__title-text">Monitoring</span>
 </h3>
 <div class="cards-item__text">
 <p>Explore Grafana dashboards bundled with Deckhouse.</p>
@@ -33,7 +33,7 @@ Essentials
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-☸ Dashboard
+☸ <span class="cards-item__title-text">Dashboard</span>
 </h3>
 <div class="cards-item__text">
 <p>Get access to the Kubernetes Dashboard.</p>
@@ -43,7 +43,7 @@ Essentials
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-👌 Status page
+👌 <span class="cards-item__title-text">Status page</span>
 </h3>
 <div class="cards-item__text">
 <p>Get information about the overall status of Deckhouse and its components.<br />
@@ -70,7 +70,7 @@ Deploying your first application
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-⟳ Setting up a CI/CD system
+⟳ <span class="cards-item__title-text">Setting up a CI/CD system</span>
 </h3>
 <div class="cards-item__text" markdown="1">
 [Create](/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access)
@@ -82,7 +82,7 @@ You can use the generated `kubeconfig` file in Kubernetes with any deployment sy
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-🔀 Routing traffic
+🔀 <span class="cards-item__title-text">Routing traffic</span>
 </h3>
 <div class="cards-item__text" markdown="1">
 Create a `Service` and `Ingress` for your application.
@@ -93,7 +93,7 @@ Create a `Service` and `Ingress` for your application.
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-🔍 Monitoring your application
+🔍 <span class="cards-item__title-text">Monitoring your application</span>
 </h3>
 <div class="cards-item__text" markdown="1">
 Add `prometheus.deckhouse.io/custom-target: "my-app"` and `prometheus.deckhouse.io/port: "80"` annotations to the Service created.
@@ -116,7 +116,7 @@ Other features
 
 <div class="cards-item cards-item_inverse" style="width: 100%">
 <h3 class="cards-item__title text_h3">
-⚖ Managing nodes
+⚖ <span class="cards-item__title-text">Managing nodes</span>
 </h3>
 <div class="cards-item__text" markdown="1">
 Run the following command to list nodegroups created in the cluster during the deployment process: `kubectl get nodegroups`. For more information, see the node-manager's [documentation](/documentation/v1/modules/040-node-manager/).
@@ -124,7 +124,7 @@ Run the following command to list nodegroups created in the cluster during the d
 You only need to make changes to `minPerZone` and `maxPerZone` parameters to scale the existing groups. If these two parameters are not equal, Deckhouse will automatically launch an autoscaler.
 
 You need to create a new
-[InstanceClass](/documentation/v1/modules/030-cloud-provider-{{ page.platform_code | downcase }}/cr.html) and a
+[InstanceClass](/documentation/v1/modules/030-cloud-provider-{{ page.platform_code | regex_replace: "^(openstack)_.+$", "\1" | downcase }}/cr.html) and a
 [NodeGroup](/documentation/v1/modules/040-node-manager/cr.html#nodegroup) referring to it to create new groups.
 </div>
 </div>
@@ -137,7 +137,7 @@ You need to create a new
 <div markdown="1">
 ## What's next?
 
-Detailed information about the system and the Deckhouse Platform components is available in the [documentation](/documentation/v1/).
+Detailed information about the system and the Deckhouse Kubernetes Platform components is available in the [documentation](/documentation/v1/).
 
 Please, reach us via our [online community](/community/about.html#online-community) if you have any questions.
 </div>

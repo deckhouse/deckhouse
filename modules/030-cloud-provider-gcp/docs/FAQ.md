@@ -11,10 +11,11 @@ title: "Cloud provider — GCP: FAQ"
 
 ## Adding CloudStatic nodes to a cluster
 
-Add Network Tag that is equal to the cluster `prefix` to instances that you'd manually join to the cluster.
+For the VMs, you want to add to a cluster as nodes, add a `Network Tag` similar to the cluster prefix.
 
 You can find out `prefix` using the command:
 
 ```shell
-kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix
+kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
+  | base64 -d | grep prefix
 ```

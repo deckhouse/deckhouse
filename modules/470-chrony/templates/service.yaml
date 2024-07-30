@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: chrony-masters
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony")) | nindent 2 }}
+spec:
+  clusterIP: None
+  selector:
+    app: chrony-master
+  ports:
+    - protocol: UDP
+      port: 4234
+      name: ntp
+      targetPort: ntp

@@ -32,6 +32,8 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -40,11 +42,13 @@ type input struct {
 	maxUsedControlPlaneVersion string
 	configVersion              string
 	controlPlaneVersions       []string
+	defaultVersionInSecret     string
 }
 
 type output struct {
 	maxUsedControlPlaneVersion string
 	effectiveVersion           string
+	minUsedVersion             string
 }
 
 func setStateFromTestCase(hec *HookExecutionConfig, caseInput input) {
@@ -110,6 +114,7 @@ metadata:
   namespace: kube-system
 data:
   maxUsedControlPlaneKubernetesVersion: "<<PLACEHOLDER_B64>>"
+  <<PLACEHOLDER_DEFAULT>>
 `
 
 	var b strings.Builder
@@ -135,7 +140,12 @@ data:
 		b.WriteString(kubeSchedulerManifest)
 	}
 
-	b.WriteString(strings.ReplaceAll(d8ConfigurationSecretTemplate, "<<PLACEHOLDER_B64>>", base64.StdEncoding.EncodeToString([]byte(caseInput.maxUsedControlPlaneVersion))))
+	secretContent := strings.ReplaceAll(d8ConfigurationSecretTemplate, "<<PLACEHOLDER_B64>>", base64.StdEncoding.EncodeToString([]byte(caseInput.maxUsedControlPlaneVersion)))
+	deckhouseDefaultKubernetesVersion := ""
+	if caseInput.defaultVersionInSecret != "" {
+		deckhouseDefaultKubernetesVersion = fmt.Sprintf("deckhouseDefaultKubernetesVersion: %s", base64.StdEncoding.EncodeToString([]byte(caseInput.defaultVersionInSecret)))
+	}
+	b.WriteString(strings.ReplaceAll(secretContent, "<<PLACEHOLDER_DEFAULT>>", deckhouseDefaultKubernetesVersion))
 
 	clusterConf := fmt.Sprintf(`
 apiVersion: deckhouse.io/v1
@@ -144,7 +154,7 @@ cloud:
   provider: OpenStack
 clusterDomain: cluster.local
 clusterType: Cloud
-defaultCRI: Docker
+defaultCRI: Containerd
 kind: ClusterConfiguration
 kubernetesVersion: "%s"
 podSubnetCIDR: 10.111.0.0/16
@@ -185,101 +195,131 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum 
 				Expect(err).To(BeNil())
 				Expect(string(decodedMaxUsedKubernetesVersion)).To(Equal(out.maxUsedControlPlaneVersion))
 
+				defaultKubernetesVersion, err := base64.StdEncoding.DecodeString(d8ClusterConfigSecret.Field("data.deckhouseDefaultKubernetesVersion").String())
+				Expect(err).To(BeNil())
+				Expect(string(defaultKubernetesVersion)).To(Equal(config.DefaultKubernetesVersion))
+
 				Expect(f.ValuesGet("controlPlaneManager.internal.effectiveKubernetesVersion").String()).To(Equal(out.effectiveVersion))
+
+				minVer, ok := requirements.GetValue(minK8sVersionRequirementKey)
+				Expect(ok).To(BeTrue())
+				Expect(minVer.(string)).To(Equal(out.minUsedVersion))
 			},
 			Entry("upgrade: Node version lower than control plane, do not allow to bump effective version and max used version",
 				input{
-					nodeVersions:               []string{"v1.21.3", "v1.21.1", "v1.21.5", "v1.22.2"},
-					maxUsedControlPlaneVersion: "1.22",
-					configVersion:              "1.23",
-					controlPlaneVersions:       []string{"1.22", "1.22", "1.22"},
+					nodeVersions:               []string{"v1.26.3", "v1.26.1", "v1.26.5", "v1.27.2"},
+					maxUsedControlPlaneVersion: "1.27",
+					configVersion:              "1.28",
+					controlPlaneVersions:       []string{"1.27", "1.27", "1.27"},
 				},
 				output{
-					maxUsedControlPlaneVersion: "1.22",
-					effectiveVersion:           "1.22",
+					maxUsedControlPlaneVersion: "1.27",
+					effectiveVersion:           "1.27",
+					minUsedVersion:             "1.26.1",
 				},
 			),
 			Entry("upgrade: control plane and nodes are on the same version, allow bumping effective version and max used version", input{
-				nodeVersions:               []string{"v1.22.10", "v1.22.3", "v1.22.5", "v1.22.2"},
-				maxUsedControlPlaneVersion: "1.22",
-				configVersion:              "1.23",
-				controlPlaneVersions:       []string{"1.22", "1.22", "1.22"},
+				nodeVersions:               []string{"v1.27.10", "v1.27.3", "v1.27.5", "v1.27.2"},
+				maxUsedControlPlaneVersion: "1.27",
+				configVersion:              "1.28",
+				controlPlaneVersions:       []string{"1.27", "1.27", "1.27"},
 			},
 				output{
-					maxUsedControlPlaneVersion: "1.23",
-					effectiveVersion:           "1.23",
+					maxUsedControlPlaneVersion: "1.28",
+					effectiveVersion:           "1.28",
+					minUsedVersion:             "1.27.2",
 				},
 			),
 			Entry("upgrade: control plane and nodes are on the same version (but kube-scheduler is on a lower version), do not bump effective version and max used version",
 				input{
-					nodeVersions:               []string{"v1.22.10", "v1.22.3", "v1.22.5", "v1.22.2"},
-					maxUsedControlPlaneVersion: "1.22",
-					configVersion:              "1.23",
-					controlPlaneVersions:       []string{"1.22", "1.22", "1.21"},
+					nodeVersions:               []string{"v1.27.10", "v1.27.3", "v1.27.5", "v1.27.2"},
+					maxUsedControlPlaneVersion: "1.27",
+					configVersion:              "1.28",
+					controlPlaneVersions:       []string{"1.27", "1.27", "1.26"},
 				},
 				output{
-					maxUsedControlPlaneVersion: "1.22",
-					effectiveVersion:           "1.22",
+					maxUsedControlPlaneVersion: "1.27",
+					effectiveVersion:           "1.27",
+					minUsedVersion:             "1.27.2",
 				},
 			),
 			Entry("downgrade: control plane and nodes are on the same version, do not lower effective version",
 				input{
-					nodeVersions:               []string{"v1.22.10", "v1.22.3", "v1.22.5", "v1.22.2"},
-					maxUsedControlPlaneVersion: "1.22",
-					configVersion:              "1.21",
-					controlPlaneVersions:       []string{"1.22", "1.22", "1.22"},
+					nodeVersions:               []string{"v1.27.10", "v1.27.3", "v1.27.5", "v1.27.2"},
+					maxUsedControlPlaneVersion: "1.27",
+					configVersion:              "1.26",
+					controlPlaneVersions:       []string{"1.27", "1.27", "1.27"},
 				},
 				output{
-					maxUsedControlPlaneVersion: "1.22",
-					effectiveVersion:           "1.22",
+					maxUsedControlPlaneVersion: "1.27",
+					effectiveVersion:           "1.27",
+					minUsedVersion:             "1.27.2",
 				},
 			),
 			Entry("downgrade: nodes are downgraded already, lower effective version",
 				input{
-					nodeVersions:               []string{"v1.22.10", "v1.22.3", "v1.22.5", "v1.22.2"},
-					maxUsedControlPlaneVersion: "1.23",
-					configVersion:              "1.21",
-					controlPlaneVersions:       []string{"1.23", "1.23", "1.23"},
+					nodeVersions:               []string{"v1.27.10", "v1.27.3", "v1.27.5", "v1.27.2"},
+					maxUsedControlPlaneVersion: "1.28",
+					configVersion:              "1.26",
+					controlPlaneVersions:       []string{"1.28", "1.28", "1.28"},
 				},
 				output{
-					maxUsedControlPlaneVersion: "1.23",
-					effectiveVersion:           "1.22",
+					maxUsedControlPlaneVersion: "1.28",
+					effectiveVersion:           "1.27",
+					minUsedVersion:             "1.27.2",
 				},
 			),
 			Entry("downgrade: nodes are downgraded already, but configVersion is 2 minor versions lower, lower effective version by one",
 				input{
-					nodeVersions:               []string{"v1.22.10", "v1.22.3", "v1.22.5", "v1.22.2"},
-					maxUsedControlPlaneVersion: "1.23",
-					configVersion:              "1.21",
-					controlPlaneVersions:       []string{"1.23", "1.23", "1.23"},
+					nodeVersions:               []string{"v1.27.10", "v1.27.3", "v1.27.5", "v1.27.2"},
+					maxUsedControlPlaneVersion: "1.28",
+					configVersion:              "1.26",
+					controlPlaneVersions:       []string{"1.28", "1.28", "1.28"},
 				},
 				output{
-					maxUsedControlPlaneVersion: "1.23",
-					effectiveVersion:           "1.22",
+					maxUsedControlPlaneVersion: "1.28",
+					effectiveVersion:           "1.27",
+					minUsedVersion:             "1.27.2",
 				},
 			),
 			Entry("downgrade: nodes are downgraded already, but maxUsedControlPlaneVersion does not allow us to downgrade by more than 1",
 				input{
-					nodeVersions:               []string{"v1.21.4", "v1.21.3", "v1.21.5", "v1.21.2"},
-					maxUsedControlPlaneVersion: "1.23",
-					configVersion:              "1.21",
-					controlPlaneVersions:       []string{"1.22", "1.22", "1.22"},
+					nodeVersions:               []string{"v1.26.4", "v1.26.3", "v1.26.5", "v1.26.2"},
+					maxUsedControlPlaneVersion: "1.28",
+					configVersion:              "1.26",
+					controlPlaneVersions:       []string{"1.27", "1.27", "1.27"},
 				},
 				output{
-					maxUsedControlPlaneVersion: "1.23",
-					effectiveVersion:           "1.22",
+					maxUsedControlPlaneVersion: "1.28",
+					effectiveVersion:           "1.27",
+					minUsedVersion:             "1.26.2",
 				},
 			),
 			Entry("downgrade: nodes are downgraded already, maxUsedControlPlaneVersion does not allow us to downgrade by more than 1, but we already violating maxUsedControlPlaneVersion",
 				input{
-					nodeVersions:               []string{"v1.21.4", "v1.21.3", "v1.21.5", "v1.21.2"},
-					maxUsedControlPlaneVersion: "1.24",
-					configVersion:              "1.22",
-					controlPlaneVersions:       []string{"1.22", "1.22", "1.22"},
+					nodeVersions:               []string{"v1.26.4", "v1.26.3", "v1.26.5", "v1.26.2"},
+					maxUsedControlPlaneVersion: "1.29",
+					configVersion:              "1.27",
+					controlPlaneVersions:       []string{"1.27", "1.27", "1.27"},
 				},
 				output{
-					maxUsedControlPlaneVersion: "1.24",
-					effectiveVersion:           "1.22",
+					maxUsedControlPlaneVersion: "1.29",
+					effectiveVersion:           "1.27",
+					minUsedVersion:             "1.26.2",
+				},
+			),
+			Entry("deckhouse default version should be changed",
+				input{
+					nodeVersions:               []string{"v1.26.4", "v1.26.3", "v1.26.5", "v1.26.2"},
+					maxUsedControlPlaneVersion: "1.29",
+					configVersion:              "1.27",
+					controlPlaneVersions:       []string{"1.27", "1.27", "1.27"},
+					defaultVersionInSecret:     "1.27",
+				},
+				output{
+					maxUsedControlPlaneVersion: "1.29",
+					effectiveVersion:           "1.27",
+					minUsedVersion:             "1.26.2",
 				},
 			),
 		)

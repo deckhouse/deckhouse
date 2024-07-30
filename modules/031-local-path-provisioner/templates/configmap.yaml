@@ -15,42 +15,12 @@ data:
                     "node":"DEFAULT_PATH_FOR_NON_LISTED_NODES",
                     "paths":["{{ $localPathProvisioner.spec.path }}"]
             }
-            ]
+            ],
+            "setupCommand": "/manager",
+            "teardownCommand": "/manager"
     }
-  setup: |-
-    #!/bin/sh
-    while getopts "m:s:p:" opt
-    do
-        case $opt in
-            p)
-            absolutePath=$OPTARG
-            ;;
-            s)
-            sizeInBytes=$OPTARG
-            ;;
-            m)
-            volMode=$OPTARG
-            ;;
-        esac
-    done
-    mkdir -m 0777 -p "${absolutePath}"
-  teardown: |-
-    #!/bin/sh
-    while getopts "m:s:p:" opt
-    do
-        case $opt in
-            p)
-            absolutePath=$OPTARG
-            ;;
-            s)
-            sizeInBytes=$OPTARG
-            ;;
-            m)
-            volMode=$OPTARG
-            ;;
-        esac
-    done
-    rm -rf "${absolutePath}"
+
+  # we do not use deckhouse user here because root of sc directory was created by root
   helperPod.yaml: |-
     apiVersion: v1
     kind: Pod

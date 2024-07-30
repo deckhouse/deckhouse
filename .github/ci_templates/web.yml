@@ -1,56 +1,67 @@
-{!{- define "doc_web_build_template" -}!}
-# <template: doc_web_build_template>
+{!{- define "web_build_template" -}!}
+{!{- $ctx := index . 0 -}!}
+{!{- $docPart := index . 1 -}!}
+{!{- $buildType := index . 2 -}!}
+
+# <template: web_build_template>
 runs-on: [self-hosted, regular]
 steps:
-  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "checkout_full_step"           . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_flant_registry_step"    . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "started_at_output"         $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_full_step"        $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_dev_registry_step"   $ctx | strings.Indent 2 }!}
+  {!{- $dir := "docs/documentation" -}!}
+{!{ if eq $docPart "main" }!}
+  {!{- $dir = "docs/site" -}!}
+{!{ end }!}
+{!{ if eq $buildType "release" }!}
+  {!{ tmpl.Exec "login_rw_registry_step"    $ctx | strings.Indent 2 }!}
+{!{ end }!}
 
-  - name: Run doc web build
+  - name: Run {!{ $docPart }!} web build
     uses: {!{ index (ds "actions") "werf/actions/build" }!}
     with:
       channel: ${{env.WERF_CHANNEL}}
     env:
-      WERF_DIR: "docs/documentation"
+      WERF_DIR: "{!{ $dir }!}"
       WERF_LOG_VERBOSE: "on"
-      WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
-# </template: doc_web_build_template>
-{!{- end -}!}
+{!{- if eq $docPart "main" }!}
+      DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
+      DOC_API_URL: "${{vars.DOC_API_URL}}"
+{!{- end }!}
+{!{- if eq $buildType "release" }!}
+      WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
+      WERF_SECONDARY_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
+{!{- else }!}
+      WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
+{!{- end }!}
 
-{!{- define "main_web_build_template" -}!}
-# <template: main_web_build_template>
-runs-on: [self-hosted, regular]
-steps:
-  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "checkout_full_step"           . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_flant_registry_step"    . | strings.Indent 2 }!}
-
-  - name: Run main web build
-    uses: {!{ index (ds "actions") "werf/actions/build" }!}
-    with:
-      channel: ${{env.WERF_CHANNEL}}
-    env:
-      WERF_DIR: "docs/site"
-      WERF_LOG_VERBOSE: "on"
-      WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
-# </template: main_web_build_template>
+# </template: web_build_template>
 {!{- end -}!}
 
 {!{- define "web_links_test_template" -}!}
 # <template: web_links_test_template>
+{!{- $ctx  := index . 0 }!}
+{!{- $mode := index . 1 }!}
 runs-on: [self-hosted, regular]
 steps:
-  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "checkout_full_step"           . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_flant_registry_step"    . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "werf_install_step"            . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "started_at_output"            $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_full_step"           $ctx | strings.Indent 2 }!}
+{!{ if eq $mode "release" }!}
+  {!{ tmpl.Exec "login_rw_registry_step"       $ctx | strings.Indent 2 }!}
+{!{- else }!}
+  {!{ tmpl.Exec "login_dev_registry_step"      $ctx | strings.Indent 2 }!}
+{!{- end }!}
+  {!{ tmpl.Exec "werf_install_step"            $ctx | strings.Indent 2 }!}
 
   - name: Prepare site structure
     env:
-      WEB_REGISTRY_PATH: ${{steps.check_flant_registry.outputs.web_registry_path}}
+      DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
+      DOC_API_URL: "${{vars.DOC_API_URL}}"
+{!{ if eq $mode "release" }!}
+      WEB_REGISTRY_PATH: ${{steps.check_rw_registry.outputs.web_registry_path}}
+{!{- else }!}
+      WEB_REGISTRY_PATH: ${{steps.check_dev_registry.outputs.web_registry_path}}
+{!{- end }!}
     run: |
       type werf
       werf version
@@ -62,7 +73,7 @@ steps:
       echo "_TMPDIR=$_TMPDIR"
 
       export WERF_REPO="${WEB_REGISTRY_PATH}"
-      echo -n 'use werf_repo'
+      echo -n 'use werf_repo '
       echo $WERF_REPO | tr 'a-z' 'A-Z'
 
       # Extract site content to the tmp directory.
@@ -96,14 +107,14 @@ steps:
       echo "Create site structure in '${_TMPDIR}/site_en/'"
       mkdir -p ${_TMPDIR}/site_en/ ${_TMPDIR}/site_ru/
       touch ${_TMPDIR}/site_en/index.html ${_TMPDIR}/site_ru/index.html
-      rsync -a --exclude='ru' --exclude='en' --exclude='compare' ${_TMPDIR}/frontend/ ${_TMPDIR}/site_en/
-      rsync -a --exclude='ru' --exclude='en' --exclude='compare' ${_TMPDIR}/frontend/ ${_TMPDIR}/site_ru/
+      rsync -a --exclude='ru' --exclude='en' --exclude='compare' --exclude='includes/header.html' ${_TMPDIR}/frontend/ ${_TMPDIR}/site_en/
+      rsync -a --exclude='ru' --exclude='en' --exclude='compare' --exclude='includes/header.html' ${_TMPDIR}/frontend/ ${_TMPDIR}/site_ru/
       #
       rsync -a ${_TMPDIR}/frontend/en/ ${_TMPDIR}/site_en/
       rsync -a ${_TMPDIR}/frontend/ru/ ${_TMPDIR}/site_ru/
       #
-      rsync -a ${_TMPDIR}/backend/en/ ${_TMPDIR}/site_en/
-      rsync -a ${_TMPDIR}/backend/ru/ ${_TMPDIR}/site_ru/
+      rsync -a --exclude='includes/header.html' ${_TMPDIR}/backend/en/ ${_TMPDIR}/site_en/
+      rsync -a --exclude='includes/header.html' ${_TMPDIR}/backend/ru/ ${_TMPDIR}/site_ru/
       #
       rsync -a --exclude='ru' --exclude='en' --exclude='compare' ${_TMPDIR}/documentation/ ${_TMPDIR}/site_en/documentation/
       rsync -a --exclude='ru' --exclude='en' --exclude='compare' ${_TMPDIR}/documentation/ ${_TMPDIR}/site_ru/documentation/
@@ -118,10 +129,11 @@ steps:
       # Do not exit on html-proofer error.
       set +e
       # Checking EN site
-      docker run --rm -v "${_TMPDIR}/site_en:/src:ro" klakegg/html-proofer:3.19.1 \
+      docker run --rm -v "${_TMPDIR}/site_en:/src:ro" klakegg/html-proofer:3.19.2 \
         --allow-hash-href --check-html --empty-alt-ignore \
-        --url-ignore "/localhost/,/https\:\/\/t.me/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
+        --url-ignore "/^\/(?!(gs\/|documentation\/|guides\/))/,/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
         --url-swap "https\:\/\/deckhouse.io\/:/,\/documentation\/v1\/:/documentation/,\/documentation\/latest\/:/documentation/" \
+        --file_ignore "404.html" \
         --http-status-ignore "0,429" ${1}
       # Emulate 'allow_failure: true' from Gitlab. Github has only two state: success and failure.
       exit 0
@@ -131,10 +143,11 @@ steps:
       # Do not exit on html-proofer error.
       set +e
       # Checking RU site
-      docker run --rm -v "${_TMPDIR}/site_ru:/src:ro" klakegg/html-proofer:3.19.1 \
+      docker run --rm -v "${_TMPDIR}/site_ru:/src:ro" klakegg/html-proofer:3.19.2 \
         --allow-hash-href --check-html --empty-alt-ignore \
-        --url-ignore "/localhost/,/https\:\/\/t.me/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
+        --url-ignore "/^\/(?!(gs\/|documentation\/|guides\/))/,/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
         --url-swap "https\:\/\/deckhouse.io\/:/,\/documentation\/v1\/:/documentation/,\/documentation\/latest\/:/documentation/" \
+        --file_ignore "404.html" \
         --http-status-ignore "0,429" ${1}
       # Emulate 'allow_failure: true' from Gitlab. Github has only two state: success and failure.
       exit 0
@@ -178,10 +191,20 @@ steps:
 {!{- $url := printf "deckhouse.%s.flant.com" $env -}!}
 {!{- $urlRu := printf "deckhouse.ru.%s.flant.com" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
-{!{- if eq $env "production" -}!}
+{!{- $dcName := "dev" -}!}
+{!{- $repo := "${{ steps.check_dev_registry.outputs.web_registry_path }}" -}!}
+{!{- if or (eq $env "production") (eq $env "preproduction") -}!}
+  {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
   {!{- $url = "deckhouse.io" -}!}
   {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
+  {!{- $dcName = "prod-eu" -}!}
+{!{- end -}!}
+{!{- if eq $env "preproduction" -}!}
+  {!{- $ns = "deckhouse-web-production" -}!}
+  {!{- $webEnv = "web-production" -}!}
+  {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}" -}!}
+  {!{- $dcName = "prod-sel" -}!}
 {!{- end -}!}
 
 # <template: deploy_doc_template>
@@ -192,7 +215,7 @@ steps:
     kube-config-base64-data: "{!{ $kubeConfig }!}"
     env: {!{ $webEnv }!}
   env:
-    WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
+    WERF_REPO: {!{ $repo }!}
     WERF_DIR: "docs/documentation"
     WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
     WERF_NAMESPACE: {!{ $ns }!}
@@ -200,6 +223,7 @@ steps:
     WERF_SET_URL: "global.url={!{ $url }!}"
     WERF_SET_URL_RU: "global.url_ru={!{ $urlRu }!}"
     WERF_SET_WEB_ENV: "web.env={!{ $webEnv }!}"
+    WERF_SET_DCNAME: "web.dc_name={!{ $dcName }!}"
 # </template: deploy_doc_template>
 {!{- end -}!}
 
@@ -210,11 +234,22 @@ steps:
 {!{- $url := printf "deckhouse.%s.flant.com" $env -}!}
 {!{- $urlRu := printf "deckhouse.ru.%s.flant.com" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
-{!{- if eq $env "production" -}!}
+{!{- $dcName := "dev" -}!}
+{!{- $repo := "${{ steps.check_dev_registry.outputs.web_registry_path }}" -}!}
+{!{- if or (eq $env "production") (eq $env "preproduction") -}!}
+  {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
   {!{- $url = "deckhouse.io" -}!}
   {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
+  {!{- $dcName = "prod-eu" -}!}
 {!{- end -}!}
+{!{- if eq $env "preproduction" -}!}
+  {!{- $ns = "deckhouse-web-production" -}!}
+  {!{- $webEnv = "web-production" -}!}
+  {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}" -}!}
+  {!{- $dcName = "prod-sel" -}!}
+{!{- end -}!}
+
 {!{- $siteDomainMap := printf "{\"en\" : \"%s\", \"ru\" : \"%s\"}" $url $urlRu -}!}
 
 # <template: deploy_site_template>
@@ -225,7 +260,7 @@ steps:
     kube-config-base64-data: "{!{ $kubeConfig }!}"
     env: {!{ $webEnv }!}
   env:
-    WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
+    WERF_REPO: {!{ $repo }!}
     WERF_DIR: "docs/site"
     WERF_RELEASE: "deckhouse-site"
     WERF_NAMESPACE: {!{ $ns }!}
@@ -235,5 +270,9 @@ steps:
     WERF_SET_URL_RU: "global.url_ru={!{ $urlRu }!}"
     WERF_SET_WEB_ENV: "web.env={!{ $webEnv }!}"
     WERF_SET_DOMAIN_MAP: "global.domain_map={!{ base64.Encode $siteDomainMap }!}"
+    WERF_SET_DCNAME: "web.dc_name={!{ $dcName }!}"
+    DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
+    DOC_API_URL: "${{vars.DOC_API_URL}}"
+    WERF_SET_MODULE_WATCHER_AUTHS: "global.moduleWatcherAuths=${{ secrets.MODULE_WATCHER_AUTHS }}"
 # </template: deploy_site_template>
 {!{- end -}!}

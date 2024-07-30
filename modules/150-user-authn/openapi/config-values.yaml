@@ -1,3 +1,4 @@
+x-config-version: 2
 type: object
 properties:
   publishAPI:
@@ -5,12 +6,13 @@ properties:
     default: {}
     description: 'Settings for exposing the API server using Ingress.'
     properties:
-      enable:
+      enabled:
         type: boolean
         default: false
         description: 'Setting it to `true` will create an Ingress resource in the `d8-user-authn` namespace in the cluster (it exposes the Kubernetes API).'
       ingressClass:
         type: string
+        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         description: 'The Ingress class that will be used to expose the Kubernetes API via Ingress.'
       whitelistSourceRanges:
         type: array
@@ -35,7 +37,9 @@ properties:
             description: |
               The mode of issuing certificates for the Ingress resource.
 
-              In the `SelfSigned` mode, a self-signed certificate will be issued for the Ingress resource.
+              In the `SelfSigned` mode, a CA-signed certificate will be issued for the Ingress resource.
+
+              Use the following command to get the certificate: `kubectl -n d8-user-authn get secrets kubernetes-api-ca-key-pair -oyaml`.
 
               In the `Global` mode, the policies specified in the `global.modules.https.mode` global parameter will be applied. Thus, if the global parameter has the `CertManager` mode set (with `letsencrypt` as the ClusterIssuer), then the Let's Encrypt certificate will be issued for the Ingress resource.
           global:
@@ -47,7 +51,13 @@ properties:
                 description: |
                   If there is an external load balancer in front of the Ingress that terminates HTTPS traffic using non-public CA, then you need to specify the CA so it will be included in kubectl-config.
 
+                  If you are using certificates issued by the `cert-manager` module and Let's Encrypt in your cluster, you should set an empty string `""` as the value.
+
                   Also, you can set the external LB's certificate itself as a CA if you can't get the CA that signed it for some reason. Note that after the certificate is updated on the LB, all the previously generated kubeconfigs will stop working.
+      addKubeconfigGeneratorEntry:
+        type: boolean
+        default: true
+        description: 'Setting it to `false` will remove an entry in kubeconfig-generator'
   kubeconfigGenerator:
     type: array
     description: |
@@ -71,11 +81,11 @@ properties:
             * delete old API server certificates: `mv /etc/kubernetes/pki/apiserver.* /tmp/`;
             * reissue new certificates: `kubeadm init phase certs apiserver --config=kubeadmconf.yaml`;
             * restart the API server's container: `docker ps -a | grep 'kube-apiserver' | grep -v pause| awk '{print $1}' | xargs docker restart`;
-            * repeat this step for all master nodes;
+            * repeat this step for all master nodes.
         description:
           type: string
           description: |
-            A couple of words how this authentication metod differs from others.
+            A couple of words how this authentication method differs from others.
         masterCA:
           type: string
           description: |
@@ -84,10 +94,12 @@ properties:
             * We recommend using a self-signed certificate (and specify it as masterCA) if an HTTP proxy (that terminates HTTPS traffic) is used for exposing.
   idTokenTTL:
     type: string
-    pattern: '^[0-9]+[smh]{1}$'
+    pattern: '^([0-9]+h)?([0-9]+m)?([0-9]+s)?$'
     default: '10m'
     description: |
       The TTL of the id token (use `s` for seconds, `m` for minutes, `h` for hours).
+
+      It is specified as a string containing the time unit in hours, minutes and seconds: 30m, 20s, 2h30m10s, 24h.
   highAvailability:
     type: boolean
     x-examples: [true, false]
@@ -132,8 +144,9 @@ properties:
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
   ingressClass:
     type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
     description: |
-      The class of the Ingress controller of the documentation web UI.
+      The class of the Ingress controller that will be used for Dex/kubeconfig-generator.
 
       An optional parameter; by default, the `modules.ingressClass` global value is used.
   https:
@@ -158,7 +171,7 @@ properties:
           - `CertManager` — Dex/kubeconfig-generator will use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter.
           - `CustomCertificate` — Dex/kubeconfig-generator will use HTTPS using the certificate from the `d8-system` namespace.
           - `Disabled` — Dex/kubeconfig-generator will work over HTTP only;
-          - `OnlyInURI` — Dex/kubeconfig-generator will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
+          - `OnlyInURI` — Dex/kubeconfig-generator will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
         enum:
           - "Disabled"
           - "CertManager"

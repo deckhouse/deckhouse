@@ -2,20 +2,228 @@
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
 
-На данном этапе вы создали кластер, который состоит из **единственного** master-узла.
+На данном этапе вы создали кластер, который состоит из **единственного** узла — master-узла. На master-узле по умолчанию работает только ограниченный набор системных компонентов. Для полноценной работы кластера необходимо либо добавить в кластер хотя бы один worker-узел, либо разрешить остальным компонентам Deckhouse работать на master-узле.
 
-Для полноценной работы кластера добавьте узлы, согласно <a href="/documentation/latest/modules/040-node-manager/faq.html#как-добавить-статичный-узел-в-кластер">документации</a> (рекомендуется для production-окружений и тестовых сред).
+Выберите ниже один из двух вариантов, для продолжения установки кластера:
 
-<blockquote>
-<p>Если вы развернули кластер <strong>для ознакомительных целей</strong> и одного узла вам достаточно, разрешите компонентам Deckhouse работать на master-узле. Для этого, снимите с master-узла taint, выполнив на master-узле следующую команду:</p>
+<div class="tabs">
+        <a id='tab_layout_worker' href="javascript:void(0)" class="tabs__btn tabs__btn_revision active"
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');
+                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');">
+        Кластер из нескольких узлов
+        </a>
+        <a id='tab_layout_master' href="javascript:void(0)" class="tabs__btn tabs__btn_revision"
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');
+                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');">
+        Кластер из единственного узла
+        </a>
+</div>
+
+<div id="block_layout_master" class="tabs__content_master" style="display: none;">
+<p>Кластера, состоящего из единственного узла, может быть достаточно, например, для ознакомительных целей.</p>
+<ul>
+  <li>
+<p>Выполните на <strong>master-узле</strong> следующую команду, для того чтобы снять с него <i>taint</i> и разрешить остальным компонентам Deckhouse работать на master-узле:</p>
+
 {% snippetcut %}
 ```bash
-kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
+sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
 ```
 {% endsnippetcut %}
-</blockquote>
+  </li>
+  <li>
+<p>Настройте StorageClass <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: LocalPathProvisioner
+metadata:
+  name: localpath
+spec:
+  path: "/opt/local-path-provisioner"
+  reclaimPolicy: Delete
+EOF
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+<p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду, чтобы добавить на StorageClass аннотацию <code>storageclass.kubernetes.io/is-default-class='true'</code>:
+</p>
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io/is-default-class='true'
+```
+{% endsnippetcut %}
+  </li>
+</ul>
+</div>
 
-Далее, остается выполнить следующие три действия.
+<div id="block_layout_worker" class="tabs__content_worker">
+<p>Добавьте узел в кластер (подробнее о добавлении статического узла в кластер читайте в <a href="/documentation/latest/modules/040-node-manager/examples.html#добавление-статического-узла-в-кластер">документации</a>):</p>
+
+<ul>
+  <li>
+    Подготовьте <strong>чистую</strong> виртуальную машину, которая будет узлом кластера.
+  </li>
+  <li>
+<p>Настройте StorageClass <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: LocalPathProvisioner
+metadata:
+  name: localpath
+spec:
+  path: "/opt/local-path-provisioner"
+  reclaimPolicy: Delete
+EOF
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+<p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду, чтобы добавить на StorageClass аннотацию <code>storageclass.kubernetes.io/is-default-class='true'</code>:</p>
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io/is-default-class='true'
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p>Создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
+{% snippetcut %}
+```bash
+sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+  staticInstances:
+    count: 1
+    labelSelector:
+      matchLabels:
+        role: worker
+EOF
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p>Сгенерируйте SSH-ключ с пустой парольной фразой. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
+{% snippetcut %}
+```bash
+ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p>Создайте в кластере ресурс <a href="/documentation/v1/modules/040-node-manager/cr.html#sshcredentials">SSHCredentials</a>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
+{% snippetcut %}
+```bash
+kubectl create -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: SSHCredentials
+metadata:
+  name: caps
+spec:
+  user: caps
+  privateSSHKey: "`cat /dev/shm/caps-id | base64 -w0`"
+EOF
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p>Выведите публичную часть сгенерированного ранее SSH-ключа (он понадобится на следующем шаге). Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
+{% snippetcut %}
+```bash
+cat /dev/shm/caps-id.pub
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p><strong>На подготовленной виртуальной машине</strong> создайте пользователя <code>caps</code>. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:</p>
+{% snippetcut %}
+```bash
+# Укажите публичную часть SSH-ключа пользователя.
+export KEY='<SSH-PUBLIC-KEY>'
+useradd -m -s /bin/bash caps
+usermod -aG sudo caps
+echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+mkdir /home/caps/.ssh
+echo $KEY >> /home/caps/.ssh/authorized_keys
+chown -R caps:caps /home/caps
+chmod 700 /home/caps/.ssh
+chmod 600 /home/caps/.ssh/authorized_keys
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p>Создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> для добавляемого узла. Для этого выполните на <strong>master-узле</strong> следующую команду, указав IP-адрес добавляемого узла:</p>
+{% snippetcut %}
+```bash
+# Укажите IP-адрес узла, который необходимо подключить к кластеру.
+export NODE=<NODE-IP-ADDRESS>
+kubectl create -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: d8cluster-worker
+  labels:
+    role: worker
+spec:
+  address: "$NODE"
+  credentialsRef:
+    kind: SSHCredentials
+    name: caps
+EOF
+```
+{% endsnippetcut %}
+  </li>
+  <li><p>Убедитесь, что все узлы кластера находятся в статусе <code>Ready</code>.</p>
+<p>Выполните на <strong>master-узле</strong> следующую команду, чтобы получить список узлов кластера:</p>
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl get no
+```
+{% endsnippetcut %}
+
+{% offtopic title="Пример вывода..." %}
+```
+$ sudo /opt/deckhouse/bin/kubectl get no
+NAME               STATUS   ROLES                  AGE    VERSION
+d8cluster          Ready    control-plane,master   30m   v1.23.17
+d8cluster-worker   Ready    worker                 10m   v1.23.17
+```
+{%- endofftopic %}
+  </li>
+</ul>
+</div>
+
+<p>Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время.</p>
+
+<ul>
+<li><p>Убедитесь, что под Kruise controller manager модуля <a href="/documentation/v1/modules/402-ingress-nginx/">ingress-nginx</a> запустился и находится в статусе <code>Ready</code>.</p>
+<p>Выполните на <strong>master-узле</strong> следующую команду:</p>
+
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=kruise
+```
+{% endsnippetcut %}
+
+{% offtopic title="Пример вывода..." %}
+```
+$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=kruise
+NAME                                         READY   STATUS    RESTARTS    AGE
+kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
+```
+{%- endofftopic %}
+</li></ul>
+
+Далее нужно создать Ingress-контроллер, создать пользователя для доступа в веб-интерфейсы и настроить DNS.
+
 <ul><li><p><strong>Установка Ingress-контроллера</strong></p>
 <p>Создайте на <strong>master-узле</strong> файл <code>ingress-nginx-controller.yml</code> содержащий конфигурацию Ingress-контроллера:</p>
 {% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
@@ -24,9 +232,27 @@ kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/
 <p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
-kubectl create -f ingress-nginx-controller.yml
+sudo /opt/deckhouse/bin/kubectl create -f ingress-nginx-controller.yml
 ```
 {% endsnippetcut %}
+
+Запуск Ingress-контроллера после завершения установки Deckhouse может занять какое-то время. Прежде чем продолжить убедитесь что Ingress-контроллер запустился (выполните на <code>master-узле</code>):
+
+{% snippetcut %}
+```shell
+sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
+```
+{% endsnippetcut %}
+
+Дождитесь перехода подов Ingress-контроллера в статус <code>Ready</code>.
+
+{% offtopic title="Пример вывода..." %}
+```
+$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
+NAME                                       READY   STATUS    RESTARTS   AGE
+controller-nginx-r6hxc                     3/3     Running   0          5m
+```
+{%- endofftopic %}
 </li>
 <li><p><strong>Создание пользователя</strong> для доступа в веб-интерфейсы кластера</p>
 <p>Создайте на <strong>master-узле</strong> файл <code>user.yml</code> содержащий описание учетной записи пользователя и прав доступа:</p>
@@ -36,7 +262,7 @@ kubectl create -f ingress-nginx-controller.yml
 <p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
-kubectl create -f user.yml
+sudo /opt/deckhouse/bin/kubectl create -f user.yml
 ```
 {% endsnippetcut %}
 </li>
@@ -57,7 +283,7 @@ kubectl create -f user.yml
 <code example-hosts>api.example.com
 argocd.example.com
 dashboard.example.com
-deckhouse.example.com
+documentation.example.com
 dex.example.com
 grafana.example.com
 hubble.example.com
@@ -82,7 +308,7 @@ sudo -E bash -c "cat <<EOF >> /etc/hosts
 $PUBLIC_IP api.example.com
 $PUBLIC_IP argocd.example.com
 $PUBLIC_IP dashboard.example.com
-$PUBLIC_IP deckhouse.example.com
+$PUBLIC_IP documentation.example.com
 $PUBLIC_IP dex.example.com
 $PUBLIC_IP grafana.example.com
 $PUBLIC_IP hubble.example.com

@@ -58,6 +58,9 @@ spec:
       labels:
         app: node-exporter
       name: node-exporter
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/node-exporter: "unconfined"
+        container.apparmor.security.beta.kubernetes.io/kubelet-eviction-thresholds-exporter: "unconfined"
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
@@ -65,35 +68,52 @@ spec:
       serviceAccountName: node-exporter
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" . | nindent 6 }}
       containers:
       - image: {{ include "helm_lib_module_image" (list . "nodeExporter") }}
         name: node-exporter
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "SYS_TIME")) | nindent 8 }}
         args:
-        - '--web.listen-address=127.0.0.1:9101'
+        - '--web.listen-address=127.0.0.1:4206'
         - '--path.rootfs=/host/root'
         - '--collector.ntp'
+        - '--collector.ntp.server-port=4234'
         - '--no-collector.wifi'
         - '--collector.ntp.server-is-local'
+        - '--collector.ntp.server=$(HOST_IP)'
         - '--collector.processes'
-        - '--collector.filesystem.ignored-mount-points'
+        - '--collector.filesystem.mount-points-exclude'
         - '(^/(dev|proc|sys|run)($|/))|(^/var/lib/docker/)|(^/var/lib/containerd/)|(/kubelet/)'
-        - '--collector.netclass.ignored-devices=^(veth.*|[a-f0-9]{15})$'
-        - '--collector.netdev.ignored-devices=^(veth.*|[a-f0-9]{15})$'
-        - '--collector.filesystem.ignored-fs-types'
+# we want to ignore veth devices. Justification - https://github.com/prometheus-operator/kube-prometheus/pull/1224
+# veth.* - for veth interfaces.
+# [a-f0-9]{15} - for OVN veth interfaces.
+# lxc.* - for Cilium veth interfaces.
+        - '--collector.netclass.ignored-devices=^(veth.*|lxc.*|[a-f0-9]{15})$'
+        - '--collector.netdev.device-exclude=^(veth.*|lxc.*|[a-f0-9]{15})$'
+        - '--collector.filesystem.fs-types-exclude'
         - '^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|fuse\.lxcfs|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs|squashfs)$'
         - '--collector.textfile.directory'
-        - '/host/textfile'
+        - '/host/textfile*'
         - '--collector.netstat.fields'
         - '^(.*_(InErrors|InErrs)|Ip_Forwarding|Ip(6|Ext)_(InOctets|OutOctets)|Icmp6?_(InMsgs|OutMsgs)|TcpExt_.*|Tcp_(ActiveOpens|InSegs|OutSegs|PassiveOpens|RetransSegs|CurrEstab)|Udp6?_(InDatagrams|OutDatagrams|NoPorts))$'
+        env:
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         volumeMounts:
         - name: root
           readOnly:  true
           mountPath: /host/root
+          mountPropagation: HostToContainer
         - name: textfile
           readOnly: true
           mountPath: /host/textfile
+          mountPropagation: HostToContainer
+        - name: textfile-kubelet-eviction-thresholds-exporter
+          readOnly: true
+          mountPath: /host/textfile-kubelet-eviction-thresholds-exporter
+          mountPropagation: HostToContainer
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -112,7 +132,7 @@ spec:
         - name: root
           readOnly:  true
           mountPath: /host/
-        - name: textfile
+        - name: textfile-kubelet-eviction-thresholds-exporter
           mountPath: /var/run/node-exporter-textfile
         - name: dockersock
           mountPath: /var/run/docker.sock
@@ -130,7 +150,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9101"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4206"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -142,7 +162,7 @@ spec:
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             upstreams:
-            - upstream: http://127.0.0.1:9101/metrics
+            - upstream: http://127.0.0.1:4206/metrics
               path: /metrics
               authorization:
                 resourceAttributes:
@@ -153,7 +173,7 @@ spec:
                   subresource: prometheus-metrics
                   name: node-exporter
         ports:
-        - containerPort: 9101
+        - containerPort: 4206
           name: https-metrics
         resources:
           requests:
@@ -179,5 +199,7 @@ spec:
       - emptyDir:
           medium: Memory
         name: kube
+      - emptyDir:
+        name: textfile-kubelet-eviction-thresholds-exporter
       imagePullSecrets:
       - name: deckhouse-registry

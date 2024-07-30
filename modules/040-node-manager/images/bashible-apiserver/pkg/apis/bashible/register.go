@@ -51,6 +51,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&BashibleList{},
 		&NodeGroupBundle{},
 		&NodeGroupBundleList{},
+		&Bootstrap{},
+		&BootstrapList{},
 	)
 	return nil
 }

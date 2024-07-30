@@ -65,6 +65,16 @@ func ObjectBindingSubjectServiceAccountCheck(m utils.Module, object storage.Stor
 			continue
 		}
 
+		// Grafana service account has binding in loki module.
+		if m.Name == "loki" && subject.Name == "grafana" && subject.Namespace == "d8-monitoring" {
+			continue
+		}
+
+		// Log-shipper service account has binding in loki module.
+		if m.Name == "loki" && subject.Name == "log-shipper" && subject.Namespace == "d8-log-shipper" {
+			continue
+		}
+
 		if subject.Namespace == m.Namespace && !objectStore.Exists(storage.ResourceIndex{
 			Name: subject.Name, Kind: subject.Kind, Namespace: subject.Namespace,
 		}) {

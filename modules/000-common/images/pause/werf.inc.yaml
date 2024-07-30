@@ -1,2 +1,22 @@
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: registry.k8s.io/pause:3.1@sha256:f78411e19d84a252e53bff71a4407a5686c46983a2c2eeed83929b888179acea
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /pause-linux-amd64
+  to: /pause
+  before: setup
+docker:
+  ENTRYPOINT: ["/pause"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
+shell:
+  install:
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - mkdir /src
+    - git clone --depth 1 --branch v1.28.0 {{ $.SOURCE_REPO }}/kubernetes/kubernetes.git /src
+    - cd /src
+    - gcc -Os -Wall -Werror -static -o /pause-linux-amd64 build/pause/linux/pause.c
+    - strip /pause-linux-amd64

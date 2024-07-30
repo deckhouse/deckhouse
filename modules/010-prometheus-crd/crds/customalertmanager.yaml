@@ -18,12 +18,43 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
+      subresources:
+        status: {}
       schema:
         openAPIV3Schema:
           type: object
           description: The resource for connecting additional Alertmanagers to Prometheus.
           required: ['spec']
           properties:
+            status:
+              type: object
+              properties:
+                deckhouse:
+                  type: object
+                  properties:
+                    synced:
+                      type: string
+                      description: True if last observed version of the resource was successfully applied in the cluster.
+                    observed:
+                      type: object
+                      description: Contains last timestamp when the resource change was noted by the operator and its checksum.
+                      properties:
+                        lastTimestamp:
+                          type: string
+                          description: Last timestamp when a change of the resource was noted by the operator.
+                        checkSum:
+                          type: string
+                          description: The checksum of last observed resource.
+                    processed:
+                      type: object
+                      description: Contains last timestamp when the resource was applied in the cluster by the operator and its checksum.
+                      properties:
+                        lastTimestamp:
+                          type: string
+                          description: Last timestamp when a change of the resource was processed by the operator.
+                        checkSum:
+                          type: string
+                          description: The checksum of last processed resource.
             spec:
               type: object
               properties:
@@ -40,7 +71,7 @@ spec:
                   properties:
                     address:
                       type: string
-                      x-examples: ["http://alerts.mycompany.com", "https://alerts.company.com", "http://192.168.1.1"]
+                      x-doc-examples: ["http://alerts.mycompany.com", "https://alerts.company.com", "http://192.168.1.1"]
                       pattern: "^https?://[^\\s/$.?#].[^\\s]*$"
                       description: 'URL of an external Alertmanager.'
                     service:
@@ -220,8 +251,6 @@ spec:
                                 requireTLS:
                                   description: |
                                     The SMTP TLS requirement.
-
-                                    Note that Go does not support unencrypted connections to remote SMTP endpoints.
                                   type: boolean
                                 sendResolved:
                                   description: Whether or not to notify about resolved alerts.
@@ -838,6 +867,210 @@ spec:
                                   type: string
                               type: object
                             type: array
+                          telegramConfigs:
+                            description: List of Telegram configurations.
+                            items:
+                              description: |
+                                Configures notifications via Telegram. 
+                                
+                                Read more in the [Prometheus documentation](https://prometheus.io/docs/alerting/latest/configuration/#telegram_config).
+                              properties:
+                                apiURL:
+                                  description: |
+                                    The Telegram API URL i.e. `https://api.telegram.org`.
+                                    
+                                    If not specified, the default API URL will be used.
+                                  type: string
+                                botToken:
+                                  description: The Secret in the `d8-monitoring` namespace that contains Telegram bot token.
+                                  properties: *data-in-secret-properties
+                                  required:
+                                    - key
+                                  type: object
+                                chatID:
+                                  description: The Telegram chat ID.
+                                  format: int64
+                                  type: integer
+                                disableNotifications:
+                                  description: Disable telegram notifications
+                                  type: boolean
+                                httpConfig:
+                                  description: HTTP client configuration.
+                                  properties:
+                                    authorization:
+                                      description: Authorization header configuration for
+                                        the client. This is mutually exclusive with BasicAuth
+                                        and is only available starting from Alertmanager
+                                        v0.22+.
+                                      properties:
+                                        credentials:
+                                          description: The Secret in the `d8-monitoring` namespace that contains the credentials of the request.
+                                          properties: *data-in-secret-properties
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        type:
+                                          description: Set the authentication type. Defaults
+                                            to Bearer, Basic will cause an error
+                                          type: string
+                                      type: object
+                                    basicAuth:
+                                      description: BasicAuth for the client. This is mutually
+                                        exclusive with Authorization. If both are defined,
+                                        BasicAuth takes precedence.
+                                      properties:
+                                        password:
+                                          description: The Secret in the `d8-monitoring` namespace that contains the password for authentication.
+                                          properties: *data-in-secret-properties
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        username:
+                                          description: The Secret in the `d8-monitoring` namespace that contains the username for authentication.
+                                          properties: *data-in-secret-properties
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
+                                    bearerTokenSecret:
+                                      description: The Secret in the `d8-monitoring` namespace that contains the bearer token to be used by the client for authentication.
+                                      properties: *data-in-secret-properties
+                                      required:
+                                        - key
+                                      type: object
+                                    followRedirects:
+                                      description: FollowRedirects specifies whether the
+                                        client should follow HTTP 3xx redirects.
+                                      type: boolean
+                                    oauth2:
+                                      description: OAuth2 client credentials used to fetch
+                                        a token for the targets.
+                                      properties:
+                                        clientId:
+                                          description: The Secret or configMap containing
+                                            the OAuth2 client id
+                                          properties:
+                                            configMap:
+                                              description: The ConfigMap in the `d8-monitoring` namespace that contains data to use for the targets.
+                                              properties: *data-in-cm-properties
+                                              required:
+                                                - key
+                                              type: object
+                                              x-kubernetes-map-type: atomic
+                                            secret:
+                                              description: The Secret in the `d8-monitoring` namespace that contains data to use for the targets.
+                                              properties: *data-in-secret-properties
+                                              required:
+                                                - key
+                                              type: object
+                                              x-kubernetes-map-type: atomic
+                                          type: object
+                                        clientSecret:
+                                          description: The secret in the `d8-monitoring` namespace that contains OAuth2 client data.
+                                          properties: *data-in-secret-properties
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        endpointParams:
+                                          additionalProperties:
+                                            type: string
+                                          description: Parameters to append to the token
+                                            URL
+                                          type: object
+                                        scopes:
+                                          description: OAuth2 scopes used for the token
+                                            request
+                                          items:
+                                            type: string
+                                          type: array
+                                        tokenUrl:
+                                          description: The URL to fetch the token from
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                        - clientId
+                                        - clientSecret
+                                        - tokenUrl
+                                      type: object
+                                    proxyURL:
+                                      description: Optional proxy URL.
+                                      type: string
+                                    tlsConfig:
+                                      description: TLS configuration for the client.
+                                      properties:
+                                        ca:
+                                          description: Certificate authority used when verifying
+                                            server certificates.
+                                          properties:
+                                            configMap:
+                                              description: The ConfigMap in the `d8-monitoring` namespace that contains data to use for the targets.
+                                              properties: *data-in-cm-properties
+                                              required:
+                                                - key
+                                              type: object
+                                              x-kubernetes-map-type: atomic
+                                            secret:
+                                              description: The Secret in the `d8-monitoring` namespace that contains data to use for the targets.
+                                              properties: *data-in-secret-properties
+                                              required:
+                                                - key
+                                              type: object
+                                              x-kubernetes-map-type: atomic
+                                          type: object
+                                        cert:
+                                          description: Client certificate to present when
+                                            doing client-authentication.
+                                          properties:
+                                            configMap:
+                                              description: The ConfigMap in the `d8-monitoring` namespace that contains data to use for the targets.
+                                              properties: *data-in-cm-properties
+                                              required:
+                                                - key
+                                              type: object
+                                              x-kubernetes-map-type: atomic
+                                            secret:
+                                              description: The Secret in the `d8-monitoring` namespace that contains data to use for the targets.
+                                              properties: *data-in-secret-properties
+                                              required:
+                                                - key
+                                              type: object
+                                              x-kubernetes-map-type: atomic
+                                          type: object
+                                        insecureSkipVerify:
+                                          description: Disable target certificate validation.
+                                          type: boolean
+                                        keySecret:
+                                          description: The Secret in the `d8-monitoring` namespace that contains the client key file for the targets.
+                                          properties: *data-in-secret-properties
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        serverName:
+                                          description: Used to verify the hostname for the
+                                            targets.
+                                          type: string
+                                      type: object
+                                  type: object
+                                message:
+                                  description: Message template
+                                  type: string
+                                parseMode:
+                                  description: Parse mode for telegram message
+                                  enum:
+                                    - MarkdownV2
+                                    - Markdown
+                                    - HTML
+                                  type: string
+                                sendResolved:
+                                  description: Whether to notify about resolved alerts.
+                                  type: boolean
+                              type: object
+                            type: array
                           webhookConfigs:
                             description: List of webhook configurations.
                             items:
@@ -1045,3 +1278,17 @@ spec:
           name: Type
           description: 'Type of an Alertmanager.'
           type: string
+        - jsonPath: .status.deckhouse.synced
+          name: Synced
+          type: string
+          description: Status message if current version of the resource was processed by the operator.
+        - name: Observed
+          jsonPath: .status.deckhouse.observed.lastTimestamp
+          type: string
+          description: Timestamp when the resource was observed by the operator last time.
+          priority: 1
+        - name: Processed
+          jsonPath: .status.deckhouse.processed.lastTimestamp
+          type: string
+          description: Timestamp when the resource was processed by the operator last time.
+          priority: 1

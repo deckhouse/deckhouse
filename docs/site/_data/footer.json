@@ -1,0 +1,123 @@
+{
+  "columns": {
+    "en": [
+      {
+        "title": "Products",
+        "items": [
+          {
+            "title": "Deckhouse Kubernetes Platform EE",
+            "url": "/products/enterprise-edition/",
+            "target": ""
+          },
+          {
+            "title": "Deckhouse Kubernetes Platform CE",
+            "url": "/community/community-edition/",
+            "target": ""
+          }
+        ]
+      },
+      {
+        "title": "Services",
+        "items": [
+          {
+            "title": "Training &amp; Consulting",
+            "url": "/services/education/",
+            "target": ""
+          }
+        ]
+      },
+      {
+        "title": "Resources",
+        "items": [
+          {
+            "title": "Deckhouse Security",
+            "url": "/security/",
+            "target": ""
+          },
+          {
+            "title": "Deckhouse vs KaaS",
+            "url": "/deckhouse-vs-kaas/",
+            "target": ""
+          },
+          {
+            "title": "Success stories",
+            "url": "/success-stories/",
+            "target": ""
+          },
+          {
+            "title": "Blog",
+            "url": "https://blog.deckhouse.io/",
+            "target": "_blank"
+          }
+        ]
+      }
+    ],
+    "ru": [
+      {
+        "title": "Продукты",
+        "items": [
+          {
+            "title": "Deckhouse Kubernetes Platform EE",
+            "url": "/products/enterprise-edition/",
+            "target": ""
+          },
+          {
+            "title": "Deckhouse Kubernetes Platform CE",
+            "url": "/community/community-edition/",
+            "target": ""
+          },
+          {
+            "title": "Как купить",
+            "url": "/how-to-buy/",
+            "target": ""
+          }
+        ]
+      },
+      {
+        "title": "Услуги",
+        "items": [
+          {
+            "title": "Обучение",
+            "url": "/services/education/",
+            "target": ""
+          },
+          {
+            "title": "Переезд с OpenShift",
+            "url": "/moving-from-openshift/",
+            "target": ""
+          }
+        ]
+      },
+      {
+        "title": "Информация",
+        "items": [
+          {
+            "title": "Партнёры",
+            "url": "/how-to-buy/#partners",
+            "target": ""
+          },
+          {
+            "title": "Партнёрская программа",
+            "url": "/partners-program/",
+            "target": "_blank"
+          },
+          {
+            "title": "Импортозамещение",
+            "url": "/substitution/",
+            "target": ""
+          },
+          {
+            "title": "Безопасность Deckhouse",
+            "url": "/security/",
+            "target": ""
+          },
+          {
+            "title": "Сравнение с KaaS",
+            "url": "/deckhouse-vs-kaas/",
+            "target": ""
+          }
+        ]
+      }
+    ]
+  }
+}

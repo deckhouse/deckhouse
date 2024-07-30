@@ -44,18 +44,33 @@ spec:
     metadata:
       labels:
         name: monitoring-ping
+        app: monitoring-ping
     spec:
       terminationGracePeriodSeconds: 0
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       serviceAccountName: monitoring-ping
       containers:
       - image: {{ include "helm_lib_module_image" (list . "monitoringPing") }}
         name: monitoring-ping
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "NET_RAW")) | nindent 8 }}
+        {{- /*
+          UID: 0 GID:0 using for privilege access for fping because using hostNetwork
+        */}}
+        securityContext:
+          allowPrivilegeEscalation: true
+          capabilities:
+            add:
+            - NET_RAW
+            - DAC_OVERRIDE
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 0
+          runAsNonRoot: false
+          runAsUser: 0
         env:
           - name: MY_NODE_NAME
             valueFrom:

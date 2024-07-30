@@ -1,0 +1,29 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: test-source
+spec:
+  type: File
+  file:
+    include: ["/var/log/kube-audit/audit.log"]
+  destinationRefs:
+    - test-loki-dest
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: test-loki-dest
+spec:
+  type: Loki
+  loki:
+    endpoint: http://192.168.1.1:9000
+    tenantID: "{{ test }}"
+  extraLabels:
+    foo: bar
+    app: "{{ ap_p[0].a }}"
+  buffer:
+    type: Memory
+    memory:
+      maxEvents: 4096
+    whenFull: DropNewest

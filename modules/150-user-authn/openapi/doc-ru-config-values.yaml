@@ -1,14 +1,14 @@
 type: object
 properties:
   publishAPI:
-    description: 'Настройки публикации API-сервера Kubernetes через Ingress, для обеспечения его публичного доступа.'
+    description: 'Настройки публикации API-сервера Kubernetes через Ingress для обеспечения его публичного доступа.'
     properties:
-      enable:
-        description: 'Если указать `true`, то в namespace `d8-user-authn` кластера будет создан Ingress-ресурс, который откроет публичный доступ к API-серверу.'
+      enabled:
+        description: 'Если указать `true`, в namespace `d8-user-authn` кластера будет создан Ingress-ресурс, который откроет публичный доступ к API-серверу.'
       ingressClass:
         description: 'Ingress-класс, который будет использован для публикации API Kubernetes через Ingress.'
       whitelistSourceRanges:
-        description: 'Массив CIDR, которым разрешено подключение к API-серверу.'
+        description: 'Массив адресов в формате CIDR, которым разрешено подключение к API-серверу.'
       https:
         description: 'Режим работы HTTPS для Ingress API-сервера.'
         properties:
@@ -16,9 +16,11 @@ properties:
             description: |
               Режим выдачи сертификатов для данного Ingress-ресурса.
 
-              В случае использования режима `SelfSigned` для Ingress-ресурса будет выпущен самоподписанный сертификат.
+              В случае использования режима `SelfSigned`, для Ingress-ресурса будет выпущен сертификат подписанный CA.
 
-              В случае использования режима `Global`, будут применены политики из глобальной настройки `global.modules.https.mode`. Т.е. если в глобальной настройке стоит режим `CertManager` с ClusterIssuer `letsencrypt`, то для Ingress-ресурса будет заказан сертификат Let's Encrypt.
+              Получить выпущенный сертификат можно следующей командой: `kubectl -n d8-user-authn get secrets kubernetes-api-ca-key-pair -oyaml`.
+
+              В случае использования режима `Global` будут применены политики из глобальной настройки `global.modules.https.mode`. То есть если в глобальной настройке стоит режим `CertManager` с ClusterIssuer `letsencrypt`, для Ingress-ресурса будет заказан сертификат Let's Encrypt.
           global:
             description: 'Дополнительный параметр для режима `Global`.'
             properties:
@@ -26,20 +28,24 @@ properties:
                 description: |
                   Если перед Ingress-контроллером есть внешний балансировщик, который терминирует HTTPS-трафик с использованием непубличного сертификата, укажите цепочку CA в этом параметре. Она будет добавлена в сгенерированные kubectl-конфиги.
 
+                  Если вы используете в кластере сертификаты, выдаваемые c помощью модуля `cert-manager` и Let's Encrypt, следует в качестве значения установить пустую строку `""`.
+
                   В качестве CA допускается указать непосредственно сертификат внешнего балансировщика. В таком случае нужно помнить, что обновление сертификата на балансировщике повредит ранее сгенерированные kubectl-конфиги.
+        addKubeconfigGeneratorEntry:
+          description: 'Если указать `false` будет удалена запись в kubeconfig-generator'
   kubeconfigGenerator:
     description: |
       Массив, в котором указываются дополнительные способы доступа к API-серверу.
 
-      Параметр может быть полезен в случае, если вы не хотите предоставить доступ к API-серверу через Ingress, а хотите предоставить доступ другими способами (например, с bastion-хоста или через OpenVPN).
+      Параметр может быть полезен в случае, если вы хотите предоставить доступ к API-серверу не через Ingress, а другими способами (например, с bastion-хоста или через OpenVPN).
     items:
       properties:
         id:
           description: 'Имя способа доступа к API-серверу (без пробелов, маленькими буквами).'
         masterURI:
           description: |
-            Если планируется использовать TCP-прокси, то для адреса TCP-прокси должен быть сконфигурирован сертификат на стороне API-сервера. Например, в случае, если API-сервер доступен по трем адресам (`192.168.0.10`, `192.168.0.11` и `192.168.0.12`), а ходить к API-серверу клиент будет, через TCP-балансер (например, `192.168.0.15`), то необходимо перегенерировать сертификаты для API-серверов:
-            * отредактировать `kubeadm-config`: `kubectl -n kube-system edit configmap kubeadm-config` добавив в `.apiServer.certSANs` адрес `192.168.0.15`;
+            Если планируется использовать TCP-прокси, для адреса TCP-прокси должен быть сконфигурирован сертификат на стороне API-сервера. Например, в случае, если API-сервер доступен по трем адресам (`192.168.0.10`, `192.168.0.11` и `192.168.0.12`), а ходить к API-серверу клиент будет через TCP-балансер (например, `192.168.0.15`), необходимо перегенерировать сертификаты для API-серверов:
+            * отредактировать `kubeadm-config`: `kubectl -n kube-system edit configmap kubeadm-config`, добавив в `.apiServer.certSANs` адрес `192.168.0.15`;
             * сохранить получившийся конфиг: `kubeadm config view > kubeadmconf.yaml`;
             * удалить старые сертификаты API-сервера: `mv /etc/kubernetes/pki/apiserver.* /tmp/`;
             * перевыпустить новые сертификаты: `kubeadm init phase certs apiserver --config=kubeadmconf.yaml`;
@@ -57,7 +63,9 @@ properties:
             Текстовое описание, содержащее информацию о том, чем этот метод аутентификации отличается от других.
   idTokenTTL:
     description: |
-      Время жизни id-токена (указывается с суффиксом `s`, `m` или `h`).
+      Время жизни ID-токена.
+
+      Задается в виде строки с указанием часов, минут и секунд: 30m, 20s, 2h30m10s, 24h.
   highAvailability:
     description: |
       Ручное управление режимом отказоустойчивости.
@@ -65,15 +73,15 @@ properties:
       По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
   nodeSelector:
     description: |
-      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     type: array
     description: |
-      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   ingressClass:
     description: |
       Класс Ingress-контроллера, который используется для Dex/kubeconfig-generator.
@@ -88,10 +96,10 @@ properties:
       mode:
         description: |
           Режим работы HTTPS:
-          - `CertManager` — Dex/kubeconfig-generator будет работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданном в параметре `certManager.clusterIssuerName`.
-          - `CustomCertificate` — Dex/kubeconfig-generator будет работать по HTTPS, используя сертификат из namespace `d8-system`.
-          - `Disabled` — Dex/kubeconfig-generator будет работать только по HTTP.
-          - `OnlyInURI` — Dex/kubeconfig-generator будет работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS-трафик) и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
+          - `CertManager` — Dex/kubeconfig-generator будет работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
+          - `CustomCertificate` — Dex/kubeconfig-generator будет работать по HTTPS, используя сертификат из namespace `d8-system`;
+          - `Disabled` — Dex/kubeconfig-generator будет работать только по HTTP;
+          - `OnlyInURI` — Dex/kubeconfig-generator будет работать по HTTP (подразумевая, что перед ним стоит внешний балансировщик, который терминирует HTTPS-трафик) и все ссылки в [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         properties:
           clusterIssuerName:
@@ -114,7 +122,7 @@ properties:
       dexCAMode:
         description: |
           Способ определения CA, который будет использован при настройке `kube-apiserver`:
-          * `Custom` — использовать CA указанный в параметре `dexCustomCA`. Этот вариант уместен, например, если вы используете внешний HTTPS-балансировщик перед Ingress-контроллером, и на этом балансировщике используется самоподписанный сертификат.
+          * `Custom` — использовать CA, указанный в параметре `dexCustomCA`. Этот вариант уместен, например, если вы используете внешний HTTPS-балансировщик перед Ingress-контроллером и на этом балансировщике используется самоподписанный сертификат.
           * `DoNotNeed` — CA не требуется (например, при использовании публичного TLS-провайдера Let’s Encrypt или других).
           * `FromIngressSecret` — извлечь CA или сам сертификат из Secret'а, который используется в Ingress-ресурсе. Если вы используете самоподписанные сертификаты в Ingress-ресурсах — это ваш вариант.
       dexCustomCA:

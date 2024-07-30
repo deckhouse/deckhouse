@@ -11,7 +11,7 @@ spec:
   versions:
     - name: v1alpha1
       served: true
-      storage: true
+      storage: false
       schema: &schema
         openAPIV3Schema:
           type: object
@@ -32,34 +32,37 @@ spec:
                 numCPUs:
                   description: |
                     Count of vCPUs to allocate to vSphere VirtualMachines.
-                  example: 2
+                  x-doc-examples: [2]
                   type: integer
                 memory:
                   description: |
                     Memory in MiB to allocate to vSphere VirtualMachines.
-                  example: 8192
+                  x-doc-examples: [8192]
                   type: integer
                 rootDiskSize:
                   description: |
                     Root disk size in GiB to use in vSphere VirtualMachines.
 
                     The disk will be automatically enlarged if its size in the template is less than specified.
-                  example: 20
+                  x-doc-examples: [20]
+                  x-doc-default: 20
                   type: integer
                 template:
                   description: |
                     Path to the template to be cloned. Relative to the datacenter.
-                  example: dev/golden_image
+
+                    By default, a template from the `master` InstanceClass is used.
+                  x-doc-examples: ['dev/golden_image']
                   type: string
                 mainNetwork:
                   description: |
                     Path to the network that VirtualMachines' primary NICs will connect to (default gateway). Relative to the datacenter.
-                  example: k8s-msk-178
+                  x-doc-examples: ['k8s-msk-178']
                   type: string
                 additionalNetworks:
                   description: |
                     Paths to networks that VirtualMachines' secondary NICs will connect to. Relative to the datacenter.
-                  example:
+                  x-doc-examples:
                   - DEVOPS_32
                   - DEVOPS_50
                   type: array
@@ -67,10 +70,13 @@ spec:
                     type: string
                 datastore:
                   description: |
-                    Path to a Datastore in which VirtualMachines will be cloned. Relative to the datacenter.
-                  example: lun-1201
+                    Path to a Datastore (relative to the datacenter) in which VirtualMachines will be cloned.
+
+                    By default, a datastore from the `master` InstanceClass is used.
+                  x-doc-examples: ['lun-1201']
                   type: string
                 disableTimesync:
+                  x-doc-default: true
                   description: >
                     Disable time synchronization in Guest VM.
 
@@ -79,7 +85,9 @@ spec:
                 resourcePool:
                   description: |
                     Path to a Resource Pool in which VirtualMachines will be cloned. Relative to the zone (vSphere Cluster).
-                  example: rp-2012
+
+                    By default, the value from `VsphereCloudDiscoveryData` is used.
+                  x-doc-examples: ['rp-2012']
                   type: string
                 runtimeOptions:
                   description: |
@@ -119,10 +127,25 @@ spec:
                       x-doc-default: 80
                       minimum: 0
                       maximum: 100
+            status:
+              type: object
+              properties:
+                nodeGroupConsumers:
+                  type: array
+                  items:
+                    type: string
     - name: v1
       served: true
-      storage: false
+      storage: true
       schema: *schema
+      additionalPrinterColumns:
+        - name: "Node Groups"
+          type: string
+          description: NodeGroups which use this instance class.
+          jsonPath: .status.nodeGroupConsumers
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
   scope: Cluster
   names:
     plural: vsphereinstanceclasses

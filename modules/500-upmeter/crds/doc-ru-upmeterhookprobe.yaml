@@ -8,6 +8,6 @@ spec:
             spec:
               properties:
                 inited:
-                  description: Начальное значение, которое устанавилвает агент апметра.
+                  description: Начальное значение, которое устанавливает upmeter-агент.
                 mirror:
                   description: Значение, которое должно стать равным `initial` в результате работы хука.

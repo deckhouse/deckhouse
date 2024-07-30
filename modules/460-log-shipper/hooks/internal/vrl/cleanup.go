@@ -31,4 +31,8 @@ if exists(.kubernetes) {
 if exists(.file) {
     del(.file)
 }
+if exists(.node_labels."node.deckhouse.io/group") {
+	.node_group = (.node_labels."node.deckhouse.io/group")
+}
+del(.node_labels)
 `

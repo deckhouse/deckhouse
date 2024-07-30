@@ -35,7 +35,7 @@ spec:
                 url:
                   description: The URL of the endpoint to send samples to.
                   type: string
-                  example: https://victoriametrics-test.domain.com/api/v1/write
+                  x-doc-examples: ['https://victoriametrics-test.domain.com/api/v1/write']
                 basicAuth:
                   description: BasicAuth for the URL.
                   properties:
@@ -109,6 +109,10 @@ spec:
                       description: Disable target certificate validation.
                       type: boolean
                       x-doc-default: false
+                    ca:
+                      description: The CA certificate used when verifying the API server certificate.
+                      type: string
+                      x-doc-default: ""
       additionalPrinterColumns: &additionalPrinterColumns
         - name: URL
           type: string

@@ -7,7 +7,7 @@
   <a href="https://twitter.com/deckhouseio"><img src="https://img.shields.io/twitter/follow/deckhouseio?label=%40deckhouseio&style=flat-square" alt="Twitter"></a>
   <a href="https://github.com/deckhouse/deckhouse/discussions"><img src="https://img.shields.io/github/discussions/deckhouse/deckhouse" alt="GH Discussions"/></a>
   <a href="CODE_OF_CONDUCT.md"><img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg" alt="Contributor Covenant"></a>
-  <a href="https://flow.deckhouse.io"><img src="https://img.shields.io/badge/releases-flow.deckhouse.io-blueviolet" alt="Releases"></a>
+  <a href="https://releases.deckhouse.io"><img src="https://img.shields.io/badge/releases-releases.deckhouse.io-blueviolet" alt="Releases"></a>
 </p>
 
 [Deckhouse](https://deckhouse.io/) is an Open Source platform for managing Kubernetes clusters in a fully automatic and uniform fashion. It allows you to create homogeneous Kubernetes clusters anywhere and fully manages them. It supplies all the add-ons you need for auto-scaling, observability, security, and service mesh. It comes in Enterprise Edition (EE) and Community Edition (CE).
@@ -23,7 +23,7 @@
 - Easy to start: you need a couple of CLI commands and 8 minutes to get production-ready Kubernetes.
 - A fully-featured platform. Many features *(check the diagram below)* — carefully configured & integrated — are available right out of the box.
 
-_Deckhouse Platform [has passed](https://landscape.cncf.io/card-mode?category=certified-kubernetes-distribution,certified-kubernetes-hosted,certified-kubernetes-installer&grouping=category&selected=flant-deckhouse) the CNCF Certified Kubernetes Conformance Program certification for Kubernetes 1.20—1.25._
+_Deckhouse Platform [has passed](https://landscape.cncf.io/card-mode?category=certified-kubernetes-distribution,certified-kubernetes-hosted,certified-kubernetes-installer&grouping=category&selected=flant-deckhouse) the CNCF Certified Kubernetes Conformance Program certification for Kubernetes 1.23—1.27._
 
 A brief overview of essential Deckhouse Platform features, from infrastructure level to the platform:
 
@@ -46,7 +46,7 @@ Deckhouse Platform follows the upstream version of Kubernetes, using that as a b
 
 # Trying Deckhouse
 
-Please, refer to the project's [Getting started](https://deckhouse.io/gs/) to begin your journey with Deckhouse Platform. Choose the cloud provder or bare-metal option for your infrastructure and follow the relevant step-by-step instructions to deploy your first Deckhouse Kubernetes cluster.
+Please, refer to the project's [Getting started](https://deckhouse.io/gs/) to begin your journey with Deckhouse Platform. Choose the cloud provider or bare-metal option for your infrastructure and follow the relevant step-by-step instructions to deploy your first Deckhouse Kubernetes cluster.
 
 If anything works in an unexpected manner or you have any questions, feel free to contact us via GitHub Issues / Discussions or reach a wider [community of Deckhouse users](#online-community) in Telegram and other resources.
 

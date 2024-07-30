@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>Deckhouse</title>
+    <meta name="viewport" content="width=800, initial-scale=1.0">
+    <link href="{{ url .ReqPath "static/output.css" }}" rel="stylesheet">
+    <link href="{{ url .ReqPath "static/main.css" }}" rel="stylesheet">
+    <link rel="icon" href="{{ url .ReqPath "static/img/favicon.png" }}">
+  </head>
+
+  <body style="background-image: url({{ url .ReqPath "static/img/background.jpg" }})">
+    <div class="layout">
+      <div class="layout-header"></div>
+      <div class="layout-content">
+        <img src="{{ url .ReqPath "static/img/deckhouse-logo-icon.svg" }}" class="layout-deckhouse-logo" />
+        <img src="{{ url .ReqPath "static/img/deckhouse-logo-title.svg" }}" class="layout-deckhouse-title" />

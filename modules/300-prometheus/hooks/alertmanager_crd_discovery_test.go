@@ -178,6 +178,7 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("prometheus.internal.alertmanagers.byService").String()).To(MatchJSON(`[
           {
+            "resourceName": "external-alertmanager",
             "name": "test",
             "namespace": "test",
             "pathPrefix": "/",
@@ -207,12 +208,14 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("prometheus.internal.alertmanagers.byService").String()).To(MatchJSON(`[
           {
+            "resourceName": "external-alertmanager",
             "name": "test",
             "namespace": "test",
             "pathPrefix": "/",
             "port": "https"
           },
           {
+            "resourceName": "",
             "name": "deprecatedsvc1",
             "namespace": "myns1",
             "pathPrefix": "/myprefix/",
@@ -258,6 +261,127 @@ spec:
             }
           }
         ]`))
+		})
+	})
+
+	Context("Cluster has multiple custom alert managers", func() {
+		var alertManagers = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: test-alert-emailer
+spec:
+  internal:
+    receivers:
+    - emailConfigs:
+      - from: test
+        requireTLS: false
+        sendResolved: false
+        smarthost: test
+        to: test@test.ru
+      name: test-alert-emailer
+    route:
+      groupBy:
+      - job
+      groupInterval: 5m
+      groupWait: 30s
+      receiver: test-alert-emailer
+      repeatInterval: 4h
+      routes:
+      - matchers:
+        - name: namespace
+          regex: false
+          value: app-airflow
+        receiver: test-alert-emailer
+  type: Internal
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: airflow-alert-emailer
+spec:
+  internal:
+    receivers:
+    - emailConfigs:
+      - from: test
+        requireTLS: false
+        sendResolved: false
+        smarthost: test
+        to: test@test.ru
+      name: airflow-alert-emailer
+    route:
+      groupBy:
+      - job
+      groupInterval: 5m
+      groupWait: 30s
+      receiver: airflow-alert-emailer
+      repeatInterval: 4h
+      routes:
+      - matchers:
+        - name: namespace
+          regex: false
+          value: app-airflow
+        receiver: airflow-alert-emailer
+  type: Internal
+`
+
+		const values = `
+- name: airflow-alert-emailer
+  receivers:
+    - emailConfigs:
+        - from: test
+          requireTLS: false
+          sendResolved: false
+          smarthost: test
+          to: test@test.ru
+      name: airflow-alert-emailer
+  route:
+    groupBy:
+      - job
+    groupInterval: 5m
+    groupWait: 30s
+    receiver: airflow-alert-emailer
+    repeatInterval: 4h
+    routes:
+      - matchers:
+          - name: namespace
+            regex: false
+            value: app-airflow
+        receiver: airflow-alert-emailer
+- name: test-alert-emailer
+  receivers:
+    - emailConfigs:
+        - from: test
+          requireTLS: false
+          sendResolved: false
+          smarthost: test
+          to: test@test.ru
+      name: test-alert-emailer
+  route:
+    groupBy:
+      - job
+    groupInterval: 5m
+    groupWait: 30s
+    receiver: test-alert-emailer
+    repeatInterval: 4h
+    routes:
+      - matchers:
+          - name: namespace
+            regex: false
+            value: app-airflow
+        receiver: test-alert-emailer
+`
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(alertManagers))
+			f.RunHook()
+		})
+
+		It("prometheus.internal.alertmanagers.internal must contain multiple values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			alertmanagers, err := yaml.Marshal(f.ValuesGet("prometheus.internal.alertmanagers.internal").Value())
+			Expect(err).To(BeNil())
+			Expect(alertmanagers).To(MatchYAML(values))
 		})
 	})
 })

@@ -1,0 +1,17 @@
+candi:
+  fixes:
+    - summary: Fix `cluster-autoscaler` liveness probe.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5869
+deckhouse:
+  fixes:
+    - summary: Move deckhouse `kube-rbac-proxy` port to `9889`, to avoid conflicts with user applications.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5815
+prometheus:
+  fixes:
+    - summary: Fixed permissions for existing files after changing GID and UID.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5847
+    - summary: The etcd version in the home dashboard is fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5842
+    - summary: Fixed issue with adding custom Grafana plugins.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5834
+

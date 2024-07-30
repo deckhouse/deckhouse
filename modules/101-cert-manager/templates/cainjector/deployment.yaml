@@ -3,6 +3,7 @@ cpu: 25m
 memory: 50Mi
 {{- end }}
 
+{{- if .Values.certManager.enableCAInjector }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -49,7 +50,7 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cainjector")) | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
@@ -69,5 +70,6 @@ spec:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
 {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
               {{- include "cainjector_resources" . | nindent 14 }}
+{{- end }}
 {{- end }}
 

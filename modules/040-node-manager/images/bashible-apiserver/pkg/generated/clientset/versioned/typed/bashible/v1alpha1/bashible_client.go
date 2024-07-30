@@ -19,8 +19,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "d8.io/bashible/pkg/apis/bashible/v1alpha1"
-	"d8.io/bashible/pkg/generated/clientset/versioned/scheme"
+	v1alpha1 "bashible-apiserver/pkg/apis/bashible/v1alpha1"
+	"bashible-apiserver/pkg/generated/clientset/versioned/scheme"
+	"net/http"
 
 	rest "k8s.io/client-go/rest"
 )
@@ -28,6 +29,7 @@ import (
 type BashibleV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	BashiblesGetter
+	BootstrapsGetter
 	NodeGroupBundlesGetter
 }
 
@@ -40,17 +42,37 @@ func (c *BashibleV1alpha1Client) Bashibles() BashibleInterface {
 	return newBashibles(c)
 }
 
+func (c *BashibleV1alpha1Client) Bootstraps() BootstrapInterface {
+	return newBootstraps(c)
+}
+
 func (c *BashibleV1alpha1Client) NodeGroupBundles() NodeGroupBundleInterface {
 	return newNodeGroupBundles(c)
 }
 
 // NewForConfig creates a new BashibleV1alpha1Client for the given config.
+// NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
+// where httpClient was generated with rest.HTTPClientFor(c).
 func NewForConfig(c *rest.Config) (*BashibleV1alpha1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
 	}
-	client, err := rest.RESTClientFor(&config)
+	httpClient, err := rest.HTTPClientFor(&config)
+	if err != nil {
+		return nil, err
+	}
+	return NewForConfigAndClient(&config, httpClient)
+}
+
+// NewForConfigAndClient creates a new BashibleV1alpha1Client for the given config and http client.
+// Note the http client provided takes precedence over the configured transport values.
+func NewForConfigAndClient(c *rest.Config, h *http.Client) (*BashibleV1alpha1Client, error) {
+	config := *c
+	if err := setConfigDefaults(&config); err != nil {
+		return nil, err
+	}
+	client, err := rest.RESTClientForConfigAndClient(&config, h)
 	if err != nil {
 		return nil, err
 	}

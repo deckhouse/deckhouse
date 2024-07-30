@@ -38,7 +38,7 @@ type RenderedTemplate struct {
 // RenderTemplatesDir renders each file in templatesDir.
 // Files are rendered separately, so no support for
 // libraries, like in Helm.
-func RenderTemplatesDir(templatesDir string, data map[string]interface{}) ([]RenderedTemplate, error) {
+func RenderTemplatesDir(templatesDir string, data map[string]interface{}, ignoreMap map[string]struct{}) ([]RenderedTemplate, error) {
 	files, err := os.ReadDir(templatesDir)
 	if os.IsNotExist(err) {
 		log.InfoF("Templates directory %q does not exist. Skipping...\n", templatesDir)
@@ -52,6 +52,10 @@ func RenderTemplatesDir(templatesDir string, data map[string]interface{}) ([]Ren
 	renders := make([]RenderedTemplate, 0, len(files))
 
 	for _, file := range files {
+		if _, ok := ignoreMap[filepath.Join(templatesDir, file.Name())]; ok {
+			continue
+		}
+
 		tplName := file.Name()
 
 		isTemplate := !file.IsDir() && strings.HasSuffix(tplName, ".tpl")
@@ -120,8 +124,8 @@ func NewTemplateController(tmpDir string) *Controller {
 	return &Controller{TmpDir: tmpDir}
 }
 
-func (t *Controller) RenderAndSaveTemplates(fromDir, toDir string, data map[string]interface{}) error {
-	renderedTemplates, err := RenderTemplatesDir(fromDir, data)
+func (t *Controller) RenderAndSaveTemplates(fromDir, toDir string, data map[string]interface{}, ignoreMap map[string]struct{}) error {
+	renderedTemplates, err := RenderTemplatesDir(fromDir, data, ignoreMap)
 	if err != nil {
 		return fmt.Errorf("render templates: %v", err)
 	}

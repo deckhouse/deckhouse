@@ -6,12 +6,35 @@ properties:
       exporterEnabled:
         description: |
           Включен ли imageAvailabilityExporter.
-      skipRegistryCertVerification:
-        description: |
-          Пропускать ли валидацию TLS-сертификата для Docker Registry.
       ignoredImages:
         description: |
           Список образов, для которых нужно пропустить проверку, например `alpine:3.12` или `quay.io/test/test:v1.1`.
+      registry:
+        description: |
+          Настройки подключения к container registry.
+        properties:
+          scheme:
+            description: |
+              Протокол доступа к container registry.
+          tlsConfig:
+            description: |
+              Настройки подключения к container registry
+            properties:
+              insecureSkipVerify:
+                description: |
+                  Пропускать ли валидацию TLS-сертификата для container registry.
+              ca:
+                description: |
+                  Корневой сертификат, которым можно проверить сертификат container registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).
+      mirrors:
+        type: array
+        description: |
+          Список зеркал для container registry.
+      forceCheckDisabledControllers:
+        description: |
+          Список контроллеров, которые необходимо проверять, даже если количество реплик подов равняется 0 или контроллер находится в статусе `suspend` (приостановленный).
+
+          Укажите `All`, для проверки всех типов контроллеров.
   events:
     description: |
       Настройки для мониторинга event'ов в кластере Kubernetes.
@@ -33,11 +56,11 @@ properties:
           Включен ли certExporter.
   nodeSelector:
     description: |
-      Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
-      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).

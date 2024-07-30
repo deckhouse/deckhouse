@@ -1,5 +1,5 @@
 @import "components/common/_variables.scss";
-
+@import "components/common/_mixins";
 .button {
     cursor: pointer;
     display: inline-block;
@@ -22,7 +22,7 @@
         background: $color-inverse;
         border: 2px solid $color-inverse;
     }
-    &:not(.button_disabled):not(.button_card):hover {
+    &:not(.button_disabled):not(.button_card):not(.button--primary):not(.gdpr__button):hover {
         color: $color-inverse !important;
         background: $color-main;
         border: 2px solid $color-main;
@@ -63,14 +63,33 @@
           height: $font-size-h2*1.5;
         }
     }
+    &--primary {
+        @include color($white);
+        @include bg-color($primary-700);
+        border: 2px solid $primary-700;
+        transition: .2s;
 
-    &_card {
+        &:hover {
+            @include bg-color($primary-900);
+            border: 2px solid $primary-900;
+        }
+    }
+    &--small {
+        font-size: 10px;
+        line-height: 12px;
+        padding: 10px 14px;
+    }
+
+
+
+  &_card {
         display: flex;
         transition: all .25s ease;
         flex-direction: column;
         flex-wrap: wrap;
         border-radius: 0.5em;
         height: 8em;
+        overflow: hidden;
 
         &:not(.button_disabled):hover {
             transform: scale(1.1);
@@ -86,6 +105,15 @@
         & span.name {
             width: 9em;
             margin: 5px 0px 0px 0px;
+        }
+
+        & div.footer {
+          display: flex;
+          flex-direction: row;
+          gap: 1rem;
+          padding: 0.5em 2em;
+          margin: auto -1.5rem -0.75rem -1.5rem;
+          background-color: #02003E;
         }
 
     }

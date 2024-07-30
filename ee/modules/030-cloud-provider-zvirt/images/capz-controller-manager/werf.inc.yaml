@@ -1,0 +1,53 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+docker:
+  ENTRYPOINT: ["/capz-controller-manager"]
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /capz-controller-manager
+  to: /capz-controller-manager
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
+  includePaths:
+    - '**/*'
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+git:
+  - add: /{{ $.ModulePath }}modules/030-{{ .ModuleName }}/images/{{ .ImageName }}/src
+    to: /src
+#    excludePaths:
+#      - "**/*.md"
+#      - hack
+    stageDependencies:
+      install:
+        - go.mod
+        - go.sum
+      setup:
+        - go.mod
+        - go.sum
+        - "**/*.go"
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - cd /src
+    - export GOPROXY={{ $.GOPROXY }}
+    - go mod download
+  setup:
+    - cd /src
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /capz-controller-manager cmd/main.go
+    - chown 64535:64535 /capz-controller-manager
+    - chmod 0700 /capz-controller-manager
+---
+{{- $csiBinaries := "/usr/bin/ssh /lib64/libnss_*" }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ .Images.BASE_ALT_DEV }}
+shell:
+  setup:
+    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate

@@ -1,28 +1,25 @@
-# Based on https://github.com/dexidp/dex/blob/v2.35.3/Dockerfile
-ARG BASE_GOLANG_18_ALPINE
-ARG BASE_ALPINE
-FROM $BASE_GOLANG_18_ALPINE as artifact
-RUN apk add --no-cache git ca-certificates gcc build-base sqlite patch make curl
+ARG BASE_GOLANG_21_ALPINE_DEV
+ARG BASE_DISTROLESS
+FROM $BASE_GOLANG_21_ALPINE_DEV as artifact
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+ARG SOURCE_REPO
+ENV SOURCE_REPO=${SOURCE_REPO}
 WORKDIR /dex
-COPY patches/client-groups.patch patches/static-user-groups.patch patches/gitlab-refresh-context.patch patches/connector-data.patch patches/oidc-ca-insecure.patch /
-RUN wget https://github.com/dexidp/dex/archive/v2.35.3.tar.gz -O - | tar -xz --strip-components=1 \
+COPY patches/client-groups.patch patches/static-user-groups.patch patches/gitlab-refresh-context.patch /
+RUN git clone --branch v2.40.0 --depth 1 ${SOURCE_REPO}/dexidp/dex.git . \
   && git apply /client-groups.patch \
   && git apply /static-user-groups.patch \
-  && git apply /gitlab-refresh-context.patch \
-  && git apply /connector-data.patch \
-  && git apply /oidc-ca-insecure.patch
-RUN go build ./cmd/dex
+  && git apply /gitlab-refresh-context.patch
 
-FROM $BASE_ALPINE
-RUN apk add --no-cache --update ca-certificates openssl
-RUN mkdir -p /var/dex
-RUN chown -R 1001:1001 /var/dex
-RUN mkdir -p /etc/dex
-RUN chown -R 1001:1001 /etc/dex
+RUN CGO_ENABLED=1 GOOS=linux go build -ldflags '-s -w' -ldflags "-linkmode external -extldflags -static" -tags netgo ./cmd/dex
+
+RUN chown 64535:64535 dex
+RUN chmod 0700 dex
+
+FROM $BASE_DISTROLESS
 
 COPY --from=artifact /dex/dex /usr/local/bin/
-COPY --from=artifact /dex/web /web
-
-USER 1001:1001
+COPY web /web
 
 CMD ["dex", "serve", "/etc/dex/config.docker.yaml"]

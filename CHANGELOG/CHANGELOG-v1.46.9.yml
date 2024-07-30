@@ -1,0 +1,5 @@
+ingress-nginx:
+  fixes:
+    - summary: Fix `proxy-failover-iptables` panicking and `iptables` rules duplicating.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4959
+

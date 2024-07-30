@@ -1,40 +1,26 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ .Images.BASE_ALPINE }}
+fromImage: common/distroless
 docker:
   ENV:
     WORKDIR: /
     ENTRYPOINT: "/machine-controller-manager"
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}/build
-  add: /src/bin/machine-controller-manager
+  add: /src/machine-controller-manager
   to: /machine-controller-manager
   before: setup
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}/build
-from: {{ .Images.BASE_GOLANG_ALPINE }}
-fromCacheVersion: "20210607"
-git:
-- url: https://github.com/deckhouse/mcm.git
-  to: /src
-  tag: v0.36.0-flant.12
-  stageDependencies:
-    install:
-    - '**/*'
+from: {{ .Images.BASE_GOLANG_20_ALPINE }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
-ansible:
-  beforeInstall:
-  - name: "Install dependencies"
-    apk:
-      name:
-      - mercurial
-      - make
-      - bash
-      - tzdata
-      update_cache: yes
+shell:
   install:
-  - name: "Build"
-    shell: make build-local
-    args:
-      chdir: /src
+  - apk add git
+  setup:
+  - mkdir /src && cd /src
+  - git clone --depth 1 --branch v0.36.0-flant.16 {{ $.SOURCE_REPO }}/deckhouse/mcm.git .
+  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod=vendor -o machine-controller-manager cmd/machine-controller-manager/controller_manager.go
+  - chown 64535:64535 machine-controller-manager
+  - chmod 0700 machine-controller-manager

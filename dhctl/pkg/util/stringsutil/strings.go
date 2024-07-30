@@ -18,16 +18,10 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"math/rand"
-	"time"
 )
 
 func RandomStrElement(list []string) (string, int) {
-	// we silent gosec linter here
-	// because we do not need security random number
-	// for choice random element
-	s := rand.NewSource(time.Now().Unix())
-	r := rand.New(s) //nolint:gosec
-	indx := r.Intn(len(list))
+	indx := rand.Intn(len(list)) // this call is thread safe
 
 	return list[indx], indx
 }

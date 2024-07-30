@@ -2,169 +2,128 @@
 
 ## Список необходимых ресурсов vSphere
 
-* **User** пользователь с необходимым [набором прав](#права).
-* **Network** с DHCP и доступом в Интернет.
-* **Datacenter** с соответствующим тэгом [`k8s-region`](#создание-тэгов-и-категорий-тэгов).
-* **ComputeCluster** с соответствующим тэгом [`k8s-zone`](#создание-тэгов-и-категорий-тэгов).
-* **Datastore** в любом количестве, с соответствующими [тэгами](#datastore-тэги).
-* **Template** — [подготовленный](#сборка-образа-виртуальных-машин) образ vSphere.
+* **User** с необходимым [набором прав](#создание-и-назначение-роли).
+* **Network** с DHCP и доступом в интернет.
+* **Datacenter** с соответствующим тегом [`k8s-region`](#создание-тегов-и-категорий-тегов).
+* **Cluster** с соответствующим тегом [`k8s-zone`](#создание-тегов-и-категорий-тегов).
+* **Datastore** в любом количестве, с соответствующими [тегами](#конфигурация-datastore).
+* **Template** — [подготовленный](#подготовка-образа-виртуальной-машины) образ виртуальной машины.
 
 ## Конфигурация vSphere
 
-Для конфигурации vSphere необходимо использовать vSphere CLI [govc](https://github.com/vmware/govmomi/tree/master/govc#installation).
+### Установка govc
 
-### Настройка govc
+Для дальнейшей конфигурации vSphere вам понадобится vSphere CLI — [govc](https://github.com/vmware/govmomi/tree/master/govc#installation).
+
+После установки задайте переменные окружения для работы с vCenter:
 
 {% snippetcut %}
 ```shell
 export GOVC_URL=example.com
-export GOVC_USERNAME=<USER_NAME>
-export GOVC_PASSWORD=<USER_PASSWORD>
+export GOVC_USERNAME=<username>@vsphere.local
+export GOVC_PASSWORD=<password>
 export GOVC_INSECURE=1
 ```
 {% endsnippetcut %}
 
-### Создание тэгов и категорий тэгов
+### Создание тегов и категорий тегов
 
-В vSphere нет понятия "регион" и "зона", поэтому для разграничения зон доступности используются тэги.
+В VMware vSphere нет понятий «регион» и «зона». «Регионом» в vSphere является `Datacenter`, а «зоной» — `Cluster`. Для создания этой связи используются теги.
 
-"Регионом" в vSphere является `Datacenter`, а "зоной" — `ComputeCluster`.
-
-Например, если необходимо сделать 2 региона, и в каждом регионе будет 1 зона доступности:
+Создайте категории тегов с помощью команд:
 
 {% snippetcut %}
 ```shell
-govc tags.category.create -d "Kubernetes region" k8s-region
-govc tags.category.create -d "Kubernetes zone" k8s-zone
-govc tags.create -d "Kubernetes Region #1" -c k8s-region test_region_1
-govc tags.create -d "Kubernetes Region #2" -c k8s-region test_region_2
-govc tags.create -d "Kubernetes Zone Test" -c k8s-zone test_zone
+govc tags.category.create -d "Kubernetes Region" k8s-region
+govc tags.category.create -d "Kubernetes Zone" k8s-zone
 ```
 {% endsnippetcut %}
 
-Тэги *регионов* навешиваются на Datacenter:
+Создайте теги в каждой категории. Если вы планируете использовать несколько «зон» (`Cluster`), создайте тег для каждой из них:
 
 {% snippetcut %}
 ```shell
-govc tags.attach -c k8s-region test_region_1 /DC1
-govc tags.attach -c k8s-region test_region_2 /DC2
+govc tags.create -d "Kubernetes Region" -c k8s-region test-region
+govc tags.create -d "Kubernetes Zone Test 1" -c k8s-zone test-zone-1
+govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 ```
 {% endsnippetcut %}
 
-Тэги *зон* навешиваются на Cluster и Datastores:
+Назначьте тег «региона» на `Datacenter`:
 
 {% snippetcut %}
 ```shell
-govc tags.attach -c k8s-zone test_zone /DC/host/test_cluster
-govc tags.attach -c k8s-zone test_zone /DC/datastore/test_lun
+govc tags.attach -c k8s-region test-region /<DatacenterName>
 ```
 {% endsnippetcut %}
 
-#### Datastore тэги
-
-При наличии Datastore'ов на **всех** ESXi, где будут размещаться виртуальные машины узлов кластера, возможно использовать динамический заказ PV.
-Для автоматического создания StorageClass'ов в Kubernetes кластере, повесьте тэг региона и зоны, созданные ранее, на выбранные Datastore'ы.
-
-### Права
-
-> Ввиду разнообразия подключаемых к vSphere SSO-провайдеров, шаги по созданию пользователя в данной статье не рассматриваются.
-
-Необходимо создать роль (Role) с указанными правами и прикрепить её к **vCenter**, где нужно развернуть кластер
-Kubernetes.
+Назначьте теги «зон» на объекты `Cluster`:
 
 {% snippetcut %}
 ```shell
-govc role.create kubernetes \
-  Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement Folder.Create Global.GlobalTag Global.SystemTag \
-  InventoryService.Tagging.AttachTag InventoryService.Tagging.CreateCategory InventoryService.Tagging.CreateTag \
-  InventoryService.Tagging.DeleteCategory InventoryService.Tagging.DeleteTag InventoryService.Tagging.EditCategory \
-  InventoryService.Tagging.EditTag InventoryService.Tagging.ModifyUsedByForCategory InventoryService.Tagging.ModifyUsedByForTag \
-  InventoryService.Tagging.ObjectAttachable \
-  Network.Assign Resource.AssignVMToPool Resource.ColdMigrate Resource.HotMigrate Resource.CreatePool \
-  Resource.DeletePool Resource.RenamePool Resource.EditPool Resource.MovePool StorageProfile.View System.Anonymous System.Read System.View \
-  VirtualMachine.Config.AddExistingDisk VirtualMachine.Config.AddNewDisk VirtualMachine.Config.AddRemoveDevice \
-  VirtualMachine.Config.AdvancedConfig VirtualMachine.Config.Annotation VirtualMachine.Config.CPUCount \
-  VirtualMachine.Config.ChangeTracking VirtualMachine.Config.DiskExtend VirtualMachine.Config.DiskLease \
-  VirtualMachine.Config.EditDevice VirtualMachine.Config.HostUSBDevice VirtualMachine.Config.ManagedBy \
-  VirtualMachine.Config.Memory VirtualMachine.Config.MksControl VirtualMachine.Config.QueryFTCompatibility \
-  VirtualMachine.Config.QueryUnownedFiles VirtualMachine.Config.RawDevice VirtualMachine.Config.ReloadFromPath \
-  VirtualMachine.Config.RemoveDisk VirtualMachine.Config.Rename VirtualMachine.Config.ResetGuestInfo \
-  VirtualMachine.Config.Resource VirtualMachine.Config.Settings VirtualMachine.Config.SwapPlacement \
-  VirtualMachine.Config.ToggleForkParent VirtualMachine.Config.UpgradeVirtualHardware VirtualMachine.GuestOperations.Execute \
-  VirtualMachine.GuestOperations.Modify VirtualMachine.GuestOperations.ModifyAliases VirtualMachine.GuestOperations.Query \
-  VirtualMachine.GuestOperations.QueryAliases VirtualMachine.Hbr.ConfigureReplication VirtualMachine.Hbr.MonitorReplication \
-  VirtualMachine.Hbr.ReplicaManagement VirtualMachine.Interact.AnswerQuestion VirtualMachine.Interact.Backup \
-  VirtualMachine.Interact.ConsoleInteract VirtualMachine.Interact.CreateScreenshot VirtualMachine.Interact.CreateSecondary \
-  VirtualMachine.Interact.DefragmentAllDisks VirtualMachine.Interact.DeviceConnection VirtualMachine.Interact.DisableSecondary \
-  VirtualMachine.Interact.DnD VirtualMachine.Interact.EnableSecondary VirtualMachine.Interact.GuestControl \
-  VirtualMachine.Interact.MakePrimary VirtualMachine.Interact.Pause VirtualMachine.Interact.PowerOff \
-  VirtualMachine.Interact.PowerOn VirtualMachine.Interact.PutUsbScanCodes VirtualMachine.Interact.Record \
-  VirtualMachine.Interact.Replay VirtualMachine.Interact.Reset VirtualMachine.Interact.SESparseMaintenance \
-  VirtualMachine.Interact.SetCDMedia VirtualMachine.Interact.SetFloppyMedia VirtualMachine.Interact.Suspend \
-  VirtualMachine.Interact.TerminateFaultTolerantVM VirtualMachine.Interact.ToolsInstall \
-  VirtualMachine.Interact.TurnOffFaultTolerance VirtualMachine.Inventory.Create \
-  VirtualMachine.Inventory.CreateFromExisting VirtualMachine.Inventory.Delete \
-  VirtualMachine.Inventory.Move VirtualMachine.Inventory.Register VirtualMachine.Inventory.Unregister \
-  VirtualMachine.Namespace.Event VirtualMachine.Namespace.EventNotify VirtualMachine.Namespace.Management \
-  VirtualMachine.Namespace.ModifyContent VirtualMachine.Namespace.Query VirtualMachine.Namespace.ReadContent \
-  VirtualMachine.Provisioning.Clone VirtualMachine.Provisioning.CloneTemplate VirtualMachine.Provisioning.CreateTemplateFromVM \
-  VirtualMachine.Provisioning.Customize VirtualMachine.Provisioning.DeployTemplate VirtualMachine.Provisioning.DiskRandomAccess \
-  VirtualMachine.Provisioning.DiskRandomRead VirtualMachine.Provisioning.FileRandomAccess VirtualMachine.Provisioning.GetVmFiles \
-  VirtualMachine.Provisioning.MarkAsTemplate VirtualMachine.Provisioning.MarkAsVM VirtualMachine.Provisioning.ModifyCustSpecs \
-  VirtualMachine.Provisioning.PromoteDisks VirtualMachine.Provisioning.PutVmFiles VirtualMachine.Provisioning.ReadCustSpecs \
-  VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot VirtualMachine.State.RevertToSnapshot \
-  Cns.Searchable StorageProfile.View
-
-govc permissions.set  -principal имя_пользователя -role kubernetes /DC
+govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
+govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
 ```
 {% endsnippetcut %}
 
-### Сборка образа виртуальных машин
+#### Конфигурация Datastore
 
-1. [Установить Packer](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli).
-1. Склонировать [репозиторий Deckhouse](https://github.com/deckhouse/deckhouse/):
-   {% snippetcut %}
-```bash
-git clone https://github.com/deckhouse/deckhouse/
-```
-   {% endsnippetcut %}
+{% alert level="warning" %}
+Для динамического заказа `PersistentVolume` необходимо, чтобы `Datastore` был доступен на **каждом** хосте ESXi (shared datastore).
+{% endalert %}
 
-1. Перейти в директорию `ee/modules/030-cloud-provider-vsphere/packer/` склонированного репозитория:
-   {% snippetcut %}
-```bash
-cd deckhouse/ee/modules/030-cloud-provider-vsphere/packer/
-```
-   {% endsnippetcut %}
+Для автоматического создания `StorageClass` в кластере Kubernetes назначьте созданные ранее теги «региона» и «зоны» на объекты `Datastore`:
 
-1. Создать файл `vsphere.auto.pkrvars.hcl` со следующим содержимым:
-   {% snippetcut %}
-```text
-vcenter_server = "<hostname или IP vCenter>"
-vcenter_username = "<имя пользователя>"
-vcenter_password = "<пароль>"
-vcenter_cluster = "<имя ComputeCluster, где будет создан образ>"
-vcenter_datacenter = "<имя Datacenter>"
-vcenter_resource_pool = "имя ResourcePool"
-vcenter_datastore = "<имя Datastore, в котором будет создан образ>"
-vcenter_folder = "<имя директории>"
-vm_network = "<имя сети, к которой подключится виртуальная машина при сборке образа>"
-```
-   {% endsnippetcut %}
-{% raw %}
-1. Если ваш компьютер (с которого запущен Packer) не находится в одной сети с `vm_network`, а вы подключены через VPN-туннель, то замените `{{ .HTTPIP }}` в файле `<UbuntuVersion>.pkrvars.hcl` на IP-адрес вашего компьютера из VPN-сети в следующей строке:
-
-    ```hcl
-    " url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg",
-    ```
-{% endraw %}
-
-1. Выберите версию Ubuntu и соберите образ:
-
-   {% snippetcut %}
+{% snippetcut %}
 ```shell
-# Ubuntu 20.04
-packer build --var-file=20.04.pkrvars.hcl .
-# Ubuntu 18.04
-packer build --var-file=18.04.pkrvars.hcl .
+govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
+
+govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
 ```
-   {% endsnippetcut %}
+{% endsnippetcut %}
+
+### Создание и назначение роли
+
+{% alert %}
+Ввиду разнообразия подключаемых к vSphere SSO-провайдеров шаги по созданию пользователя в данной статье не рассматриваются.
+
+Роль, которую предлагается создать далее, включает в себя все возможные права для всех компонентов Deckhouse.
+Для получения детального списка привилегий, обратитесь [к документации](/documentation/v1/modules/030-cloud-provider-vsphere/configuration.html#список-необходимых-привилегий).
+При необходимости получения более гранулярных прав обратитесь в техподдержку Deckhouse.
+{% endalert %}
+
+Создайте роль с необходимыми правами:
+
+{% snippetcut %}
+```shell
+govc role.create deckhouse \
+   Cns.Searchable Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement \
+   Global.GlobalTag Global.SystemTag Network.Assign StorageProfile.View \
+   $(govc role.ls Admin | grep -F -e 'Folder.' -e 'InventoryService.' -e 'Resource.' -e 'VirtualMachine.')
+```
+{% endsnippetcut %}
+
+Назначьте пользователю роль на объекте `vCenter`:
+
+{% snippetcut %}
+```shell
+govc permissions.set -principal <username>@vsphere.local -role deckhouse /
+```
+{% endsnippetcut %}
+
+### Подготовка образа виртуальной машины
+
+Для создания шаблона виртуальной машины (`Template`) рекомендуется использовать готовый cloud-образ/OVA-файл, предоставляемый вендором ОС:
+
+* [**Ubuntu**](https://cloud-images.ubuntu.com/)
+* [**Debian**](https://cloud.debian.org/images/cloud/)
+* [**CentOS**](https://cloud.centos.org/)
+* [**Rocky Linux**](https://rockylinux.org/alternative-images/) (секция *Generic Cloud / OpenStack*)
+
+{% alert %}
+Если вы планируете использовать дистрибутив отечественной ОС, обратитесь к вендору ОС для получения образа/OVA-файла.
+{% endalert %}
+
+Если вам необходимо использовать собственный образ, обратитесь к [документации](/documentation/v1/modules/030-cloud-provider-vsphere/environment.html#требования-к-образу-виртуальной-машины).

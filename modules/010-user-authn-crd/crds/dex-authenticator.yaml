@@ -29,9 +29,27 @@ spec:
             * Deployment containing oauth2-proxy and redis containers
             * Service, pointing to a Deployment with an oauth2-proxy
             * Ingress, configured to receive requests on `https://<applicationDomain>/dex-authenticator` and send it to a service side
-            * Secrets, needed to access dex
+            * Secrets, needed to access Dex
 
             **NOTE!** After restarting a pod with an oauth2-proxy, the current `access token` and `id token` will be queried (using the refresh token) and stored in a redis memory.
+          x-doc-examples:
+            - apiVersion: deckhouse.io/v1
+              kind: DexAuthenticator
+              metadata:
+                name: app-name
+                namespace: app-namespace
+              spec:
+                applicationDomain: "app-name.kube.my-domain.com"
+                sendAuthorizationHeader: false
+                applicationIngressCertificateSecretName: "ingress-tls"
+                applicationIngressClassName: "nginx"
+                keepUsersLoggedInFor: "720h"
+                allowedGroups:
+                  - everyone
+                  - admins
+                whitelistSourceRanges:
+                  - 1.1.1.1/32
+                  - 192.168.0.0/24
           properties:
             spec:
               type: object
@@ -42,19 +60,21 @@ spec:
                 applicationDomain:
                   type: string
                   description: 'Public domain that points to your application. Must be specified **without** HTTP scheme.'
-                  example: 'my-app.domain.com'
+                  x-doc-examples: ['my-app.domain.com']
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                 sendAuthorizationHeader:
                   type: boolean
                   description: 'Request to application will be sent with "Authorization: Bearer" header when the option is switched to true.'
                 applicationIngressCertificateSecretName:
                   type: string
-                  description: 'Name of TLS-certificate secret specified in your application Ingress object to add to dex authenticator Ingress object for HTTPS access. Secret must be located in the same namespace with DexAuthenticator object.'
-                  example: 'ingress-tls'
+                  description: 'Name of TLS-certificate secret specified in your application Ingress object to add to Dex authenticator Ingress object for HTTPS access. Secret must be located in the same namespace with DexAuthenticator object.'
+                  x-doc-examples: ['ingress-tls']
+                  pattern: '^(|[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)$'
                 applicationIngressClassName:
                   type: string
                   description: 'Ingress class that serves your application ingress resource.'
-                  example: 'nginx'
+                  x-doc-examples: ['nginx']
+                  pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                 signOutURL:
                   type: string
                   description: 'Provide the URL from which requests will be proxied to the Dex authenticator sign out URL.'
@@ -64,7 +84,7 @@ spec:
                     User session will be kept for specified amount of time even if user will not log in.
 
                     Specified with  s, m or h suffix.
-                  example: '24h'
+                  x-doc-examples: ['24h']
                   x-doc-default: '168h'
                 allowedGroups:
                   type: array
@@ -79,7 +99,7 @@ spec:
                   type: array
                   description: |
                     CIDRs that are allowed to authenticate. Authentication is allowed without IP address restrictions, If not specified.
-                  example: ['192.168.42.0/24']
+                  x-doc-examples: ['192.168.42.0/24']
                   items:
                     type: string
                     pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'

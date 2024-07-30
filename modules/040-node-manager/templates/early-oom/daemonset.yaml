@@ -64,6 +64,11 @@ spec:
         volumeMounts:
           - mountPath: /host_proc
             name: proc
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTPS
+            port: 8443
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" 10 | nindent 12 }}

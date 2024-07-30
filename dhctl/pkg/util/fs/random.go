@@ -19,8 +19,6 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"strconv"
-	"time"
 )
 
 func RandomTmpFileName() string {
@@ -28,13 +26,9 @@ func RandomTmpFileName() string {
 	return filepath.Join(os.TempDir(), fileName)
 }
 
+// The suffix will consist of 128 bits of non-secure randomness composed in 32 hex digits, 16 bytes.
+// For example, for "name-here" the call will produce something like "name-here-7d03f3e265dace994308fc812e9ab366"
 func RandomNumberSuffix(name string) string {
-	// we silent gosec linter here
-	// because we do not need security random number
-	s := rand.NewSource(time.Now().UnixNano())
-	r := rand.New(s) //nolint:gosec
-
-	rndSuf := strconv.FormatUint(r.Uint64(), 10)
-
-	return fmt.Sprintf("%s-%s", name, rndSuf)
+	// Could be using k8s.io/apimachinery/pkg/util/rand.String() here instead
+	return fmt.Sprintf("%s-%x%x", name, rand.Uint64(), rand.Uint64()) // these two rand calls are thread safe
 }

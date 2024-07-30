@@ -42,7 +42,7 @@ func Test_is_error_line(t *testing.T) {
 		// Negative cases.
 		{
 			"level=info",
-			`{"level":"info","msg":"Module hook start deckhouse-web/810-deckhouse-web/hooks/https/copy_custom_certificate.go","binding":"beforeHelm","event.type":"OperatorStartup","hook":"810-deckhouse-web/hooks/https/copy_custom_certificate.go","hook.type":"module","module":"deckhouse-web","queue":"main","task.id":"e7f06e0c-2304-421a-a856-2684f5cd4914","time":"2022-06-17T08:54:22Z"}`,
+			`{"level":"info","msg":"Module hook start documentation/810-documentation/hooks/https/copy_custom_certificate.go","binding":"beforeHelm","event.type":"OperatorStartup","hook":"810-documentation/hooks/https/copy_custom_certificate.go","hook.type":"module","module":"documentation","queue":"main","task.id":"e7f06e0c-2304-421a-a856-2684f5cd4914","time":"2022-06-17T08:54:22Z"}`,
 			false,
 		},
 		{

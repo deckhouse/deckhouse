@@ -1,9 +1,11 @@
 {%- assign moduleName = page.dir | regex_replace: "^.*/[0-9]+\-([a-z-]+)/$", "\1" %}
+{%- assign moduleSnakeName = page['module-snake-name'] %}
+{%- assign moduleKebabName = page['module-kebab-name'] %}
 
 {%- assign bundlesEnabledCount = 0 %}
 {%- assign bundlesDisabledCount = 0 %}
 {%- for bundle in site.data.bundles.bundleNames %}
-  {%- if site.data.bundles.byModule[moduleName][bundle] == 'true' %}
+  {%- if site.data.bundles.byModule[moduleKebabName][bundle] == 'true' %}
 
     {%- if bundlesEnabledList.size > 0 %}
       {%- assign bundlesEnabledList = bundlesEnabledList | append: '`, `' %}
@@ -62,4 +64,4 @@
   {%- endif %}
 {%- endif %}
 
-{% include module-enable.liquid moduleName=moduleName %}
+{% include module-enable.liquid moduleKebabName=moduleKebabName moduleSnakeName=moduleSnakeName %}

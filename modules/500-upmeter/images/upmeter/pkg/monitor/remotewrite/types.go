@@ -25,6 +25,13 @@ type Config struct {
 	Endpoint    string            `json:"url"`
 	BasicAuth   map[string]string `json:"basicAuth"`
 	BearerToken string            `json:"bearerToken"`
+	TLSConfig   TLSConfig         `json:"tlsConfig"`
+}
+
+// TLSConfig is the spec in the RemoteWrite CRD
+type TLSConfig struct {
+	InsecureSkipVerify bool   `json:"insecureSkipVerify"`
+	CA                 string `json:"ca"`
 }
 
 // Spec is the spec in the RemoteWrite CRD

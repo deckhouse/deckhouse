@@ -5,37 +5,49 @@ title: "Модуль Prometheus Pushgateway: примеры"
 ## Пример настройки модуля
 
 ```yaml
-prometheusPushgatewayEnabled: "true"
-prometheusPushgateway: |
-  instances:
-  - first
-  - second
-  - another
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus-pushgateway
+spec:
+  version: 1
+  enabled: true
+  settings:
+    instances:
+    - first
+    - second
+    - another
 ```
 
-{% raw %}
+Адрес PushGateway (из контейнера пода): `http://first.kube-prometheus-pushgateway:9091`.
 
-Адрес PushGateway: `http://first.kube-prometheus-pushgateway:9091`.
+## Отправка метрики
 
-## Отправка метрики через curl
+Пример отправки метрики через curl:
 
 ```shell
-# echo "test_metric 3.14" | curl --data-binary @- http://first.kube-prometheus-pushgateway:9091/metrics/job/app
+echo "test_metric{env="dev"} 3.14" | curl --data-binary @- http://first.kube-prometheus-pushgateway:9091/metrics/job/myapp
 ```
 
-Через 30 секунд (после скрейпа данных) метрики будут доступны в Prometheus:
+Через 30 секунд (после скрейпа данных) метрики будут доступны в Prometheus. Пример:
 
 ```text
-test_metric{instance="10.244.1.155:9091",job="app",pushgateway="first"} 3.14
+test_metric{container="prometheus-pushgateway", env="dev", exported_job="myapp", 
+    instance="10.244.1.155:9091", job="prometheus-pushgateway", pushgateway="prometheus-pushgateway", tier="cluster"} 3.14
 ```
 
-**Важно!** Значение job должно быть уникальным в Prometheus, чтобы не поломать существующие графики и алерты. Получить список всех занятых job можно следующим запросом: `count({__name__=~".+"}) by (job)`.
+{% alert %} Название job (в примере — `myapp`) будет доступно в Prometheus в лейбле `exported_job`, а не `job` (так как лейбл `job` уже занят в Prometheus, он переименовывается при приеме метрики от PushGateway).
+{% endalert %}
 
-## Удаление всех метрик группы `{instance="10.244.1.155:9091",job="app"}` через curl
+{% alert %} Возможно, вам потребуется получить список всех имеющихся job для выбора уникального названия (чтобы не испортить существующие графики и алерты). Получить список всех имеющихся job можно следующим запросом: {% raw %}`count({__name__=~".+"}) by (job)`.{% endraw %}
+{% endalert %}
+
+## Удаление метрик
+
+Пример удаления всех метрик группы `{instance="10.244.1.155:9091",job="myapp"}` через curl:
 
 ```shell
-# curl -X DELETE http://first.kube-prometheus-pushgateway:9091/metrics/job/app/instance/10.244.1.155:9091
+curl -X DELETE http://first.kube-prometheus-pushgateway:9091/metrics/job/myapp/instance/10.244.1.155:9091
 ```
 
-Т.к. PushGateway хранит полученные метрики в памяти, **при рестарте pod-а все метрики будут утеряны**.
-{% endraw %}
+Так как PushGateway хранит полученные метрики в памяти, **при рестарте пода все метрики будут утеряны**.

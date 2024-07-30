@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cni-configuration
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+data:
+{{- if hasKey .Values.cloudProviderVcd.internal "cniSecretData" }}
+  {{- .Values.cloudProviderVcd.internal.cniSecretData | b64dec | nindent 2 }}
+{{- else }}
+  cni: {{ b64enc "cilium" | quote }}
+  cilium: {{ b64enc "{\"mode\": \"DirectWithNodeRoutes\"}" | quote }}
+{{- end }}

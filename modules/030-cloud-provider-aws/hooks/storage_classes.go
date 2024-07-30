@@ -27,8 +27,6 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 type StorageClass struct {
@@ -71,7 +69,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyModuleStorageClassesFilter,
 		},
 	},
-}, dependency.WithExternalDependencies(storageClasses))
+}, storageClasses)
 
 func applyModuleStorageClassesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var sc = &storagev1.StorageClass{}
@@ -92,7 +90,7 @@ func excludeCheck(regexps []*regexp.Regexp, storageClassName string) bool {
 	return false
 }
 
-func storageClasses(input *go_hook.HookInput, dc dependency.Container) error {
+func storageClasses(input *go_hook.HookInput) error {
 	provision := input.Values.Get("cloudProviderAws.storageClass.provision").Array()
 
 	provisionExcludeNames := make([]gjson.Result, 0, len(provision))

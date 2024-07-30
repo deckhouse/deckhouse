@@ -1,238 +1,120 @@
 bashible: &bashible
-  ubuntu: &ubuntu
+  ubuntu:
     '18.04':
-      docker:
-        desiredVersion: "docker-ce=5:19.03.13~3-0~ubuntu-bionic"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.4.6-1"
-          allowedPattern: "containerd.io=1.[234]"
-      containerd:
-        desiredVersion: "containerd.io=1.6.14-1"
-        allowedPattern: ""
     '20.04':
-      docker:
-        desiredVersion: "docker-ce=5:19.03.13~3-0~ubuntu-focal"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.4.6-1"
-          allowedPattern: "containerd.io=1.[234]"
-      containerd:
-        desiredVersion: "containerd.io=1.6.14-1"
-        allowedPattern: ""
     '22.04':
-      docker:
-        desiredVersion: "docker-ce=5:20.10.14~3-0~ubuntu-jammy"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.5.11-1"
-          allowedPattern: "containerd.io=1.[56]"
-      containerd:
-        desiredVersion: "containerd.io=1.6.14-1"
-        allowedPattern: ""
+    '24.04':
   debian:
-    '9': &debian9
-      docker:
-        desiredVersion: "docker-ce=5:19.03.15~3-0~debian-stretch"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.4.3-1"
-          allowedPattern: "containerd.io=1.[234]"
-      containerd:
-        desiredVersion: "containerd.io=1.4.3-1"
-        allowedPattern: ""
     '10':
-      docker:
-        desiredVersion: "docker-ce=5:20.10.12~3-0~debian-buster"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.4.6-1"
-          allowedPattern: "containerd.io=1.[234]"
-      containerd:
-        desiredVersion: "containerd.io=1.6.14-1"
-        allowedPattern: ""
     '11':
-      docker:
-        desiredVersion: "docker-ce=5:20.10.12~3-0~debian-bullseye"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io=1.4.6-1"
-          allowedPattern: "containerd.io=1.[234]"
-      containerd:
-        desiredVersion: "containerd.io=1.6.14-1"
-        allowedPattern: ""
+    '12':
   centos:
     '7':
-      docker:
-        desiredVersion: "docker-ce-19.03.15-3.el7.x86_64"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io-1.4.6-3.1.el7.x86_64"
-          allowedPattern: "containerd.io-1.[1234]"
-      containerd:
-        desiredVersion: "containerd.io-1.6.14-3.1.el7.x86_64"
-        allowedPattern: ""
     '8':
-      docker:
-        desiredVersion: "docker-ce-19.03.15-3.el8.x86_64"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io-1.4.6-3.1.el8.x86_64"
-          allowedPattern: "containerd.io-1.[1234]"
-      containerd:
-        desiredVersion: "containerd.io-1.6.14-3.1.el8.x86_64"
-        allowedPattern: ""
     '9':
-      docker:
-        desiredVersion: "docker-ce-20.10.17-3.el9.x86_64"
-        allowedPattern: ""
-        containerd:
-          desiredVersion: "containerd.io-1.6.7-3.1.el9.x86_64"
-          allowedPattern: "containerd.io-1.6"
-      containerd:
-        desiredVersion: "containerd.io-1.6.14-3.1.el9.x86_64"
-        allowedPattern: ""
 k8s:
-  '1.21':
-    status: available
-    patch: 14
-    cniVersion: 0.8.7
-    bashible: &bashible_k8s_ge_1_21
-      !!merge <<: *bashible
-      ubuntu:
-        !!merge <<: *ubuntu
-        '18.04':
-          docker:
-            desiredVersion: "docker-ce=5:19.03.13~3-0~ubuntu-bionic"
-            allowedPattern: ""
-            containerd:
-              desiredVersion: "containerd.io=1.4.6-1"
-              allowedPattern: "containerd.io=1.[234]"
-          containerd:
-            desiredVersion: "containerd.io=1.6.14-1"
-            allowedPattern: ""
-    ccm:
-      openstack: v1.21.0
-      yandex: v0.21.3
-      aws: v1.21.4
-      vsphere: v1.20.0
-      azure: v1.0.0@sha256:b31991b6056a879ddc15eac8d6f3025b4c3f1e86617f91d320b1dcba22db0217
-      gcp: 133826d967b2852f8bb8aa177d5f11cb1adb1f01
-    csi:
-      openstack: v1.21.0
-      provisioner: v3.2.1@sha256:4ad5fcdbe7e9147b541a863d74e4d1d519bf435ecda4c7bde5abe237a43f7029
-      attacher: v4.0.0@sha256:9a685020911e2725ad019dbce6e4a5ab93d51e3d4557f115e64343345e05781b
-      resizer: v1.6.0@sha256:425d8f1b769398127767b06ed97ce62578a3179bcb99809ce93a1649e025ffe7
-      registrar: v2.5.1@sha256:0103eee7c35e3e0b5cd8cdca9850dc71c793cdeb6669d8be7a89440da2d06ae4
-      snapshotter: v6.0.1@sha256:ad16874e2140256a809cada2b4ac3d931d5b73b0bee23ed0f8d60bdd778cfec2
-      livenessprobe: v2.7.0@sha256:933940f13b3ea0abc62e656c1aa5c5b47c04b15d71250413a6b821bd0c58b94e
-    controlPlane:
-      # etcd: sha256 digest isn't needed because this component is compiled from source
-      # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
-      # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:67d226ce629ef439d8e1e1b401a6f828cc4558abd6d9e5e3717d188dc7ce4ba1
-      # kubeProxy: sha256 digest isn't needed for this version of kubernetes because this component is compiled as a module image with a special patch
-  '1.22':
-    status: available
-    patch: 17
-    cniVersion: 1.1.1
-    bashible: *bashible_k8s_ge_1_21
-    ccm:
-      openstack: v1.22.0
-      yandex: v0.22.0
-      aws: v1.22.5
-      vsphere: v1.22.6
-      azure: v1.1.3@sha256:f33bb656a912417823be1aee8d663df447044cb20f951767d30318b8ca50b777
-      gcp: 133826d967b2852f8bb8aa177d5f11cb1adb1f01
-    csi:
-      openstack: v1.22.0
-      provisioner: v3.2.1@sha256:4ad5fcdbe7e9147b541a863d74e4d1d519bf435ecda4c7bde5abe237a43f7029
-      attacher: v4.0.0@sha256:9a685020911e2725ad019dbce6e4a5ab93d51e3d4557f115e64343345e05781b
-      resizer: v1.6.0@sha256:425d8f1b769398127767b06ed97ce62578a3179bcb99809ce93a1649e025ffe7
-      registrar: v2.5.1@sha256:0103eee7c35e3e0b5cd8cdca9850dc71c793cdeb6669d8be7a89440da2d06ae4
-      snapshotter: v6.0.1@sha256:ad16874e2140256a809cada2b4ac3d931d5b73b0bee23ed0f8d60bdd778cfec2
-      livenessprobe: v2.7.0@sha256:933940f13b3ea0abc62e656c1aa5c5b47c04b15d71250413a6b821bd0c58b94e
-    controlPlane:
-      # etcd: sha256 digest isn't needed because this component is compiled from source
-      # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
-      # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:bd7642f0d25996df2daa0b355cf4f1886c72a9573a2f0772c214f32a3441b277
-      kubeProxy: sha256:cfb5210283cd2c1aca30f8f89e64b9ca72a5d3f6bd82810897a1612c6f9c8536
-  '1.23':
+  '1.26':
     status: available
     patch: 15
-    cniVersion: 1.1.1
-    bashible: *bashible_k8s_ge_1_21
+    bashible: *bashible
+    clusterAutoscalerPatch: 2
     ccm:
-      openstack: v1.23.1
-      yandex: v0.23.0
-      aws: v1.23.4
-      vsphere: v1.23.0
-      azure: v1.23.10
-      gcp: 66064c62c6c23110c7a93faca5fba668018df732
+      openstack: v1.26.1
+      yandex: v0.26.1
+      aws: v1.26.0
+      vsphere: v1.26.0
+      azure: v1.26.17
+      gcp: ccm/v26.0.4
     csi:
-      openstack: v1.23.1
-      provisioner: v3.2.1@sha256:4ad5fcdbe7e9147b541a863d74e4d1d519bf435ecda4c7bde5abe237a43f7029
-      attacher: v4.0.0@sha256:9a685020911e2725ad019dbce6e4a5ab93d51e3d4557f115e64343345e05781b
-      resizer: v1.6.0@sha256:425d8f1b769398127767b06ed97ce62578a3179bcb99809ce93a1649e025ffe7
-      registrar: v2.5.1@sha256:0103eee7c35e3e0b5cd8cdca9850dc71c793cdeb6669d8be7a89440da2d06ae4
-      snapshotter: v6.0.1@sha256:ad16874e2140256a809cada2b4ac3d931d5b73b0bee23ed0f8d60bdd778cfec2
-      livenessprobe: v2.7.0@sha256:933940f13b3ea0abc62e656c1aa5c5b47c04b15d71250413a6b821bd0c58b94e
-    controlPlane:
-      # etcd: sha256 digest isn't needed because this component is compiled from source
-      # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
-      # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:9accf0bab7275b3a7704f5fcbc27d7a7820ce9209cffd4634214cfb4536fa4ca
-      kubeProxy: sha256:22492448d429a665b319028097ab066625e6923672e98423c8acce21617dc811
-  '1.24':
+      vsphere: v3.0.3
+      openstack: v1.26.1
+      provisioner: v3.4.1
+      attacher: v4.2.0
+      resizer: v1.7.0
+      registrar: v2.7.0
+      snapshotter: v6.3.1
+      livenessprobe: v2.11.0
+  '1.27':
     status: available
-    patch: 9
-    cniVersion: 1.1.1
-    bashible: *bashible_k8s_ge_1_21
+    patch: 15
+    bashible: *bashible
+    clusterAutoscalerPatch: '0'
     ccm:
-      openstack: v1.24.2
-      yandex: v0.24.0
-      aws: v1.24.1
-      vsphere: v1.24.0
-      azure: v1.24.4
-      gcp: eda9a5a3dd73ef923df7b16cf067af1b0ccbb929
+      openstack: v1.27.1
+      yandex: v0.27.0
+      aws: v1.27.1
+      vsphere: 4e80a0c86d2ae8a1b843b4ba9e5ac31707758912
+      azure: v1.27.11
+      gcp: ccm/v27.1.0
     csi:
-      openstack: v1.24.2
-      provisioner: v3.2.1@sha256:4ad5fcdbe7e9147b541a863d74e4d1d519bf435ecda4c7bde5abe237a43f7029
-      attacher: v4.0.0@sha256:9a685020911e2725ad019dbce6e4a5ab93d51e3d4557f115e64343345e05781b
-      resizer: v1.6.0@sha256:425d8f1b769398127767b06ed97ce62578a3179bcb99809ce93a1649e025ffe7
-      registrar: v2.5.1@sha256:0103eee7c35e3e0b5cd8cdca9850dc71c793cdeb6669d8be7a89440da2d06ae4
-      snapshotter: v6.0.1@sha256:ad16874e2140256a809cada2b4ac3d931d5b73b0bee23ed0f8d60bdd778cfec2
-      livenessprobe: v2.7.0@sha256:933940f13b3ea0abc62e656c1aa5c5b47c04b15d71250413a6b821bd0c58b94e
-    controlPlane:
-      # etcd: sha256 digest isn't needed because this component is compiled from source
-      # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
-      # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:3c4d859c18e6930c921732eb08a47d75392a0521b87cfba0826d46b9f1a84b58
-      kubeProxy: sha256:2f0df9a9723a314a5c85e9bedd5f1cdc28468655ed8e5d6393250e4acc886bb8
-  '1.25':
+      vsphere: v3.0.3
+      openstack: v1.27.1
+      provisioner: v3.5.0
+      attacher: v4.3.0
+      resizer: v1.8.0
+      registrar: v2.8.0
+      snapshotter: v6.3.1
+      livenessprobe: v2.11.0
+  '1.28':
     status: available
-    patch: 5
-    cniVersion: 1.1.1
-    bashible: *bashible_k8s_ge_1_21
+    patch: 11
+    bashible: *bashible
+    clusterAutoscalerPatch: '0'
     ccm:
-      openstack: v1.25.3
-      yandex: v0.25.2
-      aws: v1.25.1
-      vsphere: v1.25.0
-      azure: v1.25.4
-      gcp: ccm/v25.3.0
+      openstack: v1.28.0
+      yandex: v0.27.0
+      aws: v1.28.1
+      vsphere: v1.28.0
+      azure: v1.28.3
+      gcp: ccm/v27.1.6
     csi:
-      openstack: v1.25.3
-      provisioner: v3.3.0@sha256:ee3b525d5b89db99da3b8eb521d9cd90cb6e9ef0fbb651e98bb37be78d36b5b8
-      attacher: v4.0.0@sha256:9a685020911e2725ad019dbce6e4a5ab93d51e3d4557f115e64343345e05781b
-      resizer: v1.6.0@sha256:425d8f1b769398127767b06ed97ce62578a3179bcb99809ce93a1649e025ffe7
-      registrar: v2.6.2@sha256:a13bff2ed69af0cf4270f0cf47bdedf75a56c095cd95b91195ae6c713a9b1845
-      snapshotter: v6.1.0@sha256:291334908ddf71a4661fd7f6d9d97274de8a5378a2b6fdfeb2ce73414a34f82f
-      livenessprobe: v2.8.0@sha256:cacee2b5c36dd59d4c7e8469c05c9e4ef53ecb2df9025fa8c10cdaf61bce62f0
-    controlPlane:
-      # etcd: sha256 digest isn't needed because this component is compiled from source
-      # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
-      # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:51b7d5eb5c3128eac582d411438c65cd9aaebe993fd73703dedbbbe83bc02c1d
-      kubeProxy: sha256:df959d1975f5deb357e18e48d1603d8e9f3fa036642c12e63745b68eb7b2f248
+      vsphere: v3.0.3
+      openstack: v1.28.0
+      provisioner: v3.6.0
+      attacher: v4.4.0
+      resizer: v1.9.0
+      registrar: v2.9.0
+      snapshotter: v6.3.1
+      livenessprobe: v2.11.0
+  '1.29':
+    status: available
+    patch: 6
+    bashible: *bashible
+    clusterAutoscalerPatch: '0'
+    ccm:
+      openstack: v1.29.0
+      yandex: v0.29.0
+      aws: v1.29.1
+      vsphere: v1.29.0
+      azure: v1.29.0
+      gcp: ccm/v29.0.0
+    csi:
+      vsphere: v3.0.3
+      openstack: v1.29.0
+      provisioner: v4.0.0
+      attacher: v4.5.0
+      resizer: v1.9.3
+      registrar: v2.10.0
+      snapshotter: v6.3.3
+      livenessprobe: v2.12.0
+  '1.30':
+    status: preview
+    patch: 2
+    bashible: *bashible
+    clusterAutoscalerPatch: 2
+    ccm:
+      openstack: v1.30.0
+      yandex: v0.29.0
+      aws: v1.30.1
+      vsphere: v1.30.1
+      azure: v1.30.2
+      gcp: ccm/v29.0.1
+    csi:
+      vsphere: v3.0.3
+      openstack: v1.30.0
+      provisioner: v5.0.0
+      attacher: v4.6.1
+      resizer: v1.11.0
+      registrar: v2.11.0
+      snapshotter: v8.0.0
+      livenessprobe: v2.13.0

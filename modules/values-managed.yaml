@@ -3,11 +3,12 @@ admissionPolicyEngineEnabled: true
 certManagerEnabled: true
 containerizedDataImporterEnabled: true
 dashboardEnabled: true
-deckhouseConfigEnabled: true
+externalModuleManagerEnabled: true
 deckhouseEnabled: true
-deckhouseWebEnabled: true
+documentationEnabled: true
 deschedulerEnabled: true
 extendedMonitoringEnabled: true
+flowSchemaEnabled: true
 helmEnabled: true
 ingressNginxEnabled: true
 localPathProvisionerEnabled: true

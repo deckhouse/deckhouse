@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -58,7 +59,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "prometheus",
+					"app.kubernetes.io/name": "prometheus",
 				},
 			},
 			FilterFunc: applyPodFilter,
@@ -193,7 +194,7 @@ func execToPodThroughAPI(kubeClient k8s.Client, command, containerName, podName,
 	}
 
 	var stdout, stderr bytes.Buffer
-	err = exec.Stream(remotecommand.StreamOptions{
+	err = exec.StreamWithContext(context.TODO(), remotecommand.StreamOptions{
 		Stdin:  nil,
 		Stdout: &stdout,
 		Stderr: &stderr,

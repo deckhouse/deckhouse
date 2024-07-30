@@ -1,0 +1,44 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- $patch := toString $value.patch }}
+  {{- $v := semver $version }}
+  {{- $full_version := printf "%s.%s" $version $patch }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $full_version | replace "." "-" }}
+    {{- if semverCompare ">=1.30" $version }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+    {{- else if semverCompare ">=1.29" $version }}
+from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+    {{- else if semverCompare ">=1.27" $version }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
+    {{- else }}
+from: {{ $.Images.BASE_GOLANG_19_ALPINE_DEV }}
+    {{- end }}
+git:
+- add: /{{ $.ModulePath }}/modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - mkdir /src
+  - git clone --depth 1 --branch v{{ $full_version }} {{ $.SOURCE_REPO }}/kubernetes/kubernetes.git /src
+  - cd /src
+  - |
+    cat <<EOF > .kube-version
+    KUBE_GIT_VERSION='v{{ $full_version }}'
+    KUBE_GIT_MAJOR='{{ $v.Major }}'
+    KUBE_GIT_MINOR='{{ $v.Minor }}'
+    KUBE_GIT_COMMIT='0000000000000000000000000000000000000000'
+    KUBE_GIT_TREE_STATE='archive'
+    EOF
+  - export KUBE_GIT_VERSION_FILE=.kube-version
+  - find /patches/*/{{ $version }} -name '*.patch' | xargs git apply
+  - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
+{{- end }}

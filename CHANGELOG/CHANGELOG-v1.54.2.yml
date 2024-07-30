@@ -1,0 +1,30 @@
+candi:
+  fixes:
+    - summary: Do not use cloud network setup scripts for static NodeGroups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6464
+dhctl:
+  features:
+    - summary: Add support for uploading mirrored Deckhouse images to custom repo paths.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6467
+    - summary: Compute stribog 256 bit hash for downloaded registry copy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6409
+  fixes:
+    - summary: >-
+        Fix `edit provider-cluster-configuration` command to not remove `discovery-data.json` file
+        from `kube-system/d8-provider-cluster-configuration` Secret.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6486
+linstor:
+  features:
+    - summary: Add a custom script for eviction of LINSTOR resources from a node.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6457
+operator-prometheus:
+  fixes:
+    - summary: Fix RBAC for updating alertmanager status.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6466
+user-authn:
+  fixes:
+    - summary: Add missing quotes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6491
+    - summary: Provide `userID` field for correct JWT generation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6484
+

@@ -1,6 +1,6 @@
 {% assign revision=include.revision %}
 
-Use a Docker image to install the **Deckhouse Platform**. It is necessary to transfer configuration files to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/id_rsa` is used){% endif %}.
+Use a Docker image to install the **Deckhouse Kubernetes Platform**. It is necessary to transfer configuration files to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/id_rsa` is used){% endif %}.
 {% if page.platform_code == 'bm-private' %}
 Log in on the **personal computer** to the container image registry you specified in the previous step.
 {%- endif %}
@@ -107,7 +107,7 @@ dhctl bootstrap --ssh-user=<username> --ssh-host=<master_ip> --ssh-agent-private
   --config=/config.yml \
   --ask-become-pass
 {%- elsif page.platform_type == "cloud" %}
-dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml --resources=/resources.yml
+dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml --config=/resources.yml
 {%- endif %}
 ```
 {% endsnippetcut %}
@@ -136,8 +136,23 @@ The `--ssh-user` parameter here refers to the default user for the relevant VM i
 {%- endif %}
 {%- endif %}
 
-The installation process may take about 15-30 minutes with a good connection.
+The installation process may take about from 5 to 30 minutes, depending on the connection.
 
+{% if page.platform_type == "baremetal" %}
+Example of output upon successful completion of the installation:
+```
+...
+│ │ No more converge tasks found in Deckhouse queue.
+│ │ Deckhouse pod is Ready!
+│ └ Waiting for Deckhouse to become Ready (157.34 seconds)
+└ ⛵ ~ Bootstrap: Install Deckhouse (158.47 seconds)
+
+❗ ~ Some resources require at least one non-master node to be added to the cluster.
+┌ ⛵ ~ Bootstrap: Clear cache
+│ ❗ ~ Next run of "dhctl bootstrap" will create a new Kubernetes cluster.
+└ ⛵ ~ Bootstrap: Clear cache (0.00 seconds)
+```
+{% else  %}
 After the installation is complete, the installer will output the IP of the **master node** (you will need it further). Example output:
 ```
 ...
@@ -145,6 +160,7 @@ After the installation is complete, the installer will output the IP of the **ma
 │ cloud-demo-master-0 | ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@1.2.3.4
 └ 🎈 ~ Common: Kubernetes Master Node addresses for SSH (0.00 seconds)
 ```
+{% endif %}
 
 {%- if page.platform_code == "kind" %}
 
@@ -170,10 +186,10 @@ kubectl -n d8-ingress-nginx get po
 
 Wait for the Ingress controller Pod to switch to `Ready` state.
 
-You have installed Deckhouse Platform in `kind`!
+You have installed Deckhouse Kubernetes Platform in `kind`!
 {%- else %}
 
-Almost everything is ready for a fully-fledged Deckhouse Platform to work!
+Almost everything is ready for a fully-fledged Deckhouse Kubernetes Platform to work!
 {%- endif %}
 
 <!-- Troubleshooting in existing cluster //-->

@@ -35,8 +35,10 @@ To install Deckhouse, you have to create a YAML file containing the installation
 The YAML installation config contains multiple resource configurations (manifests):
 - [InitConfiguration](configuration.html#initconfiguration) — the initial [Deckhouse configuration](../#deckhouse-configuration). Deckhouse will use it to start after the installation.
 
-  This resource contains the parameters Deckhouse needs to start or run smoothly, such as the [placement-related parameters for Deckhouse components](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), the [storageClass](../deckhouse-configure-global.html#parameters-storageclass) used, the [container registry](configuration.html#parameters-deckhouse-registrydockercfg) credentials, the [DNS naming template](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate), and more.
-  
+  This resource contains the parameters Deckhouse needs to start or run smoothly, such as the [placement-related parameters for Deckhouse components](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), the [storageClass](../deckhouse-configure-global.html#parameters-storageclass) used, the [container registry](configuration.html#initconfiguration-deckhouse-registrydockercfg) credentials, the [DNS naming template](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate), and more.
+
+  **Caution!** The [configOverrides](configuration.html#initconfiguration-deckhouse-configoverrides) parameter is deprecated and will be removed. Use the [ModuleConfig](../#configuring-the-module) in the installation config to set parameters for **built-in** Deckhouse modules. For other modules, use [installation resource file](#installation-resource-config).  
+
 - [ClusterConfiguration](configuration.html#clusterconfiguration) — general cluster parameters, such as network parameters, CRI parameters, control plane version, etc.
   
   > The `ClusterConfiguration` resource is only required if a Kubernetes cluster has to be pre-deployed when installing Deckhouse. That is, `ClusterConfiguration` is not required if Deckhouse is installed into an existing Kubernetes cluster.
@@ -57,6 +59,8 @@ The YAML installation config contains multiple resource configurations (manifest
   - [VsphereInstanceClass](../modules/030-cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere
   - [YandexInstanceClass](../modules/030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud
 
+- `ModuleConfig` — a set of resources containing [Deckhouse configuration](../) parameters.
+
 {% offtopic title="An example of the installation config..." %}
 
 ```yaml
@@ -68,7 +72,7 @@ cloud:
   prefix: cloud-demo
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.23"
+kubernetesVersion: "Automatic"
 clusterDomain: cluster.local
 ---
 apiVersion: deckhouse.io/v1
@@ -98,6 +102,34 @@ provider:
   clientSecret: <CLIENT_SECRET>
   tenantId: <TENANT_ID>
   location: westeurope
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cni-flannel
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  enabled: true
+  settings:
+    modules:
+      publicDomainTemplate: "%s.k8s.example.com"
+  version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: node-manager
+spec:
+  version: 1
+  enabled: true
+  settings:
+    allowedBundles: ["ubuntu-lts"]
 ```
 
 {% endofftopic %}
@@ -107,6 +139,8 @@ provider:
 The optional YAML installation resource config contains the Kubernetes resource manifests that will be applied after a successful Deckhouse installation.
 
 This file can help you with the additional cluster configuration once Deckhouse is installed: deploying the Ingress controller, creating additional node groups and configuration resources, assigning permissions and managing users, etc.
+
+**Caution!** You cannot use [ModuleConfig](../) for **built-in** modules in the installation resource file. To configure built-in modules, use [configuration file](#installation-config).
 
 {% offtopic title="An example of the resource config... " %}
 
@@ -161,6 +195,13 @@ metadata:
 spec:
   email: admin@deckhouse.io
   password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse-admin
+spec:
+  enabled: true
 ```
 
 {% endofftopic %}
@@ -236,11 +277,17 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
 ```
 
 , where:
-- `<DECKHOUSE_REVISION>` — edition of Deckhouse: `ee` for Enterprise Edition and `ce` for Community Edition;
+- `<DECKHOUSE_REVISION>` — [edition](../revision-comparison.html) of Deckhouse (e.g., `ee` for Enterprise Edition, `ce` for Community Edition, etc.);
 - `<MOUNT_OPTIONS>` — options for mounting files in the installer container, such as:
   - SSH authentication keys;
   - config file;
   - resource file, etc.
+- `<RELEASE_CHANNEL>` — Deckhouse [release channel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) in kebab-case. Should match with the option set in `config.yml`:
+  - `alpha` — for the *Alpha* release channel;
+  - `beta` — for the *Beta* release channel;
+  - `early-access` — for the *Early Access* release channel;
+  - `stable` — for the *Stable* release channel;
+  - `rock-solid` — for the *Rock Solid* release channel.
 
 Here is an example of a command to run the installer container for Deckhouse CE:
 
@@ -263,7 +310,7 @@ This command will start the Deckhouse installation in a cloud:
 ```shell
 dhctl bootstrap \
   --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-  --config=/config.yml --resources=/resources.yml
+  --config=/config.yml --config=/resources.yml
 ```
 
 , where:

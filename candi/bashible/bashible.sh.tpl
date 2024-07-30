@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-export LANG=C
+export LANG=C LC_NUMERIC=C
 set -Eeo pipefail
 
 function kubectl_exec() {
@@ -25,11 +25,15 @@ function bb-event-error-create() {
     # bashible step and used events.k8s.io/v1 apiVersion.
     # eventName aggregates hostname with bashible step - sed keep only name and replace
     # underscore with dash due to regexp.
+    # nodeName is used for both .name and .uid fields intentionally as putting a real node uid
+    # has proven to have some side effects like missing events when describing objects
+    # using kubectl versions 1.23.x (https://github.com/deckhouse/deckhouse/issues/4609).
     # All of stderr outputs are stored in the eventLog file.
     # step is used as argument for function call.
     # If event creation failed, error from kubectl suppressed.
     step="$1"
-    eventName="$(echo -n "$(hostname -s)")-$(echo $step | sed 's#.*/##; s/_/-/g')"
+    eventName="$(echo -n "${D8_NODE_HOSTNAME}")-$(echo $step | sed 's#.*/##; s/_/-/g')"
+    nodeName="${D8_NODE_HOSTNAME}"
     eventLog="/var/lib/bashible/step.log"
     kubectl_exec apply -f - <<EOF || true
         apiVersion: events.k8s.io/v1
@@ -39,40 +43,45 @@ function bb-event-error-create() {
         regarding:
           apiVersion: v1
           kind: Node
-          name: '$(hostname -s)'
-          uid: "$(kubectl_exec get node $(hostname -s) -o jsonpath='{.metadata.uid}')"
+          name: ${nodeName}
+          uid: ${nodeName}
         note: '$(tail -c 500 ${eventLog})'
         reason: BashibleStepFailed
         type: Warning
         reportingController: bashible
-        reportingInstance: '$(hostname -s)'
+        reportingInstance: '${D8_NODE_HOSTNAME}'
         eventTime: '$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")'
         action: "BashibleStepExecution"
 EOF
 }
 
 function annotate_node() {
+  echo "Annotate node ${D8_NODE_HOSTNAME} with annotation ${@}"
   attempt=0
-  until kubectl_exec annotate node $(hostname -s) --overwrite ${@} 1> /dev/null; do
+  until error=$(kubectl_exec annotate node ${D8_NODE_HOSTNAME} --overwrite ${@} 2>&1); do
     attempt=$(( attempt + 1 ))
     if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-      >&2 echo "ERROR: Failed to annotate node $(hostname -s) with annotation ${@} after ${MAX_RETRIES} retries."
+      >&2 echo "ERROR: Failed to annotate node ${D8_NODE_HOSTNAME} with annotation ${@} after ${MAX_RETRIES} retries. Last error from kubectl: ${error}"
       exit 1
     fi
-    >&2 echo "Failed to annotate node $(hostname -s) with annotation ${@} ... retry in 10 seconds."
+    if [ "$attempt" -gt "2" ]; then
+      >&2 echo "Failed to annotate node ${D8_NODE_HOSTNAME} with annotation ${@} after 3 tries. Last message from kubectl: ${error}"
+      >&2 echo "Retrying..."
+      attempt=0
+    fi
     sleep 10
   done
+  echo "Succesful annotate node ${D8_NODE_HOSTNAME} with annotation ${@}"
 }
 
 function get_secret() {
   secret="$1"
-  max_retries="$2"
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     attempt=0
     until kubectl_exec -n d8-cloud-instance-manager get secret "$secret" -o json; do
       attempt=$(( attempt + 1 ))
-      if [ -n "${max_retries-}" ] && [ "$attempt" -gt "${max_retries}" ]; then
+      if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
         >&2 echo "ERROR: Failed to get secret $secret with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
         exit 1
       fi
@@ -85,7 +94,7 @@ function get_secret() {
     while true; do
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
         url="https://$server/api/v1/namespaces/d8-cloud-instance-manager/secrets/$secret"
-        if curl -s -f -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+        if d8-curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
           return 0
         else
@@ -104,13 +113,12 @@ function get_secret() {
 function get_bundle() {
   resource="$1"
   name="$2"
-  max_retries="$3"
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     attempt=0
     until kubectl_exec get "$resource" "$name" -o json; do
       attempt=$(( attempt + 1 ))
-      if [ -n "${max_retries-}" ] && [ "$attempt" -gt "${max_retries}" ]; then
+      if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
         >&2 echo "ERROR: Failed to get $resource $name with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
         exit 1
       fi
@@ -123,7 +131,7 @@ function get_bundle() {
     while true; do
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
         url="https://$server/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"
-        if curl -s -f -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+        if d8-curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
          return 0
         else
@@ -139,21 +147,30 @@ function get_bundle() {
   fi
 }
 
+function current_uptime() {
+  cat /proc/uptime | cut -d " " -f1
+}
+
 function main() {
-  # IMPORTANT !!! Do not remove this line, because in Centos/Redhat when dhctl bootstraps the cluster /usr/local/bin not in PATH.
-  export PATH="/usr/local/bin:$PATH"
+  export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
   export BOOTSTRAP_DIR="/var/lib/bashible"
   export BUNDLE_STEPS_DIR="$BOOTSTRAP_DIR/bundle_steps"
   export BUNDLE="{{ .bundle }}"
-  export CONFIGURATION_CHECKSUM_FILE="/var/lib/bashible/configuration_checksum"
+  export CONFIGURATION_CHECKSUM_FILE="$BOOTSTRAP_DIR/configuration_checksum"
+  export UPTIME_FILE="$BOOTSTRAP_DIR/uptime"
   export CONFIGURATION_CHECKSUM="{{ .configurationChecksum | default "" }}"
   export FIRST_BASHIBLE_RUN="no"
   export NODE_GROUP="{{ .nodeGroup.name }}"
+  export TMPDIR="/opt/deckhouse/tmp"
 {{- if .registry }}
   export REGISTRY_ADDRESS="{{ .registry.address }}"
   export SCHEME="{{ .registry.scheme }}"
   export REGISTRY_PATH="{{ .registry.path }}"
   export REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.auth | default "" }}")"
+{{- end }}
+{{- if .packagesProxy }}
+  export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
+  export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
 {{- end }}
 {{- if .proxy }}
   {{- if .proxy.httpProxy }}
@@ -171,9 +188,14 @@ function main() {
 {{- else }}
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- end }}
+{{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
+  export D8_NODE_HOSTNAME=$(hostname -s)
+{{- else }}
+  export D8_NODE_HOSTNAME=$(hostname)
+{{- end }}
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-    if tmp="$(kubectl_exec get node $(hostname -s) -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
+    if tmp="$(kubectl_exec get node ${D8_NODE_HOSTNAME} -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
       NODE_GROUP="$tmp"
       if [ "${NODE_GROUP}" == "null" ] ; then
         >&2 echo "failed to get node group. Forgot set label 'node.deckhouse.io/group'"
@@ -185,11 +207,11 @@ function main() {
     FIRST_BASHIBLE_RUN="yes"
   fi
 
-  mkdir -p "$BUNDLE_STEPS_DIR"
+  mkdir -p "$BUNDLE_STEPS_DIR" "$TMPDIR"
 
   # update bashible.sh itself
   if [ -z "${BASHIBLE_SKIP_UPDATE-}" ] && [ -z "${is_local-}" ]; then
-    get_bundle bashible "${BUNDLE}.${NODE_GROUP}" "${MAX_RETRIES}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
+    get_bundle bashible "${BUNDLE}.${NODE_GROUP}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
     if [ ! -s $BOOTSTRAP_DIR/bashible-new.sh ] ; then
       >&2 echo "ERROR: Got empty $BOOTSTRAP_DIR/bashible-new.sh."
       exit 1
@@ -210,9 +232,10 @@ function main() {
   fi
 
 {{ if eq .runType "Normal" }}
-  if [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] 2>/dev/null; then
+  if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ -f $UPTIME_FILE ]] && [[ "$(<$UPTIME_FILE)" < "$(current_uptime)" ]] 2>/dev/null; then
     echo "Configuration is in sync, nothing to do."
     annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
+    current_uptime > $UPTIME_FILE
     exit 0
   fi
   rm -f "$CONFIGURATION_CHECKSUM_FILE"
@@ -220,65 +243,19 @@ function main() {
 
   if [ -z "${is_local-}" ]; then
     # update bashbooster library for idempotent scripting
-    get_secret bashible-bashbooster -o json | jq -r '.data."bashbooster.sh"' | base64 -d > $BOOTSTRAP_DIR/bashbooster.sh
+    get_secret bashible-bashbooster | jq -r '.data."bashbooster.sh"' | base64 -d > $BOOTSTRAP_DIR/bashbooster.sh
 
     # Get steps from bashible apiserver
 
     rm -rf "$BUNDLE_STEPS_DIR"/*
 
-    ng_steps_collection="$(  get_bundle nodegroupbundle  "${BUNDLE}.${NODE_GROUP}"   | jq -rc '.data')"
+    ng_steps_collection="$(get_bundle nodegroupbundle "${BUNDLE}.${NODE_GROUP}" | jq -rc '.data')"
 
     for step in $(jq -r 'to_entries[] | .key' <<< "$ng_steps_collection"); do
       jq -r --arg step "$step" '.[$step] // ""' <<< "$ng_steps_collection" > "$BUNDLE_STEPS_DIR/$step"
     done
 
   fi
-
-{{ if eq .runType "Normal" }}
-  if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
-    >&2 echo "Setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node..."
-    attempt=0
-    until
-      node_data="$(
-        kubectl_exec get node "$(hostname -s)" -o json | jq '
-        {
-          "resourceVersion": .metadata.resourceVersion,
-          "isApproved": (.metadata.annotations | has("update.node.deckhouse.io/approved")),
-          "isWaitingForApproval": (.metadata.annotations | has("update.node.deckhouse.io/waiting-for-approval"))
-        }
-      ')" &&
-       jq -ne --argjson n "$node_data" '(($n.isApproved | not) and ($n.isWaitingForApproval)) or ($n.isApproved)' >/dev/null
-    do
-      attempt=$(( attempt + 1 ))
-      if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-        >&2 echo "ERROR: Can't set update.node.deckhouse.io/waiting-for-approval= annotation on our Node."
-        exit 1
-      fi
-      kubectl_exec annotate node "$(hostname -s)" \
-        --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
-        update.node.deckhouse.io/waiting-for-approval= node.deckhouse.io/configuration-checksum- \
-        || { echo "Retry setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node in 10sec..."; sleep 10; }
-    done
-
-    >&2 echo "Waiting for update.node.deckhouse.io/approved= annotation on our Node..."
-    attempt=0
-    until
-      kubectl_exec get node "$(hostname -s)" -o json | \
-      jq -e '.metadata.annotations | has("update.node.deckhouse.io/approved")' >/dev/null
-    do
-      attempt=$(( attempt + 1 ))
-      if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-        >&2 echo "ERROR: Can't get annotation 'update.node.deckhouse.io/approved' from our Node."
-        exit 1
-      fi
-      echo "Steps are waiting for approval to start."
-      echo "Note: Deckhouse is performing a rolling update. If you want to force an update, use the following command."
-      echo "kubectl annotate node $(hostname -s) update.node.deckhouse.io/approved="
-      echo "Retry in 10sec..."
-      sleep 10
-    done
-  fi
-{{ end }}
 
   # Execute bashible steps
   for step in $BUNDLE_STEPS_DIR/*; do
@@ -299,11 +276,9 @@ function main() {
       echo ===
       echo === Step: $step
       echo ===
-      {{- if eq .runType "ClusterBootstrap" }}
       if [ "$attempt" -gt 2 ]; then
         sx=x
       fi
-      {{- end }}
       {{- if ne .runType "ClusterBootstrap" }}
       bb-event-error-create "$step"
       {{- end }}
@@ -314,6 +289,7 @@ function main() {
   annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
 
   echo "$CONFIGURATION_CHECKSUM" > $CONFIGURATION_CHECKSUM_FILE
+  current_uptime > $UPTIME_FILE
 {{ end }}
 }
 

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 function tools::generate_password() {
-  pwgen -s 20 1
+  python3 -c 'import secrets,sys; sys.stdout.write(secrets.token_urlsafe(20))'
 }
 
 function tools::to_slug() {

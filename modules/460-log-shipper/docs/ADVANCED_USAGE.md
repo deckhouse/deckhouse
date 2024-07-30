@@ -1,5 +1,5 @@
 ---
-title: "Module log-shipper: advanced usage"
+title: "The log-shipper module: advanced usage"
 ---
 
 ## How to enable debugging logs?
@@ -72,22 +72,23 @@ Example of the output:
 
 ### Get raw log samples
 
-You can execute the `vector tap` to get all raw samples for all logging configs.
-The only argument to the command is the ID of the pipeline stage (glob patterns are allowed).
+You may use the `vector tap` command to get input data for any channel components.
+The only argument to be set is the ID of the processing stage. Patterns in a glob format are also supported for selections (e.g., `d8_cluster_source_*`).
 
-Logs before applying any transforms:
-
-```bash
-vector tap d8_cluster_source_*
-```
-
-Transformed logs:
+By using the following command, you can see the log's before applying the transformation rules (`d8_cluster_source_*` is
+the first stage of processing according to the output of the `vector graph` command):
 
 ```bash
-vector tap d8_tf_*
+vector tap 'cluster_logging_config/*'
 ```
 
-You can then use the `vector vrl` interactive console to debug [VRL](https://vector.dev/docs/reference/vrl/) remap rules for messages.
+Transformed logs that are received at the input of the next channel components in the chain:
+
+```bash
+vector tap 'transform/*'
+```
+
+You can then use the `vector vrl` interactive console to debug [VRL](https://vector.dev/docs/reference/vrl/) message remap rules.
 
 Example of a program on VRL:
 
@@ -99,7 +100,7 @@ del(.test2)
 
 ## How to add a new source/sink support for log-shipper?
 
-Vector in the log-shipper module has been built with the limited number of enabled [features](https://doc.rust-lang.org/cargo/reference/features.html) (to improve building speed and decrease the size of the final binary).
+Vector in the `log-shipper` module has been built with the limited number of enabled [features](https://doc.rust-lang.org/cargo/reference/features.html) (to improve building speed and decrease the size of the final binary).
 
 You can see a list of all supported features by executing the `vector list` command.
 

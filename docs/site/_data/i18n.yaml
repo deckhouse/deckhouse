@@ -15,3 +15,190 @@ soon:
   ru: "скоро..."
 ce: Community Edition
 ee: Enterprise Edition
+
+common:
+  of:
+    en: of
+    ru: ""
+  array:
+    en: array
+    ru: массив
+  of_array:
+    en: arrays
+    ru: массивов
+  object:
+    en: object
+    ru: объект
+  of_object:
+    en: objects
+    ru: объектов
+  number:
+    en: number
+    ru: число
+  of_number:
+    en: number
+    ru: чисел
+  integer:
+    en: integer
+    ru: целочисленный
+  of_integer:
+    en: integers
+    ru: целых чисел
+  string:
+    en: string
+    ru: строка
+  of_string:
+    en: strings
+    ru: строк
+  boolean:
+    en: boolean
+    ru: булевый
+  of_boolean:
+    en: booleans
+    ru: булевых значений
+  allowed_values:
+    en: Allowed values
+    ru: допустимые значения
+  allowed_values_of_array:
+    en: of the array
+    ru: элемента массива
+  default_value:
+    en: default
+    ru: по умолчанию
+  default_version:
+    en: default version
+    ru: версия по умолчанию
+  deprecated:
+    en: deprecated
+    ru: устарел
+  deprecated_parameter:
+    en: Deprecated
+    ru: Параметр устарел
+  deprecated_parameter_hint:
+    en: Support for the parameter might be removed in a later release.
+    ru: Поддержка параметра может быть исключена в следующих версиях.
+  for_example:
+    en: for example
+    ru: например
+  example:
+    en: example
+    ru: пример
+  examples:
+    en: examples
+    ru: примеры
+  element_of_array:
+    en: element of the array
+    ru: элемент массива
+  x-kubernetes-int-or-string:
+    en: integer or string
+    ru: строка или число
+  pattern:
+    en: pattern
+    ru: шаблон
+  length:
+    en: length
+    ru: длина
+  min_length:
+    en: minimal length
+    ru: минимальная длина
+  max_length:
+    en: maximum length
+    ru: максимальная длина
+  required_value_sentence:
+    en: Required value
+    ru: Обязательный параметр
+  not_required_value_sentence:
+    en: Not required value.
+    ru: Необязательный параметр.
+  documents_found:
+    en: Documents found
+    ru: Найдено документов
+  parameters_found:
+    en: Parameters found
+    ru: Найдено параметров
+  parameters_and_resources_found:
+    en: Parameters and resources found
+    ru: Найдено параметров и ресурсов
+  empty_search_documents_result:
+    en: Documents not found.
+    ru: Документов не найдено.
+  empty_search_parameters_resources_result:
+    en: Parameters and resources not found.
+    ru: Параметров и ресурсов не найдено.
+  no_description:
+    en: There is no description...
+    ru: Нет описания...
+  search_placeholder_text:
+    en: Search...
+    ru: Поиск...
+  warning_ee_version:
+    en: Available only in
+    ru: Доступно только в
+  version:
+    en: version
+    ru: версия
+  versions:
+    en: versions
+    ru: версии
+  version_of_schema:
+    en: Schema version
+    ru: Версия схемы
+  versions_supported:
+    en: Supported versions
+    ru: Поддерживаемые версии
+  status:
+    en: status
+    ru: статус
+  or:
+    en: or
+    ru: или
+  notice-latest:
+    en: You are viewing the documentation for an unreleased version of Deckhouse. You may choose the appropriate release channel from the versions menu or <a href="/documentation/v1/">go to the latest stable Deckhouse version</a>.
+    ru: Вы просматриваете документацию еще не вышедшей версии Deckhouse. Вы можете выбрать необходимый канал обновлений в меню версий или <a href="/documentation/v1/">перейти к последней стабильной версии Deckhouse</a>.
+  os_supported_phrase:
+    en: The following Linux distributions are currently supported for nodes
+    ru: В настоящий момент в качестве ОС для узлов поддерживаются следующие дистрибутивы Linux
+  k8s_supported_phrase:
+    en: The following Kubernetes versions are currently supported
+    ru: В настоящий момент поддерживаются следующие версии Kubernetes
+  linux_distro:
+    en: Linux Distribution
+    ru: Дистрибутив Linux
+  for_domain_template:
+    en: for the domain template
+    ru: для шаблона доменов
+  module_web_ifaces:
+    en: Web interfaces associated with the module
+    ru: Веб-интерфейсы, связанные с модулем
+  role:
+    en: role
+    ru: роль
+  includes_rules_from:
+    en: includes all rules from the role
+    ru: включает все правила из роли
+
+comparison:
+  except_parameters:
+    en: "Except for the following parameters:<br />"
+    ru: "Кроме следующих параметров:<br />"
+
+features:
+  experimental:
+    en: The functionality of the module might significantly change. Compatibility with future versions is not guaranteed.
+    ru: Функциональность модуля может сильно измениться. Совместимость с будущими версиями не гарантируется
+  preview:
+    en: The functionality of the module might change, but the main features will remain. Compatibility with future versions is guaranteed, but might require additional migration steps.
+    ru: Функциональность модуля может измениться, но основные возможности сохранятся. Совместимость с будущими версиями обеспечивается, но может потребовать дополнительных действий по миграции.
+  deprecated:
+    en: The module is deprecated.
+    ru: Модуль устарел.
+  temporaryDeprecated:
+    en: The current version of the module is deprecated, a new version will be published soon.
+    ru: Текущая версия модуля устарела, скоро будет опубликована новая версия.
+  proprietaryOkmeter:
+    en: This feature requires an <a href="https://okmeter.io">Okmeter</a> license.
+    ru: Для этого компонента требуется лицензия <a href="https://okmeter.io">Okmeter</a>.
+  ee:
+    en: This feature is available in Enterprise Edition only.
+    ru: Доступно только в Enterprise Edition.
+

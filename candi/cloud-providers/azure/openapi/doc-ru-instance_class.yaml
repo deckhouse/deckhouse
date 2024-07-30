@@ -20,11 +20,13 @@ spec:
                     ```
                 capacity:
                   description: |
+                    Устарело: параметр больше не используется. Для переданного типа инстанса Deckhouse использует параметры, полученные из облака.
+
                     Емкость инстанса для *нестандартных* типов инстансов (параметр `machineSize`).
 
-                    Используется cluster-autoscaler'ом при планировании только когда в NodeGroup'е еще нет узлов (при minPerZone равном 0). Если в NodeGroup уже есть узлы, то cluster-autoscaler использует при планировании фактические данные (CPU, memory) о мощности узла, и не использует данные параметра `capacity`.
+                    Используется cluster-autoscaler'ом при планировании, только когда в NodeGroup'е еще нет узлов (при minPerZone равном 0). Если в NodeGroup уже есть узлы, cluster-autoscaler использует при планировании фактические данные (CPU, memory) о мощности узла и не использует данные параметра `capacity`.
 
-                    Параметр необходимо указывать только для *нестандартных* типов инстансов. Параметры *стандартных* типов инстансов (`Standard_A1_v2`, `Standard_B16ms` и т.п.) заложены в Deckhouse.
+                    Параметр необходимо указывать только для *нестандартных* типов инстансов. Параметры *стандартных* типов инстансов (`Standard_A1_v2`, `Standard_B16ms` и т. п.) заложены в Deckhouse.
                   properties:
                     cpu:
                       description: Количество vCPU узла.
@@ -40,12 +42,12 @@ spec:
                       - `az vm image show --urn Canonical:UbuntuServer:18.04-LTS:latest --location westeurope`;
                       - `az vm image show --urn Canonical:0001-com-ubuntu-server-focal:20_04-lts:latest --location westeurope`.
 
-                    **По умолчанию:** образ из `AzureCloudDiscoveryData` (образ из которого был создан мастер при развертывании кластера).
+                    По умолчанию используется образ из `AzureCloudDiscoveryData` (образ, из которого был создан мастер-узел при развертывании кластера).
 
-                    > **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11`.
+                    Список поддерживаемых ОС и их версий можно найти в [документации](https://deckhouse.ru/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
                 diskSizeGb:
                   description: |
-                    Размер root-диска. Значение указывается в гигабайтах.
+                    Размер root-диска. Значение указывается в `ГиБ`.
                 diskType:
                   description: |
                     Тип созданного диска.
@@ -54,6 +56,9 @@ spec:
                     ```shell
                     az vm list-skus -l westeurope --zone`
                     ```
+                etcdDiskSizeGb:
+                  description: |
+                    Размер диска для etcd. Значение указывается в `ГиБ`.
                 additionalTags:
                   description: |
                     Дополнительные теги, которые будут присвоены созданным инстансам.

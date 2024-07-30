@@ -2,7 +2,7 @@
 title: "The local-path-provisioner module: examples"
 ---
 
-## Example CR `LocalPathProvisioner`
+## Example of a `LocalPathProvisioner` custom resource
 
 Reclaim policy set by default to `Retain`.
 
@@ -17,7 +17,7 @@ spec:
   path: "/opt/local-path-provisioner"
 ```
 
-## Example CR `LocalPathProvisioner` with `reclaimPolicy` set
+## Example of a `LocalPathProvisioner` custom resource with `reclaimPolicy` set
 
 Reclaim policy set to `Delete`.
 

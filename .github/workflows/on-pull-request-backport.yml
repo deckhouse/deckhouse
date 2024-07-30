@@ -47,8 +47,8 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           releaseBranch="release-$(echo ${MILESTONE} | sed -nre 's/v?([0-9]+\.[0-9]+)\.[0-9]+/\1/p')"
-          echo "::set-output name=release_branch::${releaseBranch}"
-          echo "::set-output name=commit::${GITHUB_SHA}"
+          echo "release_branch=${releaseBranch}" >> $GITHUB_OUTPUT
+          echo "commit=${GITHUB_SHA}" >> $GITHUB_OUTPUT
 
   detect_pr_by_comment:
     concurrency: source_pr
@@ -71,7 +71,7 @@ jobs:
           MINOR_RELEASE: ${{ steps.regexp_match.outputs.group1 }}
         run: |
           releaseBranch="release-${MINOR_RELEASE}"
-          echo "::set-output name=branch::${releaseBranch}"
+          echo "branch=${releaseBranch}" >> $GITHUB_OUTPUT
       - name: Get Pull Request info
         id: pr_info
         if: ${{ steps.regexp_match.outputs.match != null }}
@@ -101,9 +101,9 @@ jobs:
             commit=${{needs.detect_pr_by_comment.outputs.commit}}
             prNumber=${{needs.detect_pr_by_comment.outputs.pr_number}}
           fi
-          echo "::set-output name=release_branch::${releaseBranch}"
-          echo "::set-output name=commit::${commit}"
-          echo "::set-output name=pr_number::${prNumber}"
+          echo "release_branch=${releaseBranch}" >> $GITHUB_OUTPUT
+          echo "commit=${commit}" >> $GITHUB_OUTPUT
+          echo "pr_number=${prNumber}" >> $GITHUB_OUTPUT
       - name: Check release branch exists
         id: check_target_branch
         uses: actions/github-script@v6
@@ -117,7 +117,7 @@ jobs:
               ref: 'heads/' + process.env.RELEASE_BRANCH
             })
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
       - name: Cherry pick

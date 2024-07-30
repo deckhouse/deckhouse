@@ -3,7 +3,13 @@ require 'json'
 def parse_module_data(input, site)
     if input.has_key?("featureStatus")
        featureStatus = input["featureStatus"]
-       moduleName = input["title"]
+       if input.has_key?("moduleName")
+         moduleName = input["moduleName"]
+       elsif input["title"].is_a?(Hash) && input["title"].has_key?('en')
+         moduleName = input["title"]['en']
+       else
+         moduleName = input["title"]
+       end
        if ! site.data["modulesFeatureStatus"]
           site.data["modulesFeatureStatus"] = {}
        end
@@ -54,4 +60,22 @@ Jekyll::Hooks.register :site, :post_read do |site|
   # Fill site.data.modulesFeatureStatus
   parse_module_data(site.data["sidebars"]["main"]["entries"], site)
 
+  # Exclude custom resource and module setting files from the search index by setting the 'searchable' parameter to false.
+  # Add module name in kebab case and snake case to search keywords.
+  site.pages.each do |page|
+    if ( page.url.match?(%r{/modules/[0-9]+-[^/]+/$}) or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') ) then
+      moduleKebabCase = page.url.sub(%r{(.*)?/modules/[0-9]+-([^/]+)/.*$},'\2')
+      moduleSnakeCase = moduleKebabCase.gsub(/-[a-z]/,&:upcase).gsub(/-/,'')
+      page.data['module-kebab-name'] = moduleKebabCase
+      page.data['module-snake-name'] = moduleSnakeCase
+      if ( page.name == 'CONFIGURATION.md' or page.name == 'CONFIGURATION_RU.md' ) then
+        page.data['legacy-enabled-commands'] = %Q(#{moduleSnakeCase}Enabled)
+      else
+        page.data['module-index-page'] = true
+      end
+    end
+    next if ! ( page.name.end_with?('CR.md') or page.name.end_with?('CR_RU.md') or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') )
+    next if page['force_searchable'] == true
+    page.data['searchable'] = false
+  end
 end

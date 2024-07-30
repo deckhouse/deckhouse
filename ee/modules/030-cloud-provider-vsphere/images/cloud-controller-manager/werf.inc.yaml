@@ -3,32 +3,27 @@
   {{- if $value.ccm.vsphere }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_ALPINE }}
+fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
   to: /bin/vsphere-cloud-controller-manager
   before: setup
-shell:
-  beforeInstall:
-  - apk add --no-cache ca-certificates
 docker:
-  ENV:
-    container: docker
   ENTRYPOINT: ["/bin/vsphere-cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.25" $version }}
-from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
-    {{- else if semverCompare ">=1.23" $version }}
-from: {{ $.Images.BASE_GOLANG_17_ALPINE }}
-    {{- else if semverCompare "=1.22" $version }}
-from: {{ $.Images.BASE_GOLANG_16_ALPINE }}
-    {{- else }}
-from: {{ $.Images.BASE_GOLANG_ALPINE }}
+    {{- if semverCompare ">=1.30" $version }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+    {{- else if semverCompare "=1.29" $version }}
+from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+    {{- else if semverCompare ">=1.27" $version }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
+    {{- else if semverCompare "=1.26" $version }}
+from: {{ $.Images.BASE_GOLANG_19_ALPINE_DEV }}
     {{- end }}
 git:
-- add: /ee/modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
@@ -40,10 +35,12 @@ shell:
   beforeInstall:
   - apk add --no-cache make bash git mercurial patch rsync
   install:
-  - mkdir /src
-  - wget https://github.com/kubernetes/cloud-provider-vsphere/archive/{{ $value.ccm.vsphere }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
+  - git clone https://github.com/kubernetes/cloud-provider-vsphere.git /src
   - cd /src
-  - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile} ; done
-  - make build
+  - git checkout {{ $value.ccm.vsphere }}
+  - git apply /patches/{{ $version }}/*.patch --verbose
+  - make build VERSION={{ $value.ccm.vsphere }}
+  - chown 64535:64535 /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
+  - chmod 0755 /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
   {{- end }}
 {{- end }}

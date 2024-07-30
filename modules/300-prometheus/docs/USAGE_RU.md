@@ -2,28 +2,43 @@
 title: "Prometheus-мониторинг: примеры конфигурации"
 type:
   - instruction
-search: prometheus remote write, как подключится к Prometheus, пользовательская Grafana, prometheus remote write
+search: prometheus remote write, как подключиться к Prometheus, пользовательская Grafana, prometheus remote write
 ---
+
+{% raw %}
 
 ## Пример конфигурации модуля
 
 ```yaml
-prometheus: |
-  auth:
-    password: xxxxxx
-  retentionDays: 7
-  storageClass: rbd
-  nodeSelector:
-    node-role/example: ""
-  tolerations:
-  - key: dedicated
-    operator: Equal
-    value: example
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  version: 2
+  enabled: true
+  settings:
+    auth:
+      password: xxxxxx
+    retentionDays: 7
+    storageClass: rbd
+    nodeSelector:
+      node-role/example: ""
+    tolerations:
+    - key: dedicated
+      operator: Equal
+      value: example
 ```
 
 ## Запись данных Prometheus в longterm storage
 
-У Prometheus есть поддержка remote_write данных из локального Prometheus в отдельный longterm storage (например: [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). В Deckhouse поддержка данного механизма реализована с помощью Custom Resource `PrometheusRemoteWrite`.
+У Prometheus есть поддержка remote_write данных из локального Prometheus в отдельный longterm storage (например, [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). В Deckhouse поддержка данного механизма реализована с помощью custom resource `PrometheusRemoteWrite`.
+
+{% endraw -%}
+{% alert level="info" %}
+Для VictoriaMetrics подробную информацию о способах передачи данные в vmagent можно получить в [документации](https://docs.victoriametrics.com/vmagent/index.html#how-to-push-data-to-vmagent) VictoriaMetrics.
+{% endalert %}
+{% raw %}
 
 ### Пример минимального PrometheusRemoteWrite
 
@@ -59,7 +74,7 @@ spec:
 
 ## Подключение Prometheus к сторонней Grafana
 
-У каждого `ingress-nginx-controller` есть сертификаты, при указании которых в качестве клиентских будет разрешено подключение к Prometheus. Всё что нужно - создать дополнительный `Ingress`-ресурс.
+У каждого `ingress-nginx-controller` есть сертификаты, при указании которых в качестве клиентских будет разрешено подключение к Prometheus. Все, что нужно, — создать дополнительный `Ingress`-ресурс.
 
 > В приведенном ниже примере предполагается, что Secret `example-com-tls` уже существует в namespace d8-monitoring.
 >
@@ -106,6 +121,7 @@ metadata:
   namespace: d8-monitoring
 type: Opaque
 data:
+  # Строка basic-auth хешируется с помощью htpasswd.
   auth: Zm9vOiRhcHIxJE9GRzNYeWJwJGNrTDBGSERBa29YWUlsSDkuY3lzVDAK  # foo:bar
 ```
 
@@ -117,14 +133,14 @@ data:
 
 * **Basic-авторизация** не является надежной мерой безопасности. Рекомендуется ввести дополнительные меры безопасности, например указать аннотацию `nginx.ingress.kubernetes.io/whitelist-source-range`.
 
-* **Огромный минус** подключения таким способом - необходимость создания Ingress-ресурса в системном namespace'е.
+* **Огромный минус** подключения таким способом — необходимость создания Ingress-ресурса в системном namespace'е.
 Deckhouse **не гарантирует** сохранение работоспособности данной схемы подключения в связи с его активными постоянными обновлениями.
 
-* Этот Ingress-ресурс может быть использован для доступа к Prometheus API не только для Grafana, но и для других интеграций, например, для федерации Prometheus.
+* Этот Ingress-ресурс может быть использован для доступа к Prometheus API не только для Grafana, но и для других интеграций, например для федерации Prometheus.
 
 ## Подключение стороннего приложения к Prometheus
 
-Подключение к Prometheus защищено при помощи [kube-rbac-proxy](https://github.com/brancz/kube-rbac-proxy). Для подключения понадобится создать `ServiceAccount` с необходимыми правами.
+Подключение к Prometheus защищено с помощью [kube-rbac-proxy](https://github.com/brancz/kube-rbac-proxy). Для подключения понадобится создать `ServiceAccount` с необходимыми правами.
 
 ```yaml
 ---
@@ -158,7 +174,7 @@ subjects:
   namespace: default
 ```
 
-Далее сделаем запрос используя `curl`:
+Далее сделаем запрос, используя `curl`:
 
 ```yaml
 apiVersion: batch/v1
@@ -188,79 +204,112 @@ spec:
 
 ## Отправка алертов в Telegram
 
-Prometheus-operator не поддерживает прямую отправку алертов в Telegram, поэтому Alertmanager настраивается на отправку алертов через webhook в приложение, которое отправляет полученные данные в Telegram.
+Alertmanager поддерживает прямую отправку алертов в Telegram.
 
-Задеплойте приложение, которое отправляет полученные от webhook данные в Telegram:
+Создайте Secret в пространстве имен `d8-monitoring`:
 
 ```yaml
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-   name: telegram-alertmanager
-   namespace: d8-monitoring
-   labels:
-     app: telegram
-spec:
-   template:
-     metadata:
-       name: telegram-alertmanager
-       labels:
-         app: telegram
-     spec:
-       containers:
-         - name: telegram-alertmanager
-           image: janwh/alertmanager-telegram
-           ports:
-             - containerPort: 8080
-           env:
-             - name: TELEGRAM_CHAT_ID
-               value: "-30490XXXXX"
-             - name: TELEGRAM_TOKEN
-               value: "562696849:AAExcuJ8H6z4pTlPuocbrXXXXXXXXXXXx"
-   replicas: 1
-   selector:
-     matchLabels:
-       app: telegram
----
 apiVersion: v1
-kind: Service
+kind: Secret
 metadata:
- labels:
-   app: telegram
- name: telegram-alertmanager
- namespace: d8-monitoring
-spec:
- type: ClusterIP
- selector:
-   app: telegram
- ports:
-   - protocol: TCP
-     port: 8080
+  name: telegram-bot-secret
+  namespace: d8-monitoring
+stringData:
+  token: "562696849:AAExcuJ8H6z4pTlPuocbrXXXXXXXXXXXx"
 ```
 
-`TELEGRAM_CHAT_ID` и `TELEGRAM_TOKEN` необходимо поставить свои. [Подробнее](https://core.telegram.org/bots) о Telegram API.
-
-Задеплойте CRD CustomAlertManager:
+Задеплойте custom resource `CustomAlertManager`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
 metadata:
-  name: webhook
+  name: telegram
+spec:
+  type: Internal
+  internal:
+    receivers:
+      - name: telegram
+        telegramConfigs:
+          - botToken:
+              name: telegram-bot-secret
+              key: token
+            chatID: -30490XXXXX
+    route:
+      groupBy:
+        - job
+      groupInterval: 5m
+      groupWait: 30s
+      receiver: telegram
+      repeatInterval: 12h
+```
+
+Поля `token` в Secret'е и `chatID` в ресурсе `CustomAlertmanager` необходимо поставить свои. [Подробнее](https://core.telegram.org/bots) о Telegram API.
+
+## Пример отправки алертов в Slack с фильтром
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: slack
 spec:
   internal:
     receivers:
-    - name: webhook
-      webhookConfigs:
-      - sendResolved: true
-        url: http://telegram-alertmanager:8080/alerts
+    - name: devnull
+    - name: slack
+      slackConfigs:
+      - apiURL:
+          key: apiURL
+          name: slack-apiurl
+        channel: {{ dig .Values.werf.env .Values.slack.channel._default .Values.slack.channel }} 
+        fields:
+        - short: true
+          title: Severity
+          value: '{{`{{  .CommonLabels.severity_level }}`}}'
+        - short: true
+          title: Status
+          value: '{{`{{ .Status }}`}}'
+        - title: Summary
+          value: '{{`{{ range .Alerts }}`}}{{`{{ .Annotations.summary }}`}} {{`{{ end }}`}}'
+        - title: Description
+          value: '{{`{{ range .Alerts }}`}}{{`{{ .Annotations.description }}`}} {{`{{ end }}`}}'
+        - title: Labels
+          value: '{{`{{ range .Alerts }}`}} {{`{{ range .Labels.SortedPairs }}`}}{{`{{ printf "%s:
+            %s\n" .Name .Value }}`}}{{`{{ end }}`}}{{`{{ end }}`}}'
+        - title: Links
+          value: '{{`{{ (index .Alerts 0).GeneratorURL }}`}}'
+        title: '{{`{{ .CommonLabels.alertname }}`}}'
     route:
       groupBy:
-      - job
-      groupInterval: 5m
-      groupWait: 30s
-      receiver: webhook
+      - '...'  
+      receiver: devnull
+      routes:
+        - matchers:
+          - matchType: =~
+            name: severity_level
+            value: "^[4-9]$"
+          receiver: slack
       repeatInterval: 12h
   type: Internal
 ```
+
+## Пример отправки алертов в Opsgenie
+
+```yaml
+- name: opsgenie
+        opsgenieConfigs:
+          - apiKey:
+              key: data
+              name: opsgenie
+            description: |
+              {{ range .Alerts }}{{ .Annotations.summary }} {{ end }}
+              {{ range .Alerts }}{{ .Annotations.description }} {{ end }}
+            message: '{{ .CommonLabels.alertname }}'
+            priority: P1
+            responders:
+              - id: team_id
+                type: team
+```
+
+{% endraw %}

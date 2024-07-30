@@ -13,11 +13,11 @@
 # limitations under the License.
 
 {!{- $ctx := . -}!}
-{!{- $jobNames := dict -}!}
+{!{- $jobNames := dict }!}
 
 name: Build and test for release branches
 
-# On every push to relese branches.
+# On every push to release branches.
 on:
   push:
     branches:
@@ -25,6 +25,7 @@ on:
 
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+{!{ tmpl.Exec "git_source_envs" | strings.Indent 2 }!}
 
 # Cancel in-progress jobs for the same branch.
 concurrency:
@@ -59,30 +60,30 @@ jobs:
   doc_web_build:
     name: Doc web build
     # Wait for success build of modules.
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
     needs:
       - git_info
-{!{ tmpl.Exec "doc_web_build_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_build_template" (slice $ctx "doc" "release") | strings.Indent 4 }!}
 
   main_web_build:
     name: Main web build
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
     # Wait for success build of modules.
     needs:
       - git_info
-{!{ tmpl.Exec "main_web_build_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_build_template" (slice $ctx "main" "dev") | strings.Indent 4 }!}
 
   tests:
     name: Tests
     needs:
       - git_info
-      - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "unit" "build_deckhouse") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "unit") | strings.Indent 4 }!}
 
   matrix_tests:
     name: Matrix tests
     needs:
       - git_info
-      - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "matrix" "build_deckhouse") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "matrix") | strings.Indent 4 }!}
 
   dhctl_tests:
     name: Dhctl Tests
@@ -107,12 +108,13 @@ jobs:
 
   web_links_test:
     name: Web links test
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
     needs:
       - git_info
       - doc_web_build
       - main_web_build
     continue-on-error: true
-{!{ tmpl.Exec "web_links_test_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_links_test_template" (slice $ctx "release") | strings.Indent 4 }!}
 
   validators:
     name: Validators
@@ -121,10 +123,10 @@ jobs:
       - build_deckhouse
 {!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_deckhouse") | strings.Indent 4 }!}
 
-{!{/* Autodeploy documentation to production and stage envs on push to release branch */}!}
-{!{ $jobNames = coll.Merge $jobNames (dict "deploy_release_doc" "Deploy release documentation") }!}
-  deploy_release_doc:
-    name: {!{ $jobNames.deploy_release_doc }!}
+{!{/* Autodeploy documentation to production envs on push to release branch */}!}
+{!{- $jobNames = coll.Merge $jobNames (dict "deploy_release_doc_prod_sel" "(Prod) Deploy release documentation") }!}
+  deploy_release_doc_prod_sel:
+    name: {!{ $jobNames.deploy_release_doc_prod_sel }!}
     needs:
       - git_info
       - doc_web_build
@@ -133,8 +135,26 @@ jobs:
     steps:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
-{!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "doc_release_version_template" | strings.Indent 6 }!}
+{!{ tmpl.Exec "deploy_doc_template" "preproduction" | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_release_doc_prod_sel) | strings.Indent 6 }!}
+
+{!{/* Autodeploy documentation to stage envs on push to release branch */}!}
+{!{- $jobNames = coll.Merge $jobNames (dict "deploy_release_doc_stage" "(Stage) Deploy release documentation") }!}
+  deploy_release_doc_stage:
+    name: {!{ $jobNames.deploy_release_doc_stage }!}
+    needs:
+      - git_info
+      - doc_web_build
+    if: ${{ startsWith(needs.git_info.outputs.ci_commit_ref_name, 'release-') && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: [self-hosted, regular]
+    steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
+{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 6 }!}
 {!{ tmpl.Exec "doc_release_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" "stage" | strings.Indent 6 }!}
-{!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_release_doc) | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_release_doc_stage) | strings.Indent 6 }!}

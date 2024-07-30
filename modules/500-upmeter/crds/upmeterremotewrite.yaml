@@ -60,6 +60,18 @@ spec:
                       type: string
                       description: Bearer token.
                       minLength: 1
+                    tlsConfig:
+                      type: object
+                      description: TLS Config to use for remote write.
+                      properties:
+                        insecureSkipVerify:
+                          description: Disable target certificate validation.
+                          type: boolean
+                          x-doc-default: false
+                        ca:
+                          description: The CA certificate used when verifying the API server certificate.
+                          type: string
+                          x-doc-default: ""
                 additionalLabels:
                   type: object
                   description: Additional labels to add to all metrics.

@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
         defaultScale = 3,
         scale = scales[window.devicePixelRatio] || defaultScale;
 
-      let displaySize = 1.25;
+      let displaySize = 1;
 
       let v = this;
       this.pageRendering = true;
@@ -76,8 +76,10 @@ document.addEventListener('DOMContentLoaded', () => {
         v.canvas.height = viewport.height;
         v.canvas.width = viewport.width;
 
-        v.canvas.style.width = `${viewport.width * displaySize / scale}px`;
-        v.canvas.style.height = `${viewport.height * displaySize / scale}px`;
+        v.canvas.style.minWidth = `${viewport.width * displaySize / scale}px`;
+        v.canvas.style.minHeight = `${viewport.height * displaySize / scale}px`;
+        v.canvas.style.width = '100%';
+        v.canvas.style.height = '100%';
 
         // Render PDF page into canvas context
         let renderContext = {
@@ -85,7 +87,8 @@ document.addEventListener('DOMContentLoaded', () => {
           viewport: viewport
         };
 
-        v.nav.container.style.width = `${(viewport.width * displaySize / scale) + 2}px`;
+        v.nav.container.style.minWidth = `${(viewport.width * displaySize / scale) + 2}px`;
+        v.nav.container.style.width = 'calc(100% + 2px)';
 
         let renderTask = page.render(renderContext);
 

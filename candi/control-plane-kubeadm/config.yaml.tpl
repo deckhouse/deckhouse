@@ -1,13 +1,20 @@
-{{- $featureGates := list "EndpointSliceTerminatingCondition=true" "DaemonSetUpdateSurge=true" "TopologyAwareHints=true" | join "," }}
-{{- if semverCompare "< 1.23" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = list $featureGates "EphemeralContainers=true" | join "," }}
+{{/*
+RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be explicitly enabled
+https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
+*/}}
+{{- $featureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," }}
+{{- if semverCompare ">= 1.26" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "ValidatingAdmissionPolicy=true" | join "," }}
+{{- end }}
+{{- if semverCompare "< 1.27" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" | join "," }}
+{{- end }}
+{{- if semverCompare "< 1.28" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "EndpointSliceTerminatingCondition=true" | join "," }}
+    {{- $featureGates = list $featureGates "InTreePluginRBDUnregister=true" | join "," }}
 {{- end }}
 
-{{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
 apiVersion: kubeadm.k8s.io/v1beta3
-{{- else }}
-apiVersion: kubeadm.k8s.io/v1beta2
-{{- end }}
 kind: ClusterConfiguration
 kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString ) (index .k8s .clusterConfiguration.kubernetesVersion "patch" | toString) }}
 controlPlaneEndpoint: "127.0.0.1:6445"
@@ -39,12 +46,22 @@ apiServer:
   extraArgs:
 {{- if .apiserver.serviceAccount }}
     api-audiences: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}{{ with .apiserver.serviceAccount.additionalAPIAudiences }},{{ . | join "," }}{{ end }}
+    {{- if .apiserver.serviceAccount.issuer }}
+    service-account-issuer: {{ .apiserver.serviceAccount.issuer }}
+    service-account-jwks-uri: {{ .apiserver.serviceAccount.issuer }}/openid/v1/jwks
+    {{- else }}
     service-account-issuer: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}
+    service-account-jwks-uri: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}/openid/v1/jwks
+    {{- end }}
     service-account-key-file: /etc/kubernetes/pki/sa.pub
     service-account-signing-key-file: /etc/kubernetes/pki/sa.key
 {{- end }}
 {{- if ne .runType "ClusterBootstrap" }}
-    enable-admission-plugins: "EventRateLimit,ExtendedResourceToleration{{ if .apiserver.admissionPlugins }},{{ .apiserver.admissionPlugins | join "," }}{{ end }}"
+    {{ $admissionPlugins := list "NodeRestriction" "PodNodeSelector" "PodTolerationRestriction" "EventRateLimit" "ExtendedResourceToleration" }}
+    {{- if .apiserver.admissionPlugins }}
+      {{ $admissionPlugins = concat $admissionPlugins .apiserver.admissionPlugins | uniq }}
+    {{- end }}
+    enable-admission-plugins: "{{ $admissionPlugins | sortAlpha | join "," }}"
     admission-control-config-file: "/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml"
 # kubelet-certificate-authority flag should be set after bootstrap of first master.
 # This flag affects logs from kubelets, for period of time between kubelet start and certificate request approve by Deckhouse hook.
@@ -52,9 +69,18 @@ apiServer:
 {{- end }}
     anonymous-auth: "false"
     feature-gates: {{ $featureGates | quote }}
+{{- if semverCompare ">= 1.28" .clusterConfiguration.kubernetesVersion }}
+    runtime-config: "admissionregistration.k8s.io/v1beta1=true"
+{{- else if semverCompare ">= 1.26" .clusterConfiguration.kubernetesVersion }}
+    runtime-config: "admissionregistration.k8s.io/v1alpha1=true"
+{{- end }}
 {{- if hasKey . "arguments" }}
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
     default-unreachable-toleration-seconds: {{ .arguments.defaultUnreachableTolerationSeconds | quote }}
+  {{- end }}
+  {{- if and (hasKey .arguments "podEvictionTimeout") (semverCompare "> 1.26" .clusterConfiguration.kubernetesVersion) }}
+    default-not-ready-toleration-seconds: "{{ .arguments.podEvictionTimeout }}"
+    default-unreachable-toleration-seconds: "{{ .arguments.podEvictionTimeout }}"
   {{- end }}
 {{- end }}
 {{- if hasKey . "apiserver" }}
@@ -89,6 +115,9 @@ apiServer:
   {{- end -}}
   {{ if .apiserver.authnWebhookCacheTTL }}
     authentication-token-webhook-cache-ttl: {{.apiserver.authnWebhookCacheTTL | quote }}
+  {{- end -}}
+  {{ if .apiserver.auditWebhookURL }}
+    audit-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/audit-webhook-config.yaml
   {{- end -}}
   {{- if .apiserver.auditPolicy }}
     audit-policy-file: /etc/kubernetes/deckhouse/extra-files/audit-policy.yaml
@@ -129,9 +158,6 @@ controllerManager:
     feature-gates: {{ $featureGates | quote }}
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     bind-address: "127.0.0.1"
-{{- if semverCompare "< 1.24" .clusterConfiguration.kubernetesVersion }}
-    port: "0"
-{{- end }}
 {{- if eq .clusterConfiguration.clusterType "Cloud" }}
     cloud-provider: external
 {{- end }}
@@ -140,7 +166,7 @@ controllerManager:
     node-monitor-period: "{{ .arguments.nodeMonitorPeriod }}s"
     node-monitor-grace-period: "{{ .arguments.nodeMonitorGracePeriod }}s"
   {{- end }}
-  {{- if hasKey .arguments "podEvictionTimeout" }}
+  {{- if and (hasKey .arguments "podEvictionTimeout") (semverCompare "< 1.27" .clusterConfiguration.kubernetesVersion) }}
     pod-eviction-timeout: "{{ .arguments.podEvictionTimeout }}s"
   {{- end }}
 {{- end }}
@@ -158,9 +184,6 @@ scheduler:
     profiling: "false"
     feature-gates: {{ $featureGates | quote }}
     bind-address: "127.0.0.1"
-{{- if semverCompare "< 1.24" .clusterConfiguration.kubernetesVersion }}
-    port: "0"
-{{- end }}
 {{- if hasKey . "etcd" }}
   {{- if hasKey .etcd "existingCluster" }}
     {{- if .etcd.existingCluster }}
@@ -178,32 +201,20 @@ etcd:
   {{- end }}
 {{- end }}
 ---
-{{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
 apiVersion: kubeadm.k8s.io/v1beta3
-{{- else }}
-apiVersion: kubeadm.k8s.io/v1beta2
-{{- end }}
 kind: InitConfiguration
-{{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
 patches:
   directory: /etc/kubernetes/deckhouse/kubeadm/patches/
-{{- end }}
 localAPIEndpoint:
 {{- if hasKey . "nodeIP" }}
   advertiseAddress: {{ .nodeIP | quote }}
 {{- end }}
   bindPort: 6443
 ---
-{{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
 apiVersion: kubeadm.k8s.io/v1beta3
-{{- else }}
-apiVersion: kubeadm.k8s.io/v1beta2
-{{- end }}
 kind: JoinConfiguration
-{{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
 patches:
   directory: /etc/kubernetes/deckhouse/kubeadm/patches/
-{{- end }}
 discovery:
   file:
     kubeConfigPath: "/etc/kubernetes/admin.conf"

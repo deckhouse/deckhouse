@@ -1,4 +1,6 @@
 @import "components/common/_variables.scss";
+@import 'components/common/_mixins.scss';
+@import 'components/common/_breakpoints.scss';
 
 html {
     scroll-padding-top: 80px;
@@ -6,65 +8,274 @@ html {
 
 .header-container {
     position: sticky;
-    top: 0px;
+    top: 0;
     z-index: 100;
 }
 
 .header {
-    background: $color-inverse;
-    box-shadow: 0px 0px 4px rgba(0, 0, 0, 0.15);
-    &__logo {
-        img {
-            height: 42px;
-            @media (min-width: $container-breakpoint-lg) {
-                height: 50px;
-            }
+  position: sticky;
+  top: 0;
+  @include bg-color($white);
+  transition: .2s ease-in-out;
+  z-index: 100;
+
+  &_float {
+    @include box-shadow;
+  }
+
+  &__content {
+    display: flex;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+
+    @include min-w(m) {
+      padding-top: 24px;
+      padding-bottom: 24px;
+    }
+  }
+
+  &__logo {
+    overflow: hidden;
+    transition: .2s;
+
+    @include min-w(xs) {
+      width: auto;
+    }
+
+    body.sidebar-opened & {
+      width: inherit;
+    }
+
+    img, svg {
+      display: block;
+      height: 40px;
+      width: auto;
+
+      @include min-w(xl) {
+        height: 52px;
+      }
+    }
+  }
+
+  &__left-box {
+    display: flex;
+    gap: 4rem;
+    align-items: center;
+  }
+
+
+  &__nav {
+    &.nav {
+      font-family: 'Noto Sans', sans-serif;
+      display: flex;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+
+      @include min-w(l) {
+        gap: 12px 16px;
+      }
+
+      @include min-w(xl) {
+        gap: 12px 24px;
+      }
+
+      @include min-w(xxl) {
+        gap: 12px 32px;
+      }
+    }
+
+    .menu-item {
+      &:hover {
+        & > a {
+          @include color($primary-700);
         }
+      }
     }
-    &__content {
-        display: flex;
-        flex-direction: row;
-        justify-content: flex-start;
-        align-items: center;
-        height: 80px;
+
+    .sub-menu {
+      display: flex;
+      min-width: 180px;
+      padding: 18px 16px 20px;
+      gap: .6rem;
+      flex-direction: column;
+      @include bg-color($white);
+      border-radius: 1px;
+      @include box-shadow;
+      list-style: none;
+
+      @include min-w(xl) {
+        gap: 1rem;
+      }
+
+      &-container {
+        position: absolute;
+        left: -2em;
+        opacity: 0;
+        visibility: hidden;
+      }
     }
+
+
+    a {
+      @include color($ntrl-800);
+      white-space: nowrap;
+      text-decoration: none;
+    }
+
+    .menu-item-has-children {
+      position: relative;
+      display: inline-block;
+
+      &:hover {
+        a:after {
+          transform: translateY(2px);
+        }
+
+        .sub-menu-container {
+          display: flex;
+          padding-top: 1em;
+          visibility: visible;
+          opacity: 1;
+          transition: .2s;
+
+          a {
+            color: $ntrl-700;
+          }
+        }
+      }
+
+      > a:after {
+        content: '';
+        display: inline-block;
+        margin-bottom: 2px;
+        margin-left: 5px;
+        width: 8px;
+        height: 5px;
+        background: bottom / contain no-repeat url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTMiIGhlaWdodD0iOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtMTEuMDIgMS41LTUgNS01LTUiIHN0cm9rZT0iIzIyMkE1RCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=");
+        transition: .15s;
+
+        @include min-w(xl) {
+          margin-left: 8px;
+          width: 12px;
+          height: 8px;
+        }
+      }
+
+      > a:where(.button--primary) {
+        &:after {
+          width: 7px;
+          height: 4px;
+          filter: grayscale(1) brightness(20);
+        }
+      }
+    }
+  }
+
+  &__right-box {
+    display: flex;
+    gap: 1.5rem;
+    position: relative;
+    align-items: center;
+
+    .icon--home {
+      margin-left: 8px;
+    }
+  }
+
+  .socials {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+
+    a {
+      width: 24px;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+
+      path {
+        fill: $primary-700;
+      }
+    }
+  }
+
+  a {
+    font-size: .875em;
+
+    @include min-w(xl) {
+      font-size: 16px;
+    }
+  }
+
+  .language-button {
+    display: flex;
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 700;
+    text-decoration: none;
+    text-transform: uppercase;
+    border-radius: 50px;
+    background-color: $primary-700;
+    color: $white;
+  }
+}
+
+.language-links {
+  user-select: none;
+
+  a {
+    text-decoration: none;
+    text-transform: uppercase;
+    @include color($ntrl-800);
+
+    &.active {
+      @include color($primary-700);
+    }
+  }
+}
+
+.header {
+    background: $color-inverse;
+
     &__navigation {
         display: flex;
         flex-direction: row;
         justify-content: flex-start;
         align-items: center;
+        gap: 24px;
         list-style-type: none;
         padding: 0;
         margin: 0 0 0 auto;
 
         &-item-icon {
-            margin-left: 10px;
             position: relative;
             top: 3px;
-            @media (min-width: $container-breakpoint-lg) {
-                margin-left: 20px;
-            }
-            &_first {
-                margin-left: 20px;
-                @media (min-width: $container-breakpoint-lg) {
-                    margin-left: 35px;
-                }
-            }
+
             a {
                 display: inline-block;
+
                 svg {
                     height: 15px;
                     @media (min-width: $container-breakpoint-lg) {
-                        height: 20px;
+                        height: 24px;
                     }
                     path {
                         fill: $color-alt;
                     }
                 }
-                &:hover svg path {
-                    fill: $color-main;
-                }
             }
+
             &--phone {
               & svg {
                 width: 19px;
@@ -99,62 +310,24 @@ html {
 
         &-item {
             position: relative;
-            margin-left: 20px;
             font-size: $font-size-small;
+
             @media (min-width: $container-breakpoint-lg) {
-                margin-left: 55px;
                 font-size: $font-size-base;
             }
-            &:first-child {
-                margin-left: 0;
-            }
+
             &_parent > a {
                 display: flex;
                 flex-direction: row;
                 align-items: center;
                 justify-content: flex-start;
             }
-            &_parent > a:after {
-                content: '';
-                width: 10px;
-                height: 10px;
-                background: url('../images/icons/dropdown.svg');
-                background-repeat: no-repeat;
-                background-size: contain;
-                margin-left: 5px;
-                margin-bottom: -3px;
-                @media (min-width: $container-breakpoint-lg) {
-                    margin-bottom: 0px;
-                }
-            }
-            &_active {
-                &:after {
-                    content: '';
-                    display: block;
-                    background: $color-alt;
-                    position: absolute;
-                    height: 2px;
-                    width: calc(100% + 10px);
-                    top: calc(100% + 5px);
-                    left: -5px;
-                }
-            }
+
             &.disabled {
                 opacity: 0.3;
-                &:hover {
-                    & a {
-                        color: $color-main;
-                    }
-                }
+
                 & a {
                     cursor: not-allowed;
-                }
-            }
-            a {
-                color: $color-main;
-                text-decoration: none;
-                &:hover {
-                    color: $color-alt;
                 }
             }
         }

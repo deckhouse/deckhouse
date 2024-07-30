@@ -9,6 +9,7 @@ Bashible apiserver serves the bashible script and its step scripts through Kuber
 Call bashible script or a bundle for a pair of OS and node group:
 
 ```shell
+kubectl get -o json  bootstrap         ubuntu-lts.master    # <os>.<nodegroup>
 kubectl get -o json  bashibles         ubuntu-lts.master    # <os>.<nodegroup>
 kubectl get -o json  nodegroupbundles  ubuntu-lts.master    # <os>.<nodegroup>
 ```
@@ -16,8 +17,9 @@ kubectl get -o json  nodegroupbundles  ubuntu-lts.master    # <os>.<nodegroup>
 or
 
 ```
-GET /api/bashible.deckhouse.io/v1alpha1/bashibles/ubuntu-lts.master
-GET /api/bashible.deckhouse.io/v1alpha1/nodegroupbundles/ubuntu-lts.master
+GET /apis/bashible.deckhouse.io/v1alpha1/bootstrap/ubuntu-lts.master
+GET /apis/bashible.deckhouse.io/v1alpha1/bashibles/ubuntu-lts.master
+GET /apis/bashible.deckhouse.io/v1alpha1/nodegroupbundles/ubuntu-lts.master
 ```
 
 Example:

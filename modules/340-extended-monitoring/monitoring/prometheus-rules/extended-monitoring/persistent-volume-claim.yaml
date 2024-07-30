@@ -20,7 +20,7 @@
         (
           label_replace((kube_persistentvolume_is_local==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
           * on (volumename) group_right()
-          kube_persistentvolumeclaim_info
+          kube_persistentvolumeclaim_info{job="kube-state-metrics"}
         )
       )
     for: 5m
@@ -57,7 +57,7 @@
         (
           label_replace((kube_persistentvolume_is_local==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
           * on (volumename) group_right()
-          kube_persistentvolumeclaim_info
+          kube_persistentvolumeclaim_info{job="kube-state-metrics"}
         )
       )
     for: 5m
@@ -94,7 +94,7 @@
         (
           label_replace((kube_persistentvolume_is_local==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
           * on (volumename) group_right()
-          kube_persistentvolumeclaim_info
+          kube_persistentvolumeclaim_info{job="kube-state-metrics"}
         )
       )
     for: 5m
@@ -131,7 +131,7 @@
         (
           label_replace((kube_persistentvolume_is_local==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
           * on (volumename) group_right()
-          kube_persistentvolumeclaim_info
+          kube_persistentvolumeclaim_info{job="kube-state-metrics"}
         )
       )
     for: 2m

@@ -1,0 +1,246 @@
+{
+  "topnav": {
+    "en": [
+      {
+        "items": [
+          {
+            "title": "Documentation",
+            "url": "",
+            "target": "",
+            "items": [
+              {
+                "title": "Platform",
+                "url": "/documentation/v1/deckhouse-overview.html",
+                "target": ""
+              },
+              {
+                "title": "Modules",
+                "url": "/modules/",
+                "target": ""
+              }
+            ]
+          },
+          {
+            "title": "How to start",
+            "url": "",
+            "target": "",
+            "items": [
+              {
+                "title": "Getting started",
+                "url": "/gs/",
+                "target": ""
+              },
+              {
+                "title": "Going to Production",
+                "url": "/guides/production.html",
+                "target": ""
+              }
+            ]
+          },
+          {
+            "title": "Products",
+            "url": "",
+            "target": "",
+            "items": [
+              {
+                "title": "Deckhouse Kubernetes Platform EE",
+                "url": "/products/enterprise-edition/",
+                "target": ""
+              },
+              {
+                "title": "Deckhouse Kubernetes Platform CE",
+                "url": "/community/community-edition/",
+                "target": ""
+              },
+              {
+                "title": "Deckhouse Commander",
+                "url": "/products/commander/",
+                "target": ""
+              }
+            ]
+          },
+          {
+            "title": "Serviсes",
+            "url": "",
+            "target": "",
+            "items": [
+              {
+                "title": "Training &amp; Consulting",
+                "url": "/services/education/",
+                "target": ""
+              }
+            ]
+          },
+          {
+            "title": "Resources",
+            "url": "",
+            "target": "",
+            "items": [
+              {
+                "title": "Deckhouse Security",
+                "url": "/security/",
+                "target": ""
+              },
+              {
+                "title": "Deckhouse vs KaaS",
+                "url": "/deckhouse-vs-kaas/",
+                "target": ""
+              },
+              {
+                "title": "Technical support regulations",
+                "url": "/regulations-en/",
+                "target": ""
+              },
+              {
+                "title": "Success stories",
+                "url": "/success-stories/",
+                "target": ""
+              }
+            ]
+          },
+          {
+            "title": "Community",
+            "url": "/community/",
+            "target": ""
+          }
+        ]
+      }
+    ],
+    "ru": [
+      {
+        "items": [
+          {
+            "title": "Документация",
+            "url": "",
+            "target": "",
+            "items": [
+              {
+                "title": "Платформа",
+                "url": "/documentation/v1/deckhouse-overview.html",
+                "target": ""
+              },
+              {
+                "title": "Модули",
+                "url": "/modules/",
+                "target": ""
+              }
+            ]
+          },
+          {
+            "title": "Руководства",
+            "url": "",
+            "target": "",
+            "items": [
+              {
+                "title": "Быстрый старт",
+                "url": "/gs/",
+                "target": ""
+              },
+              {
+                "title": "Подготовка к production",
+                "url": "/guides/production.html",
+                "target": ""
+              }
+            ]
+          },
+          {
+            "title": "Продукты",
+            "url": "",
+            "target": "",
+            "items": [
+              {
+                "title": "Deckhouse Kubernetes Platform EE",
+                "url": "/products/enterprise-edition/",
+                "target": ""
+              },
+              {
+                "title": "Deckhouse Kubernetes Platform CE",
+                "url": "/community/community-edition/",
+                "target": ""
+              },
+              {
+                "title": "Deckhouse Commander",
+                "url": "/products/commander/",
+                "target": ""
+              },
+              {
+                "title": "Как купить",
+                "url": "/how-to-buy/",
+                "target": ""
+              }
+            ]
+          },
+          {
+            "title": "Услуги",
+            "url": "",
+            "target": "",
+            "items": [
+              {
+                "title": "Обучение",
+                "url": "/services/education/",
+                "target": ""
+              },
+              {
+                "title": "Переезд с OpenShift",
+                "url": "/moving-from-openshift/",
+                "target": ""
+              },
+              {
+                "title": "Техническая поддержка",
+                "url": "/tech-support/",
+                "target": ""
+              }
+            ]
+          },
+          {
+            "title": "Информация",
+            "url": "",
+            "target": "",
+            "items": [
+              {
+                "title": "Партнёры",
+                "url": "/how-to-buy/#partners",
+                "target": ""
+              },
+              {
+                "title": "Партнёрская программа",
+                "url": "/partners-program/",
+                "target": ""
+              },
+              {
+                "title": "Импортозамещение",
+                "url": "/substitution/",
+                "target": ""
+              },
+              {
+                "title": "Безопасность Deckhouse",
+                "url": "/security/",
+                "target": ""
+              },
+              {
+                "title": "Сравнение с KaaS",
+                "url": "/deckhouse-vs-kaas/",
+                "target": ""
+              },
+              {
+                "title": "Истории успеха",
+                "url": "/success-stories/",
+                "target": ""
+              },
+              {
+                "title": "Вакансии",
+                "url": "https://job.flant.ru/vacancies/deckhouse",
+                "target": ""
+              }
+            ]
+          },
+          {
+            "title": "Сообщество",
+            "url": "/community/",
+            "target": ""
+          }
+        ]
+      }
+    ]
+  }
+}

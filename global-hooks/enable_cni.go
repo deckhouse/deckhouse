@@ -16,9 +16,6 @@ package hooks
 
 import (
 	"fmt"
-	"os"
-	"strconv"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -26,6 +23,8 @@ import (
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 /*
@@ -64,45 +63,30 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyCniConfigFilter,
 		},
 		{
-			Name:       "deckhouse_cm",
-			ApiVersion: "v1",
-			Kind:       "ConfigMap",
+			Name:       "deckhouse_mc",
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "ModuleConfig",
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{os.Getenv("ADDON_OPERATOR_CONFIG_MAP")},
-			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-system"},
-				},
+				MatchNames: []string{"cni-flannel", "cni-cilium", "cni-simple-bridge"},
 			},
 			ExecuteHookOnEvents:          pointer.Bool(false),
 			ExecuteHookOnSynchronization: pointer.Bool(false),
-			FilterFunc:                   applyD8CMFilter,
+			FilterFunc:                   applyMCFilter,
 		},
 	},
 }, enableCni)
 
-func applyD8CMFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var cm v1core.ConfigMap
-	err := sdk.FromUnstructured(obj, &cm)
+func applyMCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	v, _, err := unstructured.NestedBool(obj.UnstructuredContent(), "spec", "enabled")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	cniMap := make(map[string]bool)
-
-	for k, v := range cm.Data {
-		// looking for keys like 'cniCiliumEnabled' or 'cniFlannelEnabled'
-		if strings.HasPrefix(k, "cni") && strings.HasSuffix(k, "Enabled") {
-			boolValue, err := strconv.ParseBool(v)
-			if err != nil {
-				return nil, fmt.Errorf("parse cni enable flag failed: %s", err)
-			}
-			cniMap[k] = boolValue
-		}
+	if !v {
+		return nil, nil
 	}
 
-	return cniMap, nil
+	return obj.GetName(), nil
 }
 
 func applyCniConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -122,33 +106,23 @@ func applyCniConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 
 func enableCni(input *go_hook.HookInput) error {
 	cniNameSnap := input.Snapshots["cni_name"]
-	deckhouseCMSnap := input.Snapshots["deckhouse_cm"]
+	deckhouseMCSnap := input.Snapshots["deckhouse_mc"]
+
+	explicitlyEnabledCNIs := set.NewFromSnapshot(deckhouseMCSnap)
 
 	if len(cniNameSnap) == 0 {
-		input.LogEntry.Warnln("Cni name not found")
+		input.LogEntry.Warnln("CNI name not found")
 		return nil
 	}
 
-	if len(deckhouseCMSnap) == 0 {
-		input.LogEntry.Warnln("Deckhouse CM not found")
+	if len(explicitlyEnabledCNIs) > 1 {
+		return fmt.Errorf("more then one CNI enabled: %v", explicitlyEnabledCNIs.Slice())
+	} else if len(explicitlyEnabledCNIs) == 1 {
+		input.LogEntry.Infof("enabled CNI from Deckhouse ModuleConfig: %s", explicitlyEnabledCNIs.Slice()[0])
 		return nil
 	}
 
-	cmEnabledCNIs := make([]string, 0)
-	for cni, enabled := range deckhouseCMSnap[0].(map[string]bool) {
-		if enabled {
-			cmEnabledCNIs = append(cmEnabledCNIs, cni)
-		}
-	}
-
-	if len(cmEnabledCNIs) > 1 {
-		return fmt.Errorf("more then one CNI enabled: %v", cmEnabledCNIs)
-	} else if len(cmEnabledCNIs) == 1 {
-		input.LogEntry.Infof("enabled CNI from Deckhouse CM: %s", strings.TrimSuffix(cmEnabledCNIs[0], "Enabled"))
-		return nil
-	}
-
-	// nor any CNI enabled directly via CM, found default CNI from secret
+	// nor any CNI enabled directly via MC, found default CNI from secret
 	cniToEnable := cniNameSnap[0].(string)
 	if _, ok := cniNameToModule[cniToEnable]; !ok {
 		input.LogEntry.Warnf("Incorrect cni name: '%v'. Skip", cniToEnable)

@@ -15,63 +15,22 @@
 package commands
 
 import (
-	"fmt"
-	"time"
+	"context"
 
-	"gopkg.in/alecthomas/kingpin.v2"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("converge", "Converge kubernetes cluster.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
-
-	runFunc := func(sshClient *ssh.Client) error {
-		kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
-		if err != nil {
-			return err
-		}
-
-		cacheIdentity := ""
-		if app.KubeConfigInCluster {
-			cacheIdentity = "in-cluster"
-		}
-
-		if sshClient != nil {
-			cacheIdentity = sshClient.Check().String()
-		}
-
-		if cacheIdentity == "" {
-			return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster")
-		}
-
-		err = cache.Init(cacheIdentity)
-		if err != nil {
-			return err
-		}
-		inLockRunner := converge.NewInLockLocalRunner(kubeCl, "local-converger")
-
-		runner := converge.NewRunner(kubeCl, inLockRunner)
-		runner.WithChangeSettings(&terraform.ChangeActionSettings{
-			AutoDismissDestructive: false,
-		})
-
-		err = runner.RunConverge()
-		if err != nil {
-			return fmt.Errorf("converge problem: %v", err)
-		}
-
-		return nil
-	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		sshClient, err := ssh.NewInitClientFromFlags(true)
@@ -79,7 +38,13 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
-		return runFunc(sshClient)
+		converger := converge.NewConverger(&converge.Params{
+			SSHClient:        sshClient,
+			TerraformContext: terraform.NewTerraformContext(),
+		})
+		_, err = converger.Converge(context.Background())
+
+		return err
 	})
 	return cmd
 }
@@ -87,41 +52,17 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 func DefineAutoConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("converge-periodical", "Start service for periodical run converge.")
 	app.DefineAutoConvergeFlags(cmd)
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		if app.RunningNodeName == "" {
-			return fmt.Errorf("Need to pass running node name. It is may taints terraform state while converge")
-		}
-
-		sshClient, err := ssh.NewInitClientFromFlags(false)
-		if err != nil {
-			return err
-		}
-
-		kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
-		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
-			return err
-		}
-
-		inLockRunner := converge.NewInLockRunner(kubeCl, converge.AutoConvergerIdentity).
-			// never force lock
-			WithForceLock(false)
-
-		app.DeckhouseTimeout = 1 * time.Hour
-
-		runner := converge.NewRunner(kubeCl, inLockRunner).
-			WithChangeSettings(&terraform.ChangeActionSettings{
-				AutoDismissDestructive: true,
-				AutoApprove:            true,
-			}).
-			WithExcludedNodes([]string{app.RunningNodeName}).
-			WithSkipPhases([]converge.Phase{converge.PhaseAllNodes})
-
-		converger := operations.NewAutoConverger(runner, app.AutoConvergeListenAddress, app.ApplyInterval)
-		return converger.Start()
+		converger := converge.NewConverger(&converge.Params{
+			AutoDismissDestructive: true,
+			AutoApprove:            true,
+			TerraformContext:       terraform.NewTerraformContext(),
+		})
+		return converger.AutoConverge()
 	})
 	return cmd
 }

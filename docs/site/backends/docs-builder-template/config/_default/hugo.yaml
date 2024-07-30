@@ -1,0 +1,65 @@
+
+cleanDestinationDir: true
+
+sectionPagesMenu: main
+
+# Language settings
+defaultContentLanguage: 'en'
+defaultContentLanguageInSubdir: false
+
+uglyURLs: true
+#relativeURLs: true
+
+params:
+  display_toc: true
+
+markup:
+  tableOfContents:
+    endLevel: 3
+    ordered: false
+    startLevel: 2
+  goldmark:
+    extensions:
+      definitionList: true
+      footnote: true
+      linkify: true
+      linkifyProtocol: https
+      strikethrough: true
+      table: true
+      taskList: true
+    parser:
+      attribute:
+        block: false
+        title: true
+      autoHeadingID: true
+      autoHeadingIDType: github
+      wrapStandAloneImageWithinParagraph: true
+    renderer:
+      hardWraps: false
+      unsafe: true
+      xhtml: false
+  highlight:
+    anchorLineNos: false
+    codeFences: true
+    guessSyntax: false
+    hl_Lines: ""
+    hl_inline: false
+    lineAnchors: ""
+    lineNoStart: 1
+    lineNos: false
+    lineNumbersInTable: true
+    noClasses: true
+    noHl: false
+    style: native
+    tabWidth: 4
+
+# "404" "home" "page" "robotsTXT" "RSS" "section" "sitemap" "taxonomy" "term"
+disableKinds:
+- "404"
+- home
+- robotsTXT
+- RSS
+#- section
+- sitemap
+- taxonomy
+- term

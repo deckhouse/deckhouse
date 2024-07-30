@@ -25,19 +25,36 @@ import (
 )
 
 const (
-	AppName     = "dhctl"
-	VersionFile = "/deckhouse/version"
+	AppName = "dhctl"
+	// NodeDeckhouseDirectoryPath deckhouse operating directory path.
+	NodeDeckhouseDirectoryPath = "/opt/deckhouse"
+
+	// DeckhouseNodeTmpPath deckhouse directory for temporary files.
+	DeckhouseNodeTmpPath = NodeDeckhouseDirectoryPath + "/tmp"
+	// DeckhouseNodeBinPath deckhouse directory for binary files.
+	DeckhouseNodeBinPath = NodeDeckhouseDirectoryPath + "/bin"
+)
+
+var (
+	deckhouseDir             = "/deckhouse"
+	VersionFile              = deckhouseDir + "/version"
+	DeckhouseImageDigestFile = deckhouseDir + "/image_digest"
 )
 
 var TmpDirName = filepath.Join(os.TempDir(), "dhctl")
 
 var (
-	AppVersion = "dev"
+	// AppVersion is overridden in CI environment via a linker "-X" flag with a CI commit tag or just "dev" if there is none.
+	// "local" is kept for manual builds only
+	AppVersion = "local"
 
-	ConfigPath  = ""
+	ConfigPaths = make([]string, 0)
 	SanityCheck = false
 	LoggerType  = "pretty"
 	IsDebug     = false
+
+	DoNotWriteDebugLogFile = false
+	DebugLogFilePath       = ""
 )
 
 func init() {
@@ -66,13 +83,24 @@ func GlobalFlags(cmd *kingpin.Application) {
 		Envar(configEnvName("TMP_DIR")).
 		Default(TmpDirName).
 		StringVar(&TmpDirName)
+	cmd.Flag("do-not-write-debug-log-file", `Skip write debug log into file in tmp-dir`).
+		Envar(configEnvName("DO_NOT_WRITE_DEBUG_LOG")).
+		Default("false").
+		BoolVar(&DoNotWriteDebugLogFile)
+	cmd.Flag("debug-log-file-path", `Write debug log into passed file instead of standard file path ${DHCTL_TMP_DIR}/state-dir/operation-data.log`).
+		Envar(configEnvName("DEBUG_LOG_FILE_PATH")).
+		Default("").
+		StringVar(&DebugLogFilePath)
 }
 
 func DefineConfigFlags(cmd *kingpin.CmdClause) {
-	cmd.Flag("config", "Config file path").
+	cmd.Flag("config", `Path to a file with bootstrap configuration and declared Kubernetes resources in YAML format.
+It can be go-template file (for only string keys!). Passed data contains next keys:
+  cloudDiscovery - the data discovered by applying Terrfarorm and getting its output. It depends on the cloud provider.
+`).
 		Required().
 		Envar(configEnvName("CONFIG")).
-		StringVar(&ConfigPath)
+		StringsVar(&ConfigPaths)
 }
 
 func DefineSanityFlags(cmd *kingpin.CmdClause) {
@@ -83,4 +111,10 @@ func DefineSanityFlags(cmd *kingpin.CmdClause) {
 
 func configEnvName(name string) string {
 	return "DHCTL_CLI_" + name
+}
+
+func InitGlobalVars(pwd string) {
+	deckhouseDir = pwd + "/deckhouse"
+	VersionFile = deckhouseDir + "/version"
+	DeckhouseImageDigestFile = deckhouseDir + "/image_digest"
 }

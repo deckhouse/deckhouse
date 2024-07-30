@@ -1,0 +1,25 @@
+cni-cilium:
+  fixes:
+    - summary: Fix `resourceManagement` in the Static mode.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6550
+control-plane-manager:
+  fixes:
+    - summary: Update the documentation on backing up etcd.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6515
+deckhouse:
+  fixes:
+    - summary: Fix panic when validating int in a number field in module configuration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6556
+dhctl:
+  fixes:
+    - summary: Delete unnecessary obsolescence image preflight check.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6567
+    - summary: Fix `dhctl mirror` is not available in a container.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6538
+node-manager:
+  features:
+    - summary: Add support for Kubernetes events in Cluster API Provider Static.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6419
+    - summary: Add documentation for Cluster API Provider Static.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6387
+

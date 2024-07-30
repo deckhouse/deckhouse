@@ -45,12 +45,12 @@ const globalValues = `
     apiVersion: deckhouse.io/v1
     cloud:
       prefix: myprefix
-      provider: OpenStack
+      provider: Azure
     clusterDomain: cluster.local
     clusterType: "Cloud"
-    defaultCRI: Docker
+    defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.27"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -62,7 +62,7 @@ const globalValues = `
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.21.4
+    kubernetesVersion: 1.27.4
 `
 
 const moduleValues = `
@@ -218,6 +218,66 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-azure", "csi-controller").Exists()).To(BeFalse())
 			})
+		})
+	})
+
+	Context("Cloud data discoverer", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderAzure", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Should render cloud data discoverer deployment with two containers", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			d := f.KubernetesResource("Deployment", "d8-cloud-provider-azure", "cloud-data-discoverer")
+			Expect(d.Exists()).To(BeTrue())
+
+			Expect(d.Field("spec.template.spec.containers.0.name").String()).To(Equal("cloud-data-discoverer"))
+			Expect(d.Field("spec.template.spec.containers.1.name").String()).To(Equal("kube-rbac-proxy"))
+		})
+
+		It("Should render secret field", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			s := f.KubernetesResource("Secret", "d8-cloud-provider-azure", "cloud-data-discoverer")
+			Expect(s.Exists()).To(BeTrue())
+		})
+	})
+
+	Context("vertical-pod-autoscaler-crd module enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd"]`)
+			f.ValuesSetFromYaml("cloudProviderAzure", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Should render VPA resource", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			d := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-azure", "cloud-data-discoverer")
+			Expect(d.Exists()).To(BeTrue())
+		})
+	})
+
+	Context("vertical-pod-autoscaler-crd module disabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("global.enabledModules", `[]`)
+			f.ValuesSetFromYaml("cloudProviderAzure", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Should render VPA resource", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			d := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-azure", "cloud-data-discoverer")
+			Expect(d.Exists()).To(BeFalse())
 		})
 	})
 })

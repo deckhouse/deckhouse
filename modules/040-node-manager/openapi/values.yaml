@@ -6,9 +6,49 @@ properties:
     type: object
     default: {}
     properties:
+
+      capiControllerManagerWebhookCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+
+      capsControllerManagerWebhookCert:
+        type: object
+        default: { }
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+
       machineControllerManagerEnabled:
         type: boolean
-
+      capiControllerManagerEnabled:
+        type: boolean
+      capsControllerManagerEnabled:
+        type: boolean
       clusterMasterAddresses:
         type: array
         description: |
@@ -19,6 +59,27 @@ properties:
           type: string
           pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[1-9][0-9]{0,4}$'
 
+      packagesProxy:
+        type: object
+        default: {}
+        properties:
+          addresses:
+            type: array
+            description: |
+              Array of package proxy servers addresses.
+            x-examples:
+              - ["10.0.0.1:5443", "10.0.0.2:5443", "10.0.0.3:5443"]
+            default: []
+            items:
+              type: string
+              pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[1-9][0-9]{0,4}$'
+          token:
+            type: string
+            description: |
+              packages proxy token.
+            x-examples:
+            - "mytoken"
+            default: ""
       kubernetesCA:
         type: string
         x-examples:
@@ -44,7 +105,7 @@ properties:
             taints:
               type: array
               description: |
-                Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object.
+                Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
                 **Caution!** Only `effect`, `key`, `value` fields are available.
               items:
@@ -217,7 +278,7 @@ properties:
               description: |
                 Major.Minor of the Kubernetes version used in cluster.
               x-examples:
-                - "1.21"
+                - "1.29"
             updateEpoch:
               type: [integer, string]
               x-examples:
@@ -230,6 +291,10 @@ properties:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               additionalProperties: true
+            staticInstances:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              additionalProperties: true
             cloudInstances:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
@@ -237,6 +302,13 @@ properties:
             nodeCapacity:
               type: object
               properties:
+                name:
+                  type: string
+                rootDisk:
+                  oneOf:
+                    - type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                    - type: number
                 cpu:
                   oneOf:
                     - type: string
@@ -267,13 +339,21 @@ properties:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               additionalProperties: true
+            fencing:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              properties:
+                mode:
+                  type: string
+                  enum:
+                    - "Watchdog"
         x-examples:
           - - name: worker
               instanceClass: # minimum
                 ami: myami
                 instanceType: t2.medium
               nodeType: CloudEphemeral
-              kubernetesVersion: "1.21"
+              kubernetesVersion: "1.29"
               cri:
                 type: "Docker"
               cloudInstances:

@@ -27,7 +27,7 @@ spec:
       replacement: kube-apiserver
     - targetLabel: tier
       replacement: cluster
-    - sourceLabels: [__meta_kubernetes_endpoint_ready]
+    - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
     metricRelabelings:

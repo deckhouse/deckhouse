@@ -12,9 +12,9 @@
 {%- assign layout = site.data.getting_started.data.installTypes[page.platform_code].layout %}
 {% unless page.ee_only == true or page.platform_code == "bm-private" -%}
 {% if page.lang == 'ru' %}
-#### Выберите редакцию Deckhouse Platform
+#### Выберите редакцию Deckhouse Kubernetes Platform
 {% else %}
-#### Select the Deckhouse Platform revision
+#### Select the Deckhouse Kubernetes Platform revision
 {% endif %}
 <div class="tabs">
     {%- for revision in site.data.getting_started.data.global.revisions %}
@@ -79,15 +79,16 @@ Create the `resources.yml` file.
 
 <script>
 $(document).ready(function() {
+  $.cookie('lang', '{{ page.lang }}');
   $('#enter-license-key').click((e)=> {
     e.preventDefault();
-    let licenseToken = $('[license-token]').val()
+    let licenseToken = $('[license-token]').val().trim();
     getLicenseToken(licenseToken)
   });
 
   $('[license-token]').keypress((e) => {
       const keycode = (event.keyCode ? event.keyCode : event.which);
-      let licenseToken = $('[license-token]').val()
+      let licenseToken = $('[license-token]').val().trim();
       if (keycode == '13') {
         getLicenseToken(licenseToken)
       }

@@ -40,7 +40,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
-  enabledModules: ["vertical-pod-autoscaler-crd", "cloud-provider-yandex"]
+  enabledModules: ["vertical-pod-autoscaler-crd", "cloud-provider-yandex", "operator-prometheus-crd"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:
@@ -48,9 +48,9 @@ const globalValues = `
       provider: Yandex
     clusterDomain: cluster.local
     clusterType: Cloud
-    defaultCRI: Docker
+    defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.23"
+    kubernetesVersion: "1.29"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -61,7 +61,7 @@ const globalValues = `
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.23.0
+    kubernetesVersion: 1.29.0
     clusterUUID: 3b5058e1-e93a-4dfa-be32-395ef4b3da45
 `
 
@@ -139,7 +139,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			monitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "yandex-nat-instance-metrics")
 
 			Expect(monitor.Exists()).To(Equal(exists))
-			Expect(prometheusRuleExists).To(Equal(exists))
+			Expect(prometheusRuleExists).To(BeTrue())
 			Expect(grafanaDashboardExists).To(Equal(exists))
 		}
 
@@ -221,7 +221,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 					assertExporterDeploymentSecret(f, true)
 				})
 
-				It("Should not deploy monitor, prometheus rules and grafana dashboard for nat instance", func() {
+				It("Should deploy monitor, prometheus rules and grafana dashboard for nat instance", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 					assertDeployNatInstanceMonitoring(f, true)

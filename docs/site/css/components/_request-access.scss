@@ -25,6 +25,7 @@
         background: $color-inverse;
         z-index: 1002;
         position: relative;
+        overflow: auto;
         h3 {
             margin-top: 0;
         }

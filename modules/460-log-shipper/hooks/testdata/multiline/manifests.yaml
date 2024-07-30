@@ -36,3 +36,4 @@ spec:
   extraLabels:
     foo: bar
     app: "{{ ap_p[0].a }}"
+    app-with-line: "{{ ap-p[0].a }}"

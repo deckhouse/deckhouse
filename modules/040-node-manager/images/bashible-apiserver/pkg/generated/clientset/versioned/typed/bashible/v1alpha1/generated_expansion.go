@@ -20,4 +20,6 @@ package v1alpha1
 
 type BashibleExpansion interface{}
 
+type BootstrapExpansion interface{}
+
 type NodeGroupBundleExpansion interface{}

@@ -75,7 +75,7 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
        regex: .+                           # any NON-empty label would suffice
        action: keep
      # Filtering by the port name
-     - source_labels: [__meta_kubernetes_endpoint_port_name]
+     - source_labels: [__meta_kubernetes_endpointslice_port_name]
        regex: http-metrics                 # only works if the port is called http-metrics
        action: keep
      # Adding the job label, using the value of the prometheus_custom_target label in the service while adding the " custom-" prefix
@@ -160,7 +160,7 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
 
 * **(1)** Prometheus Operator monitors PrometheusRules that match the `ruleSelector` defined in the `prometheus` resource.
 * **(2)** If a new PrometheusRule is created (or the existing one is deleted), Prometheus Operator updates `prometheus.yaml` (and then the logic for Service Monitors described above comes into play).
-* **(3)** Prometheus Operator updates the `prometheus-main-rulefiles-0` ConfigMap in response to the addition/deletiion/modification of the PrometheusRule.
+* **(3)** Prometheus Operator updates the `prometheus-main-rulefiles-0` ConfigMap in response to the addition/deletion/modification of the PrometheusRule.
 * **(4)** The ConfigMap data are passed to the Pod using standard Kubernetes mechanisms.
 * `prometheus-config-reloader` notices that the file is changed and:
   * **(5)** pulls the modified ConfigMaps to the rules directory (of an `emptyDir` type);

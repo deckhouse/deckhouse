@@ -1,0 +1,16 @@
+- name: kubernetes.extended-monitoring.deprecated-annotation
+  rules:
+  - alert: ExtendedMonitoringDeprecatatedAnnotation
+    expr: >-
+      group (d8_deprecated_legacy_annotation == 1)
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_extended_monitoring_deprecated_annotation: "D8ExtendedMonitoringDeprecatedAnnotation,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_extended_monitoring_deprecated_annotation: "D8ExtendedMonitoringDeprecatedAnnotation,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: >
+        Deprecated `extended-monitoring.flant.com/enabled` annotations are used in cluster.
+        Migrate to `extended-monitoring.deckhouse.io/enabled` label ASAP.
+        Check d8_deprecated_legacy_annotation metric in Prometheus to get list of all usages.

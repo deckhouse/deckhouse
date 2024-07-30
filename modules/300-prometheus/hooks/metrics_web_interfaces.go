@@ -17,7 +17,7 @@ limitations under the License.
 package hooks
 
 import (
-	"path"
+	"net/url"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -88,7 +88,12 @@ func filterIngress(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	icon := ing.Annotations["web.deckhouse.io/export-icon"]
 	if icon == "" {
 		// unknown mark
-		icon = "https://cdn0.iconfinder.com/data/icons/basic-uses-symbol-vol-2/100/Help_Need_Suggestion_Question_Unknown-512.png"
+		icon = "/public/img/unknown.png"
+	}
+
+	exportedScheme := "http"
+	if len(ing.Spec.TLS) > 0 {
+		exportedScheme = "https"
 	}
 
 	exportedHost := ing.Annotations["web.deckhouse.io/export-host"]
@@ -126,10 +131,16 @@ func filterIngress(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 		}
 	}
 
+	u := url.URL{
+		Scheme: exportedScheme,
+		Host:   exportedHost,
+		Path:   exportedPath,
+	}
+
 	return exportedWebInterface{
 		Icon: icon,
 		Name: name,
-		URL:  path.Join(exportedHost, exportedPath),
+		URL:  u.String(),
 	}, nil
 }
 
@@ -143,7 +154,16 @@ func domainMetricHandler(input *go_hook.HookInput) error {
 		}
 
 		domain := sn.(exportedWebInterface)
-		input.MetricsCollector.Set("deckhouse_web_interfaces", 1, map[string]string{"icon": domain.Icon, "name": domain.Name, "url": domain.URL}, metrics.WithGroup("deckhouse_exported_domains"))
+		input.MetricsCollector.Set(
+			"deckhouse_web_interfaces",
+			1,
+			map[string]string{
+				"icon": domain.Icon,
+				"name": domain.Name,
+				"url":  domain.URL,
+			},
+			metrics.WithGroup("deckhouse_exported_domains"),
+		)
 	}
 
 	return nil

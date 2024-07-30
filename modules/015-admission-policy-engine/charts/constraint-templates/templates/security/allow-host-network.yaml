@@ -1,0 +1,83 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8hostnetwork
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: security-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Host Networking"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Controls usage of host network namespace by pod containers. Specific
+      ports must be specified. Corresponds to the `hostNetwork` and
+      `hostPorts` fields in a PodSecurityPolicy. For more information, see
+      https://kubernetes.io/docs/concepts/policy/pod-security-policy/#host-namespaces
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8HostNetwork
+      validation:
+        # Schema for the `parameters` field
+        openAPIV3Schema:
+          type: object
+          description: >-
+            Controls usage of host network namespace by pod containers. Specific
+            ports must be specified. Corresponds to the `hostNetwork` and
+            `hostPorts` fields in a PodSecurityPolicy. For more information, see
+            https://kubernetes.io/docs/concepts/policy/pod-security-policy/#host-namespaces
+          properties:
+            allowHostNetwork:
+              description: "Determines if the policy allows the use of HostNetwork in the pod spec."
+              type: boolean
+            ranges:
+              type: array
+              description: "A list of of hostPort ranges allowed by the rule."
+              items:
+                type: object
+                description: "The range of hostPorts allowed by the rule."
+                properties:
+                  min:
+                    description: "The start of the allowed port range, inclusive."
+                    type: integer
+                  max:
+                    description: "The end of the allowed port range, inclusive."
+                    type: integer
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.security_policies
+
+        violation[{"msg": msg, "details": {}}] {
+          input_share_hostnetwork(input.review.object)
+          msg := sprintf("The specified hostNetwork and/or hostPort are not allowed, pod: %v. Allowed values: %v", [input.review.object.metadata.name, input.parameters])
+        }
+
+        input_share_hostnetwork(o) {
+          not input.parameters.allowHostNetwork
+          o.spec.hostNetwork
+        }
+
+        input_share_hostnetwork(o) {
+          hostPort := input_containers[_].ports[_].hostPort
+          not in_range(input.parameters.ranges, hostPort)
+        }
+
+        in_range(ranges, port) {
+          matching := {1 | port >= ranges[j].min; port <= ranges[j].max}
+          count(matching) > 0
+        }
+
+        input_containers[c] {
+          c := input.review.object.spec.containers[_]
+        }
+
+        input_containers[c] {
+          c := input.review.object.spec.initContainers[_]
+        }
+
+        input_containers[c] {
+          c := input.review.object.spec.ephemeralContainers[_]
+        }

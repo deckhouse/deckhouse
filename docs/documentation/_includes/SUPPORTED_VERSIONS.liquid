@@ -20,14 +20,20 @@
 {%- for osItem in osVersions %}
 {%- assign osKey = osItem[0] %}
 {%- assign osName = site.data.supported_versions.osDistributions[osKey].name | default: osKey  %}
-{%- assign firstItemData = osItem[1] | first %}
-{%- if firstItemData[1][langSupportKey] and firstItemData[1][langSupportKey] != "true" %}{% continue %}{% endif %}
+{%- if site.data.supported_versions.osDistributions[osKey][langSupportKey] and site.data.supported_versions.osDistributions[osKey][langSupportKey] != "true" %}{% continue %}{% endif %}
 <tr>
   <td class="name">
-    <span {% if firstItemData[1]['ru_support'] and firstItemData[1]['ru_support'] == "true" %}class="table__asterisk"{% endif %}>
-      {%- if site.data.supported_versions.osDistributions[osKey].url %}<a href="{{ site.data.supported_versions.osDistributions[osKey].url }}" target="_blank">{{ osName }}</a>
+    <span
+      {% if site.data.supported_versions.osDistributions[osKey]['additional_notes'] %}
+        class="table__double_asterisk"
+      {% elsif site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}
+        class="table__asterisk"
+      {% endif %}
+    >
+      {%- if site.data.supported_versions.osDistributions[osKey].url %}
+        <a href="{{ site.data.supported_versions.osDistributions[osKey].url }}" target="_blank">{{ osName }}</a>
       {%- else %}{{ osName }}
-      {%- endif%}
+      {%- endif %}
     </span></td>
   <td class="versions">
 {%- for osData in osItem[1] %}
@@ -41,12 +47,8 @@
 </tbody>
 </table>
 {% if page.lang == 'ru' %}
-<em style="margin-top: 16px; display: block;">* Базовая поддержка доступна в редакции CE. Расширенная поддержка предоставляется только в редакции EE. В расширенную поддержку входит:</em>
-<ul>
-<li style="padding-bottom: 5px;"><em>Гарантия совместимости Deckhouse с ОС.</em></li>
-<li style="padding-bottom: 5px;"><em>Приоритетное исправление ошибок и выпуск обновлений.</em></li>
-<li style="padding-bottom: 5px;"><em>Консультации по миграции на ОС.</em></li>
-</ul>
+<em style="margin-top: 16px; display: block;">* Поддержка предоставляется только в Basic Edition, Standard Edition, Enterprise Edition. Работоспособность в Community Edition не гарантируется.</em>
+<em style="margin-top: 16px; display: block;">** Невозможна работа модуля runtime-audit-engine (из-за отсутствия поддержки ядром BPF Type Format (BTF)). Для <strong>РОСА «КОБАЛЬТ» Сервер</strong> рекомендуется установка ядра не ниже версии <code>5.15.33</code> (пакет <code>kernel-ml</code>).</em>
 {%  endif %}
 </div>
 
@@ -81,3 +83,55 @@
 </tbody>
 </table>
 </div>
+
+## Container registry
+
+{% alert level="info" %}
+{%- if page.lang == 'ru' %}
+Deckhouse должен работать с любыми container registry, поддерживающими работу с Bearer token-схемой авторизации и с [OCI форматом образов](https://github.com/opencontainers/image-spec/blob/main/spec.md).
+{%- else %}
+Deckhouse should work with any container registry supporting Bearer authentication and [OCI image format specification](https://github.com/opencontainers/image-spec/blob/main/spec.md).
+{%- endif %}
+{% endalert %}
+
+<div markdown="0">
+<table class="supported_versions__kubernetes">
+<thead>
+<tr><th>
+{%- if page.lang == 'ru' %}
+Container registry, с которыми Deckhouse гарантированно работает
+{%- else %}
+Сontainer registries that Deckhouse is guaranteed to work with
+{%- endif %}
+</th></tr>
+</thead>
+<tbody>
+{%- for registry in site.data.supported_versions.registries %}
+<tr>
+  <td style="text-align: left"
+  {%- if registry[1].additionalInfo %} table__hint_{{ registry[0] }}{% endif -%}>
+  <p><a href="{{ registry[1].url }}" target="_blank">{{ registry[1].longname }}{% if registry[1].additionalInfo %}<sup>*</sup>{% endif %}</a></p>
+  </td>
+</tr>
+{%- endfor %}
+</tbody>
+</table>
+</div>
+
+<script type="text/javascript">
+$(document).ready(function () {
+{%- for registry in site.data.supported_versions.registries %}
+{%- if registry[1].additionalInfo %}
+    tippy('[table__hint_{{ registry[0] }}]', {
+        interactive: true,
+        interactiveDebounce: 10,
+        maxWidth: 600,
+        theme: 'custom',
+        allowHTML: true,
+        arrow: false,
+        content: `{{ registry[1].additionalInfo[page.lang] }}`
+      });
+{%- endif -%}
+{%- endfor %}
+});
+</script>

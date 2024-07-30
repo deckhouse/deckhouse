@@ -16,12 +16,14 @@ package template_tests
 import (
 	"encoding/base64"
 	"fmt"
+	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 func Test(t *testing.T) {
@@ -38,7 +40,7 @@ const globalValues = `
       provider: OpenStack
     clusterDomain: cluster.local
     clusterType: Cloud
-    defaultCRI: Docker
+    defaultCRI: Containerd
     kind: ClusterConfiguration
     kubernetesVersion: "%s"
     podSubnetCIDR: 10.111.0.0/16
@@ -58,6 +60,7 @@ const globalValues = `
 const moduleValues = `
   storageClass:
     topologyEnabled: true
+  ignoreVolumeMicroversion: false
   internal:
     storageClasses:
       - name: fastssd
@@ -79,7 +82,6 @@ const moduleValues = `
       - myextnetname
       - myextnetname2
     podNetworkMode: "VXLAN"
-    ignoreVolumeMicroversion: false
     instances:
       imageName: ubuntu
       mainNetwork: kube
@@ -231,34 +233,9 @@ subnet-id = "my-subnet-id"
 floating-network-id = "my-floating-network-id"
 enable-ingress-hostname = true
 [BlockStorage]
-rescan-on-resize = true`
-		if k8sVer == "1.23" {
-			ccmExpectedConfig = `
-[Global]
-auth-url = "http://my.cloud.lalla/123/"
-domain-name = "mydomain"
-tenant-name = "mytenantname"
-username = "myuser"
-password = "myPaSs"
-region = "myreg"
-ca-file = /etc/config/ca.crt
-[Networking]
-public-network-name = "myextnetname"
-public-network-name = "myextnetname2"
-internal-network-name = "myintnetname"
-internal-network-name = "myintnetname2"
-ipv6-support-disabled = true
-[LoadBalancer]
-create-monitor = "true"
-monitor-delay = "2s"
-monitor-timeout = "1s"
-subnet-id = "my-subnet-id"
-floating-network-id = "my-floating-network-id"
-enable-ingress-hostname = true
-[BlockStorage]
 ignore-volume-microversion = false
 rescan-on-resize = true`
-		}
+
 		ccmConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(string(ccmConfig)).To(Equal(ccmExpectedConfig))
@@ -277,17 +254,31 @@ storageclass.kubernetes.io/is-default-class: "true"
 var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
-	Context("Openstack", func() {
-		openstackCheck(f, "1.21")
+	BeforeSuite(func() {
+		err := os.Remove("/deckhouse/ee/modules/030-cloud-provider-openstack/candi")
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Symlink("/deckhouse/ee/candi/cloud-providers/openstack", "/deckhouse/ee/modules/030-cloud-provider-openstack/candi")
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	AfterSuite(func() {
+		err := os.Remove("/deckhouse/ee/modules/030-cloud-provider-openstack/candi")
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Symlink("/deckhouse/candi/cloud-providers/openstack", "/deckhouse/ee/modules/030-cloud-provider-openstack/candi")
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	Context("Openstack with k8s 1.29", func() {
+		openstackCheck(f, "1.29")
 	})
 
 	Context("Openstack", func() {
-		openstackCheck(f, "1.23")
+		openstackCheck(f, "1.26")
 	})
 
 	Context("Openstack with default StorageClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.21", "1.21"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSetFromYaml("cloudProviderOpenstack.internal.defaultStorageClass", `slowhdd`)
@@ -312,7 +303,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Openstack bad config", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.21", "1.21"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", badModuleValues)
 			f.HelmRender()
@@ -326,7 +317,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Unsupported Kubernetes version", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.21", "1.21"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
@@ -342,7 +333,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Openstack StorageClass topology disabled", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.21", "1.21"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSetFromYaml("cloudProviderOpenstack.storageClass.topologyEnabled", "false")
@@ -355,6 +346,220 @@ storageclass.kubernetes.io/is-default-class: "true"
 			cinderControllerPluginSS := f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "csi-controller")
 			Expect(cinderControllerPluginSS.Exists()).To(BeTrue())
 			Expect(cinderControllerPluginSS.Field("spec.template.spec.containers.0.args.3").String()).To(MatchYAML(`--feature-gates=Topology=false`))
+		})
+	})
+
+	Context("Openstack ignoreVolumeMicroversion", func() {
+		assertConfigSecretIgnoreMicroVer := func(f *Config, s string) {
+			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-openstack", "cloud-controller-manager")
+			ccmConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			sExp := fmt.Sprintf("ignore-volume-microversion = %s", s)
+			Expect(ccmConfig).To(ContainSubstring(sExp))
+		}
+
+		Context("all kube versions", func() {
+			Context("ignoreVolumeMicroversion disabled", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.27", "1.27"))
+					f.ValuesSet("global.modulesImages", GetModulesImages())
+					f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+					f.ValuesSetFromYaml("cloudProviderOpenstack.ignoreVolumeMicroversion", "false")
+					f.HelmRender()
+				})
+
+				It("Should not render 'ignore-volume-microversion' in ccm config", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertConfigSecretIgnoreMicroVer(f, "false")
+				})
+			})
+
+			Context("ignoreVolumeMicroversion enabled", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.27", "1.27"))
+					f.ValuesSet("global.modulesImages", GetModulesImages())
+					f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+					f.ValuesSetFromYaml("cloudProviderOpenstack.ignoreVolumeMicroversion", "true")
+					f.HelmRender()
+				})
+
+				It("Should render 'ignore-volume-microversion = true' in ccm config", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertConfigSecretIgnoreMicroVer(f, "true")
+				})
+			})
+		})
+	})
+
+	Context("Cloud data discoverer", func() {
+		deployment := func(f *Config) object_store.KubeObject {
+			return f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "cloud-data-discoverer")
+		}
+
+		assertEnv := func(f *Config, envName string) {
+			d := deployment(f)
+			Expect(d.Exists()).To(BeTrue())
+
+			envs := d.Field("spec.template.spec.containers.0.env").Array()
+
+			found := false
+			for _, e := range envs {
+				if e.Map()["name"].String() == envName {
+					found = true
+					break
+				}
+			}
+
+			Expect(found).To(BeTrue())
+		}
+
+		assertSecretFieldExists := func(f *Config, field string) {
+			s := f.KubernetesResource("Secret", "d8-cloud-provider-openstack", "cloud-data-discoverer")
+			Expect(s.Exists()).To(BeTrue())
+
+			Expect(s.Field(fmt.Sprintf("data.%s", field)).Exists()).To(BeTrue())
+		}
+
+		Context("with tenant name", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+				f.HelmRender()
+			})
+
+			It("Should render cloud data discoverer deployment with two containers", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				d := deployment(f)
+				Expect(d.Exists()).To(BeTrue())
+
+				Expect(d.Field("spec.template.spec.containers.0.name").String()).To(Equal("cloud-data-discoverer"))
+				Expect(d.Field("spec.template.spec.containers.1.name").String()).To(Equal("kube-rbac-proxy"))
+			})
+
+			It("Should render OS_TENANT_NAME env for first container", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				assertEnv(f, "OS_TENANT_NAME")
+			})
+
+			It("Should render 'tenantName' secret field", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				assertSecretFieldExists(f, "tenantName")
+			})
+		})
+
+		Context("with tenant id", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+				f.ValuesSetFromYaml("cloudProviderOpenstack.internal.connection", `
+authURL: http://my.cloud.lalla/123/
+username: myuser
+password: myPaSs
+domainName: mydomain
+tenantID: mytenantid
+caCert: mycacert
+region: myreg
+`)
+				f.HelmRender()
+			})
+
+			It("Should render cloud data discoverer deployment with two containers", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				d := deployment(f)
+				Expect(d.Exists()).To(BeTrue())
+
+				Expect(d.Field("spec.template.spec.containers.0.name").String()).To(Equal("cloud-data-discoverer"))
+				Expect(d.Field("spec.template.spec.containers.1.name").String()).To(Equal("kube-rbac-proxy"))
+			})
+
+			It("Should render OS_TENANT_ID env for first container", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				assertEnv(f, "OS_TENANT_ID")
+			})
+
+			It("Should render 'tenantID' secret field", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				assertSecretFieldExists(f, "tenantID")
+			})
+		})
+
+		Context("with ca cert", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+				f.ValuesSetFromYaml("cloudProviderOpenstack.internal.connection.caCert", `
+multiline
+ca
+`)
+				f.HelmRender()
+			})
+
+			It("Should render cloud data discoverer deployment with two containers", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				d := deployment(f)
+				Expect(d.Exists()).To(BeTrue())
+
+				Expect(d.Field("spec.template.spec.containers.0.name").String()).To(Equal("cloud-data-discoverer"))
+				Expect(d.Field("spec.template.spec.containers.1.name").String()).To(Equal("kube-rbac-proxy"))
+			})
+
+			It("Should render OS_CACERT env for first container", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				assertEnv(f, "OS_CACERT")
+			})
+
+			It("Should render 'ca.crt' secret field", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				assertSecretFieldExists(f, `ca\.crt`)
+			})
+		})
+
+		Context("vertical-pod-autoscaler-crd module enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd"]`)
+				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+				f.HelmRender()
+			})
+
+			It("Should render VPA resource", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				d := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-openstack", "cloud-data-discoverer")
+				Expect(d.Exists()).To(BeTrue())
+			})
+		})
+
+		Context("vertical-pod-autoscaler-crd module disabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("global.enabledModules", `[]`)
+				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+				f.HelmRender()
+			})
+
+			It("Should render VPA resource", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				d := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-openstack", "cloud-data-discoverer")
+				Expect(d.Exists()).To(BeFalse())
+			})
 		})
 	})
 })

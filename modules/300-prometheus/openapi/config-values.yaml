@@ -11,18 +11,22 @@ properties:
     description: |
       The name of the StorageClass to use.
 
-      If omitted, the StorageClass of the existing Prometheus PVC is used. If there is no PVC yet, either `global.StorageClass` or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
+      If omitted, the StorageClass of the existing Prometheus PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
+
+      `global.discovery.defaultStorageClass` is applied during module activation, changing default StorageClass in cluster won't result in disk re-provisioning.
 
       `storageClass: false` — forces the `emptyDir` usage. You will need to delete the old PVC and restart the Pod manually.
 
-      **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in Prometheus volume reprovisioning and data loss.
+      **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in Prometheus volume re-provisioning and data loss.
   longtermStorageClass:
     type: string
     x-examples: ["ceph-ssd"]
     description: |
-      The name of the storageClass to use for Longterm Prometheus.
+      The name of the StorageClass to use for Longterm Prometheus.
 
-      If omitted, the StorageClass of the existing Longterm Prometheus PVC is used. If there is no PVC yet, either `global.StorageClass` or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data;
+      If omitted, the StorageClass of the existing Longterm Prometheus PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data;
+
+      `global.discovery.defaultStorageClass` is applied during module activation, changing default StorageClass in cluster won't result in disk re-provisioning.
 
       **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in Longterm Prometheus volume reprovisioning and data loss.
   longtermRetentionDays:
@@ -40,7 +44,7 @@ properties:
       externalAuthentication:
         type: object
         description: |
-          Parameters to enable external authentication based on the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+          Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
           > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) module is enabled.
         properties:
@@ -104,13 +108,37 @@ properties:
             - agenty-flowcharting-panel
             - vertamedia-clickhouse-datasource
           ```
+
+          You can also install plugins from other sources by passing a link to the plugin zip archive in the format `<url to plugin zip>;<plugin name>`:
+
+          ```yaml
+          grafana:
+            customPlugins:
+            - http://10.241.32.16:3000/netsage-bumpchart-panel-1.1.1.zip;netsage-bumpchart-panel
+          ```
   ingressClass:
     type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
     x-examples: ["public"]
     description: |
       The class of the Ingress controller used for Grafana/Prometheus.
 
       An optional parameter. By default, the `modules.ingressClass` global value is used.
+  externalLabels:
+    type: object
+    x-examples:
+      - prometheus_replica: $(POD_NAME)
+        shard: $(SHARD)
+        hostname: $(HOSTNAME)
+    description: |
+      The set of external labels to add to the metrics.
+
+      It's possible to expand the environment variables of the `config-reloader` container in external labels
+      such as:
+      * `HOSTNAME`/`POD_NAME` - contains the name of the pod (for example `prometheus-main-0`, `prometheus-main-1`, etc.).
+      * `SHARD` - contains the [shard](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/shards-and-replicas.md) number.
+    additionalProperties:
+      type: string
   https:
     type: object
     x-examples:
@@ -133,7 +161,7 @@ properties:
           - `Disabled` — Grafana/Prometheus will work over HTTP only;
           - `CertManager` — Grafana/Prometheus will use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter.
           - `CustomCertificate` — Grafana/Prometheus will use HTTPS using the certificate from the `d8-system` namespace.
-          - `OnlyInURI` — Grafana/Prometheus will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
+          - `OnlyInURI` — Grafana/Prometheus will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
         enum:
           - "Disabled"
           - "CertManager"
@@ -166,6 +194,8 @@ properties:
       - {updateMode: "Initial", longtermMaxCPU: "1", longtermMaxMemory: "1500Mi", maxCPU: "1000m", maxMemory: "1500Mi"}
       - {updateMode: "Off"}
     default: {updateMode: "Initial"}
+    description: |
+      VPA settings for pods.
     properties:
       maxCPU:
         oneOf:
@@ -174,7 +204,7 @@ properties:
           - type: number
         x-examples: ["3"]
         description: |
-          The maximum CPU requests set by the VPA controller for the main Prometheus Pods.
+          The maximum value that the VPA can set for the CPU requests for the main Prometheus Pods.
 
           The default value is chosen automatically based on the maximum number of Pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
       maxMemory:
@@ -184,7 +214,7 @@ properties:
           - type: number
         x-examples: ["3Mi"]
         description: |
-          The maximum Memory requests set by the VPA controller for the main Prometheus Pods.
+          The maximum memory requests the VPA can set for the main Prometheus Pods.
 
           The default value is chosen automatically based on the maximum number of Pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
       longtermMaxCPU:
@@ -194,7 +224,7 @@ properties:
           - type: number
         x-examples: [0.1]
         description: |
-          The maximum CPU requests set by the VPA controller for the Longterm Prometheus Pods.
+          The maximum value that the VPA can set for the Longterm Prometheus Pods.
 
           The default value is chosen automatically based on the maximum number of Pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
       longtermMaxMemory:
@@ -204,13 +234,13 @@ properties:
           - type: number
         x-examples: ["4Mi"]
         description: |
-          The maximum Memory requests set by the VPA controller for the longterm Prometheus Pods.
+          The maximum memory requests the VPA can set for the longterm Prometheus Pods.
 
           The default value is chosen automatically based on the maximum number of Pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
       updateMode:
         type: string
         description: |
-          The Pod update mode.
+          The VPA usage mode.
         default: "Initial"
         enum:
           - "Initial"
@@ -230,12 +260,24 @@ properties:
       Sets the interval for scraping metrics from targets.
 
       Evaluation Interval is always equal to scrapeInterval.
+    pattern: '^([\d]*y)?([\d]*w)?([\d]*d)?([\d]*h)?([\d]*m)?([\d]*s)?$'
   longtermScrapeInterval:
     type: string
     default: "5m"
     description: |
       Sets the interval for making "data snapshots" of the main Prometheus by the longterm Prometheus.
   nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    x-kubernetes-preserve-unknown-fields: true
+    x-examples:
+      - disktype: ssd
+    description: |
+      The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+  longtermNodeSelector:
     type: object
     additionalProperties:
       type: string
@@ -272,16 +314,40 @@ properties:
       The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+  longtermTolerations:
+    type: array
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+    x-examples:
+      -
+        - key: "key1"
+          operator: "Equal"
+          value: "value1"
+          effect: "NoSchedule"
+    description: |
+      The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
   mainMaxDiskSizeGigabytes:
     type: integer
-    default: 300
     description: |
       Deprecated and will be removed. Doesn't affect anything.
       The maximum size (in GiB) that the main Prometheus' volume can automatically resize to.
     x-doc-deprecated: true
   longtermMaxDiskSizeGigabytes:
     type: integer
-    default: 300
     x-doc-deprecated: true
     description: |
       Deprecated and will be removed. Doesn't affect anything.

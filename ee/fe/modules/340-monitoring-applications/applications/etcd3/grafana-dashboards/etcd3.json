@@ -173,7 +173,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(grpc_server_started_total{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\", grpc_type=\"unary\"}[$__interval_sx4]))",
+          "expr": "sum(rate(grpc_server_started_total{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\", grpc_type=\"unary\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RPC Rate",
@@ -182,7 +182,7 @@
           "step": 2
         },
         {
-          "expr": "sum(rate(grpc_server_handled_total{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\", grpc_type=\"unary\",grpc_code!=\"OK\"}[$__interval_sx4]))",
+          "expr": "sum(rate(grpc_server_handled_total{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\", grpc_type=\"unary\",grpc_code!=\"OK\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RPC Failed Rate",
@@ -462,7 +462,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}[$__interval_sx4])) by (pod, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}[$__rate_interval])) by (pod, le))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -472,7 +472,7 @@
           "step": 4
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}[$__interval_sx4])) by (pod, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}[$__rate_interval])) by (pod, le))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} DB fsync",
@@ -650,7 +650,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(etcd_network_client_grpc_received_bytes_total{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}[$__interval_sx4])",
+          "expr": "rate(etcd_network_client_grpc_received_bytes_total{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} Client Traffic In",
@@ -740,7 +740,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(etcd_network_client_grpc_sent_bytes_total{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}[$__interval_sx4])",
+          "expr": "rate(etcd_network_client_grpc_sent_bytes_total{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} Client Traffic Out",
@@ -830,7 +830,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(etcd_network_peer_received_bytes_total{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}[$__interval_sx4])) by (pod)",
+          "expr": "sum(rate(etcd_network_peer_received_bytes_total{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} Peer Traffic In",
@@ -921,7 +921,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(etcd_network_peer_sent_bytes_total{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}[$__interval_sx4])) by (pod)",
+          "expr": "sum(rate(etcd_network_peer_sent_bytes_total{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1011,7 +1011,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(etcd_server_proposals_failed_total{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}[$__interval_sx4]))",
+          "expr": "sum(rate(etcd_server_proposals_failed_total{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Proposal Failure Rate",
@@ -1029,7 +1029,7 @@
           "step": 2
         },
         {
-          "expr": "sum(rate(etcd_server_proposals_committed_total{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}[$__interval_sx4]))",
+          "expr": "sum(rate(etcd_server_proposals_committed_total{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Proposal Commit Rate",
@@ -1038,7 +1038,7 @@
           "step": 2
         },
         {
-          "expr": "sum(rate(etcd_server_proposals_applied_total{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}[$__interval_sx4]))",
+          "expr": "sum(rate(etcd_server_proposals_applied_total{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Proposal Apply Rate",

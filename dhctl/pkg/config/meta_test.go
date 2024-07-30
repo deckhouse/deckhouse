@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+
 	"testing"
 	"text/template"
 
@@ -62,8 +63,7 @@ func TestGetDNSAddress(t *testing.T) {
 	}
 }
 
-func renderTestConfig(data map[string]interface{}) string {
-	config := `
+const metaConfigTestsTemplate = `
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
@@ -72,7 +72,7 @@ cloud:
   prefix: cluster
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.21"
+kubernetesVersion: "1.29"
 clusterDomain: "cluster.local"
 {{- if .proxy }}
 proxy:
@@ -122,6 +122,17 @@ masterNodeGroup:
     diskSizeGB: 50
     externalIPAddresses:
       - Auto
+nodeGroups:
+  - name: node-group-1
+    replicas: 2
+    instanceClass:
+      cores: 4
+      memory: 8192
+      imageID: id
+      diskSizeGB: 50
+      externalIPAddresses:
+        - Auto
+        - Auto
 sshPublicKey: ssh-rsa AAAA
 nodeNetworkCIDR: 10.100.0.0/21
 provider:
@@ -136,7 +147,10 @@ provider:
        "public_key": "publicKey",
        "private_key": "privateKey"
     }
+---
 `
+
+func renderTestConfig(data map[string]interface{}, config string) string {
 	t := template.New("testconfig_template").Funcs(sprig.TxtFuncMap())
 	t, err := t.Parse(config)
 	if err != nil {
@@ -191,18 +205,27 @@ func generateOldDockerCfg(host string, username, password *string) string {
 	return string(auth)
 }
 
-func generateMetaConfig(t *testing.T, data map[string]interface{}) *MetaConfig {
-	configData := renderTestConfig(data)
+func generateMetaConfig(t *testing.T, template string, data map[string]interface{}, hasErr bool) *MetaConfig {
+	configData := renderTestConfig(data, template)
 
 	cfg, err := ParseConfigFromData(configData)
-	require.NoError(t, err)
+	f := require.NoError
+	if hasErr {
+		f = require.Error
+	}
+
+	f(t, err)
 
 	return cfg
 }
 
+func generateMetaConfigForMetaConfigTest(t *testing.T, data map[string]interface{}) *MetaConfig {
+	return generateMetaConfig(t, metaConfigTestsTemplate, data, false)
+}
+
 func TestPrepareRegistry(t *testing.T) {
 	t.Run("Has imagesRepo and dockerCfg", func(t *testing.T) {
-		cfg := generateMetaConfig(t, map[string]interface{}{
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
 			"dockerCfg":  generateDockerCfg("r.example.com", "a", "b"),
 			"imagesRepo": "r.example.com/deckhouse/ce/",
 		})
@@ -225,7 +248,7 @@ func TestPrepareRegistry(t *testing.T) {
 	})
 
 	t.Run("Has not imagesRepo and dockerCfg", func(t *testing.T) {
-		cfg := generateMetaConfig(t, make(map[string]interface{}))
+		cfg := generateMetaConfigForMetaConfigTest(t, make(map[string]interface{}))
 
 		t.Run("Registry object for CE edition", func(t *testing.T) {
 			expectedData := RegistryData{
@@ -239,13 +262,65 @@ func TestPrepareRegistry(t *testing.T) {
 			require.Equal(t, cfg.Registry, expectedData)
 		})
 	})
+
+	t.Run("Validate registryDockerCfg", func(t *testing.T) {
+		t.Run("Expect successful validation", func(t *testing.T) {
+			creds := []string{
+				`{"auths": { "registry.deckhouse.io": {}}}`,
+				`{"auths": { "regi-stry.deckhouse.io": {}}}`,
+				`{"auths": { "registry.io": {}}}`,
+				`{"auths": { "1.io": {}}}`,
+				`{"auths": { "1.s.io": {}}}`,
+				`{"auths": { "regi.stry:5000": {}}}`,
+				`{"auths": { "1.2.3": {}}}`,
+				`{"auths": { "1.2:5000": {}}}`,
+				`{"auths": { "reg.dec.io1": {}}}`,
+				`{"auths": { "one.two.three.four.five.six.whatever": {}}}`,
+				`{"auths": { "1.2.3.4.5.6.0": {}}}`,
+				``,
+			}
+
+			for _, cred := range creds {
+				dockerCfg := base64.StdEncoding.EncodeToString([]byte(cred))
+
+				err := validateRegistryDockerCfg(dockerCfg)
+				require.NoError(t, err)
+			}
+		})
+
+		t.Run("Expect failed validation", func(t *testing.T) {
+			hosts := []string{
+				"some-bad-host:1434/deckhouse",
+				"some-bad/deckhouse",
+				".some-bad/deckhouse",
+				"-some.bad",
+				"somebad.",
+				"some--ba",
+				"some..ba",
+				"14214.ba1::1554",
+				"some.bad:host",
+				"some-bad:host1",
+			}
+
+			for _, host := range hosts {
+				creds := fmt.Sprintf("{\"auths\": { \"%s\": {}}}", host)
+				dockerCfg := base64.StdEncoding.EncodeToString([]byte(creds))
+
+				err := validateRegistryDockerCfg(dockerCfg)
+				require.EqualErrorf(t,
+					err,
+					fmt.Sprintf("invalid registryDockerCfg. Your auths host \"%s\" should be similar to \"your.private.registry.example.com\"", host),
+					err.Error())
+			}
+		})
+	})
 }
 
 func TestParseRegistryData(t *testing.T) {
 	t.Run("dockerCfg in current format (has auth)", func(t *testing.T) {
 		t.Run("sets auth key from auth string", func(t *testing.T) {
 			user, password := "user", "password"
-			cfg := generateMetaConfig(t, map[string]interface{}{
+			cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
 				"dockerCfg":  generateDockerCfg("r.example.com", user, password),
 				"imagesRepo": "r.example.com/deckhouse/ce/",
 			})
@@ -261,7 +336,7 @@ func TestParseRegistryData(t *testing.T) {
 		t.Run("correct", func(t *testing.T) {
 			t.Run("sets auth key as base64 concatenation username and password with ':' separator", func(t *testing.T) {
 				user, password := "old_user", "old_password"
-				cfg := generateMetaConfig(t, map[string]interface{}{
+				cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
 					"dockerCfg":  generateOldDockerCfg("r.example.com", &user, &password),
 					"imagesRepo": "r.example.com/deckhouse/ce/",
 				})
@@ -276,7 +351,7 @@ func TestParseRegistryData(t *testing.T) {
 		t.Run("does not have username", func(t *testing.T) {
 			t.Run("sets empty auth key", func(t *testing.T) {
 				password := "old_password"
-				cfg := generateMetaConfig(t, map[string]interface{}{
+				cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
 					"dockerCfg":  generateOldDockerCfg("r.example.com", nil, &password),
 					"imagesRepo": "r.example.com/deckhouse/ce/",
 				})
@@ -291,7 +366,7 @@ func TestParseRegistryData(t *testing.T) {
 		t.Run("does not have password", func(t *testing.T) {
 			t.Run("sets empty auth key", func(t *testing.T) {
 				user := "old_user"
-				cfg := generateMetaConfig(t, map[string]interface{}{
+				cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
 					"dockerCfg":  generateOldDockerCfg("r.example.com", &user, nil),
 					"imagesRepo": "r.example.com/deckhouse/ce/",
 				})
@@ -306,7 +381,7 @@ func TestParseRegistryData(t *testing.T) {
 
 	t.Run("default dockerCfg", func(t *testing.T) {
 		t.Run("sets empty auth key", func(t *testing.T) {
-			cfg := generateMetaConfig(t, make(map[string]interface{}))
+			cfg := generateMetaConfigForMetaConfigTest(t, make(map[string]interface{}))
 
 			m, err := cfg.ParseRegistryData()
 			require.NoError(t, err)
@@ -318,7 +393,7 @@ func TestParseRegistryData(t *testing.T) {
 
 func TestEnrichProxyData(t *testing.T) {
 	t.Run("proxy config is absent", func(t *testing.T) {
-		cfg := generateMetaConfig(t, map[string]interface{}{})
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
 
 		p, err := cfg.EnrichProxyData()
 		require.NoError(t, err)
@@ -327,7 +402,7 @@ func TestEnrichProxyData(t *testing.T) {
 	})
 
 	t.Run("proxy config is present, httpProxy is set", func(t *testing.T) {
-		cfg := generateMetaConfig(t, map[string]interface{}{
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
 			"proxy": map[string]interface{}{
 				"httpProxy": "http://1.2.3.4",
 			},
@@ -343,7 +418,7 @@ func TestEnrichProxyData(t *testing.T) {
 	})
 
 	t.Run("proxy config is present, httpsProxy is set", func(t *testing.T) {
-		cfg := generateMetaConfig(t, map[string]interface{}{
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
 			"proxy": map[string]interface{}{
 				"httpsProxy": "https://2.3.4.5",
 			},
@@ -359,7 +434,7 @@ func TestEnrichProxyData(t *testing.T) {
 	})
 
 	t.Run("proxy config is present, all options is set", func(t *testing.T) {
-		cfg := generateMetaConfig(t, map[string]interface{}{
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
 			"proxy": map[string]interface{}{
 				"httpProxy":  "http://1.2.3.4",
 				"httpsProxy": "https://2.3.4.5",

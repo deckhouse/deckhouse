@@ -34,12 +34,9 @@ webhooks:
         scope: Namespaced
     failurePolicy: Fail
     sideEffects: None
-    timeoutSeconds: 30
+    timeoutSeconds: 28
     admissionReviewVersions:
-      - v1
-    {{- if semverCompare "<1.22" $kubernetesVersion}}
-      - v1beta1
-    {{- end }}
+    - v1
     clientConfig:
       service:
         namespace: d8-ingress-nginx
@@ -69,10 +66,7 @@ webhooks:
     sideEffects: None
     timeoutSeconds: 5
     admissionReviewVersions:
-      - v1
-    {{- if semverCompare "<1.22" $kubernetesVersion}}
-      - v1beta1
-    {{- end }}
+    - v1
     clientConfig:
       service:
         namespace: d8-ingress-nginx

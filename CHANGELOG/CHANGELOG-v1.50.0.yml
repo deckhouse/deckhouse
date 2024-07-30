@@ -1,0 +1,109 @@
+candi:
+  features:
+    - summary: Add a bashible step that tries to detect Docker CRI and exits with an error if it does.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5468
+    - summary: Bump default Kubernetes version to `1.25`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5467
+      impact: >-
+        Kubernetes will be updated to `1.25`, if the
+        [kubernetesVersion](https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion)
+        parameter of the `ClusterConfiguration` resource is set to `Automatic`.
+  fixes:
+    - summary: Set firmware explicitly for `vsphere_virtual_machine`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5457
+    - summary: Remove usage of temp files when creating a `NodeUser`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5337
+ci:
+  features:
+    - summary: Add SOURCE_REPO env
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5371
+deckhouse-config:
+  fixes:
+    - summary: Deckhouse-config-webhook successfully starts without the `external-module-manager` module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5392
+extended-monitoring:
+  features:
+    - summary: Images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5358
+go_lib:
+  fixes:
+    - summary: >-
+        Fix the error which prevents proper work with `dockerConfigJSON` files with more than one
+        auth section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5315
+ingress-nginx:
+  features:
+    - summary: Bump default Ingress controller version to `1.6`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5466
+      impact: >-
+        If the Ingress controller version is not pinned in the
+        [IngressNginxController](https://deckhouse.io/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller)
+        CR, Ingress controller will be updated to version `1.6` and restart.
+  fixes:
+    - summary: Fix `nginx_ingress_controller_ssl_expire_time_seconds`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5442
+      impact: Ingress controller will restart.
+keepalived:
+  fixes:
+    - summary: >-
+        Add info about [how to do manual IP
+        switching](https://deckhouse.io/documentation/latest/modules/450-keepalived/faq.html#how-to-manually-switch-keepalived).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5335
+linstor:
+  features:
+    - summary: Move DRBD module build from `kernel-module-injector` to `bashible`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5230
+      impact: linstor satellite on nodes will restart.
+  fixes:
+    - summary: Fixes in nodegroupconfigurations for DRBD install and linstor components update script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5483
+log-shipper:
+  features:
+    - summary: Add `tenantID` option for Loki (may be required for Grafana Cloud).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5401
+loki:
+  fixes:
+    - summary: Mount `/tmp` on `emptyDir` to fix retention.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5400
+monitoring-applications:
+  features:
+    - summary: Add Grafana dashboard for Loki.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5383
+monitoring-kubernetes:
+  features:
+    - summary: Images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5343
+  fixes:
+    - summary: fix node_exporter apparmor premissions issue
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5448
+      impact: all node_exporter pods will be restarted
+node-manager:
+  features:
+    - summary: Alert fires if Node has no config checksum annotation during a `NodeGroup` update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5443
+    - summary: Add a short name for `NodeGroupConfiguration` (`ngc`).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5367
+    - summary: Make the versions of autoscaler correspond to the versions of Kubernetes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5158
+operator-trivy:
+  fixes:
+    - summary: Remove `upmeter` probes from trivy scanning.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5364
+prometheus:
+  fixes:
+    - summary: >-
+        Fix alert expression when a `longterm-prometheus` fails to scrape the `main-prometheus` for
+        whatever reason.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5345
+user-authn:
+  fixes:
+    - summary: Use global discovered `publishAPI` cert by default for generated kubeconfigs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5488
+virtualization:
+  features:
+    - summary: >-
+        Allow specifying priority for virtual machines via the
+        [PriorityClassName](https://deckhouse.io/documentation/latest/modules/490-virtualization/cr.html#virtualmachine-v1alpha1-spec-priorityclassname)
+        parameter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5444
+

@@ -32,18 +32,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                   "csinodes",
-			WaitForSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization: pointer.Bool(false),
 			ApiVersion:             "storage.k8s.io/v1",
 			Kind:                   "CSINode",
 			FilterFunc:             csiFilterCSINode, //  jqFilter: '{"name": .metadata.name}'
 		},
 		{
 			Name:                         "nodes",
-			WaitForSynchronization:       pointer.BoolPtr(false),
+			WaitForSynchronization:       pointer.Bool(false),
 			ApiVersion:                   "v1",
 			Kind:                         "Node",
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
 			FilterFunc:                   csiFilterNode, // '{"needPatch": ([(.spec.taints // [])[] | select(.key == "node.deckhouse.io/csi-not-bootstrapped")] | length > 0), "name": .metadata.name}',
 		},
 	},

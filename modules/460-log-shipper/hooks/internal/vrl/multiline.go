@@ -91,3 +91,21 @@ if err != null {
     matched;
 }
 `
+
+const RegexMultilineRule Rule = `
+matched, err = match(.message, r'{{ $.multiline }}');
+if err != null {
+    false;
+} else {
+    matched;
+}
+`
+
+const NotRegexMultilineRule Rule = `
+matched, err = match(.message, r'{{ $.multiline }}');
+if err != null {
+    true;
+} else {
+    !matched;
+}
+`

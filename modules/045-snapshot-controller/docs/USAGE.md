@@ -19,7 +19,7 @@ kind: VolumeSnapshot
 metadata:
   name: my-first-snapshot
 spec:
-  volumeSnapshotClassName: linstor
+  volumeSnapshotClassName: sds-replicated-volume
   source:
     persistentVolumeClaimName: my-first-volume
 ```
@@ -32,7 +32,7 @@ $ kubectl describe volumesnapshots.snapshot.storage.k8s.io my-first-snapshot
 Spec:
   Source:
     Persistent Volume Claim Name:  my-first-snapshot
-  Volume Snapshot Class Name:      linstor
+  Volume Snapshot Class Name:      sds-replicated-volume
 Status:
   Bound Volume Snapshot Content Name:  snapcontent-b6072ab7-6ddf-482b-a4e3-693088136d2c
   Creation Time:                       2020-06-04T13:02:28Z
@@ -48,7 +48,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: my-first-volume-from-snapshot
 spec:
-  storageClassName: linstor-data-r2
+  storageClassName: sds-replicated-volume-data-r2
   dataSource:
     name: my-first-snapshot
     kind: VolumeSnapshot
@@ -74,7 +74,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: my-cloned-pvc
 spec:
-  storageClassName: linstor-data-r2
+  storageClassName: sds-replicated-volume-data-r2
   dataSource:
     name: my-origin-pvc
     kind: PersistentVolumeClaim

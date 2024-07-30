@@ -1,29 +1,30 @@
-# [<en>] section containing the parameters of nginx ingress controller
-# [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры nginx ingress controller
-# [<ru>] используемая версия API Deckhouse
+# [<en>] Section containing the parameters of NGINX Ingress controller.
+# [<en>] https://deckhouse.io/documentation/v1/modules/402-ingress-nginx/cr.html
+# [<ru>] Секция, описывающая параметры NGINX Ingress controller.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/402-ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: nginx
 spec:
-  # [<en>] the name of the Ingress class to use with the Ingress nginx controller
-  # [<ru>] имя Ingress-класса для обслуживания Ingress NGINX controller
   ingressClass: nginx
-  # [<en>] Ingress version to use (use version 1.1 with Kubernetes 1.23+)
-  # [<ru>] версия Ingress-контроллера (используйте версию 1.1 с Kubernetes 1.23+)
-  controllerVersion: "1.1"
-  # [<en>] the way traffic goes to cluster from the outer network
-  # [<ru>] способ поступления трафика из внешнего мира
+  # [<en>] The way traffic goes to cluster from the outer network.
+  # [<ru>] Способ поступления трафика из внешнего мира.
   inlet: HostPort
   hostPort:
     httpPort: 80
     httpsPort: 443
-  # [<en>] describes on which nodes the component will be located
-  # [<ru>] описывает, на каких узлах будет находиться компонент
-  # [<en>] you might consider changing this
-  # [<ru>] возможно, захотите изменить
+  # [<en>] Describes on which nodes the Ingress Controller will be located.
+  # [<ru>] Описывает, на каких узлах будет находиться Ingress-контроллер.
+  # [<en>] You might consider changing this.
+  # [<en>] More examples here.
+  # [<en>] https://deckhouse.io/documentation/v1/modules/402-ingress-nginx/examples.html
+  # [<ru>] Возможно, захотите изменить.
+  # [<ru>] Больше примеров здесь
+  # [<ru>] https://deckhouse.ru/documentation/v1/modules/402-ingress-nginx/examples.html
   nodeSelector:
     node-role.kubernetes.io/control-plane: ""
   tolerations:
-  - operator: Exists
+  - effect: NoSchedule
+    key: dedicated.deckhouse.io
+    value: control-plane

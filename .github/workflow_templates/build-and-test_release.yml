@@ -35,6 +35,7 @@ on:
 
 env:
 {!{ tmpl.Exec "werf_envs"               | strings.Indent 2 }!}
+{!{ tmpl.Exec "git_source_envs"               | strings.Indent 2 }!}
 
 # Cancel in-progress jobs for the same tag/branch.
 concurrency:
@@ -100,6 +101,32 @@ jobs:
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.build_ee) | strings.Indent 6 }!}
 
+{!{ $jobNames = coll.Merge $jobNames (dict "build_se" "Build SE") }!}
+  build_se:
+    name: {!{ $jobNames.build_se }!}
+    needs:
+      - git_info
+      - go_generate
+      - workflow_render
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    env:
+      WERF_ENV: "SE"
+{!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.build_se) | strings.Indent 6 }!}
+
+{!{ $jobNames = coll.Merge $jobNames (dict "build_be" "Build BE") }!}
+  build_be:
+    name: {!{ $jobNames.build_be }!}
+    needs:
+      - git_info
+      - go_generate
+      - workflow_render
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    env:
+      WERF_ENV: "BE"
+{!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.build_be) | strings.Indent 6 }!}
+
 {!{ $jobNames = coll.Merge $jobNames (dict "build_ce" "Build CE") }!}
   build_ce:
     name: {!{ $jobNames.build_ce }!}
@@ -116,19 +143,21 @@ jobs:
 {!{ $jobNames = coll.Merge $jobNames (dict "doc_web_build" "Doc web build") }!}
   doc_web_build:
     name: {!{ $jobNames.doc_web_build }!}
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
     # Wait for success build of modules.
     needs:
       - git_info
-{!{ tmpl.Exec "doc_web_build_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_build_template" (slice $ctx "doc" "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.doc_web_build) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "main_web_build" "Main web build") }!}
   main_web_build:
     name: {!{ $jobNames.main_web_build }!}
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
     # Wait for success build of modules.
     needs:
       - git_info
-{!{ tmpl.Exec "main_web_build_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_build_template" (slice $ctx "main" "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.main_web_build) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "tests" "Tests") }!}
@@ -136,8 +165,7 @@ jobs:
     name: {!{ $jobNames.tests }!}
     needs:
       - git_info
-      - build_fe
-{!{ tmpl.Exec "tests_template" (slice $ctx "unit" "build_fe") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "unit") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.tests) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "matrix_tests" "Matrix tests") }!}
@@ -145,7 +173,6 @@ jobs:
     name: {!{ $jobNames.matrix_tests }!}
     needs:
       - git_info
-      - build_fe
 {!{ tmpl.Exec "tests_before_build_template" (slice $ctx "matrix") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.matrix_tests) | strings.Indent 6 }!}
 
@@ -179,14 +206,15 @@ jobs:
 {!{ $jobNames = coll.Merge $jobNames (dict "web_links_test" "Web links test") }!}
   web_links_test:
     name: {!{ $jobNames.web_links_test }!}
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
     needs:
       - git_info
       - doc_web_build
       - main_web_build
-{!{ tmpl.Exec "web_links_test_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_links_test_template" (slice $ctx "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.web_links_test) | strings.Indent 6 }!}
 
-{!{ $jobNames = coll.Merge $jobNames (dict "validators" "Validators") }!}
+{!{- $jobNames = coll.Merge $jobNames (dict "validators" "Validators") }!}
   validators:
     name: {!{ $jobNames.validators }!}
     needs:
@@ -195,10 +223,10 @@ jobs:
 {!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_fe") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.validators) | strings.Indent 6 }!}
 
-{!{/* Autodeploy site and docs to production env on push to main branch. */}!}
-{!{ $jobNames = coll.Merge $jobNames (dict "deploy_latest_web" "Deploy latest doc and site") }!}
-  deploy_latest_web:
-    name: {!{ $jobNames.deploy_latest_web }!}
+{!{/* Autodeploy site to production (SEL) env on push to the main branch. */}!}
+{!{- $jobNames = coll.Merge $jobNames (dict "deploy_latest_web_site_prod_sel" "(Prod) Deploy latest site") }!}
+  deploy_latest_web_site_prod_sel:
+    name: {!{ $jobNames.deploy_latest_web_site_prod_sel }!}
     needs:
       - git_info
       - doc_web_build
@@ -208,11 +236,28 @@ jobs:
     steps:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
-{!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
 {!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
-{!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
-{!{ tmpl.Exec "deploy_site_template" "production" | strings.Indent 6 }!}
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_latest_web) | strings.Indent 6 }!}
+{!{ tmpl.Exec "deploy_site_template" "preproduction" | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_latest_web_site_prod_sel) | strings.Indent 6 }!}
+
+{!{/* Autodeploy docs to production (SEL) env on push to the main branch. */}!}
+{!{- $jobNames = coll.Merge $jobNames (dict "deploy_latest_web_doc_prod_sel" "(Prod) Deploy latest doc") }!}
+  deploy_latest_web_doc_prod_sel:
+    name: {!{ $jobNames.deploy_latest_web_doc_prod_sel }!}
+    needs:
+      - git_info
+      - doc_web_build
+      - main_web_build
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: [self-hosted, regular]
+    steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
+{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
+{!{ tmpl.Exec "deploy_doc_template" "preproduction" | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_latest_web_doc_prod_sel) | strings.Indent 6 }!}
 
   last_comment:
     name: Update comment on finish
@@ -224,15 +269,17 @@ jobs:
       - build_fe
       - build_ee
       - build_ce
+      - build_be
+      - build_se
       - doc_web_build
       - main_web_build
-      - deploy_latest_web
+      - deploy_latest_web_site_prod_sel
+      - deploy_latest_web_doc_prod_sel
       - tests
       - matrix_tests
       - dhctl_tests
       - golangci_lint
       - openapi_test_cases
-      - web_links_test
       - validators
     if: ${{ always() }}
     runs-on: ubuntu-latest

@@ -39,7 +39,10 @@
   env:
     HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
   run: |
-    if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+    if [[ -n $HOST ]]; then
+      echo "has_credentials=true" >> $GITHUB_OUTPUT
+      echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+    fi
 - name: Login to dev registry
   uses: {!{ index (ds "actions") "docker/login-action" }!}
   if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
@@ -58,7 +61,10 @@
   env:
     HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
   run: |
-    if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+    if [[ -n $HOST ]]; then
+      echo "has_credentials=true" >> $GITHUB_OUTPUT
+      echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+    fi
 - name: Login to readonly registry
   uses: {!{ index (ds "actions") "docker/login-action" }!}
   if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
@@ -77,7 +83,10 @@
   env:
     HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
   run: |
-    if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+    if [[ -n $HOST ]]; then
+      echo "has_credentials=true" >> $GITHUB_OUTPUT
+      echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+    fi
 - name: Login to rw registry
   uses: {!{ index (ds "actions") "docker/login-action" }!}
   if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
@@ -105,10 +114,10 @@
     HOST: ${{secrets.FLANT_REGISTRY_HOST}}
   run: |
     if [[ -n $HOST ]]; then
-      echo "::set-output name=has_flant_credentials::true"
-      echo "::set-output name=web_registry_path::${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
+      echo "has_flant_credentials=true" >> $GITHUB_OUTPUT
+      echo "web_registry_path=${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss" >> $GITHUB_OUTPUT
     else
-      echo "::set-output name=web_registry_path::${GHA_TEST_REGISTRY_PATH}"
+      echo "web_registry_path=${GHA_TEST_REGISTRY_PATH}" >> $GITHUB_OUTPUT
     fi
 - name: Login to flant registry
   uses: {!{ index (ds "actions") "docker/login-action" }!}
@@ -144,7 +153,7 @@
   id: started_at
   run: |
     unixTimestamp=$(date +%s)
-    echo "::set-output name=started_at::${unixTimestamp}"
+    echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
 # </template: started_at_output>
 {!{- end -}!}
 

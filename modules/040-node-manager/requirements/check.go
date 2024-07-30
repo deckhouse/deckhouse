@@ -18,6 +18,8 @@ package requirements
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -26,30 +28,69 @@ import (
 
 const (
 	minUbuntuVersionValuesKey = "nodeManager:nodesMinimalOSVersionUbuntu"
-	requirementsKey           = "nodesMinimalOSVersionUbuntu"
+	minDebianVersionValuesKey = "nodeManager:nodesMinimalOSVersionDebian"
+	requirementsUbuntuKey     = "nodesMinimalOSVersionUbuntu"
+	requirementsDebianKey     = "nodesMinimalOSVersionDebian"
+	containerdRequirementsKey = "containerdOnAllNodes"
+	hasNodesWithDocker        = "nodeManager:hasNodesWithDocker"
 )
 
 func init() {
-	checkRequirementFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-		desiredVersion, err := semver.NewVersion(requirementValue)
-		if err != nil {
-			return false, err
+	checkRequirementUbuntuFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+		return baseFuncMinVerOS(requirementValue, getter, "Ubuntu")
+	}
+
+	checkRequirementDebianFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+		return baseFuncMinVerOS(requirementValue, getter, "Debian")
+	}
+
+	checkContainerdRequirementFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+		requirementValue = strings.TrimSpace(requirementValue)
+		if requirementValue == "false" || requirementValue == "" {
+			return true, nil
 		}
-		currentVersionRaw, exists := getter.Get(minUbuntuVersionValuesKey)
+
+		hasDocker, exists := getter.Get(hasNodesWithDocker)
 		if !exists {
 			return true, nil
 		}
-		currentVersion, err := semver.NewVersion(currentVersionRaw.(string))
-		if err != nil {
-			return false, err
-		}
 
-		if currentVersion.LessThan(desiredVersion) {
-			return false, errors.New("minimal node Ubuntu OS version is lower then required")
+		if hasDocker.(bool) {
+			return false, errors.New("has nodes with Docker CRI or defaultCRI is Docker")
 		}
 
 		return true, nil
 	}
+	requirements.RegisterCheck(requirementsUbuntuKey, checkRequirementUbuntuFunc)
+	requirements.RegisterCheck(requirementsDebianKey, checkRequirementDebianFunc)
+	requirements.RegisterCheck(containerdRequirementsKey, checkContainerdRequirementFunc)
+}
 
-	requirements.RegisterCheck(requirementsKey, checkRequirementFunc)
+func baseFuncMinVerOS(requirementValue string, getter requirements.ValueGetter, osImage string) (bool, error) {
+	var minVersionValuesKey string
+	desiredVersion, err := semver.NewVersion(requirementValue)
+	if err != nil {
+		return false, err
+	}
+	switch osImage {
+	case "Ubuntu":
+		minVersionValuesKey = minUbuntuVersionValuesKey
+	case "Debian":
+		minVersionValuesKey = minDebianVersionValuesKey
+	}
+
+	currentVersionRaw, exists := getter.Get(minVersionValuesKey)
+	if !exists {
+		return true, nil
+	}
+	currentVersion, err := semver.NewVersion(currentVersionRaw.(string))
+	if err != nil {
+		return false, err
+	}
+
+	if currentVersion.LessThan(desiredVersion) {
+		return false, fmt.Errorf("minimal node %v OS version is lower then required", osImage)
+	}
+
+	return true, nil
 }

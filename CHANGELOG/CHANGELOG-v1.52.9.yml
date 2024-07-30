@@ -1,0 +1,11 @@
+extended-monitoring:
+  fixes:
+    - summary: Fix extended monitoring rules for node disk usage.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6227
+linstor:
+  fixes:
+    - summary: >-
+        Changed the method of loading DRBD kernel module on the nodes with active LINSTOR
+        satellites.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6288
+

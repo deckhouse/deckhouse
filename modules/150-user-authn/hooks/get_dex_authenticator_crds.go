@@ -68,9 +68,6 @@ func applyDexAuthenticatorFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	encodedName := encoding.ToFnvLikeDex(fmt.Sprintf("%s-%s-dex-authenticator", name, namespace))
 
 	_, allowAccessToKubernetes := obj.GetAnnotations()["dexauthenticator.deckhouse.io/allow-access-to-kubernetes"]
-	if namespace != "d8-dashboard" {
-		allowAccessToKubernetes = false
-	}
 
 	return DexAuthenticator{
 		ID:                      id,

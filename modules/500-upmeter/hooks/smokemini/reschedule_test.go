@@ -50,7 +50,7 @@ kind: Node
 metadata:
   labels:
     kubernetes.io/hostname: node-a-1
-    failure-domain.beta.kubernetes.io/zone: nova
+    topology.kubernetes.io/zone: nova
   name: node-a-1
 status:
   conditions:
@@ -64,7 +64,7 @@ kind: Node
 metadata:
   labels:
     kubernetes.io/hostname: node-a-1
-    failure-domain.beta.kubernetes.io/zone: nova
+    topology.kubernetes.io/zone: nova
   name: node-a-1
 status:
   conditions:
@@ -103,7 +103,7 @@ spec:
                   values:
                   - node-a-1
       containers:
-      - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
+      - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini@whatever
         name: smoke-mini
 status:
   collisionCount: 0
@@ -120,7 +120,7 @@ metadata:
 spec:
   nodeName: node-a-1
   containers:
-  - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
+  - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini@whatever
     name: smoke-mini
   affinity:
     nodeAffinity:
@@ -139,7 +139,7 @@ kind: Node
 metadata:
   labels:
     kubernetes.io/hostname: node-a-1
-    failure-domain.beta.kubernetes.io/zone: nova
+    topology.kubernetes.io/zone: nova
   name: node-a-1
 status:
   conditions:
@@ -151,7 +151,7 @@ kind: Node
 metadata:
   labels:
     kubernetes.io/hostname: node-a-2
-    failure-domain.beta.kubernetes.io/zone: nova
+    topology.kubernetes.io/zone: nova
   name: node-a-2
 status:
   conditions:
@@ -190,7 +190,7 @@ spec:
                   values:
                   - node-a-1
       containers:
-      - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
+      - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini@whatever
         name: smoke-mini
 status:
   collisionCount: 0
@@ -207,7 +207,7 @@ metadata:
 spec:
   nodeName: node-a-1
   containers:
-  - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
+  - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini@whatever
     name: smoke-mini
   affinity:
     nodeAffinity:
@@ -226,7 +226,7 @@ kind: Node
 metadata:
   labels:
     kubernetes.io/hostname: node-a-1
-    failure-domain.beta.kubernetes.io/zone: nova
+    topology.kubernetes.io/zone: nova
   name: node-a-1
 status:
   conditions:
@@ -265,7 +265,7 @@ spec:
                   values:
                   - node-a-1
       containers:
-      - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
+      - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini@whatever
         name: smoke-mini
 status:
   collisionCount: 0
@@ -282,7 +282,7 @@ metadata:
 spec:
   nodeName: ""
   containers:
-    - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
+    - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini@whatever
       name: smoke-mini
   affinity:
     nodeAffinity:
@@ -308,7 +308,7 @@ kind: Node
 metadata:
   labels:
     kubernetes.io/hostname: node-a-1
-    failure-domain.beta.kubernetes.io/zone: nova
+    topology.kubernetes.io/zone: nova
   name: node-a-1
 status:
   conditions:

@@ -37,9 +37,9 @@ properties:
       kubernetesApiserverAddresses:
         type: array
         items: strings
-      crowdProxyCert:
+      basicAuthProxyCert:
         type: string
-      crowdProxyKey:
+      basicAuthProxyKey:
         type: string
       selfSignedCA:
         type: object
@@ -311,3 +311,12 @@ properties:
             bitbucketCloud:
               type: object
               additionalProperties: true
+      customLogo:
+        type: object
+        default: {}
+        properties:
+          enabled:
+            type: boolean
+            default: false
+          checksum:
+            type: string

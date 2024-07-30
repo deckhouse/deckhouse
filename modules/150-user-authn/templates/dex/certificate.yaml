@@ -10,9 +10,9 @@ metadata:
 spec:
   certificateOwnerRef: false
   secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  {{ include "helm_lib_module_generate_common_name" (list . "dex") | nindent 2 }}
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "dex") }}
-  - {{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}
   issuerRef:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer

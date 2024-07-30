@@ -17,38 +17,42 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func CheckPreventBreakAnotherBootstrappedCluster(kubeCl *client.KubernetesClient, config *deckhouse.Config) error {
-	var uuidInCluster string
-	cmInCluster, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(context.TODO(), manifests.ClusterUUIDCm, metav1.GetOptions{})
-	if err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-
-	if err == nil {
-		uuidInCluster = cmInCluster.Data[manifests.ClusterUUIDCmKey]
-		if uuidInCluster == "" {
-			return fmt.Errorf("Cluster UUID config map found, but UUID is empty")
+func CheckPreventBreakAnotherBootstrappedCluster(kubeCl *client.KubernetesClient, config *config.DeckhouseInstaller) error {
+	return retry.NewSilentLoop("Check prevent break another bootstrapped", 15, 3*time.Second).Run(func() error {
+		var uuidInCluster string
+		cmInCluster, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(context.TODO(), manifests.ClusterUUIDCm, metav1.GetOptions{})
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
 		}
-	}
 
-	if uuidInCluster == "" {
-		return nil
-	}
+		if err == nil {
+			uuidInCluster = cmInCluster.Data[manifests.ClusterUUIDCmKey]
+			if uuidInCluster == "" {
+				return fmt.Errorf("Cluster UUID config map found, but UUID is empty")
+			}
+		}
 
-	if uuidInCluster != config.UUID {
-		return fmt.Errorf(`Cluster UUID's not equal in the cluster (%s) and in the cache (%s).
+		if uuidInCluster == "" {
+			return nil
+		}
+
+		if uuidInCluster != config.UUID {
+			return fmt.Errorf(`Cluster UUID's not equal in the cluster (%s) and in the cache (%s).
 Probably you are trying bootstrap cluster on node with previous created cluster.
 Please check hostname.`, uuidInCluster, config.UUID)
-	}
+		}
 
-	return nil
+		return nil
+	})
 }

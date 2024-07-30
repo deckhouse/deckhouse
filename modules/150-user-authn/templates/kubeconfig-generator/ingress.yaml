@@ -1,4 +1,4 @@
-{{- if or (.Values.userAuthn.publishAPI.enable) (.Values.userAuthn.kubeconfigGenerator) }}
+{{- if or (and (.Values.userAuthn.publishAPI.enabled) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator) }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -15,7 +15,7 @@ spec:
   tls:
   - hosts:
     - {{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}
-    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "kubeconfig-ingress-tls") }}
   {{- end }}
   rules:
   - host: {{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}

@@ -48,14 +48,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                "ngs",
 			ApiVersion:          "deckhouse.io/v1",
 			Kind:                "NodeGroup",
-			ExecuteHookOnEvents: pointer.BoolPtr(false),
+			ExecuteHookOnEvents: pointer.Bool(false),
 			FilterFunc:          bootstrapTokenFilterNodeGroup,
 		},
 		{
 			Name:                "bootstrap_tokens",
 			ApiVersion:          "v1",
 			Kind:                "Secret",
-			ExecuteHookOnEvents: pointer.BoolPtr(false),
+			ExecuteHookOnEvents: pointer.Bool(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"kube-system"},
@@ -117,21 +117,10 @@ func bootstrapTokenFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.Filt
 	var ng ngv1.NodeGroup
 
 	err := sdk.FromUnstructured(obj, &ng)
-
-	var needToken bool
-	switch ng.Spec.NodeType {
-	case ngv1.NodeTypeStatic, ngv1.NodeTypeCloudPermanent, ngv1.NodeTypeCloudStatic:
-		needToken = true
-
-	// migration at 25.06.2021, this case have to be deleted after 01.09.2021
-	case "Hybrid":
-		// to avoid race on migration
-		needToken = true
-	}
-
+	// TODO  maybe need to revert?
 	return bootstrapTokenNG{
 		Name:      ng.Name,
-		NeedToken: needToken,
+		NeedToken: true,
 	}, err
 }
 

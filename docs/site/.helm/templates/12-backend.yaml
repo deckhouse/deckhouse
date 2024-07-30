@@ -20,7 +20,7 @@ spec:
         service: backend
     spec:
       imagePullSecrets:
-        - name: registrysecret
+        - name: deckhouse-registry-site
       priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
       containers:
         - name: backend
@@ -75,7 +75,7 @@ spec:
     kind: Deployment
     name: backend
   updatePolicy:
-    updateMode: "Initial"
+    updateMode: "Auto"
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

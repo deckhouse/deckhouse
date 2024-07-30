@@ -1,8 +1,8 @@
 ---
 artifact: apiserver
-from: {{ $.Images.BASE_GOLANG_16_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
 git:
-- add: /modules/040-node-manager/images/bashible-apiserver
+- add: /{{ $.ModulePath }}modules/040-node-manager/images/bashible-apiserver
   to: /src
   excludePaths:
   - "**/*.md"
@@ -19,50 +19,42 @@ git:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
-ansible:
-  beforeInstall:
-  - apk:
-      name: git
-      update_cache: yes
-  - command: rm -rf /var/cache/apk/*
+shell:
   install:
-  - shell: go mod download
-    args:
-      chdir: /src
+  - cd /src
+  - GOPROXY={{ $.GOPROXY }} go mod download
   setup:
-  - shell: go build -ldflags="-s -w" -o bashible-apiserver .
-    args:
-      chdir: /src
-    environment:
-      GOOS: "linux"
-      GOARCH: "amd64"
-      CGO_ENABLED: "0"
+  - cd /src
+  - CGO_ENABLED=0 GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bashible-apiserver .
+  - chown 64535:64535 bashible-apiserver
+  - chmod 0700 bashible-apiserver
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ .Images.BASE_ALPINE }}
+fromImage: common/distroless
 docker:
-  ENTRYPOINT: ["/bashible-apiserver"]
+  ENTRYPOINT: ["/bashible-apiserver", "--tls-cipher-suites", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA"]
 import:
 - artifact: apiserver
   add: /src/bashible-apiserver
   to: /bashible-apiserver
   before: setup
 git:
-{{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) | replace "/deckhouse/candi" "/bashible/templates" }}
-- add: /candi/bashible
-  to: /bashible/templates/bashible
+{{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
+- add: /{{ .ModulePath }}candi/bashible
+  to: /deckhouse/candi/bashible
   stageDependencies:
     beforeSetup:
     - "*"
   includePaths:
   - bundles
   - common-steps
+  - bootstrap
   - bashible.sh.tpl
+
   excludePaths:
-  - "**/bootstrap.sh.tpl"
   - "**/cluster-bootstrap"
-- add: /candi/cloud-providers
-  to: /bashible/templates/cloud-providers
+- add: /{{ .ModulePath }}candi/cloud-providers
+  to: /deckhouse/candi/cloud-providers
   stageDependencies:
     beforeSetup:
     - "*"

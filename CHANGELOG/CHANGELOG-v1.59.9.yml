@@ -1,0 +1,15 @@
+flant-integration:
+  fixes:
+    - summary: Fix resources counting.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8291
+operator-prometheus:
+  fixes:
+    - summary: Add TLS-assets for email and webhook receivers into secret which mount into alertmanager.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8302
+prometheus:
+  fixes:
+    - summary: >-
+        Switch Alertmanager configuration selector from `alertmanagerConfigSelector` to
+        `alertmanagerConfiguration`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8302
+

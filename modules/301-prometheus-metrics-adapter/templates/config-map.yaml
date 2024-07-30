@@ -17,8 +17,8 @@ data:
       metricsQuery: 'label_replace(<<.Series>>{<<.LabelMatchers>>}, "__name__", "$1", "__name__", "^kube_adapter_metric_(.*)$")'
     resourceRules:
       cpu:
-        containerQuery: sum(irate(container_cpu_usage_seconds_total{<<.LabelMatchers>>, container!="POD"}[5m])) by (<<.GroupBy>>)
-        nodeQuery: sum(irate(container_cpu_usage_seconds_total{<<.LabelMatchers>>}[5m])) by (<<.GroupBy>>)
+        containerQuery: sum(irate(container_cpu_usage_seconds_total{<<.LabelMatchers>>, container!="POD"}[{{ mul (.Values.global.discovery.prometheusScrapeInterval | default 30) 4 }}s])) by (<<.GroupBy>>)
+        nodeQuery: sum(irate(container_cpu_usage_seconds_total{<<.LabelMatchers>>}[{{ mul (.Values.global.discovery.prometheusScrapeInterval | default 30) 4 }}s])) by (<<.GroupBy>>)
         resources:
           overrides:
             node:
@@ -40,7 +40,7 @@ data:
             pod:
               resource: pod
         containerLabel: container
-      window: 30s
+      window: 0s
     rules:
     - seriesQuery: 'ingress_nginx_detail_requests_total{namespace!="",ingress!=""}'
       resources:
@@ -50,7 +50,7 @@ data:
       name:
         matches: ".*"
         as: "rps_1m"
-      metricsQuery: 'sum(irate(<<.Series>>{<<.LabelMatchers>>}[5m])) by (<<.GroupBy>>)'
+      metricsQuery: 'sum(irate(<<.Series>>{<<.LabelMatchers>>}[5m])) by (<<.GroupBy>>) OR on() vector(0)'
     - seriesQuery: 'container_cpu_usage_seconds_total{namespace!="",pod!="",container!="POD"}'
       resources:
         overrides:
@@ -78,7 +78,7 @@ data:
       name:
         matches: ".*"
         as: "rps_{{ . }}"
-      metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[{{ . }}])) by (<<.GroupBy>>)'
+      metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[{{ . }}])) by (<<.GroupBy>>) OR on() vector(0)'
     - seriesQuery: 'container_cpu_usage_seconds_total{namespace!="",pod!="",container!="POD"}'
       resources:
         overrides:

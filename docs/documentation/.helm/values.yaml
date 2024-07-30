@@ -1,13 +1,14 @@
 priorityClassName:
   _default: develop
   production: production-medium
-ingress:
-  secret_name:
-    _default: ingress-le-tls
+
+ingressClass:
+  _default: nginx
+  prod-sel: nginx-tfprod
 
 resources:
   requests:
     memory:
-      _default: 20M
-      production: 50M
+      _default: 30M
+      web-production: 50M
 

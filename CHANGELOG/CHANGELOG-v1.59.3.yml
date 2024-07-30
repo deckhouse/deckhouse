@@ -1,0 +1,13 @@
+dhctl:
+  features:
+    - summary: Add options for dhctl mirror to pull only specific release and skip modules option.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8063
+documentation:
+  fixes:
+    - summary: Update module version badge to display only the module version instead of the dropdown list.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8145
+global-hooks:
+  fixes:
+    - summary: Fix K8s upgrade migration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8148
+

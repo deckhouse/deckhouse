@@ -33,7 +33,7 @@ func TestDeleteMachinesIfResourcesExist(t *testing.T) {
 	t.Run("Without sap API registration", func(t *testing.T) {
 		fakeClient := client.NewFakeKubernetesClient()
 
-		err := checkMachinesAPI(fakeClient)
+		err := checkMCMMachinesAPI(fakeClient)
 		require.EqualError(t, err, "the server could not find the requested resource, GroupVersion \"machine.sapcloud.io/v1alpha1\" not found")
 	})
 
@@ -46,7 +46,7 @@ func TestDeleteMachinesIfResourcesExist(t *testing.T) {
 			APIResources: []metav1.APIResource{},
 		})
 
-		err := checkMachinesAPI(fakeClient)
+		err := checkMCMMachinesAPI(fakeClient)
 		require.EqualError(t, err, "0 of 2 resources found in the cluster")
 	})
 
@@ -68,7 +68,7 @@ func TestDeleteMachinesIfResourcesExist(t *testing.T) {
 			},
 		})
 
-		err := checkMachinesAPI(fakeClient)
+		err := checkMCMMachinesAPI(fakeClient)
 		require.EqualError(t, err, "1 of 2 resources found in the cluster")
 	})
 
@@ -98,7 +98,7 @@ func TestDeleteMachinesIfResourcesExist(t *testing.T) {
 			},
 		})
 
-		err := checkMachinesAPI(fakeClient)
+		err := checkMCMMachinesAPI(fakeClient)
 		require.NoError(t, err)
 	})
 }

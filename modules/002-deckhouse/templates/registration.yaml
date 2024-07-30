@@ -1,14 +1,17 @@
-{{/* Release channel and bundle for 600-flant-integration module.  */}}
-{{- if (.Values.global.enabledModules | has "flant-integration") }}
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: d8-deckhouse-flant-integration
+  name: deckhouse-discovery
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 type: Opaque
 data:
   bundle: {{ b64enc .Values.deckhouse.bundle }}
   releaseChannel: {{ .Values.deckhouse.releaseChannel | default "Unknown" | b64enc }}
+{{- if .Values.deckhouse.update }}
+  updateSettings.json: {{ .Values.deckhouse.update | toJson | b64enc }}
+{{- end }}
+{{- if $.Values.global.discovery.clusterUUID }}
+  clusterUUID: {{ $.Values.global.discovery.clusterUUID | b64enc }}
 {{- end }}

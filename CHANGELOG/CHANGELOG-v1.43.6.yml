@@ -1,0 +1,16 @@
+admission-policy-engine:
+  fixes:
+    - summary: Fix PDBs for controllers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3886
+cni-cilium:
+  fixes:
+    - summary: fix vpa resource for cni-cilium agent.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3890
+    - summary: Preserve default tunnel port `8472` for virtualization workloads.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3887
+      impact: Short network downtime for virtualization enabled clusters.
+virtualization:
+  fixes:
+    - summary: Disable metrics by default in the `vmi-router`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3876
+

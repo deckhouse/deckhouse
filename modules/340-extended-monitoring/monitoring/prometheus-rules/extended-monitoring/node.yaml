@@ -7,7 +7,8 @@
           (node_filesystem_size_bytes - node_filesystem_avail_bytes)
           /
           node_filesystem_size_bytes
-        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_bytes",type="hard"})))
+        ) * 100
+      )
       > on (node) group_left()
       (
         max by (node) (extended_monitoring_node_threshold{threshold="disk-bytes-warning"})
@@ -21,8 +22,16 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
       plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+      description: |-
+        Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of the storage capacity.
+        Currently at: {{ .Value }}%
+
+        Retrieve the disk usage info on the node: `ncdu -x {{$labels.mountpoint}}'
+
+        If the output shows high disk usage in the /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/ directory, use the following command to show the pods with the highest usage:
+        `crictl stats -o json | jq '.stats[] | select((.writableLayer.usedBytes.value | tonumber) > 1073741824) | { meta: .attributes.labels, diskUsage: ((.writableLayer.usedBytes.value | tonumber) / 1073741824 * 100 | round / 100 | tostring + " GiB")}'`
       summary: |-
-        Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
+        Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of the storage capacity.
         Currently at: {{ .Value }}%
 
   - alert: NodeDiskBytesUsage
@@ -32,7 +41,8 @@
           (node_filesystem_size_bytes - node_filesystem_avail_bytes)
           /
           node_filesystem_size_bytes
-        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_bytes",type="hard"})))
+        ) * 100
+      )
       > on (node) group_left()
       (
         max by (node) (extended_monitoring_node_threshold{threshold="disk-bytes-critical"})
@@ -57,7 +67,8 @@
           (node_filesystem_files - node_filesystem_files_free)
           /
           node_filesystem_files
-        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_inodes",type="hard"})))
+        ) * 100
+      )
       > on (node) group_left()
       (
         max by (node) (extended_monitoring_node_threshold{threshold="disk-inodes-warning"})
@@ -82,7 +93,8 @@
           (node_filesystem_files - node_filesystem_files_free)
           /
           node_filesystem_files
-        ) * 100 unless (max by (node, mountpoint) ({__name__=~"kubelet_eviction_.+_inodes",type="hard"})))
+        ) * 100
+      ) 
       > on (node) group_left()
       (
         max by (node) (extended_monitoring_node_threshold{threshold="disk-inodes-critical"})

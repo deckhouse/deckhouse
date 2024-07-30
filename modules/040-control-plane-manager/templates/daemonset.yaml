@@ -14,10 +14,10 @@ memory: 10Mi
 {{- $images := dict }}
 {{- range $component := list "kubeApiserver" "kubeControllerManager" "kubeScheduler" }}
   {{- $componentWithSuffix := printf "%s%s" $component $kubeImageTagSuffix }}
-  {{- $_ := set $images $componentWithSuffix (get $.Values.global.modulesImages.tags.controlPlaneManager $componentWithSuffix) }}
+  {{- $_ := set $images $componentWithSuffix (get $.Values.global.modulesImages.digests.controlPlaneManager $componentWithSuffix) }}
 {{- end }}
-{{- $_ := set $images "kubeApiserverHealthcheck" $.Values.global.modulesImages.tags.controlPlaneManager.kubeApiserverHealthcheck }}
-{{- $_ := set $images "etcd" $.Values.global.modulesImages.tags.controlPlaneManager.etcd }}
+{{- $_ := set $images "kubeApiserverHealthcheck" $.Values.global.modulesImages.digests.controlPlaneManager.kubeApiserverHealthcheck }}
+{{- $_ := set $images "etcd" $.Values.global.modulesImages.digests.controlPlaneManager.etcd }}
 
 {{- $registry := dict }}
 {{- $_ := set $registry "address" $.Values.global.modulesImages.registry.address }}
@@ -34,6 +34,11 @@ memory: 10Mi
 {{- $_ := set $tpl_context "apiserver" dict }}
 {{- $_ := set $tpl_context "resourcesRequestsMilliCpuControlPlane" .Values.global.internal.modules.resourcesRequests.milliCpuControlPlane }}
 {{- $_ := set $tpl_context "resourcesRequestsMemoryControlPlane" .Values.global.internal.modules.resourcesRequests.memoryControlPlane }}
+
+{{- $allowedKubernetesVersions := list }}
+{{- range $key, $_ := $tpl_context.k8s }}
+  {{- $allowedKubernetesVersions = append $allowedKubernetesVersions (toString $key) }}
+{{- end }}
 
 {{- if hasKey .Values.controlPlaneManager.internal "etcdServers" }}
   {{- $_ := set $tpl_context.apiserver "etcdServers" .Values.controlPlaneManager.internal.etcdServers }}
@@ -60,6 +65,12 @@ memory: 10Mi
     {{- end }}
     {{- if .Values.controlPlaneManager.apiserver.authn.webhookCacheTTL }}
       {{ $_ := set $tpl_context.apiserver "authnWebhookCacheTTL" .Values.controlPlaneManager.apiserver.authn.webhookCacheTTL }}
+    {{- end }}
+    {{- if .Values.controlPlaneManager.internal.audit.webhookURL }}
+      {{ $_ := set $tpl_context.apiserver "auditWebhookURL" .Values.controlPlaneManager.internal.audit.webhookURL }}
+    {{- end }}
+    {{- if .Values.controlPlaneManager.internal.audit.webhookCA }}
+      {{ $_ := set $tpl_context.apiserver "auditWebhookCA" .Values.controlPlaneManager.internal.audit.webhookCA }}
     {{- end }}
   {{- end }}
   {{- if hasKey .Values.controlPlaneManager.apiserver "authz" }}
@@ -111,6 +122,10 @@ extra-file-oidc-ca.crt: {{ $tpl_context.apiserver.oidcCA | b64enc }}
 extra-file-webhook-config.yaml: {{ include "webhookTemplate" (dict "webhookCA" $tpl_context.apiserver.webhookCA "webhookURL" $tpl_context.apiserver.webhookURL) | b64enc }}
   {{- end }}
 
+  {{- if $tpl_context.apiserver.auditWebhookURL }}
+extra-file-audit-webhook-config.yaml: {{ include "auditWebhookTemplate" (dict "webhookCA" $tpl_context.apiserver.auditWebhookCA "webhookURL" $tpl_context.apiserver.auditWebhookURL) | b64enc }}
+  {{- end }}
+
   {{- if $tpl_context.apiserver.authnWebhookURL }}
 extra-file-authn-webhook-config.yaml: {{ include "authnWebhookTemplate" (dict "webhookCA" $tpl_context.apiserver.authnWebhookCA "webhookURL" $tpl_context.apiserver.authnWebhookURL) | b64enc }}
   {{- end }}
@@ -159,7 +174,7 @@ spec:
       maxAllowed:
         cpu: 50m
         memory: 80Mi
-    {{- range $name, $imageTag := $images }}
+    {{- range $name, $imageDigest := $images }}
     - containerName: image-holder-{{ $name | kebabcase }}
       minAllowed:
         {{- include "image_holder_resources" $ | nindent 8 }}
@@ -190,7 +205,7 @@ spec:
     spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple . "any-uninitialized-node") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: d8-control-plane-manager
@@ -227,10 +242,18 @@ spec:
               fieldPath: metadata.name
         - name: KUBERNETES_VERSION
           value: {{ .Values.global.clusterConfiguration.kubernetesVersion | quote }}
+        - name: ALLOWED_KUBERNETES_VERSIONS
+          value: {{ $allowedKubernetesVersions | sortAlpha | join  "," | quote }}
+        livenessProbe:
+          httpGet:
+            host: 127.0.0.1
+            path: /healthz
+            port: 8095
         readinessProbe:
-          exec:
-            command:
-            - readiness-check
+          httpGet:
+            host: 127.0.0.1
+            path: /readyz
+            port: 8095
           initialDelaySeconds: 10
           periodSeconds: 3
           timeoutSeconds: 8
@@ -240,9 +263,9 @@ spec:
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "control_plane_manager_resources" . | nindent 12 }}
 {{- end }}
-{{- range $name, $imageTag := $images }}
+{{- range $name, $imageDigest := $images }}
       - name: image-holder-{{ $name | kebabcase }}
-        image: "{{ $.Values.global.modulesImages.registry.base }}:{{ $imageTag }}"
+        image: "{{ $.Values.global.modulesImages.registry.base }}@{{ $imageDigest }}"
         command:
         - /pause
   {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}

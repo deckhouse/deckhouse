@@ -1,0 +1,37 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := $key | toString }}
+  {{- $patch := $value.patch | toString }}
+  {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - kubelet
+  - kubelet.service
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    kubelet: {{ printf "%s.%s" $version $patch }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    setup:
+    - '**/*'
+import:
+- artifact: common/kubernetes-artifact-{{ $image_version }}
+  add: /src/_output/bin/kubelet
+  to: /kubelet
+  before: setup
+{{- end }}

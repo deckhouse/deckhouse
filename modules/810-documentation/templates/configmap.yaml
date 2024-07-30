@@ -1,0 +1,125 @@
+{{/*
+   NOTES:
+   1. This ConfigMap is deprecated, documentation uses ConfigMap/d8-deckhouse-version-info,
+      that is created by 002-deckhouse.
+   2. This resource is left intact to prevent Pod stuck in Terminating state.
+   3. Delete this template the next release after migrating to DeckhouseConfig resources.
+  */}}
+{{- if and .Values.global.modules.publicDomainTemplate  .Values.global.clusterIsBootstrapped }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: documentation
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "documentation")) | nindent 2 }}
+data:
+  data.json: >
+    {"channel":"unknown", "version":"unknown", "edition":"unknown"}
+{{- end }}
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: documentation-nginx-config
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "documentation")) | nindent 2 }}
+data:
+  nginx.conf: |
+    worker_processes 1;
+    error_log /dev/stderr warn;
+    pid       /tmp/nginx.pid;
+
+    events {
+      worker_connections 1024;
+      multi_accept on;
+    }
+
+    http {
+      include       /opt/nginx-static/conf/mime.types;
+      default_type  application/octet-stream;
+
+      client_body_temp_path /tmp/client_temp;
+      proxy_temp_path       /tmp/proxy_temp;
+      fastcgi_temp_path     /tmp/fastcgi_temp;
+      uwsgi_temp_path       /tmp/uwsgi_temp;
+      scgi_temp_path        /tmp/scgi_temp;
+
+      access_log off;
+
+      log_format json_combined escape=json '{ "time_local": "$time_local", '
+        '"host": "$host", '
+        '"remote_addr": "$remote_addr", '
+        '"remote_user": "$remote_user", '
+        '"request": "$request", '
+        '"status": "$status", '
+        '"body_bytes_sent": "$body_bytes_sent", '
+        '"request_time": "$request_time", '
+        '"http_referrer": "$http_referer", '
+        '"http_user_agent": "$http_user_agent" }';
+
+      keepalive_timeout  65;
+
+      ssi on;
+      gzip off;
+
+      map $uri $lang {
+        "~^/ru/"      "ru";
+        "~^/en/"      "en";
+        default       "en";
+      }
+
+      server {
+        listen   8080;
+        server_name _;
+
+        root   /app;
+        index  index.html readme.html;
+        error_page 403 404 /$lang/404.html;
+
+        charset utf-8;
+        access_log     /dev/stdout json_combined;
+
+        location /link_test_report.txt {
+          deny all;
+        }
+
+        location = /healthz {
+            access_log  off;
+            add_header Content-Type text/plain;
+            return 200;
+        }
+
+        location /config {
+            try_files $uri $uri/ =404;
+        }
+
+        location ~* ^(/(ru|en))?/(platform/)?(presentations|assets|images|js|css)/(.+)$ {
+            try_files /platform/$4/$5 /platform/$4/$5/ =404;
+        }
+
+        location ~* ^/(ru|en)/modules/([^0-9]+[^/]+)/(.*)$ {
+            try_files /modules/$1/$2/$3 /modules/$1/$2/$3/ /modules/$1/$2/$3readme.html /modules/$1/$2/$3/readme.html =404;
+        }
+
+        location ~* ^/(ru|en)/modules/$ {
+            try_files /modules/$1/readme.html =404;
+        }
+
+        location ~* ^/(ru|en)/platform/(.*) {
+            try_files /platform/$1/$2 /platform/$1/$2/ /platform/$1/$2index.html /platform/$1/$2/index.html  =404;
+        }
+
+        location ~* ^/platform/(ru|en)/(.*) {
+            try_files $uri $uri/ =404;
+        }
+
+        location ~* ^/modules/(ru|en)/([^0-9]+[^/]+)/(.*)$ {
+            try_files $uri $uri/ =404;
+        }
+
+        location / {
+            try_files /platform$uri /platform$uri/index.html /platform$uri/ /platform/$lang/$uri /platform/$lang/$uri/index.html /platform/$lang/$uri/ =404;
+        }
+      }
+    }

@@ -1,5 +1,5 @@
 ---
-title: "Модуль keepalived: Custom Resources"
+title: "Модуль keepalived: custom resources"
 ---
 
 <!-- SCHEMA -->

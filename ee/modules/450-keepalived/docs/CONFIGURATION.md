@@ -2,6 +2,8 @@
 title: "The keepalived module: configuration"
 ---
 
+{% include module-alerts.liquid %}
+
 {% include module-bundle.liquid %}
 
-Keepalived clusters are configured using the [Custom Resource](cr.html).
+Keepalived clusters are configured using the [custom resource](cr.html).

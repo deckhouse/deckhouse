@@ -28,7 +28,7 @@ type Vector struct {
 
 	Address string `json:"address"`
 
-	TLS CommonTLS `json:"tls,omitempty"`
+	TLS CommonTLS `json:"tls"`
 
 	Keepalive VectorKeepalive `json:"keepalive,omitempty"`
 }
@@ -39,13 +39,6 @@ type VectorKeepalive struct {
 
 func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Vector {
 	spec := cspec.Vector
-
-	// Disable buffer. It is buggy. Vector developers know about problems with buffer.
-	// More info about buffer rewriting here - https://github.com/vectordotdev/vector/issues/9476
-	// common.Buffer = buffer{
-	//	Size: 100 * 1024 * 1024, // 100MiB in bytes for vector persistent queue
-	//	Type: "disk",
-	// }
 
 	tls := CommonTLS{
 		CAFile:            decodeB64(spec.TLS.CAFile),
@@ -70,11 +63,12 @@ func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Vector {
 			Name:   ComposeName(name),
 			Type:   "vector",
 			Inputs: set.New(),
+			Buffer: buildVectorBuffer(cspec.Buffer),
 		},
 		TLS:     tls,
 		Version: "2",
 		Address: spec.Endpoint,
-		// TODO(nabokikhms): Only available for vector the first version sink, consider different load balancing solution
+		// TODO(nabokihms): Only available for vector the first version sink, consider different load balancing solution
 		//
 		// Keepalive: VectorKeepalive{
 		//	TimeSecs: 7200,

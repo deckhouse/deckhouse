@@ -1,0 +1,5 @@
+loki:
+  fixes:
+    - summary: Fixed a volume mount init container.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5941
+

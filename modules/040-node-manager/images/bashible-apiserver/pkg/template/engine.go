@@ -1,18 +1,42 @@
+/*
+Copyright 2023 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package template
 
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"text/template"
 
+	"github.com/mitchellh/copystructure"
 	"github.com/pkg/errors"
 )
 
 type Engine struct {
 	Name string
 	Data map[string]interface{}
+}
+
+// deepCopyData make a non-shallow copy of Data field
+func (e Engine) deepCopyData() map[string]interface{} {
+	ret := copystructure.Must(copystructure.Copy(e.Data))
+	return ret.(map[string]interface{})
 }
 
 // Render
@@ -85,8 +109,11 @@ func (e Engine) renderWithTemplate(tmpl string, t *template.Template) (out *byte
 		return nil, cleanupParseError(e.Name, err)
 	}
 
+	data := e.deepCopyData()
+	data["Files"] = Files{}
+
 	var buf bytes.Buffer
-	if err := t.ExecuteTemplate(&buf, e.Name, e.Data); err != nil {
+	if err := t.ExecuteTemplate(&buf, e.Name, data); err != nil {
 		return nil, cleanupExecError(e.Name, err)
 	}
 
@@ -139,4 +166,22 @@ var warnRegex = regexp.MustCompile(warnStartDelim + `(.*)` + warnEndDelim)
 
 func warnWrap(warn string) string {
 	return warnStartDelim + warn + warnEndDelim
+}
+
+// mocking Helm's .Files.Get
+type Files struct {
+}
+
+// implements .Files.Get
+// helm version of .Files.Get returns empty string if file does not exists
+// https://github.com/helm/helm/blob/main/pkg/engine/files.go#L42-L54
+func (_ Files) Get(path string) (string, error) {
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", err
+	}
+	return string(contents), nil
 }

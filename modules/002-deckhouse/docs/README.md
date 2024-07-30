@@ -17,7 +17,7 @@ In Deckhouse, this module sets up:
 
   Deckhouse supports **manual** and **automatic** update modes.
 
-  In the manual upgrade mode, only critical fixes (patch releases) are automatically applied, and upgrading to a more current Deckhouse release requires [manual confirmation](cr.html#deckhouserelease-v1alpha1-approved).
+  In the manual upgrade mode, only critical fixes (patch releases) are automatically applied, and upgrading to a more current Deckhouse release requires [manual confirmation](../../cr.html#deckhouserelease-v1alpha1-approved).
 
   In the automatic update mode, Deckhouse switches to a newer release as soon as it is available in the corresponding release channel unless [update windows](configuration.html#parameters-update-windows) are **configured** for the cluster. If update windows are **configured** for the cluster, Deckhouse will upgrade to a newer release during the next available update window.
 
@@ -29,13 +29,13 @@ In Deckhouse, this module sets up:
 
 #### Get Deckhouse releases status
 
-You can get Deckhouse releases list via the command `kubectl get deckhousereleases`. By default, a cluster keeps the last 10 outdated releases and all deployed/pending releases.
+You can get Deckhouse releases list via the command `kubectl get deckhousereleases`. By default, a cluster keeps the last 10 Superseded releases and all deployed/pending releases.
 
 Every release can have one of the following statuses:
 * `Pending` - release is waiting to be deployed: waiting for update window, canary deployment, etc. You can see the detailed status via the `kubectl describe deckhouserelease $name` command.
-* `Deployed` - release is applied. It means that the Deckhouse image tag was changed, but the update process of all components
+* `Deployed` - release is applied. It means that the image tag of the Deckhouse Pod was changed, but the update process of all components
 is going asynchronously and could not have been finished yet.
-* `Outdated` - release is outdated and not used anymore.
+* `Superseded` - release is outdated and not used anymore.
 * `Suspended` - release was suspended (for ex. it has an error). Can be set only if `suspended` release was not deployed yet.
 
 #### Update process

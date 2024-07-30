@@ -1,0 +1,150 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: modulereleases.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: external-module-manager
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: modulereleases
+    singular: modulerelease
+    kind: ModuleRelease
+    shortNames:
+      - mr
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the configuration for Deckhouse release.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - moduleName
+                - version
+              properties:
+                moduleName:
+                  type: string
+                  description: Module name.
+                version:
+                  type: string
+                  description: Module version.
+                  example: 'v1.0.0'
+                weight:
+                  type: integer
+                  description: Module weight.
+                applyAfter:
+                  type: string
+                  description: Marks release as a part of canary release. This release will be delayed until this time.
+                requirements:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: Deckhouse release requirements.
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum:
+                    - Pending
+                    - Deployed
+                    - Superseded
+                    - Suspended
+                  description: Current status of the release.
+                message:
+                  type: string
+                  description: Detailed status or error message.
+                transitionTime:
+                  type: string
+                  description: Time of release status change.
+                approved:
+                  type: boolean
+                  description: |
+                    The status of the release's readiness for deployment. It makes sense only for Manual updates (`update.mode: Manual`).
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: phase
+          jsonPath: .status.phase
+          type: string
+          description: 'Current release status.'
+        - name: transitionTime
+          jsonPath: .status.transitionTime
+          type: date
+          format: date-time
+          description: 'When the release status was changed.'
+        - name: message
+          jsonPath: .status.message
+          type: string
+          description: 'Release status details.'
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: modules.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: deckhouse
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: modules
+    singular: module
+    kind: Module
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Shows basic information about the Deckhouse module.
+
+            > The Module resource cannot be changed. It is intended only for getting information about the module (read-only).
+          properties:
+            properties:
+              type: object
+              properties:
+                weight:
+                  type: integer
+                  description: 'Module weight (priority).'
+                state:
+                  type: string
+                  description: 'Module state.'
+                  enum:
+                    - Enabled
+                    - Disabled
+                source:
+                  type: string
+                  description: 'ModuleSource name of the module if provided by one (otherwise empty).'
+                description:
+                  type: string
+                  description: 'Module description.'
+      additionalPrinterColumns:
+        - name: weight
+          jsonPath: .properties.weight
+          type: integer
+          description: 'Module weight (priority).'
+        - name: state
+          jsonPath: .properties.state
+          type: string
+          description: 'Module state. Enabled or Disabled.'
+        - name: source
+          jsonPath: .properties.source
+          type: string
+          description: 'ModuleSource name of the module if provided by one (otherwise empty).'

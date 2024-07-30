@@ -29,42 +29,42 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func GetModulesImagesTags(modulePath string) (map[string]interface{}, error) {
+func GetModulesImagesDigests(modulePath string) (map[string]interface{}, error) {
 	var (
-		modulesTags map[string]interface{}
-		search      bool
+		modulesDigests map[string]interface{}
+		search         bool
 	)
 
-	if fi, err := os.Stat(filepath.Join(filepath.Dir(modulePath), "images_tags.json")); err != nil || fi.Size() == 0 {
+	if fi, err := os.Stat(filepath.Join(filepath.Dir(modulePath), "images_digests.json")); err != nil || fi.Size() == 0 {
 		search = true
 	}
 
 	var err error
 	if search {
-		modulesTags = DefaultImagesTags
+		modulesDigests = DefaultImagesDigests
 	} else {
-		modulesTags, err = getModulesImagesTagsFromLocalPath(modulePath)
+		modulesDigests, err = getModulesImagesDigestsFromLocalPath(modulePath)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return modulesTags, nil
+	return modulesDigests, nil
 }
 
-func getModulesImagesTagsFromLocalPath(modulePath string) (map[string]interface{}, error) {
-	var tags map[string]interface{}
+func getModulesImagesDigestsFromLocalPath(modulePath string) (map[string]interface{}, error) {
+	var digests map[string]interface{}
 
-	imageTagsRaw, err := os.ReadFile(filepath.Join(filepath.Dir(modulePath), "images_tags.json"))
+	imageDigestsRaw, err := os.ReadFile(filepath.Join(filepath.Dir(modulePath), "images_digests.json"))
 	if err != nil {
 		return nil, err
 	}
-	err = json.Unmarshal(imageTagsRaw, &tags)
+	err = json.Unmarshal(imageDigestsRaw, &digests)
 	if err != nil {
 		return nil, err
 	}
 
-	return tags, nil
+	return digests, nil
 }
 
 func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]interface{}, error) {
@@ -80,7 +80,7 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 	)
 
 	// 0. Get values from values-default.yaml
-	globalValuesRaw, err := os.ReadFile(filepath.Join("/deckhouse", "modules", "values.yaml"))
+	globalValuesRaw, err := os.ReadFile(filepath.Join(filepath.Dir(filepath.Clean(modulePath)), "values.yaml"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
@@ -112,15 +112,15 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 		return nil, err
 	}
 
-	// 3. Get image tags
-	tags, err := GetModulesImagesTags(modulePath)
+	// 3. Get image digests
+	digests, err := GetModulesImagesDigests(modulePath)
 	if err != nil {
 		return nil, err
 	}
 	moduleImagesValues = map[string]interface{}{
 		"global": map[string]interface{}{
 			"modulesImages": map[string]interface{}{
-				"tags": tags,
+				"digests": digests,
 			},
 		},
 	}

@@ -131,10 +131,10 @@ func (ws Windows) NextAllowedTime(min time.Time) time.Time {
 					if min.After(fromTime) || min.Equal(fromTime) {
 						windowMinTime = min
 						break
-					} else {
-						windowMinTime = fromTime
-						break
 					}
+
+					windowMinTime = fromTime
+					break
 				}
 			}
 			nextDay = nextDay.AddDate(0, 0, 1)

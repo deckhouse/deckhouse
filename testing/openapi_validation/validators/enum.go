@@ -36,6 +36,8 @@ var (
 			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.zones.items",
 			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.zones.items",
 			"apiVersions[0].openAPISpec.properties.zones.items",
+			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.instanceClass.properties.diskType",
+			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.instanceClass.properties.diskType",
 		},
 		// disk types - gp2.,..
 		"candi/cloud-providers/aws/openapi/cluster_configuration.yaml": {
@@ -72,6 +74,24 @@ var (
 			// v1alpha1 migrated to v1
 			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.access",
 		},
+		"modules/015-admission-policy-engine/crds/operation-policy.yaml": {
+			// probes are inherited from Kubernetes
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.policies.properties.requiredProbes.items",
+			// requests and limits are cpu and memory, they are taken from kubernetes
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.policies.properties.requiredResources.properties.requests.items",
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.policies.properties.requiredResources.properties.limits.items",
+		},
+		"modules/015-admission-policy-engine/crds/security-policy.yaml": {
+			// volumes are inherited from kubernetes
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.policies.properties.allowedVolumes.items",
+			// capabilities names are hardcoded, it's not ours
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.policies.properties.allowedCapabilities.items",
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.policies.properties.requiredDropCapabilities.items",
+		},
+		"modules/015-admission-policy-engine/openapi/values.yaml": {
+			// enforcement actions are discovered from label values and should be propagated further into the helm chart as is
+			"properties.internal.properties.podSecurityStandards.properties.enforcementActions.items",
+		},
 		"modules/030-cloud-provider-azure/openapi/config-values.yaml": {
 			// ignore Azure disk types
 			"properties.storageClass.properties.provision.items.properties.type",
@@ -81,6 +101,15 @@ var (
 			// ignore AWS disk types
 			"properties.storageClass.properties.provision.items.properties.type",
 			"properties.storageClass.properties.provision.items.oneOf[*].properties.type",
+		},
+		"modules/030-cloud-provider-openstack/openapi/values.yaml": {
+			// ignore internal values
+			"properties.internal.properties.discoveryData.properties.apiVersion",
+		},
+		// for local tests run
+		"ee/modules/030-cloud-provider-openstack/openapi/values.yaml": {
+			// ignore internal values
+			"properties.internal.properties.discoveryData.properties.apiVersion",
 		},
 		"modules/030-cloud-provider-aws/openapi/values.yaml": {
 			// ignore AWS disk types
@@ -100,6 +129,22 @@ var (
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
 		},
 		"ee/modules/030-cloud-provider-vsphere/openapi/values.yaml": {
+			// ignore internal values
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
+			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+		},
+		"modules/030-cloud-provider-vcd/openapi/values.yaml": {
+			// ignore internal values
+			"properties.internal.properties.discoveryData.properties.apiVersion",
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
+			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+		},
+		"modules/030-cloud-provider-zvirt/openapi/values.yaml": {
+			// ignore internal values
+			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
+		},
+		"ee/modules/030-cloud-provider-vcd/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
@@ -136,12 +181,12 @@ var (
 			// GeoIP base constants: GeoIP2-ISP, GeoIP2-ASN, ...
 			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.geoIP2.properties.maxmindEditionIDs.items",
 		},
-		"modules/099-ceph-csi/crds/cephcsi.yaml": {
+		"modules/031-ceph-csi/crds/cephcsi.yaml": {
 			// ignore file system names: ext4, xfs, etc.
 			"properties.internal.properties.crs.items.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType",
 			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType",
 		},
-		"modules/099-ceph-csi/openapi/values.yaml": {
+		"modules/031-ceph-csi/openapi/values.yaml": {
 			// ignore file system names: ext4, xfs, etc.
 			"properties.internal.properties.crs.items.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType",
 			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType",
@@ -153,6 +198,10 @@ var (
 		"ee/modules/380-metallb/openapi/config-values.yaml": {
 			// ignore enum values
 			"properties.addressPools.items.properties.protocol",
+		},
+		"candi/cloud-providers/azure/openapi/cluster_configuration.yaml": {
+			// ignore enum values
+			"apiVersions[*].openAPISpec.properties.serviceEndpoints.items",
 		},
 	}
 

@@ -1,0 +1,11 @@
+documentation:
+  fixes:
+    - summary: Remove deckhouse-web mc on migration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4991
+    - summary: Add migration for the `documentation` module (former name - `deckhouse-web`).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4982
+      impact: >-
+        If you deploy the `deckhouse-web` moduleConfig via a CI/CD process, then you have to replace
+        it with the `documentation` moduleConfig (run `kubectl get mc documentation -o yaml` to get
+        its content).
+

@@ -61,7 +61,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, clusterIsBootstrapped)
 
-func applyClusterBootstrapCmFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyClusterBootstrapCmFilter(_ *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	// we only need to check the configmap existence
 	return true, nil
 }

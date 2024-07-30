@@ -30,7 +30,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-func newKubeCSR(org string, cn string, dnsNames []string, ipAddresses []string) *cv1.CertificateSigningRequest {
+func newKubeCSR(org string, cn string, dnsNames []string, ipAddresses []string, usages []cv1.KeyUsage) *cv1.CertificateSigningRequest {
 	csrPEM, _, _ := certificate.GenerateCSR(nil, cn, certificate.WithNames(csr.Name{O: org}), certificate.WithCSRKeyRequest(&csr.KeyRequest{A: "rsa", S: 2048}), certificate.WithSANs(dnsNames...), certificate.WithSANs(ipAddresses...))
 
 	return &cv1.CertificateSigningRequest{
@@ -45,7 +45,7 @@ func newKubeCSR(org string, cn string, dnsNames []string, ipAddresses []string) 
 			Username:   "system:node:dev-master-0",
 			SignerName: "kubernetes.io/kubelet-serving",
 			Request:    csrPEM,
-			Usages:     []cv1.KeyUsage{cv1.UsageDigitalSignature, cv1.UsageKeyEncipherment, cv1.UsageServerAuth},
+			Usages:     usages,
 			Groups:     []string{"system:nodes", "system:authenticated"},
 		},
 	}
@@ -67,7 +67,28 @@ var _ = Describe("Modules :: nodeManager :: hooks :: kubelet_csr_approver ::", f
 
 	Context("Cluster with proper csr, with IPAddresses and DNSNames", func() {
 		BeforeEach(func() {
-			csr := newKubeCSR("system:nodes", "system:node:dev-master-0", []string{"node1"}, []string{"1.2.3.4"})
+			csrUsages := []cv1.KeyUsage{cv1.UsageDigitalSignature, cv1.UsageKeyEncipherment, cv1.UsageServerAuth}
+			csr := newKubeCSR("system:nodes", "system:node:dev-master-0", []string{"node1"}, []string{"1.2.3.4"}, csrUsages)
+			csrYaml, _ := yaml.Marshal(csr)
+
+			f.BindingContexts.Set(f.KubeStateSet(string(csrYaml)))
+			_, _ = f.KubeClient().CertificatesV1().CertificateSigningRequests().Create(context.TODO(), csr, metav1.CreateOptions{})
+
+			f.RunHook()
+		})
+
+		It("Must be executed successfully and approve csr", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			csr, err := f.KubeClient().CertificatesV1().CertificateSigningRequests().Get(context.TODO(), "kubelet-csr", metav1.GetOptions{})
+			Expect(err).To(BeNil())
+			Expect(csr.Status.Conditions[0].Type).To(Equal(cv1.CertificateApproved))
+		})
+	})
+
+	Context("Cluster with proper csr (without UsageKeyEncipherment), with IPAddresses and DNSNames", func() {
+		BeforeEach(func() {
+			csrUsages := []cv1.KeyUsage{cv1.UsageDigitalSignature, cv1.UsageServerAuth}
+			csr := newKubeCSR("system:nodes", "system:node:dev-master-0", []string{"node1"}, []string{"1.2.3.4"}, csrUsages)
 			csrYaml, _ := yaml.Marshal(csr)
 
 			f.BindingContexts.Set(f.KubeStateSet(string(csrYaml)))
@@ -86,7 +107,8 @@ var _ = Describe("Modules :: nodeManager :: hooks :: kubelet_csr_approver ::", f
 
 	Context("Cluster with proper csr, with IPAddresses and without DNSNames", func() {
 		BeforeEach(func() {
-			csr := newKubeCSR("system:nodes", "system:node:dev-master-0", nil, []string{"1.2.3.4"})
+			csrUsages := []cv1.KeyUsage{cv1.UsageDigitalSignature, cv1.UsageKeyEncipherment, cv1.UsageServerAuth}
+			csr := newKubeCSR("system:nodes", "system:node:dev-master-0", nil, []string{"1.2.3.4"}, csrUsages)
 			csrYaml, _ := yaml.Marshal(csr)
 
 			f.BindingContexts.Set(f.KubeStateSet(string(csrYaml)))
@@ -105,7 +127,8 @@ var _ = Describe("Modules :: nodeManager :: hooks :: kubelet_csr_approver ::", f
 
 	Context("Cluster with proper csr, without IPAddresses and with DNSNames", func() {
 		BeforeEach(func() {
-			csr := newKubeCSR("system:nodes", "system:node:dev-master-0", []string{"foobar"}, nil)
+			csrUsages := []cv1.KeyUsage{cv1.UsageDigitalSignature, cv1.UsageKeyEncipherment, cv1.UsageServerAuth}
+			csr := newKubeCSR("system:nodes", "system:node:dev-master-0", []string{"foobar"}, nil, csrUsages)
 			csrYaml, _ := yaml.Marshal(csr)
 
 			f.BindingContexts.Set(f.KubeStateSet(string(csrYaml)))
@@ -124,7 +147,8 @@ var _ = Describe("Modules :: nodeManager :: hooks :: kubelet_csr_approver ::", f
 
 	Context("Cluster with wrong csr (Organization must match 'system:nodes')", func() {
 		BeforeEach(func() {
-			csr := newKubeCSR("foobar", "system:node:dev-master-0", []string{"foobar"}, []string{"1.2.3.4"})
+			csrUsages := []cv1.KeyUsage{cv1.UsageDigitalSignature, cv1.UsageKeyEncipherment, cv1.UsageServerAuth}
+			csr := newKubeCSR("foobar", "system:node:dev-master-0", []string{"foobar"}, []string{"1.2.3.4"}, csrUsages)
 			csrYaml, _ := yaml.Marshal(csr)
 
 			f.BindingContexts.Set(f.KubeStateSet(string(csrYaml)))
@@ -143,7 +167,8 @@ var _ = Describe("Modules :: nodeManager :: hooks :: kubelet_csr_approver ::", f
 
 	Context("Cluster with wrong csr (CommonName must start with 'system:node:')", func() {
 		BeforeEach(func() {
-			csr := newKubeCSR("system:nodes", "dev-master-0", []string{"foobar"}, []string{"1.2.3.4"})
+			csrUsages := []cv1.KeyUsage{cv1.UsageDigitalSignature, cv1.UsageKeyEncipherment, cv1.UsageServerAuth}
+			csr := newKubeCSR("system:nodes", "dev-master-0", []string{"foobar"}, []string{"1.2.3.4"}, csrUsages)
 			csrYaml, _ := yaml.Marshal(csr)
 
 			f.BindingContexts.Set(f.KubeStateSet(string(csrYaml)))

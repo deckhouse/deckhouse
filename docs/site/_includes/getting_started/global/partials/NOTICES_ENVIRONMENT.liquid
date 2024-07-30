@@ -1,22 +1,11 @@
 {%- if page.platform_type == "cloud" %}
+{% alert level="warning" %}
 {%- if page.lang == "ru" %}
-> Перед началом установки убедитесь в наличии квот облачного провайдера, необходимых для развертывания вашего кластера.{%- if page.platform_code == "aws" %} Проверьте наличие доступа к необходимым регионам.{%- endif %}
-{%- if page.platform_code == "gcp" %}
->
-> Перед началом установки убедитесь, что у вас включен [Compute Engine API](https://console.cloud.google.com/marketplace/product/google/compute.googleapis.com).
-{%- endif %}
+Перед началом установки убедитесь в наличии квот облачного провайдера, необходимых для развертывания вашего кластера.{%- if page.platform_code == "aws" %} Проверьте наличие доступа к необходимым регионам.{%- endif %}{%- if page.platform_code == "gcp" %} Убедитесь, что у вас включен [Compute Engine API](https://console.cloud.google.com/marketplace/product/google/compute.googleapis.com).{%- endif %}
 {%- else %}
-> Before starting the installation, ensure you have the cloud provider quotas required to deploy your cluster.{%- if page.platform_code == "aws" %} Make sure that you have access to the desired regions.{%- endif %}.
-{%- if page.platform_code == "gcp" %}
->
-> Before starting the installation, ensure you have [Compute Engine API](https://console.cloud.google.com/marketplace/product/google/compute.googleapis.com) enabled.
+Before starting the installation, ensure you have the cloud provider quotas required to deploy your cluster.{%- if page.platform_code == "aws" %} Make sure that you have access to the desired regions.{%- endif %}{%- if page.platform_code == "gcp" %} Ensure you have [Compute Engine API](https://console.cloud.google.com/marketplace/product/google/compute.googleapis.com) enabled.{%- endif %}
 {%- endif %}
-{%- endif %}
+{% endalert %}
 {%- endif %}
 {%- if page.platform_type == 'existing' %}
-{%- if page.lang == "ru" %}
-> **Внимание!** Установка Deckhouse в существующий кластер EKS AWS (Amazon Elastic Kubernetes Service) в настоящий момент не поддерживается.
-{%- else %}
-> **Caution!** Installing Deckhouse into an existing EKS AWS (Amazon Elastic Kubernetes Service) cluster is not currently supported.
-{%- endif %}
 {%- endif %}

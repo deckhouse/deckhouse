@@ -1,0 +1,43 @@
+---
+artifact: docs-builder-artifact
+from: {{ .ctx.Images.BASE_GOLANG_20_ALPINE }}
+ansible:
+  install:
+    - name: Download dependencies
+      shell: |
+        go mod tidy
+      args:
+        executable: /bin/sh
+        chdir: /go/src/app
+  setup:
+    - name: Build docs-builder
+      shell: |
+        go build -ldflags "-w -s" -v -o /go/src/app/server /go/src/app/
+      args:
+        executable: /bin/sh
+        chdir: /go/src/app
+git:
+  - add: /docs/site/backends/docs-builder
+    to: /go/src/app
+    stageDependencies:
+      install: 'go.mod'
+      setup: '**/*'
+---
+image: docs-builder
+from: {{ .ctx.Images.BASE_ALPINE }}
+docker:
+  WORKDIR: /app
+import:
+  - artifact: docs-builder-artifact
+    add: /go/src/app/server
+    to: /app/server
+    before: setup
+git:
+  - add: /docs/site/backends/docs-builder-template
+    to: /app/hugo
+{{ if eq .mode "module" }}
+    excludePaths:
+    - config/production/
+  - add: /{{ .ctx.ModulePath }}modules/810-documentation/images/web/modules-docs/hugo.yaml
+    to: /app/hugo/config/production/hugo.yaml
+{{ end }}

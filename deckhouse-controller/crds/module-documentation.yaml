@@ -1,0 +1,77 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: moduledocumentations.deckhouse.io
+  labels:
+    heritage: deckhouse
+    app.kubernetes.io/name: deckhouse
+    app.kubernetes.io/part-of: deckhouse
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: moduledocumentations
+    singular: moduledocumentation
+    kind: ModuleDocumentation
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the rendering configuration of the Deckhouse module documentation.
+
+            **Deckhouse creates ModuleDocumentation resources by itself.**
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - version
+              properties:
+                version:
+                  type: string
+                  description: Module version.
+                  x-doc-examples: ['v1.0.0']
+                checksum:
+                  type: string
+                  description: Module version checksum.
+                path:
+                  type: string
+                  description: Path to the module version.
+            status:
+              type: object
+              properties:
+                result:
+                  type: string
+                conditions:
+                  type: array
+                  x-kubernetes-patch-strategy: "retainKeys"
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      version:
+                        type: string
+                      checksum:
+                        type: string
+                      address:
+                        type: string
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        type: string
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: result
+          jsonPath: .status.result
+          type: string
+          description: 'Current render status.'
+

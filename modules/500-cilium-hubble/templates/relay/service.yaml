@@ -11,4 +11,4 @@ spec:
   ports:
   - protocol: TCP
     port: 443
-    targetPort: 4245
+    targetPort: grpc

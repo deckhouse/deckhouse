@@ -53,7 +53,7 @@ spec:
                   properties:
                     address:
                       type: string
-                      x-examples: [ "http://alerts.mycompany.com", "https://alerts.company.com", "http://192.168.1.1" ]
+                      x-doc-examples: [ "http://alerts.mycompany.com", "https://alerts.company.com", "http://192.168.1.1" ]
                       pattern: "^https?://[^\\s/$.?#].[^\\s]*$"
                       description: URL of an external Alertmanager.
                     auth:

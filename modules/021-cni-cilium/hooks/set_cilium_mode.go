@@ -98,6 +98,9 @@ func setCiliumMode(input *go_hook.HookInput) error {
 		if input.ConfigValues.Get("cniCilium.tunnelMode").String() == "VXLAN" {
 			input.Values.Set("cniCilium.internal.mode", "VXLAN")
 			return nil
+		} else if input.ConfigValues.Get("cniCilium.tunnelMode").String() == "Disabled" {
+			// to recover default value if it was discovered before
+			input.Values.Set("cniCilium.internal.mode", "Direct")
 		}
 	}
 

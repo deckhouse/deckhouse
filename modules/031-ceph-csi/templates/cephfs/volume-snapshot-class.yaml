@@ -1,0 +1,21 @@
+# Source https://github.com/ceph/ceph-csi/blob/devel/examples/cephfs/snapshotclass.yaml
+{{- if (.Values.global.enabledModules | has "snapshot-controller") }}
+  {{- range $cr := .Values.cephCsi.internal.crs }}
+    {{- if $cr.spec.cephfs }}
+      {{- range $sc := $cr.spec.cephfs.storageClasses }}
+---
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  {{- include "helm_lib_module_labels" (list $ (dict "app" $.Chart.Name)) | nindent 2 }}
+  name: {{ $cr.name }}-{{ $sc.namePostfix }}
+driver: cephfs.csi.ceph.com
+parameters:
+  clusterID: {{ $cr.spec.clusterID }}
+  csi.storage.k8s.io/snapshotter-secret-name: csi-{{ $cr.name }}
+  csi.storage.k8s.io/snapshotter-secret-namespace: d8-{{ $.Chart.Name }}
+deletionPolicy: Delete
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}

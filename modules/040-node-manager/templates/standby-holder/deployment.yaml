@@ -3,11 +3,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  annotations:
-    extended-monitoring.flant.com/enabled: "false"
   name: standby-holder-{{ $ng.name }}
   namespace: d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "standby-holder")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "standby-holder" "extended-monitoring.deckhouse.io/enabled" "")) | nindent 2 }}
 spec:
   selector:
     matchLabels:

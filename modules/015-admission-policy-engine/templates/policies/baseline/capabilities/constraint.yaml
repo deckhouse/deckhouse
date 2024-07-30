@@ -1,2 +1,0 @@
-{{- $parameters := dict "allowedCapabilities" (list "AUDIT_WRITE" "CHOWN" "DAC_OVERRIDE" "FOWNER" "FSETID" "KILL" "MKNOD" "NET_BIND_SERVICE" "SETFCAP" "SETGID" "SETPCAP" "SETUID" "SYS_CHROOT") }}
-{{- include "pod_security_standard_baseline" (list . "D8PSSCapabilities" $parameters ) }}

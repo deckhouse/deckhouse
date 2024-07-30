@@ -16,6 +16,8 @@ package template_tests
 
 import (
 	"encoding/base64"
+	"fmt"
+	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -38,9 +40,9 @@ const globalValues = `
       provider: vSphere
     clusterDomain: cluster.local
     clusterType: Cloud
-    defaultCRI: Docker
+    defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "%s"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -51,7 +53,7 @@ const globalValues = `
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.21.11
+    kubernetesVersion: "%s.1"
 `
 
 const moduleValuesA = `
@@ -124,6 +126,8 @@ const moduleValuesB = `
         internalNetworkNames: ["ccc", "ddd"]
       providerDiscoveryData:
         resourcePoolPath: kubernetes-dev
+        zones:
+        - default
 `
 
 const moduleValuesC = `
@@ -219,9 +223,23 @@ const moduleValuesD = `
 var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
+	BeforeSuite(func() {
+		err := os.Remove("/deckhouse/ee/modules/030-cloud-provider-vsphere/candi")
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Symlink("/deckhouse/ee/candi/cloud-providers/vsphere", "/deckhouse/ee/modules/030-cloud-provider-vsphere/candi")
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	AfterSuite(func() {
+		err := os.Remove("/deckhouse/ee/modules/030-cloud-provider-vsphere/candi")
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Symlink("/deckhouse/candi/cloud-providers/vsphere", "/deckhouse/ee/modules/030-cloud-provider-vsphere/candi")
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
 	Context("Vsphere", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesA)
 			f.HelmRender()
@@ -321,7 +339,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Vsphere", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesB)
 			f.HelmRender()
@@ -365,13 +383,10 @@ vcenter:
     server: "myhost"
     datacenters:
       - "X1"
-    externalNetworkNames:
-      - aaa
-      - bbb
-    internalNetworkNames:
-      - ccc
-      - ddd
-    vmFolderPath: dev/test
+
+nodes:
+  externalVmNetworkName: aaa,bbb
+  internalVmNetworkName: ccc,ddd
 
 labels:
   region: "myregtagcat"
@@ -384,7 +399,7 @@ labels:
 
 		Context("Unsupported Kubernetes version", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesA)
 				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
@@ -402,7 +417,7 @@ labels:
 
 	Context("Vsphere with default StorageClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesB)
 			f.ValuesSetFromYaml("cloudProviderVsphere.internal.defaultStorageClass", `mydsname2`)
@@ -428,7 +443,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Vsphere with NSX-T specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesC)
 			f.HelmRender()
@@ -452,13 +467,6 @@ vcenter:
     server: "myhost"
     datacenters:
       - "X1"
-    externalNetworkNames:
-      - aaa
-      - bbb
-    internalNetworkNames:
-      - ccc
-      - ddd
-    vmFolderPath: dev/test
 
 labels:
   region: "myregtagcat"
@@ -475,13 +483,16 @@ nsxt:
   host: 1.2.3.4
   password: password
   user: user
+nodes:
+  externalVmNetworkName: aaa,bbb
+  internalVmNetworkName: ccc,ddd
 `))
 		})
 	})
 
 	Context("Vsphere with NSX-T with LoadBalancerClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesD)
 			f.HelmRender()
@@ -521,18 +532,15 @@ nsxt:
   password: password
   user: user
 
+nodes:
+  externalVmNetworkName: aaa,bbb
+  internalVmNetworkName: ccc,ddd
+
 vcenter:
   main:
     datacenters:
     - X1
-    externalNetworkNames:
-    - aaa
-    - bbb
-    internalNetworkNames:
-    - ccc
-    - ddd
     server: myhost
-    vmFolderPath: dev/test
 `))
 		})
 	})

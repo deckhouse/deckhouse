@@ -32,9 +32,9 @@ import (
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
-// applyTags if ugly because values now are strongly untyped. We have to rewrite this after adding proper global schema
-func applyTags(tags map[string]interface{}, values interface{}) {
-	values.(map[string]interface{})["global"].(map[string]interface{})["modulesImages"].(map[string]interface{})["tags"] = tags
+// applyDigests if ugly because values now are strongly untyped. We have to rewrite this after adding proper global schema
+func applyDigests(digests map[string]interface{}, values interface{}) {
+	values.(map[string]interface{})["global"].(map[string]interface{})["modulesImages"].(map[string]interface{})["digests"] = digests
 }
 
 func isExist(baseDir, filename string) bool {
@@ -45,7 +45,7 @@ func isExist(baseDir, filename string) bool {
 func Run(tmpDir string, m utils.Module) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("panic on linter run occurred:\n\n%v", string(debug.Stack()))
+			err = fmt.Errorf("panic on linter run occurred:\n%s\n\n%v", r, string(debug.Stack()))
 		}
 	}()
 

@@ -1,25 +1,37 @@
 osDistributions:
-  ubuntu:
-    name: Ubuntu
-    url: https://ubuntu.com/download/server
+  altlinux:
+    name: ALT Linux
+    url: https://www.altlinux.org/
+    ru_support: 'true'
+    en_support: 'false'
+  astra:
+    name: Astra Linux Special Edition
+    url: https://astralinux.ru/products/astra-linux-special-edition/
+    ru_support: 'true'
+    en_support: 'false'
   centos:
     name: CentOS
     url: https://www.centos.org/download/
   debian:
     name: Debian
     url: https://www.debian.org/download
-  astra:
-    name: Astra Linux Special Edition
-    url: https://astralinux.ru/products/astra-linux-special-edition/
   rocky:
     name: Rocky Linux
     url: https://rockylinux.org/download
-  alteros:
-    name: AlterOS
-    url: https://alter-os.ru/
+  ubuntu:
+    name: Ubuntu
+    url: https://ubuntu.com/download/server
   '_redos':
     name: 'РЕД ОС'
     url: https://redos.red-soft.ru/product/server/
+    ru_support: 'true'
+    en_support: 'false'
+  '_rosa':
+    name: 'РОСА Сервер'
+    url: https://rosa.ru
+    ru_support: 'true'
+    en_support: 'false'
+    additional_notes: 'true'
 
 k8s_statuses:
   end-of-life:
@@ -34,3 +46,50 @@ k8s_statuses:
   preview:
     en: Early access version, which is not suitable for production environments.
     ru: Версия с ранним доступом, которая не подходит для использования в production-окружениях.
+
+registries:
+  nexus:
+    longname: Sonatype Nexus Repository
+    shortname: Nexus
+    url: https://github.com/sonatype/nexus-public
+  harbor:
+    longname: Harbor
+    shortname: Harbor
+    url: https://github.com/goharbor/harbor
+  artifactory:
+    longname: JFrog Artifactory
+    shortname: Artifactory
+    url: https://jfrog.com/artifactory/
+  dockerv2:
+    longname: Docker Registry v2
+    shortname: Docker Registry
+    url: https://docs.docker.com/registry/
+  quay:
+    longname: Project Quay
+    shortname: Quay
+    url: https://quay.io/
+    additionalInfo:
+      ru: |
+        <em>Требуется добавить поддержку <a href="https://access.redhat.com/documentation/en-us/red_hat_quay/3/html/use_red_hat_quay/oci-intro#other-oci-artifacts-with-quay" target="_blank">дополнительных типов артефактов OCI.</a></em>
+        <pre>
+        FEATURE_GENERAL_OCI_SUPPORT: true
+        ALLOWED_OCI_ARTIFACT_TYPES:
+          "application/vnd.aquasec.trivy.config.v1+json":
+            - "application/vnd.aquasec.trivy.db.layer.v1.tar+gzip"
+          "application/octet-stream":
+            - "application/deckhouse.io.bdu.layer.v1.tar+gzip"
+          "application/vnd.oci.empty.v1+json":
+            - "application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip"
+        </pre>
+      en: |
+        <em>It is required to add support for <a href="https://access.redhat.com/documentation/en-us/red_hat_quay/3/html/use_red_hat_quay/oci-intro#other-oci-artifacts-with-quay" target="_blank">additional types of OCI artifacts.</a></em>
+        <pre>
+        FEATURE_GENERAL_OCI_SUPPORT: true
+        ALLOWED_OCI_ARTIFACT_TYPES:
+          "application/vnd.aquasec.trivy.config.v1+json":
+            - "application/vnd.aquasec.trivy.db.layer.v1.tar+gzip"
+          "application/octet-stream":
+            - "application/deckhouse.io.bdu.layer.v1.tar+gzip"
+          "application/vnd.oci.empty.v1+json":
+            - "application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip"
+        </pre>

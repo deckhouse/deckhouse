@@ -2,6 +2,8 @@
 title: "The cilium-hubble module: configuration"
 ---
 
+{% include module-alerts.liquid %}
+
 {% include module-bundle.liquid %}
 
 The module will be left disabled unless `cni-cilium` is used regardless of `ciliumHubbleEnabled:` parameter.
@@ -19,7 +21,7 @@ Use kubectl to see password:
 kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values cilium-hubble -o json | jq '.ciliumHubble.internal.auth.password'
 ```
 
-Delete secret to re-generate password:
+Delete the Secret to re-generate password:
 
 ```shell
 kubectl -n d8-cni-cilium delete secret/hubble-basic-auth

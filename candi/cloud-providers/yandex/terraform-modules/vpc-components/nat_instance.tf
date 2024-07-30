@@ -35,7 +35,7 @@ locals {
   zone_to_subnet_id = tomap({
       "ru-central1-a" = local.should_create_subnets ? yandex_vpc_subnet.kube_a[0].id : (local.not_have_existing_subnet_a ? null : data.yandex_vpc_subnet.kube_a[0].id)
       "ru-central1-b" = local.should_create_subnets ? yandex_vpc_subnet.kube_b[0].id : (local.not_have_existing_subnet_b ? null : data.yandex_vpc_subnet.kube_b[0].id)
-      "ru-central1-c" = local.should_create_subnets ? yandex_vpc_subnet.kube_c[0].id : (local.not_have_existing_subnet_c ? null : data.yandex_vpc_subnet.kube_c[0].id)
+      "ru-central1-d" = local.should_create_subnets ? yandex_vpc_subnet.kube_d[0].id : (local.not_have_existing_subnet_d ? null : data.yandex_vpc_subnet.kube_d[0].id)
     })
 
   # we can not use one map because we will get cycle
@@ -43,7 +43,7 @@ locals {
   zone_to_cidr = tomap({
     "ru-central1-a" = local.should_create_subnets ? local.kube_a_v4_cidr_block : (local.not_have_existing_subnet_a ? null : data.yandex_vpc_subnet.kube_a[0].v4_cidr_blocks[0])
     "ru-central1-b" = local.should_create_subnets ? local.kube_b_v4_cidr_block : (local.not_have_existing_subnet_b ? null : data.yandex_vpc_subnet.kube_b[0].v4_cidr_blocks[0])
-    "ru-central1-c" = local.should_create_subnets ? local.kube_c_v4_cidr_block : (local.not_have_existing_subnet_c ? null : data.yandex_vpc_subnet.kube_c[0].v4_cidr_blocks[0])
+    "ru-central1-d" = local.should_create_subnets ? local.kube_d_v4_cidr_block : (local.not_have_existing_subnet_d ? null : data.yandex_vpc_subnet.kube_d[0].v4_cidr_blocks[0])
   })
 
   # if user set internal subnet id for nat instance get cidr from its subnet
@@ -88,20 +88,33 @@ locals {
     EOF
 
     netplan apply
+
+    # Load conntrack module at boot time
+    cat > /etc/modules-load.d/ip_conntrack.conf <<EOF
+    ip_conntrack
+    EOF
+
+    cat > /etc/sysctl.d/999-netfilter-nf-conntrack.conf <<EOF
+    net.netfilter.nf_conntrack_max=1048576
+    net.netfilter.nf_conntrack_tcp_timeout_time_wait=30
+    EOF
+
+    sysctl -p /etc/sysctl.d/999-netfilter-nf-conntrack.conf
   EOT
 }
 
 resource "yandex_compute_instance" "nat_instance" {
   count = local.is_with_nat_instance ? 1 : 0
 
-  name         = join("-", [var.prefix, "nat"])
-  hostname     = join("-", [var.prefix, "nat"])
-  zone         = local.internal_subnet_zone
+  name                      = join("-", [var.prefix, "nat"])
+  hostname                  = join("-", [var.prefix, "nat"])
+  zone                      = local.internal_subnet_zone
+  network_acceleration_type = "software_accelerated"
 
-  platform_id  = "standard-v2"
+  platform_id = "standard-v2"
   resources {
-    cores  = 2
-    memory = 2
+    cores  = var.nat_instance_cores
+    memory = var.nat_instance_memory
   }
 
   boot_disk {
@@ -134,6 +147,7 @@ resource "yandex_compute_instance" "nat_instance" {
       metadata,
       boot_disk[0].initialize_params[0].image_id,
       boot_disk[0].initialize_params[0].size,
+      network_acceleration_type,
     ]
   }
 

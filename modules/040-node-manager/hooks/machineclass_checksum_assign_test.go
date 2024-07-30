@@ -76,8 +76,8 @@ var _ = Describe("Modules :: node-manager :: hooks :: MachineClass checksum calc
 - name: worker
   nodeType: CloudEphemeral
   cri:
-    type: Docker
-  kubernetesVersion: "1.21"
+    type: Containerd
+  kubernetesVersion: "1.29"
   manualRolloutID: ""
   updateEpoch: "112714"
   disruptions:
@@ -180,14 +180,14 @@ spec: {}
                 "minPerZone": 3,
                 "zones": [ "nova" ]
             },
-            "cri": { "type": "Docker" },
+            "cri": { "type": "Containerd" },
             "disruptions": { "approvalMode": "Automatic" },
             "instanceClass": {
                 "flavorName": "m1.small",
                 "imageName": "ubuntu-18-04-cloud-amd64",
                 "mainNetwork": "dev2"
             },
-            "kubernetesVersion": "1.21",
+            "kubernetesVersion": "1.29",
             "manualRolloutID": "",
             "updateEpoch": "112714"
         }]`
@@ -311,9 +311,9 @@ internal:
       iops: 42
       instanceType: t2.medium
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: AWSInstanceClass
@@ -347,9 +347,9 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: GCPInstanceClass
@@ -383,9 +383,9 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: GCPInstanceClass
@@ -423,9 +423,9 @@ internal:
       - mynetwork
       - mynetwork2
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: OpenStackInstanceClass
@@ -445,9 +445,9 @@ internal:
         aaa: bbb
         ccc: ddd
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: OpenStackInstanceClass
@@ -489,9 +489,9 @@ internal:
         nestedHardwareVirtualization: true
         memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: VsphereInstanceClass
@@ -535,9 +535,9 @@ internal:
       additionalLabels: # optional
         my: label
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.21"
+    kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: YandexInstanceClass
@@ -942,11 +942,16 @@ func newCloudProviderAvailabilityChecker() func(tYpE string) {
 // containing corresponding checksum template in cloud-providers directory.
 func getAvailableCloudProviderTypes() set.Set {
 	ptypes := set.New()
-
-	modulesDir, ok := os.LookupEnv("MODULES_DIR")
-	if !ok {
-		modulesDir = "../.."
+	for _, modulesInEditionDir := range []string{"/deckhouse/modules", "/deckhouse/ee/modules", "/deckhouse/ee/fe/modules"} {
+		ptypes.AddSet(getAvailableCloudProviderTypesInDir(modulesInEditionDir))
 	}
+
+	return ptypes
+}
+
+func getAvailableCloudProviderTypesInDir(modulesDir string) set.Set {
+	ptypes := set.New()
+
 	dir := filepath.Join(modulesDir, "040-node-manager", "cloud-providers")
 
 	files, err := os.ReadDir(dir)

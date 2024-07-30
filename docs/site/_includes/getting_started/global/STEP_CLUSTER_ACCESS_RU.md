@@ -6,7 +6,7 @@
 ## Подключение к master-узлу
 Deckhouse завершил процесс установки кластера. Осталось выполнить некоторые настройки, для чего необходимо подключиться к **master-узлу**.
 
-Подключитесь к master-узлу по SSH (IP-адрес master-узла был выведен инсталлятором по завершении установки, но вы также можете найти его используя web-интерфейс или CLI&#8209;утилиты облачного провайдера):
+Подключитесь к master-узлу по SSH (IP-адрес master-узла был выведен инсталлятором по завершении установки, но вы также можете найти его используя веб-интерфейс или CLI&#8209;утилиты облачного провайдера):
 {% snippetcut %}
 ```shell
 ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
@@ -16,13 +16,13 @@ ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code =
 Проверьте работу kubectl, выведя список узлов кластера:
 {% snippetcut %}
 ```shell
-sudo kubectl get nodes
+sudo /opt/deckhouse/bin/kubectl get nodes
 ```
 {% endsnippetcut %}
 
 {% offtopic title="Пример вывода..." %}
 ```
-$ sudo kubectl get nodes
+$ sudo /opt/deckhouse/bin/kubectl get nodes
 NAME                                     STATUS   ROLES                  AGE   VERSION
 cloud-demo-master-0                      Ready    control-plane,master   12h   v1.23.9
 cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v1.23.9
@@ -33,17 +33,18 @@ cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v
 
 {% snippetcut %}
 ```shell
-sudo kubectl -n d8-ingress-nginx get po
+sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
 ```
 {% endsnippetcut %}
 
-Дождитесь перехода Pod'а Ingress-контроллера в статус `Ready`.
+Дождитесь перехода Pod'ов в статус `Ready`.
 
 {% offtopic title="Пример вывода..." %}
 ```
-$ sudo kubectl -n d8-ingress-nginx get po
-NAME                     READY   STATUS    RESTARTS   AGE
-controller-nginx-l2gk6   3/3     Running   0          12m
+$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
+NAME                                       READY   STATUS    RESTARTS   AGE
+controller-nginx-r6hxc                     3/3     Running   0          16h
+kruise-controller-manager-78786f57-82wph   3/3     Running   0          16h
 ```
 {%- endofftopic %}
 
@@ -51,7 +52,7 @@ controller-nginx-l2gk6   3/3     Running   0          12m
 Также дождитесь готовности балансировщика:
 {% snippetcut %}
 ```shell
-sudo kubectl -n d8-ingress-nginx get svc nginx-load-balancer
+sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer
 ```
 {% endsnippetcut %}
 
@@ -59,7 +60,7 @@ sudo kubectl -n d8-ingress-nginx get svc nginx-load-balancer
 
 {% offtopic title="Пример вывода..." %}
 ```
-$ sudo kubectl -n d8-ingress-nginx get svc nginx-load-balancer
+$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer
 NAME                  TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)                      AGE
 nginx-load-balancer   LoadBalancer   10.222.91.204   1.2.3.4         80:30493/TCP,443:30618/TCP   1m
 ```
@@ -82,10 +83,10 @@ nginx-load-balancer   LoadBalancer   10.222.91.204   1.2.3.4         80:30493/TC
 {% snippetcut %}
 {% raw %}
 ```shell
-BALANCER_IP=$(dig $(sudo kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname') +short | head -1) && \
-echo "Balancer IP is '${BALANCER_IP}'." && sudo kubectl patch mc global --type merge \
+BALANCER_IP=$(dig $(sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname') +short | head -1) && \
+echo "Balancer IP is '${BALANCER_IP}'." && sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
-echo "Domain template is '$(sudo kubectl get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
+echo "Domain template is '$(sudo /opt/deckhouse/bin/kubectl get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
 {% endraw %}
 {% endsnippetcut %}
@@ -93,10 +94,10 @@ echo "Domain template is '$(sudo kubectl get mc global -o=jsonpath='{.spec.setti
 {% snippetcut %}
 {% raw %}
 ```shell
-BALANCER_IP=$(sudo kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
-echo "Balancer IP is '${BALANCER_IP}'." && sudo kubectl patch mc global --type merge \
+BALANCER_IP=$(sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
+echo "Balancer IP is '${BALANCER_IP}'." && sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
-echo "Domain template is '$(sudo kubectl get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
+echo "Domain template is '$(sudo /opt/deckhouse/bin/kubectl get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
 {% endraw %}
 {% endsnippetcut %}
@@ -110,7 +111,9 @@ moduleconfig.deckhouse.io/global patched
 Domain template is '%s.1.2.3.4.sslip.io'.
 ```
 
-> Перегенерация сертификатов после изменения шаблона DNS-имен может занять до 5 минут.
+{% alert %}
+Перегенерация сертификатов после изменения шаблона DNS-имен может занять до 5 минут.
+{% endalert %}
 
 {% offtopic title="Другие варианты настройки..." %}
 Вместо сервиса *sslip.io* вы можете использовать другие варианты настройки.
@@ -121,7 +124,7 @@ Domain template is '%s.1.2.3.4.sslip.io'.
 {% snippetcut %}
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
-sudo kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
+sudo /opt/deckhouse/bin/kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
 {% endsnippetcut %}
 </div>
@@ -138,7 +141,7 @@ sudo kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"module
 {% raw %}
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
-sudo kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
+sudo /opt/deckhouse/bin/kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
 {% endraw %}
 {% endsnippetcut %}

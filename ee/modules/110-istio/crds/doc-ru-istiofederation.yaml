@@ -11,9 +11,9 @@ spec:
               properties:
                 trustDomain:
                   description: |
-                    TrustDomain удалённого кластера.
+                    TrustDomain удаленного кластера.
 
                     Несмотря на то, что это обязательный параметр, он не используется на данный момент (так как Istio не умеет сопоставлять TrustDomain и корневой CA).
                 metadataEndpoint:
                   description: |
-                    HTTPS URL, по которому опубликованы метаданные удалённого кластера.
+                    HTTPS URL, по которому опубликованы метаданные удаленного кластера.

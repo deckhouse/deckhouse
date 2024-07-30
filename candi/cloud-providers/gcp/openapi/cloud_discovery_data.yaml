@@ -3,6 +3,18 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
+    x-examples:
+    - apiVersion: deckhouse.io/v1
+      kind: GCPCloudDiscoveryData
+      networkName: test
+      subnetworkName: test
+      zones: ["test"]
+      disableExternalIP: true
+      instances:
+        image: ubuntu
+        diskSizeGb: 50
+        diskType: test
+        networkTags: ["test"]
     additionalProperties: false
     required: [apiVersion, kind, networkName, subnetworkName, zones]
     properties:

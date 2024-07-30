@@ -7,6 +7,7 @@ package hooks
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -20,7 +21,12 @@ import (
 )
 
 func getAllowedApplications() (set.Set, error) {
-	res, err := filepath.Glob("/deckhouse/modules/340-monitoring-applications/applications/*")
+	applicationPaths := "/deckhouse/modules/340-monitoring-applications/applications/*"
+	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
+		applicationPaths = "/deckhouse/ee/fe/modules/340-monitoring-applications/applications/*"
+	}
+
+	res, err := filepath.Glob(applicationPaths)
 	if err != nil {
 		return nil, err
 	}

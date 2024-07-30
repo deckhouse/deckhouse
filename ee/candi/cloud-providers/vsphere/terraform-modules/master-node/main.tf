@@ -135,6 +135,7 @@ resource "vsphere_virtual_machine" "master" {
   datastore_id     = data.vsphere_datastore.datastore.id
   folder           = var.providerClusterConfiguration.vmFolderPath
 
+  firmware = data.vsphere_virtual_machine.template.firmware
   num_cpus = local.master_instance_class.numCPUs
   memory   = local.master_instance_class.memory
   guest_id = data.vsphere_virtual_machine.template.guest_id
@@ -157,7 +158,7 @@ resource "vsphere_virtual_machine" "master" {
   disk {
     label            = "disk0"
     unit_number      = 0
-    size             = lookup(local.master_instance_class, "rootDiskSize", 30)
+    size             = lookup(local.master_instance_class, "rootDiskSize", 50)
     eagerly_scrub    = false
     thin_provisioned = false
   }
@@ -197,6 +198,8 @@ resource "vsphere_virtual_machine" "master" {
       extra_config,
       disk,
       vapp,
+      firmware,
     ]
   }
+  wait_for_guest_net_routable = false
 }

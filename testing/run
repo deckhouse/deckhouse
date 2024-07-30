@@ -21,7 +21,6 @@ export BASE_GOLANG_ALPINE=${BASE_GOLANG_ALPINE:-"golang:1.15.3-alpine3.12"}
 export BASE_GOLANG_16_ALPINE=${BASE_GOLANG_16_ALPINE:-"golang:1.16.3-alpine3.12"}
 export BASE_GOLANG_BUSTER=${BASE_GOLANG_BUSTER:-"golang:1.15.3-buster"}
 export BASE_GOLANG_16_BUSTER=${BASE_GOLANG_16_BUSTER:-"golang:1.16.3-buster"}
-export BASE_SHELL_OPERATOR=${BASE_SHELL_OPERATOR:-"flant/shell-operator:v1.0.1"}
 export BASE_NGINX_ALPINE=${BASE_NGINX_ALPINE:-"nginx:1.15-alpine"}
 export BASE_PYTHON_ALPINE=${BASE_PYTHON_ALPINE:-"python:3.7.9-alpine3.12"}
 export BASE_UBUNTU=${BASE_UBUNTU:-"ubuntu:18.04"}

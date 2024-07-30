@@ -18,6 +18,7 @@ package openapi_validation
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -42,10 +43,73 @@ type fileValidation struct {
 	validationError error
 }
 
+type moduleVersions struct {
+	specVersion        int
+	conversionsVersion int
+}
+
+func modulesVersions(rootPath string) (map[string]*moduleVersions, error) {
+	result := map[string]*moduleVersions{}
+	err := filepath.Walk(rootPath, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() || !strings.HasSuffix(path, ".yaml") {
+			if info.Name() == ".git" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if strings.Contains(path, "/openapi/") {
+			var module string
+			splits := strings.Split(path, "/")
+			for i := 1; i < len(splits); i++ {
+				if splits[i] == "openapi" && i > 0 {
+					module = splits[i-1]
+				}
+			}
+			if module == "" {
+				return nil
+			}
+			if strings.HasSuffix(path, "config-values.yaml") {
+				config := getFileYAMLContent(path)
+				if val, ok := config["x-config-version"]; ok && val.(int) > 1 {
+					if mv, ok := result[module]; ok {
+						mv.specVersion = val.(int)
+					} else {
+						result[module] = &moduleVersions{specVersion: val.(int)}
+					}
+				}
+			}
+			if strings.Contains(path, "/conversions/") {
+				data, err := os.ReadFile(path)
+				if err != nil {
+					return err
+				}
+				var parsed struct {
+					Version int
+				}
+				if err = yaml.Unmarshal(data, &parsed); err != nil {
+					return err
+				}
+				if mv, ok := result[module]; ok {
+					if parsed.Version > mv.conversionsVersion {
+						mv.conversionsVersion = parsed.Version
+					}
+				} else {
+					result[module] = &moduleVersions{conversionsVersion: parsed.Version}
+				}
+			}
+		}
+		return nil
+	})
+	return result, err
+}
+
 // GetOpenAPIYAMLFiles returns all .yaml files which are placed into openapi/ | crds/ directory
 func GetOpenAPIYAMLFiles(rootPath string) ([]string, error) {
 	var result []string
-	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, _ error) error {
 		if info.IsDir() {
 			if info.Name() == ".git" {
 				return filepath.SkipDir
@@ -55,6 +119,11 @@ func GetOpenAPIYAMLFiles(rootPath string) ([]string, error) {
 		}
 
 		if !strings.HasSuffix(path, ".yaml") {
+			return nil
+		}
+
+		// ignore matrix test specs
+		if strings.HasSuffix(path, "-tests.yaml") {
 			return nil
 		}
 
@@ -156,7 +225,7 @@ func isCRD(data map[interface{}]interface{}) bool {
 	return true
 }
 
-func isDechkouseCRD(data map[interface{}]interface{}) bool {
+func isDeckhouseCRD(data map[interface{}]interface{}) bool {
 	kind, ok := data["kind"].(string)
 	if !ok {
 		return false
@@ -183,9 +252,17 @@ func isDechkouseCRD(data map[interface{}]interface{}) bool {
 	return false
 }
 
+func (fp fileParser) parseForWrongKeys(m map[interface{}]interface{}) {
+	keysValidator := validators.NewKeyNameValidator()
+	err := keysValidator.Run(fp.fileName, "allfile", m)
+	if err != nil {
+		fp.resultC <- err
+	}
+}
+
 func runFileParser(fileName string, data map[interface{}]interface{}, resultC chan error) {
 	// exclude external CRDs
-	if isCRD(data) && !isDechkouseCRD(data) {
+	if isCRD(data) && !isDeckhouseCRD(data) {
 		close(resultC)
 		return
 	}
@@ -199,7 +276,9 @@ func runFileParser(fileName string, data map[interface{}]interface{}, resultC ch
 		},
 		resultC: resultC,
 	}
-
+	if isDeckhouseCRD(data) {
+		fileParser.parseForWrongKeys(data)
+	}
 	go fileParser.startParsing(data, resultC)
 }
 

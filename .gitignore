@@ -22,6 +22,7 @@
 .idea/
 .vscode
 venv/
+out/
 
 # local development deckhouse binary
 /deckhouse/deckhouse
@@ -46,7 +47,14 @@ layouts-tests-tmp/
 
 # Dev environment
 bin/
+include/
 
 # Python dev environment
 __pycache__/
+*.py[cod]
 .pytest_cache/
+
+/shell-operator
+
+# Helm lib
+deckhouse_lib_helm-*.tgz

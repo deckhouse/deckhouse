@@ -22,7 +22,7 @@ spec:
 
 ### Service object Annotations
 
-The following parameters are supported in addition to the existing upstream ones:
+The following parameters are supported in addition to the existing [upstream](https://cloud-provider-aws.sigs.k8s.io/service_controller/) ones:
 
 1. `service.beta.kubernetes.io/aws-load-balancer-type` — if it has the `none` value, then the Target Group will **only** be created (without any LoadBalancer).
 2. `service.beta.kubernetes.io/aws-load-balancer-backend-protocol` — this parameter is used together with `service.beta.kubernetes.io/aws-load-balancer-type: none`:

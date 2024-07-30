@@ -1,4 +1,6 @@
 {{- if and .Values.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName .Values.cloudProviderYandex.internal.providerDiscoveryData.monitoringAPIKey }}
+  {{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
+---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
@@ -35,4 +37,5 @@ spec:
   namespaceSelector:
     matchNames:
       - d8-cloud-provider-yandex
+  {{- end }}
 {{- end }}

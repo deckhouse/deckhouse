@@ -1,0 +1,77 @@
+{{- $binaries := "/usr/sbin/conntrack /sbin/xtables-nft-multi /sbin/ip6tables-nft /sbin/ip6tables-nft-restore /sbin/ip6tables-nft-save /sbin/iptables-nft /sbin/iptables-nft-restore /sbin/iptables-nft-save /sbin/xtables-legacy-multi /sbin/iptables /sbin/iptables-restore /sbin/iptables-save /sbin/iptables-legacy /sbin/iptables-legacy-restore /sbin/iptables-legacy-save /sbin/ip6tables /sbin/ip6tables-restore /sbin/ip6tables-save /sbin/ip6tables-legacy /sbin/ip6tables-legacy-restore /sbin/ip6tables-legacy-save /usr/lib64/libnetfilter_conntrack.so* /bin/mknod" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
+shell:
+  install:
+    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+    - mkdir -m 0755 -p /relocate/lib64/iptables /relocate/run
+    - cp -rp /lib64/iptables /relocate/lib64/
+---
+artifact: {{ .ModuleName }}/entrypoint-artifact
+from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+git:
+- add: /{{ $.ModulePath }}/modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint
+  to: /src
+  stageDependencies:
+    install:
+      - '**/*'
+shell:
+  install:
+    - cd /src
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /entrypoint entrypoint.go
+---
+artifact: {{ .ModuleName }}/openssl-artifact
+from: {{ .Images.BASE_ALPINE }}
+shell:
+  install:
+    - apk add --no-cache curl git autoconf automake make libtool g++ linux-headers libnl3-dev libcap-ng-dev lz4-dev linux-pam-dev tree
+    - mkdir -p /src
+    - cd /src
+    - git clone --depth 1 -b openssl-3.1.3 {{ $.SOURCE_REPO }}/openssl/openssl.git
+    - cd openssl
+    - ./Configure gcc -static -no-shared
+    - make -j4
+    - make install_sw DESTDIR=/openssl
+---
+artifact: {{ .ModuleName }}/openvpn-artifact
+from: {{ .Images.BASE_ALPINE }}
+import:
+- artifact: {{ .ModuleName }}/openssl-artifact
+  add: /openssl
+  to: /
+  before: install
+shell:
+  install:
+    - apk add --no-cache curl git autoconf automake make libtool g++ linux-headers libnl3-dev libcap-ng-dev lz4-dev linux-pam-dev tree
+    - mkdir -p /src
+    - cd /src
+    - git clone --depth 1 -b lzo-2.10 {{ $.SOURCE_REPO }}/oberhumer/lzo.git
+    - cd lzo
+    - ./configure --enable-static --disable-debug
+    - make -j4
+    - make install
+    - cd /src
+    - git clone --depth 1 -b v2.5.6 {{ $.SOURCE_REPO }}/OpenVPN/openvpn.git
+    - cd openvpn
+    - autoreconf -vi
+    - ./configure --enable-static --disable-shared --disable-debug --disable-unit-tests --disable-lz4 --disable-plugin-auth-pam --disable-plugin-down-root
+    - make LIBS="-all-static"
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/openvpn-artifact
+  add: /src/openvpn/src/openvpn/openvpn
+  to: /usr/sbin/openvpn
+  before: setup
+- artifact: {{ .ModuleName }}/entrypoint-artifact
+  add: /entrypoint
+  to: /entrypoint
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup

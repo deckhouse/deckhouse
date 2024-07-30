@@ -1,0 +1,180 @@
+admission-policy-engine:
+  features:
+    - summary: Add Java vulnerability scan capability to `trivy-provider`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6139
+      impact: '`trivy-provider` will restart.'
+candi:
+  fixes:
+    - summary: Fix big time drift on nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6297
+      impact: All chrony pods will restart.
+chrony:
+  features:
+    - summary: Chrony image is based on distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6240
+ci:
+  fixes:
+    - summary: Temporary remove "Send report" job.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6352
+common:
+  fixes:
+    - summary: Fix CVE issues in the `kube-rbac-proxy` image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6316
+      impact: The pods that are behind the `kube-rbac-proxy` will restart.
+dashboard:
+  fixes:
+    - summary: Fix apiVersion for CronJobs to display with the dashboard module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5799
+deckhouse:
+  features:
+    - summary: Change `deckhouse-controller` user to `deckhouse`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5841
+deckhouse-controller:
+  features:
+    - summary: >-
+        Use ModuleConfig as the primary source of configuration. Don't use ConfigMap `deckhouse`
+        anymore.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6061
+  fixes:
+    - summary: Fix deckhouse logging and qps settings.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6371
+    - summary: Fix ModuleConfig reading with .spec.version set.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6353
+dhctl:
+  features:
+    - summary: Added pushed images count in dhctl mirror log during push to registry
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6345
+    - summary: >-
+        Implemented copying of Deckhouse images to third-party registries for air-gapped
+        installation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6257
+    - summary: >-
+        Use ModuleConfig to override the default configuration instead of the `configOverrides`
+        section of the `InitConfiguration` resource.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6061
+      impact: >-
+        The
+        [configOverrides](https://deckhouse.io/documentation/v1.54/installing/configuration.html#initconfiguration-deckhouse-configoverrides)
+        parameter of the `InitConfiguration` resource has been deprecated. Use corresponding
+        `ModuleConfig` resources when bootstrapping a new cluster. Read [the
+        documentation](https://deckhouse.io/documentation/latest/installing/#preparing-the-configuration)
+        for additional information.
+  fixes:
+    - summary: Improved the seeding and usage of rand.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5094
+      impact: Higher quality of insecure randomness, slightly better performance.
+extended-monitoring:
+  fixes:
+    - summary: >-
+        Change the node search command for a DaemonSet in the
+        `KubernetesDaemonSetReplicasUnavailable` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6068
+external-module-manager:
+  features:
+    - summary: Add support for module pull from insecure (HTTP) registry.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6340
+  fixes:
+    - summary: Add support for hardlinks and symlinks to the module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6330
+go_lib:
+  fixes:
+    - summary: Fix EnsureCRDs hook - reading an empty yaml document should't trigger an error.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6326
+ingress-nginx:
+  features:
+    - summary: >-
+        Use chrooted image for controller version `1.9`. Add `enable-annotation-validation` feature
+        for version `1.9`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6370
+    - summary: Add v1.9.3 Ingress Nginx controller version.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6312
+      impact: >-
+        In case of switching to '1.9' controller version, relevant Ingress nginx's pods will be
+        recreated.
+    - summary: Add
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6254
+      impact: Open Kruise controller will restart.
+  fixes:
+    - summary: Fix CVE issues in the `protobuf-exporter` image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6327
+    - summary: Fix CVE issues in the `nginx-exporter` image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6325
+    - summary: Fix CVE issues in the `kruise-state-metrics` image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6321
+    - summary: Fix CVE issues in the `kruise` image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6320
+    - summary: >-
+        Change the node search command for a DaemonSet in the
+        `NginxIngressDaemonSetReplicasUnavailable` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6068
+local-path-provisioner:
+  features:
+    - summary: Image is based on distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6194
+  fixes:
+    - summary: Fix CVE issues in the `local-path-provisioner` image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6346
+log-shipper:
+  features:
+    - summary: >-
+        Add an option to encode messages to CEF format (often accepted by SIEM systems, such as KUMA
+        (Kaspersky Unified Monitoring and Analysis Platform).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6406
+  fixes:
+    - summary: Remove buffer locks on startup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6322
+loki:
+  fixes:
+    - summary: Fix CVE issues in the `loki` image. Bump Loki version to `2.7.7`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6375
+metallb:
+  fixes:
+    - summary: Fix error with preserving controller internal state after reboot.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6418
+      impact: Metallb pods will restart.
+monitoring-deckhouse:
+  fixes:
+    - summary: Fix deckhouse metrics fetch.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6379
+monitoring-kubernetes:
+  fixes:
+    - summary: Fix CVE issues in the `kube-state-metrics` image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6336
+monitoring-ping:
+  features:
+    - summary: Image is based on distroless image. Use static Python.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6204
+multitenancy-manager:
+  fixes:
+    - summary: Non-valid `Project` or `ProjectType` resources don't block the main queue.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6049
+node-manager:
+  fixes:
+    - summary: Fix `CVE-2021-4238` and  `GHSA-m425-mq94-257g` in `bashible-apiserver`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6348
+pod-reloader:
+  fixes:
+    - summary: Add a forgotten `nodeSelector`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6338
+prometheus:
+  features:
+    - summary: Ability to set a custom logo for the Grafana dashboard.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6268
+  fixes:
+    - summary: Fix Prometheus image size.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6434
+    - summary: Fix HIGH CVE issues in the `alertmanager` image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6294
+      impact: Check that the alerts come after the update.
+    - summary: Fix HIGH CVE issues in the `trickster` image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6281
+      impact: Check that Prometheus metrics come after the update.
+testing:
+  features:
+    - summary: Add validation test for wrong property names.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5853
+tools:
+  fixes:
+    - summary: To successfully run CVE tests, the Trivy image was excluded from the scan
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6347
+

@@ -38,9 +38,9 @@ var _ = sdk.RegisterFunc(
 				LabelSelector:     labelSelector,
 				FilterFunc:        snapshot.NewStatefulSet,
 
-				ExecuteHookOnEvents:          pointer.BoolPtr(false),
-				ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-				// WaitForSynchronization:       pointer.BoolPtr(false),
+				ExecuteHookOnEvents:          pointer.Bool(false),
+				ExecuteHookOnSynchronization: pointer.Bool(false),
+				// WaitForSynchronization:       pointer.Bool(false),
 			},
 		},
 	},

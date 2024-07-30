@@ -52,6 +52,7 @@ type Loop struct {
 	breakPredicate   BreakPredicate
 	logger           log.Logger
 	interruptable    bool
+	showError        bool
 }
 
 // NewLoop create Loop with features:
@@ -64,6 +65,7 @@ func NewLoop(name string, attemptsQuantity int, wait time.Duration) *Loop {
 		waitTime:         wait,
 		logger:           log.GetDefaultLogger(),
 		interruptable:    true,
+		showError:        true,
 	}
 }
 
@@ -78,6 +80,7 @@ func NewSilentLoop(name string, attemptsQuantity int, wait time.Duration) *Loop 
 		logger:           log.GetSilentLogger(),
 		// - this loop is not interruptable by the signal watcher in tomb package.
 		interruptable: false,
+		showError:     true,
 	}
 }
 
@@ -91,6 +94,11 @@ func (l *Loop) WithInterruptable(flag bool) *Loop {
 	return l
 }
 
+func (l *Loop) WithShowError(flag bool) *Loop {
+	l.showError = flag
+	return l
+}
+
 // Run retries a task function until it succeeded or break task retries if break predicate returns true
 func (l *Loop) Run(task func() error) error {
 	setupTests(&l.attemptsQuantity, &l.waitTime)
@@ -100,7 +108,7 @@ func (l *Loop) Run(task func() error) error {
 		for i := 1; i <= l.attemptsQuantity; i++ {
 			// Check if process is interrupted.
 			if l.interruptable && tomb.IsInterrupted() {
-				return fmt.Errorf("loop was canceled: graceful shutdown")
+				return fmt.Errorf("Loop was canceled: graceful shutdown")
 			}
 
 			// Run task and return if everything is ok.
@@ -116,7 +124,11 @@ func (l *Loop) Run(task func() error) error {
 			}
 
 			l.logger.LogFail(fmt.Sprintf(attemptMessage, i, l.attemptsQuantity, l.name, l.waitTime))
-			l.logger.LogInfoF("\tError: %v\n\n", err)
+			errorMsg := "\t%v\n\n"
+			if l.showError {
+				errorMsg = "\tError: %v\n\n"
+			}
+			l.logger.LogInfoF(errorMsg, err)
 
 			// Do not waitTime after the last iteration.
 			if i < l.attemptsQuantity {
@@ -124,7 +136,7 @@ func (l *Loop) Run(task func() error) error {
 			}
 		}
 
-		return fmt.Errorf("timeout while %q: last error: %v", l.name, err)
+		return fmt.Errorf("Timeout while %q: last error: %v", l.name, err)
 	}
 
 	return l.logger.LogProcess("default", l.name, loopBody)

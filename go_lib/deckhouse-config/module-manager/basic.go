@@ -26,15 +26,21 @@ import (
 // InitBasic creates basic ModuleManager without additional components.
 // It is sufficient to list modules and validate values. It is suitable
 // for separated webhooks and tests.
-func InitBasic(globalHooksDir string, modulesDir string) (module_manager.ModuleManager, error) {
+func InitBasic(globalHooksDir string, modulesDir string) (*module_manager.ModuleManager, error) {
 	tempDir := os.Getenv("ADDON_OPERATOR_TMP_DIR")
 	if tempDir == "" {
 		tempDir = "."
 	}
 
-	mm := module_manager.NewModuleManager()
-	mm.WithContext(context.Background())
-	mm.WithDirectories(modulesDir, globalHooksDir, tempDir)
+	dirs := module_manager.DirectoryConfig{
+		ModulesDir:     modulesDir,
+		GlobalHooksDir: globalHooksDir,
+		TempDir:        tempDir,
+	}
+	cfg := module_manager.ModuleManagerConfig{
+		DirectoryConfig: dirs,
+	}
+	mm := module_manager.NewModuleManager(context.Background(), &cfg)
 
 	err := mm.Init()
 	if err != nil {

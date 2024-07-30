@@ -20,19 +20,32 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 type inputPublishAPICACert struct {
-	manifests      string
-	httpMode       string
-	publishAPIMode string
+	manifests          string
+	httpMode           string
+	publishAPIMode     string
+	kubeconfigMasterCA *string
 }
 
 var _ = Describe("User Authn hooks :: discover publish api cert ::", func() {
 	f := HookExecutionConfigInit(
-		`{"userAuthn":{"publishAPI": {"enable": true, "https":{"mode": "SelfSigned"}}, "internal": {}, "https": {"mode": "CertManager"}}}`,
+		`
+global:
+  discovery:
+    kubernetesCA: "discoveredKubernetesCA"
+userAuthn:
+  publishAPI:
+    enabled: true
+    https:
+      mode: SelfSigned
+  internal: {}
+  https:
+    mode: CertManager`,
 		"",
 	)
 	selfSignedCertSecret := `
@@ -72,6 +85,10 @@ data:
 			f.ValuesSet("userAuthn.publishAPI.https.mode", in.publishAPIMode)
 			f.ValuesSet("userAuthn.https.mode", in.httpMode)
 
+			if in.kubeconfigMasterCA != nil {
+				f.ValuesSet("userAuthn.publishAPI.https.global.kubeconfigGeneratorMasterCA", *in.kubeconfigMasterCA)
+			}
+
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())
@@ -83,7 +100,7 @@ data:
 				publishAPIMode: "SelfSigned",
 				httpMode:       "CertManager",
 			},
-			"",
+			"discoveredKubernetesCA",
 		),
 		Entry("With every secret: SelfSigned",
 			inputPublishAPICACert{
@@ -99,15 +116,16 @@ data:
 				publishAPIMode: "SelfSigned",
 				httpMode:       "CertManager",
 			},
-			"",
+			"discoveredKubernetesCA",
 		),
 		Entry("On first start: SelfSigned",
 			inputPublishAPICACert{
-				manifests:      "",
-				publishAPIMode: "SelfSigned",
-				httpMode:       "CertManager",
+				manifests:          "",
+				publishAPIMode:     "SelfSigned",
+				httpMode:           "CertManager",
+				kubeconfigMasterCA: pointer.String("test"),
 			},
-			"",
+			"discoveredKubernetesCA",
 		),
 		Entry("With every secret: Global: CertManager",
 			inputPublishAPICACert{
@@ -123,7 +141,7 @@ data:
 				publishAPIMode: "Global",
 				httpMode:       "CertManager",
 			},
-			"",
+			"discoveredKubernetesCA",
 		),
 		Entry("With every secret: Global: CustomCertificate",
 			inputPublishAPICACert{
@@ -139,7 +157,7 @@ data:
 				publishAPIMode: "Global",
 				httpMode:       "CustomCertificate",
 			},
-			"",
+			"discoveredKubernetesCA",
 		),
 		Entry("With every secret: Global: OnlyInURI",
 			inputPublishAPICACert{
@@ -147,13 +165,31 @@ data:
 				publishAPIMode: "Global",
 				httpMode:       "OnlyInURI",
 			},
-			"",
+			"discoveredKubernetesCA",
 		),
 		Entry("Without secret: Global: OnlyInURI",
 			inputPublishAPICACert{
 				manifests:      "",
 				publishAPIMode: "Global",
 				httpMode:       "OnlyInURI",
+			},
+			"discoveredKubernetesCA",
+		),
+		Entry("Without secret: Global: OnlyInURI with custom CA",
+			inputPublishAPICACert{
+				manifests:          "",
+				publishAPIMode:     "Global",
+				httpMode:           "OnlyInURI",
+				kubeconfigMasterCA: pointer.String("testMasterCA"),
+			},
+			"testMasterCA",
+		),
+		Entry("Without secret: Global: OnlyInURI with custom CA empty",
+			inputPublishAPICACert{
+				manifests:          "",
+				publishAPIMode:     "Global",
+				httpMode:           "OnlyInURI",
+				kubeconfigMasterCA: pointer.String(""),
 			},
 			"",
 		),

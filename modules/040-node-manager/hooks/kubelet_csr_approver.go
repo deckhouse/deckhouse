@@ -45,8 +45,14 @@ type CsrInfo struct {
 	ErrMsg string
 }
 
-var kubeletServerUsages = []cv1.KeyUsage{
+// https://github.com/kubernetes/kubernetes/blob/release-1.27/pkg/apis/certificates/helpers.go#L85-L87
+var kubeletServingRequiredUsages = []cv1.KeyUsage{
 	cv1.UsageKeyEncipherment,
+	cv1.UsageDigitalSignature,
+	cv1.UsageServerAuth,
+}
+
+var kubeletServingRequiredUsagesNoRSA = []cv1.KeyUsage{
 	cv1.UsageDigitalSignature,
 	cv1.UsageServerAuth,
 }
@@ -200,7 +206,7 @@ func nodeServingCert(csr *cv1.CertificateSigningRequest, x509cr *x509.Certificat
 		return fmt.Errorf("field URIs is present")
 	}
 
-	if !hasExactUsages(csr, kubeletServerUsages) {
+	if !hasExactUsages(csr, kubeletServingRequiredUsages) && !hasExactUsages(csr, kubeletServingRequiredUsagesNoRSA) {
 		return fmt.Errorf("usage does not match")
 	}
 

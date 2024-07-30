@@ -15,16 +15,20 @@
 package log
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"sync"
 
-	"github.com/fatih/color"
-	"github.com/flant/logboek"
+	"github.com/gookit/color"
 	"github.com/sirupsen/logrus"
+	"github.com/werf/logboek"
+	"github.com/werf/logboek/pkg/level"
+	"github.com/werf/logboek/pkg/types"
 	"k8s.io/klog"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -39,21 +43,45 @@ func init() {
 	defaultLogger = &DummyLogger{}
 }
 
+type LoggerOptions struct {
+	OutStream io.Writer
+	Width     int
+	IsDebug   bool
+}
+
 func InitLogger(loggerType string) {
+	InitLoggerWithOptions(loggerType, LoggerOptions{IsDebug: app.IsDebug})
+}
+
+func WrapLoggerWithTeeLogger(writer io.WriteCloser, bufSize int) error {
+	previousLogger := defaultLogger
+	var err error
+	defaultLogger, err = NewTeeLogger(defaultLogger, writer, bufSize)
+	if err != nil {
+		defaultLogger = previousLogger
+		return err
+	}
+
+	return nil
+}
+
+func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 	switch loggerType {
 	case "pretty":
-		defaultLogger = NewPrettyLogger()
+		defaultLogger = NewPrettyLogger(opts)
 	case "simple":
-		defaultLogger = NewSimpleLogger()
+		defaultLogger = NewSimpleLogger(opts)
 	case "json":
-		defaultLogger = NewJSONLogger()
+		defaultLogger = NewJSONLogger(opts)
+	case "silent":
+		defaultLogger = emptyLogger
 	default:
 		panic("unknown logger type: " + app.LoggerType)
 	}
 
 	// Mute Shell-Operator logs
 	logrus.SetLevel(logrus.PanicLevel)
-	if app.IsDebug {
+	if opts.IsDebug {
 		// Enable shell-operator log, because it captures klog output
 		// todo: capture output of klog with default logger instead
 		logrus.SetLevel(logrus.DebugLevel)
@@ -62,7 +90,22 @@ func InitLogger(loggerType string) {
 
 		// Wrap them with our default logger
 		logrus.SetOutput(defaultLogger)
+	} else {
+		klog.SetOutput(io.Discard)
+		flags := &flag.FlagSet{}
+		klog.InitFlags(flags)
+		flags.Set("logtostderr", "false")
 	}
+}
+
+func WrapWithTeeLogger(writer io.WriteCloser, bufSize int) error {
+	l, err := NewTeeLogger(defaultLogger, writer, bufSize)
+	if err != nil {
+		return err
+	}
+
+	defaultLogger = l
+	return nil
 }
 
 type ProcessLogger interface {
@@ -72,6 +115,8 @@ type ProcessLogger interface {
 }
 
 type Logger interface {
+	FlushAndClose() error
+
 	LogProcess(string, string, func() error) error
 
 	LogInfoF(format string, a ...interface{})
@@ -97,6 +142,7 @@ type Logger interface {
 }
 
 var (
+	_ Logger    = &TeeLogger{}
 	_ Logger    = &PrettyLogger{}
 	_ Logger    = &SimpleLogger{}
 	_ Logger    = &DummyLogger{}
@@ -105,42 +151,64 @@ var (
 	_ io.Writer = &SimpleLogger{}
 	_ io.Writer = &DummyLogger{}
 	_ io.Writer = &SilentLogger{}
+	_ io.Writer = &TeeLogger{}
 )
 
 type styleEntry struct {
-	title   string
-	options logboek.LogProcessOptions
+	title         string
+	optionsSetter func(opts types.LogProcessOptionsInterface)
 }
 
 type PrettyLogger struct {
 	processTitles map[string]styleEntry
+	isDebug       bool
+	logboekLogger types.LoggerInterface
 }
 
-func NewPrettyLogger() *PrettyLogger {
-	err := logboek.Init()
-	if err != nil {
-		panic(fmt.Errorf("can't start logging system: %w", err))
-	}
-	logboek.SetLevel(logboek.Info)
-	logboek.SetWidth(logboek.DefaultWidth)
-	// Adds fixed width ↵ , but breaks copy-pasta and tabs
-	if !app.IsDebug {
-		logboek.EnableFitMode()
+func NewPrettyLogger(opts LoggerOptions) *PrettyLogger {
+	res := &PrettyLogger{
+		processTitles: map[string]styleEntry{
+			"common":           {"🎈 ~ Common: %s", CommonOptions},
+			"terraform":        {"🌱 ~ Terraform: %s", TerraformOptions},
+			"converge":         {"🛸 ~ Converge: %s", ConvergeOptions},
+			"bootstrap":        {"⛵ ~ Bootstrap: %s", BootstrapOptions},
+			"mirror":           {"🪞 ~ Mirror: %s", MirrorOptions},
+			"commander/attach": {"⚓ ~ Attach to commander: %s", CommanderAttachOptions},
+			"commander/detach": {"🚢 ~ Detach from commander: %s", CommanderDetachOptions},
+			"default":          {"%s", BoldOptions},
+		},
+		isDebug: opts.IsDebug,
 	}
 
-	return &PrettyLogger{
-		processTitles: map[string]styleEntry{
-			"common":    {"🎈 ~ Common: %s", CommonOptions()},
-			"terraform": {"🌱 ~ Terraform: %s", TerraformOptions()},
-			"converge":  {"🛸 ~ Converge: %s", ConvergeOptions()},
-			"bootstrap": {"⛵ ~ Bootstrap: %s", BootstrapOptions()},
-			"default":   {"%s", BoldOptions()},
-		},
+	if opts.OutStream != nil {
+		res.logboekLogger = logboek.DefaultLogger().NewSubLogger(opts.OutStream, opts.OutStream)
+	} else {
+		res.logboekLogger = logboek.DefaultLogger()
 	}
+
+	res.logboekLogger.SetAcceptedLevel(level.Info)
+
+	if opts.Width != 0 {
+		res.logboekLogger.Streams().SetWidth(opts.Width)
+	} else {
+		res.logboekLogger.Streams().SetWidth(140)
+	}
+
+	if opts.IsDebug {
+		res.logboekLogger.Streams().DisableProxyStreamDataFormatting()
+	} else {
+		res.logboekLogger.Streams().EnableProxyStreamDataFormatting()
+	}
+
+	return res
+}
+
+func (d *PrettyLogger) FlushAndClose() error {
+	return nil
 }
 
 func (d *PrettyLogger) ProcessLogger() ProcessLogger {
-	return newPrettyProcessLogger()
+	return newPrettyProcessLogger(d.logboekLogger)
 }
 
 func (d *PrettyLogger) LogProcess(p, t string, run func() error) error {
@@ -148,34 +216,34 @@ func (d *PrettyLogger) LogProcess(p, t string, run func() error) error {
 	if !ok {
 		format = d.processTitles["default"]
 	}
-	return logboek.LogProcess(fmt.Sprintf(format.title, t), format.options, run)
+	return d.logboekLogger.LogProcess(format.title, t).Options(format.optionsSetter).DoError(run)
 }
 
 func (d *PrettyLogger) LogInfoF(format string, a ...interface{}) {
-	logboek.LogInfoF(format, a...)
+	d.logboekLogger.Info().LogF(format, a...)
 }
 
 func (d *PrettyLogger) LogInfoLn(a ...interface{}) {
-	logboek.LogInfoLn(a...)
+	d.logboekLogger.Info().LogLn(a...)
 }
 
 func (d *PrettyLogger) LogErrorF(format string, a ...interface{}) {
-	logboek.LogErrorF(format, a...)
+	d.logboekLogger.Error().LogF(format, a...)
 }
 
 func (d *PrettyLogger) LogErrorLn(a ...interface{}) {
-	logboek.LogErrorLn(a...)
+	d.logboekLogger.Error().LogLn(a...)
 }
 
 func (d *PrettyLogger) LogDebugF(format string, a ...interface{}) {
-	if app.IsDebug {
-		logboek.LogInfoF(format, a...)
+	if d.isDebug {
+		d.logboekLogger.Info().LogF(format, a...)
 	}
 }
 
 func (d *PrettyLogger) LogDebugLn(a ...interface{}) {
-	if app.IsDebug {
-		logboek.LogInfoLn(a...)
+	if d.isDebug {
+		d.logboekLogger.Info().LogLn(a...)
 	}
 }
 
@@ -216,12 +284,12 @@ func prettyJSON(content []byte) string {
 }
 
 type SimpleLogger struct {
-	logger *logrus.Entry
+	logger  *logrus.Entry
+	isDebug bool
 }
 
-func NewSimpleLogger() *SimpleLogger {
+func NewSimpleLogger(opts LoggerOptions) *SimpleLogger {
 	l := &logrus.Logger{
-		Out:   os.Stdout,
 		Level: logrus.DebugLevel,
 		Formatter: &logrus.TextFormatter{
 			DisableColors:   true,
@@ -229,14 +297,22 @@ func NewSimpleLogger() *SimpleLogger {
 			FullTimestamp:   true,
 		},
 	}
+
+	if opts.OutStream != nil {
+		l.Out = opts.OutStream
+	} else {
+		l.Out = os.Stdout
+	}
+
 	// l.Formatter = &logrus.JSONFormatter{}
 	return &SimpleLogger{
-		logger: logrus.NewEntry(l),
+		logger:  logrus.NewEntry(l),
+		isDebug: opts.IsDebug,
 	}
 }
 
-func NewJSONLogger() *SimpleLogger {
-	simpleLogger := NewSimpleLogger()
+func NewJSONLogger(opts LoggerOptions) *SimpleLogger {
+	simpleLogger := NewSimpleLogger(opts)
 	simpleLogger.logger.Logger.Formatter = &logrus.JSONFormatter{}
 
 	return simpleLogger
@@ -244,6 +320,10 @@ func NewJSONLogger() *SimpleLogger {
 
 func (d *SimpleLogger) ProcessLogger() ProcessLogger {
 	return newWrappedProcessLogger(d)
+}
+
+func (d *SimpleLogger) FlushAndClose() error {
+	return nil
 }
 
 func (d *SimpleLogger) LogProcess(p, t string, run func() error) error {
@@ -270,13 +350,13 @@ func (d *SimpleLogger) LogErrorLn(a ...interface{}) {
 }
 
 func (d *SimpleLogger) LogDebugF(format string, a ...interface{}) {
-	if app.IsDebug {
+	if d.isDebug {
 		d.logger.Debugf(format, a...)
 	}
 }
 
 func (d *SimpleLogger) LogDebugLn(a ...interface{}) {
-	if app.IsDebug {
+	if d.isDebug {
 		d.logger.Debugln(a...)
 	}
 }
@@ -310,6 +390,10 @@ type DummyLogger struct{}
 
 func (d *DummyLogger) ProcessLogger() ProcessLogger {
 	return newWrappedProcessLogger(d)
+}
+
+func (d *DummyLogger) FlushAndClose() error {
+	return nil
 }
 
 func (d *DummyLogger) LogProcess(_, t string, run func() error) error {
@@ -370,6 +454,10 @@ func (d *DummyLogger) LogJSON(content []byte) {
 func (d *DummyLogger) Write(content []byte) (int, error) {
 	fmt.Print(string(content))
 	return len(content), nil
+}
+
+func FlushAndClose() error {
+	return defaultLogger.FlushAndClose()
 }
 
 func Process(p, t string, run func() error) error {
@@ -447,6 +535,10 @@ func (d *SilentLogger) LogProcess(_, t string, run func() error) error {
 	return err
 }
 
+func (d *SilentLogger) FlushAndClose() error {
+	return nil
+}
+
 func (d *SilentLogger) LogInfoF(format string, a ...interface{}) {
 }
 
@@ -482,4 +574,158 @@ func (d *SilentLogger) LogJSON(content []byte) {
 
 func (d *SilentLogger) Write(content []byte) (int, error) {
 	return len(content), nil
+}
+
+type TeeLogger struct {
+	l      Logger
+	closed bool
+
+	bufMutex sync.Mutex
+	buf      *bufio.Writer
+	out      io.WriteCloser
+}
+
+func NewTeeLogger(l Logger, writer io.WriteCloser, bufferSize int) (*TeeLogger, error) {
+	buf := bufio.NewWriterSize(writer, bufferSize)
+
+	return &TeeLogger{
+		l:   l,
+		buf: buf,
+		out: writer,
+	}, nil
+}
+
+func (d *TeeLogger) FlushAndClose() error {
+	if d.closed {
+		return nil
+	}
+
+	d.bufMutex.Lock()
+	defer d.bufMutex.Unlock()
+
+	err := d.buf.Flush()
+	if err != nil {
+		d.l.LogWarnF("Cannot flush TeeLogger: %v \n", err)
+		return err
+	}
+
+	d.buf = nil
+
+	err = d.out.Close()
+	if err != nil {
+		d.l.LogWarnF("Cannot close TeeLogger file: %v \n", err)
+		return err
+	}
+
+	d.closed = true
+	return nil
+}
+
+func (d *TeeLogger) ProcessLogger() ProcessLogger {
+	return d.l.ProcessLogger()
+}
+
+func (d *TeeLogger) LogProcess(msg, t string, run func() error) error {
+	d.writeToFile(fmt.Sprintf("Start process %s", t))
+
+	err := d.l.LogProcess(msg, t, run)
+
+	d.writeToFile(fmt.Sprintf("End process %s", t))
+
+	return err
+}
+
+func (d *TeeLogger) LogInfoF(format string, a ...interface{}) {
+	d.l.LogInfoF(format, a...)
+
+	d.writeToFile(fmt.Sprintf(format, a...))
+}
+
+func (d *TeeLogger) LogInfoLn(a ...interface{}) {
+	d.l.LogInfoLn(a...)
+
+	d.writeToFile(fmt.Sprintln(a...))
+}
+
+func (d *TeeLogger) LogErrorF(format string, a ...interface{}) {
+	d.l.LogErrorF(format, a...)
+
+	d.writeToFile(fmt.Sprintf(format, a...))
+}
+
+func (d *TeeLogger) LogErrorLn(a ...interface{}) {
+	d.l.LogErrorLn(a...)
+
+	d.writeToFile(fmt.Sprintln(a...))
+}
+
+func (d *TeeLogger) LogDebugF(format string, a ...interface{}) {
+	d.l.LogDebugF(format, a...)
+
+	d.writeToFile(fmt.Sprintf(format, a...))
+}
+
+func (d *TeeLogger) LogDebugLn(a ...interface{}) {
+	d.l.LogDebugLn(a...)
+
+	d.writeToFile(fmt.Sprintln(a...))
+}
+
+func (d *TeeLogger) LogSuccess(l string) {
+	d.l.LogSuccess(l)
+
+	d.writeToFile(l)
+}
+
+func (d *TeeLogger) LogFail(l string) {
+	d.l.LogFail(l)
+
+	d.writeToFile(l)
+}
+
+func (d *TeeLogger) LogWarnLn(a ...interface{}) {
+	d.l.LogWarnLn(a...)
+
+	d.writeToFile(fmt.Sprintln(a...))
+}
+
+func (d *TeeLogger) LogWarnF(format string, a ...interface{}) {
+	d.l.LogWarnF(format, a...)
+
+	d.writeToFile(fmt.Sprintf(format, a...))
+}
+
+func (d *TeeLogger) LogJSON(content []byte) {
+	d.l.LogJSON(content)
+
+	d.writeToFile(string(content))
+}
+
+func (d *TeeLogger) Write(content []byte) (int, error) {
+	ln, err := d.l.Write(content)
+	if err != nil {
+		d.l.LogDebugF("Cannot write to log: %v", err)
+	}
+
+	d.writeToFile(string(content))
+
+	return ln, err
+}
+
+func (d *TeeLogger) writeToFile(content string) {
+	if d.closed {
+		return
+	}
+
+	d.bufMutex.Lock()
+	defer d.bufMutex.Unlock()
+
+	if d.buf == nil {
+		return
+	}
+
+	if _, err := d.buf.Write([]byte(content)); err != nil {
+		d.l.LogDebugF("Cannot write to TeeLog: %v", err)
+	}
+
 }

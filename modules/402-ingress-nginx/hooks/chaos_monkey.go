@@ -22,15 +22,15 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 )
 
 type ingressDaemonSetFilterResult struct {
@@ -56,26 +56,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:                   "deckhouse.io/v1alpha1",
 			Kind:                         "IngressNginxController",
 			FilterFunc:                   chaosMonkeyApplyControllerFilter,
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          pointer.Bool(false),
 		},
 		{
-			Name:       "daemonsets",
-			ApiVersion: "apps/v1",
-			Kind:       "DaemonSet",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-ingress-nginx"},
-				},
-			},
+			Name:              "daemonsets",
+			ApiVersion:        "apps/v1",
+			Kind:              "DaemonSet",
+			NamespaceSelector: internal.NsSelector(),
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": "controller",
 				},
 			},
 			FilterFunc:                   applyIngressDaemonSetFilter,
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          pointer.Bool(false),
 		},
 	},
 }, dependency.WithExternalDependencies(chaosMonkey))
@@ -141,7 +137,7 @@ func chaosMonkey(input *go_hook.HookInput, dc dependency.Container) (err error) 
 		}
 
 		podList, err := kubeClient.CoreV1().
-			Pods(namespace).
+			Pods(internal.Namespace).
 			List(context.TODO(), metav1.ListOptions{LabelSelector: labels.FormatLabels(res.LabelSelector)})
 		if err != nil {
 			return err
@@ -160,8 +156,8 @@ func chaosMonkey(input *go_hook.HookInput, dc dependency.Container) (err error) 
 		}
 
 		err = kubeClient.CoreV1().
-			Pods(namespace).
-			Evict(context.TODO(), &v1beta1.Eviction{ObjectMeta: metav1.ObjectMeta{Name: oldestPod.Name}})
+			Pods(internal.Namespace).
+			EvictV1(context.TODO(), &policyv1.Eviction{ObjectMeta: metav1.ObjectMeta{Name: oldestPod.Name}})
 		if err != nil {
 			input.LogEntry.Infof("can't evict ingress controller pod %q: %v", oldestPod.Name, err)
 		}

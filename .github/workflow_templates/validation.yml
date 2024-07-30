@@ -40,7 +40,7 @@ concurrency:
 jobs:
   close_dependabot_prs_for_forks:
     name: Autoclose Dependabot PRs for forks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ github.actor == 'dependabot[bot]' && github.repository != 'deckhouse/deckhouse' }}
     env:
       ENABLE_DEPENDABOT_IN_FORKS: ${{ secrets.ENABLE_DEPENDABOT_IN_FORKS }}
@@ -74,7 +74,7 @@ jobs:
     name: Prepare input for validation scripts
     needs:
       - pull_request_info
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       run_no_cyrillic: ${{ steps.check_labels.outputs.run_no_cyrillic }}
       label_no_cyrillic: ${{ steps.check_labels.outputs.label_no_cyrillic }}
@@ -84,6 +84,10 @@ jobs:
       label_copyright: ${{ steps.check_labels.outputs.label_copyright }}
       run_markdown: ${{ steps.check_labels.outputs.run_markdown }}
       label_markdown: ${{ steps.check_labels.outputs.label_markdown }}
+      run_grafana_dashboard: ${{ steps.check_labels.outputs.run_grafana_dashboard }}
+      label_grafana_dashboard: ${{ steps.check_labels.outputs.label_grafana_dashboard }}
+      run_release_requirements: ${{ steps.check_labels.outputs.run_release_requirements }}
+      label_release_requirements: ${{ steps.check_labels.outputs.label_release_requirements }}
     steps:
 {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 6 }!}
       - id: check_labels
@@ -112,36 +116,6 @@ jobs:
           name: pr_diff
           path: pr.diff
 
-  check-pr-milestone:
-    name: Check milestone
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check that a milestone is set for a pull request
-        uses: {!{ index (ds "actions") "actions/github-script" }!}
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const prNumber = context.payload.pull_request.number;
-
-            const response = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber
-            });
-
-            if (response.status != 200 || !response.data) {
-              return core.setFailed(`Bad response on getting PR#${prNumber} : ${JSON.stringify(response)}`);
-            }
-
-            let pr = response.data;
-            core.debug(`response: ${pr}`)
-
-            if (pr.milestone) {
-              core.debug(`This pull request has a milestone: ${pr.milestone.title}`);
-            } else {
-              core.setFailed("The pull request has no milestone. Set a milestone for the pull request.");
-            }
-
   no_cyrillic_validation:
     name: No Cyrillic Validation
     env:
@@ -150,16 +124,28 @@ jobs:
 {!{ tmpl.Exec "validation_template" (slice $ctx "no_cyrillic") | strings.Indent 4 }!}
 
   doc_validation:
-    name: Documentation Validation
+    name: Docs Validation (base)
 {!{ tmpl.Exec "validation_template" (slice $ctx "doc_changes") | strings.Indent 4 }!}
+
+  doc_spell_check:
+    name: Docs Validation (spellcheck)
+{!{ tmpl.Exec "spellcheck_template" (slice $ctx) | strings.Indent 4 }!}
 
   copyright_validation:
     name: Copyright Validation
 {!{ tmpl.Exec "validation_template" (slice $ctx "copyright") | strings.Indent 4 }!}
 
+  grafana_dashboard_validation:
+    name: Grafana Dashboard Validation
+{!{ tmpl.Exec "validation_template" (slice $ctx "grafana_dashboard") | strings.Indent 4 }!}
+
   markdown_linter:
     name: Markdown Linter
-{!{ tmpl.Exec "linter_template" (slice $ctx "markdown") | strings.Indent 4 -}!}
+{!{ tmpl.Exec "linter_template" (slice $ctx "markdown") | strings.Indent 4 }!}
+
+  release_requirements_validation:
+    name: Release Requirements Validation
+{!{ tmpl.Exec "validation_template" (slice $ctx "release_requirements") | strings.Indent 4 -}!}
 
 {!{/* Template for validation jobs. */}!}
 {!{ define "validation_template" }!}
@@ -169,7 +155,7 @@ needs:
   - discover
   - pull_request_info
 if: needs.discover.outputs.run_{!{ $type }!} == 'true'
-runs-on: ubuntu-latest
+runs-on: ubuntu-24.04
 steps:
   {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
 
@@ -194,7 +180,7 @@ needs:
   - discover
   - pull_request_info
 if: needs.discover.outputs.run_{!{ $type }!} == 'true'
-runs-on: ubuntu-latest
+runs-on: ubuntu-24.04
 steps:
   {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
 
@@ -209,4 +195,31 @@ steps:
       SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_{!{ $type }!} }}
     run: |
       make lint-{!{ $type }!}
+{!{- end -}!}
+
+{!{/* Template for spellcheck steps. */}!}
+{!{ define "spellcheck_template" }!}
+{!{- $ctx := index . 0 -}!}
+needs:
+  - discover
+  - pull_request_info
+if: ${{ needs.discover.outputs.run_doc_changes == 'true' && github.repository == 'deckhouse/deckhouse' }}
+runs-on: ubuntu-24.04
+steps:
+  {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_dev_registry_step"   $ctx | strings.Indent 2 }!}
+
+  - name: Restore diff artifact
+    uses: {!{ index (ds "actions") "actions/download-artifact" }!}
+    with:
+      name: pr_diff
+
+   # <template: spellcheck_template>
+  - name: Install werf
+    uses: werf/actions/install@v1.2
+
+  - name: Spell check
+    run: |
+      make lint-doc-spellcheck-pr
+   # </template: spellcheck_template>
 {!{- end -}!}

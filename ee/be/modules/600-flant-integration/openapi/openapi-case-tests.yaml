@@ -1,0 +1,27 @@
+positive:
+  configValues:
+    - kubeall:
+        host: test.control-plane
+      metrics: false
+      madisonAuthKey: false
+      logs: false
+  values:
+    - internal:
+        releaseChannel: "test"
+        bundle: "Default"
+        cloudProvider: "TestCloud"
+        controlPlaneVersion: "1.29"
+        clusterType: "Static"
+        nodeStats:
+          minimalKubeletVersion: "1.29"
+          staticNodesCount: 0
+          mastersCount: 3
+          masterIsDedicated: True
+          masterMinCPU: 4
+          masterMinMemory: 8265010916
+        terraformManagerEnabled: True
+negative:
+  configValues:
+    - metrics: true
+      madisonAuthKey: true
+      logs: true

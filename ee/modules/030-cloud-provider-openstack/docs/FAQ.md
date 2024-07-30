@@ -4,7 +4,7 @@ title: "Cloud provider — OpenStack: FAQ"
 
 ## How do I set up LoadBalancer?
 
-> **Note** that Load Balancer must support Proxy Protocol to determine the client IP correctly.
+> **Note!** Load Balancer must support Proxy Protocol to determine the client IP correctly.
 
 ### An example of IngressNginxController
 
@@ -222,7 +222,7 @@ The `OpenStackInstanceClass` has a `rootDiskSize` parameter, and OpenStack flavo
 
 - Use flavor with a zero disk size.
 - Set the `rootDiskSize` in the `OpenStackInstanceClass`.
-- Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the disk type will be taken from [volumeTypeMap](cluster_configuration.html#parameters-masternodegroup-volumetypemap).
+- Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the disk type will be taken from [volumeTypeMap](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap).
 
 #### Local disk is recommended for ephemeral nodes
 
@@ -252,4 +252,19 @@ Example:
 ```shell
 openstack volume type list
 openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=VOLUME_NAME
+```
+
+## OFFLINE disk resize
+
+Some cloud providers may not support ONLINE disk resizing.
+If you get the following error, then you need to reduce the number of StatefulSet replicas to 0, wait for disk resizing
+and return the number of replicas that was before the start of the operation.
+
+```text
+Warning  VolumeResizeFailed     5s (x11 over 41s)  external-resizer cinder.csi.openstack.org                                   
+resize volume "pvc-555555-ab66-4f8d-947c-296520bae4c1" by resizer "cinder.csi.openstack.org" failed: 
+rpc error: code = Internal desc = Could not resize volume "bb5a275b-3f30-4916-9480-9efe4b6dfba5" to size 2: 
+Expected HTTP response code [202] when accessing 
+[POST https://public.infra.myfavourite-cloud-provider.ru:8776/v3/555555555555/volumes/bb5a275b-3f30-4916-9480-9efe4b6dfba5/action], but got 406 instead
+{"computeFault": {"message": "Version 3.42 is not supported by the API. Minimum is 3.0 and maximum is 3.27.", "code": 406}}
 ```

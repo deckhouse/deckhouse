@@ -412,7 +412,7 @@
           "refId": "C"
         },
         {
-          "expr": "100 - (avg by (node) (rate(node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}[$__interval_sx4])) * 100 )",
+          "expr": "100 - (avg by (node) (rate(node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}[$__rate_interval])) * 100 )",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -569,7 +569,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "count(kube_node_info)",
@@ -619,7 +619,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -684,7 +684,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "100 - (avg by (node) (rate(node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}[$__interval_sx4])) * 100 )",
+          "expr": "100 - (avg by (node) (rate(node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}[$__rate_interval])) * 100 )",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -780,7 +780,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (node) (avg_over_time(node_load1{node=~\"$node\"}[$__interval_sx3]))",
+          "expr": "sum by (node) (avg_over_time(node_load1{node=~\"$node\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ node }}",
@@ -874,7 +874,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (node) (avg_over_time(node_load1{node=~\"$node\"}[$__interval_sx3])) / count by (node) (node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}) * 100",
+          "expr": "sum by (node) (avg_over_time(node_load1{node=~\"$node\"}[$__rate_interval])) / count by (node) (node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ node }}",
@@ -918,7 +918,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -977,7 +977,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__interval_sx4])) * 100",
+              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__rate_interval])) * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -1026,7 +1026,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -1093,7 +1093,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=~\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=~\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=~\"$node\"}[$__interval_sx3])\n  )",
+          "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=~\"$node\"}[$__rate_interval])\n  )",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1191,7 +1191,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=~\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=~\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=~\"$node\"}[$__interval_sx3])\n  )\n/\nsum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__interval_sx3]))\n* 100",
+          "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=~\"$node\"}[$__rate_interval])\n  )\n/\nsum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__rate_interval]))\n* 100",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1202,7 +1202,7 @@
           "step": 10
         },
         {
-          "expr": "sum by (node) (avg_over_time(node_load1{node=~\"$node\"}[$__interval_sx3])) / count by (node) (node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}) * 100",
+          "expr": "sum by (node) (avg_over_time(node_load1{node=~\"$node\"}[$__rate_interval])) / count by (node) (node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}) * 100",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -1245,7 +1245,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -1312,21 +1312,21 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
               "refId": "A"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Free",
               "refId": "B"
             },
             {
-              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3])\n  )",
+              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__rate_interval])\n  )",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -1337,14 +1337,14 @@
               "step": 10
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__interval_sx3]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Cached",
               "refId": "D"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__interval_sx3]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Buffered",
@@ -1390,7 +1390,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -1468,7 +1468,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (node) (rate(node_disk_read_bytes_total{node=~\"$node\"}[$__interval_sx4]))",
+          "expr": "sum by (node) (rate(node_disk_read_bytes_total{node=~\"$node\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1575,7 +1575,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (node) (rate(node_disk_written_bytes_total{node=~\"$node\"}[$__interval_sx4]))",
+          "expr": "sum by (node) (rate(node_disk_written_bytes_total{node=~\"$node\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1628,7 +1628,7 @@
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -1699,7 +1699,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (node) (rate(node_network_receive_bytes_total{node=~\"$node\",device!~\"lo\"}[$__interval_sx4]))",
+          "expr": "sum by (node) (rate(node_network_receive_bytes_total{node=~\"$node\",device!~\"lo\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1801,7 +1801,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum by (node) (rate(node_network_transmit_bytes_total{node=~\"$node\",device!~\"lo\"}[$__interval_sx4]))",
+          "expr": "sum by (node) (rate(node_network_transmit_bytes_total{node=~\"$node\",device!~\"lo\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,

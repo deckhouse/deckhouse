@@ -1,9 +1,28 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ $.Images.BASE_NGINX_ALPINE }}
-git:
-- add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/kubernetes-api-proxy-reloader
+fromImage: common/nginx-static
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/kubernetes-api-proxy-reloader
   to: /kubernetes-api-proxy-reloader
+  before: install
+docker:
+  ENTRYPOINT: ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_22_ALPINE }}
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/reloader
+  to: /src
+  stageDependencies:
+    install:
+      - '**/*'
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
-  beforeInstall:
-  - apk add --no-cache inotify-tools bash
+  install:
+    - cd /src
+    - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o kubernetes-api-proxy-reloader cmd/main.go
+    - chown 64535:64535 kubernetes-api-proxy-reloader
+    - chmod 0700 kubernetes-api-proxy-reloader

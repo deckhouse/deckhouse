@@ -1,0 +1,36 @@
+- name: d8.helm-releases-resource-versions
+  rules:
+  - alert: HelmReleasesHasResourcesWithDeprecatedVersions
+    expr: |
+      (count by (k8s_version) (max by (helm_release_namespace, helm_release_name, resource_namespace, resource_name, api_version, kind, k8s_version) (max_over_time (resource_versions_compatibility[10m])) == 1)) > 0
+    labels:
+      tier: cluster
+      severity_level: "5"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      summary: At least one HELM release contains resources with deprecated apiVersion, which will be removed in Kubernetes v{{ $labels.k8s_version }}.
+      description: |
+        To observe all resources use the expr `max by (helm_release_namespace, helm_release_name, helm_version, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 1` in Prometheus.
+
+        You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "\\." "-" }}.
+
+        Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+
+  - alert: HelmReleasesHasResourcesWithUnsupportedVersions
+    expr: |
+      (count by (k8s_version) (max by (helm_release_namespace, helm_release_name, resource_namespace, resource_name, api_version, kind, k8s_version) (max_over_time (resource_versions_compatibility[10m])) == 2)) > 0
+    labels:
+      tier: cluster
+      severity_level: "4"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      summary:
+        At least one HELM release contains resources with unsupported apiVersion for Kubernetes v{{ $labels.k8s_version }}.
+      description: |
+        To observe all resources use the expr `max by (helm_release_namespace, helm_release_name, helm_version, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 2` in Prometheus.
+
+        You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "\\." "-" }}.
+
+        Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.

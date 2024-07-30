@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -44,16 +44,18 @@ import (
 )
 
 const (
-	contextSecretName  = "bashible-apiserver-context"
-	registrySecretName = "deckhouse-registry"
-	nodeUserCRDName    = "nodeusers"
+	contextSecretName   = "bashible-apiserver-context"
+	registrySecretName  = "deckhouse-registry"
+	nodeUserCRDName     = "nodeusers"
+	moduleSourceCRDName = "modulesources"
 
-	imageTagsFile  = "/var/files/images_tags.json"
-	versionMapFile = "/var/files/version_map.yml"
+	imageDigestsFile = "/var/files/images_digests.json"
+	versionMapFile   = "/var/files/version_map.yml"
 )
 
 type Context interface {
 	Get(contextKey string) (map[string]interface{}, error)
+	GetBootstrapContext(ng string) (map[string]interface{}, error)
 }
 
 type UpdateHandler interface {
@@ -87,13 +89,16 @@ type BashibleContext struct {
 	stepsStorage *StepsStorage
 	emitter      changesEmitter
 
-	nodeUsersQueue                chan usersQueueAction
+	nodeUsersQueue                chan queueAction
 	nodeUsersConfigurationChanged chan struct{}
+
+	moduleSourcesQueue                chan queueAction
+	moduleSourcesConfigurationChanged chan struct{}
 
 	updateLocked bool
 }
 
-type usersQueueAction struct {
+type queueAction struct {
 	action    string
 	newObject *unstructured.Unstructured
 	oldObject *unstructured.Unstructured
@@ -106,14 +111,16 @@ type UserConfiguration struct {
 
 func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient client.Client, resyncTimeout time.Duration, secretHandler checksumSecretUpdater, updateHandler UpdateHandler) *BashibleContext {
 	c := BashibleContext{
-		ctx:                           ctx,
-		updateHandler:                 updateHandler,
-		secretHandler:                 secretHandler,
-		contextBuilder:                NewContextBuilder(ctx, stepsStorage),
-		checksums:                     make(map[string]string),
-		stepsStorage:                  stepsStorage,
-		nodeUsersQueue:                make(chan usersQueueAction, 100),
-		nodeUsersConfigurationChanged: make(chan struct{}, 1),
+		ctx:                               ctx,
+		updateHandler:                     updateHandler,
+		secretHandler:                     secretHandler,
+		contextBuilder:                    NewContextBuilder(ctx, stepsStorage),
+		checksums:                         make(map[string]string),
+		stepsStorage:                      stepsStorage,
+		nodeUsersQueue:                    make(chan queueAction, 100),
+		nodeUsersConfigurationChanged:     make(chan struct{}, 1),
+		moduleSourcesQueue:                make(chan queueAction, 100),
+		moduleSourcesConfigurationChanged: make(chan struct{}, 1),
 	}
 
 	c.runFilesParser()
@@ -122,11 +129,13 @@ func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient clie
 	contextSecretFactory := newBashibleInformerFactory(kubeClient, resyncTimeout, "d8-cloud-instance-manager", "app=bashible-apiserver")
 	registrySecretFactory := newBashibleInformerFactory(kubeClient, resyncTimeout, "d8-system", "app=registry")
 	nodeUserCRDFactory := newNodeUserInformerFactory(kubeClient, resyncTimeout)
+	moduleSourcesFactory := newModuleSourcesInformerFactory(kubeClient, resyncTimeout, "app!=deckhouse,heritage!=deckhouse,module!=deckhouse")
 
 	contextSecretUpdates := c.subscribe(ctx, contextSecretFactory, contextSecretName)
 	registrySecretUpdates := c.subscribe(ctx, registrySecretFactory, registrySecretName)
 
 	c.subscribeOnNodeUserCRD(ctx, nodeUserCRDFactory)
+	c.subscribeOnModuleSource(ctx, moduleSourcesFactory)
 
 	go c.onSecretsUpdate(ctx, contextSecretUpdates, registrySecretUpdates)
 
@@ -157,16 +166,16 @@ func (c *BashibleContext) subscribe(ctx context.Context, factory informers.Share
 }
 
 func (c *BashibleContext) runFilesParser() {
-	c.parseImagesTagsFile()
+	c.parseimagesDigestsFile()
 	c.parseVersionMapFile()
 
 	go c.runFilesWatcher()
 }
 
-func (c *BashibleContext) parseImagesTagsFile() {
-	hasher := sha256.New()           // writer
-	buf := bytes.NewBuffer(nil)      // writer
-	f, err := os.Open(imageTagsFile) // reader
+func (c *BashibleContext) parseimagesDigestsFile() {
+	hasher := sha256.New()              // writer
+	buf := bytes.NewBuffer(nil)         // writer
+	f, err := os.Open(imageDigestsFile) // reader
 	if err != nil {
 		klog.Fatal(err)
 	}
@@ -180,21 +189,21 @@ func (c *BashibleContext) parseImagesTagsFile() {
 	}
 
 	fileHash := fmt.Sprintf("%x", hasher.Sum(nil))
-	if c.isChecksumEqual(imageTagsFile, fileHash) {
+	if c.isChecksumEqual(imageDigestsFile, fileHash) {
 		return
 	}
 
-	var imagesTags map[string]map[string]string
+	var imagesDigests map[string]map[string]string
 
-	err = json.NewDecoder(buf).Decode(&imagesTags)
+	err = json.NewDecoder(buf).Decode(&imagesDigests)
 	if err != nil {
-		klog.Fatalf("images_tags.json unmarshal error: %v", err)
+		klog.Fatalf("images_digests.json unmarshal error: %v", err)
 	}
 
-	c.contextBuilder.SetImagesData(imagesTags)
-	c.saveChecksum(imageTagsFile, fileHash)
+	c.contextBuilder.SetImagesData(imagesDigests)
+	c.saveChecksum(imageDigestsFile, fileHash)
 
-	klog.Info("images_tags.json file has been changed")
+	klog.Info("images_digests.json file has been changed")
 
 	c.update("file: images_tags")
 }
@@ -246,7 +255,7 @@ func (c *BashibleContext) runFilesWatcher() {
 	if err != nil {
 		klog.Fatal(err)
 	}
-	err = watcher.Add(imageTagsFile)
+	err = watcher.Add(imageDigestsFile)
 	if err != nil {
 		klog.Fatal(err)
 	}
@@ -263,8 +272,8 @@ func (c *BashibleContext) runFilesWatcher() {
 					klog.Fatal(err)
 				}
 				switch event.Name {
-				case imageTagsFile:
-					go c.parseImagesTagsFile()
+				case imageDigestsFile:
+					go c.parseimagesDigestsFile()
 				case versionMapFile:
 					go c.parseVersionMapFile()
 				}
@@ -327,6 +336,9 @@ func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, r
 
 		case <-c.OnNodeUserConfigurationsChanged():
 			c.update("NodeUserConfiguration")
+
+		case <-c.OnModuleSourceChanged():
+			c.update("ModuleSourceConfiguration")
 
 		case <-ctx.Done():
 			return
@@ -420,6 +432,34 @@ func (c *BashibleContext) Get(contextKey string) (map[string]interface{}, error)
 	return copied, nil
 }
 
+// Get retrieves a copy of context for the given secretKey.
+func (c *BashibleContext) GetBootstrapContext(contextKey string) (map[string]interface{}, error) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	raw, ok := c.data[contextKey]
+	if !ok {
+		// log exists keys for debug purposes
+		keys := make([]string, 0, len(c.data))
+		for k := range c.data {
+			keys = append(keys, k)
+		}
+		return nil, fmt.Errorf("context not found for secretKey \"%s\". Have keys: %v", contextKey, keys)
+	}
+
+	converted, ok := raw.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("cannot convert context for secretKey \"%s\" to map[string]interface{}", contextKey)
+	}
+
+	copied := make(map[string]interface{})
+	for k, v := range converted {
+		copied[k] = v
+	}
+
+	return copied, nil
+}
+
 // secretMapFilter returns filtering function for single secret
 func secretMapFilter(name string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
@@ -446,7 +486,7 @@ func (x *secretEventHandler) OnAdd(obj interface{}) {
 	x.out <- secret.Data
 }
 
-func (x *secretEventHandler) OnUpdate(oldObj, newObj interface{}) {
+func (x *secretEventHandler) OnUpdate(_, newObj interface{}) {
 	secret := newObj.(*corev1.Secret)
 
 	if x.lockApplied(secret) {
@@ -515,6 +555,19 @@ func newNodeUserInformerFactory(kubeClient client.Client, resync time.Duration) 
 	return factory
 }
 
+func newModuleSourcesInformerFactory(kubeClient client.Client, resync time.Duration, labelSelector string) dynamicinformer.DynamicSharedInformerFactory {
+	factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(
+		kubeClient.Dynamic(),
+		resync,
+		"", // ns
+		dynamicinformer.TweakListOptionsFunc(func(opts *metav1.ListOptions) {
+			opts.LabelSelector = labelSelector
+		}),
+	)
+
+	return factory
+}
+
 func (c *BashibleContext) subscribeOnNodeUserCRD(ctx context.Context, ngConfigFactory dynamicinformer.DynamicSharedInformerFactory) {
 	if ngConfigFactory == nil {
 		return
@@ -535,20 +588,67 @@ func (c *BashibleContext) subscribeOnNodeUserCRD(ctx context.Context, ngConfigFa
 
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			c.nodeUsersQueue <- usersQueueAction{
+			c.nodeUsersQueue <- queueAction{
 				action:    "add",
 				newObject: obj.(*unstructured.Unstructured),
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			c.nodeUsersQueue <- usersQueueAction{
+			c.nodeUsersQueue <- queueAction{
 				action:    "update",
 				newObject: newObj.(*unstructured.Unstructured),
 				oldObject: oldObj.(*unstructured.Unstructured),
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			c.nodeUsersQueue <- usersQueueAction{
+			c.nodeUsersQueue <- queueAction{
+				action:    "delete",
+				oldObject: obj.(*unstructured.Unstructured),
+			}
+		},
+	})
+
+	go informer.Run(ctx.Done())
+
+	// Wait for the first sync of the informer cache, should not take long
+	if !cache.WaitForCacheSync(ctx.Done(), informer.HasSynced) {
+		klog.Fatalf("unable to sync caches: %v", ctx.Err())
+	}
+}
+
+func (c *BashibleContext) subscribeOnModuleSource(ctx context.Context, moduleSourcesFactory dynamicinformer.DynamicSharedInformerFactory) {
+	if moduleSourcesFactory == nil {
+		return
+	}
+
+	go c.emitter.runBufferedEmitter(c.moduleSourcesConfigurationChanged)
+	go c.runModuleSourceCRDQueue(ctx)
+
+	ginformer := moduleSourcesFactory.ForResource(schema.GroupVersionResource{
+		Group:    "deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: moduleSourceCRDName,
+	})
+
+	informer := ginformer.Informer()
+	informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
+
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			c.moduleSourcesQueue <- queueAction{
+				action:    "add",
+				newObject: obj.(*unstructured.Unstructured),
+			}
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			c.moduleSourcesQueue <- queueAction{
+				action:    "update",
+				newObject: newObj.(*unstructured.Unstructured),
+				oldObject: oldObj.(*unstructured.Unstructured),
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			c.moduleSourcesQueue <- queueAction{
 				action:    "delete",
 				oldObject: obj.(*unstructured.Unstructured),
 			}
@@ -582,6 +682,26 @@ func (c *BashibleContext) AddNodeUserConfiguration(nu *NodeUser) {
 			c.contextBuilder.nodeUserConfigurations[ngBundlePair] = []*UserConfiguration{&nuc}
 		}
 	}
+}
+
+func (c *BashibleContext) AddModuleSourceCA(ms *ModuleSource) {
+	klog.Infof("Adding CA ModuleSource %s to context", ms.Name)
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	registryHost := ms.getRegistry()
+	if _, ok := c.contextBuilder.moduleSourcesCA[registryHost]; !ok {
+		c.contextBuilder.moduleSourcesCA[registryHost] = ms.Spec.Registry.CA
+	}
+}
+
+func (c *BashibleContext) RemoveModuleSourceCA(ms *ModuleSource) {
+	klog.Infof("Removing CA ModuleSource %s from context", ms.Name)
+
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	registryHost := ms.getRegistry()
+	delete(c.contextBuilder.moduleSourcesCA, registryHost)
+
 }
 
 func (c *BashibleContext) RemoveNodeUserConfiguration(nu *NodeUser) {
@@ -657,6 +777,64 @@ func (c *BashibleContext) runNodeUserCRDQueue(ctx context.Context) {
 	}
 }
 
+func (c *BashibleContext) runModuleSourceCRDQueue(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+
+		case event := <-c.moduleSourcesQueue:
+			switch event.action {
+			case "add":
+				var ms ModuleSource
+				err := fromUnstructured(event.newObject, &ms)
+				if err != nil {
+					klog.Errorf("Action: add, moduleSource: %s - convert from unstructured failed: %v", event.newObject.GetName(), err)
+					continue
+				}
+				c.AddModuleSourceCA(&ms)
+
+			case "update":
+				var newModuleSourceConf ModuleSource
+				err := fromUnstructured(event.newObject, &newModuleSourceConf)
+				if err != nil {
+					klog.Errorf("Action: update, moduleSource: %s - convert from unstructured failed: %v", event.newObject.GetName(), err)
+					continue
+				}
+
+				var oldModuleSourceConf ModuleSource
+				err = fromUnstructured(event.oldObject, &oldModuleSourceConf)
+				if err != nil {
+					klog.Errorf("Action: update, moduleSource: %s - convert from unstructured failed: %v", event.newObject.GetName(), err)
+					continue
+				}
+
+				if newModuleSourceConf.IsEqual(oldModuleSourceConf) {
+					continue
+				}
+
+				c.RemoveModuleSourceCA(&oldModuleSourceConf)
+				c.AddModuleSourceCA(&newModuleSourceConf)
+
+			case "delete":
+				var ms ModuleSource
+				err := fromUnstructured(event.oldObject, &ms)
+				if err != nil {
+					klog.Errorf("Action: delete, moduleSource: %s - convert from unstructured failed: %v", event.newObject.GetName(), err)
+					continue
+				}
+				c.RemoveModuleSourceCA(&ms)
+			}
+
+			c.emitter.emitChanges()
+		}
+	}
+}
+
 func (c *BashibleContext) OnNodeUserConfigurationsChanged() chan struct{} {
 	return c.nodeUsersConfigurationChanged
+}
+
+func (c *BashibleContext) OnModuleSourceChanged() chan struct{} {
+	return c.moduleSourcesConfigurationChanged
 }

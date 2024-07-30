@@ -1,0 +1,12 @@
+{%- assign folders_sorted = site.data.deckhouse-used-directories.directories | sort: 'path'  %}
+{%- if page.lang == "ru" -%}
+Директория,Узел,Модуль,Описание
+{%- else -%}
+Folder path,Node,Module,Description
+{%- endif %}
+{% for folder in folders_sorted %}
+{{- folder.path -}}
+,{% if folder.node %}{{folder.node}}{% else %}{%- if page.lang == "ru" %}Любой{%- else %}Any{% endif %}{% endif -%}
+,{{ folder.module -}}
+,"{{ folder.description[page.lang] | replace: "`", "" }}"
+{% endfor -%}

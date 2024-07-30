@@ -244,6 +244,8 @@ async function setStatusAfterE2eRun({github, context, core}) {
  * @returns Promise<void>
  */
 async function setInitialStatus ({github, context, core}) {
+  core.info(`Labels json: ${process.env.PR_LABELS}`);
+
   const labels = JSON.parse(process.env.PR_LABELS);
   const commitSha = process.env.STATUS_TARGET_COMMIT;
 

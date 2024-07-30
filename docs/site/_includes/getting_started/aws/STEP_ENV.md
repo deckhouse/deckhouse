@@ -1,6 +1,6 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-You have to create an IAM account with the {{ page.platform_name[page.lang] }} cloud provider so that Deckhouse Platform can manage cloud resources. The detailed instructions for creating an IAM account with AWS are available in the [documentation](/documentation/v1/modules/030-cloud-provider-aws/environment.html). Below, we will provide a brief overview of the necessary actions (run them on the **personal computer**):
+You have to create an IAM account with the {{ page.platform_name[page.lang] }} cloud provider so that Deckhouse Kubernetes Platform can manage cloud resources. The detailed instructions for creating an IAM account with AWS are available in the [documentation](/documentation/v1/modules/030-cloud-provider-aws/environment.html). Below, we will provide a brief overview of the necessary actions (run them on the **personal computer**):
 
 Create the `JSON specification` using the following command.
 
@@ -51,6 +51,7 @@ cat > policy.json << EOF
                 "ec2:DescribeInstanceAttribute",
                 "ec2:DescribeInstanceCreditSpecifications",
                 "ec2:DescribeInstances",
+                "ec2:DescribeInstanceTypes",
                 "ec2:DescribeInternetGateways",
                 "ec2:DescribeKeyPairs",
                 "ec2:DescribeNatGateways",
@@ -58,6 +59,7 @@ cat > policy.json << EOF
                 "ec2:DescribeRegions",
                 "ec2:DescribeRouteTables",
                 "ec2:DescribeSecurityGroups",
+                "ec2:DescribeSecurityGroupRules",
                 "ec2:DescribeSubnets",
                 "ec2:DescribeTags",
                 "ec2:DescribeVolumesModifications",
@@ -80,6 +82,10 @@ cat > policy.json << EOF
                 "ec2:RevokeSecurityGroupIngress",
                 "ec2:RunInstances",
                 "ec2:TerminateInstances",
+                "ec2:DescribeVpcPeeringConnections",
+                "ec2:CreateVpcPeeringConnection",
+                "ec2:DeleteVpcPeeringConnection",
+                "ec2:AcceptVpcPeeringConnection",
                 "elasticloadbalancing:AddTags",
                 "elasticloadbalancing:ApplySecurityGroupsToLoadBalancer",
                 "elasticloadbalancing:AttachLoadBalancerToSubnets",
@@ -140,7 +146,7 @@ EOF
 Create a new Policy based on the specification created above with `D8CloudProviderAWS` as a policy name:
 {% snippetcut %}
 ```shell
-aws iam create-policy --policy-name D8Policy --policy-document file://policy.json
+aws iam create-policy --policy-name D8CloudProviderAWS --policy-document file://policy.json
 ```
 {% endsnippetcut %}
 
@@ -148,9 +154,9 @@ aws iam create-policy --policy-name D8Policy --policy-document file://policy.jso
 > ```yaml
   {
       "Policy": {
-          "PolicyName": "D8Policy",
+          "PolicyName": "D8CloudProviderAWS",
           "PolicyId": "AAA",
-          "Arn": "arn:aws:iam::123:policy/D8Policy",
+          "Arn": "arn:aws:iam::123:policy/D8CloudProviderAWS",
           "Path": "/",
           "DefaultVersionId": "v1",
           "AttachmentCount": 0,
@@ -205,6 +211,6 @@ aws iam create-access-key --user-name deckhouse
 Attach the specified `Policy` to the specified `User`:
 {% snippetcut %}
 ```shell
-aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8Policy
+aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8CloudProviderAWS
 ```
 {% endsnippetcut %}

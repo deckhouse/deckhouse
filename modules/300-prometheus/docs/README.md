@@ -3,11 +3,13 @@ title: "The Prometheus monitoring module"
 type:
   - instruction
 search: prometheus
+webIfaces:
+- name: grafana
 ---
 
 This module installs and configures the [Prometheus](https://prometheus.io/) monitoring system. Also, it configures metrics scraping for many typical applications and provides the basic set of Prometheus alerts and Grafana dashboards.
 
-If a storage class supports automatic volume expansion (allowVolumeExpansion: true), it can automatically expand the volume if there is not enough disk space for Prometheus data. Otherwise, you will receive an alert that the volume space in Prometheus is running out.
+If a StorageClass supports automatic volume expansion (allowVolumeExpansion: true), it can automatically expand the volume if there is not enough disk space for Prometheus data. Otherwise, you will receive an alert that the volume space in Prometheus is running out.
 
 The [Vertical Pod Autoscaler](../../modules/302-vertical-pod-autoscaler/) module makes it possible to automatically request CPU and memory resources based on the utilization history when the Pod is recreated. Also, the Prometheus memory consumption is minimized by caching requests to it via [Trickster](https://github.com/trickstercache/trickster).
 
@@ -69,7 +71,7 @@ Deckhouse supports sending alerts using `Alertmanager`:
 
 ## Included modules
 
-<img src="../../images/300-prometheus/prometheus_monitoring.svg">
+![The scheme of interaction](../../images/300-prometheus/prometheus_monitoring_new.svg)
 
 ### Components installed by Deckhouse
 
@@ -78,6 +80,8 @@ Deckhouse supports sending alerts using `Alertmanager`:
 | **prometheus-main**         | The primary Prometheus instance that scrapes metrics every 30 seconds (you can change this value using the `scrapeInterval` parameter). It processes all the rules, sends alerts, and serves as the main data source.                                                                    |
 | **prometheus-longterm**     | The secondary Prometheus instance that scrapes the data of the primary Prometheus instance (`prometheus-main`) every 5 minutes (you can change this value using the `longtermScrapeInterval` parameter). It is used for long-term history storage and displaying data for large periods. |
 | **trickster**               | The caching proxy that reduces the load on Prometheus.                                                                                                                                                                                                                                   |
+| **aggregating-proxy**       | An aggregating and caching proxy  that reduces the load on Prometheus and aggregate both main and longterm in single datasource.                                                                                                                                                         |
+| **memcached**               | Distributed memory caching system.                                                                                                                                                                                                                                                       |
 | **grafana**                 | The managed observability platform with ready-to-use dashboards for all Deckhouse modules and popular applications. Grafana instances are highly available, stateless, and configured by CRDs.                                                                                           |
 | **metrics-adapter**         | The component connecting Prometheus and Kubernetes metrics API. It enables HPA support in a Kubernetes cluster.                                                                                                                                                                          |
 | **vertical-pod-autoscaler** | An autoscaling tool to help size Pods for the optimal CPU and memory resources required by the Pods.                                                                                                                                                                                     |

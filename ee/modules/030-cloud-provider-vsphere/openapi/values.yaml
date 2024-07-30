@@ -132,6 +132,8 @@ properties:
             type: string
           vmFolderPath:
             type: string
+          vmFolderExists:
+            type: boolean
           externalNetworkNames:
             type: array
             items:
@@ -391,6 +393,10 @@ properties:
             type: string
           resourcePoolPath:
             type: string
+          zones:
+            type: array
+            items:
+              type: string
       vsphereDiscoveryData:
         type: object
         additionalProperties: false

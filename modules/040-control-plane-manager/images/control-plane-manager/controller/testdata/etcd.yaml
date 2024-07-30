@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    control-plane-manager.deckhouse.io/checksum: c343f4ff8f786fdfbe5792e3d24a88a5ff2f1ecd99428f02a86eb9827d43ea46
+    kubeadm.kubernetes.io/etcd.advertise-client-urls: https://192.168.199.39:2379
+  creationTimestamp: null
+  labels:
+    component: etcd
+    tier: control-plane
+  name: etcd
+  namespace: kube-system
+spec:
+  containers:
+    - command:
+        - etcd
+        - --advertise-client-urls=https://192.168.199.39:2379
+        - --cert-file=/etc/kubernetes/pki/etcd/server.crt
+        - --client-cert-auth=true
+        - --data-dir=/var/lib/etcd
+        - --experimental-initial-corrupt-check=true
+        - --initial-advertise-peer-urls=https://192.168.199.39:2380
+        - --initial-cluster=dev-master-0=https://192.168.199.39:2380
+        - --initial-cluster-state=existing
+        - --key-file=/etc/kubernetes/pki/etcd/server.key
+        - --listen-client-urls=https://127.0.0.1:2379,https://192.168.199.39:2379
+        - --listen-metrics-urls=http://127.0.0.1:2381
+        - --listen-peer-urls=https://192.168.199.39:2380
+        - --metrics=extensive
+        - --name=dev-master-0
+        - --peer-cert-file=/etc/kubernetes/pki/etcd/peer.crt
+        - --peer-client-cert-auth=true
+        - --peer-key-file=/etc/kubernetes/pki/etcd/peer.key
+        - --peer-trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
+        - --quota-backend-bytes=2147483648
+        - --snapshot-count=10000
+        - --trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
+      image: dev-registry.deckhouse.io/sys/deckhouse-oss:48b060a9402372196e86e679af44c4957ea0cd8421ef951cfcd9db9b-1674417352546
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        failureThreshold: 8
+        httpGet:
+          host: 127.0.0.1
+          path: /health
+          port: 2381
+          scheme: HTTP
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 15
+      name: etcd
+      readinessProbe:
+        httpGet:
+          host: 127.0.0.1
+          path: /health
+          port: 2381
+          scheme: HTTP
+      resources:
+        requests:
+          cpu: 518m
+          memory: "1080160411"
+      startupProbe:
+        failureThreshold: 24
+        httpGet:
+          host: 127.0.0.1
+          path: /health
+          port: 2381
+          scheme: HTTP
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 15
+      volumeMounts:
+        - mountPath: /var/lib/etcd
+          name: etcd-data
+        - mountPath: /etc/kubernetes/pki/etcd
+          name: etcd-certs
+  dnsPolicy: ClusterFirstWithHostNet
+  hostNetwork: true
+  priorityClassName: system-node-critical
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
+  volumes:
+    - hostPath:
+        path: /etc/kubernetes/pki/etcd
+        type: DirectoryOrCreate
+      name: etcd-certs
+    - hostPath:
+        path: /var/lib/etcd
+        type: DirectoryOrCreate
+      name: etcd-data
+status: {}

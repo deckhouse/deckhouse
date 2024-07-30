@@ -1,0 +1,26 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8requiredlabels
+tests:
+  - name: d8requiredlabels
+    template: ../../templates/operation/required-labels.yaml
+    constraint: constraint.yaml
+    cases:
+      - name: pod-allowed
+        object: allowed_pod.yaml
+        assertions:
+          - violations: no
+      - name: dep-allowed
+        object: allowed_dep.yaml
+        assertions:
+          - violations: no
+      - name: pod-disallowed
+        object: disallowed_pod.yaml
+        assertions:
+          - violations: yes
+      - name: dep-disallowed
+        object: disallowed_dep.yaml
+        assertions:
+          - violations: yes
+            message: 'you must provide labels: {"foo"}'

@@ -2,49 +2,30 @@
 title: "The descheduler module"
 ---
 
-The module runs a [descheduler](https://github.com/kubernetes-incubator/descheduler) with **predefined** [strategies](#strategies) in a cluster.
+The module runs a [descheduler](https://github.com/kubernetes-incubator/descheduler) with [strategies](#strategies) defined in a `Descheduler` custom resource.
 
-descheduler every 15 minutes evicts Pods that satisfy strategies enabled in the [module configuration](configuration.html). This leads to forced run the scheduling process for evicted Pods.
+descheduler every 15 minutes evicts Pods that satisfy strategies enabled in the `Descheduler` custom resource. This leads to forced run the scheduling process for evicted Pods.
 
 ## Nuances of descheduler operation
 
-* descheduler takes into account the priorityClass when evicting Pods from a high-loaded node (check out the [priority-class](../001-priority-class/) module);
+* descheduler takes into account the priority class when evicting Pods from a high-loaded node (check out the [priority-class](../001-priority-class/) module);
 * Pods with [priorityClassName](../001-priority-class/) set to `system-cluster-critical` or `system-node-critical` (*critical* Pods) are never evicts;
 * Pods that are associated with a DaemonSet or aren't covered by a controller are never evicts;
 * Pods with local storage enabled are never evicts;
 * The Best effort Pods are evicted before Burstable and Guaranteed ones;
-* descheduler takes into account the [Pod Disruption Budget](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/):  the Pod will not be evicted if descheduling violates the PDB.
+* descheduler takes into account the [Pod Disruption Budget](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/): the Pod will not be evicted if descheduling violates the PDB.
 
 ## Strategies
 
-You can enable or disable a strategy in the [module configuration](configuration.html).
-
-The following strategies are **enabled** by default:
-* [RemovePodsViolatingInterPodAntiAffinity](#removepodsviolatinginterpodantiaffinity)
-* [RemovePodsViolatingNodeAffinity](#removepodsviolatingnodeaffinity)
+You can enable, disable, and configure a strategy in the [`Descheduler` custom resource](cr.html).
 
 ### HighNodeUtilization
 
-This strategy finds nodes that are under utilized and evicts Pods in the hope that these Pods will be scheduled compactly into fewer nodes. This strategy must be used with the scheduler strategy `MostRequestedPriority`
-
-The thresholds for identifying underutilized nodes are currently preset and cannot be changed:
-* Criteria to identify underutilized nodes:
-  * CPU — 50%
-  * memory — 50%
+This strategy finds nodes that are under utilized and evicts Pods in the hope that these Pods will be scheduled compactly into fewer nodes. This strategy must be used with the scheduler strategy `MostRequestedPriority`.
 
 ### LowNodeUtilization
 
-The descheduler finds underutilized or overutilized nodes using cpu/memory/Pods (in %) thresholds and evict Pods from overutilized nodes hoping that these Pods will be rescheduled on underutilized nodes. Note that this strategy takes into account Pod requests instead of actual resources consumed.
-
-The thresholds for identifying underutilized or overutilized nodes are currently preset and cannot be changed:
-* Criteria to identify underutilized nodes:
-  * CPU — 40%
-  * memory — 50%
-  * Pods — 40%
-* Criteria to identify overutilized nodes:
-  * CPU — 80%
-  * memory — 90%
-  * Pods — 80%
+This strategy finds underutilized or overutilized nodes using cpu/memory/Pods (in %) thresholds and evicts Pods from overutilized nodes hoping that these Pods will be rescheduled on underutilized nodes. Note that this strategy takes into account Pod requests instead of actual resources consumed.
 
 ### PodLifeTime
 

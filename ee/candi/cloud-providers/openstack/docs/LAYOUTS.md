@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider - OpenStack: Layouts"
+description: "Schemes of placement and interaction of resources in OpenStack when working with the Deckhouse cloud provider."
 ---
 
 Four layouts are supported. Below is more information about each of them.
@@ -9,7 +10,7 @@ Four layouts are supported. Below is more information about each of them.
 In this scheme, an internal cluster network is created with a gateway to the public network; the nodes do not have public IP addresses. Note that the floating IP is assigned to the master node.
 
 > **Caution!**
-> If the provider does not support SecurityGroups, all applications running on nodes with Floating IPs assigned will be available at a public IP. For example, `kube-apiserver` on master nodes will be available on port 6443. To avoid this, we recommend using the [SimpleWithInternalNetwork](#simplewithinternalnetwork) placement strategy.
+> If the provider does not support SecurityGroups, all applications running on nodes with Floating IPs assigned will be available at a public IP. For example, `kube-apiserver` on master nodes will be available on port 6443. To avoid this, we recommend using the [SimpleWithInternalNetwork](#simplewithinternalnetwork) placement strategy or [Standard](#standard) strategy with bastion host.
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vSTIcQnxcwHsgANqHE5Ry_ZcetYX2lTFdDjd3Kip5cteSbUxwRjR3NigwQzyTMDGX10_Avr_mizOB5o/pub?w=960&h=720)
 <!--- Source: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
@@ -33,8 +34,7 @@ standard:
     instanceClass:
       flavorName: m1.large                      # Required.
       imageName: ubuntu-20-04-cloud-amd64       # Required.
-      # Optional, local disk is used if not specified.
-      rootDiskSize: 50
+      rootDiskSize: 50                          # Optional, default 50 gigabytes.
       additionalTags:
         severity: critical                      # Optional.
         environment: production                 # Optional.
@@ -72,7 +72,8 @@ nodeGroups:
     # required during vm bootstrap process. It's needed if there
     # is no dhcp in network that is used as default gateway.
     configDrive: false
-    # Required, network will be used as default gateway.
+    # Required, the gateway of the network will be used as the default gateway.
+    # Matches the cloud.prefix in the ClusterConfiguration resource.
     mainNetwork: kube
     additionalNetworks:                         # Optional.
     - office
@@ -106,6 +107,9 @@ An internal cluster network is created that does not have access to the public n
 
 > **Caution!**
 > This strategy does not support a LoadBalancer since a Floating IP is not available for the router-less network. Thus, you cannot provision a load balancer with the Floating IP. An internal load balancer with the virtual IP in the public network is only accessible to cluster nodes.
+>
+> **Caution!**
+> In this strategy, it is necessary to explicitly specify the name of the internal network in `additionalNetworks` when creating an `OpenStackInstanceClass` in the cluster.
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vR9Vlk22tZKpHgjOeQO2l-P0hyAZiwxU6NYGaLUsnv-OH0so8UXNnvrkNNiAROMHVI9iBsaZpfkY-kh/pub?w=960&h=720)
 <!--- Source: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
@@ -153,7 +157,8 @@ nodeGroups:
     # if there is no dhcp in network that is used as default
     # gateway.
     configDrive: false
-    # Required, network will be used as default gateway.
+    # Required, the gateway of the network will be used as the default gateway.
+    # Matches the cloud.prefix in the ClusterConfiguration resource.
     mainNetwork: kube
     additionalNetworks:                          # Optional.
     - office
@@ -170,6 +175,9 @@ nodeGroups:
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
+  # Required if rootDiskSize is specified. Volume type map for node's root volume
+  volumeTypeMap:
+    nova: ceph-ssd
 sshPublicKey: "<SSH_PUBLIC_KEY>"
 provider:
   ...
@@ -227,7 +235,8 @@ nodeGroups:
     # if there is no dhcp in network that is used as default
     # gateway.
     configDrive: false
-    # Required, network will be used as default gateway.
+    # Required, the gateway of the network will be used as the default gateway.
+    # Matches the cloud.prefix in the ClusterConfiguration resource.
     mainNetwork: kube
     additionalNetworks:                         # Optional.
     - office
@@ -307,7 +316,8 @@ nodeGroups:
     # if there is no dhcp in network that is used as default
     # gateway.
     configDrive: false
-    # Required, network will be used as default gateway.
+    # Required, the gateway of the network will be used as the default gateway.
+    # Matches the cloud.prefix in the ClusterConfiguration resource.
     mainNetwork: kube
     additionalNetworks:                         # Optional.
     - office

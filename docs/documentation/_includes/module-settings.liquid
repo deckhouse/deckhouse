@@ -1,35 +1,33 @@
-{%- assign moduleName = page.dir | regex_replace: "^.*/[0-9]+\-([a-z-]+)/$", "\1" %}
-{%- assign configVersion = site.data.schemas[moduleName].config-values.x-config-version |  default: "1" %}
+{%- assign moduleSnakeName = page['module-snake-name'] %}
+{%- assign moduleKebabName = page['module-kebab-name'] %}
+
+{%- assign configVersion = site.data.schemas[moduleKebabName].config-values.x-config-version |  default: "1" %}
 
 {%- if configVersion.size < 1 %}
   {%- assign configVersion = "1" %}
 {%- endif %}
 
 {%- if page.lang == 'ru' %}
-Модуль настраивается с помощью custom resource `ModuleConfig` с именем `{{ moduleName }}` ([подробнее о настройке Deckhouse...](../../)).
+Чтобы настроить модуль, используйте custom resource `ModuleConfig` с именем `{{ moduleKebabName }}` ([подробнее о настройке Deckhouse...](../../)).
 
-Пример ресурса `ModuleConfig/{{ moduleName }}` для настройки модуля:
+Пример ресурса `ModuleConfig/{{ moduleKebabName }}` для настройки модуля:
 {%- else %}
-The module is configured using the ModuleConfig custom resource named `{{ moduleName }}` ([learn more about setting up Deckhouse...](../../)).
+The module is configured using the ModuleConfig custom resource named `{{ moduleKebabName }}` ([learn more about setting up Deckhouse...](../../)).
 
-Example of the `ModuleConfig/{{ moduleName }}` resource for configuring the module:
+Example of the `ModuleConfig/{{ moduleKebabName }}` resource for configuring the module:
 {%- endif %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: {{ moduleName }}
+  name: {{ moduleKebabName }}
 spec:
   version: {{ configVersion }}
   enabled: true
   settings: # <-- {% if page.lang == 'ru' %}Параметры модуля из раздела "Параметры" ниже.{% else %}Module parameters from the "Parameters" section below.{% endif %}
 ```
 
-{%- if page.lang == 'ru' %}
-## Параметры
-{%- else %}
-## Parameters
-{%- endif %}
+## {{ site.data.i18n.common['parameters'][page.lang] }}
 
-{{ site.data.schemas[moduleName].config-values | format_module_configuration }}
+{{ site.data.schemas[moduleKebabName].config-values | format_module_configuration: moduleKebabName }}

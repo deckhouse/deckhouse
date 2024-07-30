@@ -23,7 +23,7 @@ spec:
         service: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
     spec:
       imagePullSecrets:
-        - name: registrysecret
+        - name: deckhouse-registry-site
       priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
       containers:
         - name: web
@@ -69,7 +69,7 @@ spec:
     kind: Deployment
     name: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
   updatePolicy:
-    updateMode: "Initial"
+    updateMode: "Auto"
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

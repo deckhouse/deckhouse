@@ -64,3 +64,5 @@ spec:
   extraLabels:
     foo: bar
     app: "{{ ap_p[0].a }}"
+    X-Device-Id: '{{ X-Device-Id }}'
+    X-Device-Version: 'X-Device-Version'

@@ -42,17 +42,24 @@ spec:
     metadata:
       labels:
         name: okmeter
+      annotations:
+        apiTokenChecksum: {{ .Values.okmeter.apiKey | sha256sum }}
     spec:
       serviceAccountName: okmeter
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
-      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
-{{- with .Values.okmeter.nodeSelector }}
+      {{- with .Values.okmeter.nodeSelector }}
       nodeSelector:
-{{ . | toYaml | nindent 8 }}
-{{- end }}
+      {{ . | toYaml | nindent 8 }}
+      {{- end }}
+      {{- with .Values.okmeter.tolerations }}
+      tolerations:
+      {{- . | toYaml | nindent 6 }}
+      {{- else }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- end }}
       containers:
       - name: okagent
         {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
@@ -71,9 +78,13 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+{{- if .Values.okmeter.disableAutoDiscovery }}
+        - name: DISABLE_AUTO_DISCOVER
+          value: "1"
+{{- end }}
         volumeMounts:
-        - name: dockersocket
-          mountPath: /var/run/docker.sock
+        - name: containerdsocket
+          mountPath: /run/containerd/containerd.sock
           readOnly: true
         - name: hostproc
           mountPath: /host/proc
@@ -87,9 +98,9 @@ spec:
             {{- include "okagent_resources" . | nindent 12 }}
   {{- end }}
       volumes:
-      - name: dockersocket
+      - name: containerdsocket
         hostPath:
-          path: /var/run/docker.sock
+          path: /run/containerd/containerd.sock
       - name: hostproc
         hostPath:
           path: /proc

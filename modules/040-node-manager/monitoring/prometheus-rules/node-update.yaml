@@ -130,6 +130,27 @@
 
         Most likely, there is a problem with the `update_approval` hook of the `node-manager` module.
 
+
+  - alert: D8ProblematicNodeGroupConfiguration
+    expr: |
+      max by (status, node_group, node) (node_group_node_status{status="UpdateFailedNoConfigChecksum"}) == 1
+    for: 5m
+    labels:
+      tier: cluster
+      severity_level: "8"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The {{ $labels.node }} Node cannot begin the update.
+      description: |
+        There is a new update for Nodes of the {{ $labels.node_group }} group; Nodes have learned about the update. However, {{ $labels.node }} Node cannot be updated.
+
+        Node {{ $labels.node }} has no `node.deckhouse.io/configuration-checksum` annotation.
+        Perhaps the bootstrap process of the Node did not complete correctly. Check the `cloud-init` logs (/var/log/cloud-init-output.log) of the Node.
+        There is probably a problematic NodeGroupConfiguration resource for {{ $labels.node_group }} NodeGroup.
+
   - alert: NodeRequiresDisruptionApprovalForUpdate
     expr: |
       max by (node,node_group) (
@@ -153,6 +174,8 @@
         Grant approval to the Node using the `update.node.deckhouse.io/disruption-approved=` annotation if it is ready for unsafe updates (e.g., drained).
 
         **Caution!!!** The Node will not be drained automatically since the manual mode is enabled (`disruptions.approvalMode: Manual`).
+
+        **Caution!!!** No need to drain the master node.
 
         * Use the following commands to drain the Node and grant it update approval:
           ```shell
@@ -184,7 +207,34 @@
       plk_grouped_by__cluster_has_nodes_stuck_in_draining_for_disruption_during_update: "ClusterHasNodesStuckInDrainingForDisruptionDuringUpdate,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The {{ $labels.node }} Node is stuck in draining.
       description: |
-        There is a new update for the {{ $labels.node }} Node of the {{ $labels.node_group }}group. The Node has learned about the update, requested and received approval, started the update, ran into a step that causes possible downtime, and stuck in draining in order to get disruption approval automatically.
+        There is a new update for the {{ $labels.node }} Node of the {{ $labels.node_group }} NodeGroup. The Node has learned about the update, requested and received approval, started the update, ran into a step that causes possible downtime, and stuck in draining in order to get disruption approval automatically.
+
+        You can get more info by running: `kubectl -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=ScaleDown --sort-by='.metadata.creationTimestamp'`
+
+  - alert: NodeStuckInDraining
+    expr: |
+      max by (message, node, node_group) (
+        d8_node_draining *
+        on (node) group_left (node_group) node_group_node_status{status="Draining"} *
+        on (node) group_left () (max by (node) ((kube_node_status_condition == 1)))
+      ) > 0
+    for: 5m
+    labels:
+      tier: cluster
+      severity_level: "6"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__cluster_has_nodes_stuck_in_draining: "ClusterHasNodesStuckInDraining,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_nodes_stuck_in_draining: "ClusterHasNodesStuckInDraining,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: message
+      summary: The {{ $labels.node }} Node is stuck in draining.
+      description: |
+        The {{ $labels.node }} Node of the {{ $labels.node_group }} NodeGroup stuck in draining.
+
+        You can get more info by running: `kubectl -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=DrainFailed --sort-by='.metadata.creationTimestamp'`
+
+        The error message is: {{ $labels.message }}
 
   - alert: D8BashibleApiserverLocked
     expr: d8_bashible_apiserver_locked == 1

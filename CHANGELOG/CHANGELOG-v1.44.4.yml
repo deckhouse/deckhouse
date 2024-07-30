@@ -1,0 +1,9 @@
+log-shipper:
+  fixes:
+    - summary: Fix throttling alert labels.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4222
+runtime-audit-engine:
+  fixes:
+    - summary: Docs improvements.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4096
+

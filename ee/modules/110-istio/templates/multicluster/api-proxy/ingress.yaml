@@ -48,6 +48,7 @@ metadata:
 spec:
   certificateOwnerRef: false
   secretName: {{ include "helm_lib_module_https_secret_name" (list . "api-proxy-ingress-tls") }}
+  {{ include "helm_lib_module_generate_common_name" (list . "istio-api-proxy") | nindent 2 }}
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "istio-api-proxy") }}
   issuerRef:

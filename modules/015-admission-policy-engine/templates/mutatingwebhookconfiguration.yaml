@@ -1,37 +1,42 @@
-{{/*---*/}}
-{{/*apiVersion: admissionregistration.k8s.io/v1*/}}
-{{/*kind: MutatingWebhookConfiguration*/}}
-{{/*metadata:*/}}
-{{/*  name: gatekeeper-mutating-webhook-configuration*/}}
-{{/*  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "controller-manager" "gatekeeper.sh/system" "yes")) | nindent 2 }}*/}}
-{{/*webhooks:*/}}
-{{/*- admissionReviewVersions:*/}}
-{{/*  - v1*/}}
-{{/*  - v1beta1*/}}
-{{/*  clientConfig:*/}}
-{{/*    caBundle: {{ .Values.admissionPolicyEngine.internal.webhook.ca | b64enc | quote }}*/}}
-{{/*    service:*/}}
-{{/*      name: gatekeeper-webhook-service*/}}
-{{/*      namespace: d8-admission-policy-engine*/}}
-{{/*      path: /v1/mutate*/}}
-{{/*  failurePolicy: Ignore*/}}
-{{/*  matchPolicy: Exact*/}}
-{{/*  name: mutation.gatekeeper.sh*/}}
-{{/*  namespaceSelector:*/}}
-{{/*    matchExpressions:*/}}
-{{/*    - key: admission.gatekeeper.sh/ignore*/}}
-{{/*      operator: DoesNotExist*/}}
-{{/*  objectSelector: {}*/}}
-{{/*  reinvocationPolicy: Never*/}}
-{{/*  rules:*/}}
-{{/*  - apiGroups:*/}}
-{{/*    - '*'*/}}
-{{/*    apiVersions:*/}}
-{{/*    - '*'*/}}
-{{/*    operations:*/}}
-{{/*    - CREATE*/}}
-{{/*    - UPDATE*/}}
-{{/*    resources:*/}}
-{{/*    - '*'*/}}
-{{/*  sideEffects: None*/}}
-{{/*  timeoutSeconds: 1*/}}
+{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (gt (len .Values.admissionPolicyEngine.internal.trackedMutateResources) 0) }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: d8-admission-policy-engine-config
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "controller-manager" "gatekeeper.sh/system" "yes")) | nindent 2 }}
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ .Values.admissionPolicyEngine.internal.webhook.ca | b64enc | quote }}
+    service:
+      name: gatekeeper-webhook-service
+      namespace: d8-admission-policy-engine
+      path: /v1/mutate
+  failurePolicy: Ignore
+  matchPolicy: Exact
+  name: admission-policy-engine.deckhouse.io
+  namespaceSelector:
+    matchExpressions:
+    - key: heritage
+      operator: NotIn
+      values:
+        - deckhouse
+  objectSelector: {}
+  reinvocationPolicy: Never
+  rules:
+  {{- range $trackResource := .Values.admissionPolicyEngine.internal.trackedMutateResources }}
+  - apiGroups:
+      {{- $trackResource.apiGroups | toYaml | nindent 6 }}
+    apiVersions:
+    - '*'
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+      {{- $trackResource.resources | toYaml | nindent 6 }}
+  {{- end }}
+  sideEffects: None
+  timeoutSeconds: 3
+{{- end }}

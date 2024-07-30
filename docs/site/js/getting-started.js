@@ -172,7 +172,7 @@ function triggerBlockOnItemContent(itemSelector, targetSelector, turnCommonEleme
   const input = $(itemSelector);
   const wrapper = $(targetSelector);
   if (input.val() !== '') {
-    update_license_parameters(input.val());
+    update_license_parameters(input.val().trim());
     wrapper.removeClass('disabled');
   } else if(input.val() === '' && !turnCommonElement) {
     getLicenseToken(input.val());
@@ -186,10 +186,10 @@ function triggerBlockOnItemContent(itemSelector, targetSelector, turnCommonEleme
 }
 
 function toggleDisabled(tab, inputDataAttr) {
-  if (tab === 'tab_withoutnat_ce' || tab === 'tab_standard_ce') {
+  if (tab === 'tab_layout_ce' ) {
     $('.dimmer-block-content.common').removeClass('disabled');
-  } else if (tab === 'tab_withoutnat_ee' || tab === 'tab_standard_ee') {
-    const licenseToken = $(inputDataAttr).val();
+  } else if (tab === 'tab_layout_ee' ) {
+    const licenseToken = $(inputDataAttr).val().trim();
     getLicenseToken(licenseToken)
   }
 }
@@ -249,6 +249,9 @@ function update_license_parameters(newtoken = '') {
 
   if ($.cookie("demotoken") || $.cookie("license-token") || newtoken !== '') {
     let registry = 'registry.deckhouse.io';
+    if ($.cookie("lang") === "ru") {
+      registry = 'registry.deckhouse.ru'
+    }
     let username = 'license-token';
     let matchStringClusterConfig = '<YOUR_ACCESS_STRING_IS_HERE>';
     let matchStringDockerLogin = 'echo <LICENSE_TOKEN>';
@@ -288,7 +291,8 @@ function generate_password(force = false) {
     var salt = bcrypt.genSaltSync(10);
     var password = Math.random().toString(36).slice(-10);
     var hash = bcrypt.hashSync(password, salt);
-    sessionStorage.setItem("dhctl-user-password-hash", hash);
+    var base64 = btoa(hash)
+    sessionStorage.setItem("dhctl-user-password-hash", base64);
     sessionStorage.setItem("dhctl-user-password", password);
   }
 }

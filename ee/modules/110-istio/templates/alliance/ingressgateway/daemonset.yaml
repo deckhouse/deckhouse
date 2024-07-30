@@ -44,6 +44,8 @@ spec:
       app: ingressgateway
   template:
     metadata:
+      annotations:
+        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
       labels:
         app: ingressgateway
         sidecar.istio.io/inject: "false"
@@ -171,6 +173,12 @@ spec:
             {{- include "istio_proxy_resources" . | nindent 12 }}
   {{- end }}
         volumeMounts:
+        - name: workload-socket
+          mountPath: /var/run/secrets/workload-spiffe-uds
+        - name: credential-socket
+          mountPath: /var/run/secrets/credential-uds
+        - name: workload-certs
+          mountPath: /var/run/secrets/workload-spiffe-credentials
         - mountPath: /etc/istio/proxy
           name: istio-envoy
         - mountPath: /etc/istio/config
@@ -219,6 +227,12 @@ spec:
               divisor: 1m
               resource: requests.cpu
         name: podinfo
+      - emptyDir: {}
+        name: workload-socket
+      - emptyDir: {}
+        name: credential-socket
+      - emptyDir: {}
+        name: workload-certs
       - emptyDir: {}
         name: istio-envoy
       - emptyDir: {}

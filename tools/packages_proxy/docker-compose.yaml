@@ -1,0 +1,15 @@
+version: "3.7"
+
+services:
+  goproxy:
+    image: ghcr.io/goproxy/goproxy
+    ports:
+      - 3000:3000
+    volumes:
+      - /data/goproxy:/caches
+    command:
+      - server
+      - --address
+      - :3000
+      - --cacher-dir
+      - /caches

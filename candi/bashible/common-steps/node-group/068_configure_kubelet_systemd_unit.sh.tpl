@@ -25,15 +25,13 @@ cri_config=""
 {{- if eq .cri "Containerd" }}
 cri_config="--container-runtime=remote --container-runtime-endpoint=unix:/var/run/containerd/containerd.sock"
 {{- else if eq .cri "NotManaged" }}
-  {{- if .nodeGroup.cri.notManaged.criSocketPath }}
+  {{- if (and .nodeGroup.cri.notManaged .nodeGroup.cri.notManaged.criSocketPath) }}
 cri_socket_path={{ .nodeGroup.cri.notManaged.criSocketPath | quote }}
   {{- else }}
-for socket_path in /var/run/docker.sock /run/containerd/containerd.sock; do
-  if [[ -S "${socket_path}" ]]; then
-    cri_socket_path="${socket_path}"
+  if [[ -S "/run/containerd/containerd.sock" ]]; then
+    cri_socket_path="/run/containerd/containerd.sock"
     break
   fi
-done
   {{- end }}
 
 if [[ -z "${cri_socket_path}" ]]; then
@@ -41,11 +39,15 @@ if [[ -z "${cri_socket_path}" ]]; then
   exit 1
 fi
 
-if grep -q "docker" <<< "${cri_socket_path}"; then
-  cri_config="--container-runtime=docker --docker-endpoint=unix://${cri_socket_path}"
-else
-  cri_config="--container-runtime=remote --container-runtime-endpoint=unix:${cri_socket_path}"
-fi
+cri_config="--container-runtime=remote --container-runtime-endpoint=unix:${cri_socket_path}"
+{{- end }}
+
+credential_provider_flags=""
+{{- if semverCompare ">1.26" .kubernetesVersion }}
+    if bb-flag? kubelet-enable-credential-provider; then
+      credential_provider_flags="--image-credential-provider-config=/var/lib/bashible/kubelet-credential-provider-config.yaml --image-credential-provider-bin-dir=/opt/deckhouse/bin"
+      bb-flag-unset kubelet-enable-credential-provider
+    fi
 {{- end }}
 
 bb-event-on 'bb-sync-file-changed' '_enable_kubelet_service'
@@ -61,8 +63,9 @@ function _enable_kubelet_service() {
 bb-sync-file /etc/systemd/system/kubelet.service.d/10-deckhouse.conf - << EOF
 [Service]
 Type=forking
+Environment="PATH=/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
 ExecStart=
-ExecStart=/usr/local/bin/d8-kubelet-forker /usr/bin/kubelet \\
+ExecStart=/opt/deckhouse/bin/d8-kubelet-forker /opt/deckhouse/bin/kubelet \\
 {{- if not (eq .nodeGroup.nodeType "Static") }}
     --register-with-taints=node.deckhouse.io/uninitialized=:NoSchedule,node.deckhouse.io/csi-not-bootstrapped=:NoSchedule \\
 {{- else }}
@@ -72,11 +75,6 @@ ExecStart=/usr/local/bin/d8-kubelet-forker /usr/bin/kubelet \\
     --node-labels=node.deckhouse.io/type={{ .nodeGroup.nodeType }} \\
     --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf \\
     --config=/var/lib/kubelet/config.yaml \\
-{{- if semverCompare "<1.24" .kubernetesVersion }}
-    --cni-bin-dir=/opt/cni/bin/ \\
-    --cni-conf-dir=/etc/cni/net.d/ \\
-    --network-plugin=cni \\
-{{- end }}
     --kubeconfig=/etc/kubernetes/kubelet.conf \\
     --address=${discovered_node_ip:-0.0.0.0} \\
 {{- /* During the first multi-network Node bootstrap `kubelet` discovers external IP getting it by Node's hostname. */ -}}
@@ -91,6 +89,13 @@ $([ -n "$discovered_node_ip" ] && echo -e "\n    --node-ip=${discovered_node_ip}
 {{- if hasKey .nodeGroup "kubelet" }}
     --root-dir={{ .nodeGroup.kubelet.rootDir | default "/var/lib/kubelet" }} \\
 {{- end }}
+{{- if semverCompare "<1.27" .kubernetesVersion }}
     ${cri_config} \\
+{{- end }}
+    ${credential_provider_flags} \\
     --v=2
 EOF
+
+# CIS becnhmark purposes
+chmod 600 /etc/systemd/system/kubelet.service.d/10-deckhouse.conf
+chmod 600 /lib/systemd/system/kubelet.service

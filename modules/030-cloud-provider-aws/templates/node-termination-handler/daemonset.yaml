@@ -40,6 +40,8 @@ spec:
       app: node-termination-handler
   template:
     metadata:
+      annotations:
+        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
       labels:
         app: node-termination-handler
     spec:
@@ -55,7 +57,7 @@ spec:
       - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       serviceAccountName: node-termination-handler
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet

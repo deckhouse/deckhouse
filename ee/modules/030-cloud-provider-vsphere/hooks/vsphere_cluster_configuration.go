@@ -19,7 +19,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
 
-var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, secretFound bool) error {
+var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, _ bool) error {
 
 	p := make(map[string]json.RawMessage)
 	if metaCfg != nil {
@@ -102,7 +102,7 @@ func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModu
 	}
 
 	if p.RegionTagCategory == nil {
-		p.RegionTagCategory = pointer.StringPtr("k8s-region")
+		p.RegionTagCategory = pointer.String("k8s-region")
 	}
 
 	if m.ZoneTagCategory != nil {
@@ -110,7 +110,7 @@ func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModu
 	}
 
 	if p.ZoneTagCategory == nil {
-		p.ZoneTagCategory = pointer.StringPtr("k8s-zone")
+		p.ZoneTagCategory = pointer.String("k8s-zone")
 	}
 
 	if m.DisableTimesync != nil {
@@ -118,7 +118,7 @@ func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModu
 	}
 
 	if p.DisableTimesync == nil {
-		p.DisableTimesync = pointer.BoolPtr(true)
+		p.DisableTimesync = pointer.Bool(true)
 	}
 
 	if m.ExternalNetworkNames != nil {

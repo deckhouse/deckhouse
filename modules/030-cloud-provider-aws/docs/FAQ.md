@@ -6,7 +6,7 @@ title: "Cloud provider — AWS: FAQ"
 
 Let's, for example, create a peering connection between two VPCs, vpc-a and vpc-b.
 
->**Caution!** IPv4 CIDR must be unique for each VPC.
+> **Caution!** IPv4 CIDR must be unique for each VPC.
 
 To configure, follow these steps:
 
@@ -64,11 +64,13 @@ There are two possible cases:
   1. Manually run a bastion in the <prefix>-public-0 subnet;
   1. Continue the installation by specifying the bastion host: `dhctl bootstrap --ssh-bastion...`
 
-## Adding CloudStatic nodes to the cluster
+## Adding CloudStatic nodes to a cluster
 
-To add a pre-created instance to the cluster, you need to:
-1. Attach a security group `<prefix>-node`.
-2. Add tags:
+To add a pre-created VM as a node to a cluster, follow these steps:
+
+1. Attach a security group `<prefix>-node` to the virtual machine.
+1. Attach the IAM role `<prefix>-node` to the virtual machine.
+1. Add the following tags to the virtual machine (so that `cloud-controller-manager` can find virtual machines in the cloud):
 
    ```text
    "kubernetes.io/cluster/<cluster_uuid>" = "shared"
@@ -84,7 +86,8 @@ To add a pre-created instance to the cluster, you need to:
    * You can find out `prefix` using the command:
 
      ```shell
-     kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix
+     kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
+       | base64 -d | grep prefix
      ```
 
 ## How to increase the size of a volume?

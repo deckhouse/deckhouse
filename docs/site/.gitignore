@@ -1,4 +1,3 @@
-modules
 _site/
 .sass-cache/
 .jekyll-metadata
@@ -7,3 +6,5 @@ _pdf
 .werf_secret_key
 backend/releasechannels
 backend/root
+/backends/docs-builder-template/public/
+.hugo_build.lock

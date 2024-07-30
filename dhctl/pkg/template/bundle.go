@@ -15,11 +15,7 @@
 package template
 
 import (
-	"bytes"
-	"fmt"
-	"os"
 	"path/filepath"
-	"text/template"
 
 	"gopkg.in/yaml.v2"
 
@@ -28,18 +24,22 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
-const (
+var (
 	candiDir         = "/deckhouse/candi"
-	bashibleDir      = "/var/lib/bashible"
 	candiBashibleDir = candiDir + "/bashible"
-	stepsDir         = bashibleDir + "/bundle_steps"
 	detectBundlePath = candiBashibleDir + "/detect_bundle.sh"
 )
 
+const (
+	bashibleDir = "/var/lib/bashible"
+	stepsDir    = bashibleDir + "/bundle_steps"
+)
+
 type saveFromTo struct {
-	from string
-	to   string
-	data map[string]interface{}
+	from        string
+	to          string
+	data        map[string]interface{}
+	ignorePaths map[string]struct{}
 }
 
 func logTemplatesData(name string, data map[string]interface{}) {
@@ -55,10 +55,8 @@ func logTemplatesData(name string, data map[string]interface{}) {
 	}
 
 	formattedData, _ := yaml.Marshal(dataForLog)
-	_ = log.Process("default", fmt.Sprintf("%s data", name), func() error {
-		log.InfoF(string(formattedData))
-		return nil
-	})
+
+	log.DebugF("Data %s\n%s", name, string(formattedData))
 }
 
 func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePath string, metaConfig *config.MetaConfig) error {
@@ -74,19 +72,17 @@ func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePat
 	}
 	logTemplatesData("bashible", bashibleData)
 
-	return log.Process("default", "Render bashible bundle templates", func() error {
-		if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, bundleName, devicePath); err != nil {
-			return err
-		}
+	if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, bundleName, devicePath); err != nil {
+		return err
+	}
 
-		if err := PrepareKubeadmConfig(templateController, kubeadmData); err != nil {
-			return err
-		}
+	if err := PrepareKubeadmConfig(templateController, kubeadmData); err != nil {
+		return err
+	}
 
-		bashboosterDir := filepath.Join(candiBashibleDir, "bashbooster")
-		log.InfoF("From %q to %q\n", bashboosterDir, bashibleDir)
-		return templateController.RenderBashBooster(bashboosterDir, bashibleDir)
-	})
+	bashboosterDir := filepath.Join(candiBashibleDir, "bashbooster")
+	log.DebugF("From %q to %q\n", bashboosterDir, bashibleDir)
+	return templateController.RenderBashBooster(bashboosterDir, bashibleDir)
 }
 
 func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider, bundle, devicePath string) error {
@@ -103,6 +99,9 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 			from: candiBashibleDir,
 			to:   bashibleDir,
 			data: templateData,
+			ignorePaths: map[string]struct{}{
+				filepath.Join(candiBashibleDir, "bootstrap.sh.tpl"): {},
+			},
 		},
 	}
 
@@ -139,14 +138,14 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 	}
 
 	for _, info := range saveInfo {
-		log.InfoF("From %q to %q\n", info.from, info.to)
-		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data); err != nil {
+		log.DebugF("From %q to %q\n", info.from, info.to)
+		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, info.ignorePaths); err != nil {
 			return err
 		}
 	}
 
 	firstRunFileFlag := filepath.Join(templateController.TmpDir, bashibleDir, "first_run")
-	log.InfoF("Create %q\n", firstRunFileFlag)
+	log.DebugF("Create %q\n", firstRunFileFlag)
 	if err := fs.CreateEmptyFile(firstRunFileFlag); err != nil {
 		return err
 	}
@@ -172,7 +171,7 @@ func PrepareKubeadmConfig(templateController *Controller, templateData map[strin
 	}
 	for _, info := range saveInfo {
 		log.InfoF("From %q to %q\n", info.from, info.to)
-		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data); err != nil {
+		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, nil); err != nil {
 			return err
 		}
 	}
@@ -192,53 +191,14 @@ func withoutNodeGroup(data map[string]interface{}) map[string]interface{} {
 func RenderAndSaveDetectBundle(data map[string]interface{}) (string, error) {
 	log.DebugLn("Start render detect bundle script")
 
-	fileContent, err := os.ReadFile(detectBundlePath)
-	if err != nil {
-		return "", fmt.Errorf("loading %s: %v", detectBundlePath, err)
-	}
+	return RenderAndSaveTemplate("detect_bundle.sh", detectBundlePath, data)
+}
 
-	content := string(fileContent)
-
-	if data != nil {
-		t := template.New("detect_bundle_render").Funcs(FuncMap())
-		t, err := t.Parse(content)
-		if err != nil {
-			return "", err
-		}
-
-		var tpl bytes.Buffer
-
-		err = t.Execute(&tpl, data)
-		if err != nil {
-			return "", err
-		}
-
-		content = tpl.String()
-		log.DebugF("Bundle script content:\n%s", content)
-	}
-
-	outFile, err := os.CreateTemp(os.TempDir(), "*-detect-bundle.sh")
-	if err != nil {
-		return "", err
-	}
-
-	defer func() {
-		if err := outFile.Close(); err != nil {
-			log.ErrorF("Cannot close rendered detect_bundle.sh %s:%v", outFile.Name())
-		}
-	}()
-
-	if _, err = outFile.WriteString(content); err != nil {
-		return "", err
-	}
-
-	if err = outFile.Sync(); err != nil {
-		return "", err
-	}
-
-	if err = outFile.Chmod(0775); err != nil {
-		return "", err
-	}
-
-	return outFile.Name(), nil
+func InitGlobalVars(pwd string) {
+	candiDir = pwd + "/deckhouse/candi"
+	candiBashibleDir = candiDir + "/bashible"
+	detectBundlePath = candiBashibleDir + "/detect_bundle.sh"
+	checkPortsScriptPath = candiBashibleDir + "/preflight/check_ports.sh.tpl"
+	checkLocalhostScriptPath = candiBashibleDir + "/preflight/check_localhost.sh.tpl"
+	preflightScriptDirPath = candiBashibleDir + "/preflight/"
 }

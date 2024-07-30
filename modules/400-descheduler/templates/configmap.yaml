@@ -1,111 +1,153 @@
+{{- define "additional_parameters" }}
+  {{- if .nodeFilter }}
+nodeFilter:
+  {{- .nodeFilter | toYaml | nindent 2 }}
+    {{- end }}
+
+    {{- if .priorityFilter }}
+priorityFilter:
+  {{- .priorityFilter | toYaml | nindent 2 }}
+    {{- end }}
+
+    {{- if .namespaceFilter }}
+namespaceFilter:
+  {{- .namespaceFilter | toYaml | nindent 2 }}
+    {{- end }}
+
+    {{- if .nodeFit }}
+nodeFit:
+  {{- .nodeFit | toYaml | nindent 2 }}
+    {{- end }}
+  {{- end }}
+
+  {{- range $d := .Values.descheduler.internal.deschedulers }}
+  {{- $deschedulerSpec := $d.spec }}
+  {{- $globalParameters := $deschedulerSpec.deschedulerPolicy.globalParameters }}
+  {{- $strategies := $deschedulerSpec.deschedulerPolicy.strategies }}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: descheduler-policy-configmap
+  name: descheduler-policy-{{ $d.metadata.name | sha1sum }}
   namespace: d8-descheduler
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
 data:
   policy.yaml: |
     apiVersion: "descheduler/v1alpha1"
     kind: "DeschedulerPolicy"
+  {{- if $globalParameters }}
+    {{- $globalParameters | toYaml | nindent 4 }}
+  {{- end }}
     strategies:
-{{- if .Values.descheduler.removePodsViolatingNodeAffinity }}
+  {{- if dig "removeDuplicates" "enabled" false $strategies }}
+      "RemoveDuplicates":
+        enabled: true
+        params:
+    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
+  {{- else }}
+      "RemoveDuplicates":
+        enabled: false
+  {{- end }}
+
+  {{- if dig "removePodsViolatingNodeAffinity" "enabled" false $strategies }}
       "RemovePodsViolatingNodeAffinity":
         enabled: true
         params:
           nodeAffinityType:
-          - "requiredDuringSchedulingIgnoredDuringExecution"
-{{- else }}
+            - "requiredDuringSchedulingIgnoredDuringExecution"
+    {{- include "additional_parameters" $strategies.removePodsViolatingNodeAffinity | nindent 10 }}
+  {{- else }}
       "RemovePodsViolatingNodeAffinity":
         enabled: false
-{{- end }}
+  {{- end }}
 
-{{- if .Values.descheduler.removePodsViolatingInterPodAntiAffinity }}
+  {{- if dig "removePodsViolatingInterPodAntiAffinity" "enabled" false $strategies }}
       "RemovePodsViolatingInterPodAntiAffinity":
         enabled: true
-{{- else }}
+        params:
+    {{- include "additional_parameters" $strategies.removePodsViolatingInterPodAntiAffinity | nindent 10 }}
+  {{- else }}
       "RemovePodsViolatingInterPodAntiAffinity":
         enabled: false
-{{- end }}
+  {{- end }}
 
-{{- if .Values.descheduler.removeDuplicates }}
-      "RemoveDuplicates":
-        enabled: true
-{{- else }}
-      "RemoveDuplicates":
-        enabled: false
-{{- end }}
 
-{{- if .Values.descheduler.lowNodeUtilization }}
+  {{- if dig "lowNodeUtilization" "enabled" false $strategies }}
       "LowNodeUtilization":
         enabled: true
         params:
           nodeResourceUtilizationThresholds:
             thresholds:
-              "cpu" : 40
+              "cpu": 40
               "memory": 50
               "pods": 40
             targetThresholds:
-              "cpu" : 80
+              "cpu": 80
               "memory": 90
               "pods": 80
-{{- else }}
+    {{- include "additional_parameters" $strategies.lowNodeUtilization | nindent 10 }}
+  {{- else }}
       "LowNodeUtilization":
         enabled: false
-{{- end }}
+  {{- end }}
 
-{{- if .Values.descheduler.highNodeUtilization }}
+  {{- if dig "highNodeUtilization" "enabled" false $strategies }}
       "HighNodeUtilization":
         enabled: true
         params:
-          nodeFit: true
           nodeResourceUtilizationThresholds:
             thresholds:
-              "cpu" : 50
+              "cpu": 50
               "memory": 50
-{{- else }}
+    {{- include "additional_parameters" $strategies.highNodeUtilization | nindent 10 }}
+  {{- else }}
       "HighNodeUtilization":
         enabled: false
-{{- end }}
+  {{- end }}
 
-{{- if .Values.descheduler.removePodsViolatingNodeTaints }}
+  {{- if dig "removePodsViolatingNodeTaints" "enabled" false $strategies }}
       "RemovePodsViolatingNodeTaints":
         enabled: true
-{{- else }}
+        params:
+    {{- include "additional_parameters" $strategies.removePodsViolatingNodeTaints | nindent 10 }}
+  {{- else }}
       "RemovePodsViolatingNodeTaints":
         enabled: false
-{{- end }}
+  {{- end }}
 
-{{- if .Values.descheduler.removePodsViolatingTopologySpreadConstraint }}
+  {{- if dig "removePodsViolatingTopologySpreadConstraint" "enabled" false $strategies }}
       "RemovePodsViolatingTopologySpreadConstraint":
         enabled: true
-{{- else }}
+        params:
+    {{- include "additional_parameters" $strategies.removePodsViolatingTopologySpreadConstraint | nindent 10 }}
+  {{- else }}
       "RemovePodsViolatingTopologySpreadConstraint":
         enabled: false
-{{- end }}
+  {{- end }}
 
-{{- if .Values.descheduler.removePodsHavingTooManyRestarts }}
+  {{- if dig "removePodsHavingTooManyRestarts" "enabled" false $strategies }}
       "RemovePodsHavingTooManyRestarts":
         enabled: true
         params:
           podsHavingTooManyRestarts:
             podRestartThreshold: 100
             includingInitContainers: true
-{{- else }}
+    {{- include "additional_parameters" $strategies.removePodsHavingTooManyRestarts | nindent 10 }}
+  {{- else }}
       "RemovePodsHavingTooManyRestarts":
         enabled: false
-{{- end }}
+  {{- end }}
 
-{{- if .Values.descheduler.podLifeTime }}
+  {{- if dig "podLifeTime" "enabled" false $strategies }}
       "PodLifeTime":
         enabled: true
         params:
           podLifeTime:
             maxPodLifeTimeSeconds: 86400
             podStatusPhases:
-            - "Pending"
-{{- else }}
+              - "Pending"
+  {{- else }}
       "PodLifeTime":
         enabled: false
+  {{- end }}
 {{- end }}

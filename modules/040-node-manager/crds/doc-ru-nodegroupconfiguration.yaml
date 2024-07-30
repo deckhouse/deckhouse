@@ -19,15 +19,50 @@ spec:
       storage: true
       schema:
         openAPIV3Schema:
+          description: |
+            Ресурс для выполнения bash-скриптов на узлах.
+
+            [Подробнее](./#пользовательские-настройки-на-узлах) в документации модуля.
           properties:
             spec:
               properties:
                 content:
-                  description: Содержимое шага конфигурации. Может быть или шаблоном Go Template или bash-скриптом.
+                  description: |
+                    Содержимое шага конфигурации в виде bash-скрипта.
+
+                    Для генерации скрипта возможно использовать [Go Template](https://pkg.go.dev/text/template).
+
+                    Получить список параметров, доступных для использования в шаблонах, можно из секрета `bashible-apiserver-context`:
+
+                    ```shell
+                    kubectl -n d8-cloud-instance-manager get secrets bashible-apiserver-context -o jsonpath='{.data.input\.yaml}'| base64 -d
+                    ```
+
+                    Пример:
+
+                    ```shell
+                    {{- range .nodeUsers }}
+                    echo 'Tuning environment for user {{ .name }}'
+                    # Some code for tuning user environment
+                    {{- end }}
+                    ```
+
+                    Также в скрипте допустимо использовать подготовленные команды [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster). Например:
+
+                    ```shell
+                    bb-event-on 'bb-package-installed' 'post-install'
+                    post-install() {
+                      bb-log-info "Setting reboot flag due to kernel was updated"
+                      bb-flag-set reboot
+                    }
+                    ```
                 weight:
                   description: Очередность выполнения шага конфигурации.
                 nodeGroups:
-                  description: Список NodeGroup к которым применять шаг конфигурации. Для выбора всех NodeGroups нужно указать '*'.
+                  description: Список NodeGroup, к которым нужно применять шаг конфигурации. Для выбора всех NodeGroups нужно указать '*'.
                 bundles:
-                  description: Список bundles, для которых выполнять скрипт. Для выбора всех bundles нужно указать `'*'`.
+                  description: |
+                    Список bundle'ов, для которых будет выполняться скрипт. Для выбора всех bundle'ов нужно указать `'*'`.
+
+                    Список возможных bundle'ов такой же, как у параметра [allowedBundles](configuration.html#parameters-allowedbundles) модуля.
 

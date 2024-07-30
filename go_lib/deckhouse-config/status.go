@@ -21,15 +21,22 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	d8cfg_v1alpha1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-type Status struct {
-	State   string
+type ModuleConfigStatus struct {
 	Version string
-	Status  string
+	Message string
+}
+
+type ModuleStatus struct {
+	Status     string
+	Message    string
+	HooksState string
 }
 
 type StatusReporter struct {
@@ -44,29 +51,117 @@ func NewModuleInfo(mm ModuleManager, possibleNames set.Set) *StatusReporter {
 	}
 }
 
-func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName string) Status {
-	// Special case: unknown module name.
-	if !s.possibleNames.Has(cfg.GetName()) {
-		return Status{
-			State:   "N/A",
-			Version: "",
-			Status:  "Ignored: unknown module name",
+func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.ModuleConfig, bundleName string) ModuleStatus {
+	// Figure out additional statuses for known modules.
+	statusMsgs := make([]string, 0)
+	msgs := make([]string, 0)
+
+	mod := s.moduleManager.GetModule(module.GetName())
+	// return error if module manager doesn't have such a module
+	if mod == nil {
+		return ModuleStatus{
+			Status: "Error: failed to fetch module metadata",
 		}
 	}
 
-	chain := conversion.Registry().Chain(cfg.GetName())
+	// Calculate state and status.
+	if s.moduleManager.IsModuleEnabled(module.GetName()) {
+		lastHookErr := mod.GetLastHookError()
+		if lastHookErr != nil {
+			statusMsgs = append(statusMsgs, fmt.Sprintf("HookError: %v", lastHookErr))
+		}
+		if mod.GetModuleError() != nil {
+			statusMsgs = append(statusMsgs, fmt.Sprintf("ModuleError: %v", mod.GetModuleError()))
+		}
 
-	// Run conversions and validate versioned settings to warn about invalid spec.settings.
-	// TODO(future): add cache for these errors, for example in internal values.
-	if chain.IsKnownVersion(cfg.Spec.Version) && hasVersionedSettings(cfg) {
-		res := Service().ConfigValidator().Validate(cfg)
-		if res.HasError() {
-			invalidMsg := fmt.Sprintf("Ignored: %s", res.Error)
-			return Status{
-				State:   "N/A",
-				Version: "",
-				Status:  invalidMsg,
+		if len(statusMsgs) == 0 { // no errors were added
+			// Best effort alarm!
+			//
+			// Actually, this condition is not correct because the `CanRunHelm` status appears right before the first run.c
+			// The right approach is to check the queue for the module run task.
+			// However, there are too many addon-operator internals involved.
+			// We should consider moving these statuses to the `Module` resource,
+			// which is directly controlled by addon-operator.
+			switch mod.GetPhase() {
+			case modules.CanRunHelm:
+				statusMsgs = append(statusMsgs, "Ready")
+				// enrich the status message with a notification from the related module config
+				if cfg != nil {
+					cfgStatus := s.ForConfig(cfg)
+					if len(cfgStatus.Message) > 0 {
+						msgs = append(msgs, "Info: check module configuration status")
+					}
+				}
+
+			case modules.Startup:
+				statusMsgs = append(statusMsgs, "Enqueued")
+
+			case modules.OnStartupDone:
+				statusMsgs = append(statusMsgs, "OnStartUp hooks are completed")
+
+			case modules.WaitForSynchronization:
+				statusMsgs = append(statusMsgs, "Synchronizations tasks are running")
+
+			case modules.HooksDisabled:
+				statusMsgs = append(statusMsgs, "Pending: hooks are disabled")
 			}
+		}
+	} else {
+		// Special case: no enabled flag in ModuleConfig or ModuleConfig is in terminating stage, module disabled by bundle.
+		if cfg == nil || (cfg != nil && (cfg.Spec.Enabled == nil || cfg.DeletionTimestamp != nil)) {
+			// for external modules it makes sense to notify that they must be explicitly enabled via module configs
+			if module.Properties.Source != "Embedded" {
+				msgs = append(msgs, "Info: apply module config to enable")
+			} else {
+				// Consider merged static enabled flags as '*Enabled flags from the bundle'.
+				enabledMsg := "disabled"
+				// TODO(yalosev): think about it
+				if s.moduleManager.IsModuleEnabled(mod.GetName()) {
+					enabledMsg = "enabled"
+				}
+				msgs = append(msgs, fmt.Sprintf("Info: %s by %s bundle", enabledMsg, bundleName))
+			}
+		}
+
+		// Special case: explicitly enabled by the config but effectively disabled by the ModuleManager.
+		if cfg != nil {
+			if cfg.Spec.Enabled != nil {
+				if *cfg.Spec.Enabled {
+					if scriptResult := mod.GetEnabledScriptResult(); scriptResult != nil {
+						if !*scriptResult {
+							msgs = append(msgs, "Info: turned off by 'enabled'-script, refer to the module documentation")
+						}
+					}
+				} else {
+					msgs = append(msgs, "Info: disabled by module config")
+				}
+			}
+		}
+	}
+
+	return ModuleStatus{
+		Status:     strings.Join(statusMsgs, ", "),
+		Message:    strings.Join(msgs, ", "),
+		HooksState: mod.GetHookErrorsSummary(),
+	}
+}
+
+func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig) ModuleConfigStatus {
+	statusMsgs := make([]string, 0)
+
+	// Special case: unknown module name.
+	if !s.possibleNames.Has(cfg.GetName()) {
+		return ModuleConfigStatus{
+			Version: "",
+			Message: "Ignored: unknown module name",
+		}
+	}
+
+	res := Service().ConfigValidator().Validate(cfg)
+	if res.HasError() {
+		return ModuleConfigStatus{
+			Version: "",
+			Message: fmt.Sprintf("Error: %s", res.Error),
 		}
 	}
 
@@ -74,85 +169,35 @@ func (s *StatusReporter) ForConfig(cfg *d8cfg_v1alpha1.ModuleConfig, bundleName 
 	// Also create warning if version is unknown or outdated.
 	versionWarning := ""
 	version := ""
+	converter := conversion.Store().Get(cfg.GetName())
 	if cfg.Spec.Version == 0 {
 		// Use latest version if spec.version is empty.
-		version = strconv.Itoa(chain.LatestVersion())
+		version = strconv.Itoa(converter.LatestVersion())
 	}
 	if cfg.Spec.Version > 0 {
 		version = strconv.Itoa(cfg.Spec.Version)
-		if !chain.IsKnownVersion(cfg.Spec.Version) {
-			versionWarning = fmt.Sprintf("Error: invalid spec.version, use version %d", chain.LatestVersion())
-		} else if chain.Conversion(cfg.Spec.Version) != nil {
+		if !converter.IsKnownVersion(cfg.Spec.Version) {
+			versionWarning = fmt.Sprintf("Error: invalid spec.version, use version %d", converter.LatestVersion())
+		} else if cfg.Spec.Version < converter.LatestVersion() {
 			// Warn about obsolete version if there is conversion for spec.version.
-			versionWarning = fmt.Sprintf("Update available, latest spec.settings schema version is %d", chain.LatestVersion())
+			versionWarning = fmt.Sprintf("Update available, latest spec.settings schema version is %d", converter.LatestVersion())
 		}
 	}
 
 	// 'global' config is always enabled.
 	if cfg.GetName() == "global" {
-		return Status{
-			State:   "Enabled",
+		return ModuleConfigStatus{
 			Version: version,
-			Status:  versionWarning,
+			Message: versionWarning,
 		}
 	}
 
-	// Figure out additional statuses for known modules.
-	statusMsgs := make([]string, 0)
 	if versionWarning != "" {
 		statusMsgs = append(statusMsgs, versionWarning)
 	}
 
-	mod := s.moduleManager.GetModule(cfg.GetName())
-
-	// Calculate state and status.
-	stateMsg := "Disabled"
-	if s.moduleManager.IsModuleEnabled(cfg.GetName()) {
-		stateMsg = "Enabled"
-		lastHookErr := mod.State.GetLastHookErr()
-		if lastHookErr != nil {
-			statusMsgs = append(statusMsgs, fmt.Sprintf("HookError: %v", lastHookErr))
-		}
-		if mod.State.LastModuleErr != nil {
-			statusMsgs = append(statusMsgs, fmt.Sprintf("ModuleError: %v", mod.State.LastModuleErr))
-		}
-	} else {
-		// Special case: no enabled flag in ModuleConfig, module disabled by bundle.
-		if cfg.Spec.Enabled == nil {
-			// Consider merged static enabled flags as '*Enabled flags from the bundle'.
-			enabledMsg := "disabled"
-			if mergeEnabled(mod.CommonStaticConfig.IsEnabled, mod.StaticConfig.IsEnabled) {
-				enabledMsg = "enabled"
-			}
-			statusMsgs = append(statusMsgs, fmt.Sprintf("Info: %s by %s bundle", enabledMsg, bundleName))
-		}
-
-		// Special case: explicitly enabled by the config but effectively disabled by the ModuleManager.
-		if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
-			statusMsgs = append(statusMsgs, "Info: turned off by 'enabled'-script, refer to the module documentation")
-		}
-	}
-
-	return Status{
+	return ModuleConfigStatus{
 		Version: version,
-		State:   stateMsg,
-		Status:  strings.Join(statusMsgs, ", "),
+		Message: strings.Join(statusMsgs, ", "),
 	}
-}
-
-// mergeEnabled merges enabled flags. Enabled flag can be nil.
-//
-// If all flags are nil, then false is returned — module is disabled by default.
-// Note: copy-paste from AddonOperator.moduleManager
-func mergeEnabled(enabledFlags ...*bool) bool {
-	result := false
-	for _, enabled := range enabledFlags {
-		if enabled == nil {
-			continue
-		} else {
-			result = *enabled
-		}
-	}
-
-	return result
 }

@@ -2,7 +2,7 @@
 title: "Модуль local-path-provisioner: примеры"
 ---
 
-## Пример CR `LocalPathProvisioner`
+## Пример custom resource `LocalPathProvisioner`
 
 Reclaim policy устанавливается по умолчанию в `Retain`.
 
@@ -17,7 +17,7 @@ spec:
   path: "/opt/local-path-provisioner"
 ```
 
-## Пример CR `LocalPathProvisioner` с установленным `reclaimPolicy`
+## Пример custom resource `LocalPathProvisioner` с установленным `reclaimPolicy`
 
 Reclaim policy устанавливается в `Delete`.
 

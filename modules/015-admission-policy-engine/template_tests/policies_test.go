@@ -18,11 +18,8 @@ package template_tests
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"os/exec"
-	"path"
-	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -32,15 +29,21 @@ import (
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: pod security policies ::", func() {
+	var gatorPath string
+	var gatorFound bool
 	f := SetupHelmConfig(`
 admissionPolicyEngine:
   internal:
+    podSecurityStandards:
+      enforcementActions:
+      - deny
     bootstrapped: true
     webhook:
       ca: YjY0ZW5jX3N0cmluZwo=
       crt: YjY0ZW5jX3N0cmluZwo=
       key: YjY0ZW5jX3N0cmluZwo=
-    trackedResources: []
+    trackedConstraintResources: []
+    trackedMutateResources: []
   podSecurityStandards:
     policies:
       hostPorts:
@@ -52,41 +55,22 @@ admissionPolicyEngine:
 `)
 
 	Context("Test rego policies", func() {
-		renderedOutput := make(map[string]string)
 		BeforeEach(func() {
-			if !gatorAvailable() {
+			if gatorPath, gatorFound = gatorAvailable(); !gatorFound {
 				Skip("gator binary is not available")
 			}
 
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.HelmRender(WithFilteredRenderOutput(renderedOutput, "admission-policy-engine/templates/policies/"))
+			f.HelmRender()
 		})
 
 		It("Rego policy test must have passed", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			tmpDir, err := os.MkdirTemp("", "policy-*")
-			defer os.RemoveAll(tmpDir)
-			Expect(err).To(BeNil())
-
-			for filePath, content := range renderedOutput {
-				newPath := path.Join(tmpDir, filePath)
-				_ = os.MkdirAll(path.Dir(newPath), 0755)
-				_ = os.WriteFile(newPath, []byte(content), 0444)
-			}
-			_ = filepath.Walk("../templates/policies", func(fpath string, info fs.FileInfo, err error) error {
-				if strings.HasSuffix(fpath, "test_suite.yaml") || strings.Contains(fpath, "/test_samples/") {
-					newPath := path.Join(tmpDir, strings.Replace(fpath, "../", "admission-policy-engine/", 1))
-					_ = os.MkdirAll(path.Dir(newPath), 0755)
-					input, _ := os.ReadFile(fpath)
-					_ = os.WriteFile(newPath, input, 0644)
-				}
-				return nil
-			})
-			gatorCLI := exec.Command("gator", "verify", "-v", path.Join(tmpDir, "..."))
+			gatorCLI := exec.Command(gatorPath, "verify", "-v", "../charts/constraint-templates/tests/...")
 			res, err := gatorCLI.Output()
 			if err != nil {
-				output := strings.ReplaceAll(string(res), strings.TrimPrefix(path.Join(tmpDir, "admission-policy-engine"), "/"), "")
+				output := strings.ReplaceAll(string(res), "modules/015-admission-policy-engine/charts/constraint-templates", "...")
 				fmt.Println(output)
 				Fail("Gatekeeper policy tests failed:" + err.Error())
 			}
@@ -94,9 +78,12 @@ admissionPolicyEngine:
 	})
 })
 
-const gatorPath = "/deckhouse/bin/gator"
+func gatorAvailable() (string, bool) {
+	gatorPath, err := exec.LookPath("gator")
+	if err != nil {
+		return "", false
+	}
 
-func gatorAvailable() bool {
 	info, err := os.Lstat(gatorPath)
-	return err == nil && (info.Mode().Perm()&0111 != 0)
+	return gatorPath, err == nil && (info.Mode().Perm()&0111 != 0)
 }

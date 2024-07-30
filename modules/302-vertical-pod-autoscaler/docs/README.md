@@ -6,7 +6,7 @@ search: autoscaler
 Vertical Pod Autoscaler ([VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler)) is an infrastructure service that allows you to avoid setting exact resource requests for a container if their values are not known in advance. VPA can automatically adjust the CPU and memory reservations (providing that the corresponding mode is enabled) based on the actual resource consumption (as shown by the Prometheus data).
 Also, VPA can recommend values for resource requests and limits without updating them automatically.
 
-VPA has three operating modes:
+VPA has the following operating modes:
 - `"Auto"` (default) — currently, Auto and Recreate modes do the same thing. This mode is reserved for the [Pod in-place resource update](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md#in-place-updates) in Kubernetes.
 - `"Recreate"` — this mode allows VPA to modify resource requirements of the running Pods (i.e., restart them during operation). This mode might result in temporary unavailability of the service (due to restart) if you have just one replica (replicas: 1). In this mode, VPA does not recreate Pods that were created without a controller.
 - `"Initial"` — VPA modifies Pod resources only when Pods are started (but not during operation).
@@ -21,7 +21,7 @@ VPA limitations:
 - Using multiple VPAs for the same Pod can lead to undefined behavior.
 - If VPA is deleted or "turned off" (the `Off` mode), the changes made by VPA earlier are not reset (the most recent value set is kept). It may lead to confusion due to the difference between resource values in Helm/controller and the actual resources of Pods (it may be perceived as if they "came from out of nowhere").
 
-> **CAUTION!**: We highly recommend using [Pod Disruption Budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) with VPA.
+> **Caution!** We highly recommend using [Pod Disruption Budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) with VPA.
 
 ## Grafana dashboard
 

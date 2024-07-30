@@ -1,16 +1,19 @@
 ---
 title: "The user-authn module"
 search: kube config generator
+webIfaces:
+- name: kubeconfig
+  urlInfo: faq.html#how-can-i-generate-a-kubeconfig-and-access-kubernetes-api
 ---
 
-This module sets up a unified authentication system integrated with Kubernetes and Web interfaces used in other modules (Grafana, Dashboard, etc.).
+The module sets up a unified authentication system integrated with Kubernetes and Web interfaces used in other modules (Grafana, Dashboard, etc.).
 
 It consists of the following components:
 - [dex](https://github.com/dexidp/dex) — is a federated OpenID Connect provider that acts as an identity service for static users and can be linked to one or more ID providers (e.g., SAML providers, GitHub, and Gitlab);
-- kubeconfig-generator (in fact, [dex-k8s-authenticator](https://github.com/mintel/dex-k8s-authenticator)) — is a helper web application that (being authorized with dex) generates kubectl commands for creating and modifying a kubeconfig;
-- dex-authenticator (in fact, [oauth2-proxy](https://github.com/pusher/oauth2_proxy)) — is an application that gets nginx ingress (auth_request) requests and authenticates them with dex.
+- `kubeconfig-generator` (in fact, [dex-k8s-authenticator](https://github.com/mintel/dex-k8s-authenticator)) — is a helper web application that (being authorized with dex) generates kubectl commands for creating and modifying a kubeconfig;
+- `dex-authenticator` (in fact, [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy)) — is an application that gets NGINX Ingress (auth_request) requests and authenticates them with Dex.
 
-Static users are managed using the [`User`](cr.html#user) Custom Resource. It contains all the user-related data, including the password.
+Static users are managed using the [`User`](cr.html#user) custom resource. It contains all the user-related data, including the password.
 
 The following external authentication protocols/providers are supported:
 - GitHub
@@ -24,58 +27,50 @@ You can use several external authentication providers simultaneously.
 
 ## Integration features
 
-### Integration with Kubernetes and Deckhouse
+### Basic authentication for the Kubernetes API requests
 
-The module generates [control-plane-manager](../../modules/040-control-plane-manager/) settings (based on the Kubernetes and Deckhouse versions).
+[Basic authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) for the Kubernetes API requests is currently only available for the Crowd provider (with the [`enableBasicAuth`](cr.html#dexprovider-v1-spec-crowd-enablebasicauth) parameter).
 
-Thus, one of these modules configures the `kube-apiserver` so that it becomes the Dex OIDC client. Several other Deckhouse modules will also be configured to integrate with dex, including:
-- [prometheus](../300-prometheus/)
-- [dashboard](../500-dashboard/)
-- [openvpn](../500-openvpn/)
-- etc.
+> You can also connect to the Kubernetes API [via other supported external providers](#web-interface-for-generating-ready-made-kubeconfig-files).
 
-### Authenticating to the Kubernetes API using a login and password
+### Application integration
 
-Currently, login and password-based authentication to the Kubernetes API is **only** available for the *Crowd* provider.
-Support for this feature for static users and LDAP-enabled providers is expected in the near future.
+To enable authentication for any web application running in Kubernetes, create a [_DexAuthenticator_](cr.html#dexauthenticator) resource in the application's _Namespace_ and add several annotations to the _Ingress_ resource.
+This will enable you to:
+* limit the list of groups with access;
+* limit the list of addresses for which authentication is allowed;
+* integrate the application into a unified authentication system if the application supports OIDC. For that, Kubernetes will create a resource [_DexClient_](cr.html#dexclient) in the application _Namespace_. A secret with data for connecting to Dex via OIDC will also be created in that _Namespace_.
 
-### Integration with applications
+Following such an integration, you can: 
+* limit the list of groups for which the connection is allowed; 
+* define a list of clients with trusted OIDC tokens (`trustedPeers`).
 
-To drive authentication for any web application, you only need to create a [`DexAuthenticator`](cr.html#dexauthenticator) resource in the necessary namespace and add several annotations to the Ingress resource. After that, you can:
-- limit the list of groups that are allowed to connect;
-- limit the list of addresses for which authentication is allowed.
+### Web interface for generating ready-made kubeconfig files
 
-The application that supports OIDC authentication can be integrated into the unified authentication process. To do this, create a [`DexClient` resource](cr.html#dexclient) in the appropriate Kubernetes namespace. Next, a secret with the data to connect to the Dex over OIDC will be created in this namespace.
+The module allows you to automatically generate configuration for kubectl or other Kubernetes tools. 
 
-Such integration provides the following opportunities:
-- the ability to limit the list of groups that are allowed to connect;
-- the ability to set a list of trusted clients whose OIDC tokens can be trusted (`trustedPeers`).
+The user will be presented with a set of commands to configure kubectl once authorized in the generator's web interface. These commands can be copied and pasted into the console to use kubectl.
+The authentication mechanism for kubeconfig uses an OIDC token. The OIDC session can be extended automatically if the authentication provider used in Dex supports session extension. For this, the `refresh token` is specified in kubeconfig.
 
-### Web interface for generating ready-to-use kubeconfig files
+On top of that, you can configure multiple `kube-apiserver` addresses and CA certificates for each of them. This may come in handy, e. g., if access to the Kubernetes cluster is via VPN or direct connection.
 
-The module can automatically generate a configuration file for kubectl or other Kubernetes utilities. The kubeconfig generator's web interface provides to the authenticated user a set of kubectl commands for cluster management. Just copy/paste them into the console to use kubectl.
+## Exposing the Kubernetes API over Ingress
 
-The kubeconfig authentication mechanism uses an OIDC token. An OIDC session can be extended automatically if the authentication provider used by Dex supports session extension. For this, a `refresh token` is provided in kubeconfig.
+The kube-apiserver component (without advanced configuration) is only accessible in the internal cluster network. This module enables easy and secure access to Kubernetes API from outside the cluster. The API server is exposed on a dedicated domain (for more details, see the [section on service domains in the documentation](../../deckhouse-configure-global.html)).
 
-Additionally, you can configure multiple `kube-apiserver` addresses and set a CA for each of them. It might come in handy if, for example, access takes place directly and over VPN.
+When configuring, you can:
+* list network addresses from which connection is allowed;
+* list groups that are allowed to access the API server;
+* specify Ingress-controller to authenticate on.
 
-## Exposing the Kubernetes API using Ingress
+By default, a special CA certificate will be generated and the kubeconfig generator will be automatically configured.
 
-As you know, `kube-apiserver` with no additional settings provided is only reachable from within the internal cluster network by default. This module solves the problem of effortless and secure access to the API from outside the cluster. In doing so, it exposes *apiserver* on the service domain  (for more information, [see](../../deckhouse-configure-global.html) the service domain template in global).
+## Extensions by Flant
 
-The following parameters can be specified when configuring:
-- a list of network addresses for which the connection is allowed;
-- a list of groups that are allowed to access *apiserver*;
-- an Ingress controller to use for authentication.
-
-A dedicated CA will be generated by default, and the kubeconfig generator will be configured automatically.
-
-## Flant-made extensions
-
-The module makes use of a modified version of Dex that contains the following updated and corrected functionality:
-- support for groups for static users and the `bitbucketCloud` provider;
-- ability to pass the `group` parameter to clients;
-- support for the `obsolete tokens` mechanism (it prevents race conditions when the OIDC client renews the token).
+The module uses a modified version of Dex to support:
+* groups for static user accounts and Bitbucket Cloud provider (parameter [`bitbucketCloud`](cr.html#dexprovider-v1-spec-bitbucketcloud));
+* passing the `group` parameter to clients;
+* the `obsolete tokens` mechanism to avoid a race condition when an OIDC client renews a token.
 
 ## High availability mode
 

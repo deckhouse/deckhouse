@@ -95,6 +95,15 @@ func (m *Messages) Add(msg Message) {
 	m.messages = append(m.messages, msg)
 }
 
+func (m *Messages) Join(msgs *Messages) {
+	if msgs == nil {
+		return
+	}
+	for _, message := range msgs.messages {
+		m.Add(message)
+	}
+}
+
 func (m *Messages) CountOK() int {
 	res := 0
 	for _, msg := range m.messages {

@@ -34,16 +34,20 @@ func InitService(mm ModuleManager) {
 	serviceInstanceLock.Lock()
 	defer serviceInstanceLock.Unlock()
 
-	possibleNames := set.New(mm.GetModuleNames()...)
+	possibleNames := set.New()
 	possibleNames.Add("global")
 
 	serviceInstance = &ConfigService{
-		moduleManager:   mm,
-		possibleNames:   possibleNames,
-		transformer:     NewTransformer(possibleNames),
-		configValidator: NewConfigValidator(mm.GetValuesValidator()),
-		statusReporter:  NewModuleInfo(mm, possibleNames),
+		moduleManager:        mm,
+		possibleNames:        possibleNames,
+		configValidator:      NewConfigValidator(mm),
+		statusReporter:       NewModuleInfo(mm, possibleNames),
+		moduleNamesToSources: make(map[string]string),
 	}
+}
+
+func IsServiceInited() bool {
+	return serviceInstance != nil
 }
 
 func Service() *ConfigService {
@@ -56,17 +60,15 @@ func Service() *ConfigService {
 type ConfigService struct {
 	moduleManager   ModuleManager
 	possibleNames   set.Set
-	transformer     *Transformer
 	configValidator *ConfigValidator
 	statusReporter  *StatusReporter
+
+	moduleNamesToSourcesMu sync.RWMutex
+	moduleNamesToSources   map[string]string
 }
 
 func (srv *ConfigService) PossibleNames() set.Set {
 	return srv.possibleNames
-}
-
-func (srv *ConfigService) Transformer() *Transformer {
-	return srv.transformer
 }
 
 func (srv *ConfigService) ConfigValidator() *ConfigValidator {
@@ -75,4 +77,34 @@ func (srv *ConfigService) ConfigValidator() *ConfigValidator {
 
 func (srv *ConfigService) StatusReporter() *StatusReporter {
 	return srv.statusReporter
+}
+
+func (srv *ConfigService) SetModuleNameToSources(allModuleNamesToSources map[string]string) {
+	srv.moduleNamesToSourcesMu.Lock()
+	srv.moduleNamesToSources = allModuleNamesToSources
+	srv.moduleNamesToSourcesMu.Unlock()
+}
+
+func (srv *ConfigService) AddModuleNameToSource(moduleName, moduleSource string) {
+	srv.moduleNamesToSourcesMu.Lock()
+	srv.moduleNamesToSources[moduleName] = moduleSource
+	srv.moduleNamesToSourcesMu.Unlock()
+}
+
+func (srv *ConfigService) ModuleToSourcesNames() map[string]string {
+	srv.moduleNamesToSourcesMu.RLock()
+	defer srv.moduleNamesToSourcesMu.RUnlock()
+
+	res := make(map[string]string)
+	for module, repo := range srv.moduleNamesToSources {
+		res[module] = repo
+	}
+
+	return res
+}
+
+func (srv *ConfigService) AddPossibleName(name string) {
+	serviceInstanceLock.Lock()
+	srv.possibleNames.Add(name)
+	serviceInstanceLock.Unlock()
 }

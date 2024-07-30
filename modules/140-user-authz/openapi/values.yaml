@@ -52,10 +52,13 @@ properties:
           crt:
             type: string
             x-examples: [ "testcrt" ]
-      crds:
+      clusterAuthRuleCrds:
         type: array
         items:
           type: object
+          required:
+            - name
+            - spec
           properties:
             name:
               type: string
@@ -79,6 +82,46 @@ properties:
                   items:
                     type: string
                     minLength: 1
+                namespaceSelector:
+                  type: object
+                  oneOf:
+                    - required: ["labelSelector"]
+                    - required: ["matchAny"]
+                  properties:
+                    matchAny:
+                      type: boolean
+                      enum: [true]
+                    labelSelector:
+                      type: object
+                      minProperties: 1
+                      properties:
+                        matchExpressions:
+                          items:
+                            properties:
+                              key:
+                                type: string
+                              operator:
+                                type: string
+                                enum: [In,NotIn,Exists,DoesNotExist]
+                              values:
+                                type: array
+                                items:
+                                  type: string
+                                  minLength: 1
+                                  maxLength: 63
+                                  pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                            required:
+                              - key
+                              - operator
+                            type: object
+                          type: array
+                        matchLabels:
+                          additionalProperties:
+                            type: string
+                            minLength: 1
+                            maxLength: 63
+                            pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                          type: object
                 subjects:
                   type: array
                   items:
@@ -96,13 +139,8 @@ properties:
                       namespace:
                         type: string
                         minLength: 1
-                  x-examples:
-                  - kind: User
-                    name: Everyone
-                  - kind: Group
-                    name: Everyone
-                  - kind: ServiceAccount
-                    name: Everyone
+                        maxLength: 63
+                        pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
                 additionalRoles:
                   type: array
                   items:
@@ -117,10 +155,59 @@ properties:
                         minLength: 1
                       kind:
                         type: string
-                        enum: [ClusterRole, Role]
+                        enum: [ClusterRole]
                       name:
                         type: string
                         minLength: 1
+        default: []
+      authRuleCrds:
+        type: array
+        items:
+          required:
+            - name
+            - namespace
+            - spec
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 1
+            namespace:
+              type: string
+              minLength: 1
+              maxLength: 63
+              pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+            spec:
+              type: object
+              required:
+                - subjects
+              properties:
+                accessLevel:
+                  type: string
+                  enum: [User,PrivilegedUser,Editor,Admin]
+                portForwarding:
+                  type: boolean
+                allowScale:
+                  type: boolean
+                subjects:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - kind
+                      - name
+                    properties:
+                      kind:
+                        type: string
+                        enum: [User,Group,ServiceAccount]
+                      name:
+                        type: string
+                        minLength: 1
+                      namespace:
+                        type: string
+                        minLength: 1
+                        maxLength: 63
+                        pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
         default: []
     x-examples:
     - webhookCertificate:
@@ -188,7 +275,7 @@ properties:
           - d8:user-authz:cloud-provider-openstack:user
           - d8:user-authz:node-manager:user
           - d8:user-authz:prometheus-metrics-adapter:user
-      crds:
+      clusterAuthRuleCrds:
       - name: editor-crd
         spec:
           accessLevel: Editor
@@ -202,6 +289,30 @@ properties:
           - kind: Group
             name: Everyone
       - name: admin-crd
+        spec:
+          accessLevel: ClusterEditor
+          allowScale: false
+          portForwarding: true
+          subjects:
+          - kind: Group
+            name: NotEveryone
+      authRuleCrds:
+      - name: editor-crd
+        namespace: editor
+        spec:
+          accessLevel: Editor
+          subjects:
+          - kind: Group
+            name: Editors
+      - name: user-crd
+        namespace: user
+        spec:
+          accessLevel: User
+          subjects:
+          - kind: Group
+            name: Everyone
+      - name: admin-crd
+        namespace: admin
         spec:
           accessLevel: Admin
           allowScale: false

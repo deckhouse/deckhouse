@@ -1,0 +1,6 @@
+cni-cilium:
+  fixes:
+    - summary: Fixed pprof listen address for cilium-agents.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6989
+      impact: cilium-agents will restart. Some fqdn-basic network policies will blink awile.
+

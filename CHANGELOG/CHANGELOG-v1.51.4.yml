@@ -1,0 +1,5 @@
+global-hooks:
+  fixes:
+    - summary: Fix orphaned endpointslice deletion.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5912
+

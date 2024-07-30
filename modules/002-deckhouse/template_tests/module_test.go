@@ -39,13 +39,14 @@ clusterConfiguration:
   kind: ClusterConfiguration
   clusterDomain: cluster.local
   clusterType: Static
-  kubernetesVersion: "1.21"
+  kubernetesVersion: "Automatic"
   podSubnetCIDR: 10.111.0.0/16
   podSubnetNodeCIDRPrefix: "24"
   serviceSubnetCIDR: 10.222.0.0/16
 discovery:
   clusterMasterCount: 3
   prometheusScrapeInterval: 30
+  kubernetesVersion: "1.28.10"
   d8SpecificNodeCountByRole:
     system: 1
 modules:
@@ -65,6 +66,10 @@ internal:
     crt: a
     key: b
     ca: c
+  admissionWebhookCert:
+    crt: a
+    key: b
+    ca: c
   currentReleaseImageName: test
 `
 
@@ -78,6 +83,10 @@ tolerations:
   operator: Exists
 internal:
   webhookHandlerCert:
+    crt: a
+    key: b
+    ca: c
+  admissionWebhookCert:
     crt: a
     key: b
     ca: c

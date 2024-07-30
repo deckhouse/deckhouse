@@ -23,7 +23,7 @@ $(document).ready(function () {
           delete_elements($(this), 2);
           parent.html(parent.html().replaceAll(/\n\s+\n/g, "\n"));
         });
-        updateTextInSnippet('[config-yml]', /\n\s+httpProxy: <HTTP_PROXY_ADDRESS>\n/, "\n");
+        updateTextInSnippet('[config-yml]', /\n\s+httpProxy: \<HTTP_PROXY_ADDRESS\>\n/, "\n");
       }
     }
 
@@ -38,14 +38,17 @@ $(document).ready(function () {
           delete_elements($(this), 2);
           parent.html(parent.html().replaceAll(/\n\s+\n/g, "\n"));
         });
-        updateTextInSnippet('[config-yml]', /\n\s+httpsProxy: <HTTPS_PROXY_ADDRESS>\n/, "\n");
+        updateTextInSnippet('[config-yml]', /\n\s+httpsProxy: \<HTTPS_PROXY_ADDRESS\>\n/, "\n");
       }
     }
 
     if (noProxyAddressList && noProxyAddressList.length > 0) {
       noProxyAddressList = ('["' + noProxyAddressList.split(',').join('", "') + '"]').replaceAll('""', '"')
-      update_parameter(noProxyAddressList, 'noProxy', '<NO_PROXY_LIST>', null, '[config-yml]');
-    }
+    } else {
+      noProxyAddressList = '<NO_PROXY_LIST_WITH_INTERNAL_NETWORK_CIDRS>';
+      }
+    update_parameter(noProxyAddressList, 'noProxy', '<NO_PROXY_LIST>', null, '[config-yml]');
+
   } else {
     // Delete proxy section
     $('code span.na').filter(function () {
@@ -55,7 +58,10 @@ $(document).ready(function () {
       delete_elements($(this).prev(), 11);
       parent.html(parent.html().replaceAll(/\n\s+\n/g, "\n"));
     });
-    updateTextInSnippet('[config-yml]', /\n\s+#[^#]+\n\s+proxy:\n\s+httpProxy: <HTTP_PROXY_ADDRESS>\n\s+httpsProxy: <HTTPS_PROXY_ADDRESS>\n\s+noProxy: <NO_PROXY_LIST>\n/, "\n");
+    updateTextInSnippet('[config-yml]', /\n\s*#[^#]+\n\s*proxy:\n/, "\n");
+    updateTextInSnippet('[config-yml]', /\n\s+httpProxy: \<HTTP_PROXY_ADDRESS\>\n/, "\n");
+    updateTextInSnippet('[config-yml]', /\n\s+httpsProxy: \<HTTPS_PROXY_ADDRESS\>\n/, "\n");
+    updateTextInSnippet('[config-yml]', /\n\s+noProxy: \<NO_PROXY_LIST\>\n/, "\n");
   }
 
   if (!(noProxyAddressList && noProxyAddressList.length > 0)) {
@@ -67,7 +73,7 @@ $(document).ready(function () {
       delete_elements($(this), 2);
       parent.html(parent.html().replaceAll(/\n\s+\n/g, "\n"));
     });
-    updateTextInSnippet('[config-yml]', /\n\s+noProxy: <NO_PROXY_LIST>\n/, "\n");
+    updateTextInSnippet('[config-yml]', /\n\s+noProxy: \<NO_PROXY_LIST\>\n/, "\n");
   }
 
   if (registryImagesRepo && registryImagesRepo.length > 0) {
@@ -88,10 +94,11 @@ $(document).ready(function () {
         return (this.innerText === "registryScheme");
       }).each(function (index) {
         delete_elements($(this).next().next().next(), 3);
-        updateTextInSnippet('[config-yml]', /(registryScheme: HTTP[S]?).+\n---/s, "$1\n---");
+        updateTextInSnippet('[config-yml]', /(registryScheme: HTTP[S]?).+\<REGISTRY_CA\>\n---/s, "$1\n---");
       });
 
     }
+
     $('.highlight code').filter(function () {
       return this.innerText.match('<IMAGES_REPO_URI>');
     }).each(function () {

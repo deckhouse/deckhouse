@@ -16,12 +16,14 @@ spec:
   versions:
     - name: v1alpha1
       served: true
-      storage: true
+      storage: false
       schema: &schema
         openAPIV3Schema:
           type: object
           description: |
             Contains information about the static user.
+
+            [Usage example...](usage.html#an-example-of-creating-a-static-user)
           required:
             - spec
           properties:
@@ -33,36 +35,43 @@ spec:
               properties:
                 email:
                   type: string
+                  pattern: '^[\w\-\.]+@(?:[\w-]+\.)+[\w-]{2,}$'
                   description: |
-                    User E-mail.
+                    User email.
 
                     **Caution!** Note that if used together with the [user-authz](https://deckhouse.io/documentation/v1/modules/140-user-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](https://deckhouse.io/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) CR.
-                  example: 'user@domain.com'
+                  x-doc-examples: ['user@domain.com']
                 password:
                   type: string
+                  minLength: 1
                   description: |
-                    Hashed user password.
+                    User password hash in plaintext or Base64 encoded.
 
-                    You can use the following command to encrypt the user password: `echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'`. Also, you can use the [online service](https://bcrypt-generator.com/).
-                  example: '$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC'
-                  pattern: '^\$2[ayb]\$.{56}$'
+                    Use the following command to encode the password hash in Base64: `echo "<PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0`. Alternatively, you can use an online service (such as https://bcrypt-generator.com/).
+                  x-doc-examples: ['JDJ5JDEwJE9HN1lOOUhnOXU5NmY2cGp4R3NIcS56NWQuOVQxQ0VrdWIud3BRdVJ5Sy5QQU5INlpKNDguCgo=']
                 userID:
                   type: string
                   description: 'Unique issuer user ID. It equals to .metadata.name by default.'
-                  example: '08a8684b-db88-4b73-90a9-3cd1661f5466'
+                  x-doc-examples: ['08a8684b-db88-4b73-90a9-3cd1661f5466']
                 groups:
                   type: array
-                  description: 'Static user groups.'
+                  x-doc-deprecated: true
+                  description: |
+                    Static user groups.
+
+                    Since the parameter has been deprecated, use the [Group](#group) resource to add users to groups.
                   items:
                     type: string
                 ttl:
                   type: string
-                  pattern: '^\d+(?:m|h)$'
+                  pattern: '^([0-9]+h([0-9]+m)?|[0-9]+m)$'
                   description: |
                     Static user TTL.
-                    * It is specified as a string containing the time unit: 30m, 1h, 24h. Either in minutes or hours.
-                    * You can only set the TTL once. The `expireAt` date will not be updated if you change it again.
-                  example: '24h'
+
+                    It is specified as a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
+
+                    You can only set the TTL once. The `expireAt` date will not be updated if you change it again.
+                  x-doc-examples: ['24h']
             status:
               type: object
               properties:
@@ -73,13 +82,19 @@ spec:
                     * It is shown only of the `.spec.ttl` field is set.
                     * The user account will be deleted at the specified date.
                     * This parameter is synchronized every 5 minutes. There may be a time lag between the moment specified in this field and the moment of actual deletion of the user account.
+                groups:
+                  type: array
+                  description: |
+                    Static user groups.
+                  items:
+                    type: string
       subresources: &subresources
         status: {}
       additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.email
           name: Email
           type: string
-        - jsonPath: .spec.groups
+        - jsonPath: .status.groups
           name: Groups
           type: string
         - jsonPath: .status.expireAt
@@ -88,7 +103,80 @@ spec:
           format: date-time
     - name: v1
       served: true
-      storage: false
-      schema: *schema
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Contains information about the static user.
+
+            [Usage example...](usage.html#an-example-of-creating-a-static-user)
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  pattern: '^[\w\-\.]+@(?:[\w-]+\.)+[\w-]{2,}$'
+                  description: |
+                    User email.
+
+                    **Caution!** Note that if used together with the [user-authz](https://deckhouse.io/documentation/v1/modules/140-user-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](https://deckhouse.io/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) CR.
+                  x-doc-examples: ['user@domain.com']
+                password:
+                  type: string
+                  minLength: 1
+                  description: |
+                    User password hash in plaintext or Base64 encoded.
+
+                    Use the following command to encode the password hash in Base64: `echo "<PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0`. Alternatively, you can use an online service (such as https://bcrypt-generator.com/).
+                  x-doc-examples: ['JDJ5JDEwJE9HN1lOOUhnOXU5NmY2cGp4R3NIcS56NWQuOVQxQ0VrdWIud3BRdVJ5Sy5QQU5INlpKNDguCgo=']
+                userID:
+                  type: string
+                  x-doc-deprecated: true
+                  description: |
+                    Unique issuer user ID. It equals to .metadata.name.
+
+                    Deprecated and shouldn't be set manually.
+                groups:
+                  type: array
+                  x-doc-deprecated: true
+                  description: |
+                    Static user groups.
+
+                    Since the parameter has been deprecated, use the [Group](#group) resource to add users to groups.
+                  items:
+                    type: string
+                ttl:
+                  type: string
+                  pattern: '^([0-9]+h([0-9]+m)?|[0-9]+m)$'
+                  description: |
+                    Static user TTL.
+
+                    It is specified as a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
+
+                    You can only set the TTL once. The `expireAt` date will not be updated if you change it again.
+                  x-doc-examples: ['24h']
+            status:
+              type: object
+              properties:
+                expireAt:
+                  type: string
+                  description: |
+                    User account expiration date.
+                    * It is shown only of the `.spec.ttl` field is set.
+                    * The user account will be deleted at the specified date.
+                    * This parameter is synchronized every 5 minutes. There may be a time lag between the moment specified in this field and the moment of actual deletion of the user account.
+                groups:
+                  type: array
+                  description: |
+                    Static user groups.
+                  items:
+                    type: string
       subresources: *subresources
-      additionalPrinterColumns: *additionalPrinterColumns
+      additionalPrinterColumns: &additionalPrinterColumns

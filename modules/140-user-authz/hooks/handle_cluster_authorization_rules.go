@@ -17,61 +17,24 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
-
-	"github.com/davecgh/go-spew/spew"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/modules/140-user-authz/hooks/internal"
 )
 
 const (
-	carSnapshot = "cluster_authorization_rules"
+	clusterAuthRuleSnapshot = "cluster_authorization_rules"
 )
 
-type ClusterAuthorizationRule struct {
-	Name string                 `json:"name"`
-	Spec map[string]interface{} `json:"spec"`
-}
-
-func applyClusterAuthorizationRuleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	car := &ClusterAuthorizationRule{}
-	car.Name = obj.GetName()
-	spec, found, err := unstructured.NestedMap(obj.Object, "spec")
-	if !found {
-		return nil, fmt.Errorf(`".spec is not a map[string]interface{} or contains non-string values in the map: %s`, spew.Sdump(obj.Object))
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	car.Spec = spec
-	return car, nil
-}
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: internal.Queue(carSnapshot),
+	Queue: internal.Queue(clusterAuthRuleSnapshot),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       carSnapshot,
+			Name:       clusterAuthRuleSnapshot,
 			ApiVersion: "deckhouse.io/v1",
 			Kind:       "ClusterAuthorizationRule",
-			FilterFunc: applyClusterAuthorizationRuleFilter,
+			FilterFunc: internal.ApplyAuthorizationRuleFilter,
 		},
 	},
-}, clusterAuthorizationRulesHandler)
-
-func clusterAuthorizationRulesHandler(input *go_hook.HookInput) error {
-	snapshots := input.Snapshots[carSnapshot]
-	ccrs := make([]ClusterAuthorizationRule, 0, len(snapshots))
-	for _, snapshot := range snapshots {
-		ccr := snapshot.(*ClusterAuthorizationRule)
-		ccrs = append(ccrs, *ccr)
-	}
-
-	input.Values.Set("userAuthz.internal.crds", ccrs)
-
-	return nil
-}
+}, internal.AuthorizationRulesHandler("userAuthz.internal.clusterAuthRuleCrds", clusterAuthRuleSnapshot))

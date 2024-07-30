@@ -22,9 +22,9 @@ spec:
           type: object
           required: ["spec"]
           description: |
-            CustomResource for namespaced Kubernetes source.
+            Custom resource for namespaced Kubernetes source.
 
-            Each CustomResource `PodLoggingConfig` describes rules for log fetching from specified Namespace.
+            Each custom resource `PodLoggingConfig` describes rules for log fetching from specified namespace.
           properties:
             spec:
               type: object
@@ -46,31 +46,38 @@ spec:
                     matchLabels:
                       type: object
                       description: List of labels which Pod should have.
-                      example: {"foo": "bar", "baz": "who"}
+                      x-doc-examples: [{"foo": "bar", "baz": "who"}]
                       additionalProperties:
                         type: string
                     matchExpressions:
                       type: array
                       description: List of label expressions for Pods.
-                      example: |
-                        ```yaml
-                        matchExpressions:
-                        - key: tier
+                      x-doc-examples:
+                      - - key: tier
                           operator: In
                           values:
                           - production
                           - staging
-                        ```
                       items:
+                        oneOf:
+                          - properties:
+                              operator:
+                                enum: [Exists, DoesNotExist]
+                            required: [key, operator]
+                            not:
+                              required: [values]
+                          - properties:
+                              operator:
+                                enum: [In, NotIn]
+                            required: [key, operator, values]
                         type: object
-                        required:
-                          - key
-                          - operator
                         properties:
                           key:
                             type: string
+                            description: A label name.
                           operator:
                             type: string
+                            description: A comparison operator.
                             enum:
                               - In
                               - NotIn
@@ -78,16 +85,18 @@ spec:
                               - DoesNotExist
                           values:
                             type: array
+                            description: A label value.
                             items:
                               type: string
+                              pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                              minLength: 1
+                              maxLength: 63
                 labelFilter:
                   type: array
                   description: |
-                    Rules to filter log lines by their labels.
-                  example: |
-                    ```yaml
-                    labelFilter:
-                    - field: container
+                    Rules to filter log lines by their [metadata labels](./#metadata).
+                  x-doc-examples:
+                  - - field: container
                       operator: In
                       values:
                       - nginx
@@ -96,7 +105,6 @@ spec:
                       values:
                       - prod-.+
                       - stage-.+
-                    ```
                   items:
                     type: object
                     required:
@@ -106,6 +114,7 @@ spec:
                       field:
                         description: |
                           Label name for filtering.
+
                           Must not be empty.
                         type: string
                         pattern: '.+'
@@ -151,13 +160,11 @@ spec:
                 logFilter:
                   type: array
                   description: |
-                    List of filter for logs.
+                    A list of filters for logs that are applied to messages in JSON format.
 
                     Only matched lines would be stored to log destination.
-                  example: |
-                    ```yaml
-                    logFilter:
-                    - field: tier
+                  x-doc-examples:
+                  - - field: tier
                       operator: Exists
                     - field: foo
                       operator: NotIn
@@ -171,7 +178,6 @@ spec:
                       values:
                       - ^abc
                       - ^\d.+$
-                    ```
                   items:
                     type: object
                     required:
@@ -225,6 +231,24 @@ spec:
                   description: Multiline parser for different patterns.
                   required:
                     - type
+                  oneOf:
+                    - properties:
+                        type:
+                          enum:
+                            - None
+                            - General
+                            - Backslash
+                            - LogWithTime
+                            - MultilineJSON
+                      required:
+                        - type
+                    - properties:
+                        custom: {}
+                        type:
+                          enum: [Custom]
+                      required:
+                        - type
+                        - custom
                   properties:
                     type:
                       type: string
@@ -235,16 +259,53 @@ spec:
                         * `Backslash` — tries to match bash style logs with backslash on all lines except the last event line.
                         * `LogWithTime` — tries to detect events by timestamp.
                         * `MultilineJSON` — tries to match JSON logs, assuming the event starts with the `{` symbol.
+                        * `Custom` - tries to match logs with the user provided regex in `spec.multilineParser.custom` field.
                       enum:
                         - None
                         - General
                         - Backslash
                         - LogWithTime
                         - MultilineJSON
+                        - Custom
                       default: None
+                    custom:
+                      type: object
+                      description: Multiline parser custom regex rules.
+                      oneOf:
+                        - required: [startsWhen]
+                        - required: [endsWhen]
+                      properties:
+                        startsWhen:
+                          type: object
+                          description: |
+                            It's a condition to distinguish the first log line of multiline log.
+                          oneOf:
+                            - required: [regex]
+                            - required: [notRegex]
+                          properties:
+                            notRegex:
+                              type: string
+                              description: Regex string, which treats as match only strings that DON'T match the regex.
+                            regex:
+                              type: string
+                              description: Regex string, which treats as match only strings that match the regex.
+                        endsWhen:
+                          type: object
+                          description: |
+                            It's a condition to distinguish the last log line of the multiline log.
+                          oneOf:
+                            - required: [regex]
+                            - required: [notRegex]
+                          properties:
+                            notRegex:
+                              type: string
+                              description: Regex string, which treats as match only strings that DON'T match the regex.
+                            regex:
+                              type: string
+                              description: Regex string, which treats as match only strings that match the regex.
                 clusterDestinationRefs:
                   type: array
-                  description: Array of `ClusterLogDestination` CustomResource names which this source will output with.
+                  description: Array of `ClusterLogDestination` custom resource names which this source will output with.
                   minItems: 1
                   items:
                     type: string

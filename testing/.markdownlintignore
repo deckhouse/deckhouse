@@ -8,8 +8,5 @@ tools/
 hooks/
 _includes/
 
-// Special excluding
-ee/modules/030-cloud-provider-vsphere/packer/
-
 // Files with other rules
 README.md

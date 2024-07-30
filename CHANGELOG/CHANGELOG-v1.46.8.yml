@@ -1,0 +1,15 @@
+ingress-nginx:
+  fixes:
+    - summary: Increase `minReadySeconds` for all inlets.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4919
+linstor:
+  fixes:
+    - summary: Add disabling the `lvmetad` service to `NodeGroupConfiguration` for the `linstor` module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4885
+monitoring-kubernetes:
+  fixes:
+    - summary: >-
+        Resolve symbolic links before getting file system statistics in
+        `kubelet-eviction-thresholds-exporter`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4923
+
