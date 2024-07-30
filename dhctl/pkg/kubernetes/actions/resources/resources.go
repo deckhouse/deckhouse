@@ -105,6 +105,10 @@ func (c *Creator) createAll() error {
 		c.resources = remainResources
 	}()
 
+	if err := c.ensureRequiredNamespacesExist(); err != nil {
+		return err
+	}
+
 	for indx, resource := range c.resources {
 		resourcesList, err := apiResourceGetter.Get(&resource.GVK)
 		if err != nil {
@@ -125,6 +129,37 @@ func (c *Creator) createAll() error {
 		}
 	}
 
+	return nil
+}
+
+func (c *Creator) ensureRequiredNamespacesExist() error {
+	knownNamespaces := make(map[string]struct{})
+
+	for _, res := range c.resources {
+		nsName := res.Object.GetNamespace()
+		if _, nsWasSeenBefore := knownNamespaces[nsName]; nsName == "" || nsWasSeenBefore {
+			continue // If this resource is not namespaces, or we saw this namespace already, there is no need to check
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if _, err := c.kubeCl.CoreV1().Namespaces().Get(ctx, nsName, metav1.GetOptions{}); err != nil {
+			cancel()
+
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf("can't get namespace %q: %w", nsName, err)
+			}
+
+			return fmt.Errorf(
+				"%w: waiting for namespace %q is to create %q (%s)",
+				ErrNotAllResourcesCreated,
+				nsName,
+				res.Object.GetName(),
+				res.GVK.String(),
+			)
+		}
+		cancel()
+		knownNamespaces[nsName] = struct{}{}
+	}
 	return nil
 }
 
