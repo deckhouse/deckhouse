@@ -68,8 +68,8 @@ if crictl version >/dev/null 2>/dev/null; then
     {{- range $key, $value := .normal.apiserverEndpoints }}
       {{- if eq $key 0 }}
         {{- $ipAddressAndPort := splitList ":" $value }}
-        {{- $ipAddress = index $ipAddressAndPort 0 }}
-        {{- $registryProxyAddress = (printf "%s:5001" $ipAddress) }}
+        {{- $ipAddress := index $ipAddressAndPort 0 }}
+        {{- $registryProxyAddress = printf "%s:5001" $ipAddress }}
       {{- end }}
     {{- end }}
   {{- end }}
