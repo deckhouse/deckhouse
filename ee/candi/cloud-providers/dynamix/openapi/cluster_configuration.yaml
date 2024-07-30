@@ -43,7 +43,7 @@ apiVersions:
           username: '<USERNAME>'
           password: '<PASSWORD>'
           insecure: true
-    required: [apiVersion, kind, sshPublicKey, grid, masterNodeGroup, layout, provider]
+    required: [apiVersion, kind, sshPublicKey, grid, masterNodeGroup, nodeNetworkCIDR, layout, provider]
     properties:
       apiVersion:
         type: string
@@ -77,7 +77,7 @@ apiVersions:
           instanceClass:
             type: object
             additionalProperties: false
-            required: [numCPUs, memory, osImageId, pool, externalNetworkId, vinsNetworkId]
+            required: [numCPUs, memory, osImageId, pool, externalNetworkId]
             description: |
               Partial contents of the fields of the [DynamixInstanceClass](cr.html#dynamixinstanceclass).
             properties: &instanceClassProperties
@@ -119,11 +119,6 @@ apiVersions:
                 type: integer
                 description: |
                   External network ID.
-                example: 1
-              vinsNetworkId:
-                type: integer
-                description: |
-                  Internal network ID.
                 example: 1
       nodeGroups:
         type: array
@@ -187,11 +182,24 @@ apiVersions:
             instanceClass:
               type: object
               additionalProperties: false
-              required: [numCPUs, memory, osImageId, pool, externalNetworkID, virtualNetworkID]
+              required: [numCPUs, memory, osImageId, pool, externalNetworkID]
               description: |
                 Partial contents of the fields of the.
               properties:
                 <<: *instanceClassProperties
+      nodeNetworkCIDR:
+        type: string
+        description: |
+          IP CIDR to be assigned to the internal segment of this ViNS.
+        x-unsafe: true
+      nameservers:
+        type: array
+        description: |
+          A list of IP addresses of the DNS servers.
+        items:
+          type: string
+        default: []
+        x-unsafe: true
       layout:
         type: string
         description: |
