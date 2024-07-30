@@ -31,22 +31,6 @@ bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
       {{- $sandbox_image = printf "%s%s@%s" .registry.address .registry.path .images.common.pause }}
     {{- end }}
   {{- end }}
-  {{- $masters := list }}
-  {{- $masters_url := list }}
-  {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
-    {{- if .normal.apiserverEndpoints }}
-      {{- range $key, $value := .normal.apiserverEndpoints }}
-        {{- $parts := splitList ":" $value }}
-        {{- $ip := index $parts 0 }}
-        {{- $masters = append $masters (printf "%s:5001" $ip) }}
-        {{- $masters_url = append $masters_url (printf "\"%s://%s:5001\"" $.registry.scheme $ip) }}
-      {{- end }}
-    {{- else }}
-      {{- $masters = list "localhost:5001" }}
-      {{- $masters_url = list (printf "\"%s://localhost:5001\"" $.registry.scheme) }}
-    {{- end }}
-  {{- end }}
-  {{- $masters_url = append $masters_url (printf "\"%s://%s\"" $.registry.scheme .registry.address) }}
 
 systemd_cgroup=true
 # Overriding cgroup type from external config file
@@ -154,20 +138,24 @@ oom_score = 0
       conf_template = ""
     [plugins."io.containerd.grpc.v1.cri".registry]
       [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ $.registry.address }}"]
-          endpoint = [{{ range $i, $e := $masters_url }}{{ if $i }}, {{ end }}{{ $e }}{{ end }}]
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
+          {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+          endpoint = ["{{ .registry.scheme }}://localhost:5001", "{{ .registry.scheme }}://{{ .registry.address }}"]
+          {{- else }}
+          endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
+          {{- end }}
       [plugins."io.containerd.grpc.v1.cri".registry.configs]
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $.registry.address }}".auth]
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".auth]
           auth = "{{ .registry.auth | default "" }}"
-        {{- range $index, $master := $masters }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $master }}".auth]
-          auth = "{{ $.registry.auth | default "" }}"
+        {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."localhost:5001".auth]
+          auth = "{{ .registry.auth | default "" }}"
         {{- end }}
       {{- if eq .registry.scheme "http" }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $.registry.address }}".tls]
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
           insecure_skip_verify = true
-        {{- range $index, $master := $masters }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $master }}".tls]
+        {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."localhost:5001".tls]
           insecure_skip_verify = true
     {{- end }}
   {{- end }}
