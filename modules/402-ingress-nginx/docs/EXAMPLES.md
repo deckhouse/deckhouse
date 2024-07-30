@@ -159,8 +159,8 @@ spec:
 ```
 
 Deploy the _IngressNginxController_ resource:
-* The __network.deckhouse.io/l2-load-balancer-name__ annotation specifies the name _L2LoadBalancer_ (in the example _L2LoadBalancer_ with the name _ingress_ was created in the previous step)
-* The __network.deckhouse.io/l2-load-balancer-external-ips-count__ annotation specifies how many addresses will be allocated from the pool described in _L2LoadBalancer_
+* The **network.deckhouse.io/l2-load-balancer-name** annotation specifies the name _L2LoadBalancer_ (in the example _L2LoadBalancer_ with the name _ingress_ was created in the previous step)
+* The **network.deckhouse.io/l2-load-balancer-external-ips-count** annotation specifies how many addresses will be allocated from the pool described in _L2LoadBalancer_
 
 ```yaml
 apiVersion: deckhouse.io/v1

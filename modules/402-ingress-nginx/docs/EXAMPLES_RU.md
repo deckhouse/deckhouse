@@ -133,6 +133,7 @@ metallb:
 Модуль [l2-load-balancer](../381-l2-load-balancer/) на текущий момент доступен только в редакции Enterprise Edition Deckhouse.
 
 Включите модуль:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -157,9 +158,9 @@ spec:
     node-role.kubernetes.io/loadbalancer: "" # селектор узлов-балансировщиков
 ```
 
-Создайте ресурс _IngressNginxController_: 
-* В аннотации __network.deckhouse.io/l2-load-balancer-name__ указывается имя _L2LoadBalancer_ (в примере _L2LoadBalancer_ с именем _ingress_ был создани на предыдущем шаге)
-* Аннотация __network.deckhouse.io/l2-load-balancer-external-ips-count__ указывает сколько адресов будет выделено из пула, описанного в _L2LoadBalancer_
+Создайте ресурс _IngressNginxController_:
+* В аннотации **network.deckhouse.io/l2-load-balancer-name** указывается имя _L2LoadBalancer_ (в примере _L2LoadBalancer_ с именем _ingress_ был создани на предыдущем шаге)
+* Аннотация **network.deckhouse.io/l2-load-balancer-external-ips-count** указывает сколько адресов будет выделено из пула, описанного в _L2LoadBalancer_
 
 ```yaml
 apiVersion: deckhouse.io/v1
