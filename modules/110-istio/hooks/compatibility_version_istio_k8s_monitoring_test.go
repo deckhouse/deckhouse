@@ -31,7 +31,7 @@ istio:
   internal:
     istioToK8sCompatibilityMap:
       "1.16": ["1.22", "1.23", "1.24", "1.25"]
-      "1.19": ["1.25", "1.26", "1.27", "1.28"]
+      "1.19": ["1.25", "1.26", "1.27", "1.28", "1.29", "1.30"]
 `
 	f := HookExecutionConfigInit(initValues, "")
 
@@ -117,6 +117,27 @@ istio:
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.16","1.19"]`))
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.25.4")
+
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully and generate metric", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.LogrusOutput.Contents()).To(HaveLen(0))
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(1))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  monitoringMetricsGroup,
+				Action: "expire",
+			}))
+		})
+	})
+
+	Context(" the istio version is 1.19, and it is compatible with the current version of k8s 1.29", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.19"]`))
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.30.1")
 
 			f.RunHook()
 		})
