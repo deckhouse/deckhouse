@@ -54,7 +54,7 @@ nodeGroups:
     storageProfile:  Fast vHDD
     sizingPolicy: ${VCD_ORG}-MSK
     rootDiskSizeGb: 50
-    template: private-templates/debian-12-hostname
+    template: private-templates/debian-12
   name: system
   replicas: 1
   nodeTemplate:
