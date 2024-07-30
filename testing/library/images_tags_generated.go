@@ -414,9 +414,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"xfsprogs670":               "imageHash-registrypackages-xfsprogs670",
 	},
 	"runtimeAuditEngine": map[string]interface{}{
-		"falco":         "imageHash-runtimeAuditEngine-falco",
-		"falcosidekick": "imageHash-runtimeAuditEngine-falcosidekick",
-		"rulesLoader":   "imageHash-runtimeAuditEngine-rulesLoader",
+		"falco":             "imageHash-runtimeAuditEngine-falco",
+		"falcoDriverLoader": "imageHash-runtimeAuditEngine-falcoDriverLoader",
+		"falcosidekick":     "imageHash-runtimeAuditEngine-falcosidekick",
+		"rulesLoader":       "imageHash-runtimeAuditEngine-rulesLoader",
 	},
 	"snapshotController": map[string]interface{}{
 		"snapshotController":        "imageHash-snapshotController-snapshotController",
