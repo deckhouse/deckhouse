@@ -18,15 +18,9 @@ spec:
           description: |
             Resource quota for the project.
             Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
-          required:
-            - requests
-            - limits
           properties:
             requests:
               type: object
-              required:
-                - cpu
-                - memory
               properties:
                 cpu:
                   oneOf:
@@ -45,9 +39,6 @@ spec:
                   pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
             limits:
               type: object
-              required:
-                - cpu
-                - memory
               properties:
                 cpu:
                   oneOf:
@@ -190,11 +181,17 @@ spec:
       name: all-pods
     spec:
       hard:
-        {{ with .parameters.resourceQuota.requests.cpu }}requests.cpu: {{ . }}{{ end }}
-        {{ with .parameters.resourceQuota.requests.memory }}requests.memory: {{ . }}{{ end }}
-        {{ with .parameters.resourceQuota.requests.storage }}requests.storage: {{ . }}{{ end }}
-        {{ with .parameters.resourceQuota.limits.cpu }}limits.cpu: {{ . }}{{ end }}
-        {{ with .parameters.resourceQuota.limits.memory }}limits.memory: {{ . }}{{ end }}
+        {{ with .parameters.resourceQuota }}
+          {{ with .requests }}
+            {{ with .cpu }}requests.cpu: {{ . }}{{ end }}
+            {{ with .memory }}requests.memory: {{ . }}{{ end }}
+            {{ with .storage }}requests.storage: {{ . }}{{ end }}
+          {{ end }}
+          {{ with .limits }}
+            {{ with .cpu }}limits.cpu: {{ . }}{{ end }}
+            {{ with .memory }}limits.memory: {{ . }}{{ end }}
+          {{ end }}
+        {{ end }}
     {{- if eq .parameters.networkPolicy "Isolated" }}
     ---
     # Deny all network traffic by default except namespaced traffic and dns.
