@@ -73,6 +73,9 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 			fmt.Sprintf("--server-address=%s", address),
 		)
 
+		// Add parent envs to child envs
+		cmd.Env = append(cmd.Env, os.Environ()...)
+
 		// Launch new process group so that signals (ex: SIGINT) are not sent also to the child process.
 		// https://stackoverflow.com/a/66261096
 		// Child process will start own child process e.g. terraform. We want them to finish normally.
