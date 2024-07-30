@@ -1,6 +1,6 @@
 {{- define "vector_reloader_resources" }}
 cpu: 10m
-memory: 25Mi
+memory: 15Mi
 {{- end }}
 
 {{- if .Values.logShipper.internal.activated }}
