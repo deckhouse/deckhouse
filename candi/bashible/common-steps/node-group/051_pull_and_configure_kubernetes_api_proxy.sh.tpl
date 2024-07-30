@@ -92,6 +92,9 @@ if crictl version >/dev/null 2>/dev/null; then
     crictl pull --auth="{{ $.registry.auth | default "" }}" $PROXY_RETRIEVED_IMAGE_FOR_PAUSE
     ctr --namespace=k8s.io image tag $PROXY_RETRIEVED_IMAGE_FOR_KUBERNETES_API_PROXY $ACTUAL_IMAGE_NAME_FOR_KUBERNETES_API_PROXY
     ctr --namespace=k8s.io image tag $PROXY_RETRIEVED_IMAGE_FOR_PAUSE $ACTUAL_IMAGE_NAME_FOR_PAUSE
+    # Remove proxied images
+    ctr --namespace=k8s.io image rm $PROXY_RETRIEVED_IMAGE_FOR_KUBERNETES_API_PROXY
+    ctr --namespace=k8s.io image rm $PROXY_RETRIEVED_IMAGE_FOR_PAUSE
   else
     crictl pull $ACTUAL_IMAGE_NAME_FOR_KUBERNETES_API_PROXY
     crictl pull $ACTUAL_IMAGE_NAME_FOR_PAUSE
