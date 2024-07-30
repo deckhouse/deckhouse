@@ -125,7 +125,7 @@ func generateRegistryPassword() string {
 	const passwordLength = 16
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-	// Создание нового генератора случайных чисел
+	// Creating a new random number generator
 	seed := time.Now().UnixNano()
 	rng := rand.New(rand.NewSource(seed))
 
