@@ -77,8 +77,18 @@ spec:
             name: root-falco-fs
           - mountPath: /host/proc
             name: proc-fs
-          - mountPath: /etc/falco
-            name: config-volume
+            readOnly: true
+          - mountPath: /host/boot
+            name: boot-fs
+            readOnly: true
+          - mountPath: /host/lib/modules
+            name: lib-modules
+          - mountPath: /host/usr
+            name: usr-fs
+            readOnly: true
+          - mountPath: /host/etc
+            name: etc-fs
+            readOnly: true
         env:
         - name: HOST_ROOT
           value: /host
@@ -148,6 +158,18 @@ spec:
           mountPath: /etc/falco/rules.d
         - name: containerdsock
           mountPath: /run/containerd/containerd.sock
+        - name: boot-fs
+          hostPath:
+            path: /boot
+        - name: lib-modules
+          hostPath:
+            path: /lib/modules
+        - name: usr-fs
+          hostPath:
+            path: /usr
+        - name: etc-fs
+          hostPath:
+            path: /etc
 
       - name: falcosidekick
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
