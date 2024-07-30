@@ -48,6 +48,7 @@
 | [helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs](#helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs) |
 | [helm_lib_module_pod_security_context_run_as_user_deckhouse](#helm_lib_module_pod_security_context_run_as_user_deckhouse) |
 | [helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs](#helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs) |
+| [helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted](#helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted) |
 | [helm_lib_module_pod_security_context_run_as_user_root](#helm_lib_module_pod_security_context_run_as_user_root) |
 | [helm_lib_module_pod_security_context_runtime_default](#helm_lib_module_pod_security_context_runtime_default) |
 | [helm_lib_module_container_security_context_not_allow_privilege_escalation](#helm_lib_module_container_security_context_not_allow_privilege_escalation) |
@@ -526,6 +527,19 @@ list:
 #### Usage
 
 `{{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted
+
+ returns SecurityContext parameters for Container with user and group "deckhouse" plus minimal required settings to comply with the Restricted mode of the Pod Security Standards 
+
+#### Usage
+
+`{{ include "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" . }} `
 
 #### Arguments
 
