@@ -99,7 +99,6 @@ spec:
     objectSelector:
       matchLabels:
         heritage: deckhouse
-{{- end }}
 ---
 {{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1
@@ -138,4 +137,5 @@ spec:
   policyName: "update-policy-label-objects.deckhouse.io"
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   validationActions: [Deny]
+{{- end }}
 {{- end }}
