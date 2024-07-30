@@ -415,3 +415,21 @@
       description: |
         The deckhouse configmap is no longer used.
         You need to remove configmap "d8-system/deckhouse" from ArgoCD
+
+  - alert: D8DeckhouseModuleUpdatePolicyNotFound
+    expr: |
+      increase(deckhouse_module_update_policy_not_found[__SCRAPE_INTERVAL_X_2__]) > 0
+    for: 1m
+    labels:
+      tier: cluster
+      d8_module: "{{ $labels.module }}"
+      severity_level: "5"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      for: "10m"
+      summary: Module update policy not found for {{ $labels.module }}
+      description: |
+        Module update policy not found for {{ $labels.module }}
+
+        You need to remove label from MR somthing like: `kubectl label mr {{ $labels.module }}-{{ $labels.version }} deckhouse.io/update-policy-`

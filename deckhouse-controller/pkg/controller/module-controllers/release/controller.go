@@ -310,7 +310,7 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 	}
 
 	// some other error apart from IsNotFound
-	if err != nil && !apierrors.IsNotFound(err) {
+	if !apierrors.IsNotFound(err) {
 		return ctrl.Result{Requeue: true}, err
 	}
 
@@ -382,8 +382,11 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 
 		if policyName != "" {
 			// get all policies regardless of their labels
-			var policies v1alpha1.ModuleUpdatePolicyList
-			err = c.client.List(ctx, &policies)
+			var policies = new(v1alpha1.ModuleUpdatePolicyList)
+			err = c.client.List(ctx, policies)
+			if err != nil {
+				return ctrl.Result{Requeue: true}, err
+			}
 			policy, err = c.getReleasePolicy(mr.GetModuleSource(), mr.GetName(), policies.Items)
 			if err != nil {
 				return ctrl.Result{Requeue: true}, err
@@ -397,8 +400,11 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
 	} else {
-		// TODO: add alert for this
-		// TODO: In the alert we have to have a command to delete the label from MR (somthing like: kubectl label mr XXX deckhouse.io/update-policy-
+		l := map[string]string{
+			"version": mr.GetReleaseVersion(),
+			"module":  mr.GetName(),
+		}
+		c.metricStorage.CounterAdd("{PREFIX}module_update_policy_not_found", 1.0, l)
 		if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy not set. Create a ModuleUpdatePolicy object and label the release '%s=<policy_name>'", UpdatePolicyLabel)); e != nil {
 			return ctrl.Result{Requeue: true}, e
 		}
