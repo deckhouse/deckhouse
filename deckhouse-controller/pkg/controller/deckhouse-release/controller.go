@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
+	"github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
 	log "github.com/sirupsen/logrus"
@@ -52,6 +53,11 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
+const (
+	metricReleasesGroup = "d8_releases"
+	metricUpdatingGroup = "d8_updating"
+)
+
 const defaultCheckInterval = 15 * time.Second
 
 type deckhouseReleaseReconciler struct {
@@ -61,11 +67,13 @@ type deckhouseReleaseReconciler struct {
 	moduleManager moduleManager
 
 	updateSettings          *helpers.DeckhouseSettingsContainer
+	metricStorage           *metric_storage.MetricStorage
 	clusterUUID             string
 	releaseVersionImageHash string
 }
 
-func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container, moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer) error {
+func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
+	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metric_storage.MetricStorage) error {
 	lg := log.WithField("component", "DeckhouseRelease")
 
 	r := &deckhouseReleaseReconciler{
@@ -74,6 +82,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		logger:         lg,
 		moduleManager:  moduleManager,
 		updateSettings: updateSettings,
+		metricStorage:  metricStorage,
 	}
 
 	// wait for cache sync
@@ -138,6 +147,8 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if r.updateSettings.Get().ReleaseChannel == "" {
 		return ctrl.Result{}, nil
 	}
+
+	r.metricStorage.GroupedVault.ExpireGroupMetrics(metricReleasesGroup)
 
 	release := new(v1alpha1.DeckhouseRelease)
 	err := r.client.Get(ctx, req.NamespacedName, release)
@@ -268,7 +279,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		ClusterUUID:            r.clusterUUID,
 	}
 	deckhouseUpdater, err := d8updater.NewDeckhouseUpdater(
-		r.logger, r.client, r.dc, dus, releaseData, podReady,
+		r.logger, r.client, r.dc, dus, releaseData, r.metricStorage, podReady,
 		clusterBootstrapping, imagesRegistry, r.moduleManager.GetEnabledModuleNames(),
 	)
 
@@ -277,9 +288,16 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	}
 
 	if podReady {
+		r.metricStorage.GroupedVault.ExpireGroupMetrics(metricUpdatingGroup)
+
 		if releaseData.IsUpdating {
 			_ = deckhouseUpdater.ChangeUpdatingFlag(false)
 		}
+	} else if releaseData.IsUpdating {
+		labels := map[string]string{
+			"releaseChannel": r.updateSettings.Get().ReleaseChannel,
+		}
+		r.metricStorage.GroupedVault.GaugeSet(metricUpdatingGroup, "d8_is_updating", 1, labels)
 	}
 
 	var releases v1alpha1.DeckhouseReleaseList
@@ -456,10 +474,16 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, pods []corev
 		return fmt.Errorf("registry (%s) client init failed: %s", repo, err)
 	}
 
+	r.metricStorage.CounterAdd("deckhouse_registry_check_total", 1, map[string]string{})
+	r.metricStorage.CounterAdd("deckhouse_kube_image_digest_check_total", 1, map[string]string{})
+
 	repoDigest, err := regClient.Digest(tag)
 	if err != nil {
+		r.metricStorage.CounterAdd("deckhouse_registry_check_errors_total", 1, map[string]string{})
 		return fmt.Errorf("registry (%s) get digest failed: %s", repo, err)
 	}
+
+	r.metricStorage.CounterAdd("deckhouse_kube_image_digest_check_success", 1.0, map[string]string{})
 
 	if strings.TrimSpace(repoDigest) == strings.TrimSpace(imageHash) {
 		return nil
