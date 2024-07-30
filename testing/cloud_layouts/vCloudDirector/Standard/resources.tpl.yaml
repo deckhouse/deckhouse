@@ -24,6 +24,7 @@ spec:
       name: worker
   chaos:
     mode: Disabled
+
 ---
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
