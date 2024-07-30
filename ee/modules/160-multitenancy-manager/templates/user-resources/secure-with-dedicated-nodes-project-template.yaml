@@ -10,8 +10,7 @@ spec:
     openAPIV3Schema:
       type: object
       required:
-      - administrators
-      - resourceQuota
+        - administrators
       properties:
         resourceQuota:
           type: object
