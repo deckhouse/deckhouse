@@ -123,6 +123,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-operator-trivy:operator-trivy",
 	"system:serviceaccount:d8-operator-trivy:report-updater",
 	"system:serviceaccount:d8-pod-reloader:pod-reloader",
+	"system:serviceaccount:d8-runtime-audit-engine:k8s-metacollector",
 	"system:serviceaccount:d8-runtime-audit-engine:runtime-audit-engine",
 	"system:serviceaccount:d8-snapshot-controller:snapshot-controller",
 	"system:serviceaccount:d8-static-routing-manager:agent",
