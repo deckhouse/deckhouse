@@ -72,6 +72,8 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 			fmt.Sprintf("--server-address=%s", address),
 		)
 
+		cmd.Env = append(cmd.Env, os.Environ()...)
+
 		// todo: handle logs from parallel server instances
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
