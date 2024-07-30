@@ -10,9 +10,6 @@ import:
   before: install
 git:
 - add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/docker-entrypoint.sh
-  to: /
-  stageDependencies:
-    install:
-    - '**/*'
+  to: /docker-entrypoint.sh
 docker:
   ENTRYPOINT: ["/docker-entrypoint.sh"]
