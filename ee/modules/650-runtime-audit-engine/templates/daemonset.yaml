@@ -121,8 +121,6 @@ spec:
           readOnly: true
         - mountPath: /etc/falco
           name: config-volume
-        - mountPath: /sys/kernel/debug
-          name: debug-fs
         - mountPath: /etc/falco/webhook
           name: webhook-tls
           readOnly: true
@@ -265,29 +263,14 @@ spec:
       - emptyDir: {}
         name: tmp
       - hostPath:
-          path: /boot
-        name: boot-fs
-      - hostPath:
-          path: /lib/modules
-        name: lib-modules
-      - hostPath:
-          path: /usr
-        name: usr-fs
-      - hostPath:
           path: /run/containerd/containerd.sock
         name: containerdsock
-      - hostPath:
-          path: /etc
-        name: etc-fs
       - hostPath:
           path: /dev
         name: dev-fs
       - hostPath:
           path: /proc
         name: proc-fs
-      - hostPath:
-          path: /sys/kernel/debug
-        name: debug-fs
       - name: config-volume
         configMap:
           defaultMode: 420
