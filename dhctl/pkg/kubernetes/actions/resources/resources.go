@@ -137,7 +137,7 @@ func (c *Creator) ensureRequiredNamespacesExist() error {
 
 	for _, res := range c.resources {
 		nsName := res.Object.GetNamespace()
-		if _, nsWasSeenBefore := knownNamespaces[nsName]; nsWasSeenBefore || nsName == "" {
+		if _, nsWasSeenBefore := knownNamespaces[nsName]; nsName == "" || nsWasSeenBefore {
 			continue // If this resource is not namespaces, or we saw this namespace already, there is no need to check
 		}
 
