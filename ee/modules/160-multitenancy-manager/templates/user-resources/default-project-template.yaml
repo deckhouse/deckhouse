@@ -18,9 +18,15 @@ spec:
           description: |
             Resource quota for the project.
             Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
+          required:
+            - requests
+            - memory
           properties:
             requests:
               type: object
+              required:
+                - cpu
+                - memory
               properties:
                 cpu:
                   oneOf:
@@ -39,6 +45,9 @@ spec:
                   pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
             limits:
               type: object
+              required:
+                - cpu
+                - memory
               properties:
                 cpu:
                   oneOf:
