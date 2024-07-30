@@ -140,11 +140,21 @@ func main() {
 			documentation.Scopes[key] = val
 		}
 	}
+
 	marshaled, err := yaml.Marshal(documentation)
 	if err != nil {
 		panic(err)
 	}
-	err = os.WriteFile(filepath.Join(workDir, "docs/documentation/_data/rbac.yaml"), marshaled, 0666)
+	// it fixes flaky test, because there is a possibility that PR marshaled docs locally docs will be different
+	var tmp interface{}
+	if err = yaml.Unmarshal(marshaled, &tmp); err != nil {
+		panic(err)
+	}
+	result, err := yaml.Marshal(tmp)
+	if err != nil {
+		panic(err)
+	}
+	err = os.WriteFile(filepath.Join(workDir, "docs/documentation/_data/rbac.yaml"), result, 0666)
 	if err != nil {
 		panic(err)
 	}
