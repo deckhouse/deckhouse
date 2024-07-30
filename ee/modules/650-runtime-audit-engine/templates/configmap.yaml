@@ -49,7 +49,8 @@ data:
       library_path: libk8smeta.so
       init_config:
         collectorPort: 45000
-        collectorHostname: k8s-metacollector.d8-runtime-audit-engine.svc
+        collectorHostname: "k8s-metacollector.d8-runtime-audit-engine.svc"
+        nodeName: "${FALCO_K8S_NODE_NAME}"
 
     # Setting this list to empty ensures that the above plugins are *not*
     # loaded and enabled by default. If you want to use the above plugins,
