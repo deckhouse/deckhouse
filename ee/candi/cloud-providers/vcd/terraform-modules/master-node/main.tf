@@ -3,14 +3,17 @@
 
 
 locals {
-  catalog  = split("/", local.master_instance_class.template)[0]
-  template = split("/", local.master_instance_class.template)[1]
-  ip_address  = length(local.main_ip_addresses) > 0 ? element(local.main_ip_addresses, var.nodeIndex) : null
+  template_parts   = split("/", local.master_instance_class.template)
+  org              = length(local.template_parts) == 3 ? local.template_parts[0] : null
+  catalog          = length(local.template_parts) == 3 ? local.template_parts[1] : local.template_parts[0]
+  template         = length(local.template_parts) == 3 ? local.template_parts[2] : local.template_parts[1]
+  ip_address       = length(local.main_ip_addresses) > 0 ? element(local.main_ip_addresses, var.nodeIndex) : null
   placement_policy = lookup(local.master_instance_class, "placementPolicy", "")
 }
 
 
 data "vcd_catalog" "catalog" {
+  org  = local.org
   name = local.catalog
 }
 
@@ -68,7 +71,7 @@ resource "vcd_vapp_vm" "master" {
     ip                 = local.ip_address
   }
   network_dhcp_wait_seconds = 60
-  
+
   override_template_disk {
     bus_type        = "paravirtual"
     size_in_mb      = local.master_instance_class.rootDiskSizeGb * 1024
