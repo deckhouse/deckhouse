@@ -384,6 +384,11 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 			// get policy spec
 			err = c.client.Get(ctx, types.NamespacedName{Name: policyName}, policy)
 			if err != nil {
+				c.metricStorage.CounterAdd("{PREFIX}module_update_policy_not_found", 1.0, map[string]string{
+					"version": mr.GetReleaseVersion(),
+					"module":  mr.GetName(),
+				})
+
 				if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy %s not found", policyName)); e != nil {
 					return ctrl.Result{Requeue: true}, e
 				}
@@ -398,11 +403,6 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
 	} else {
-		l := map[string]string{
-			"version": mr.GetReleaseVersion(),
-			"module":  mr.GetName(),
-		}
-		c.metricStorage.CounterAdd("{PREFIX}module_update_policy_not_found", 1.0, l)
 		if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy not set. Create a ModuleUpdatePolicy object and label the release '%s=<policy_name>'", UpdatePolicyLabel)); e != nil {
 			return ctrl.Result{Requeue: true}, e
 		}
