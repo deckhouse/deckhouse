@@ -19,15 +19,15 @@ spec:
             Resource quota for the project.
             Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
           anyOf:
-            - requests
-            - limits
+            - {required: ["requests"]}
+            - {required: ["limits"]}
           properties:
             requests:
               type: object
               anyOf:
-                - cpu
-                - memory
-                - storage
+                - {required: ["cpu"]}
+                - {required: ["memory"]}
+                - {required: ["storage"]}
               properties:
                 cpu:
                   oneOf:
@@ -47,8 +47,8 @@ spec:
             limits:
               type: object
               anyOf:
-                - cpu
-                - memory
+                - {required: ["cpu"]}
+                - {required: ["memory"]}
               properties:
                 cpu:
                   oneOf:
