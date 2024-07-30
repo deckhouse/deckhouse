@@ -158,18 +158,6 @@ spec:
           mountPath: /etc/falco/rules.d
         - name: containerdsock
           mountPath: /run/containerd/containerd.sock
-        - name: boot-fs
-          hostPath:
-            path: /boot
-        - name: lib-modules
-          hostPath:
-            path: /lib/modules
-        - name: usr-fs
-          hostPath:
-            path: /usr
-        - name: etc-fs
-          hostPath:
-            path: /etc
 
       - name: falcosidekick
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
