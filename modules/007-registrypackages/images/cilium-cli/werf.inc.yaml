@@ -37,7 +37,7 @@ shell:
     - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/cilium/cilium-cli.git /go/src/github.com/cilium/cilium-cli
   install:
     - cd /go/src/github.com/cilium/cilium-cli
-    - find /patches -name '*.patch' | xargs git apply --verbose
+    - find /patches -name '*.patch' | xargs git apply --verbose --allow-empty
     - make install
   setup:
     - strip /usr/local/bin/cilium
