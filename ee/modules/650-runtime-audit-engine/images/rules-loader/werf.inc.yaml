@@ -79,5 +79,5 @@ git:
 shell:
   install:
   - apt-get update
-  - apt-get install python3 python3-module-pip-run
+  - apt-get install -y python3 python3-module-pip-run
   - pip3 install -r /requirements.txt
