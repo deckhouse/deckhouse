@@ -6,6 +6,9 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
 data:
   falco.yaml: |-
+    engine:
+      kind: modern_ebpf
+
     # @ The location of the rules files that will be consumed by Falco.
     # The order of rule_files is important. Custom rules are above the default rules
     # to avoid the possibility of overriding.
