@@ -370,15 +370,15 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	// if release has associated update policy
 	if policyName, found := mr.ObjectMeta.Labels[UpdatePolicyLabel]; found {
 		if policyName == "" {
-			// get all policies regardless of their labels
-			var policies = new(v1alpha1.ModuleUpdatePolicyList)
-			err = c.client.List(ctx, policies)
-			if err != nil {
-				return ctrl.Result{Requeue: true}, err
-			}
-			policy, err = c.getReleasePolicy(mr.GetModuleSource(), mr.GetName(), policies.Items)
-			if err != nil {
-				return ctrl.Result{Requeue: true}, err
+			policy = &v1alpha1.ModuleUpdatePolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
+					APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "",
+				},
+				Spec: *c.deckhouseEmbeddedPolicy.Get(),
 			}
 		} else {
 			// get policy spec
@@ -403,10 +403,19 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
 	} else {
-		if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy not set. Create a ModuleUpdatePolicy object and label the release '%s=<policy_name>'", UpdatePolicyLabel)); e != nil {
-			return ctrl.Result{Requeue: true}, e
+		// get all policies regardless of their labels
+		var policies = new(v1alpha1.ModuleUpdatePolicyList)
+		err = c.client.List(ctx, policies)
+		if err != nil {
+			return ctrl.Result{Requeue: true}, err
 		}
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		policy, err = c.getReleasePolicy(mr.GetModuleSource(), mr.GetName(), policies.Items)
+		if err != nil {
+			if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy not set. Create a ModuleUpdatePolicy object and label the release '%s=<policy_name>'", UpdatePolicyLabel)); e != nil {
+				return ctrl.Result{Requeue: true}, e
+			}
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		}
 	}
 
 	kubeAPI := newKubeAPI(ctx, c.logger, c.client, c.externalModulesDir, c.symlinksDir, c.moduleManager, c.dc)
