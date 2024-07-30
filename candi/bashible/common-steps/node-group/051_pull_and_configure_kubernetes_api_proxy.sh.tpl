@@ -86,7 +86,7 @@ if crictl version >/dev/null 2>/dev/null; then
   ACTUAL_IMAGE_NAME_FOR_PAUSE={{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.common "pause") }}
 
   # Bootstrap for registry mode != "Direct"
-  if [ "$FIRST_BASHIBLE_RUN" == "yes" ] && [ -n "${REGISTRY_PROXY_ADDRESS+x}" ] && [ -n "${REGISTRY_MODE+x}" ] && [ "$REGISTRY_MODE" != "Direct" ]; then
+  if [ "$FIRST_BASHIBLE_RUN" == "yes" ] && [ -n "$REGISTRY_PROXY_ADDRESS" ] && [ -n "$REGISTRY_MODE" ] && [ "$REGISTRY_MODE" != "Direct" ]; then
     crictl pull $PROXY_RETRIEVED_IMAGE_FOR_KUBERNETES_API_PROXY
     crictl pull $PROXY_RETRIEVED_IMAGE_FOR_PAUSE
     ctr --namespace=k8s.io image tag $PROXY_RETRIEVED_IMAGE_FOR_KUBERNETES_API_PROXY $ACTUAL_IMAGE_NAME_FOR_KUBERNETES_API_PROXY
