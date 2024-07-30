@@ -20,7 +20,7 @@ spec:
             Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
           required:
             - requests
-            - memory
+            - limits
           properties:
             requests:
               type: object
