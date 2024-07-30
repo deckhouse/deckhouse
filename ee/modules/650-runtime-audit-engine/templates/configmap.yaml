@@ -6,9 +6,6 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
 data:
   falco.yaml: |-
-    engine:
-      kind: modern_ebpf
-
     # @ The location of the rules files that will be consumed by Falco.
     # The order of rule_files is important. Custom rules are above the default rules
     # to avoid the possibility of overriding.
@@ -17,6 +14,11 @@ data:
 {{- range $path, $_ := (.Files.Glob "rules/*") }}
     - /etc/falco/{{ trimPrefix "rules/" $path }}
 {{- end }}
+
+    # Falco supports different engines to generate events.
+    # Choose the appropriate engine kind based on your system's configuration and requirements.
+    engine:
+      kind: modern_ebpf
 
     #
     # Plugins that are available for use. These plugins are not loaded by
@@ -43,6 +45,11 @@ data:
     - name: json
       library_path: libjson.so
       init_config: ""
+    - name: k8smeta
+      library_path: libk8smeta.so
+      init_config:
+        collectorPort: 45000
+        collectorHostname: k8s-metacollector.d8-runtime-audit-engine.svc
 
     # Setting this list to empty ensures that the above plugins are *not*
     # loaded and enabled by default. If you want to use the above plugins,
@@ -54,6 +61,7 @@ data:
     load_plugins:
     - "k8saudit"
     - "json"
+    - "k8smeta"
 
     # @ Watch config file and rules files for modification.
     # When a file is modified, Falco will propagate new config,
