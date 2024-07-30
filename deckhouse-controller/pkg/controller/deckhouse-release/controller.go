@@ -483,7 +483,7 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, pods []corev
 		return fmt.Errorf("registry (%s) get digest failed: %s", repo, err)
 	}
 
-	r.metricStorage.GaugeSet("deckhouse_kube_image_digest_check_success", 1.0, map[string]string{})
+	r.metricStorage.CounterAdd("deckhouse_kube_image_digest_check_success", 1.0, map[string]string{})
 
 	if strings.TrimSpace(repoDigest) == strings.TrimSpace(imageHash) {
 		return nil

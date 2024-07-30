@@ -18,6 +18,7 @@ package deckhouse_release
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -25,6 +26,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/flant/shell-operator/pkg/metric_storage"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/pkg/releaseutil"
@@ -86,6 +88,7 @@ func setupControllerSettings(
 		logger:         log.New(),
 		moduleManager:  stubModulesManager{},
 		updateSettings: helpers.NewDeckhouseSettingsContainer(ds),
+		metricStorage:  metric_storage.NewMetricStorage(context.Background(), "", true),
 	}
 
 	return rec, cl
