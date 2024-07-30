@@ -9,7 +9,7 @@ data:
     # @ The location of the rules files that will be consumed by Falco.
     # The order of rule_files is important. Custom rules are above the default rules
     # to avoid the possibility of overriding.
-    rules_file:
+    rules_files:
     - /etc/falco/rules.d
 {{- range $path, $_ := (.Files.Glob "rules/*") }}
     - /etc/falco/{{ trimPrefix "rules/" $path }}
