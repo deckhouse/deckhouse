@@ -5,22 +5,22 @@ modules:
                 - name: d8:manage:capability:module:admission-policy-engine:view
                   rules:
                     - apigroups:
-                        - templates.gatekeeper.sh
-                      nonresourceurls: []
-                      resourcenames: []
-                      resources:
-                        - constrainttemplates
-                      verbs:
-                        - get
-                        - list
-                        - watch
-                    - apigroups:
                         - deckhouse.io
                       nonresourceurls: []
                       resourcenames: []
                       resources:
                         - operationpolicies
                         - securitypolicies
+                      verbs:
+                        - get
+                        - list
+                        - watch
+                    - apigroups:
+                        - templates.gatekeeper.sh
+                      nonresourceurls: []
+                      resourcenames: []
+                      resources:
+                        - constrainttemplates
                       verbs:
                         - get
                         - list
@@ -39,11 +39,12 @@ modules:
                 - name: d8:manage:capability:module:admission-policy-engine:edit
                   rules:
                     - apigroups:
-                        - templates.gatekeeper.sh
+                        - deckhouse.io
                       nonresourceurls: []
                       resourcenames: []
                       resources:
-                        - constrainttemplates
+                        - operationpolicies
+                        - securitypolicies
                       verbs:
                         - create
                         - update
@@ -51,12 +52,11 @@ modules:
                         - delete
                         - deletecollection
                     - apigroups:
-                        - deckhouse.io
+                        - templates.gatekeeper.sh
                       nonresourceurls: []
                       resourcenames: []
                       resources:
-                        - operationpolicies
-                        - securitypolicies
+                        - constrainttemplates
                       verbs:
                         - create
                         - update
