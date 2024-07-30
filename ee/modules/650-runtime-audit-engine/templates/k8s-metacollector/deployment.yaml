@@ -28,12 +28,24 @@ spec:
           memory: 50Mi
   {{- end }}
 ---
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: policy/v1
+kind: PodDisruptionBudget
 metadata:
   name: k8s-metacollector-operator
   namespace: d8-{{ $.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "k8s-metacollector")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: k8s-metacollector
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-metacollector
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "k8s-metacollector")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   revisionHistoryLimit: 2
