@@ -1,0 +1,45 @@
+{{- $version := "0.15.22" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - cilium
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    cilium: {{ $version }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+git:
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  beforeInstall:
+    - mkdir -p /go/src/github.com/cilium/cilium-cli
+    - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/cilium/cilium-cli.git /go/src/github.com/cilium/cilium-cli
+  install:
+    - cd /go/src/github.com/cilium/cilium-cli
+    - find /patches -name '*.patch' | xargs git apply --verbose
+    - make install
+  setup:
+    - strip /usr/local/bin/cilium
+    - mv /usr/local/bin/cilium /cilium
+    - chmod +x /cilium /install /uninstall
