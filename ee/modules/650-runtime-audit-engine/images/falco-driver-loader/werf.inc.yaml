@@ -1,0 +1,18 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ $.Images.BASE_ALT_P11 }}
+import:
+- artifact: {{ $.ModuleName }}/falco-artifact
+  add: /falco-package
+  to: /
+  includePaths:
+  - usr/bin/falcoctl
+  before: install
+git:
+- add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/docker-entrypoint.sh
+  to: /
+  stageDependencies:
+    install:
+    - '**/*'
+docker:
+  ENTRYPOINT: ["/docker-entrypoint.sh"]
