@@ -124,7 +124,6 @@ spec:
     - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-")
       || object.metadata.labels["modules.deckhouse.io/update-policy"] == oldObject.metadata.labels["modules.deckhouse.io/update-policy"]'
       reason: Forbidden
-{{- end }}
 ---
 {{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1beta1
