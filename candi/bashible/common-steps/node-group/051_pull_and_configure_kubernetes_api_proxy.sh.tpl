@@ -78,15 +78,16 @@ if crictl version >/dev/null 2>/dev/null; then
   REGISTRY_MODE="{{ $.registry.registryMode }}"
   REGISTRY_PROXY_ADDRESS="{{ $registryProxyAddress }}"
 
-  # Images vars
-  PROXY_RETRIEVED_IMAGE_FOR_KUBERNETES_API_PROXY={{ printf "%s%s@%s" $registryProxyAddress $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
-  PROXY_RETRIEVED_IMAGE_FOR_PAUSE={{ printf "%s%s@%s" $registryProxyAddress $.registry.path (index $.images.common "pause") }}
-
+  # Actual images refs
   ACTUAL_IMAGE_NAME_FOR_KUBERNETES_API_PROXY={{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
   ACTUAL_IMAGE_NAME_FOR_PAUSE={{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.common "pause") }}
 
   # Bootstrap for registry mode != "Direct"
   if [ "$FIRST_BASHIBLE_RUN" == "yes" ] && [ -n "$REGISTRY_PROXY_ADDRESS" ] && [ -n "$REGISTRY_MODE" ] && [ "$REGISTRY_MODE" != "Direct" ]; then
+    # Images refs via proxy
+    PROXY_RETRIEVED_IMAGE_FOR_KUBERNETES_API_PROXY={{ printf "%s%s@%s" $registryProxyAddress $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+    PROXY_RETRIEVED_IMAGE_FOR_PAUSE={{ printf "%s%s@%s" $registryProxyAddress $.registry.path (index $.images.common "pause") }}
+
     crictl pull $PROXY_RETRIEVED_IMAGE_FOR_KUBERNETES_API_PROXY
     crictl pull $PROXY_RETRIEVED_IMAGE_FOR_PAUSE
     ctr --namespace=k8s.io image tag $PROXY_RETRIEVED_IMAGE_FOR_KUBERNETES_API_PROXY $ACTUAL_IMAGE_NAME_FOR_KUBERNETES_API_PROXY
