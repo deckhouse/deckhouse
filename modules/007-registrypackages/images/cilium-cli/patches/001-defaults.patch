@@ -109,3 +109,16 @@ index 0452cba0..231dc7c9 100644
 -	DefaultCiliumSPIRENamespaces = []string{"kube-system", "cilium", "cilium-spire"}
 +	DefaultCiliumSPIRENamespaces = []string{"kube-system", "cilium", "cilium-spire", "d8-cni-cilium"}
  )
+diff --git a/sysdump/sysdump.go b/sysdump/sysdump.go
+index ebe90e99..c279dbff 100644
+--- a/sysdump/sysdump.go
++++ b/sysdump/sysdump.go
+@@ -2471,7 +2471,7 @@ func detectCiliumNamespace(k KubernetesClient) (string, error) {
+ 			return "", fmt.Errorf("failed to detect Cilium namespace: %w", err)
+ 		}
+
+-		_, err = k.GetDaemonSet(ctx, ns.Name, "cilium", metav1.GetOptions{})
++		_, err = k.GetDaemonSet(ctx, ns.Name, "agent", metav1.GetOptions{})
+ 		if errors.IsNotFound(err) {
+ 			continue
+ 		}
