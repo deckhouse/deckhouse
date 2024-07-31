@@ -67,17 +67,17 @@ pull_and_tag_image() {
     local ACTUAL_IMAGE_ADDRESS=$2
     local REGISTRY_AUTH=$3
     
-    crictl pull --auth="$REGISTRY_AUTH" "$PROXY_IMG_ADDRESS"
+    crictl pull --auth="$REGISTRY_AUTH" "$PROXY_IMG_ADDRESS" 2>&1
     if [ $? -ne 0 ]; then
         return $?
     fi
     
-    ctr --namespace=k8s.io image tag "$PROXY_IMG_ADDRESS" "$ACTUAL_IMAGE_ADDRESS"
+    ctr --namespace=k8s.io image tag "$PROXY_IMG_ADDRESS" "$ACTUAL_IMAGE_ADDRESS" 2>&1
     if [ $? -ne 0 ]; then
         return $?
     fi
 
-    ctr --namespace=k8s.io image rm "$PROXY_IMG_ADDRESS"
+    ctr --namespace=k8s.io image rm "$PROXY_IMG_ADDRESS" 2>&1
     return $?
 }
 
