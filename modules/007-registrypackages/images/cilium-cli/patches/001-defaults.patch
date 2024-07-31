@@ -57,6 +57,19 @@ index 184eda2c..b1c68210 100644
  	HubbleUIDeploymentName     = "hubble-ui"
  	HubbleUIImage              = "quay.io/cilium/hubble-ui"
  	HubbleUIBackendImage       = "quay.io/cilium/hubble-ui-backend"
+diff --git a/internal/cli/cmd/cmd.go b/internal/cli/cmd/cmd.go
+index 0c38f5ac..a04fccb7 100644
+--- a/internal/cli/cmd/cmd.go
++++ b/internal/cli/cmd/cmd.go
+@@ -75,7 +75,7 @@ cilium connectivity test`,
+ 	}
+
+ 	cmd.PersistentFlags().StringVar(&contextName, "context", "", "Kubernetes configuration context")
+-	cmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "kube-system", "Namespace Cilium is running in")
++	cmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "d8-cni-cilium", "Namespace Cilium is running in")
+
+ 	cmd.AddCommand(
+ 		newCmdBgp(),
 diff --git a/sysdump/defaults.go b/sysdump/defaults.go
 index 0452cba0..ad0c9da0 100644
 --- a/sysdump/defaults.go
