@@ -12,6 +12,9 @@
       plk_create_group_if_not_exists__d8_cluster_has_caps_unmanaged_nodes: "ClusterHasCapsUnmanagedNodes,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_cluster_has_caps_unmanaged_nodes: "ClusterHasCapsUnmanagedNodes,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "node_name"
-      summary: The Node `{{`{{ $labels.node_name }}`}}` is not managed by CAPS.
+      summary: The Node {{ $labels.node_name }} is not managed by CAPS.
       description: |
-        The Node `{{`{{ $labels.node_name }}`}}` is in `Ready` state but has no corresponding instance in `Running` state, indicating it is not managed by CAPS.
+        The Node {{ $labels.node_name }} is in `Ready` state but has no corresponding Instance in `Running` state, indicating it is not managed by CAPS.
+        ```shell
+        kubectl get nodes {{ $labels.node_name }} ; kubectl get instances -o custom-columns=INSTANCE:.metadata.name,NODE:.status.nodeRef.name,STATUS:.status.currentStatus.phase | grep {{ $labels.node_name }}
+        ```
