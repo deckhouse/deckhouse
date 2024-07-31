@@ -35,7 +35,7 @@ const (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
-	Queue:        "/modules/node-manager",
+	Queue:        "/modules/node-manager/discover-system-registry",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "system_registry_proxy",
@@ -58,21 +58,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleSystemRegistryProxyEndpoints)
 
 func systemRegistryPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var isReady bool
-
 	pod := &corev1.Pod{}
 	err := sdk.FromUnstructured(obj, pod)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse pod object from unstructured: %v", err)
-	}
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-			isReady = true
-			break
-		}
-	}
-	if !isReady {
-		return nil, nil
 	}
 	return fmt.Sprintf("%s:%d", pod.Status.HostIP, systemRegistryProxyPort), nil
 }
