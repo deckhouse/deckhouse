@@ -105,8 +105,8 @@ pull_using_proxies() {
 
 if crictl version >/dev/null 2>/dev/null; then
   {{- $registryProxyAddresses := "" }}
-  {{- if $.packagesProxy.addresses }}
-    {{- $registryProxyAddresses = $.packagesProxy.addresses | join "," }}
+  {{- if $.systemRegistry.addresses }}
+    {{- $registryProxyAddresses = $.systemRegistry.addresses | join "," }}
   {{- end }}
   # Registry vars
   REGISTRY_MODE="{{ $.registry.registryMode }}"
