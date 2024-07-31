@@ -57,3 +57,28 @@ index 184eda2c..b1c68210 100644
  	HubbleUIDeploymentName     = "hubble-ui"
  	HubbleUIImage              = "quay.io/cilium/hubble-ui"
  	HubbleUIBackendImage       = "quay.io/cilium/hubble-ui-backend"
+diff --git a/sysdump/defaults.go b/sysdump/defaults.go
+index 0452cba0..57b356c8 100644
+--- a/sysdump/defaults.go
++++ b/sysdump/defaults.go
+@@ -11,7 +11,7 @@ import (
+ )
+
+ const (
+-	labelPrefix = "k8s-app="
++	labelPrefix = "app="
+ )
+
+ const (
+@@ -60,9 +60,9 @@ var (
+
+ 	// DefaultCiliumNamespaces will be used to attempt to autodetect what namespace Cilium is installed in
+ 	// unless otherwise specified.
+-	DefaultCiliumNamespaces = []string{"kube-system", "cilium"}
++	DefaultCiliumNamespaces = []string{"kube-system", "cilium", "d8-cni-cilium"}
+
+ 	// DefaultCiliumSPIRENamespaces will be used to attempt to autodetect what namespace Cilium SPIRE is installed in
+ 	// unless otherwise specified.
+-	DefaultCiliumSPIRENamespaces = []string{"kube-system", "cilium", "cilium-spire"}
++	DefaultCiliumSPIRENamespaces = []string{"kube-system", "cilium", "cilium-spire", "d8-cni-cilium"}
+ )
