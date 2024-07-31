@@ -41,6 +41,8 @@ type UploadScript struct {
 
 	sudo bool
 
+	cleanupAfterExec bool
+
 	stdoutHandler func(string)
 
 	timeout time.Duration
@@ -51,6 +53,8 @@ func NewUploadScript(sess *session.Session, scriptPath string, args ...string) *
 		Session:    sess,
 		ScriptPath: scriptPath,
 		Args:       args,
+
+		cleanupAfterExec: true,
 	}
 }
 
@@ -71,6 +75,13 @@ func (u *UploadScript) WithTimeout(timeout time.Duration) *UploadScript {
 
 func (u *UploadScript) WithEnvs(envs map[string]string) *UploadScript {
 	u.envs = envs
+	return u
+}
+
+// WithCleanupAfterExec option tells if ssh executor should delete uploaded script after execution was attempted or not.
+// It does not care if script was executed successfully of failed.
+func (u *UploadScript) WithCleanupAfterExec(doCleanup bool) *UploadScript {
+	u.cleanupAfterExec = doCleanup
 	return u
 }
 
@@ -103,6 +114,15 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 
 	if u.timeout > 0 {
 		scriptCmd.WithTimeout(u.timeout)
+	}
+
+	if u.cleanupAfterExec {
+		defer func() {
+			err := NewCommand(u.Session, "rm", "-f", scriptFullPath).Start()
+			if err != nil {
+				log.DebugF("Failed to delete uploaded script %s: %v", scriptFullPath, err)
+			}
+		}()
 	}
 
 	err = scriptCmd.Run()
