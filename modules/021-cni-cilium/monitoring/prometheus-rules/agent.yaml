@@ -1,7 +1,7 @@
 - name: cni-cilium
   rules:
   - alert: CiliumAgentUnreachableHealthEndpoints
-    # Show all current `cilium_unreachable_health_endpoints` if the condition is met:
+    # Select all current `cilium_unreachable_health_endpoints` if the condition is met:
     # no changes in pod states for the last N minutes (number of pods including changes - number of pods N minutes ago)
     expr: |
       max by (namespace, pod) (cilium_unreachable_health_endpoints) > 0
