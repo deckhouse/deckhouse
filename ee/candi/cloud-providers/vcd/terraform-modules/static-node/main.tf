@@ -2,13 +2,16 @@
 # Licensed underthe Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  catalog  = split("/", local.instance_class.template)[0]
-  template = split("/", local.instance_class.template)[1]
-  ip_address  = length(local.main_ip_addresses) > 0 ? element(local.main_ip_addresses, var.nodeIndex) : null
+  template_parts   = split("/", local.instance_class.template)
+  org              = length(local.template_parts) == 3 ? local.template_parts[0] : null
+  catalog          = length(local.template_parts) == 3 ? local.template_parts[1] : local.template_parts[0]
+  template         = length(local.template_parts) == 3 ? local.template_parts[2] : local.template_parts[1]
+  ip_address       = length(local.main_ip_addresses) > 0 ? element(local.main_ip_addresses, var.nodeIndex) : null
   placement_policy = lookup(local.instance_class, "placementPolicy", "")
 }
 
 data "vcd_catalog" "catalog" {
+  org  = local.org
   name = local.catalog
 }
 
