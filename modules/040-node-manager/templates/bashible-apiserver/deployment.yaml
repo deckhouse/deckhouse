@@ -139,6 +139,11 @@ spec:
       {{- $.Values.nodeManager.internal.bootstrapTokens | toYaml | nindent 6 }}
     apiserverEndpoints:
       {{- $.Values.nodeManager.internal.clusterMasterAddresses | toYaml | nindent 6 }}
+    {{- if hasKey $.Values.nodeManager.internal "systemRegistryProxy" }}
+    systemRegistryProxy:
+      addresses:
+        {{- $.Values.nodeManager.internal.systemRegistryProxy.addresses | toYaml | nindent 8 }}
+    {{- end }}
     {{- if hasKey $.Values.nodeManager.internal "packagesProxy" }}
     packagesProxy:
       addresses:
