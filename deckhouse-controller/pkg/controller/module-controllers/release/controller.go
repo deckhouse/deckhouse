@@ -340,6 +340,8 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	moduleName := mr.Spec.ModuleName
 
+	log.Infof("=== mr: %#v", *mr)
+
 	otherReleases := new(v1alpha1.ModuleReleaseList)
 	err := c.client.List(ctx, otherReleases, client.MatchingLabels{"module": moduleName})
 	if err != nil {
@@ -368,7 +370,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 
 	policy := new(v1alpha1.ModuleUpdatePolicy)
 	// if release has associated update policy
-	if policyName, found := mr.ObjectMeta.Labels[UpdatePolicyLabel]; found {
+	if policyName, found := mr.GetObjectMeta().GetLabels()[UpdatePolicyLabel]; found {
 		if policyName == "" {
 			policy = &v1alpha1.ModuleUpdatePolicy{
 				TypeMeta: metav1.TypeMeta{
