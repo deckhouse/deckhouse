@@ -130,7 +130,7 @@ metallb:
 
 ## An example for Bare metal (with L2LoadBalancer)
 
-The [l2-load-balancer](../381-l2-load-balancer/) module is currently available only in the Enterprise Edition version.
+{% alert level="warning" %} This feature is available in Enterprise Edition only. {% endalert %}
 
 Enable the module:
 
@@ -159,8 +159,8 @@ spec:
 ```
 
 Deploy the _IngressNginxController_ resource:
-* The **network.deckhouse.io/l2-load-balancer-name** annotation specifies the name _L2LoadBalancer_ (in the example _L2LoadBalancer_ with the name _ingress_ was created in the previous step)
-* The **network.deckhouse.io/l2-load-balancer-external-ips-count** annotation specifies how many addresses will be allocated from the pool described in _L2LoadBalancer_
+* The **network.deckhouse.io/l2-load-balancer-name** annotation specifies the name of _L2LoadBalancer_ resource.
+* The **network.deckhouse.io/l2-load-balancer-external-ips-count** annotation specifies how many addresses will be allocated from the pool described in _L2LoadBalancer_.
 
 ```yaml
 apiVersion: deckhouse.io/v1
