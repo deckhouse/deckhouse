@@ -16,3 +16,8 @@
 set -Eeo pipefail
 mkdir -p /opt/deckhouse/bin
 cp -f cilium /opt/deckhouse/bin
+
+if [ ! -f "/etc/bash_completion.d/cilium" ]; then
+  mkdir -p /etc/bash_completion.d
+  cilium completion bash > /etc/bash_completion.d/cilium
+fi

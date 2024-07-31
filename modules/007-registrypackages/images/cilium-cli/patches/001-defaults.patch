@@ -1,0 +1,59 @@
+diff --git a/defaults/defaults.go b/defaults/defaults.go
+index 184eda2c..b1c68210 100644
+--- a/defaults/defaults.go
++++ b/defaults/defaults.go
+@@ -12,12 +12,12 @@ const (
+ 	Version = "v1.15.0"
+
+ 	AgentContainerName      = "cilium-agent"
+-	AgentServiceAccountName = "cilium"
+-	AgentClusterRoleName    = "cilium"
++	AgentServiceAccountName = "agent"
++	AgentClusterRoleName    = "d8:cni-cilium:agent"
+ 	AgentSecretsRoleName    = "cilium-secrets"
+ 	AgentConfigRoleName     = "cilium-config-agent"
+-	AgentDaemonSetName      = "cilium"
+-	AgentPodSelector        = "k8s-app=cilium"
++	AgentDaemonSetName      = "agent"
++	AgentPodSelector        = "app=agent"
+ 	AgentResourceQuota      = "cilium-resource-quota"
+ 	AgentImage              = "quay.io/cilium/cilium"
+
+@@ -33,13 +33,13 @@ const (
+
+ 	NodeInitDaemonSetName = "cilium-node-init"
+
+-	OperatorServiceAccountName = "cilium-operator"
+-	OperatorClusterRoleName    = "cilium-operator"
+-	OperatorPodSelector        = "io.cilium/app=operator"
++	OperatorServiceAccountName = "operator"
++	OperatorClusterRoleName    = "d8:cni-cilium:operator"
++	OperatorPodSelector        = "app=operator"
+ 	OperatorSecretsRoleName    = "cilium-operator-secrets"
+-	OperatorContainerName      = "cilium-operator"
++	OperatorContainerName      = "operator"
+ 	OperatorMetricsPortName    = "prometheus"
+-	OperatorDeploymentName     = "cilium-operator"
++	OperatorDeploymentName     = "operator"
+ 	OperatorResourceQuota      = "cilium-operator-resource-quota"
+ 	OperatorImage              = "quay.io/cilium/operator-generic"
+ 	OperatorImageAWS           = "quay.io/cilium/operator-aws"
+@@ -50,15 +50,15 @@ const (
+ 	RelayContainerName       = "hubble-relay"
+ 	RelayDeploymentName      = "hubble-relay"
+ 	RelayClusterRoleName     = "hubble-relay"
+-	RelayServiceAccountName  = "hubble-relay"
++	RelayServiceAccountName  = "relay"
+ 	RelayConfigMapName       = "hubble-relay-config"
+ 	RelayImage               = "quay.io/cilium/hubble-relay"
+ 	RelayServerSecretName    = "hubble-relay-server-certs"
+ 	RelayClientSecretName    = "hubble-relay-client-certs"
+ 	HubbleUIClientSecretName = "hubble-ui-client-certs"
+
+-	HubbleUIClusterRoleName    = "hubble-ui"
+-	HubbleUIServiceAccountName = "hubble-ui"
++	HubbleUIClusterRoleName    = "d8:cilium-hubble:ui:reader"
++	HubbleUIServiceAccountName = "ui"
+ 	HubbleUIDeploymentName     = "hubble-ui"
+ 	HubbleUIImage              = "quay.io/cilium/hubble-ui"
+ 	HubbleUIBackendImage       = "quay.io/cilium/hubble-ui-backend"
