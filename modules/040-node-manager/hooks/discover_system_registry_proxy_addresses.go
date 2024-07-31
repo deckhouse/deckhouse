@@ -70,6 +70,9 @@ func handleSystemRegistryProxyEndpoints(input *go_hook.HookInput) error {
 	endpointsSet := set.NewFromSnapshot(input.Snapshots["system_registry_proxy"])
 	endpointsList := endpointsSet.Slice() // sorted
 
+	if len(endpointsList) == 0 {
+		return nil
+	}
 	input.LogEntry.Infof("found system registry proxy endpoints: %v", endpointsList)
 	input.Values.Set("nodeManager.internal.systemRegistryProxy.addresses", endpointsList)
 	return nil

@@ -68,7 +68,7 @@ properties:
             description: |
               Array of system registry proxy servers addresses.
             x-examples:
-              - ["10.0.0.1:5443", "10.0.0.2:5443", "10.0.0.3:5443"]
+              - ["10.0.0.1:5001", "10.0.0.2:5001", "10.0.0.3:5001"]
             default: []
             items:
               type: string
