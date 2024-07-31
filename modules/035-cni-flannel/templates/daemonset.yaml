@@ -69,8 +69,8 @@ spec:
         env:
         - name: POD_NETWORK_MODE
           value: {{ .Values.cniFlannel.internal.podNetworkMode }}
-        - name: MODULE_CNI_CILIUM_ENABLED
-          value: "{{ .Values.global.enabledModules | has 'cni-cilium' | quote }}"
+        # - name: MODULE_CNI_CILIUM_ENABLED
+        #   value: "{{ .Values.global.enabledModules | has 'cni-cilium' | quote }}"
         - name: POD_NAME
           valueFrom:
             fieldRef:
