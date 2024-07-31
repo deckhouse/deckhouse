@@ -1,5 +1,4 @@
-{{- $context := . }}
-{{- $kubernetesVersion := $context.Values.global.discovery.kubernetesVersion }}
+{{- $kubernetesVersion := .Values.global.discovery.kubernetesVersion }}
 {{- if semverCompare ">= 1.26" $kubernetesVersion }}
 ---
 {{- $policyName := "ingressnginxcontroller-settings.deckhouse.io" }}
@@ -14,7 +13,7 @@ apiVersion: admissionregistration.k8s.io/v1alpha1
 kind: ValidatingAdmissionPolicy
 metadata:
   name: {{ $policyName }}
-  {{- include "helm_lib_module_labels" (list $context ) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 spec:
   failurePolicy: Fail
   matchConstraints:
@@ -31,7 +30,7 @@ spec:
 {{- if semverCompare ">= 1.27" $kubernetesVersion }}
       messageExpression: '''parameters "spec.{{ $spec }}" avalible only for inlet "{{ $inlet }}"'''        
 {{- end }}      
-{{- end}}  
+{{- end }}  
 ---
 {{- if semverCompare ">= 1.28" $kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1beta1
@@ -41,7 +40,7 @@ apiVersion: admissionregistration.k8s.io/v1alpha1
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   name: {{ $policyName }}
-  {{- include "helm_lib_module_labels" (list $context  ) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list .  ) | nindent 2 }}
 spec:
   policyName: {{ $policyName }}
 {{- if semverCompare ">= 1.27" $kubernetesVersion }}
