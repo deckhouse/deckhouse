@@ -93,13 +93,12 @@ pull_using_proxies() {
         local ACTUAL_IMAGE_ADDRESS="$REGISTRY_ACTUAL_ADDRESS$IMAGE_PATH"
         
         pull_and_tag_image "$PROXY_IMG_ADDRESS" "$ACTUAL_IMAGE_ADDRESS" "$REGISTRY_AUTH"
-        
         if [ $? -eq 0 ]; then
             return 0
         fi
     done
 
-    echo "Failed to pull image $REGISTRY_ACTUAL_ADDRESS$IMAGE_PATH"
+    >&2 echo "Failed to pull image: $REGISTRY_ACTUAL_ADDRESS$IMAGE_PATH, using addresses: "$REGISTRY_PROXY_ADDRESSES""
     return 1
 }
 
