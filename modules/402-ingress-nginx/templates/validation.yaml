@@ -18,9 +18,9 @@ spec:
   failurePolicy: Fail
   matchConstraints:
     resourceRules:
-      - apiGroups:   [""]
+      - apiGroups:   ["deckhouse.io"]
         apiVersions: ["*"]
-        operations:  ["CREATE"]
+        operations:  ["CREATE", "UPDATE"]
         resources:   ["ingressnginxcontrollers"]    
   validations:
 {{- range $inlet := $inlets }}
