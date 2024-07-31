@@ -120,8 +120,10 @@ spec:
         operations:  ["UPDATE"]
         resources:   ["modulereleases"]
   validations:
-    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-")
-      || object.metadata.labels["modules.deckhouse.io/update-policy"] == oldObject.metadata.labels["modules.deckhouse.io/update-policy"]'
+    - expression: request.userInfo.username.startsWith("system:serviceaccount:d8-")
+        || ! ("modules.deckhouse.io/update-policy" in object.metadata.labels)
+        || ! ("modules.deckhouse.io/update-policy" in oldObject.metadata.labels)
+        || object.metadata.labels["modules.deckhouse.io/update-policy"] == oldObject.metadata.labels["modules.deckhouse.io/update-policy"]
       reason: Forbidden
 ---
 {{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
