@@ -71,7 +71,7 @@ index 0c38f5ac..a04fccb7 100644
  	cmd.AddCommand(
  		newCmdBgp(),
 diff --git a/sysdump/defaults.go b/sysdump/defaults.go
-index 0452cba0..ad0c9da0 100644
+index 0452cba0..231dc7c9 100644
 --- a/sysdump/defaults.go
 +++ b/sysdump/defaults.go
 @@ -11,11 +11,11 @@ import (
@@ -88,6 +88,15 @@ index 0452cba0..ad0c9da0 100644
  	DefaultCiliumEnvoyLabelSelector          = labelPrefix + "cilium-envoy"
  	DefaultCiliumOperatorLabelSelector       = "io.cilium/app=operator"
  	DefaultClustermeshApiserverLabelSelector = labelPrefix + "clustermesh-apiserver"
+@@ -38,7 +38,7 @@ const (
+ 	DefaultQuick                             = false
+ 	DefaultOutputFileName                    = "cilium-sysdump-<ts>" // "<ts>" will be replaced with the timestamp
+ 	DefaultDetectGopsPID                     = false
+-	DefaultCNIConfigDirectory                = "/etc/cni/net.d/"
++	DefaultCNIConfigDirectory                = "/host/etc/cni/net.d/"
+ 	DefaultCNIConfigMapName                  = "cni-configuration"
+ 	DefaultTetragonNamespace                 = "kube-system"
+ 	DefaultTetragonLabelSelector             = "app.kubernetes.io/name=tetragon"
 @@ -60,9 +60,9 @@ var (
 
  	// DefaultCiliumNamespaces will be used to attempt to autodetect what namespace Cilium is installed in
