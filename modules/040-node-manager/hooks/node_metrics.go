@@ -96,7 +96,7 @@ func handleNodeInstanceMetrics(input *go_hook.HookInput) error {
 
 	for _, snap := range instanceSnapshots {
 		instance := snap.(instanceStatus)
-		labels := map[string]string{"instance_name": instance.Name, "status": instance.Status, "node_ref": instance.NodeRef}
+		labels := map[string]string{"instance_name": instance.Name, "status": instance.Status, "node_name": instance.NodeRef}
 		input.MetricsCollector.Set(instanceMetricName, 1, labels, options...)
 	}
 
