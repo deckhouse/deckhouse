@@ -94,9 +94,9 @@ status:
 			f.RunHook()
 		})
 
-		It("`nodeManager.internal.systemRegistryProxy.addresses` must be ['192.168.199.233:4219']", func() {
+		It("`nodeManager.internal.systemRegistryProxy.addresses` must be ['192.168.199.233:5001']", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.systemRegistryProxy.addresses").String()).To(MatchJSON(`["192.168.199.233:4219"]`))
+			Expect(f.ValuesGet("nodeManager.internal.systemRegistryProxy.addresses").String()).To(MatchJSON(`["192.168.199.233:5001"]`))
 		})
 
 		Context("Add second system registry pod", func() {
@@ -105,9 +105,9 @@ status:
 				f.RunHook()
 			})
 
-			It("`nodeManager.internal.systemRegistryProxy.addresses` must be ['192.168.199.233:4219','192.168.199.234:4219']", func() {
+			It("`nodeManager.internal.systemRegistryProxy.addresses` must be ['192.168.199.233:5001','192.168.199.234:5001']", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("nodeManager.internal.systemRegistryProxy.addresses").String()).To(MatchJSON(`["192.168.199.233:4219","192.168.199.234:4219"]`))
+				Expect(f.ValuesGet("nodeManager.internal.systemRegistryProxy.addresses").String()).To(MatchJSON(`["192.168.199.233:5001","192.168.199.234:5001"]`))
 			})
 
 			Context("Add third system registry pod", func() {
@@ -116,9 +116,9 @@ status:
 					f.RunHook()
 				})
 
-				It("`nodeManager.internal.systemRegistryProxy.addresses` must be ['192.168.199.233:4219','192.168.199.234:4219'], third pod is not ready", func() {
+				It("`nodeManager.internal.systemRegistryProxy.addresses` must be ['192.168.199.233:5001','192.168.199.234:5001'], third pod is not ready", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet("nodeManager.internal.systemRegistryProxy.addresses").String()).To(MatchJSON(`["192.168.199.233:4219","192.168.199.234:4219"]`))
+					Expect(f.ValuesGet("nodeManager.internal.systemRegistryProxy.addresses").String()).To(MatchJSON(`["192.168.199.233:5001","192.168.199.234:5001"]`))
 				})
 			})
 		})
