@@ -176,4 +176,12 @@ spec:
       network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
 ```
 
+Платформа создаст сервис с типом `LoadBalancer`. Ему будут присвоены адреса в заданном количестве:
+
+```shell
+$ kubectl -n d8-ingress-nginx get svc
+NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)                      AGE
+main-load-balancer     LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30689/TCP,443:30668/TCP   11s
+```
+
 {% endraw %}
