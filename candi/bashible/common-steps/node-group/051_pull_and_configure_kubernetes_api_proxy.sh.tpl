@@ -98,7 +98,7 @@ pull_using_proxies() {
         fi
     done
 
-    >&2 echo "Failed to pull image: $REGISTRY_ACTUAL_ADDRESS$IMAGE_PATH, using addresses: "$REGISTRY_PROXY_ADDRESSES""
+    >&2 echo "Failed to pull image: $REGISTRY_ACTUAL_ADDRESS$IMAGE_PATH, using addresses: $REGISTRY_PROXY_ADDRESSES"
     return 1
 }
 
