@@ -62,41 +62,68 @@ spec:
     emptyDir: {}
 EOF
 
-if crictl version >/dev/null 2>/dev/null; then
-  {{- $registryProxyAddress := "" }}
-  {{- if $.normal.apiserverEndpoints }}
-    {{- range $key, $value := $.normal.apiserverEndpoints }}
-      {{- if eq $key 0 }}
-        {{- $ipAddressAndPort := splitList ":" $value }}
-        {{- $ipAddress := index $ipAddressAndPort 0 }}
-        {{- $registryProxyAddress = printf "%s:5001" $ipAddress }}
-      {{- end }}
-    {{- end }}
-  {{- end }}
+pull_and_tag_image() {
+    local PROXY_IMG_ADDRESS=$1
+    local ACTUAL_IMAGE_ADDRESS=$2
+    local REGISTRY_AUTH=$3
+    
+    crictl pull --auth="$REGISTRY_AUTH" "$PROXY_IMG_ADDRESS"
+    if [ $? -ne 0 ]; then
+        return $?
+    fi
+    
+    ctr --namespace=k8s.io image tag "$PROXY_IMG_ADDRESS" "$ACTUAL_IMAGE_ADDRESS"
+    if [ $? -ne 0 ]; then
+        return $?
+    fi
 
+    ctr --namespace=k8s.io image rm "$PROXY_IMG_ADDRESS"
+    return $?
+}
+
+pull_using_proxies() {
+    local IMAGE_PATH=$1
+    local REGISTRY_ACTUAL_ADDRESS=$2
+    local REGISTRY_PROXY_ADDRESSES=$3
+    local REGISTRY_AUTH=$4
+
+    IFS=',' read -ra PROXY_ADDR <<< "$REGISTRY_PROXY_ADDRESSES"
+    for REGISTRY_PROXY_ADDRESS in "${PROXY_ADDR[@]}"; do
+        local PROXY_IMG_ADDRESS="$REGISTRY_PROXY_ADDRESS$IMAGE_PATH"
+        local ACTUAL_IMAGE_ADDRESS="$REGISTRY_ACTUAL_ADDRESS$IMAGE_PATH"
+        
+        pull_and_tag_image "$PROXY_IMG_ADDRESS" "$ACTUAL_IMAGE_ADDRESS" "$REGISTRY_AUTH"
+        
+        if [ $? -eq 0 ]; then
+            return 0
+        fi
+    done
+
+    echo "Failed to pull image $REGISTRY_ACTUAL_ADDRESS$IMAGE_PATH"
+    return 1
+}
+
+if crictl version >/dev/null 2>/dev/null; then
+  {{- $registryProxyAddresses := "" }}
+  {{- if $.packagesProxy.addresses }}
+    {{- $registryProxyAddresses = $.packagesProxy.addresses | join "," }}
+  {{- end }}
   # Registry vars
   REGISTRY_MODE="{{ $.registry.registryMode }}"
-  REGISTRY_PROXY_ADDRESS="{{ $registryProxyAddress }}"
+  REGISTRY_AUTH="{{ $.registry.auth | default "" }}"
+  REGISTRY_ACTUAL_ADDRESS="{{ $.registry.address }}"
+  REGISTRY_PROXY_ADDRESSES="{{ $registryProxyAddresses }}"
 
-  # Actual images refs
-  ACTUAL_IMAGE_NAME_FOR_KUBERNETES_API_PROXY={{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
-  ACTUAL_IMAGE_NAME_FOR_PAUSE={{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.common "pause") }}
+  # Images refs
+  IMAGE_PATH_FOR_KUBERNETES_API_PROXY={{ printf "%s@%s" $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+  IMAGE_PATH_FOR_PAUSE={{ printf "%s@%s" $.registry.path (index $.images.common "pause") }}
 
   # Bootstrap for registry mode != "Direct"
-  if [ "$FIRST_BASHIBLE_RUN" == "yes" ] && [ -n "$REGISTRY_PROXY_ADDRESS" ] && [ -n "$REGISTRY_MODE" ] && [ "$REGISTRY_MODE" != "Direct" ]; then
-    # Images refs via proxy
-    PROXY_RETRIEVED_IMAGE_FOR_KUBERNETES_API_PROXY={{ printf "%s%s@%s" $registryProxyAddress $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
-    PROXY_RETRIEVED_IMAGE_FOR_PAUSE={{ printf "%s%s@%s" $registryProxyAddress $.registry.path (index $.images.common "pause") }}
-
-    crictl pull --auth="{{ $.registry.auth | default "" }}" $PROXY_RETRIEVED_IMAGE_FOR_KUBERNETES_API_PROXY
-    crictl pull --auth="{{ $.registry.auth | default "" }}" $PROXY_RETRIEVED_IMAGE_FOR_PAUSE
-    ctr --namespace=k8s.io image tag $PROXY_RETRIEVED_IMAGE_FOR_KUBERNETES_API_PROXY $ACTUAL_IMAGE_NAME_FOR_KUBERNETES_API_PROXY
-    ctr --namespace=k8s.io image tag $PROXY_RETRIEVED_IMAGE_FOR_PAUSE $ACTUAL_IMAGE_NAME_FOR_PAUSE
-    # Remove proxied images
-    ctr --namespace=k8s.io image rm $PROXY_RETRIEVED_IMAGE_FOR_KUBERNETES_API_PROXY
-    ctr --namespace=k8s.io image rm $PROXY_RETRIEVED_IMAGE_FOR_PAUSE
+  if [ "$FIRST_BASHIBLE_RUN" == "yes" ] && [ -n "$REGISTRY_PROXY_ADDRESSES" ] && [ -n "$REGISTRY_MODE" ] && [ "$REGISTRY_MODE" != "Direct" ]; then
+    pull_using_proxies "$IMAGE_PATH_FOR_KUBERNETES_API_PROXY" "$REGISTRY_ACTUAL_ADDRESS" "$REGISTRY_PROXY_ADDRESSES" "$REGISTRY_AUTH"
+    pull_using_proxies "$IMAGE_PATH_FOR_PAUSE" "$REGISTRY_ACTUAL_ADDRESS" "$REGISTRY_PROXY_ADDRESSES" "$REGISTRY_AUTH"
   else
-    crictl pull $ACTUAL_IMAGE_NAME_FOR_KUBERNETES_API_PROXY
-    crictl pull $ACTUAL_IMAGE_NAME_FOR_PAUSE
+    crictl pull "$REGISTRY_ACTUAL_ADDRESS$IMAGE_PATH_FOR_KUBERNETES_API_PROXY"
+    crictl pull "$REGISTRY_ACTUAL_ADDRESS$IMAGE_PATH_FOR_PAUSE"
   fi
 fi
