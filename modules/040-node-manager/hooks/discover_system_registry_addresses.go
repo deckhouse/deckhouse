@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	systemRegistryProxyPort = 5001
+	systemRegistryPort = 5001
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -38,7 +38,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/node-manager/discover-system-registry",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "system_registry_proxy",
+			Name:       "system_registry",
 			ApiVersion: "v1",
 			Kind:       "Pod",
 			LabelSelector: &metav1.LabelSelector{
@@ -55,7 +55,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: systemRegistryPodFilter,
 		},
 	},
-}, handleSystemRegistryProxyEndpoints)
+}, handleSystemRegistryEndpoints)
 
 func systemRegistryPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	pod := &corev1.Pod{}
@@ -63,17 +63,17 @@ func systemRegistryPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse pod object from unstructured: %v", err)
 	}
-	return fmt.Sprintf("%s:%d", pod.Status.HostIP, systemRegistryProxyPort), nil
+	return fmt.Sprintf("%s:%d", pod.Status.HostIP, systemRegistryPort), nil
 }
 
-func handleSystemRegistryProxyEndpoints(input *go_hook.HookInput) error {
-	endpointsSet := set.NewFromSnapshot(input.Snapshots["system_registry_proxy"])
+func handleSystemRegistryEndpoints(input *go_hook.HookInput) error {
+	endpointsSet := set.NewFromSnapshot(input.Snapshots["system_registry"])
 	endpointsList := endpointsSet.Slice() // sorted
 
 	if len(endpointsList) == 0 {
 		return nil
 	}
-	input.LogEntry.Infof("found system registry proxy endpoints: %v", endpointsList)
-	input.Values.Set("nodeManager.internal.systemRegistryProxy.addresses", endpointsList)
+	input.LogEntry.Infof("found system registry endpoints: %v", endpointsList)
+	input.Values.Set("nodeManager.internal.systemRegistry.addresses", endpointsList)
 	return nil
 }

@@ -23,9 +23,9 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: node-manager :: hooks :: discover_system_registry_proxy_addresses ::", func() {
+var _ = Describe("Modules :: node-manager :: hooks :: discover_system_registry_addresses ::", func() {
 	const (
-		stateDeckhouseSystemRegistryProxyPod = `
+		stateDeckhouseSystemRegistryPod = `
 ---
 apiVersion: v1
 kind: Pod
@@ -41,7 +41,7 @@ status:
   - status: "True"
     type: Ready
 `
-		stateDeckhouseSystemRegistryProxyPod2 = `
+		stateDeckhouseSystemRegistryPod2 = `
 ---
 apiVersion: v1
 kind: Pod
@@ -57,7 +57,7 @@ status:
   - status: "True"
     type: Ready
 `
-		stateDeckhouseSystemRegistryProxyPod3 = `
+		stateDeckhouseSystemRegistryPod3 = `
 ---
 apiVersion: v1
 kind: Pod
@@ -75,7 +75,7 @@ status:
 `
 	)
 
-	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{"systemRegistryProxy":{}}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{"systemRegistry":{}}}}`, `{}`)
 
 	Context("System registry pods are not found", func() {
 		BeforeEach(func() {
@@ -90,35 +90,35 @@ status:
 
 	Context("One system registry pod", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseSystemRegistryProxyPod))
+			f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseSystemRegistryPod))
 			f.RunHook()
 		})
 
-		It("`nodeManager.internal.systemRegistryProxy.addresses` must be ['192.168.199.233:5001']", func() {
+		It("`nodeManager.internal.systemRegistry.addresses` must be ['192.168.199.233:5001']", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.systemRegistryProxy.addresses").String()).To(MatchJSON(`["192.168.199.233:5001"]`))
+			Expect(f.ValuesGet("nodeManager.internal.systemRegistry.addresses").String()).To(MatchJSON(`["192.168.199.233:5001"]`))
 		})
 
 		Context("Add second system registry pod", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseSystemRegistryProxyPod + stateDeckhouseSystemRegistryProxyPod2))
+				f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseSystemRegistryPod + stateDeckhouseSystemRegistryPod2))
 				f.RunHook()
 			})
 
-			It("`nodeManager.internal.systemRegistryProxy.addresses` must be ['192.168.199.233:5001','192.168.199.234:5001']", func() {
+			It("`nodeManager.internal.systemRegistry.addresses` must be ['192.168.199.233:5001','192.168.199.234:5001']", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("nodeManager.internal.systemRegistryProxy.addresses").String()).To(MatchJSON(`["192.168.199.233:5001","192.168.199.234:5001"]`))
+				Expect(f.ValuesGet("nodeManager.internal.systemRegistry.addresses").String()).To(MatchJSON(`["192.168.199.233:5001","192.168.199.234:5001"]`))
 			})
 
 			Context("Add third system registry pod", func() {
 				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseSystemRegistryProxyPod + stateDeckhouseSystemRegistryProxyPod2 + stateDeckhouseSystemRegistryProxyPod3))
+					f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseSystemRegistryPod + stateDeckhouseSystemRegistryPod2 + stateDeckhouseSystemRegistryPod3))
 					f.RunHook()
 				})
 
-				It("`nodeManager.internal.systemRegistryProxy.addresses` must be ['192.168.199.233:5001','192.168.199.234:5001','192.168.199.235:5001']", func() {
+				It("`nodeManager.internal.systemRegistry.addresses` must be ['192.168.199.233:5001','192.168.199.234:5001','192.168.199.235:5001']", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet("nodeManager.internal.systemRegistryProxy.addresses").String()).To(MatchJSON(`["192.168.199.233:5001","192.168.199.234:5001","192.168.199.235:5001"]`))
+					Expect(f.ValuesGet("nodeManager.internal.systemRegistry.addresses").String()).To(MatchJSON(`["192.168.199.233:5001","192.168.199.234:5001","192.168.199.235:5001"]`))
 				})
 			})
 		})
