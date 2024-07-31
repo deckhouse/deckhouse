@@ -132,7 +132,7 @@ metallb:
 
 {% alert level="warning" %} This feature is available in Enterprise Edition only. {% endalert %}
 
-Enable the module:
+Enable the `l2-load-balancer` module:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
