@@ -1,16 +1,8 @@
 diff --git a/connectivity/manifests/client-egress-l7-tls.yaml b/connectivity/manifests/client-egress-l7-tls.yaml
-index 519045a8..dc0f7301 100644
+index 519045a8..5f8ce63c 100644
 --- a/connectivity/manifests/client-egress-l7-tls.yaml
 +++ b/connectivity/manifests/client-egress-l7-tls.yaml
-@@ -8,13 +8,17 @@ specs:
-     matchLabels:
-       kind: client
-   egress:
--  # Allow DNS
-+  # Allow DNS
-   - toPorts:
-     - ports:
-       - port: "53"
+@@ -15,6 +15,10 @@ specs:
          protocol: UDP
        - port: "53"
          protocol: TCP
