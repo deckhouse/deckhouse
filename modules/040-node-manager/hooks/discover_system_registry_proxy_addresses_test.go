@@ -34,7 +34,7 @@ metadata:
   namespace: d8-system
   labels:
     component: "system-registry"
-	tier: "control-plane"
+    tier: "control-plane"
 status:
   hostIP: 192.168.199.233
   conditions:
@@ -50,7 +50,7 @@ metadata:
   namespace: d8-system
   labels:
     component: "system-registry"
-	tier: "control-plane"
+    tier: "control-plane"
 status:
   hostIP: 192.168.199.234
   conditions:
@@ -66,7 +66,7 @@ metadata:
   namespace: d8-system
   labels:
     component: "system-registry"
-	tier: "control-plane"
+    tier: "control-plane"
 status:
   hostIP: 192.168.199.235
   conditions:
@@ -84,7 +84,7 @@ status:
 		})
 
 		It("Hook should execute successfully", func() {
-			Expect(f).NotTo(ExecuteSuccessfully())
+			Expect(f).To(ExecuteSuccessfully())
 		})
 	})
 
@@ -116,9 +116,9 @@ status:
 					f.RunHook()
 				})
 
-				It("`nodeManager.internal.systemRegistryProxy.addresses` must be ['192.168.199.233:5001','192.168.199.234:5001'], third pod is not ready", func() {
+				It("`nodeManager.internal.systemRegistryProxy.addresses` must be ['192.168.199.233:5001','192.168.199.234:5001','192.168.199.235:5001']", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet("nodeManager.internal.systemRegistryProxy.addresses").String()).To(MatchJSON(`["192.168.199.233:5001","192.168.199.234:5001"]`))
+					Expect(f.ValuesGet("nodeManager.internal.systemRegistryProxy.addresses").String()).To(MatchJSON(`["192.168.199.233:5001","192.168.199.234:5001","192.168.199.235:5001"]`))
 				})
 			})
 		})
