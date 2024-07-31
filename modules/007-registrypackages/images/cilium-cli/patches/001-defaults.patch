@@ -58,10 +58,10 @@ index 184eda2c..b1c68210 100644
  	HubbleUIImage              = "quay.io/cilium/hubble-ui"
  	HubbleUIBackendImage       = "quay.io/cilium/hubble-ui-backend"
 diff --git a/sysdump/defaults.go b/sysdump/defaults.go
-index 0452cba0..57b356c8 100644
+index 0452cba0..ad0c9da0 100644
 --- a/sysdump/defaults.go
 +++ b/sysdump/defaults.go
-@@ -11,7 +11,7 @@ import (
+@@ -11,11 +11,11 @@ import (
  )
 
  const (
@@ -70,6 +70,11 @@ index 0452cba0..57b356c8 100644
  )
 
  const (
+-	DefaultCiliumLabelSelector               = labelPrefix + "cilium"
++	DefaultCiliumLabelSelector               = labelPrefix + "agent"
+ 	DefaultCiliumEnvoyLabelSelector          = labelPrefix + "cilium-envoy"
+ 	DefaultCiliumOperatorLabelSelector       = "io.cilium/app=operator"
+ 	DefaultClustermeshApiserverLabelSelector = labelPrefix + "clustermesh-apiserver"
 @@ -60,9 +60,9 @@ var (
 
  	// DefaultCiliumNamespaces will be used to attempt to autodetect what namespace Cilium is installed in
