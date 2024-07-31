@@ -1,1 +1,17 @@
-#
+- name: d8.not_managed_by_caps
+  rules:
+  - alert: CapsUnamangedNode
+    expr: sum(d8_node_status{status="Ready"}) by (node_name) unless sum(d8_instance_status{status="Running"}) by (node_name)
+    for: 1m
+    labels:
+      severity_level: "8"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_cluster_has_caps_unmanaged_nodes: "ClusterHasCapsUnmanagedNodes,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cluster_has_caps_unmanaged_nodes: "ClusterHasCapsUnmanagedNodes,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "node_name"
+      summary: The Node `{{`{{ $labels.node_name }}`}}` is not managed by CAPS.
+      description: |
+        The Node `{{`{{ $labels.node_name }}`}}` is in `Ready` state but has no corresponding instance in `Running` state, indicating it is not managed by CAPS.
