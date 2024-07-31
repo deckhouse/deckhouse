@@ -501,7 +501,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 // if several policies match the module release labels, conflict=true is returned
 func (c *moduleReleaseReconciler) getReleasePolicy(sourceName, moduleName string, policies []v1alpha1.ModuleUpdatePolicy) (*v1alpha1.ModuleUpdatePolicy, error) {
 	var releaseLabelsSet labels.Set = map[string]string{"module": moduleName, "source": sourceName}
-	var matchedPolicy *v1alpha1.ModuleUpdatePolicy
+	var matchedPolicy v1alpha1.ModuleUpdatePolicy
 	var found bool
 
 	for _, policy := range policies {
@@ -522,7 +522,7 @@ func (c *moduleReleaseReconciler) getReleasePolicy(sourceName, moduleName string
 					return nil, fmt.Errorf("more than one update policy matches the module: %s and %s", matchedPolicy.Name, policy.Name)
 				}
 				found = true
-				matchedPolicy = &policy
+				matchedPolicy = policy
 			}
 		}
 	}
@@ -541,7 +541,7 @@ func (c *moduleReleaseReconciler) getReleasePolicy(sourceName, moduleName string
 		}, nil
 	}
 
-	return matchedPolicy, nil
+	return &matchedPolicy, nil
 }
 
 func (c *moduleReleaseReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
