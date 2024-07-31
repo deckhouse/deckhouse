@@ -49,7 +49,7 @@ shell:
   - mkdir -p /src
   - git clone --depth 1 --branch ${VERSION} {{ $.SOURCE_REPO }}/vmware/cloud-director-named-disk-csi-driver.git /src
   - cd /src
-  - find /patches -name '*.patch' -exec git apply {} \;
+  - git apply /patches/*.patch --verbose;
   - go mod vendor
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-director-named-disk-csi-driver/version.Version=${VERSION}" -o bin/cloud-director-named-disk-csi-driver cmd/csi/main.go
 ---
