@@ -409,7 +409,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		if err != nil {
 			return ctrl.Result{Requeue: true}, err
 		}
-		policy, err = c.getReleasePolicy(mr.GetModuleSource(), mr.GetName(), policies.Items)
+		policy, err = c.getReleasePolicy(mr.GetModuleSource(), mr.GetModuleName(), policies.Items)
 		if err != nil {
 			if e := c.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy not set. Create a ModuleUpdatePolicy object and label the release '%s=<policy_name>'", UpdatePolicyLabel)); e != nil {
 				return ctrl.Result{Requeue: true}, e
