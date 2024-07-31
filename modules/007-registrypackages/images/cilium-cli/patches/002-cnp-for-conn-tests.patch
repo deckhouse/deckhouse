@@ -1,3 +1,26 @@
+diff --git a/connectivity/manifests/client-egress-l7-tls.yaml b/connectivity/manifests/client-egress-l7-tls.yaml
+index 519045a8..dc0f7301 100644
+--- a/connectivity/manifests/client-egress-l7-tls.yaml
++++ b/connectivity/manifests/client-egress-l7-tls.yaml
+@@ -8,13 +8,17 @@ specs:
+     matchLabels:
+       kind: client
+   egress:
+-  # Allow DNS
++  # Allow DNS
+   - toPorts:
+     - ports:
+       - port: "53"
+         protocol: UDP
+       - port: "53"
+         protocol: TCP
++      - port: "5353"
++        protocol: UDP
++      - port: "5335"
++        protocol: TCP
+       rules:
+         dns:
+           - matchPattern: "*"
 diff --git a/connectivity/manifests/client-egress-only-dns.yaml b/connectivity/manifests/client-egress-only-dns.yaml
 index b8177270..6adec70f 100644
 --- a/connectivity/manifests/client-egress-only-dns.yaml
