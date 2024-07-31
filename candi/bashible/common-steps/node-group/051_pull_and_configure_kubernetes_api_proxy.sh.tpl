@@ -108,7 +108,7 @@ if crictl version >/dev/null 2>/dev/null; then
     {{- $registryProxyAddresses = $.systemRegistry.addresses | join "," }}
   {{- end }}
   # Registry vars
-  REGISTRY_MODE="{{ $.registry.registryMode }}"
+  REGISTRY_MODE="{{ $.registry.registryMode | default ""  }}"
   REGISTRY_AUTH="{{ $.registry.auth | default "" }}"
   REGISTRY_ACTUAL_ADDRESS="{{ $.registry.address }}"
   REGISTRY_PROXY_ADDRESSES="{{ $registryProxyAddresses }}"
