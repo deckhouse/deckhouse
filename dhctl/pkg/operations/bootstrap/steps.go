@@ -411,8 +411,13 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 	log.DebugF("Got cluster domain: %s", clusterDomain)
 	log.DebugLn("Starting registry packages proxy")
 
+	registryPackagesProxyData := cfg.Registry
+	if cfg.Registry.RegistryMode != "" && cfg.Registry.RegistryMode != "Direct" {
+		registryPackagesProxyData = cfg.UpstreamRegistry
+	}
+
 	// we need clusterDomain to generate proper certificate for packages proxy
-	err = StartRegistryPackagesProxy(cfg.Registry, clusterDomain)
+	err = StartRegistryPackagesProxy(registryPackagesProxyData, clusterDomain)
 	if err != nil {
 		return fmt.Errorf("failed to start registry packages proxy: %v", err)
 	}
