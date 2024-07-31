@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestToClientConfig(t *testing.T) {
+func TestRegistrySchemeCalculation(t *testing.T) {
 
 	var tests = []struct {
 		name                  string
