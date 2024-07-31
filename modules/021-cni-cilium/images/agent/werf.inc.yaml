@@ -30,7 +30,7 @@
 # for prepull
 {{ $binariesFromALT := cat $binariesFromALT "/bin/true" }}
 # for cilium-cli sysdump
-{{ $binariesFromALT := cat $binariesFromALT "/bin/tar" }}
+{{ $binariesFromALT := cat $binariesFromALT "/bin/tar /usr/bin/timeout" }}
 # for debug
 {{ $binariesFromALT := cat $binariesFromALT "/bin/sleep /bin/ls /usr/bin/curl /usr/bin/ldd /usr/bin/strace /usr/bin/env" }}
 #####################################################################
