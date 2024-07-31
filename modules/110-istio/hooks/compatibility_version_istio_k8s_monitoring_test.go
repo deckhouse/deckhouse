@@ -134,7 +134,7 @@ istio:
 		})
 	})
 
-	Context(" the istio version is 1.19, and it is compatible with the current version of k8s 1.29", func() {
+	Context(" the istio version is 1.19, and it is compatible with the current version of k8s 1.30", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", []byte(`["1.19"]`))
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.30.1")
