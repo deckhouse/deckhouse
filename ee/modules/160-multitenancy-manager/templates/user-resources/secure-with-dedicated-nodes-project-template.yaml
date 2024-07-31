@@ -18,9 +18,8 @@ spec:
           description: |
             Resource quota for the project.
             Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
-          anyOf:
-            - {required: ["requests"]}
-            - {required: ["limits"]}
+          required:
+            - requests
           properties:
             requests:
               type: object
