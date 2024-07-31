@@ -65,7 +65,7 @@ status:
 			Expect(f).To(ExecuteSuccessfully())
 
 			nodeLabels := map[string]string{"node_name": "node-1", "status": "Ready"}
-			instanceLabels := map[string]string{"instance_name": "instance-1", "status": "Running", "node_ref": "node-1"}
+			instanceLabels := map[string]string{"instance_name": "instance-1", "status": "Running", "node_name": "node-1"}
 
 			assertMetric(f, nodeMetricName, 1.0, nodeLabels)
 			assertMetric(f, instanceMetricName, 1.0, instanceLabels)
