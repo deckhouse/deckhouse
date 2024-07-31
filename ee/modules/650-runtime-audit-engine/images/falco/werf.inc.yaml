@@ -3,7 +3,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_ALT }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /falco-package
   to: /
   includePaths:
@@ -20,8 +20,9 @@ shell:
 docker:
   CMD: ["/usr/bin/falco"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
+final: false
 shell:
   install:
   - git clone --branch {{ $falcoVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falco.git
