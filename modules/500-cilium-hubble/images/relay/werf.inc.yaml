@@ -27,6 +27,11 @@ import:
   add: /go/src/github.com/cilium/cilium/hubble-relay/hubble-relay
   to: /usr/local/bin/hubble-relay
   before: install
+- artifact: cni-cilium/gops-artifact
+  add: /out/linux/amd64/bin/gops
+  to: /bin/gops
+  before: install
+
 docker:
   USER: 64535
   ENTRYPOINT: ["/usr/local/bin/hubble-relay", "serve"]
