@@ -29,6 +29,8 @@
 {{ $binariesFromALT := cat $binariesFromALT "/usr/bin/groups" }}
 # for prepull
 {{ $binariesFromALT := cat $binariesFromALT "/bin/true" }}
+# for cilium-cli sysdump
+{{ $binariesFromALT := cat $binariesFromALT "/bin/tar" }}
 # for debug
 {{ $binariesFromALT := cat $binariesFromALT "/bin/sleep /bin/ls /usr/bin/curl /usr/bin/ldd /usr/bin/strace /usr/bin/env" }}
 #####################################################################
