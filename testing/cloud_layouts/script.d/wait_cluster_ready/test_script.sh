@@ -36,6 +36,8 @@ else
 fi
 
 bundle=$(kubectl get mc deckhouse -o jsonpath='{.spec.settings.bundle}')
+temp=$(kubectl -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d | grep 'provider: AWS')
+provider_aws=$?
 
 availability=""
 attempts=50
@@ -151,23 +153,24 @@ Ingress $ingress_inlet check: $([ "$ingress" == "ok" ] && echo "success" || echo
 EOF
   fi
 
-if [ "$PROVIDER" != AWS -a "$bundle" != Minimal ]; then
-  if [ "$(kubectl -n d8-istio get po | grep istiod | wc -l)" -gt 0 ]; then
+if [ "$provider_aws" -eq 0 ] &&  [ "$bundle" == "Minimal" ]; then
+    if [[ "$availability:$ingress" == "ok:ok" ]]; then
+              exit 0
+    fi
+  else
+
+    if [ "$(kubectl -n d8-istio get po | grep istiod | wc -l)" -gt 0 ]; then
       istio="ok"
     else
       istio=""
-  fi
+    fi
 
-  cat <<EOF
+    cat <<EOF
 Istio operator check: $([ "$istio" == "ok" ] && echo "success" || echo "failed")
 EOF
 
     if [[ "$availability:$ingress:$istio" == "ok:ok:ok" ]]; then
       exit 0
-    fi
-  else
-    if [[ "$availability:$ingress" == "ok:ok" ]]; then
-          exit 0
     fi
   fi
 done
