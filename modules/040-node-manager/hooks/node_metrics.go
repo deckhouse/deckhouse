@@ -62,7 +62,6 @@ type instanceStatus struct {
 }
 
 func handleInstanceMetrics(input *go_hook.HookInput) error {
-
 	instanceSnapshots := input.Snapshots["instances"]
 
 	input.MetricsCollector.Expire(metricsGroup)
