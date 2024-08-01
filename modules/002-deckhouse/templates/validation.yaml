@@ -123,7 +123,7 @@ spec:
         operations: ["CREATE", "UPDATE"]
         resources: ["storageclasses"]
   validations:
-    - expression: "object.metadata.annotations['is_default'] != 'true' || (list('storage.k8s.io/v1', 'StorageClass').items.filter(`metadata.annotations['is_default'] == 'true' && metadata.name != object.metadata.name`).isEmpty())"
+    - expression: "object.metadata.annotations['is_default'] != 'true' || (list('storage.k8s.io/v1', 'StorageClass').items.filter(metadata.annotations['is_default'] == 'true' && metadata.name != object.metadata.name).isEmpty())"
       reason: Forbidden
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
       messageExpression: '''Multiple default StorageClass if forbidden'''
