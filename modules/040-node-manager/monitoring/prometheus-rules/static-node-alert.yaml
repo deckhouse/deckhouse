@@ -1,6 +1,6 @@
 - name: d8.not_managed_by_caps
   rules:
-  - alert: CapsUnamangedNode
+  - alert: CapsUnmanagedNode
     expr: sum(up{job="kubelet", scrape_endpoint="kubelet"}) by (node) unless sum(d8_instance_status{status="Running"}) by (node)
     for: 1m
     labels:

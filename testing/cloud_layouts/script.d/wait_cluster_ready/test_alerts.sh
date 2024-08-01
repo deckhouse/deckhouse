@@ -24,6 +24,7 @@ allow_alerts=(
 "CertmanagerCertificateExpired" # On some system do not have DNS
 "CertmanagerCertificateExpiredSoon" # Same as above
 "DeckhouseModuleUseEmptyDir" # TODO Need made split storage class
+"CapsUnmanagedNode" # first master node is not managed by CAPS
 )
 
 # In e2e tests with OS on older cores (AWS, Azure), ebpf_exporter does not initiliaze. Ignore this alerts
