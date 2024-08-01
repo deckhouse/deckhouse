@@ -3,7 +3,7 @@
 apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
 metadata:
-  name: "grafana-v10"
+  name: "grafana"
   namespace: "d8-monitoring"
   {{- include "helm_lib_module_labels" (list . (dict "app" "dex-authenticator" "name" "grafana-v10" )) | nindent 2 }}
 spec:
