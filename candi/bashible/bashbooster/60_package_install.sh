@@ -12,16 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-mkdir -p /opt/deckhouse/share/ca-certificates/
 
-{{- if eq .runType "Normal" }}
-	{{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
-		{{- if $ca }}
-
-bb-log-info "Sync moduleSource CA for {{ $registryAddr }}"
-bb-sync-file /opt/deckhouse/share/ca-certificates/{{ $registryAddr | lower }}-ca.crt - << "EOF"
-{{ $ca }}
-EOF
-		{{- end }}
-	{{- end }}
-{{- end }}
+bb-yum-or-apt-install() {
+  if bb-yum?; then
+      bb-yum-install "$@"
+  elif bb-apt?; then
+      bb-apt-install "$@"
+  fi
+}

@@ -269,6 +269,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/fe/modules/040-node-manager/templates/ngc-ca-certificate.yaml
+  to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/fe/modules/340-monitoring-applications
   to: /deckhouse/modules/340-monitoring-applications
   stageDependencies:
