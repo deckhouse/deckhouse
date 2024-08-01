@@ -14,3 +14,4 @@ cleanup:
       tag: /.*/
       limit:
         in: 360h
+
