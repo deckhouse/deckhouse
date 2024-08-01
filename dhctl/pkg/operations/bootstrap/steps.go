@@ -548,7 +548,7 @@ func CheckDHCTLDependencies(sshClient *ssh.Client) error {
 
 	return log.Process("bootstrap", "Check DHCTL Dependencies", func() error {
 		dependencyArgs := []string{"sudo", "rm", "tar", "mount", "awk", "grep", "cut", "sed", "shopt",
-			"mkdir", "cp", "join", "cat", "ps", "kill"}
+			"mkdir", "cp", "join", "cat", "ps", "kill", "jq"}
 
 		resultsChan := make(chan checkResult)
 		go func() {
