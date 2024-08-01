@@ -1,7 +1,7 @@
 - name: d8.not_managed_by_caps
   rules:
   - alert: CapsUnamangedNode
-    expr: sum(d8_node_status{status="Ready"}) by (node_name) unless sum(d8_instance_status{status="Running"}) by (node_name)
+    expr: sum(up{job="kubelet", scrape_endpoint="kubelet"}) by (node) unless sum(d8_instance_status{status="Running"}) by (node)
     for: 1m
     labels:
       severity_level: "8"
@@ -11,12 +11,12 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_cluster_has_caps_unmanaged_nodes: "ClusterHasCapsUnmanagedNodes,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_cluster_has_caps_unmanaged_nodes: "ClusterHasCapsUnmanagedNodes,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_labels_as_annotations: "node_name"
-      summary: The Node {{ $labels.node_name }} is not managed by CAPS.
+      plk_labels_as_annotations: "node"
+      summary: The Node {{ $labels.node }} is not managed by CAPS.
       description: |
-        The Node {{ $labels.node_name }} is in `Ready` state but has no corresponding Instance in `Running` state, indicating it is not managed by CAPS.
+        The Node {{ $labels.node }} is in `Ready` state but has no corresponding Instance in `Running` state, indicating it is not managed by CAPS.
         For static nodes, we recommend using the Cluster API Provider Static (CAPS) method: https://deckhouse.io/documentation/v1/modules/040-node-manager/examples.html#using-the-cluster-api-provider-static
 
         ```shell
-        kubectl get nodes {{ $labels.node_name }} ; kubectl get instances -o custom-columns=INSTANCE:.metadata.name,NODE:.status.nodeRef.name,STATUS:.status.currentStatus.phase | grep {{ $labels.node_name }}
+        kubectl get nodes {{ $labels.node }} ; kubectl get instances -o custom-columns=INSTANCE:.metadata.name,NODE:.status.nodeRef.name,STATUS:.status.currentStatus.phase | grep {{ $labels.node }}
         ```
