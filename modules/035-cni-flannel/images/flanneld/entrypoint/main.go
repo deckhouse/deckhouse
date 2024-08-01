@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -77,10 +76,7 @@ func main() {
 	}
 
 	ciliumEnabledStr := os.Getenv("MODULE_CNI_CILIUM_ENABLED")
-	// ciliumEnabledStr = "false"
-	fmt.Println("MODULE_CNI_CILIUM_ENABLED: ", ciliumEnabledStr) // ! DELETE
 	if ciliumEnabledStr != "true" {
-		fmt.Println("NEED remove file!") // ! DELETE
 		err = os.Remove("/etc/cni/net.d/05-cilium.conflist")
 		if err != nil && !os.IsNotExist(err) {
 			log.Fatal(err)
