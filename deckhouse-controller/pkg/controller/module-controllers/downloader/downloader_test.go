@@ -17,12 +17,17 @@ limitations under the License.
 package downloader
 
 import (
+	"os"
 	"testing"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 func TestOpenapiInjection(t *testing.T) {
@@ -85,4 +90,19 @@ properties:
         type: array
     type: object
 `, string(data))
+}
+
+func TestDownloadMetadataFromReleaseChannelError(t *testing.T) {
+	ms := &v1alpha1.ModuleSource{}
+
+	dependency.TestDC.CRClient.ImageMock.When("stable").Then(&fake.FakeImage{
+		LayersStub: func() ([]v1.Layer, error) {
+			return []v1.Layer{&utils.FakeLayer{}}, nil
+		},
+	}, nil)
+
+	md := NewModuleDownloader(dependency.TestDC, os.TempDir(), ms, nil)
+	_, err := md.DownloadMetadataFromReleaseChannel("commander", "stable", "")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no version found")
 }
