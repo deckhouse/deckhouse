@@ -70,7 +70,6 @@ pull_and_re_tag_image() {
     crictl pull --auth="$REGISTRY_AUTH" "$PROXY_IMG_ADDRESS" || return 1
     ctr --namespace=k8s.io image tag "$PROXY_IMG_ADDRESS" "$ACTUAL_IMAGE_ADDRESS" || return 1
     ctr --namespace=k8s.io image rm "$PROXY_IMG_ADDRESS" || return 1
-    return 0
 }
 
 pull_using_proxies() {
