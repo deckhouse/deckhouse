@@ -119,7 +119,7 @@
     labels:
       severity_level: "4"
       tier: cluster
-  - alert: D8IstioActualDataPlaneVersionNeDesired
+  - alert: D8IstioActualDataPlaneVersionNotEqualDesired
     annotations:
       description: |
         There are Pods in Namespace `{{$labels.namespace}}` with istio data-plane version `{{$labels.version}}`, but the desired one is `{{$labels.desired_version}}`.
