@@ -35,6 +35,8 @@ else
   ingress=""
 fi
 
+bundle=$(kubectl get mc deckhouse -o jsonpath='{.spec.settings.bundle}')
+
 availability=""
 attempts=50
 # With sleep timeout of 30s, we have 25 minutes period in total to catch the 100% availability from upmeter
@@ -149,18 +151,24 @@ Ingress $ingress_inlet check: $([ "$ingress" == "ok" ] && echo "success" || echo
 EOF
   fi
 
+if [ "$PROVIDER" != AWS -a "$bundle" != Minimal ]; then
   if [ "$(kubectl -n d8-istio get po | grep istiod | wc -l)" -gt 0 ]; then
-    istio="ok"
-  else
-    istio=""
+      istio="ok"
+    else
+      istio=""
   fi
 
   cat <<EOF
 Istio operator check: $([ "$istio" == "ok" ] && echo "success" || echo "failed")
 EOF
 
-  if [[ "$availability:$ingress:$istio" == "ok:ok:ok" ]]; then
-    exit 0
+    if [[ "$availability:$ingress:$istio" == "ok:ok:ok" ]]; then
+      exit 0
+    fi
+  else
+    if [[ "$availability:$ingress" == "ok:ok" ]]; then
+          exit 0
+    fi
   fi
 done
 
