@@ -145,6 +145,10 @@ oom_score = 0
       [plugins."io.containerd.grpc.v1.cri".registry.configs]
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".auth]
           auth = "{{ .registry.auth | default "" }}"
+  {{- if .registry.ca }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
+          ca_file = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
+  {{- end }}
   {{- if eq .registry.scheme "http" }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
           insecure_skip_verify = true
@@ -152,7 +156,7 @@ oom_score = 0
   {{- if eq .runType "Normal" }}
     {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $registryAddr | lower }}".tls]
-          ca_file = "/usr/local/share/d8-ca-certificates/{{ $registryAddr | lower }}-ca.crt"
+          ca_file = "/opt/deckhouse/share/ca-certificates/{{ $registryAddr | lower }}-ca.crt"
     {{- end }}
   {{- end }}
     [plugins."io.containerd.grpc.v1.cri".image_decryption]
