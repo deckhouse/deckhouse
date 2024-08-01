@@ -62,7 +62,7 @@ spec:
     emptyDir: {}
 EOF
 
-pull_and_tag_image() {
+pull_and_re_tag_image() {
     local PROXY_IMG_ADDRESS=$1
     local ACTUAL_IMAGE_ADDRESS=$2
     local REGISTRY_AUTH=$3
@@ -79,17 +79,19 @@ pull_using_proxies() {
     local REGISTRY_PROXY_ADDRESSES=$3
     local REGISTRY_AUTH=$4
 
+    local ACTUAL_IMAGE_ADDRESS="${REGISTRY_ACTUAL_ADDRESS}${IMAGE_PATH}"
+
     IFS=',' read -ra PROXY_ADDR <<< "$REGISTRY_PROXY_ADDRESSES"
     for REGISTRY_PROXY_ADDRESS in "${PROXY_ADDR[@]}"; do
         local PROXY_IMG_ADDRESS="${REGISTRY_PROXY_ADDRESS}${IMAGE_PATH}"
-        local ACTUAL_IMAGE_ADDRESS="${REGISTRY_ACTUAL_ADDRESS}${IMAGE_PATH}"
         
-        if pull_and_tag_image "$PROXY_IMG_ADDRESS" "$ACTUAL_IMAGE_ADDRESS" "$REGISTRY_AUTH"; then
+        if pull_and_re_tag_image "$PROXY_IMG_ADDRESS" "$ACTUAL_IMAGE_ADDRESS" "$REGISTRY_AUTH"; then
+            echo "The image '$ACTUAL_IMAGE_ADDRESS' was correctly pulling from '$PROXY_IMG_ADDRESS'"
             return 0
         fi
     done
 
-    >&2 echo "Failed to pull image: $REGISTRY_ACTUAL_ADDRESS$IMAGE_PATH using addresses: $REGISTRY_PROXY_ADDRESSES"
+    >&2 echo "Failed to pull image '$ACTUAL_IMAGE_ADDRESS' using addresses '$REGISTRY_PROXY_ADDRESSES'"
     exit 1
 }
 
