@@ -101,11 +101,6 @@ if crictl version >/dev/null 2>/dev/null; then
     {{- $registryProxyAddresses = $.systemRegistry.addresses | join "," }}
   {{- end }}
 
-  {{- if ne $registryProxyAddresses "" }}
-    {{- $mockAddresses := join "," (list "127.0.0.1:5003" "127.0.0.1:5004" "127.0.0.1:5005" "127.0.0.1:5006" "127.0.0.1:5007") }}
-    {{- $registryProxyAddresses = printf "%s,%s" $mockAddresses $registryProxyAddresses }}
-  {{- end }}
-
   # Registry vars
   REGISTRY_MODE="{{ $.registry.registryMode | default ""  }}"
   REGISTRY_AUTH="{{ $.registry.auth | default "" }}"
