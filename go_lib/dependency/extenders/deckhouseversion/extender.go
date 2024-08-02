@@ -114,6 +114,9 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 	if e.err != nil {
 		return nil, &scherror.PermanentError{Err: fmt.Errorf("parse deckhouse version failed: %s", e.err)}
 	}
+	if !e.versionMatcher.Has(name) {
+		return nil, nil
+	}
 	if err := e.versionMatcher.Validate(name); err != nil {
 		e.logger.Errorf("requirements of %s are not satisfied: current deckhouse version is not suitable: %s", name, err.Error())
 		return pointer.Bool(false), fmt.Errorf("requirements are not satisfied: current deckhouse version is not suitable: %s", err.Error())
@@ -135,7 +138,7 @@ func (e *Extender) ValidateRelease(releaseName, rawConstraint string) error {
 	if e.err != nil {
 		return fmt.Errorf("parse deckhouse version failed: %s", e.err)
 	}
-	if err := e.versionMatcher.ValidateRelease(rawConstraint); err != nil {
+	if err := e.versionMatcher.ValidateConstraint(rawConstraint); err != nil {
 		e.logger.Errorf("requirements of %s release are not satisfied: current deckhouse version is not suitable: %s", releaseName, err.Error())
 		return fmt.Errorf("requirements are not satisfied: current deckhouse version is not suitable: %s", err.Error())
 	}

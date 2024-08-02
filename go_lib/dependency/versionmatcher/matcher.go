@@ -80,7 +80,7 @@ func (m *Matcher) ValidateBaseVersion(baseVersion string) (string, error) {
 	return "", nil
 }
 
-func (m *Matcher) ValidateRelease(rawConstraint string) error {
+func (m *Matcher) ValidateConstraint(rawConstraint string) error {
 	constraint, err := semver.NewConstraint(rawConstraint)
 	if err != nil {
 		return err

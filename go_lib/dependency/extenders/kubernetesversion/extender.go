@@ -157,6 +157,9 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 		return nil, &scherror.PermanentError{Err: fmt.Errorf("parse kubernetes version failed: %s", e.err)}
 	}
 	e.mtx.Unlock()
+	if !e.versionMatcher.Has(name) {
+		return nil, nil
+	}
 	if err := e.versionMatcher.Validate(name); err != nil {
 		e.logger.Errorf("requirements of %s are not satisfied: current kubernetes version is not suitable: %s", name, err.Error())
 		return pointer.Bool(false), fmt.Errorf("requirements are not satisfied: current kubernetes version is not suitable: %s", err.Error())
@@ -183,7 +186,7 @@ func (e *Extender) ValidateRelease(releaseName, rawConstraint string) error {
 	}
 	e.mtx.Unlock()
 	e.logger.Debugf("validate requirements for %s", releaseName)
-	if err := e.versionMatcher.ValidateRelease(rawConstraint); err != nil {
+	if err := e.versionMatcher.Validate(rawConstraint); err != nil {
 		e.logger.Errorf("requirements of %s release are not satisfied: current kubernetes version is not suitable: %s", releaseName, err.Error())
 		return fmt.Errorf("requirements are not satisfied: current kubernetes version is not suitable: %s", err.Error())
 	}
