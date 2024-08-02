@@ -55,15 +55,14 @@ nodeGroups:
     sizingPolicy: ${VCD_ORG}-MSK
     rootDiskSizeGb: 50
     template: private-templates/debian-12
-  name: system
+  name: frontend
   replicas: 1
   nodeTemplate:
     labels:
-      node-role.deckhouse.io/system: ""
+      node-role.deckhouse.io/frontend: ""
     taints:
-    - effect: NoExecute
-      key: dedicated.deckhouse.io
-      value: system
+      - effect: NoExecute
+        key: dedicated.deckhouse.io
 provider:
   password: ${VCD_PASSWORD}
   server: ${VCD_SERVER}
