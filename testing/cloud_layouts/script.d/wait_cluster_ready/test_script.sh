@@ -156,7 +156,7 @@ EOF
     istio=""
   fi
 
-    cat <<EOF
+  cat <<EOF
 Istio operator check: $([ "$istio" == "ok" ] && echo "success" || echo "failed")
 EOF
 
