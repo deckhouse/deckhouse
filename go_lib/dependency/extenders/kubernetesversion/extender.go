@@ -186,7 +186,7 @@ func (e *Extender) ValidateRelease(releaseName, rawConstraint string) error {
 	}
 	e.mtx.Unlock()
 	e.logger.Debugf("validate requirements for %s", releaseName)
-	if err := e.versionMatcher.Validate(rawConstraint); err != nil {
+	if err := e.versionMatcher.ValidateConstraint(rawConstraint); err != nil {
 		e.logger.Errorf("requirements of %s release are not satisfied: current kubernetes version is not suitable: %s", releaseName, err.Error())
 		return fmt.Errorf("requirements are not satisfied: current kubernetes version is not suitable: %s", err.Error())
 	}
