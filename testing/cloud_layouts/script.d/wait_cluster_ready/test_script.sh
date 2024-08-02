@@ -150,7 +150,7 @@ EOF
   fi
 
   bundle=$(kubectl get mc deckhouse -o jsonpath='{.spec.settings.bundle}')
-  if [ "$bundle" == "Minimal" ] || kubectl -n d8-istio get po | grep istiod | wc -l; then
+  if [ "$bundle" == "Minimal" ] || kubectl -n d8-istio get po | grep istiod | grep -q Running; then
     istio="ok"
   else
     istio=""
