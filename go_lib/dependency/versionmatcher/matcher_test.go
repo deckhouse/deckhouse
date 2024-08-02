@@ -64,7 +64,7 @@ func test(t *testing.T, tc testCase) {
 	matcher.ChangeBaseVersion(currentVersion)
 	err = matcher.AddConstraint(tc.name, tc.constraint)
 	require.NoError(t, err)
-	if err = matcher.ValidateInstalled(tc.name); err != nil {
+	if err = matcher.Validate(tc.name); err != nil {
 		if tc.error == nil {
 			require.NoError(t, err)
 		} else {

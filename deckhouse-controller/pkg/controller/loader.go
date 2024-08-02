@@ -124,7 +124,7 @@ func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModu
 	}
 
 	// Load constrains
-	if err = extenders.AddInstalledConstraints(def.Name, def.Requirements); err != nil {
+	if err = extenders.AddConstraints(def.Name, def.Requirements); err != nil {
 		return nil, err
 	}
 

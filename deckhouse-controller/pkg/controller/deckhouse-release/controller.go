@@ -248,21 +248,25 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		r.clusterUUID = r.getClusterUUID(ctx)
 	}
 
-	if err := deckhouseversion.Instance().ValidateBaseVersion(dr.Spec.Version); err != nil {
-		dr.Status.Message = err.Error()
-		if e := r.client.Status().Update(ctx, dr); e != nil {
-			return ctrl.Result{Requeue: true}, e
-		}
-		return ctrl.Result{}, err
-	}
-
-	if len(dr.Spec.Requirements["autoK8sVersion"]) > 0 {
-		if err := kubernetesversion.Instance().ValidateBaseVersion(dr.Spec.Requirements["autoK8sVersion"]); err != nil {
+	if moduleName, err := deckhouseversion.Instance().ValidateBaseVersion(dr.Spec.Version); err != nil {
+		if r.moduleManager.IsModuleEnabled(moduleName) {
 			dr.Status.Message = err.Error()
 			if e := r.client.Status().Update(ctx, dr); e != nil {
 				return ctrl.Result{Requeue: true}, e
 			}
-			return ctrl.Result{}, err
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
+		}
+	}
+
+	if len(dr.Spec.Requirements["autoK8sVersion"]) > 0 {
+		if moduleName, err := kubernetesversion.Instance().ValidateBaseVersion(dr.Spec.Requirements["autoK8sVersion"]); err != nil {
+			if r.moduleManager.IsModuleEnabled(moduleName) {
+				dr.Status.Message = err.Error()
+				if e := r.client.Status().Update(ctx, dr); e != nil {
+					return ctrl.Result{Requeue: true}, e
+				}
+				return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
+			}
 		}
 	}
 

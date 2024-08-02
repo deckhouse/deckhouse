@@ -22,5 +22,5 @@ import addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
 func RegisterAdmissionHandlers(operator *addon_operator.AddonOperator) {
 	operator.AdmissionServer.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler())
 	operator.AdmissionServer.RegisterHandler("/validate/v1alpha1/modules", moduleValidationHandler())
-	operator.AdmissionServer.RegisterHandler("/validate/v1/configuration-secret", kubernetesVersionHandler())
+	operator.AdmissionServer.RegisterHandler("/validate/v1/configuration-secret", kubernetesVersionHandler(operator.ModuleManager))
 }

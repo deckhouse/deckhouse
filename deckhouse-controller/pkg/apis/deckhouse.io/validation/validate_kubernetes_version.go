@@ -31,7 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 )
 
-func kubernetesVersionHandler() http.Handler {
+func kubernetesVersionHandler(mm moduleManager) http.Handler {
 	validator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		secret, ok := obj.(*v1.Secret)
 		if !ok {
@@ -47,8 +47,10 @@ func kubernetesVersionHandler() http.Handler {
 		if err := yaml.Unmarshal(clusterConfigurationRaw, &clusterConf); err != nil {
 			return nil, err
 		}
-		if err := kubernetesversion.Instance().ValidateBaseVersion(clusterConf.KubernetesVersion); err != nil {
-			return rejectResult(err.Error())
+		if moduleName, err := kubernetesversion.Instance().ValidateBaseVersion(clusterConf.KubernetesVersion); err != nil {
+			if mm.IsModuleEnabled(moduleName) {
+				return rejectResult(err.Error())
+			}
 		}
 		return allowResult("")
 	})
@@ -62,4 +64,8 @@ func kubernetesVersionHandler() http.Handler {
 	})
 
 	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
+}
+
+type moduleManager interface {
+	IsModuleEnabled(moduleName string) bool
 }

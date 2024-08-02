@@ -85,7 +85,7 @@ func Instance() *Extender {
 	return instance
 }
 
-func (e *Extender) AddInstalledConstraint(name, rawConstraint string) error {
+func (e *Extender) AddConstraint(name, rawConstraint string) error {
 	if err := e.versionMatcher.AddConstraint(name, rawConstraint); err != nil {
 		e.logger.Debugf("adding installed constraint for %q failed", name)
 		return err
@@ -94,9 +94,9 @@ func (e *Extender) AddInstalledConstraint(name, rawConstraint string) error {
 	return nil
 }
 
-func (e *Extender) DeleteConstraints(name string) {
-	e.logger.Debugf("deleting constraints for %q", name)
-	e.versionMatcher.DeleteConstraints(name)
+func (e *Extender) DeleteConstraint(name string) {
+	e.logger.Debugf("deleting installed constraint for %q", name)
+	e.versionMatcher.DeleteConstraint(name)
 }
 
 // Name implements Extender interface, it is used by scheduler in addon-operator
@@ -114,7 +114,7 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 	if e.err != nil {
 		return nil, &scherror.PermanentError{Err: fmt.Errorf("parse deckhouse version failed: %s", e.err)}
 	}
-	if err := e.versionMatcher.ValidateInstalled(name); err != nil {
+	if err := e.versionMatcher.Validate(name); err != nil {
 		e.logger.Errorf("requirements of %s are not satisfied: current deckhouse version is not suitable: %s", name, err.Error())
 		return pointer.Bool(false), fmt.Errorf("requirements are not satisfied: current deckhouse version is not suitable: %s", err.Error())
 	}
@@ -122,20 +122,20 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 	return pointer.Bool(true), nil
 }
 
-func (e *Extender) ValidateBaseVersion(baseVersion string) error {
+func (e *Extender) ValidateBaseVersion(baseVersion string) (string, error) {
 	if name, err := e.versionMatcher.ValidateBaseVersion(baseVersion); err != nil {
 		e.logger.Errorf("requirements of %s are not satisfied: %s deckhouse version is not suitable: %s", name, baseVersion, err.Error())
-		return fmt.Errorf("requirements of %s are not satisfied: %s deckhouse version is not suitable: %s", name, baseVersion, err.Error())
+		return name, fmt.Errorf("requirements of %s are not satisfied: %s deckhouse version is not suitable: %s", name, baseVersion, err.Error())
 	}
 	e.logger.Debugf("requirements for %s are satisfied", baseVersion)
-	return nil
+	return "", nil
 }
 
-func (e *Extender) ValidateRelease(releaseName, moduleName, rawConstraint string) error {
+func (e *Extender) ValidateRelease(releaseName, rawConstraint string) error {
 	if e.err != nil {
 		return fmt.Errorf("parse deckhouse version failed: %s", e.err)
 	}
-	if err := e.versionMatcher.ValidateRelease(moduleName, rawConstraint); err != nil {
+	if err := e.versionMatcher.ValidateRelease(rawConstraint); err != nil {
 		e.logger.Errorf("requirements of %s release are not satisfied: current deckhouse version is not suitable: %s", releaseName, err.Error())
 		return fmt.Errorf("requirements are not satisfied: current deckhouse version is not suitable: %s", err.Error())
 	}

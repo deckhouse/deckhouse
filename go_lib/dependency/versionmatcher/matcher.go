@@ -27,7 +27,6 @@ type Matcher struct {
 	mtx                 sync.Mutex
 	baseVersion         *semver.Version
 	installed           map[string]*semver.Constraints
-	release             map[string]*semver.Constraints
 }
 
 func New(withBaseVersionLock bool) *Matcher {
@@ -36,7 +35,6 @@ func New(withBaseVersionLock bool) *Matcher {
 		withBaseVersionLock: withBaseVersionLock,
 		baseVersion:         baseVersion,
 		installed:           make(map[string]*semver.Constraints),
-		release:             make(map[string]*semver.Constraints),
 	}
 }
 
@@ -49,21 +47,21 @@ func (m *Matcher) AddConstraint(name, rawConstraint string) error {
 	return nil
 }
 
-func (m *Matcher) DeleteConstraints(name string) {
+func (m *Matcher) DeleteConstraint(name string) {
 	delete(m.installed, name)
-	delete(m.release, name)
 }
 
-func (m *Matcher) ValidateInstalled(name string) error {
-	mod, ok := m.installed[name]
-	if !ok {
-		return nil
-	}
+func (m *Matcher) Has(name string) bool {
+	_, ok := m.installed[name]
+	return ok
+}
+
+func (m *Matcher) Validate(name string) error {
 	if m.withBaseVersionLock {
 		m.mtx.Lock()
 		defer m.mtx.Unlock()
 	}
-	if _, errs := mod.Validate(m.baseVersion); len(errs) != 0 {
+	if _, errs := m.installed[name].Validate(m.baseVersion); len(errs) != 0 {
 		return errs[0]
 	}
 	return nil
@@ -76,19 +74,13 @@ func (m *Matcher) ValidateBaseVersion(baseVersion string) (string, error) {
 	}
 	for module, installed := range m.installed {
 		if _, errs := installed.Validate(parsed); len(errs) != 0 {
-			// if there is a release constraint for the module which requirements are met try to validate it instead of installed
-			if release, ok := m.release[module]; ok {
-				if _, errs = release.Validate(parsed); len(errs) == 0 {
-					return "", nil
-				}
-			}
 			return module, errs[0]
 		}
 	}
 	return "", nil
 }
 
-func (m *Matcher) ValidateRelease(name, rawConstraint string) error {
+func (m *Matcher) ValidateRelease(rawConstraint string) error {
 	constraint, err := semver.NewConstraint(rawConstraint)
 	if err != nil {
 		return err
@@ -98,11 +90,8 @@ func (m *Matcher) ValidateRelease(name, rawConstraint string) error {
 		defer m.mtx.Unlock()
 	}
 	if _, errs := constraint.Validate(m.baseVersion); len(errs) != 0 {
-		m.release[name] = constraint
 		return errs[0]
 	}
-	// clear release constraint
-	delete(m.release, name)
 	return nil
 }
 
