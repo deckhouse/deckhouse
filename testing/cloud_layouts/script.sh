@@ -915,7 +915,7 @@ function wait_cluster_ready() {
 
   testScript=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
 
-  testRunAttempts=15
+  testRunAttempts=5
   for ((i=1; i<=$testRunAttempts; i++)); do
     if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
       test_failed=""
