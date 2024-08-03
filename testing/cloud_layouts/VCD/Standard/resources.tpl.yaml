@@ -28,7 +28,7 @@ spec:
     maxPerZone: 1
     classReference:
       kind: VCDInstanceClass
-      name: worker
+      name: system
   chaos:
     mode: Disabled
 
