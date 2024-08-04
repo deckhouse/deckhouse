@@ -284,18 +284,19 @@ properties:
           mode:
             type: string
             description: |
-              The mode for managing resource requests. Classical `Static` requests/limit.
+              Resource management mode:
+              - `Static` — allows you to specify requests/limits. The parameters of this mode are defined in the [static](#parameters-sidecar-resourcesmanagement-static) parameter section;
             enum: [ 'Static']
             default: 'Static'
           static:
             type: object
             description: |
-              Static resource management settings.
+              Resource management options for the `Static` mode.
             properties:
               requests:
                 type: object
                 description: |
-                  Requests configuration.
+                  Resource requests settings for pods.
                 properties:
                   cpu:
                     oneOf:
@@ -304,7 +305,7 @@ properties:
                       - type: number
                     default: '100m'
                     description: |
-                      CPU requests.
+                      Configuring CPU requests.
                   memory:
                     oneOf:
                       - type: string
@@ -312,11 +313,11 @@ properties:
                       - type: number
                     default: '128Mi'
                     description: |
-                      Memory requests.
+                      Configuring memory requests.
               limits:
                 type: object
                 description: |
-                  Limits configuration.
+                  Configuring CPU and memory limits.
                 properties:
                   cpu:
                     oneOf:
@@ -325,7 +326,7 @@ properties:
                       - type: number
                     default: '2000m'
                     description: |
-                      CPU limits.
+                      Configuring CPU limits.
                   memory:
                     oneOf:
                       - type: string
@@ -333,7 +334,7 @@ properties:
                       - type: number
                     default: '1Gi'
                     description: |
-                      Memory limits.
+                      Configuring memory limits.
   ca:
     type: object
     description: Explicitly specified root certificate. It signs individual service certificates to use in mutual TLS connections.
