@@ -49,20 +49,6 @@ masterNodeGroup:
     rootDiskSizeGb: 50
     template: private-templates/Ubuntu 24.04 Server (20240628)
   replicas: 1
-nodeGroups:
-- instanceClass:
-    storageProfile:  Fast vHDD
-    sizingPolicy: ${VCD_ORG}-MSK
-    rootDiskSizeGb: 50
-    template: private-templates/debian-12
-  name: frontend
-  replicas: 1
-  nodeTemplate:
-    labels:
-      node-role.deckhouse.io/frontend: ""
-    taints:
-      - effect: NoExecute
-        key: dedicated.deckhouse.io
 provider:
   password: ${VCD_PASSWORD}
   server: ${VCD_SERVER}
