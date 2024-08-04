@@ -27,6 +27,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	rc "github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/requests_counter"
 )
 
 const resourceExhaustedTimeout = time.Second
@@ -60,6 +61,20 @@ func Logger() logging.Logger {
 	return logging.LoggerFunc(func(ctx context.Context, lvl logging.Level, msg string, fields ...any) {
 		logger.L(ctx).Log(ctx, slog.Level(lvl), msg, fields...)
 	})
+}
+
+func UnaryRequestsCounter(counter *rc.RequestsCounter) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+		counter.Add(info.FullMethod)
+		return handler(ctx, req)
+	}
+}
+
+func StreamRequestsCounter(counter *rc.RequestsCounter) grpc.StreamServerInterceptor {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		counter.Add(info.FullMethod)
+		return handler(srv, ss)
+	}
 }
 
 func UnaryParallelTasksLimiter(sem chan struct{}, prefix string) grpc.UnaryServerInterceptor {
