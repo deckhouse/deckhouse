@@ -137,26 +137,33 @@ properties:
           **Внимание!** Настройка применяется только для новых подов с `istio-proxy`.
         properties:
           mode:
+            description: |
+              Режим управления ресурсами:
+              - `Static` — с помощью прямого указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-sidecar-resourcesmanagement-static);
           static:
             description: |
-              Настройки управления ресурсами в статическом режиме.
+              Настройка управления ресурсами в режиме `Static`.
             properties:
               requests:
+                description: |
+                  Настройки запросов ресурсов (requests) подов.
                 properties:
                   cpu:
                     description: |
-                      Реквесты к CPU.
+                      Настройка запроса CPU (CPU requests).
                   memory:
                     description: |
-                      Реквесты к памяти.
+                      Настройка запроса памяти (memory requests).
               limits:
+                description: |
+                  Настройка ограничений (limits) использования CPU и памяти.
                 properties:
                   cpu:
                     description: |
-                      Лимиты для CPU.
+                      Настройка ограничений использования CPU (CPU limits).
                   memory:
                     description: |
-                      Лимиты для памяти.
+                      Настройка ограничений использования памяти (memory limits).
   ca:
     description: Явно заданный корневой сертификат, который будет использован для подписывания индивидуальных сертификатов сервисов в случае включения MTLS.
     properties:
