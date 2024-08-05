@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -78,9 +79,16 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 }
 
 func discoveryIsK8sVersionAutomatic(input *go_hook.HookInput) error {
+	var kubernetesVersionStr string
 	kubernetesVersion, ok := input.Snapshots["kubernetesVersion"]
 	if !ok || len(kubernetesVersion) == 0 {
-		return errors.New("cluster configuration kubernetesVersion is empty or invalid")
+		versionParts := strings.Split(input.Values.Get("global.discovery.kubernetesVersion").String(), ".")
+		if len(versionParts) < 2 {
+			return errors.New("cluster configuration kubernetesVersion is empty or invalid")
+		}
+		kubernetesVersionStr = versionParts[0] + "." + versionParts[1]
+	} else {
+		kubernetesVersionStr = kubernetesVersion[0].(string)
 	}
 
 	// Get array of compatibility k8s versions for every operator version
@@ -88,7 +96,7 @@ func discoveryIsK8sVersionAutomatic(input *go_hook.HookInput) error {
 	_ = json.Unmarshal([]byte(input.Values.Get("istio.internal.istioToK8sCompatibilityMap").String()), &k8sCompatibleVersions)
 	requirements.SaveValue(istioToK8sCompatibilityMapKey, k8sCompatibleVersions)
 
-	requirements.SaveValue(isK8sVersionAutomaticKey, kubernetesVersion[0].(string) == "Automatic")
+	requirements.SaveValue(isK8sVersionAutomaticKey, kubernetesVersionStr == "Automatic")
 
 	return nil
 }
