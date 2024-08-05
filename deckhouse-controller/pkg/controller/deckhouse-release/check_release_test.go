@@ -440,22 +440,49 @@ global:
 	})
 
 	suite.Run("Restore absent releases from a registry", func() {
-		dependency.TestDC.CRClient.ImageMock.Set(func(tag string) (i1 v1.Image, err error) {
-			if tag == "stable" {
-				tag = "v1.60.2"
-			}
+		dependency.TestDC.CRClient.ImageMock.When("stable").Then(&fake.FakeImage{
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{
+					&fakeLayer{},
+					&fakeLayer{FilesContent: map[string]string{
+						"version.json": `{"version":"v1.60.2"}`,
+					}},
+				}, nil
+			},
+		}, nil)
 
-			return &fake.FakeImage{
-				LayersStub: func() ([]v1.Layer, error) {
-					return []v1.Layer{
-						&fakeLayer{},
-						&fakeLayer{FilesContent: map[string]string{
-							"version.json": fmt.Sprintf(`{"version":"%s"}`, tag),
-						}},
-					}, nil
-				},
-			}, nil
-		})
+		dependency.TestDC.CRClient.ImageMock.When("v1.58.1").Then(&fake.FakeImage{
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{
+					&fakeLayer{},
+					&fakeLayer{FilesContent: map[string]string{
+						"version.json": `{"version":"v1.58.1"}`,
+					}},
+				}, nil
+			},
+		}, nil)
+
+		dependency.TestDC.CRClient.ImageMock.When("v1.59.3").Then(&fake.FakeImage{
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{
+					&fakeLayer{},
+					&fakeLayer{FilesContent: map[string]string{
+						"version.json": `{"version":"v1.59.3"}`,
+					}},
+				}, nil
+			},
+		}, nil)
+
+		dependency.TestDC.CRClient.ImageMock.When("v1.60.2").Then(&fake.FakeImage{
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{
+					&fakeLayer{},
+					&fakeLayer{FilesContent: map[string]string{
+						"version.json": `{"version":"v1.60.2"}`,
+					}},
+				}, nil
+			},
+		}, nil)
 
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
 			"v1.56.0",
