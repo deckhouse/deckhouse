@@ -30,7 +30,7 @@ docker:
   ENTRYPOINT: ["/shell-operator"]
 ---
 artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
 shell:
   install:
     - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 GOOS=linux
@@ -53,4 +53,4 @@ shell:
     - git clone --branch {{ $shellOperatorVersion }} --depth 1 {{ .SOURCE_REPO }}/flant/shell-operator.git
     - cd /shell-operator
     - go mod tidy
-    - CGO_CFLAGS="-I/libjq/include" CGO_LDFLAGS="-L/libjq/lib" go build -ldflags="-linkmode external -extldflags '-static' -s -w -X '{{ .SOURCE_REPO }}/flant/shell-operator/pkg/app.Version=latest'" -tags use_libjq -o shell-operator ./cmd/shell-operator
+    - CGO_CFLAGS="-I/libjq/include" CGO_LDFLAGS="-L/libjq/lib" go build -ldflags="-linkmode external -extldflags '-static' -s -w -X '{{ .SOURCE_REPO }}/flant/shell-operator/pkg/app.Version={{ $shellOperatorVersion }}'" -tags use_libjq -o shell-operator ./cmd/shell-operator
