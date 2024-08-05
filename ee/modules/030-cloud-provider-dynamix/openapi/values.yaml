@@ -269,3 +269,5 @@ properties:
             type: array
             items:
               type: string
+      cniSecretData:
+        type: string
