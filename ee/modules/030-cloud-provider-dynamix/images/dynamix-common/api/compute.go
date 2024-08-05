@@ -107,18 +107,10 @@ func (c *ComputeService) GetVMIPAddresses(vm *compute.ItemCompute) ([]string, []
 			continue
 		}
 
-		//if vmInterface.NetType == "EXTNET" {
-		//	klog.V(4).Infof("GetVMIPAddresses: externalIP [%v] ", vmInterface.IPAddress)
-		//	externalIPs = append(externalIPs, vmInterface.IPAddress)
-		//} else {
-		//	klog.V(4).Infof("GetVMIPAddresses: internalIP [%v] ", vmInterface.IPAddress)
-		//	localIPs = append(localIPs, vmInterface.IPAddress)
-		//}
-
-		// TODO: FIXME
 		if vmInterface.NetType == "EXTNET" {
 			klog.V(4).Infof("GetVMIPAddresses: externalIP [%v] ", vmInterface.IPAddress)
 			externalIPs = append(externalIPs, vmInterface.IPAddress)
+		} else {
 			klog.V(4).Infof("GetVMIPAddresses: internalIP [%v] ", vmInterface.IPAddress)
 			localIPs = append(localIPs, vmInterface.IPAddress)
 		}
