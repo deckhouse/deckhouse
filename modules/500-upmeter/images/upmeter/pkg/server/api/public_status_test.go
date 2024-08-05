@@ -35,7 +35,8 @@ func Test_currentRange(t *testing.T) {
 
 func Test_calculateStatus(t *testing.T) {
 	type args struct {
-		summary []entity.EpisodeSummary
+		summary  []entity.EpisodeSummary
+		slotSize time.Duration
 	}
 	tests := []struct {
 		name string
@@ -43,8 +44,9 @@ func Test_calculateStatus(t *testing.T) {
 		want PublicStatus
 	}{
 		{
-			name: "all zeroes",
+			name: "nodata is degraded",
 			args: args{
+				slotSize: 5 * time.Minute,
 				summary: []entity.EpisodeSummary{
 					{TimeSlot: 300},
 					{TimeSlot: 600},
@@ -56,6 +58,7 @@ func Test_calculateStatus(t *testing.T) {
 		{
 			name: "all up",
 			args: args{
+				slotSize: 5 * time.Minute,
 				summary: []entity.EpisodeSummary{
 					{TimeSlot: 300, Up: 5 * time.Minute},
 					{TimeSlot: 600, Up: 5 * time.Minute},
@@ -67,6 +70,7 @@ func Test_calculateStatus(t *testing.T) {
 		{
 			name: "all up, last is empty",
 			args: args{
+				slotSize: 5 * time.Minute,
 				summary: []entity.EpisodeSummary{
 					{TimeSlot: 300, Up: 5 * time.Minute},
 					{TimeSlot: 600, Up: 5 * time.Minute},
@@ -78,6 +82,7 @@ func Test_calculateStatus(t *testing.T) {
 		{
 			name: "little fail, last is empty",
 			args: args{
+				slotSize: 5 * time.Minute,
 				summary: []entity.EpisodeSummary{
 					{TimeSlot: 300, Up: 5*time.Minute - time.Second, Down: time.Second},
 					{TimeSlot: 600, Up: 5 * time.Minute},
@@ -87,8 +92,9 @@ func Test_calculateStatus(t *testing.T) {
 			want: StatusDegraded,
 		},
 		{
-			name: "no up",
+			name: "unknown with a littlee fail",
 			args: args{
+				slotSize: 5 * time.Minute,
 				summary: []entity.EpisodeSummary{
 					{TimeSlot: 300, Unknown: 5*time.Minute - time.Second, Down: time.Second},
 					{TimeSlot: 600, Unknown: 5 * time.Minute},
@@ -99,8 +105,9 @@ func Test_calculateStatus(t *testing.T) {
 		},
 
 		{
-			name: "no up, last is empty",
+			name: "unknown with a littlee fail, last is empty",
 			args: args{
+				slotSize: 5 * time.Minute,
 				summary: []entity.EpisodeSummary{
 					{TimeSlot: 300, Unknown: 5*time.Minute - time.Second, Down: time.Second},
 					{TimeSlot: 600, Unknown: 5 * time.Minute},
@@ -113,6 +120,7 @@ func Test_calculateStatus(t *testing.T) {
 		{
 			name: "all down",
 			args: args{
+				slotSize: 5 * time.Minute,
 				summary: []entity.EpisodeSummary{
 					{TimeSlot: 300, Down: 5 * time.Minute},
 					{TimeSlot: 600, Down: 5 * time.Minute},
@@ -124,6 +132,7 @@ func Test_calculateStatus(t *testing.T) {
 		{
 			name: "all down for 1 sec",
 			args: args{
+				slotSize: 5 * time.Minute,
 				summary: []entity.EpisodeSummary{
 					{TimeSlot: 300, Unknown: (5*time.Minute - time.Second), Down: time.Second},
 					{TimeSlot: 600, Unknown: (5*time.Minute - time.Second), Down: time.Second},
@@ -135,6 +144,7 @@ func Test_calculateStatus(t *testing.T) {
 		{
 			name: "all down, last is empty",
 			args: args{
+				slotSize: 5 * time.Minute,
 				summary: []entity.EpisodeSummary{
 					{TimeSlot: 300, Down: 5 * time.Minute},
 					{TimeSlot: 600, Down: 5 * time.Minute},
@@ -144,8 +154,9 @@ func Test_calculateStatus(t *testing.T) {
 			want: StatusOutage,
 		},
 		{
-			name: "all down for 1 sec",
+			name: "all down for 1 sec, no more data present",
 			args: args{
+				slotSize: 5 * time.Minute,
 				summary: []entity.EpisodeSummary{
 					{TimeSlot: 300, Down: time.Second, NoData: 5*time.Minute - time.Second},
 					{TimeSlot: 600, Down: time.Second, NoData: 5*time.Minute - time.Second},
@@ -154,11 +165,202 @@ func Test_calculateStatus(t *testing.T) {
 			},
 			want: StatusOutage,
 		},
+
+		//  peek for quick operational status
+
+		{
+			name: "peek: full up",
+			args: args{
+				slotSize: 30 * time.Second,
+				summary: []entity.EpisodeSummary{
+					{TimeSlot: 300, Up: 30 * time.Second},
+				},
+			},
+			want: StatusOperational,
+		},
+		{
+			name: "peek: full down",
+			args: args{
+				slotSize: 30 * time.Second,
+				summary: []entity.EpisodeSummary{
+					{TimeSlot: 300, Down: 30 * time.Second},
+				},
+			},
+			want: StatusOutage,
+		},
+		{
+			name: "peek: 1s up, all other down",
+			args: args{
+				slotSize: 30 * time.Second,
+				summary: []entity.EpisodeSummary{
+					{TimeSlot: 300, Up: time.Second, Down: 29 * time.Second},
+				},
+			},
+			want: StatusDegraded,
+		},
+		{
+			name: "peek: 1s down, all other up",
+			args: args{
+				slotSize: 30 * time.Second,
+				summary: []entity.EpisodeSummary{
+					{TimeSlot: 300, Up: 29 * time.Second, Down: time.Second},
+				},
+			},
+			want: StatusDegraded,
+		},
+		{
+			name: "peek: partial up",
+			args: args{
+				slotSize: 30 * time.Second,
+				summary: []entity.EpisodeSummary{
+					{TimeSlot: 300, Up: 15 * time.Second},
+				},
+			},
+			want: StatusOperational,
+		},
+		{
+			name: "peek: partial unknown",
+			args: args{
+				slotSize: 30 * time.Second,
+				summary: []entity.EpisodeSummary{
+					{TimeSlot: 300, Unknown: 15 * time.Second},
+				},
+			},
+			want: StatusOperational,
+		},
+		{
+			name: "peek: partial up + unknown",
+			args: args{
+				slotSize: 30 * time.Second,
+				summary: []entity.EpisodeSummary{
+					{TimeSlot: 300, Up: time.Second, Unknown: time.Second},
+				},
+			},
+			want: StatusOperational,
+		},
+		{
+			name: "peek: partial up + down",
+			args: args{
+				slotSize: 30 * time.Second,
+				summary: []entity.EpisodeSummary{
+					{TimeSlot: 300, Up: time.Second, Down: time.Second},
+				},
+			},
+			want: StatusDegraded,
+		},
+		{
+			name: "peek: partial unknown + down",
+			args: args{
+				slotSize: 30 * time.Second,
+				summary: []entity.EpisodeSummary{
+					{TimeSlot: 300, Unknown: time.Second, Down: time.Second},
+				},
+			},
+			want: StatusDegraded,
+		},
+		{
+			name: "peek: partial up + unknown + down",
+			args: args{
+				slotSize: 30 * time.Second,
+				summary: []entity.EpisodeSummary{
+					{TimeSlot: 300, Up: time.Second, Unknown: time.Second, Down: time.Second},
+				},
+			},
+			want: StatusDegraded,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := calculateStatus(tt.args.summary, 5*time.Minute); got != tt.want {
+			if got := calculateStatus(tt.args.summary, tt.args.slotSize); got != tt.want {
 				t.Errorf("calculateStatus() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// test calculateAvailability
+
+func Test_calculateAvailability(t *testing.T) {
+	type args struct {
+		summary []entity.EpisodeSummary
+	}
+	tests := []struct {
+		name string
+		args args
+		want float64
+	}{
+		{
+			name: "no data",
+			args: args{
+				summary: []entity.EpisodeSummary{
+					{TimeSlot: 300},
+					{TimeSlot: 600},
+					{TimeSlot: 900},
+				},
+			},
+			want: -1,
+		},
+		{
+			name: "all up",
+			args: args{
+				summary: []entity.EpisodeSummary{
+					{TimeSlot: 300, Up: 5 * time.Minute},
+					{TimeSlot: 600, Up: 5 * time.Minute},
+					{TimeSlot: 900, Up: 5 * time.Minute},
+				},
+			},
+			want: 1,
+		},
+		{
+			name: "all up, last is empty",
+			args: args{
+				summary: []entity.EpisodeSummary{
+					{TimeSlot: 300, Up: 5 * time.Minute},
+					{TimeSlot: 600, Up: 5 * time.Minute},
+					{TimeSlot: 900, NoData: 5 * time.Minute},
+				},
+			},
+			want: 10.0 / 10, // nodata excluded
+		},
+		{
+			name: "little fail, last is empty",
+			args: args{
+				summary: []entity.EpisodeSummary{
+					{TimeSlot: 300, Up: 5*time.Minute - time.Second, Down: time.Second},
+					{TimeSlot: 600, Up: 5 * time.Minute},
+					{TimeSlot: 900, NoData: 5 * time.Minute},
+				},
+			},
+			want: (5.0*60 - 1 + 5*60) / 600, // nodata excluded
+		},
+		{
+			name: "unknown is up",
+			args: args{
+				summary: []entity.EpisodeSummary{
+					{TimeSlot: 300, Unknown: 5 * time.Minute},
+					{TimeSlot: 600, Unknown: 5 * time.Minute},
+					{TimeSlot: 900, Unknown: 5 * time.Minute},
+				},
+			},
+			want: 1,
+		},
+		{
+			name: "no up",
+			args: args{
+				summary: []entity.EpisodeSummary{
+					{TimeSlot: 300, Down: 5 * time.Minute},
+					{TimeSlot: 600, Down: 5 * time.Minute},
+					{TimeSlot: 900, Down: 5 * time.Minute},
+				},
+			},
+			want: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := calculateAvailability(tt.args.summary); got != tt.want {
+				t.Errorf("calculateAvailability() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -312,19 +312,24 @@ func shrinkToFulfilled(summary []entity.EpisodeSummary, slotSize time.Duration) 
 // Input array should have 3 elements, but might have only twoof them.
 //
 // The status returned is as follows:
-//   - Operational is when we observe only uptime
+//   - Operational is when we observe only uptime or no data at all
 //   - Outage is when we observe only downtime
 //   - Degraded is when we observe mixed uptime and downtime
 func calculateStatus(sums []entity.EpisodeSummary, slotSize time.Duration) PublicStatus {
 	// for the peek case
 	if len(sums) == 1 {
+		hasUp := sums[0].Up > 0 || sums[0].Unknown > 0
+		hasDown := sums[0].Down > 0
+
 		switch {
-		case sums[0].Up == slotSize:
-			return StatusOperational
-		case sums[0].Down == slotSize:
+		case hasDown && !hasUp:
 			return StatusOutage
-		default:
+		case !hasDown && hasUp:
+			return StatusOperational
+		case hasDown && hasUp:
 			return StatusDegraded
+		default:
+			return StatusOperational // no news is good news by design :)
 		}
 	}
 
