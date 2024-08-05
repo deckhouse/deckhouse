@@ -26,6 +26,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 	"time"
 
@@ -50,10 +51,14 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
-var golden bool
+var (
+	golden     bool
+	mDelimiter *regexp.Regexp
+)
 
 func init() {
 	flag.BoolVar(&golden, "golden", false, "generate golden files")
+	mDelimiter = regexp.MustCompile("(?m)^---$")
 }
 
 var embeddedMUP = &v1alpha1.ModuleUpdatePolicySpec{
@@ -112,15 +117,20 @@ func (suite *ControllerTestSuite) SetupSubTest() {
 
 func (suite *ControllerTestSuite) TearDownSubTest() {
 	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
-	got := suite.fetchResults()
+	gotB := suite.fetchResults()
 
 	if golden {
-		err := os.WriteFile(goldenFile, got, 0666)
+		err := os.WriteFile(goldenFile, gotB, 0666)
 		require.NoError(suite.T(), err)
 	} else {
-		exp, err := os.ReadFile(goldenFile)
+		got := singleDocToManifests(gotB)
+		expB, err := os.ReadFile(goldenFile)
 		require.NoError(suite.T(), err)
-		assert.YAMLEq(suite.T(), string(exp), string(got))
+		exp := singleDocToManifests(expB)
+		assert.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
+		for i := range got {
+			assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
+		}
 	}
 }
 func (suite *ControllerTestSuite) setupController(
@@ -662,6 +672,17 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	}
 
 	return result.Bytes()
+}
+
+func singleDocToManifests(doc []byte) (result []string) {
+	split := mDelimiter.Split(string(doc), -1)
+
+	for i := range split {
+		if split[i] != "" {
+			result = append(result, split[i])
+		}
+	}
+	return
 }
 
 func (suite *ControllerTestSuite) getDeckhouseRelease(name string) *v1alpha1.DeckhouseRelease {
