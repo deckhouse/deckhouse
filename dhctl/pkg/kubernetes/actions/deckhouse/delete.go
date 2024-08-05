@@ -38,12 +38,46 @@ const (
 	deckhouseDeploymentName      = "deckhouse"
 )
 
+var d8storageCRs = []string{
+	"LocalStorageClass",
+	"ReplicatedStorageClass",
+	"NFSStorageClass",
+	"CephStorageClass",
+}
+
+const d8storageCRsApiVersion = "v1alpha1"
+
 func DeleteDeckhouseDeployment(kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Delete Deckhouse", 45, 5*time.Second).WithShowError(false).Run(func() error {
 		foregroundPolicy := metav1.DeletePropagationForeground
 		err := kubeCl.AppsV1().Deployments(deckhouseDeploymentNamespace).Delete(context.TODO(), deckhouseDeploymentName, metav1.DeleteOptions{PropagationPolicy: &foregroundPolicy})
 		if err != nil && !errors.IsNotFound(err) {
 			return err
+		}
+		return nil
+	})
+}
+
+func DeleteDeckhouseStorageCRs(kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Delete Deckhouse Storage CRs", 45, 5*time.Second).WithShowError(false).Run(func() error {
+		for _, cr := range d8storageCRs {
+			resourceSchema := schema.GroupVersionResource{Group: "storage.deckhouse.io", Version: d8storageCRsApiVersion, Resource: strings.ToLower(cr)}
+			storageCRs, err := kubeCl.Dynamic().Resource(resourceSchema).Namespace(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
+			if err != nil {
+				if errors.IsNotFound(err) {
+					log.DebugF("Resource %s not found, skipping...\n", cr)
+					continue
+				}
+				return fmt.Errorf("get %s: %v", cr, err)
+			}
+
+			for _, obj := range storageCRs.Items {
+				err := kubeCl.Dynamic().Resource(resourceSchema).Namespace(obj.GetNamespace()).Delete(context.TODO(), obj.GetName(), metav1.DeleteOptions{})
+				if err != nil {
+					return fmt.Errorf("delete %s %s: %v", cr, obj.GetName(), err)
+				}
+				log.InfoF("%s/%s\n", obj.GetNamespace(), obj.GetName())
+			}
 		}
 		return nil
 	})
