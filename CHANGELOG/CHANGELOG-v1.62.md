@@ -64,6 +64,8 @@
 ## Fixes
 
 
+ - **[candi]** Keep `admissionregistration.k8s.io/v1alpha1` API support for K8s 1.28+. [#9223](https://github.com/deckhouse/deckhouse/pull/9223)
+ - **[candi]** Fix network configuration in OpenStack when using DirectRoutingWithPortSecurityEnabled. [#9196](https://github.com/deckhouse/deckhouse/pull/9196)
  - **[candi]** Restore the installation of the `nfs-common` package from the system package repositories. [#9182](https://github.com/deckhouse/deckhouse/pull/9182)
  - **[candi]** Fix home directory permission for NodeUser. [#9030](https://github.com/deckhouse/deckhouse/pull/9030)
     default
@@ -77,8 +79,10 @@
  - **[candi]** Fix patch application for all Kubernetes versions. [#8525](https://github.com/deckhouse/deckhouse/pull/8525)
     Components that use _kube-rbac-proxy_ will restart.
  - **[cloud-provider-openstack]** Add the `--tls-cipher-suites` option to the cloud-controller-manager deployment. [#8820](https://github.com/deckhouse/deckhouse/pull/8820)
+ - **[cloud-provider-vcd]** Fix impossibility to use 0 as value of Max IOPS in storage policy. [#9232](https://github.com/deckhouse/deckhouse/pull/9232)
  - **[cloud-provider-vsphere]** Fix bootstrap to existing folder. [#8478](https://github.com/deckhouse/deckhouse/pull/8478)
  - **[cloud-provider-yandex]** Change default root disk size for master and cloud permanent nodes to 50 GB [#8421](https://github.com/deckhouse/deckhouse/pull/8421)
+ - **[cni-cilium]** Fix missing datasource variable and dashboard rendering (for DKP EE). [#9244](https://github.com/deckhouse/deckhouse/pull/9244)
  - **[cni-cilium]** Add `CiliumAgentMetricNotFound` Prometheus alert. [#8751](https://github.com/deckhouse/deckhouse/pull/8751)
  - **[deckhouse]** Restore ability to edit global ModuleConfig in cases with disabled kube-dns module. [#8932](https://github.com/deckhouse/deckhouse/pull/8932)
     default
