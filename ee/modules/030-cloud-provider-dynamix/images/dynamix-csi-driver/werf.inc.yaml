@@ -1,0 +1,66 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /dynamix-csi-driver
+  to: /dynamix-csi-driver
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+  includePaths:
+  - '**/*'
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /lib64
+  to: /lib64
+  before: install
+  includePaths:
+  - 'libresolv*'
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /lib/udev/scsi_id
+  to: /lib/udev/scsi_id
+  before: setup
+docker:
+  ENTRYPOINT: ["/dynamix-csi-driver"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+git:
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to:  /dynamix/dynamix-csi-driver/src
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/dynamix-common
+  to:  /dynamix/dynamix-common
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - export VERSION="0.1.0"
+  - cd /dynamix/dynamix-csi-driver/src
+  - go mod tidy
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version=${VERSION}" -o /dynamix-csi-driver cmd/dynamix-csi-driver/main.go
+  - chown 64535:64535 /dynamix-csi-driver
+  - chmod 0755 /dynamix-csi-driver
+---
+{{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /sbin/xfs_repair /usr/sbin/nvme /usr/sbin/parted /usr/sbin/xfs*" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
+shell:
+  setup:
+    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
+
