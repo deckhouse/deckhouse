@@ -441,17 +441,6 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 			modulesChangedReason = "one of modules is not enabled"
 		}
 
-		for _, index := range releaseUpdater.GetSkippedPatchesIndexes() {
-			release := otherReleases.Items[index]
-
-			release.Status.Phase = v1alpha1.PhaseSuperseded
-			release.Status.Message = ""
-			release.Status.TransitionTime = metav1.NewTime(c.dc.GetClock().Now().UTC())
-			if e := c.client.Status().Update(ctx, &release); e != nil {
-				return ctrl.Result{Requeue: true}, e
-			}
-		}
-
 		return ctrl.Result{}, nil
 	}
 
