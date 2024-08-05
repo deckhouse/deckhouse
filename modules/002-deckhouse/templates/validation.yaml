@@ -60,7 +60,7 @@ spec:
     resourceRules:
       - apiGroups:   ["*"]
         apiVersions: ["*"]
-        operations:  ["CREATE", "UPDATE"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
         resources:   ["*"]
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
@@ -71,7 +71,7 @@ spec:
   validations:
     - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-")'
       reason: Forbidden
-      messageExpression: '''Creating an object with the `heritage: deckhouse` label is forbidden'''
+      messageExpression: '''Creating, updating and deleting an objects with the `heritage: deckhouse` label is forbidden'''
   auditAnnotations:
     - key: 'source-user'
       valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change object with the heritage label'"
