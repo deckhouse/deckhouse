@@ -120,7 +120,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 
 	// run only if it's a canary release
 	var (
-		applyAfter, cooldownUntil, notificationShiftTime *metav1.Time
+		cooldownUntil, notificationShiftTime *metav1.Time
 	)
 	if releaseChecker.releaseMetadata.Cooldown != nil {
 		cooldownUntil = releaseChecker.releaseMetadata.Cooldown
@@ -146,7 +146,6 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 	sort.Sort(sort.Reverse(updater.ByVersion[*v1alpha1.DeckhouseRelease](pointerReleases)))
 	r.metricStorage.GroupedVault.ExpireGroupMetrics(metricUpdatingFailedGroup)
 
-releaseLoop:
 	for _, release := range pointerReleases {
 		switch {
 		// GT
@@ -208,19 +207,41 @@ releaseLoop:
 					notificationShiftTime = &metav1.Time{Time: *release.GetApplyAfter()}
 				}
 			}
-			if err := releaseChecker.StepByStepUpdate(release.GetVersion(), newSemver); err != nil {
-				releaseChecker.logger.Errorf("step by step update failed. err: %v", err)
-				labels := map[string]string{
-					"version": release.GetVersion().Original(),
+
+			actual := release.GetVersion()
+			for !actual.Equal(newSemver) {
+				if actual, err = releaseChecker.StepByStepUpdate(actual, newSemver); err != nil {
+					releaseChecker.logger.Errorf("step by step update failed. err: %v", err)
+					labels := map[string]string{
+						"version": release.GetVersion().Original(),
+					}
+
+					r.metricStorage.GroupedVault.GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 1, labels)
+					return err
 				}
 
-				r.metricStorage.GroupedVault.GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 1, labels)
-				return err
-			}
+				err = r.createRelease(ctx, releaseChecker, cooldownUntil, notificationShiftTime)
+				if err != nil {
+					return fmt.Errorf("crate release %s: %w", releaseChecker.releaseMetadata.Version, err)
+				}
 
-			break releaseLoop
+				if releaseChecker.releaseMetadata.Cooldown != nil {
+					cooldownUntil = releaseChecker.releaseMetadata.Cooldown
+				}
+			}
 		}
 	}
+
+	err = r.createRelease(ctx, releaseChecker, cooldownUntil, notificationShiftTime)
+	if err != nil {
+		return fmt.Errorf("crate release %s: %w", releaseChecker.releaseMetadata.Version, err)
+	}
+	return nil
+}
+
+func (r *deckhouseReleaseReconciler) createRelease(ctx context.Context, releaseChecker *DeckhouseReleaseChecker,
+	cooldownUntil, notificationShiftTime *metav1.Time) error {
+	var applyAfter *metav1.Time
 
 	ts := metav1.Time{Time: r.dc.GetClock().Now()}
 	if releaseChecker.IsCanaryRelease() {
@@ -281,12 +302,7 @@ releaseLoop:
 		release.ObjectMeta.Annotations["release.deckhouse.io/notification-time-shift"] = "true"
 	}
 
-	err = client.IgnoreAlreadyExists(r.client.Create(ctx, release))
-	if err != nil {
-		return fmt.Errorf("crate release: %w", err)
-	}
-
-	return nil
+	return client.IgnoreAlreadyExists(r.client.Create(ctx, release))
 }
 
 func NewDeckhouseReleaseChecker(opts []cr.Option, logger logger.Logger, dc dependency.Container, moduleManager moduleManager, imagesRegistry, releaseChannel string) (*DeckhouseReleaseChecker, error) {
@@ -313,6 +329,7 @@ type DeckhouseReleaseChecker struct {
 
 	releaseChannel  string
 	releaseMetadata releaseMetadata
+	tags            []string
 }
 
 func (dcr *DeckhouseReleaseChecker) IsCanaryRelease() bool {
@@ -509,34 +526,31 @@ func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(ts metav1.Time, cluste
 	return nil
 }
 
-func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(actual, target *semver.Version) error {
+func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(actual, target *semver.Version) (*semver.Version, error) {
 	nextVersion, err := dcr.nextVersion(actual, target)
 	if err != nil {
-		return err
-	}
-	if nextVersion == target {
-		return nil
+		return nil, fmt.Errorf("get next version: %w", err)
 	}
 
 	image, err := dcr.registryClient.Image(nextVersion.Original())
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("get image: %w", err)
 	}
 
 	releaseMeta, err := dcr.fetchReleaseMetadata(image)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("fetch release metadata: %w", err)
 	}
 	if releaseMeta.Version == "" {
-		return fmt.Errorf("version not found. Probably image is broken or layer does not exist")
+		return nil, fmt.Errorf("version not found. Probably image is broken or layer does not exist")
 	}
 
 	dcr.releaseMetadata = releaseMeta
 
-	return nil
+	return nextVersion, nil
 }
 
-func (dcr *DeckhouseReleaseChecker) nextVersion(actual, target *semver.Version) (*semver.Version, error) {
+func (dcr *DeckhouseReleaseChecker) nextVersion(actual, target *semver.Version) (next *semver.Version, err error) {
 	if actual.Major() != target.Major() {
 		return nil, fmt.Errorf("major version updated") // TODO step by step update for major version
 	}
@@ -545,9 +559,9 @@ func (dcr *DeckhouseReleaseChecker) nextVersion(actual, target *semver.Version) 
 		return target, nil
 	}
 
-	listTags, err := dcr.registryClient.ListTags()
+	tags, err := dcr.listTags()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list tags: %w", err)
 	}
 
 	// Here we get the following minor with the maximum patch version.
@@ -559,7 +573,7 @@ func (dcr *DeckhouseReleaseChecker) nextVersion(actual, target *semver.Version) 
 	}
 
 	collection := make([]*semver.Version, 0)
-	for _, ver := range listTags {
+	for _, ver := range tags {
 		if r.MatchString(ver) {
 			newSemver, err := semver.NewVersion(ver)
 			if err != nil {
@@ -599,6 +613,15 @@ func (dcr *DeckhouseReleaseChecker) generateChangelogForEnabledModules() map[str
 	}
 
 	return enabledModulesChangelog
+}
+
+func (dcr *DeckhouseReleaseChecker) listTags() ([]string, error) {
+	var err error
+	if dcr.tags == nil {
+		dcr.tags, err = dcr.registryClient.ListTags()
+	}
+
+	return dcr.tags, err
 }
 
 type releaseMetadata struct {
