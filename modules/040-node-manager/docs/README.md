@@ -192,9 +192,18 @@ Using the data in the [staticInstances](cr.html#nodegroup-v1-spec-staticinstance
 ## Custom node settings
 
 The [NodeGroupConfiguration](cr.html#nodegroupconfiguration) resource allows you to automate actions on group nodes. It supports running bash scripts on nodes (you can use the [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) command set) as well as the [Go Template](https://pkg.go.dev/text/template) templating engine, and is a great way to automate operations such as:
-- installing and configuring additional OS packages ([example of installing the plugin for kubectl](examples.html#installing-the-cert-manager-plugin-for-kubectl-on-master-nodes), [example of installing containerd with Nvidia GPU support](faq.html#how-to-use-containerd-with-nvidia-gpu-support))
-- updating the OS kernel to a specific version ([example](faq.html#how-do-i-update-kernel-on-nodes));
-- modifying OS parameters ([example of customizing the sysctl parameter](examples.html#tuning-sysctl-parameters));
+- installing and configuring additional OS packages,  
+  examples:  
+    - [installing the plugin for kubectl](examples.html#installing-the-cert-manager-plugin-for-kubectl-on-master-nodes);  
+    - [installing containerd with Nvidia GPU support](faq.html#how-to-use-containerd-with-nvidia-gpu-support).
+- updating the OS kernel to a specific version,  
+  examples:
+    - [Debian kernel update](faq.html#debian-based-distros);
+    - [CentOS kernel update](faq.html#centos-based-distros).
+- modifying OS parameters,  
+  examples:  
+    - [customizing the sysctl parameter](examples.html#tuning-sysctl-parameters);
+    - [adding a root certificate](examples.html#adding-a-root-certificate).
 - collecting information on a node and carrying out other similar tasks.
 
 The `NodeGroupConfiguration` resource allows you to assign [priority](cr.html#nodegroupconfiguration-v1alpha1-spec-weight) to scripts being run or limit them to running on specific [node groups](cr.html#nodegroupconfiguration-v1alpha1-spec-nodegroups) and [OS types](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
@@ -299,7 +308,34 @@ post-install() {
 ```
 
 {% endraw %}
-The script progress can be seen on the node in the bashible service log (`journalctl -u bashible.service`). The scripts themselves are located in the `/var/lib/bashible/bundle_steps/` directory of the node.
+The progress of script execution can be seen on the node in the bashible service log using the command:
+```bash
+journalctl -u bashible.service
+```
+The scripts themselves are located on the node in the directory `/var/lib/bashible/bundle_steps/`.
+
+The service decides to re-run the scripts by comparing the single checksum of all files located at `/var/lib/bashible/configuration_checksum` with the checksum located in the `kubernetes` cluster in the `configuration-checksums` secret namespace `d8-cloud-instance-manager`.
+You can see the checksum using the following command:
+```bash
+kubectl -n d8-cloud-instance-manager get secret configuration-checksums -o yaml
+```
+The service compares checksums every minute.
+
+The checksum in the cluster changes every 4 hours, thereby re-running the scripts on all nodes.
+Forcing the execution of bashible on a node can be done by deleting the file with the script checksum using the following command:
+```bash
+rm /var/lib/bashible/configuration_checksum
+```
+
+### Features of writing scripts
+When writing your own scripts, it is important to consider the following features of their use in Deckhouse:
+
+1. Scripts in deckhouse are executed once every 4 hours or more often based on external triggers. Therefore, it is important to write scripts in such a way that they check the need for their changes in the system before performing actions, thereby not making changes every time they are launched.
+2. There are [built-in scripts](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/node-group) that perform various actions, including installing and configuring services. This is important to consider when choosing the [priority](cr.html#nodegroupconfiguration-v1alpha1-spec-weight) of custom scripts. For example, if a script is planned to restart a service, then this script should be called after the service installation script, since otherwise it will not be able to execute when deploying a new node.
+
+Useful features of some scripts:
+
+* [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/node-group/032_configure_containerd.sh.tpl) - merges all configuration files of the `containerd` service located at `/etc/containerd/conf.d/*.toml`, and also **restarts** the service. It is important to note that the `/etc/containerd/conf.d/` directory is not created automatically, and that files in this directory should be created in scripts with a priority lower than `32`
 
 ## Chaos Monkey
 
