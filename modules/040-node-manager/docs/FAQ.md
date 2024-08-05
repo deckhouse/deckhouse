@@ -771,6 +771,7 @@ Done
 ```
 
 ## How to deploy custom containerd configuration?
+
 {% endraw %}
 {% alert level="info" %}
 The above `NodeGroupConfiguration` uses the functionality embedded in the script [032_configure_containerd.sh](./#features-of-writing-scripts).
@@ -833,6 +834,7 @@ spec:
 ```
 
 ### How to configure a certificate for an additional registry?
+
 {% endraw %}
 {% alert level="info" %}
 In addition to containerd, the certificate can be [simultaneously added](examples.html#configuring-a-registry-certificate-in-containerd) into the OS.

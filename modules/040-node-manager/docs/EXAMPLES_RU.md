@@ -339,8 +339,6 @@ spec:
     sysctl -w vm.max_map_count=262144
 ```
 
-
-
 ### Добавление корневого сертификата в хост
 
 {% alert level="warning" %}
@@ -352,7 +350,6 @@ spec:
 {% alert level="warning" %}
 Для использования сертификата в `conternerd` (в т.ч. pull контейнеров из приватного репозитория) после добавления сертификата требуется произвести рестарт сервиса.
 {% endalert %}
-
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -396,7 +393,6 @@ spec:
     fi    
 ```
 
-
 ### Добавления сертификата в ОС и containerd
 
 {% alert level="warning" %}
@@ -406,7 +402,7 @@ spec:
 {% endalert %}
 
 {% alert level="info" %}
-Пример опирается на функционал, заложенный в скрипте [032_configure_containerd.sh](./#особенности-написания-скриптов). 
+Пример опирается на функционал, заложенный в скрипте [032_configure_containerd.sh](./#особенности-написания-скриптов).
 {% endalert %}
 
 ```yaml

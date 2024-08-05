@@ -351,7 +351,7 @@ When adapting the script to another OS, do not forget to change the [bundles](cr
 The example relies on the functionality embedded in the [032_configure_containerd.sh](./#features-of-writing-scripts) script.
 {% endalert %}
 
-```yaml 
+```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
@@ -394,6 +394,7 @@ spec:
 ```
 
 ### Adding a certificate to the OS and containerd
+
 {% alert level="warning" %}
 This example is given for Ubuntu OS.  
 The method of adding certificates to the store may differ depending on the OS.  
@@ -405,7 +406,7 @@ When adapting the script to another OS, do not forget to change the [bundles](cr
 The example uses the functionality embedded in the [032_configure_containerd.sh](./#features-of-writing-scripts) script.
 {% endalert %}
 
-```yaml 
+```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:

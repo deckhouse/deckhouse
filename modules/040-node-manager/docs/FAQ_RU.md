@@ -778,9 +778,10 @@ Done
 ```
 
 ## Как развернуть кастомный конфиг containerd?
+
 {% endraw %}
 {% alert level="info" %}
-Приведенные `NodeGroupConfiguration` основаны на функционале, заложенном в скрипте [032_configure_containerd.sh](./#особенности-написания-скриптов). 
+Приведенные `NodeGroupConfiguration` основаны на функционале, заложенном в скрипте [032_configure_containerd.sh](./#особенности-написания-скриптов).
 {% endalert %}
 
 {% alert level="danger" %}
@@ -837,7 +838,9 @@ spec:
     - "*"
   weight: 31
 ```
+
 ### Как настроить сертификат для дополнительного registry?
+
 {% endraw %}
 {% alert level="info" %}
 Помимо containerd сертификат можно [одновременно добавить](examples.html#добавления-сертификата-в-ос-и-containerd) и в ОС.

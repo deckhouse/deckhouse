@@ -195,16 +195,16 @@ CAPS включается автоматически, если в NodeGroup за
 Для автоматизации действий на узлах группы предусмотрен ресурс [NodeGroupConfiguration](cr.html#nodegroupconfiguration). Ресурс позволяет выполнять на узлах bash-скрипты, в которых можно пользоваться набором команд [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster), а также позволяет использовать шаблонизатор [Go Template](https://pkg.go.dev/text/template). Это удобно для автоматизации таких операций, как:
 - установка и настройки дополнительных пакетов ОС.  
   примеры:  
-    -  [установка kubectl-плагина](examples.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах);
-    -  [настройка containerd с поддержкой Nvidia GPU](faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu).
+  - [установка kubectl-плагина](examples.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах);
+  - [настройка containerd с поддержкой Nvidia GPU](faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu).
 - обновления ядра ОС на конкретную версию,  
   примеры:
-    - [обновление ядра Debian](faq.html#для-дистрибутивов-основанных-на-debian);
-    - [обновление ядра CentOS](faq.html#для-дистрибутивов-основанных-на-centos).
+  - [обновление ядра Debian](faq.html#для-дистрибутивов-основанных-на-debian);
+  - [обновление ядра CentOS](faq.html#для-дистрибутивов-основанных-на-centos).
 - изменение параметров ОС,  
   примеры:  
-    - [настройка параметра sysctl](examples.html#задание-параметра-sysctl);
-    - [добавление корневого сертификата](examples.html#добавление-корневого-сертификата-в-хост).
+  - [настройка параметра sysctl](examples.html#задание-параметра-sysctl);
+  - [добавление корневого сертификата](examples.html#добавление-корневого-сертификата-в-хост).
 - сбор информации на узле и выполнение других подобных действий.
 
 Ресурс `NodeGroupConfiguration` позволяет указывать [приоритет](cr.html#nodegroupconfiguration-v1alpha1-spec-weight) выполняемым скриптам, ограничивать их выполнение определенными [группами узлов](cr.html#nodegroupconfiguration-v1alpha1-spec-nodegroups) и [типами ОС](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
@@ -313,20 +313,25 @@ post-install() {
 {% endraw %}
 
 Ход выполнения скриптов можно увидеть на узле в журнале сервиса bashible c помощью команды:
+
 ```bash
 journalctl -u bashible.service
 ```  
+
 Сами скрипты находятся на узле в директории `/var/lib/bashible/bundle_steps/`.  
 
 Сервис принимает решение о повторном запуске скриптов путем сравнения единой контрольной суммы всех файлов, расположенной по пути `/var/lib/bashible/configuration_checksum` с контрольной суммой размещенной в кластере `kubernetes` в секрете `configuration-checksums` namespace `d8-cloud-instance-manager`.
 Проверить контрольную сумму можно следующей командой:  
+
 ```bash
 kubectl -n d8-cloud-instance-manager get secret configuration-checksums -o yaml
 ```  
+
 Сравнение контрольных суммы сервис совершает каждую минуту.  
 
 Контрольная сумма в кластере изменяется раз в 4 часа, тем самым повторно запуская скрипты на всех нодах.  
 Принудительный вызов исполнения bashible на узле можно произвести путем удаления файла с контрольной суммой скриптов с помощью следующей команды:  
+
 ```bash
 rm /var/lib/bashible/configuration_checksum
 ```  
