@@ -8,6 +8,7 @@ package service
 import (
 	"context"
 
+	dynamixapi "dynamix-common/api"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/grpc/codes"
@@ -17,17 +18,20 @@ import (
 
 type IdentityService struct {
 	csi.UnimplementedIdentityServer
-	driverName    string
-	vendorVersion string
+	driverName      string
+	vendorVersion   string
+	dynamixCloudAPI *dynamixapi.DynamixCloudAPI
 }
 
 func NewIdentity(
 	driverName string,
 	vendorVersion string,
+	dynamixCloudAPI *dynamixapi.DynamixCloudAPI,
 ) *IdentityService {
 	return &IdentityService{
-		driverName:    driverName,
-		vendorVersion: vendorVersion,
+		driverName:      driverName,
+		vendorVersion:   vendorVersion,
+		dynamixCloudAPI: dynamixCloudAPI,
 	}
 }
 
@@ -72,9 +76,7 @@ func (i *IdentityService) Probe(
 	ctx context.Context,
 	_ *csi.ProbeRequest,
 ) (*csi.ProbeResponse, error) {
-	// TODO: Implement probe to dynamix
-	var err error
-	err = nil
+	err := i.dynamixCloudAPI.PortalSvc.Test(ctx)
 	if err != nil {
 		klog.Errorf("Could not get connection %v", err)
 		return nil, status.Error(

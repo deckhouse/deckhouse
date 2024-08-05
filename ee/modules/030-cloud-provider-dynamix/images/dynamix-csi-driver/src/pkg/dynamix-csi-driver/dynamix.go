@@ -5,21 +5,21 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package dynamixcsidriver
 
 import (
+	"dynamix-csi-driver/internal/config"
 	"dynamix-csi-driver/pkg/dynamix-csi-driver/service"
-	"dynamixcommon/config"
 	"errors"
 	"sync"
 
+	dynamixapi "dynamix-common/api"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 type csiDriver struct {
-	csi.UnimplementedControllerServer
-	csi.UnimplementedNodeServer
 	csi.UnimplementedGroupControllerServer
 
 	config config.CSIConfig
 	mutex  sync.Mutex
+	client *dynamixapi.DynamixCloudAPI
 }
 
 func NewDriver(cfg config.CSIConfig) (*csiDriver, error) {
@@ -34,8 +34,15 @@ func NewDriver(cfg config.CSIConfig) (*csiDriver, error) {
 	if cfg.Endpoint == "" {
 		return nil, errors.New("no driver endpoint provided")
 	}
+
+	client, err := dynamixapi.NewDynamixCloudAPI(cfg.Credentials)
+	if err != nil {
+		return nil, err
+	}
+
 	return &csiDriver{
 		config: cfg,
+		client: client,
 	}, nil
 }
 
@@ -46,9 +53,10 @@ func (d *csiDriver) Run() error {
 		service.NewIdentity(
 			d.config.DriverName,
 			d.config.VendorVersion,
+			d.client,
 		),
-		d,
-		d,
+		service.NewController(d.client),
+		service.NewNode(d.config.NodeID, d.client),
 		d,
 	)
 	s.Wait()

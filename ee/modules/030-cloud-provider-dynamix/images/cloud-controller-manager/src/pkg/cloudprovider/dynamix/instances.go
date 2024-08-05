@@ -8,6 +8,7 @@ package dynamix
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 
 	v1 "k8s.io/api/core/v1"
@@ -101,8 +102,12 @@ func (c *Cloud) getVMByProviderID(ctx context.Context, providerID string) (*comp
 	if err != nil {
 		return nil, err
 	}
+	computeID, err := strconv.ParseUint(vmID, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse compute id [%s]: %v", vmID, err)
+	}
 
-	vm, err := c.dynamixService.ComputeSvc.GetVMByID(ctx, vmID)
+	vm, err := c.dynamixService.ComputeSvc.GetVMByID(ctx, computeID)
 	if err != nil && errors.Is(err, api.ErrNotFound) {
 		return nil, cloudprovider.InstanceNotFound
 	} else if err != nil {
