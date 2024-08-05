@@ -44,6 +44,7 @@ shell:
           url = {{ .SOURCE_REPO }}/flant/oniguruma.git
       EOF
     - git submodule update --init
+    - apt update && apt install -y --no-install-recommends git build-essential ca-certificates autoconf autotools-dev automake
     - autoreconf -fi
     - ./configure CFLAGS=-fPIC --disable-maintainer-mode --enable-all-static --disable-shared --disable-docs --disable-tls --disable-valgrind --with-oniguruma=builtin --prefix=/libjq
     - make -j4
