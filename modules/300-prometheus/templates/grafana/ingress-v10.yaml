@@ -9,7 +9,7 @@ metadata:
   annotations:
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.prometheus.auth.externalAuthentication }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.prometheus.auth.externalAuthentication.authSignInURL | quote }}
-    nginx.ingress.kubernetes.io/auth-url: {{ .Values.prometheus.auth.externalAuthentication.authURL | replace "grafana-dex-authenticator.d8-monitoring" "grafana-v10-dex-authenticator.d8-monitoring" | quote }}
+    nginx.ingress.kubernetes.io/auth-url: {{ .Values.prometheus.auth.externalAuthentication.authURL | quote }}
     nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
   {{- else }}
     nginx.ingress.kubernetes.io/auth-type: basic
