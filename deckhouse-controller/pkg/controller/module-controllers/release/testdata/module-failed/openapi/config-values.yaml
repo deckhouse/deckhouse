@@ -1,4 +1,0 @@
-type: integer
-properties:
-  replicas:
-    type: integer

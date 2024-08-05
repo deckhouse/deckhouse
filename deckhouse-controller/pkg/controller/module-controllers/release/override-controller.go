@@ -184,12 +184,7 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	tmpDir, err := os.MkdirTemp("", "module*")
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("cannot create tmp directory: %w", err)
-	}
-	defer os.RemoveAll(tmpDir)
-	md := downloader.NewModuleDownloader(c.dc, tmpDir, ms, utils.GenerateRegistryOptions(ms))
+	md := downloader.NewModuleDownloader(c.dc, c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
 	newChecksum, moduleDef, err := md.DownloadDevImageTag(mo.Name, mo.Spec.ImageTag, mo.Status.ImageDigest)
 	if err != nil {
 		mo.Status.Message = err.Error()
@@ -218,17 +213,11 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 	err = validateModule(*moduleDef)
 	if err != nil {
 		mo.Status.Message = fmt.Sprintf("validation failed: %s", err)
-		if err = c.updateModulePullOverrideStatus(ctx, mo); err != nil {
-			return ctrl.Result{Requeue: true}, fmt.Errorf("update ovveride status: %w", err)
+		if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
+			return ctrl.Result{Requeue: true}, e
 		}
-		return ctrl.Result{}, fmt.Errorf("validation failed: %w", err)
-	}
 
-	if err = os.RemoveAll(c.externalModulesDir); err != nil {
-		return ctrl.Result{}, fmt.Errorf("cannot remove old module dir %q: %w", c.externalModulesDir, err)
-	}
-	if err = copyDirectory(tmpDir, c.externalModulesDir); err != nil {
-		return ctrl.Result{}, fmt.Errorf("copy module dir: %w", err)
+		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
 	}
 
 	symlinkPath := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", moduleDef.Weight, mo.Name))

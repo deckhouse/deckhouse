@@ -131,10 +131,6 @@ func GetOpenAPIYAMLFiles(rootPath string) ([]string, error) {
 			return nil
 		}
 
-		if strings.Contains(path, "/testdata/") {
-			return nil
-		}
-
 		arr := strings.Split(path, "/")
 
 		parentDir := arr[len(arr)-2]

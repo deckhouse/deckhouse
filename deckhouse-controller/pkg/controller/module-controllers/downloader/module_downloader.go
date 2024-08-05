@@ -472,11 +472,7 @@ func InjectRegistryToModuleValues(moduleVersionPath string, moduleSource *v1alph
 
 	valuesData, err := os.ReadFile(valuesFile)
 	if err != nil {
-		if !os.IsNotExist(err) {
-			return err
-		}
-		_ = os.MkdirAll(filepath.Dir(valuesFile), 0o775)
-		valuesData = bytes.TrimSpace([]byte("type: object"))
+		return err
 	}
 
 	valuesData, err = mutateOpenapiSchema(valuesData, moduleSource)
