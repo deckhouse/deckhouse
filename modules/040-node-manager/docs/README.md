@@ -185,7 +185,7 @@ The workflow for dealing with static nodes when using Cluster API Provider Stati
    - `Running`. The server is configured and the associated node is added to the cluster.
    - `Cleaning`. The procedure of cleaning up the server and disconnecting the node from the cluster is in progress.
 
-   > It is possible to transfer an existing manually-bootstrapped cluster node under CAPS management by annotating its StaticInstance as `static.node.deckhouse.io/skip-bootstrap-phase: ""`.
+   > You can transfer the existing manually-bootstrapped cluster node under CAPS management by annotating its StaticInstance with `static.node.deckhouse.io/skip-bootstrap-phase: ""`.
 
 1. **Creating a [NodeGroup](cr.html#nodegroup) resource.**
 
