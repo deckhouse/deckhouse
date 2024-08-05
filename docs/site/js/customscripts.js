@@ -173,6 +173,22 @@ $(document).ready(function(){
   })
 });
 
+$(document).ready(function(){
+  const titles = $('.resources__prop_name');
+
+  titles.each((i, title) => {
+    $(title).click(() => {
+      const firstList = $(title).parent('li').parent('ul');
+
+      if (firstList.hasClass('resources')) return;
+
+      const parentElem = $(title).parent('li');
+
+      parentElem.toggleClass('closed');
+    })
+  })
+});
+
 const openDiagram = function () {
   const button = $('[data-open-scheme]');
   const wrap = $('.functionality-block__diagram-wrap')

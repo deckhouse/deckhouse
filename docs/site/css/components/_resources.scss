@@ -1,17 +1,17 @@
 @import "components/common/_variables.scss";
 
 .resources {
-  ul li {
-    margin: rem(14px) 0;
-    position: relative;
-  }
-
   ul, ol, li {
     & p:not(.resources__attrs) {
-        font-size: 14px;
-        margin: 0;
-        line-height: rem(20px);
-        padding-top: 0;
+      font-size: 14px;
+      margin: 0;
+      line-height: rem(20px);
+      padding-top: 0;
+      padding-bottom: $text-spacing-m;
+
+      &:last-child {
+        padding-bottom: 0;
+      }
     }
   }
 
@@ -19,10 +19,22 @@
     &_name {
       display: block;
       color: $color-main;
-      width: fit-content;
+      //width: fit-content;
+      width: 100%;
       font-weight: $font-weight-bold;
       font-family: monospace, 'Source Code Pro';
-      padding: 0;
+      //padding: 0;
+      line-height: 22px;
+      margin-bottom: $text-spacing-s;
+      cursor: pointer;
+      margin-left: -24px;
+      padding: 8px 8px 10px;
+
+      &:hover {
+        //background: $background-blue;
+        background-color: rgba(239, 243, 249, .5);
+        border-radius: 4px;
+      }
     }
 
     &_name > .ancestors,
@@ -32,10 +44,16 @@
     }
 
     &_type {
+      display: inline-block;
       color: $color-muted;
       font-style: normal;
       text-transform: uppercase;
-      font-size: rem(11px);
+      //font-size: rem(11px);
+      line-height: 22px;
+
+      &:has(+ .resources__prop_description) {
+        padding-bottom: $text-spacing-s;
+      }
 
       & + p.resources__attrs.required {
         display: inline-flex;
@@ -46,7 +64,8 @@
     }
 
     &_description {
-      margin-top: rem(7px);
+      //margin-top: rem(7px);
+      //padding-bottom: $text-spacing-l;
 
       & ul {
         padding: rem(5px);
@@ -59,7 +78,7 @@
   }
 
   &__attrs {
-    margin-top: rem(7px);
+    margin-top: 1rem;
     margin-bottom: 0;
     display: flex;
     gap: 7px;
