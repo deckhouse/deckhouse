@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+{{- /*
 # Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,7 +13,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+*/}}
+set -Eeo pipefail
 
+{{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+
+# Load bb_package_install.sh
+{{- if $bb_package_install := .Files.Get "/deckhouse/candi/bashible/bb_package_install.sh.tpl" -}}
+  {{- tpl ( $bb_package_install ) . | nindent 0 }}
+{{- end }}
+
+# Prepare D8_NODE_HOSTNAME for etcd
+{{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
+D8_NODE_HOSTNAME=$(hostname -s)
+{{- else }}
+D8_NODE_HOSTNAME=$(hostname)
+{{- end }}
+
+# Prepare UPSTREAM_REGISTRY vars for registryMode == Proxy
 {{- if eq .registry.registryMode "Proxy" }}
 UPSTREAM_REGISTRY_AUTH="$(base64 -d <<< "{{ .upstreamRegistry.auth | default "" }}")"
 if [[ "$UPSTREAM_REGISTRY_AUTH" == *":"* ]]; then
@@ -23,36 +42,39 @@ else
 fi
 {{- end }}
 
-{{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
-
-# Install igniter packages
-bb-package-install "seaweedfs:{{ .images.systemRegistry.seaweedfs }}" "dockerAuth:{{ .images.systemRegistry.dockerAuth }}" "dockerDistribution:{{ .images.systemRegistry.dockerDistribution }}"
-bb-package-install "etcd:{{ .images.controlPlaneManager.etcd }}"
-
-# Create a directories for the system registry configuration
-mkdir -p $IGNITER_DIR
-
-# Create a directories for the system registry data if it does not exist
-mkdir -p /opt/deckhouse/system-registry/seaweedfs_data/
-
-# Prepare vars
-discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
+# Other vars
+IGNITER_DIR=/opt/deckhouse/tmp/system_registry_igniter
+discovered_node_ip="$(</opt/deckhouse/tmp/discovered-node-ip)"
 internal_registry_domain="{{ .registry.address }}"
 if [[ "$internal_registry_domain" == *":"* ]]; then
     internal_registry_domain="$(echo "$internal_registry_domain" | cut -d':' -f1)"
 fi
 
 
-# Prepare certs
-bb-sync-file "$IGNITER_DIR/ca.key" - << EOF
-{{ .internalRegistryAccess.ca.key }}
-EOF
+# Install igniter packages
+bb-package-install "seaweedfs:{{ .images.systemRegistry.seaweedfs }}" "dockerAuth:{{ .images.systemRegistry.dockerAuth }}" "dockerDistribution:{{ .images.systemRegistry.dockerDistribution }}"
+bb-package-install "etcd:{{ .images.controlPlaneManager.etcd }}"
 
-bb-sync-file "$IGNITER_DIR/ca.crt" - << EOF
+# Create a directories for the system registry configuration
+# Create a directories for the system registry data if it does not exist
+mkdir -p $IGNITER_DIR
+mkdir -p /opt/deckhouse/system-registry/seaweedfs_data/
+
+# Prepare certs
+cat <<EOF > "/usr/local/share/ca-certificates/registry-ca.crt"
+{{ .registry.ca }}
+EOF
+update-ca-certificates
+
+cat <<EOF > "$IGNITER_DIR/ca.crt"
 {{ .internalRegistryAccess.ca.cert }}
 EOF
 
-bb-sync-file "$IGNITER_DIR/upstream-registry-ca.crt" - << EOF
+cat <<EOF > "$IGNITER_DIR/ca.key"
+{{ .internalRegistryAccess.ca.key }}
+EOF
+
+cat <<EOF > "$IGNITER_DIR/upstream-registry-ca.crt"
 {{ .upstreamRegistry.ca }}
 EOF
 
@@ -88,7 +110,7 @@ if [ ! -f "$IGNITER_DIR/distribution.crt" ]; then
     -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
 fi
 
-bb-sync-file "$IGNITER_DIR/auth_config.yaml" - << EOF
+cat <<EOF > "$IGNITER_DIR/auth_config.yaml"
 server:
   addr: "localhost:5051"
   certificate: "$IGNITER_DIR/auth.crt"
@@ -116,7 +138,7 @@ acl:
   # Access is denied by default.
 EOF
 
-bb-sync-file "$IGNITER_DIR/filer.toml" - << EOF
+cat <<EOF > "$IGNITER_DIR/filer.toml"
 [filer.options]
 recursive_delete = false # do we really need for registry?
 
@@ -127,7 +149,7 @@ servers = "127.0.0.1:23791"
 key_prefix = "seaweedfs_meta."
 EOF
 
-bb-sync-file "$IGNITER_DIR/master.toml" - << EOF
+cat <<EOF > "$IGNITER_DIR/master.toml"
 [master.volume_growth]
 copy_1 = 1
 copy_2 = 2
@@ -135,7 +157,7 @@ copy_3 = 3
 copy_other = 1
 EOF
 
-bb-sync-file "$IGNITER_DIR/distribution_config.yaml" - << EOF
+cat <<EOF > "$IGNITER_DIR/distribution_config.yaml"
 version: 0.1
 log:
   level: info
@@ -197,7 +219,7 @@ auth:
     autoredirect: false
 EOF
 
-bb-sync-file "$IGNITER_DIR/start_system_registry_igniter.sh" - << EOF
+cat <<EOF > "$IGNITER_DIR/start_system_registry_igniter.sh"
 #!/bin/bash
 
 for var in \$(compgen -e REGISTRY); do
@@ -287,7 +309,7 @@ echo "All services are starting in the background and logs are being written to 
 
 EOF
 
-bb-sync-file "$IGNITER_DIR/stop_system_registry_igniter.sh" - << EOF
+cat <<EOF > "$IGNITER_DIR/stop_system_registry_igniter.sh"
 #!/bin/bash
 
 stop_service() {
