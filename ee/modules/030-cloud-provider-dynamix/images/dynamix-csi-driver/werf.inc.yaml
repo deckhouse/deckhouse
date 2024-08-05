@@ -35,8 +35,8 @@ git:
     - go.mod
     - go.sum
     - "**/*.go"
-- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/dynamixcommon
-  to:  /dynamix/dynamixcommon
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/dynamix-common
+  to:  /dynamix/dynamix-common
   stageDependencies:
     install:
     - go.mod
