@@ -827,8 +827,10 @@ function change_deckhouse_image() {
   if ! $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
+D8_POD_NAME=$(kubectl -n d8-system get pod -l app=deckhouse,leader=true -o name)
+CHANGE_IMAGE_CMD="kubectl -n d8-system set image deployment/deckhouse deckhouse=dev-registry.deckhouse.io/sys/deckhouse-oss:${new_image_tag}"
 set -Eeuo pipefail
-kubectl -n d8-system set image deployment/deckhouse deckhouse=dev-registry.deckhouse.io/sys/deckhouse-oss:${new_image_tag}
+kubectl -n d8-sysyem exec -it "$D8_POD_NAME" -- $CHANGE_IMAGE_CMD
 ENDSSH
     >&2 echo "Cannot change deckhouse image to ${new_image_tag}."
     return 1
