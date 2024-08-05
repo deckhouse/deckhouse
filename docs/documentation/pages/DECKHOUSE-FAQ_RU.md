@@ -900,6 +900,97 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
    Вывод команды должен быть пуст.
 
+### Как переключить Deckhouse EE на CSE?
+
+{% alert level="warning" %}
+Инструкция подразумевает использование публичного адреса container registry: `registry-cse.deckhouse.ru`.
+{% endalert %}
+
+{% alert level="warning" %}
+В Deckhouse CSE не поддерживается работа облачных кластеров и ряда модулей.
+{% endalert %}
+
+Для переключения кластера Deckhouse Enterprise Edition на Certified Security Edition выполните следующие действия:
+
+1. Нужно убедится что с текущей версии Deckhouse можно мигрировать на CSE для этого нужно получить версию и сравнить её с версией CSE.
+
+   Версии должны совпадать до минорной части:
+   ```shell
+   kubectl get deckhousereleases.deckhouse.io -o json | jq -r '.items[] | select (.status.phase == "Deployed") | .spec.version'
+   ```
+   Пример:
+
+   ```console
+   # kubectl get deckhousereleases.deckhouse.io -o json | jq -r '.items[] | select (.status.phase == "Deployed") | .spec.version'
+   v1.62.4
+   ```
+
+   На данный момент для CSE есть только версия v1.58 и поэтому переключение на CSE не возможно c v1.62.
+
+   Если ваша версия меньше нужной то вам нужно сравнять версии перед переключением.
+
+1. Убедитесь, что используемые в кластере модули [поддерживаются в версии CSE](revision-comparison.html). Отключите модули, которые не поддерживаются в Deckhouse CSE.
+
+   Получим список включённых модулей:
+   ```shell
+   kubectl get modules.deckhouse.io | grep Enabled
+   ```
+
+1. Выполните следующую команду:
+
+   ```shell
+   LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
+   kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry-cse.deckhouse.ru/deckhouse/cse
+   ```
+
+1. Дождитесь перехода пода Deckhouse в статус `Ready`:
+
+   ```shell
+   kubectl -n d8-system get po -l app=deckhouse
+   ```
+
+1. Если под будет находиться в статусе `ImagePullBackoff`, перезапустите его:
+
+   ```shell
+   kubectl -n d8-system delete po -l app=deckhouse
+   ```
+
+1. Дождитесь перезапуска Deckhouse и [выполнения всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse):
+
+   ```shell
+   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   ```
+
+1. На master-узле проверьте применение новых настроек.
+
+   В журнале systemd-сервиса bashible на master-узле должно появиться сообщение `Configuration is in sync, nothing to do`.
+
+   Пример:
+
+   ```console
+   # journalctl -u bashible -n 5
+   Jan 12 12:38:20 demo-master-0 bashible.sh[868379]: Configuration is in sync, nothing to do.
+   Jan 12 12:38:20 demo-master-0 systemd[1]: bashible.service: Deactivated successfully.
+   Jan 12 12:39:18 demo-master-0 systemd[1]: Started Bashible service.
+   Jan 12 12:39:19 demo-master-0 bashible.sh[869714]: Configuration is in sync, nothing to do.
+   Jan 12 12:39:19 demo-master-0 systemd[1]: bashible.service: Deactivated successfully.
+   ```
+
+1. Проверьте, не осталось ли в кластере подов с адресом registry для Deckhouse EE:
+
+   ```shell
+   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ee"))))
+     | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
+   ```
+
+   И static Pod'ы (например, `kubernetes-api-proxy-*`):
+
+   ```shell
+   grep -ri 'deckhouse.io/deckhouse/ee' /etc/kubernetes | grep -v backup
+   ```
+
+   Вывод команд должен быть пуст.
+
 ### Как переключить Deckhouse CE на EE?
 
 Вам потребуется действующий лицензионный ключ (вы можете [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html) при необходимости).
