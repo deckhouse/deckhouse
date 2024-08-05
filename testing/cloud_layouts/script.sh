@@ -830,7 +830,7 @@ export LANG=C
 D8_POD_NAME=$(kubectl -n d8-system get pod -l app=deckhouse,leader=true -o name)
 CHANGE_IMAGE_CMD="kubectl -n d8-system set image deployment/deckhouse deckhouse=dev-registry.deckhouse.io/sys/deckhouse-oss:${new_image_tag}"
 set -Eeuo pipefail
-kubectl -n d8-sysyem exec -it "$D8_POD_NAME" -- $CHANGE_IMAGE_CMD
+kubectl -n d8-system exec -it "$D8_POD_NAME" -- $CHANGE_IMAGE_CMD
 ENDSSH
     >&2 echo "Cannot change deckhouse image to ${new_image_tag}."
     return 1
