@@ -17,17 +17,22 @@ import (
 var ErrNotFound = errors.New("not found")
 
 type DynamixCloudAPI struct {
-	ComputeSvc *ComputeService
+	ComputeSvc  *ComputeService
+	PortalSvc   *PortalService
+	DiskService *DiskService
 }
 
 func NewDynamixCloudAPI(config config.Credentials) (*DynamixCloudAPI, error) {
+	decortClient := decort.New(sdkconfig.Config{
+		AppID:         config.AppID,
+		AppSecret:     config.AppSecret,
+		SSOURL:        config.OAuth2URL,
+		DecortURL:     config.ControllerURL,
+		SSLSkipVerify: config.Insecure,
+	})
 	return &DynamixCloudAPI{
-		ComputeSvc: NewComputeService(decort.New(sdkconfig.Config{
-			AppID:         config.AppID,
-			AppSecret:     config.AppSecret,
-			SSOURL:        config.OAuth2URL,
-			DecortURL:     config.ControllerURL,
-			SSLSkipVerify: config.Insecure,
-		})),
+		ComputeSvc:  NewComputeService(decortClient),
+		PortalSvc:   NewPortalService(decortClient),
+		DiskService: NewDiskService(decortClient),
 	}, nil
 }
