@@ -309,7 +309,7 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 
 	suite.Run("Old deployed-on annotation", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}"}}}, nil
+			return []v1.Layer{&utils.FakeLayer{}}, nil
 		}}, nil)
 		d := moduleDirDescriptor{
 			dir:     moduleDir,
@@ -348,7 +348,7 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 
 	suite.Run("No deployed-on annotation", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}"}}}, nil
+			return []v1.Layer{&utils.FakeLayer{}}, nil
 		}}, nil)
 		d := moduleDirDescriptor{
 			dir:     moduleDir,
@@ -387,7 +387,7 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 
 	suite.Run("No symlink", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}"}}}, nil
+			return []v1.Layer{&utils.FakeLayer{}}, nil
 		}}, nil)
 		symlink := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("900-%s", moduleName))
 		d := moduleDirDescriptor{
@@ -426,7 +426,7 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 
 	suite.Run("Extra symlinks", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}"}}}, nil
+			return []v1.Layer{&utils.FakeLayer{}}, nil
 		}}, nil)
 		symlink := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("900-%s", moduleName))
 		symlink1 := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("901-%s", moduleName))
@@ -482,7 +482,7 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 
 	suite.Run("No module dir", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}"}}}, nil
+			return []v1.Layer{&utils.FakeLayer{}}, nil
 		}}, nil)
 
 		d := moduleDirDescriptor{
@@ -520,7 +520,7 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 
 	suite.Run("Wrong symlink", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}"}}}, nil
+			return []v1.Layer{&utils.FakeLayer{}}, nil
 		}}, nil)
 
 		symlink := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("900-%s", moduleName))
