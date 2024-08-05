@@ -65,7 +65,7 @@ const (
 
 func BootstrapMaster(sshClient *ssh.Client, controller *template.Controller) error {
 	return log.Process("bootstrap", "Initial bootstrap", func() error {
-		for _, bootstrapScript := range []string{"01-network-scripts.sh", "02-base-pkgs.sh"} {
+		for _, bootstrapScript := range []string{"01-network-scripts.sh", "02-base-pkgs.sh", "04-discover-node-ip.sh", "05-bootstrap-system-registry.sh"} {
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
 
 			err := retry.NewLoop(fmt.Sprintf("Execute %s", bootstrapScript), 30, 5*time.Second).
