@@ -32,7 +32,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
   - artifact: {{ $.ModuleName }}/distroless-{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    add: /src/cluster-autoscaler
+    add: /src
     to: /
     includePaths:
     - cluster-autoscaler
