@@ -39,10 +39,10 @@ const (
 )
 
 var d8storageCRs = []string{
-	"LocalStorageClass",
-	"ReplicatedStorageClass",
-	"NFSStorageClass",
-	"CephStorageClass",
+	"localstorageclasses",
+	"replicatedstorageclasses",
+	"nfsstorageclasses",
+	"cephstorageclasses",
 }
 
 const d8storageCRsApiVersion = "v1alpha1"
