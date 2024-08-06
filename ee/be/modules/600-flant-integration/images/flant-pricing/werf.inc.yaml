@@ -1,12 +1,53 @@
 ---
-image: {{ .ModuleName }}/flant-pricing
-fromImage: common/shell-operator
+image: {{ .ModuleName }}/{{ $.ImageName }}
+from: {{ $.Images.BASE_ALT_P11 }}
+import:
+- artifact: common/shell-operator-artifact
+  add: /shell-operator/shell-operator
+  to: /shell-operator
+  before: setup
+- artifact: common/shell-operator-artifact
+  add: /shell-operator/shell_lib.sh
+  to: /shell_lib.sh
+  before: setup
+- artifact: common/shell-operator-artifact
+  add: /shell-operator/frameworks
+  to: /frameworks
+  before: setup
+- artifact: common/shell-operator-artifact
+  add: /jq/jq
+  to: /usr/local/bin/jq
+  before: setup
+{{- $k8sVersion := "1.27" }}
+{{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
+- artifact: common/kubernetes-artifact-{{ $image_version }}
+  add: /src/_output/bin/kubectl
+  to: /usr/local/bin/kubectl
+  before: setup
+  - artifact: tini-artifact
+  add: /tini/tini-static
+  to: /sbin/tini
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /usr/bin
+  to: /usr/bin
+  before: install
+  includePaths:
+  - python3
+  - python3.12
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /usr/lib/python3
+  to: /usr/lib/python3
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /usr/lib64/python3
+  to: /usr/lib64/python3
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /usr/lib64/python3.12
+  to: /usr/lib64/python3.12
+  before: install
 git:
-- add: /{{ $.ModulePath }}/modules/600-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
-  to: /src
-  stageDependencies:
-    install:
-      - '**/*'
 - add: /{{ $.ModulePath }}/modules/600-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
   to: /hooks
   excludePaths:
@@ -14,12 +55,24 @@ git:
   stageDependencies:
     install:
       - '**/*'
-shell:
-  beforeInstall:
-    - apt-get update
-    - apt-get install -y python3 python3-module-pip curl
-    - apt-get clean
-  install:
-    - python3 -m pip install -r /src/requirements.txt
 docker:
-  ENTRYPOINT: ["/shell-operator"]
+  ENV:
+    SHELL_OPERATOR_HOOKS_DIR: "/hooks"
+    LOG_TYPE: json
+    PYTHONPATH: "/hooks"
+  ENTRYPOINT: ["tini", "--", "/shell-operator"]
+  CMD: ["start"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+from: {{ $.Images.BASE_ALT_P11 }}
+git:
+- add: /{{ $.ModulePath }}modules/600-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
+  to: /requirements.txt
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - apt-get update
+  - apt-get install -y python3 python3-module-pip-run
+  - pip3 install -r /requirements.txt
