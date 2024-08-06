@@ -918,7 +918,7 @@ spec:
     echo -e "${CONFIG_CONTENT}" > "${CONFIG_TMP_FILE}"  
 
     # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
-    ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destanation file
+    ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destination file
     ##  ${CERT_TMP_FILE}                          - Source file
 
     bb-sync-file \
@@ -928,8 +928,6 @@ spec:
     bb-sync-file \
       "/etc/containerd/conf.d/${REGISTRY_URL}.toml" \
       ${CONFIG_TMP_FILE} 
-
-    
   nodeGroups:
   - '*'  
   weight: 31

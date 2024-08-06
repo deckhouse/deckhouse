@@ -413,7 +413,6 @@ spec:
       "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" \
       ${CERT_TMP_FILE} \
       ca-file-updated   
-      
 ```
 
 ### Добавления сертификата в ОС и containerd
