@@ -18,28 +18,6 @@ import:
     add: /shell-operator
     to: /shell-operator
     before: setup
-  - artifact: tini-artifact
-    add: /tini/tini-static
-    to: /sbin/tini
-    before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /relocate
-    to: /
-    before: setup
-    includePaths:
-      - '**/*'
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/lib/python3
-    to: /usr/lib/python3
-    before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/lib64/python3
-    to: /usr/lib64/python3
-    before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/lib64/python3.9
-    to: /usr/lib64/python3.9
-    before: setup
 git:
 - add: /{{ .ModulePath }}
   to: /available_hooks
@@ -53,15 +31,12 @@ git:
   to: /{{ .ModulePath }}frameworks/shell/semver.sh
 - add: /{{ .ModulePath }}python_lib
   to: /frameworks/python
+shell:
+  beforeInstall:
+    - apt-get update
+    - apt-get install -y python3
+    - apt-get clean
 docker:
   ENV:
     PYTHONPATH: /frameworks/python
   ENTRYPOINT: ["/entrypoint.sh"]
-
----
-{{- $pythonBinaries := "/usr/bin/python3" }}
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
-shell:
-  setup:
-    - /binary_replace.sh -i "{{ $pythonBinaries }}" -o /relocate
