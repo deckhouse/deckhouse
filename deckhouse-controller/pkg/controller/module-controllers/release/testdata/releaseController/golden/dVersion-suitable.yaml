@@ -30,6 +30,8 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    release.deckhouse.io/notified: "false"
   creationTimestamp: null
   labels:
     module: parca-suitable
@@ -43,7 +45,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot-suitable
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "999"
+  resourceVersion: "1002"
 spec:
   changelog:
     features:
@@ -56,7 +58,7 @@ spec:
 status:
   approved: false
   message: ""
-  phase: Pending
-  pullDuration: 0s
+  phase: Deployed
+  pullDuration: 9m15s
   size: 0
-  transitionTime: "2024-05-03T20:55:49Z"
+  transitionTime: "2019-10-17T15:33:00Z"

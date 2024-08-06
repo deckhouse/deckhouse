@@ -24,6 +24,7 @@ import (
 	"syscall"
 	"time"
 
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	cp "github.com/otiai10/copy"
 	log "github.com/sirupsen/logrus"
@@ -225,7 +226,11 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, fmt.Errorf("got an empty module definition for %s module pull override", mo.Name)
 	}
 
-	err = validateModule(*moduleDef)
+	var values = make(addonutils.Values)
+	if module := c.moduleManager.GetModule(moduleDef.Name); module != nil {
+		values = module.GetConfigValues(false)
+	}
+	err = validateModule(*moduleDef, values)
 	if err != nil {
 		mo.Status.Message = fmt.Sprintf("validation failed: %s", err)
 		if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
