@@ -20,20 +20,23 @@
       display: block;
       color: $color-main;
       //width: fit-content;
-      width: 100%;
+      //width: 100%;
+      width: calc(100% + 16px);
       font-weight: $font-weight-bold;
       font-family: monospace, 'Source Code Pro';
       //padding: 0;
       line-height: 22px;
-      margin-bottom: $text-spacing-s;
+      margin-bottom: 6px;
       cursor: pointer;
       margin-left: -24px;
-      padding: 8px 8px 10px;
+      padding: 8px 8px 0;
 
       &:hover {
         //background: $background-blue;
-        background-color: rgba(239, 243, 249, .5);
+        //background-color: rgba(239, 243, 249, .5);
+        background: linear-gradient(180deg, #EFF3F9 0%, #FFF 100%);
         border-radius: 4px;
+        //opacity: 0.5;
       }
     }
 
