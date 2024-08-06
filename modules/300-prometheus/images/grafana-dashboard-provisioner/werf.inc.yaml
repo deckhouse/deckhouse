@@ -11,16 +11,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
-mount:
-  - from: tmp_dir
-    to:  /var/lib/apt/lists/
-  - from: tmp_dir
-    to:  /var/cache/apt/
 shell:
   beforeInstall:
     - apt-get update
     - apt-get install -y python3
     - apt-get clean
+    - find /var/lib/apt/lists/ /var/cache/apt/ -type f -delete
   install:
     - export SOURCE_REPO={{ .SOURCE_REPO }}
     - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
