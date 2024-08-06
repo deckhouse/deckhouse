@@ -874,10 +874,8 @@ spec:
 
     REGISTRY_URL=private.registry.example
     CERT_FILE_NAME=${REGISTRY_URL}
-
-    if [ ! -f /var/lib/containerd/certs/${CERT_FILE_NAME}.crt ]; then
-        mkdir -p /var/lib/containerd/certs
-        bb-sync-file /var/lib/containerd/certs/${CERT_FILE_NAME}.crt - << "EOF"
+    CERTS_FOLDER="/var/lib/containerd/certs/"
+    CERT_CONTENT=$(cat <<"EOF"
     -----BEGIN CERTIFICATE-----
     MIIDSjCCAjKgAwIBAgIRAJ4RR/WDuAym7M11JA8W7D0wDQYJKoZIhvcNAQELBQAw
     JTEjMCEGA1UEAxMabmV4dXMuNTEuMjUwLjQxLjIuc3NsaXAuaW8wHhcNMjQwODAx
@@ -899,17 +897,39 @@ spec:
     iATq8C7qhUOGsknDh3QSpOJeJmpcBwln11/9BGRP
     -----END CERTIFICATE-----
     EOF
+    )
 
-        mkdir -p /etc/containerd/conf.d
-        bb-sync-file /etc/containerd/conf.d/${REGISTRY_URL}.toml - << EOF
+    CONFIG_CONTENT=$(cat <<EOF
     [plugins]
       [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
-        ca_file = "/var/lib/containerd/certs/${CERT_FILE_NAME}.crt"
+        ca_file = "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"
     EOF
+    )
 
-    else
-        exit 0
-    fi    
+    mkdir -p ${CERTS_FOLDER}
+    mkdir -p /etc/containerd/conf.d
+
+    # bb-tmp-file - Create temp file function. More information: http://www.bashbooster.net/#tmp
+
+    CERT_TMP_FILE="$( bb-tmp-file )"
+    echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
+    
+    CONFIG_TMP_FILE="$( bb-tmp-file )"
+    echo -e "${CONFIG_CONTENT}" > "${CONFIG_TMP_FILE}"  
+
+    # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
+    ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destanation file
+    ##  ${CERT_TMP_FILE}                          - Source file
+
+    bb-sync-file \
+      "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" \
+      ${CERT_TMP_FILE} 
+
+    bb-sync-file \
+      "/etc/containerd/conf.d/${REGISTRY_URL}.toml" \
+      ${CONFIG_TMP_FILE} 
+
+    
   nodeGroups:
   - '*'  
   weight: 31

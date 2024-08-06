@@ -364,8 +364,8 @@ spec:
   - 'ubuntu-lts'
   content: |-
     CERT_FILE_NAME=example_ca
-    if [ ! -f /usr/local/share/ca-certificates/${CERT_FILE_NAME}.crt ]; then
-        bb-sync-file /usr/local/share/ca-certificates/${CERT_FILE_NAME}.crt - << "EOF"
+    CERTS_FOLDER="/usr/local/share/ca-certificates"
+    CERT_CONTENT=$(cat <<EOF
     -----BEGIN CERTIFICATE-----
     MIIDSjCCAjKgAwIBAgIRAJ4RR/WDuAym7M11JA8W7D0wDQYJKoZIhvcNAQELBQAw
     JTEjMCEGA1UEAxMabmV4dXMuNTEuMjUwLjQxLjIuc3NsaXAuaW8wHhcNMjQwODAx
@@ -387,10 +387,33 @@ spec:
     iATq8C7qhUOGsknDh3QSpOJeJmpcBwln11/9BGRP
     -----END CERTIFICATE-----
     EOF
-        update-ca-certificates
-    else
-        exit 0
-    fi    
+    )
+
+   
+    # bb-event           - Creating subscription for event function. More information: http://www.bashbooster.net/#event
+    ## ca-file-updated   - Event name
+    ## update-certs      - The function name that the event will call
+    
+    bb-event-on "ca-file-updated" "update-certs"
+    
+    update-certs() {          # Function with commands for adding a certificate to the store
+      update-ca-certificates
+    }
+
+    # bb-tmp-file - Creating temp file function. More information: http://www.bashbooster.net/#tmp
+    CERT_TMP_FILE="$( bb-tmp-file )"
+    echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
+    
+    # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
+    ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destination file
+    ##  ${CERT_TMP_FILE}                          - Source file
+    ##  ca-file-updated                           - Name of event that will be called if the file changes.
+
+    bb-sync-file \
+      "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" \
+      ${CERT_TMP_FILE} \
+      ca-file-updated   
+      
 ```
 
 ### Добавления сертификата в ОС и containerd
@@ -409,7 +432,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: add-custom-ca.sh
+  name: add-custom-ca-containerd..sh
 spec:
   weight: 31
   nodeGroups:
@@ -419,8 +442,8 @@ spec:
   content: |-
     REGISTRY_URL=private.registry.example
     CERT_FILE_NAME=${REGISTRY_URL}
-    if [ ! -f /usr/local/share/ca-certificates/${CERT_FILE_NAME}.crt ]; then
-        bb-sync-file /usr/local/share/ca-certificates/${CERT_FILE_NAME}.crt - << "EOF"
+    CERTS_FOLDER="/usr/local/share/ca-certificates"
+    CERT_CONTENT=$(cat <<EOF
     -----BEGIN CERTIFICATE-----
     MIIDSjCCAjKgAwIBAgIRAJ4RR/WDuAym7M11JA8W7D0wDQYJKoZIhvcNAQELBQAw
     JTEjMCEGA1UEAxMabmV4dXMuNTEuMjUwLjQxLjIuc3NsaXAuaW8wHhcNMjQwODAx
@@ -442,16 +465,46 @@ spec:
     iATq8C7qhUOGsknDh3QSpOJeJmpcBwln11/9BGRP
     -----END CERTIFICATE-----
     EOF
-
-        update-ca-certificates
-        mkdir -p /etc/containerd/conf.d
-        bb-sync-file /etc/containerd/conf.d/${REGISTRY_URL}.toml - << EOF
+    )
+    CONFIG_CONTENT=$(cat <<EOF
     [plugins]
       [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
-        ca_file = "/usr/local/share/ca-certificates/${CERT_FILE_NAME}.crt"
+        ca_file = "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"
     EOF
+    )
+    
+    mkdir -p /etc/containerd/conf.d
 
-    else
-        exit 0
-    fi    
+    # bb-tmp-file - Create temp file function. More information: http://www.bashbooster.net/#tmp
+
+    CERT_TMP_FILE="$( bb-tmp-file )"
+    echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
+    
+    CONFIG_TMP_FILE="$( bb-tmp-file )"
+    echo -e "${CONFIG_CONTENT}" > "${CONFIG_TMP_FILE}"  
+
+    # bb-event           - Creating subscription for event function. More information: http://www.bashbooster.net/#event
+    ## ca-file-updated   - Event name
+    ## update-certs      - The function name that the event will call
+    
+    bb-event-on "ca-file-updated" "update-certs"
+    
+    update-certs() {          # Function with commands for adding a certificate to the store
+      update-ca-certificates  # Restarting the containerd service is not required as this is done automatically in the script 032_configure_containerd.sh
+    }
+
+    
+    # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
+    ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destination file
+    ##  ${CERT_TMP_FILE}                          - Source file
+    ##  ca-file-updated                           - Name of event that will be called if the file changes.
+
+    bb-sync-file \
+      "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" \
+      ${CERT_TMP_FILE} \
+      ca-file-updated   
+      
+    bb-sync-file \
+      "/etc/containerd/conf.d/${REGISTRY_URL}.toml" \
+      ${CONFIG_TMP_FILE} 
 ```
