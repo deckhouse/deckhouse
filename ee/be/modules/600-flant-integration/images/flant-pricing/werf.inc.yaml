@@ -2,8 +2,8 @@
 image: {{ .ModuleName }}/{{ $.ImageName }}
 fromImage: common/shell-operator
 git:
-- add: /{{ $.ModulePath }}modules/600-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
-  to: /src/requirements.txt
+- add: /{{ $.ModulePath }}/modules/600-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
   stageDependencies:
     install:
     - '**/*'
