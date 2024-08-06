@@ -99,11 +99,14 @@ type ControllerTestSuite struct {
 	ctr        *deckhouseReleaseReconciler
 
 	testDataFileName string
+	backupTZ         *time.Location
 }
 
 func (suite *ControllerTestSuite) SetupSuite() {
 	flag.Parse()
 	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
+	suite.backupTZ = time.Local
+	time.Local = dependency.TestTimeZone
 }
 
 func (suite *ControllerTestSuite) SetupSubTest() {
@@ -113,6 +116,10 @@ func (suite *ControllerTestSuite) SetupSubTest() {
 		Return(&http.Response{
 			StatusCode: http.StatusOK,
 		}, nil)
+}
+
+func (suite *ControllerTestSuite) TearDownSuite() {
+	time.Local = suite.backupTZ
 }
 
 func (suite *ControllerTestSuite) TearDownSubTest() {

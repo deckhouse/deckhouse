@@ -54,8 +54,9 @@ type Container interface {
 }
 
 var (
-	defaultDC Container
-	TestDC    *mockedDependencyContainer
+	defaultDC    Container
+	TestDC       *mockedDependencyContainer
+	TestTimeZone = time.UTC
 )
 
 func init() {
@@ -346,7 +347,7 @@ func (mdc *mockedDependencyContainer) GetClock() clockwork.Clock {
 		return mdc.clock
 	}
 
-	t := time.Date(2019, time.October, 17, 15, 33, 0, 0, time.UTC)
+	t := time.Date(2019, time.October, 17, 15, 33, 0, 0, TestTimeZone)
 	cc := clockwork.NewFakeClockAt(t)
 	mdc.clock = cc
 	return cc
