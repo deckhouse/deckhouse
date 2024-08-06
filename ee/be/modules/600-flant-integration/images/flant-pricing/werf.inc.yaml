@@ -6,7 +6,7 @@ git:
   to: /src
   stageDependencies:
     install:
-    - '**/*'
+      - '**/*'
 - add: /{{ $.ModulePath }}/modules/600-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
   to: /hooks
   excludePaths:
