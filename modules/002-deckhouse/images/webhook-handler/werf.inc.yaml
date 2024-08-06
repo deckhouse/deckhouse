@@ -35,7 +35,8 @@ shell:
   beforeInstall:
     - apt-get update
     - apt-get install -y python3
-    - apt-get clean
+    - apt-get clean autoclean
+    - rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 docker:
   ENV:
     PYTHONPATH: /frameworks/python
