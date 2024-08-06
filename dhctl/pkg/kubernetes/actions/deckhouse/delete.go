@@ -77,7 +77,7 @@ func DeleteDeckhouseStorageCRs(kubeCl *client.KubernetesClient) error {
 				if err != nil {
 					return fmt.Errorf("delete %s %s: %v", cr, obj.GetName(), err)
 				}
-				log.InfoF("%s/%s\n", obj.GetNamespace(), obj.GetName())
+				log.InfoF("%s/%s\n", obj.GetKind(), obj.GetName())
 			}
 		}
 		return nil
