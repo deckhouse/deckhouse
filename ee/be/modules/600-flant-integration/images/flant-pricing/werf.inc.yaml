@@ -15,11 +15,12 @@ git:
     install:
       - '**/*'
 shell:
-  install:
+  beforeInstall:
   - apt-get update
-  - apt-get install -y python3 python3-module-pip-run ca-certificates curl
-  - pip3 install -r /src/requirements.txt
+  - apt-get install -y python3 python3-module-pip curl
   - apt-get clean
+  install:
+  - python3 -m pip install -r /src/requirements.txt
 docker:
   ENV:
     SHELL_OPERATOR_HOOKS_DIR: "/hooks"
