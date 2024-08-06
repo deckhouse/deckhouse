@@ -56,13 +56,47 @@ type ProbeAvailability struct {
 	Status PublicStatus `json:"status"`
 }
 
-type PublicStatus string
+type PublicStatus int
 
 const (
-	StatusOperational PublicStatus = "Operational"
-	StatusDegraded    PublicStatus = "Degraded"
-	StatusOutage      PublicStatus = "Outage"
+	StatusNoData PublicStatus = iota
+	StatusOperational
+	StatusOutage
+	StatusDegraded
+	StatusError // unexpected to have this status
 )
+
+func (s PublicStatus) Compare(s1 PublicStatus) PublicStatus {
+	if s == StatusError || s1 == StatusError {
+		return StatusError
+	}
+	if s == s1 {
+		return s
+	}
+	if s == StatusNoData {
+		return s1
+	}
+	if s1 == StatusNoData {
+		return s
+	}
+
+	return StatusDegraded
+}
+
+func (s PublicStatus) String() string {
+	switch s {
+	case StatusOperational:
+		return "Operational"
+	case StatusDegraded:
+		return "Degraded"
+	case StatusOutage:
+		return "Outage"
+	case StatusNoData:
+		return "No Data"
+	default:
+		return "Error"
+	}
+}
 
 type PublicStatusHandler struct {
 	DbCtx           *dbcontext.DbContext
@@ -83,13 +117,14 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	statuses, err := h.getGroupStatusList(r.URL.Query().Get("peek") == "1")
+	wantsPeek := r.URL.Query().Get("peek") == "1"
+	statuses, err := h.getGroupStatusList(wantsPeek)
 	if err != nil {
-		log.Errorf("Cannot get status summary: %v", err)
+		log.Errorf("Cannot get status summary (peek=%v): %v", wantsPeek, err)
 		// Skipping the error because the JSON structure is defined in advance.
 		out, _ := json.Marshal(&PublicStatusResponse{
 			Rows:   []GroupStatus{},
-			Status: "No data for last 15 min",
+			Status: StatusNoData,
 		})
 		w.WriteHeader(http.StatusOK)
 		w.Write(out)
@@ -118,7 +153,7 @@ func (h *PublicStatusHandler) getGroupStatusList(peek bool) ([]GroupStatus, erro
 		return h.calcStatuses(
 			new30SecondsStepRange(now),
 			dao.NewEpisodeDao30s(daoCtx),
-			func(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary) ([]entity.EpisodeSummary, error) {
+			func(ref check.ProbeRef, statuses summaryListByProbeByGroup) ([]entity.EpisodeSummary, error) {
 				slotSize := 30 * time.Second
 				return pickGroupProbeSummaryByLastCompleteEpisode(ref, statuses, slotSize)
 			},
@@ -133,7 +168,7 @@ func (h *PublicStatusHandler) getGroupStatusList(peek bool) ([]GroupStatus, erro
 	)
 }
 
-type summaryPicker func(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary) ([]entity.EpisodeSummary, error)
+type summaryPicker func(ref check.ProbeRef, statuses summaryListByProbeByGroup) ([]entity.EpisodeSummary, error)
 
 func (h *PublicStatusHandler) calcStatuses(
 	rng ranges.StepRange,
@@ -145,8 +180,6 @@ func (h *PublicStatusHandler) calcStatuses(
 		"InfrastructureMaintenance",
 		"InfrastructureAccident",
 	}
-
-	slotSize := time.Duration(rng.Step) * time.Second
 
 	groups := h.ProbeLister.Groups()
 	groupStatuses := make([]GroupStatus, 0, len(groups))
@@ -163,7 +196,7 @@ func (h *PublicStatusHandler) calcStatuses(
 			muteDowntimeTypes: muteTypes,
 		}
 
-		groupSummary, err := h.getProbeSummary(lister, filter, pickSummary)
+		groupSummary, err := h.episodeSummaryList(lister, filter, pickSummary)
 		if err != nil {
 			return nil, fmt.Errorf("getting summary for group %s: %v", group, err)
 		}
@@ -182,7 +215,7 @@ func (h *PublicStatusHandler) calcStatuses(
 				muteDowntimeTypes: muteTypes,
 			}
 
-			probeSummary, err := h.getProbeSummary(lister, filter, pickSummary)
+			probeSummary, err := h.episodeSummaryList(lister, filter, pickSummary)
 			if err != nil {
 				return nil, fmt.Errorf("getting summary for probe %s/%s: %v", group, groupRef.Probe, err)
 			}
@@ -194,13 +227,13 @@ func (h *PublicStatusHandler) calcStatuses(
 			probeAvails = append(probeAvails, ProbeAvailability{
 				Probe:        probeRef.Probe,
 				Availability: av,
-				Status:       calculateStatus(probeSummary, slotSize),
+				Status:       calculateStatus(probeSummary),
 			})
 		}
 
 		gs := GroupStatus{
 			Group:  group,
-			Status: calculateStatus(groupSummary, slotSize),
+			Status: calculateStatus(groupSummary),
 			Probes: probeAvails,
 		}
 		groupStatuses = append(groupStatuses, gs)
@@ -209,7 +242,7 @@ func (h *PublicStatusHandler) calcStatuses(
 	return groupStatuses, nil
 }
 
-func (h *PublicStatusHandler) getProbeSummary(
+func (h *PublicStatusHandler) episodeSummaryList(
 	lister entity.RangeEpisodeLister,
 	filter *statusFilter,
 	pickSummary summaryPicker,
@@ -257,7 +290,7 @@ func new30SecondsStepRange(now time.Time) ranges.StepRange {
 var ErrNoData = fmt.Errorf("no data")
 
 // pickGroupProbeSummaryByLastCompleteEpisode returns the last fulfilled episode summary for the given probe.
-func pickGroupProbeSummaryByLastCompleteEpisode(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary, slotSize time.Duration) ([]entity.EpisodeSummary, error) {
+func pickGroupProbeSummaryByLastCompleteEpisode(ref check.ProbeRef, statuses summaryListByProbeByGroup, slotSize time.Duration) ([]entity.EpisodeSummary, error) {
 	summary, err := pickGroupProbeSummary(ref, statuses)
 	if err != nil {
 		return nil, fmt.Errorf("getting summary for slot size %s: %w", slotSize, err)
@@ -270,7 +303,7 @@ func pickGroupProbeSummaryByLastCompleteEpisode(ref check.ProbeRef, statuses map
 }
 
 // pickGroupProbeSummary
-func pickGroupProbeSummary(ref check.ProbeRef, statuses map[string]map[string][]entity.EpisodeSummary) ([]entity.EpisodeSummary, error) {
+func pickGroupProbeSummary(ref check.ProbeRef, statuses summaryListByProbeByGroup) ([]entity.EpisodeSummary, error) {
 	g := ref.Group
 	p := ref.Probe
 
@@ -312,57 +345,44 @@ func shrinkToFulfilled(summary []entity.EpisodeSummary, slotSize time.Duration) 
 // Input array should have 3 elements, but might have only twoof them.
 //
 // The status returned is as follows:
-//   - Operational is when we observe only uptime or no data at all
-//   - Outage is when we observe only downtime
-//   - Degraded is when we observe mixed uptime and downtime
-func calculateStatus(sums []entity.EpisodeSummary, slotSize time.Duration) PublicStatus {
-	// for the peek case
+//   - 'Operational' is when we observe only uptime
+//   - 'Outage' is when we observe only downtime
+//   - 'Degraded' is when we observe mixed uptime and downtime
+//   - 'No Data' is when we have no data
+func calculateStatus(sums []entity.EpisodeSummary) PublicStatus {
+	// initial case
+	if len(sums) == 0 {
+		return StatusNoData
+	}
+
+	status := episodeStatus(sums[0])
+
+	// peek case
 	if len(sums) == 1 {
-		hasUp := sums[0].Up > 0 || sums[0].Unknown > 0
-		hasDown := sums[0].Down > 0
-
-		switch {
-		case hasDown && !hasUp:
-			return StatusOutage
-		case !hasDown && hasUp:
-			return StatusOperational
-		case hasDown && hasUp:
-			return StatusDegraded
-		default:
-			return StatusOperational // no news is good news by design :)
-		}
+		return status
 	}
 
-	var prev, cur entity.EpisodeSummary
-	if len(sums) == 2 || sums[2].NoData == slotSize {
-		// we have only two slots of data at most
-		prev, cur = sums[0], sums[1]
-	} else {
-		// ignore 1st slot, pick fresher ones
-		prev, cur = sums[1], sums[2]
+	// muted episodes are not supported yet
+	for _, s := range sums {
+		status = status.Compare(episodeStatus(s))
 	}
+	return status
+}
 
-	// Operational is when we observe only uptime
-	var (
-		hasNoDowntime = cur.Down == 0 && prev.Down == 0
-		hasUptime     = cur.Up > 0 || (prev.Up > 0 && cur.NoData == slotSize)
-	)
-	if hasNoDowntime && hasUptime {
-		return StatusOperational
-	}
+func episodeStatus(episode entity.EpisodeSummary) PublicStatus {
+	hasUp := episode.Up > 0 || episode.Unknown > 0
+	hasDown := episode.Down > 0
 
-	// Outage is when we observe only downtime
-	var (
-		hasNoUptime = cur.Up == 0 && prev.Up == 0
-		isNotMuted  = cur.Muted == 0 && prev.Muted == 0
-		hasDowntime = cur.Down > 0 || (prev.Down > 0 && cur.NoData == slotSize)
-	)
-	if hasNoUptime && isNotMuted && hasDowntime {
+	switch {
+	case hasDown && !hasUp:
 		return StatusOutage
+	case !hasDown && hasUp:
+		return StatusOperational
+	case hasDown && hasUp:
+		return StatusDegraded
+	default:
+		return StatusNoData
 	}
-
-	// Degraded is when we observe mixed uptime and downtime
-	return StatusDegraded
 }
 
 // calculateTotalStatus returns total cluster status.

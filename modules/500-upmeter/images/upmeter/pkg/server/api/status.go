@@ -32,13 +32,15 @@ import (
 )
 
 type StatusResponse struct {
-	Step      int64                                         `json:"step"`
-	From      int64                                         `json:"from"`
-	To        int64                                         `json:"to"`
-	Statuses  map[string]map[string][]entity.EpisodeSummary `json:"statuses"`
-	Episodes  []check.Episode                               `json:"episodes"`
-	Incidents []check.DowntimeIncident                      `json:"incidents"`
+	Step      int64                     `json:"step"`
+	From      int64                     `json:"from"`
+	To        int64                     `json:"to"`
+	Statuses  summaryListByProbeByGroup `json:"statuses"`
+	Episodes  []check.Episode           `json:"episodes"`
+	Incidents []check.DowntimeIncident  `json:"incidents"`
 }
+
+type summaryListByProbeByGroup map[string]map[string][]entity.EpisodeSummary
 
 type StatusRangeHandler struct {
 	DbCtx           *dbcontext.DbContext
