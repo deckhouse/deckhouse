@@ -65,7 +65,8 @@ func DeleteDeckhouseStorageCRs(kubeCl *client.KubernetesClient) error {
 			storageCRs, err := kubeCl.Dynamic().Resource(resourceSchema).Namespace(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
 			if err != nil {
 				if errors.IsNotFound(err) {
-					log.DebugF("Resource %s not found, skipping...\n", cr)
+					// log.DebugF("Resource %s not found, skipping...\n", cr)
+					log.InfoF("Resource %s not found, skipping...\n", cr)
 					continue
 				}
 				return fmt.Errorf("get %s: %v", cr, err)
