@@ -366,7 +366,7 @@ func Test_calculateAvailability(t *testing.T) {
 	}
 }
 
-func Test_new30SecondsStepRange(t *testing.T) {
+func Test_newOneMinuteStepRange(t *testing.T) {
 	now := time.Date(2024, time.November, 13, 0o4, 42, 17, 647, time.UTC)
 	step := 30 * time.Second
 	aligned := now.Truncate(step)
@@ -376,8 +376,8 @@ func Test_new30SecondsStepRange(t *testing.T) {
 	misalignedAlittleBit := aligned.Add(1 * time.Nanosecond)
 	// fmt.Println(aligned, misaligned, misalignedAlittleBit)
 
-	// The range we expect is from the recent 30s episode. All arguments are in seconds
-	recent30sRange := ranges.NewStepRange(aligned.Add(-step).Unix(), aligned.Unix(), int64(step.Seconds()))
+	// The range we expect is from the recent two 30s episodes. All arguments are in seconds
+	recentOneMinuteRange := ranges.NewStepRange(aligned.Add(-2*step).Unix(), aligned.Unix(), int64(step.Seconds()))
 
 	type args struct {
 		now time.Time
@@ -390,24 +390,24 @@ func Test_new30SecondsStepRange(t *testing.T) {
 		{
 			name: "aligned time",
 			args: args{now: aligned},
-			want: recent30sRange,
+			want: recentOneMinuteRange,
 		},
 		{
 			name: "misaligned time by 1.001s",
 			args: args{now: misaligned},
-			want: recent30sRange,
+			want: recentOneMinuteRange,
 		},
 		{
 			name: "misaligned time by 1ns",
 			args: args{now: misalignedAlittleBit},
-			want: recent30sRange,
+			want: recentOneMinuteRange,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := new30SecondsStepRange(tt.args.now); !stepRangeEqual(got, tt.want) {
-				t.Errorf("new30SecondsStepRange() = %v, want %v", got, tt.want)
+			if got := newOneMinuteStepRange(tt.args.now); !stepRangeEqual(got, tt.want) {
+				t.Errorf("newOneMinuteRangetepRange() = %v, want %v", got, tt.want)
 			}
 		})
 	}

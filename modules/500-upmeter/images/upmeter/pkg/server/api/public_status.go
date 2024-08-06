@@ -152,7 +152,7 @@ func (h *PublicStatusHandler) getGroupStatusList(peek bool) ([]GroupStatus, erro
 	if peek {
 		// Observe only last fulfilled 30 seconds for the speed of availability calculation
 		return h.calcStatuses(
-			new30SecondsStepRange(now),
+			newOneMinuteStepRange(now),
 			dao.NewEpisodeDao30s(daoCtx),
 			func(ref check.ProbeRef, statuses summaryListByProbeByGroup) ([]entity.EpisodeSummary, error) {
 				slotSize := 30 * time.Second
@@ -283,10 +283,13 @@ func new15MinutesStepRange(now time.Time) ranges.StepRange {
 	return ranges.New5MinStepRange(from.Unix(), to.Unix(), int64(step.Seconds()))
 }
 
-func new30SecondsStepRange(now time.Time) ranges.StepRange {
+// newOneMinuteStepRange returns a step range for the last 1 minute. It is used to peek the current
+// status. The range is 2 steps long to avoid missing data when user fetches recent 30s episode when
+// it hasn't been received yet from agents.
+func newOneMinuteStepRange(now time.Time) ranges.StepRange {
 	step := 30 * time.Second
 	to := now.Truncate(step)
-	from := to.Add(-step)
+	from := to.Add(-2 * step) // 1min
 	return ranges.New30SecStepRange(from.Unix(), to.Unix(), int64(step.Seconds()))
 }
 

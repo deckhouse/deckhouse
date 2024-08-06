@@ -53,7 +53,7 @@ func New30SecStepRange(from, to, step int64) StepRange {
 	return NewStepRange(from, to, step)
 }
 
-// New5MinStepRange aligns range borders and calculates subranges.
+// NewStepRange aligns range borders and calculates subranges.
 func NewStepRange(from, to, step int64) StepRange {
 	to = alignEdgeForward(to, step)
 	count := (to - from) / step
@@ -91,7 +91,7 @@ func alignStep(step, min int64) int64 {
 	return maxInt64(min, step-step%min)
 }
 
-// alignEdgeForward makes sure the edge is a multiple of step, rounded to bigger side.
+// alignEdgeForward makes sure the edge is a multiple of the step, rounded to bigger side.
 func alignEdgeForward(to, step int64) int64 {
 	if to%step == 0 {
 		return to
