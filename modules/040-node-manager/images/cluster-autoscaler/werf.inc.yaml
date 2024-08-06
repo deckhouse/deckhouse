@@ -19,11 +19,10 @@ shell:
   install:
   - mkdir /src
   - cd /src
-    {{- $clusterAutoscalerVersion := printf "%s.%s" $version $value.clusterAutoscalerPatch }}
     {{- if semverCompare ">=1.30" $version }}
-      {{- $clusterAutoscalerVersion = printf "%s.%s" "1.29" $value.clusterAutoscalerPatch }}
+      {{- $version = "1.29" }}
     {{- end }}
-  - git clone --depth 1 --branch v{{ $clusterAutoscalerVersion }} {{ $.SOURCE_REPO }}/gardener/autoscaler.git .
+  - git clone --depth 1 --branch v{{ $version }}.{{ $value.clusterAutoscalerPatch }} {{ $.SOURCE_REPO }}/gardener/autoscaler.git .
   - git apply /patches/{{ $version }}/*.patch --verbose
   - cd cluster-autoscaler
   - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o cluster-autoscaler
