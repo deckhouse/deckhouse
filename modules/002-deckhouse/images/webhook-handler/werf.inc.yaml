@@ -31,12 +31,16 @@ git:
   to: /{{ .ModulePath }}frameworks/shell/semver.sh
 - add: /{{ .ModulePath }}python_lib
   to: /frameworks/python
+mount:
+  - from: tmp_dir
+    to:  /var/lib/apt/lists/
+  - from: tmp_dir
+    to:  /var/cache/apt/
 shell:
   beforeInstall:
     - apt-get update
     - apt-get install -y python3
     - apt-get clean
-    - rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 docker:
   ENV:
     PYTHONPATH: /frameworks/python
