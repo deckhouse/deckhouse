@@ -389,7 +389,6 @@ spec:
     EOF
     )
 
-   
     # bb-event           - Creating subscription for event function. More information: http://www.bashbooster.net/#event
     ## ca-file-updated   - Event name
     ## update-certs      - The function name that the event will call
@@ -493,7 +492,6 @@ spec:
       update-ca-certificates  # Restarting the containerd service is not required as this is done automatically in the script 032_configure_containerd.sh
     }
 
-    
     # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
     ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destination file
     ##  ${CERT_TMP_FILE}                          - Source file
