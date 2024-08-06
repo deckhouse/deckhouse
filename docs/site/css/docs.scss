@@ -5,7 +5,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    margin: 25px 0 10px;
+    margin: 25px 0 40px;
 }
 
 .breadcrumbs__left {
@@ -677,7 +677,8 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs {
-    margin-bottom: 50px;
+    //margin-bottom: 50px;
+    margin-bottom: 112px;
 }
 
 .docs .hidden {
@@ -737,6 +738,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
     & > .resources__prop_name {
         margin-left: -8px;
+        width: 100%;
     }
 
     & > .resources__prop_name > .plus-icon,
@@ -809,14 +811,19 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs ul > li.closed > ul,
-.docs ul > li.closed > div,
-.docs ul > li.closed > span:not(.resources__prop_name),
-.docs ul > li.closed > p {
+.docs ul > li.closed > div:not(.resources__prop_name),
+.docs ul > li.closed > span,
+.docs ul > li.closed > p,
+.docs ul > li.closed > p.resources__attrs {
     display: none;
     //max-height: 0;
     //overflow: hidden;
     //padding: 0;
     //margin: 0;
+}
+
+.docs .resources pre.highlight {
+  padding-left: 16px;
 }
 
 .docs ol {
@@ -855,7 +862,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 .docs:not(.docs--modules) h4,
 .docs:not(.docs--modules) h5,
 .docs:not(.docs--modules) h6 {
-    margin-bottom: 40px;
+    margin-bottom: 30px;
     margin-top: 30px;
 }
 
