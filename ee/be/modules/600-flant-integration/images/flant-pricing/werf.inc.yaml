@@ -55,6 +55,11 @@ git:
   stageDependencies:
     install:
       - '**/*'
+shell:
+  install:
+  - apt-get update
+  - apt-get install -y ca-certificates curl
+  - apt-get clean
 docker:
   ENV:
     SHELL_OPERATOR_HOOKS_DIR: "/hooks"
