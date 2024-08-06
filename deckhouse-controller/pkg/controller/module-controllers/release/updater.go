@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	cp "github.com/otiai10/copy"
 	"os"
 	"path"
 	"strconv"
@@ -177,7 +178,10 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 	if err = os.RemoveAll(moduleVersionPath); err != nil {
 		return fmt.Errorf("cannot remove old module dir %q: %w", moduleVersionPath, err)
 	}
-	if err = copyDirectory(tmpModuleVersionPath, moduleVersionPath); err != nil {
+	if err = os.RemoveAll(k.downloadedModulesDir); err != nil {
+		return fmt.Errorf("cannot remove old module dir %q: %w", k.downloadedModulesDir, err)
+	}
+	if err = cp.Copy(tmpDir, k.downloadedModulesDir); err != nil {
 		return fmt.Errorf("copy module dir: %w", err)
 	}
 	def.Path = moduleVersionPath

@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
+	cp "github.com/otiai10/copy"
 	log "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -227,14 +228,17 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 	err = validateModule(*moduleDef)
 	if err != nil {
 		mo.Status.Message = fmt.Sprintf("validation failed: %s", err)
-		if err = c.updateModulePullOverrideStatus(ctx, mo); err != nil {
-			return ctrl.Result{Requeue: true}, fmt.Errorf("update ovveride status: %w", err)
+		if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
+			return ctrl.Result{Requeue: true}, fmt.Errorf("update ovveride status: %w", e)
 		}
 		return result, fmt.Errorf("validation failed: %w", err)
 	}
 
-	if err = copyDirectory(tmpDir, c.downloadedModulesDir); err != nil {
-		return result, fmt.Errorf("copy module dir: %w", err)
+	if err = os.RemoveAll(c.downloadedModulesDir); err != nil {
+		return ctrl.Result{}, fmt.Errorf("cannot remove old module dir %q: %w", c.downloadedModulesDir, err)
+	}
+	if err = cp.Copy(tmpDir, c.downloadedModulesDir); err != nil {
+		return ctrl.Result{}, fmt.Errorf("copy module dir: %w", err)
 	}
 
 	symlinkPath := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", moduleDef.Weight, mo.Name))

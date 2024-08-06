@@ -35,6 +35,38 @@ metadata:
     release-checksum: 6f0b1c3f78bf63e712e225b2ac3030ce
     source: test
     status: superseded
+  name: echo-v0.4.50
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test
+    uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
+  resourceVersion: "1000"
+spec:
+  moduleName: echo
+  version: 0.4.50
+  weight: 910
+status:
+  approved: false
+  message: ""
+  phase: Superseded
+  pullDuration: 0s
+  size: 0
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    release.deckhouse.io/notified: "false"
+  creationTimestamp: null
+  labels:
+    module: echo
+    modules.deckhouse.io/update-policy: test-alpha
+    release-checksum: 6f0b1c3f78bf63e712e225b2ac3030ce
+    source: test
+    status: superseded
   name: echo-v0.4.51
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
@@ -138,7 +170,7 @@ metadata:
     kind: ModuleSource
     name: test
     uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
-  resourceVersion: "1003"
+  resourceVersion: "1000"
 spec:
   moduleName: echo
   version: 0.4.54
@@ -146,7 +178,7 @@ spec:
 status:
   approved: false
   message: ""
-  phase: Deployed
-  pullDuration: 9m15s
-  size: 3
-  transitionTime: "2019-10-17T15:33:00Z"
+  phase: Pending
+  pullDuration: 0s
+  size: 0
+  transitionTime: null
