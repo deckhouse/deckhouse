@@ -271,8 +271,9 @@ func (s stubModulesManager) DisableModuleHooks(_ string) {
 
 }
 
-func (s stubModulesManager) GetModule(_ string) *addonmodules.BasicModule {
-	return nil
+func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
+	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{})
+	return bm
 }
 
 func (s stubModulesManager) GetEnabledModuleNames() []string {
@@ -307,6 +308,7 @@ func Test_validateModule(t *testing.T) {
 					Weight: 900,
 					Path:   path,
 				},
+				nil,
 			)
 
 			if err != nil && !failed {

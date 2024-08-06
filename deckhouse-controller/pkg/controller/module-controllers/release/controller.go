@@ -904,7 +904,7 @@ func (c *moduleReleaseReconciler) parseNotificationConfig(ctx context.Context) (
 	return settings.NotificationConfig, nil
 }
 
-func validateModule(def models.DeckhouseModuleDefinition) error {
+func validateModule(def models.DeckhouseModuleDefinition, values addonutils.Values) error {
 	if def.Weight < 900 || def.Weight > 999 {
 		return fmt.Errorf("external module weight must be between 900 and 999")
 	}
@@ -919,6 +919,10 @@ func validateModule(def models.DeckhouseModuleDefinition) error {
 	dm, err := addonmodules.NewBasicModule(def.Name, def.Path, def.Weight, nil, cb, vb)
 	if err != nil {
 		return fmt.Errorf("new deckhouse module: %w", err)
+	}
+
+	if values != nil {
+		dm.SaveConfigValues(values)
 	}
 
 	err = dm.Validate()
