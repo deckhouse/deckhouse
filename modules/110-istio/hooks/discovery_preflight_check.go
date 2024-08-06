@@ -80,15 +80,15 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 
 func discoveryIsK8sVersionAutomatic(input *go_hook.HookInput) error {
 	var kubernetesVersionStr string
-	kubernetesVersion, ok := input.Snapshots["kubernetesVersion"]
-	if !ok || len(kubernetesVersion) == 0 {
+	clusterConfigurationSnapshots, ok := input.Snapshots["kubernetesVersion"]
+	if !ok || len(clusterConfigurationSnapshots) == 0 {
 		versionParts := strings.Split(input.Values.Get("global.discovery.kubernetesVersion").String(), ".")
 		if len(versionParts) < 2 {
 			return errors.New("cluster configuration kubernetesVersion is empty or invalid")
 		}
 		kubernetesVersionStr = versionParts[0] + "." + versionParts[1]
 	} else {
-		kubernetesVersionStr = kubernetesVersion[0].(string)
+		kubernetesVersionStr = clusterConfigurationSnapshots[0].(string)
 	}
 
 	// Get array of compatibility k8s versions for every operator version
