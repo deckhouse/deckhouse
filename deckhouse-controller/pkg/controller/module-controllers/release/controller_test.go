@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"flag"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -43,6 +44,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
@@ -116,7 +118,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	require.NoError(suite.T(), err)
 	suite.Run("testdata cases", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}}"}}}, nil
+			return []v1.Layer{&utils.FakeLayer{}}, nil
 		}}, nil)
 
 		suite.Run("simple", func() {
@@ -442,4 +444,31 @@ func singleDocToManifests(doc []byte) (result []string) {
 		}
 	}
 	return
+}
+
+func Test_validateModule(t *testing.T) {
+	log.SetOutput(io.Discard)
+
+	check := func(name string, failed bool) {
+		t.Helper()
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join("./testdata", name)
+			err := validateModule(
+				models.DeckhouseModuleDefinition{
+					Name:   name,
+					Weight: 900,
+					Path:   path,
+				},
+			)
+
+			if err != nil && !failed {
+				t.Fatalf("%s: unexpected error: %v", name, err)
+			}
+		})
+	}
+
+	check("module", false)
+	check("module-not-valid", true)
+	check("module-failed", true)
+	check("module-values-failed", true)
 }
