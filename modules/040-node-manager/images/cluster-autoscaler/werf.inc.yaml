@@ -27,12 +27,13 @@ shell:
   - git apply /patches/{{ $version }}/*.patch --verbose
   - cd cluster-autoscaler
   - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o cluster-autoscaler
+  - echo "{{ $clusterAutoscalerVersion }}.{{ $value.clusterAutoscalerPatch }}-flant" > VERSION
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
   - artifact: {{ $.ModuleName }}/distroless-{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    add: /src
+    add: /src/cluster-autoscaler
     to: /
     includePaths:
     - cluster-autoscaler
