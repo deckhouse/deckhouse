@@ -105,16 +105,6 @@ rules:
   - get
   - update
   - watch
-- apiGroups:
-  - apps
-  resources:
-  - deployments
-  verbs:
-  - get
-  - list
-  - watch
-  resourceNames:
-  - machine-controller-manager
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -155,7 +145,7 @@ rules:
   resources: ["daemonsets", "replicasets"]
   verbs: ["get", "list", "watch"]
 - apiGroups: ["apps"]
-  resources: ["statefulsets"]
+  resources: ["statefulsets", "deployments"]
   verbs: ["get", "list", "watch"]
 - apiGroups: ["batch"]
   resources: ["jobs"]
