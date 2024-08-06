@@ -34,13 +34,14 @@ import (
 )
 
 type PublicStatusResponse struct {
-	Status PublicStatus  `json:"status"`
+	Status string        `json:"status"`
 	Rows   []GroupStatus `json:"rows"`
 }
 
 type GroupStatus struct {
+	status PublicStatus
+	Status string              `json:"status"`
 	Group  string              `json:"group"`
-	Status PublicStatus        `json:"status"`
 	Probes []ProbeAvailability `json:"probes"`
 }
 
@@ -124,7 +125,7 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		// Skipping the error because the JSON structure is defined in advance.
 		out, _ := json.Marshal(&PublicStatusResponse{
 			Rows:   []GroupStatus{},
-			Status: StatusNoData,
+			Status: StatusNoData.String(),
 		})
 		w.WriteHeader(http.StatusOK)
 		w.Write(out)
@@ -135,7 +136,7 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	totalStatus := calculateTotalStatus(statuses)
 	out, _ := json.Marshal(&PublicStatusResponse{
 		Rows:   statuses,
-		Status: totalStatus,
+		Status: totalStatus.String(),
 	})
 	w.Write(out)
 }
@@ -231,9 +232,11 @@ func (h *PublicStatusHandler) calcStatuses(
 			})
 		}
 
+		status := calculateStatus(groupSummary)
 		gs := GroupStatus{
+			status: status,
+			Status: status.String(),
 			Group:  group,
-			Status: calculateStatus(groupSummary),
 			Probes: probeAvails,
 		}
 		groupStatuses = append(groupStatuses, gs)
@@ -387,19 +390,14 @@ func episodeStatus(episode entity.EpisodeSummary) PublicStatus {
 
 // calculateTotalStatus returns total cluster status.
 func calculateTotalStatus(statuses []GroupStatus) PublicStatus {
-	warn := false
-	for _, info := range statuses {
-		switch info.Status {
-		case StatusDegraded:
-			warn = true
-		case StatusOutage:
-			return StatusOutage
-		}
+	if len(statuses) == 0 {
+		return StatusNoData
 	}
-	if warn {
-		return StatusDegraded
+	total := statuses[0].status
+	for _, next := range statuses[1:] {
+		total = total.Compare(next.status)
 	}
-	return StatusOperational
+	return total
 }
 
 func jsonError(msg string) string {
