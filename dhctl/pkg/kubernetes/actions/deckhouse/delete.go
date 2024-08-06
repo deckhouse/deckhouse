@@ -64,7 +64,7 @@ func DeleteDeckhouseDeployment(kubeCl *client.KubernetesClient) error {
 func DeleteDeckhouseStorageCRs(kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Delete Deckhouse Storage CRs", 45, 5*time.Second).WithShowError(false).Run(func() error {
 		for _, cr := range d8storageConfig.Resources {
-			resourceSchema := schema.GroupVersionResource{Group: d8storageConfig.ApiGroup, Version: d8storageConfig.ApiVersion, Resource: strings.ToLower(cr)}
+			resourceSchema := schema.GroupVersionResource{Group: d8storageConfig.ApiGroup, Version: d8storageConfig.ApiVersion, Resource: cr}
 			storageCRs, err := kubeCl.Dynamic().Resource(resourceSchema).Namespace(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
 			if err != nil {
 				if errors.IsNotFound(err) {
