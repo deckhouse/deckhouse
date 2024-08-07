@@ -51,8 +51,8 @@ git:
     install:
     - '**/*'
 shell:
-  beforeInstall:
+  install:
+    - set -x
     - apt-get update
     - apt-get install -y python3 python3-module-pip-run
-  install:
     - pip3 install -r /requirements.txt
