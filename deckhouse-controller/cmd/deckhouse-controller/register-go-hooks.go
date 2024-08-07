@@ -17,6 +17,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/hooks/lib"
 	_ "github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/hooks/lib/v1alpha1"
+	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-dynamix/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-openstack/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vcd/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vsphere/hooks"

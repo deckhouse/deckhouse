@@ -109,6 +109,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/030-cloud-provider-dynamix
+  to: /deckhouse/modules/030-cloud-provider-dynamix
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/030-cloud-provider-openstack
   to: /deckhouse/modules/030-cloud-provider-openstack
   stageDependencies:
