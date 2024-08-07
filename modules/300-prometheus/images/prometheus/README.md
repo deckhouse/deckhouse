@@ -12,7 +12,21 @@ metadata:
 
 ### Successfully sent metric
 
-Exports gauge metric with the count of successfully sent alerts. 
+Exports gauge metric with the count of successfully sent alerts.
+
+### Federation external labels control
+
+This patch allows to instruct Prometheus to drop external labels from federation source at a scrape time, allowing to export metrics as is.
+
+```yaml
+scrape_configs:
+- job_name: 'federate'
+  honor_labels: true
+  metrics_path: '/federate'
+  params:
+    drop_external_labels:
+    - "1"
+```
 
 ### How-to build prometheus
 
