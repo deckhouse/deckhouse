@@ -42,7 +42,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: lib.Queue("istio-k8s-auto-discovery"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:              "kubernetesVersion",
+			Name:              "cluster-configuration",
 			ApiVersion:        "v1",
 			Kind:              "Secret",
 			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}}},
@@ -80,7 +80,7 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 
 func discoveryIsK8sVersionAutomatic(input *go_hook.HookInput) error {
 	var kubernetesVersionStr string
-	clusterConfigurationSnapshots, ok := input.Snapshots["kubernetesVersion"]
+	clusterConfigurationSnapshots, ok := input.Snapshots["cluster-configuration"]
 	if !ok || len(clusterConfigurationSnapshots) == 0 {
 		versionParts := strings.Split(input.Values.Get("global.discovery.kubernetesVersion").String(), ".")
 		if len(versionParts) < 2 {
