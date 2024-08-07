@@ -7,10 +7,10 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   ports:
-  - name: http
+  - name: https
     protocol: TCP
-    port: 20001
-    targetPort: api
+    port: 443
+    targetPort: https
   - name: http-metrics
     protocol: TCP
     port: 9090
