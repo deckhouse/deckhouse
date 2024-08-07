@@ -274,12 +274,9 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		Mode:                   us.Update.Mode,
 		ClusterUUID:            r.clusterUUID,
 	}
+	releaseData := getReleaseData(dr)
 	deckhouseUpdater, err := d8updater.NewDeckhouseUpdater(
-<<<<<<< HEAD
 		r.logger, r.client, r.dc, dus, releaseData, r.metricStorage, podReady,
-=======
-		r.logger, r.client, r.dc, dus, getReleaseData(dr), podReady,
->>>>>>> 2f684a2784 (WIP)
 		clusterBootstrapping, imagesRegistry, r.moduleManager.GetEnabledModuleNames(),
 	)
 
@@ -287,7 +284,6 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{}, fmt.Errorf("initializing deckhouse updater: %w", err)
 	}
 
-<<<<<<< HEAD
 	if podReady {
 		r.metricStorage.GroupedVault.ExpireGroupMetrics(metricUpdatingGroup)
 
@@ -301,8 +297,6 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		r.metricStorage.GroupedVault.GaugeSet(metricUpdatingGroup, "d8_is_updating", 1, labels)
 	}
 
-=======
->>>>>>> 2f684a2784 (WIP)
 	var releases v1alpha1.DeckhouseReleaseList
 	err = r.client.List(ctx, &releases)
 	if err != nil {
