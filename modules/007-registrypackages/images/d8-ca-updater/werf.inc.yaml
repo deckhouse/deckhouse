@@ -1,0 +1,42 @@
+{{- $version := "06.08.24" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - certs/
+  - d8-ca-updater
+  - ca-bundle.crt
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    d8-ca-updater: {{ $version }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_UBUNTU_DEV }}
+git:
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  setup:
+    - mkdir /certs
+    - git clone -b master --depth 1  {{ $.SOURCE_REPO }}/debian/ca-certificates.git
+    - cd ca-certificates/mozilla 
+    - wget -Ocertdata.txt https://hg.mozilla.org/releases/mozilla-release/raw-file/default/security/nss/lib/ckfw/builtins/certdata.txt
+    - wget -Omk-ca-bundle.pl  https://raw.githubusercontent.com/curl/curl/curl-8_2_1/scripts/mk-ca-bundle.pl
+    - perl mk-ca-bundle.pl -n 
+    - mv ca-bundle.crt /ca-bundle.crt
+    - python3 certdata2pem.py
+    - mv *.crt /certs/
+    - chmod +x /d8-ca-updater /install /uninstall
