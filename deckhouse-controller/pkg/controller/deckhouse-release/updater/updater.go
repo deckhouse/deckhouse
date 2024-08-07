@@ -42,19 +42,21 @@ func NewDeckhouseUpdater(logger logger.Logger, client client.Client, dc dependen
 	podIsReady, clusterBootstrapping bool, imagesRegistry string, enabledModules []string) (*updater.Updater[*v1alpha1.DeckhouseRelease], error) {
 	return updater.NewUpdater[*v1alpha1.DeckhouseRelease](logger, updateSettings.NotificationConfig, updateSettings.Mode, releaseData,
 		podIsReady, clusterBootstrapping, newKubeAPI(client, dc, imagesRegistry),
-		newMetricUpdater(metricStorage), newValueSettings(updateSettings.DisruptionApprovalMode), newWebhookDataSource(), enabledModules), nil
+		newMetricUpdater(metricStorage), newValueSettings(updateSettings.DisruptionApprovalMode), newWebhookDataSource(logger), enabledModules), nil
 }
 
-func newWebhookDataSource() *webhookDataSource {
-	return &webhookDataSource{}
+func newWebhookDataSource(logger logger.Logger) *webhookDataSource {
+	return &webhookDataSource{logger: logger}
 }
 
 type webhookDataSource struct {
+	logger logger.Logger
 }
 
-func (*webhookDataSource) Fill(output *updater.WebhookData, _ *v1alpha1.DeckhouseRelease, applyTime time.Time) {
+func (s *webhookDataSource) Fill(output *updater.WebhookData, _ *v1alpha1.DeckhouseRelease, applyTime time.Time) {
 	if output == nil {
-		panic("webhook data must be defined")
+		s.logger.Error("webhook data must be defined")
+		return
 	}
 
 	output.UpdateType = updater.UpdateTypeDeckhouse

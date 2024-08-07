@@ -41,19 +41,26 @@ func newModuleUpdater(logger logger.Logger, nConfig *updater.NotificationConfig,
 	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string) *updater.Updater[*v1alpha1.ModuleRelease] {
 	return updater.NewUpdater[*v1alpha1.ModuleRelease](logger, nConfig, mode,
 		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(),
-		newSettings(), newWebhookDataSource(), enabledModules)
+		newSettings(), newWebhookDataSource(logger), enabledModules)
 }
 
-func newWebhookDataSource() *webhookDataSource {
-	return &webhookDataSource{}
+func newWebhookDataSource(logger logger.Logger) *webhookDataSource {
+	return &webhookDataSource{logger: logger}
 }
 
 type webhookDataSource struct {
+	logger logger.Logger
 }
 
-func (*webhookDataSource) Fill(output *updater.WebhookData, release *v1alpha1.ModuleRelease, applyTime time.Time) {
+func (s *webhookDataSource) Fill(output *updater.WebhookData, release *v1alpha1.ModuleRelease, applyTime time.Time) {
 	if output == nil {
-		panic("webhook data must be defined")
+		s.logger.Error("webhook data must be defined")
+		return
+	}
+
+	if release == nil {
+		s.logger.Error("release must be defined")
+		return
 	}
 
 	output.UpdateType = updater.UpdateTypeModule
