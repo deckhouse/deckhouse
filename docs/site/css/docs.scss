@@ -726,9 +726,32 @@ a.comparison-table__module-proprietaryOkmeter::after {
     position: relative;
 }
 
+.docs ul > li::before {
+  content: '';
+  display: block;
+  background: #0066FF;
+  width: 6px;
+  height: 6px;
+  border-radius: 6px;
+  position: absolute;
+  left: -15px;
+  top: 7px;
+}
+
 .docs ul.resources li {
     padding-left: 0;
     margin-left: 0;
+}
+
+.docs ul.resources li::before {
+  position: absolute;
+  top: 52px;
+  left: 4px;
+  content: '';
+  display: block;
+  width: 1px;
+  height: calc(100% - 52px);
+  background: #ccc;
 }
 
 .docs ul.resources > li {
@@ -778,17 +801,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs ul li:last-child, .docs ol li:last-child {
     padding-bottom: 0;
-}
-
-.docs ul > li::before {
-    position: absolute;
-    top: 52px;
-    left: 4px;
-    content: '';
-    display: block;
-    width: 1px;
-    height: calc(100% - 52px);
-    background: #ccc;
 }
 
 .docs .resources__prop_description > ul > li {
