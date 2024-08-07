@@ -1,0 +1,37 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: cloud-data-discoverer-metrics
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main" "app" "cloud-data-discoverer")) | nindent 2 }}
+spec:
+  jobLabel: app
+  podMetricsEndpoints:
+    - port: https-metrics
+      path: /metrics
+      scheme: https
+      bearerTokenSecret:
+        name: "prometheus-token"
+        key: "token"
+      tlsConfig:
+        insecureSkipVerify: true
+      honorLabels: true
+      scrapeTimeout: {{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list . 25) }}
+      relabelings:
+      - regex: endpoint|pod|container
+        action: labeldrop
+      - targetLabel: job
+        replacement: cloud-data-discoverer
+      - sourceLabels: [__meta_kubernetes_pod_node_name]
+        targetLabel: node
+      - targetLabel: tier
+        replacement: cluster
+      - sourceLabels: [__meta_kubernetes_pod_ready]
+        regex: "true"
+        action: keep
+  selector:
+    matchLabels:
+      app: cloud-data-discoverer
+  namespaceSelector:
+    matchNames:
+      - d8-cloud-provider-dvp
