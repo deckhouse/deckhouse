@@ -1,0 +1,27 @@
+# Next lines are for local build only
+entries:
+  folders:
+    - title:
+        en: Режимы обновлений платформы
+        ru: Режимы обновлений платформы
+      url: /update/update-mode/
+    - title:
+        en: Каналы и окна обновлений
+        ru: Каналы и окна обновлений
+      url: /update/channels-and-windows/
+    - title:
+        en: Получение уведомлений
+        ru: Получение уведомлений
+      url: /update/notifications/
+    - title:
+        en: Обновление в закрытом контуре
+        ru: Обновление в закрытом контуре
+      url: /update/security/
+    - title:
+        en: Обновление узлов в кластере
+        ru: Обновление узлов в кластере
+      url: /update/update-nodes/
+    - title:
+        en: Обновление Kubernetes
+        ru: Обновление Kubernetes
+      url: /update/update-kubernetes/
