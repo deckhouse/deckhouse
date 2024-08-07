@@ -21,12 +21,12 @@ package vrl
 //
 // It is usually used in a combination with other rules.
 const ParseJSONRule Rule = `
-if !exists(.parsed_data) {
+if !exists(."@parsed_data") {
     structured, err = parse_json(.message)
     if err == null {
-        .parsed_data = structured
+        ."@parsed_data" = structured
     } else {
-        .parsed_data = .message
+        ."@parsed_data" = .message
     }
 }
 `

@@ -50,9 +50,11 @@ type Kubernetes struct {
 	labelSelector          string
 	namespaceLabelSelector string
 
-	annotationFields     KubernetesAnnotationFields
-	nodeAnnotationFields NodeAnnotationFields
-	globCooldownMs       int
+	annotationFields          KubernetesAnnotationFields
+	namespaceAnnotationFields NamespaceAnnotationFields
+	nodeAnnotationFields      NodeAnnotationFields
+
+	globCooldownMs int
 }
 
 // KubernetesAnnotationFields are supported fields for the following vector options
@@ -68,6 +70,10 @@ type KubernetesAnnotationFields struct {
 	PodOwner       string `json:"pod_owner,omitempty"`
 }
 
+type NamespaceAnnotationFields struct {
+	NamespaceLabels string `json:"namespace_labels,omitempty"`
+}
+
 type NodeAnnotationFields struct {
 	NodeLabels string `json:"node_labels,omitempty"`
 }
@@ -77,13 +83,14 @@ type NodeAnnotationFields struct {
 type rawKubernetesLogs struct {
 	commonSource
 
-	Labels               string                     `json:"extra_label_selector,omitempty"`
-	Fields               string                     `json:"extra_field_selector,omitempty"`
-	NamespaceLabels      string                     `json:"extra_namespace_label_selector,omitempty"`
-	AnnotationFields     KubernetesAnnotationFields `json:"annotation_fields,omitempty"`
-	NodeAnnotationFields NodeAnnotationFields       `json:"node_annotation_fields,omitempty"`
-	GlobCooldownMs       int                        `json:"glob_minimum_cooldown_ms,omitempty"`
-	UserAPIServerCache   bool                       `json:"use_apiserver_cache,omitempty"`
+	Labels                    string                     `json:"extra_label_selector,omitempty"`
+	Fields                    string                     `json:"extra_field_selector,omitempty"`
+	NamespaceLabels           string                     `json:"extra_namespace_label_selector,omitempty"`
+	AnnotationFields          KubernetesAnnotationFields `json:"annotation_fields,omitempty"`
+	NamespaceAnnotationFields NamespaceAnnotationFields  `json:"namespace_annotation_fields,omitempty"`
+	NodeAnnotationFields      NodeAnnotationFields       `json:"node_annotation_fields,omitempty"`
+	GlobCooldownMs            int                        `json:"glob_minimum_cooldown_ms,omitempty"`
+	UserAPIServerCache        bool                       `json:"use_apiserver_cache,omitempty"`
 }
 
 func (k *rawKubernetesLogs) BuildSources() []apis.LogSource {
@@ -145,6 +152,9 @@ func NewKubernetes(name string, spec v1alpha1.KubernetesPodsSpec, namespaced boo
 			ContainerName:  "container",
 			PodNodeName:    "node",
 			PodOwner:       "pod_owner",
+		},
+		namespaceAnnotationFields: NamespaceAnnotationFields{
+			NamespaceLabels: "namespace_labels",
 		},
 		nodeAnnotationFields: NodeAnnotationFields{
 			NodeLabels: "node_labels",
