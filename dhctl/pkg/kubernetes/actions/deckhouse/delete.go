@@ -77,11 +77,7 @@ func ListD8StorageResources(kubeCl *client.KubernetesClient, cr schema.GroupVers
 	defer cancel()
 	storageCR, err := kubeCl.Dynamic().Resource(cr).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		if errors.IsNotFound(err) {
-			log.InfoF("Resources kind of %s not found, skipping...\n", cr)
-			return nil, err
-		}
-		return nil, fmt.Errorf("get %s: %v", cr, err)
+		return nil, err
 	}
 	return storageCR, err
 }
@@ -103,7 +99,11 @@ func DeleteAllD8StorageResources(kubeCl *client.KubernetesClient) error {
 		for _, cr := range d8storageConfig {
 			storageCRs, err := ListD8StorageResources(kubeCl, cr)
 			if err != nil {
-				return err
+				if errors.IsNotFound(err) {
+					log.InfoF("Resources kind of %s not found, skipping...\n", cr)
+					continue
+				}
+				return fmt.Errorf("get %s: %v", cr, err)
 			}
 			for _, obj := range storageCRs.Items {
 				err = DeleteD8StorageResources(kubeCl, obj, cr)
