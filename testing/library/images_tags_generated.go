@@ -208,6 +208,9 @@ var DefaultImagesDigests = map[string]interface{}{
 	"deckhouse": map[string]interface{}{
 		"webhookHandler": "imageHash-deckhouse-webhookHandler",
 	},
+	"deckhouseTools": map[string]interface{}{
+		"web": "imageHash-deckhouseTools-web",
+	},
 	"delivery": map[string]interface{}{
 		"argocd":               "imageHash-delivery-argocd",
 		"argocdImageUpdater":   "imageHash-delivery-argocdImageUpdater",
