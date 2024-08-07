@@ -20,5 +20,8 @@ bb-yum-or-apt-install() {
 			bb-apt-rpm-install "$@"
   elif bb-apt?; then
       bb-apt-install "$@"
+  else
+		  bb-log-error "Unsupported package manager"
+		  return 1
   fi
 }
