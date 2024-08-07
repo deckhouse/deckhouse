@@ -1,11 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
-git:
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
-  to: /hooks
-  stageDependencies:
-    install:
-    - '**/*'
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
     add: /usr/lib/python3
@@ -19,6 +13,12 @@ import:
     add: /usr/lib64/python3.12
     to: /usr/lib64/python3.12
     before: setup
+git:
+- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
+  to: /hooks
+  stageDependencies:
+    install:
+    - '**/*'
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ $.Images.BASE_ALT_P11 }}
