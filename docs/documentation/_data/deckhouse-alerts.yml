@@ -418,6 +418,19 @@ alerts:
         The {{ $labels.module }}/{{ $labels.hook }} Deckhouse hook crashes way too often.
       severity: "9"
       markupFormat: markdown
+    - name: D8DeckhouseModuleUpdatePolicyNotFound
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module update policy not found for {{ $labels.module }}
+
+        You need to remove label from MR somthing like: `kubectl label mr {{ $labels.module }}-{{ $labels.version }} deckhouse.io/update-policy-`
+      summary: |
+        Module update policy not found for {{ $labels.module }}
+      severity: "5"
+      markupFormat: markdown
     - name: D8DeckhousePodIsNotReady
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 340-monitoring-deckhouse
