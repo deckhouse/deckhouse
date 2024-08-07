@@ -72,30 +72,45 @@ func DeleteDeckhouseDeployment(kubeCl *client.KubernetesClient) error {
 	})
 }
 
-func DeleteDeckhouseStorageCRs(kubeCl *client.KubernetesClient) error {
+func ListD8StorageResources(kubeCl *client.KubernetesClient, cr schema.GroupVersionResource) (*unstructured.UnstructuredList, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	storageCR, err := kubeCl.Dynamic().Resource(cr).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			log.InfoF("Resources kind of %s not found, skipping...\n", cr)
+			return nil, err
+		}
+		return nil, fmt.Errorf("get %s: %v", cr, err)
+	}
+	return storageCR, err
+}
+
+func DeleteD8StorageResources(kubeCl *client.KubernetesClient, obj unstructured.Unstructured, cr schema.GroupVersionResource) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	err := kubeCl.Dynamic().Resource(cr).Namespace(obj.GetNamespace()).Delete(ctx, obj.GetName(), metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("delete %s %s: %v", cr, obj.GetName(), err)
+	}
+	log.InfoF("%s/%s\n", obj.GetKind(), obj.GetName())
+	return nil
+}
+
+func DeleteAllD8StorageResources(kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Delete Deckhouse Storage CRs", 45, 5*time.Second).WithShowError(false).Run(func() error {
 		for _, cr := range d8storageConfig {
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-			storageCRs, err := kubeCl.Dynamic().Resource(cr).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
+			storageCRs, err := ListD8StorageResources(kubeCl, cr)
 			if err != nil {
-				cancel()
-				if errors.IsNotFound(err) {
-					log.InfoF("Resources kind of %s not found, skipping...\n", cr)
-					continue
-				}
-				return fmt.Errorf("get %s: %v", cr, err)
+				return err
 			}
-
 			for _, obj := range storageCRs.Items {
-				err := kubeCl.Dynamic().Resource(cr).Namespace(obj.GetNamespace()).Delete(ctx, obj.GetName(), metav1.DeleteOptions{})
+				err = DeleteD8StorageResources(kubeCl, obj, cr)
 				if err != nil {
-					cancel()
-					return fmt.Errorf("delete %s %s: %v", cr, obj.GetName(), err)
+					return err
 				}
-				log.InfoF("%s/%s\n", obj.GetKind(), obj.GetName())
 			}
-			cancel()
 		}
 		return nil
 	})
