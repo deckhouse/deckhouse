@@ -23,6 +23,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
+
 	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/kube-client/client"
