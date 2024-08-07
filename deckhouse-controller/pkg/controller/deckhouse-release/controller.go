@@ -300,6 +300,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		Mode:                   us.Update.Mode,
 		ClusterUUID:            r.clusterUUID,
 	}
+	releaseData := getReleaseData(dr)
 	deckhouseUpdater, err := d8updater.NewDeckhouseUpdater(
 		r.logger, r.client, r.dc, dus, releaseData, r.metricStorage, podReady,
 		clusterBootstrapping, imagesRegistry, r.moduleManager.GetEnabledModuleNames(),
