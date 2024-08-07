@@ -36,7 +36,7 @@ detect_bundle() {
 update_redhat_ca() {
   local REDHAT_DEST_DIR=/etc/pki/ca-trust
 
-  mkdir -p "$REDHAT_DEST_DIR"/extracted/pem/
+  mkdir -p "$REDHAT_DEST_DIR"/extracted/pem/ "$REDHAT_DEST_DIR"/source/anchors/
   ln -sf "$CERT_SRC_DIR"/*.crt "$REDHAT_DEST_DIR"/source/anchors/
 
   if command -v update-ca-trust >/dev/null 2>&1; then
