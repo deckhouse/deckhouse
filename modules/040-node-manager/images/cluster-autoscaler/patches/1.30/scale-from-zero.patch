@@ -29,5 +29,5 @@ index b6dfeb84d..2f3b18d05 100644
 +			return nil, cloudprovider.ErrNotImplemented
 +		}
  	}
- 
+
  	labels := make(map[string]string)
