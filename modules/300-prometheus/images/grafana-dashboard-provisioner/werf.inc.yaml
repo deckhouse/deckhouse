@@ -6,6 +6,23 @@ git:
   stageDependencies:
     install:
     - '**/*'
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/lib/python3
+    to: /usr/lib/python3
+    before: setup
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/lib64/python3
+    to: /usr/lib64/python3
+    before: setup
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/lib64/python3.12
+    to: /usr/lib64/python3.12
+    before: setup
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ $.Images.BASE_ALT_P11 }}
+git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
   to: /requirements.txt
   stageDependencies:
@@ -14,18 +31,8 @@ git:
 shell:
   beforeInstall:
     - apt-get update
-    - apt-get install -y python3 python3-module-pip
-    - apt-get clean
-    - find /var/lib/apt/lists/ /var/cache/apt/ -type f -delete
+    - apt-get install -y python3 python3-module-pip git
   install:
-    - set -x
-    - apt-get update
-    - apt-get install -y git
     - export SOURCE_REPO={{ .SOURCE_REPO }}
     - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
     - pip3 install -f file:///wheels --no-index -r /requirements.txt
-    - rm -rf /wheels
-    - apt-get remove -y git
-    - apt-get autoremove -y
-    - apt-get clean
-    - find /var/lib/apt/lists/ /var/cache/apt/ -type f -delete
