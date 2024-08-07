@@ -126,7 +126,7 @@ func (g *DeckhouseDestroyer) deleteEntities(kubeCl *client.KubernetesClient) err
 		return err
 	}
 
-	err = deckhouse.DeleteDeckhouseStorageCRs(kubeCl)
+	err = deckhouse.DeleteAllD8StorageResources(kubeCl)
 	if err != nil {
 		return err
 	}
