@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-
 	log "github.com/sirupsen/logrus"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	"github.com/slok/kubewebhook/v2/pkg/model"
