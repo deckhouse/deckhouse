@@ -26,6 +26,7 @@ git:
   stageDependencies:
     install:
     - '**/*'
+
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ $.Images.BASE_ALT_P11 }}
