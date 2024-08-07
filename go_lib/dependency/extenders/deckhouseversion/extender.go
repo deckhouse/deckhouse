@@ -67,7 +67,7 @@ func Instance() *Extender {
 		}
 		if raw, err := os.ReadFile("/deckhouse/version"); err == nil {
 			if strings.TrimSpace(string(raw)) == "dev" {
-				instance.logger.Warn("this is dev cluster, v1.0.0 will be used")
+				instance.logger.Warn("this is dev cluster, v2.0.0 will be used")
 				return
 			}
 			if parsed, err := semver.NewVersion(string(raw)); err == nil {
