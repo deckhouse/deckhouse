@@ -16,12 +16,12 @@
 bb-yum-or-apt-install() {
   if bb-yum?; then
       bb-yum-install "$@"
-	elif bb-apt-rpm?; then
-			bb-apt-rpm-install "$@"
+  elif bb-apt-rpm?; then
+      bb-apt-rpm-install "$@"
   elif bb-apt?; then
       bb-apt-install "$@"
   else
-		  bb-log-error "Unsupported package manager"
-		  return 1
+      bb-log-error "Unsupported package manager"
+      return 1
   fi
 }
