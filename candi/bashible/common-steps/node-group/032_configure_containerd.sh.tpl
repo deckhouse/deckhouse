@@ -151,8 +151,10 @@ oom_score = 0
   {{- end }}
   {{- if eq .runType "Normal" }}
     {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
+			{{- if $ca }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $registryAddr | lower }}".tls]
           ca_file = "/usr/local/share/d8-ca-certificates/{{ $registryAddr | lower }}-ca.crt"
+			{{- end }}
     {{- end }}
   {{- end }}
     [plugins."io.containerd.grpc.v1.cri".image_decryption]
