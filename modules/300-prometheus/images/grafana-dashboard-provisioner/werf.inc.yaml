@@ -14,7 +14,7 @@ git:
 shell:
   beforeInstall:
     - apt-get update
-    - apt-get install -y python3
+    - apt-get install -y python3 python3-module-pip
     - apt-get clean
     - find /var/lib/apt/lists/ /var/cache/apt/ -type f -delete
   install:
