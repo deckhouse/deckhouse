@@ -35,23 +35,23 @@ locals {
 }
 
 data "yandex_vpc_subnet" "existing" {
-  for_each = local.mapping
+  for_each  = local.mapping
   subnet_id = each.value
 }
 
 data "yandex_vpc_subnet" "kube_a" {
   count = length(local.mapping) == 0 ? 1 : 0
-  name = "${local.prefix}-a"
+  name  = "${local.prefix}-a"
 }
 
 data "yandex_vpc_subnet" "kube_b" {
   count = length(local.mapping) == 0 ? 1 : 0
-  name = "${local.prefix}-b"
+  name  = "${local.prefix}-b"
 }
 
 data "yandex_vpc_subnet" "kube_d" {
   count = length(local.mapping) == 0 ? 1 : 0
-  name = "${local.prefix}-d"
+  name  = "${local.prefix}-d"
 }
 
 resource "yandex_vpc_address" "addr" {
@@ -60,6 +60,10 @@ resource "yandex_vpc_address" "addr" {
 
   external_ipv4_address {
     zone_id = local.internal_subnet.zone
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
