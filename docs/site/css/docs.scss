@@ -722,23 +722,37 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs ul li {
     padding-bottom: 10px;
-    //margin-left: $text-spacing-m;
-    padding-left: 32px;
-    margin-left: -16px;
+    margin-left: 30px;
     position: relative;
 }
 
-.docs ul.resources > li {
-    margin-left: 0;
+.docs ul.resources li {
     padding-left: 0;
+    margin-left: 0;
+}
 
+.docs ul.resources > li {
     &::before {
         display: none;
     }
 
-    & > .resources__prop_name {
+    & > .resources__prop_wrap {
         margin-left: -8px;
         width: 100%;
+
+        > .resources__prop_name {
+            cursor: auto;
+        }
+
+        &:hover {
+            background: transparent;
+        }
+    }
+}
+
+.docs ul.resources > li > .resources__prop_wrap {
+    & > .resources__prop_type {
+        margin-left: 0;
     }
 
     & > .resources__prop_name > .plus-icon,
@@ -750,6 +764,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 .docs ul.resources ul > li:not(.resources__prop_description li) {
     padding-top: $text-spacing-l;
     padding-bottom: 16px;
+    padding-left: 16px;
 
     &.closed {
         padding-bottom: 0;
@@ -762,18 +777,22 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs ul li:last-child, .docs ol li:last-child {
-    padding-bottom: 0px;
+    padding-bottom: 0;
 }
 
 .docs ul > li::before {
     position: absolute;
     top: 52px;
-    left: 20px;
+    left: 4px;
     content: '';
     display: block;
     width: 1px;
     height: calc(100% - 52px);
     background: #ccc;
+}
+
+.docs .resources__prop_description > ul > li {
+    padding-left: 32px;
 }
 
 .docs .resources__prop_description > ul > li::before {
@@ -806,20 +825,20 @@ a.comparison-table__module-proprietaryOkmeter::after {
     }
 }
 
-.docs ul > li.closed > span.resources__prop_name {
+.docs ul > li.closed > .resources__prop_wrap > span.resources__prop_name {
     margin-bottom: 0;
 }
 
 .docs ul > li.closed > ul,
-.docs ul > li.closed > div:not(.resources__prop_name),
-.docs ul > li.closed > span,
-.docs ul > li.closed > p,
-.docs ul > li.closed > p.resources__attrs {
+.docs ul > li.closed > .resources__prop_wrap > div:not(.resources__prop_name),
+.docs ul > li.closed > .resources__prop_wrap > span,
+.docs ul > li.closed > .resources__prop_wrap > p,
+.docs ul > li.closed > .resources__prop_wrap > p.resources__attrs {
     display: none;
-    //max-height: 0;
-    //overflow: hidden;
-    //padding: 0;
-    //margin: 0;
+}
+
+.docs ul > li > .resources__prop_wrap > p.resources__attrs:not(.required) {
+    margin-left: 24px;
 }
 
 .docs .resources pre.highlight {
@@ -843,7 +862,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs .language-yaml.highlighter-rouge {
-    margin: 5px 0 10px 0;
+    margin: 5px 0 10px 24px;
 }
 
 .docs li > .language-yaml.highlighter-rouge:last-child {

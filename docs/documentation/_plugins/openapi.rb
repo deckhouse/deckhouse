@@ -446,6 +446,7 @@ module Jekyll
         if parameterTitle != ''
             parameterTextContent = ''
             result.push('<li>')
+            result.push('<div class="resources__prop_wrap">')
             attributesType = ''
             if attributes.is_a?(Hash)
               if attributes.has_key?('type')
@@ -484,6 +485,7 @@ module Jekyll
           end
         end
 
+        result.push('</div>')
 
         if attributes.is_a?(Hash) and attributes.has_key?("properties")
             result.push('<ul>')

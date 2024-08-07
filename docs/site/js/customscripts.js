@@ -178,11 +178,11 @@ $(document).ready(function(){
 
   titles.each((i, title) => {
     $(title).click(() => {
-      const firstList = $(title).parent('li').parent('ul');
+      const firstList = $(title).parent('.resources__prop_wrap').parent('li').parent('ul');
 
       if (firstList.hasClass('resources')) return;
 
-      const parentElem = $(title).parent('li');
+      const parentElem = $(title).parent('.resources__prop_wrap').parent('li');
 
       parentElem.toggleClass('closed');
     })

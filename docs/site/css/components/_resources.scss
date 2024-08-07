@@ -16,28 +16,25 @@
   }
 
   &__prop {
+    &_wrap {
+      padding: 8px 8px 0;
+      margin-left: -24px;
+      width: calc(100% + 16px);
+
+      &:hover {
+        background: linear-gradient(180deg, #EFF3F9 0%, #FFF 100%);
+        border-radius: 4px;
+      }
+    }
+
     &_name {
       display: block;
       color: $color-main;
-      //width: fit-content;
-      //width: 100%;
-      width: calc(100% + 16px);
       font-weight: $font-weight-bold;
       font-family: monospace, 'Source Code Pro';
-      //padding: 0;
       line-height: 22px;
       margin-bottom: 6px;
       cursor: pointer;
-      margin-left: -24px;
-      padding: 8px 8px 0;
-
-      &:hover {
-        //background: $background-blue;
-        //background-color: rgba(239, 243, 249, .5);
-        background: linear-gradient(180deg, #EFF3F9 0%, #FFF 100%);
-        border-radius: 4px;
-        //opacity: 0.5;
-      }
     }
 
     &_name > .ancestors,
@@ -51,8 +48,8 @@
       color: $color-muted;
       font-style: normal;
       text-transform: uppercase;
-      //font-size: rem(11px);
       line-height: 22px;
+      margin-left: 20px;
 
       &:has(+ .resources__prop_description) {
         padding-bottom: $text-spacing-s;
@@ -67,8 +64,7 @@
     }
 
     &_description {
-      //margin-top: rem(7px);
-      //padding-bottom: $text-spacing-l;
+      margin-left: 20px;
 
       & ul {
         padding: rem(5px);
@@ -91,6 +87,7 @@
       font-weight: $font-weight-regular;
       font-style: italic;
       color: $color-muted;
+
       &.required {
         font-style: normal;
         color: #ff7a7a;
