@@ -169,6 +169,11 @@ func (cp *CRDsInstaller) putCRDToCluster(ctx context.Context, crdReader io.Reade
 		return fmt.Errorf("invalid CRD document apiversion/kind: '%s/%s'", crd.APIVersion, crd.Kind)
 	}
 
+	if len(crd.ObjectMeta.Labels) == 0 {
+		crd.ObjectMeta.Labels = make(map[string]string, 1)
+	}
+	crd.ObjectMeta.Labels["heritage"] = "deckhouse"
+
 	cp.k8sTasks.Go(func() error {
 		return cp.updateOrInsertCRD(ctx, crd)
 	})
@@ -197,11 +202,16 @@ func (cp *CRDsInstaller) updateOrInsertCRD(ctx context.Context, crd *v1.CustomRe
 			crd.Spec.Conversion = existCRD.Spec.Conversion
 		}
 
-		if reflect.DeepEqual(existCRD.Spec, crd.Spec) {
+		if existCRD.GetObjectMeta().GetLabels()["heritage"] == "deckhouse" &&
+			reflect.DeepEqual(existCRD.Spec, crd.Spec) {
 			return nil
 		}
 
 		existCRD.Spec = crd.Spec
+		if len(existCRD.ObjectMeta.Labels) == 0 {
+			existCRD.ObjectMeta.Labels = make(map[string]string, 1)
+		}
+		existCRD.ObjectMeta.Labels["heritage"] = "deckhouse"
 
 		ucrd, err := sdk.ToUnstructured(existCRD)
 		if err != nil {
