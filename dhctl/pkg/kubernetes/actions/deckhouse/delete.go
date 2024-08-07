@@ -38,16 +38,27 @@ const (
 	deckhouseDeploymentName      = "deckhouse"
 )
 
-type StorageCRsConfig struct {
-	Resources  []string
-	ApiGroup   string
-	ApiVersion string
-}
-
-var d8storageConfig = StorageCRsConfig{
-	Resources:  []string{"localstorageclasses", "replicatedstorageclasses", "nfsstorageclasses", "cephstorageclasses"},
-	ApiGroup:   "storage.deckhouse.io",
-	ApiVersion: "v1alpha1",
+var d8storageConfig = []schema.GroupVersionResource{
+	{
+		Group:    "storage.deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "localstorageclasses",
+	},
+	{
+		Group:    "storage.deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "replicatedstorageclasses",
+	},
+	{
+		Group:    "storage.deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "nfsstorageclasses",
+	},
+	{
+		Group:    "storage.deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "cephstorageclasses",
+	},
 }
 
 func DeleteDeckhouseDeployment(kubeCl *client.KubernetesClient) error {
@@ -63,8 +74,8 @@ func DeleteDeckhouseDeployment(kubeCl *client.KubernetesClient) error {
 
 func DeleteDeckhouseStorageCRs(kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Delete Deckhouse Storage CRs", 45, 5*time.Second).WithShowError(false).Run(func() error {
-		for _, cr := range d8storageConfig.Resources {
-			resourceSchema := schema.GroupVersionResource{Group: d8storageConfig.ApiGroup, Version: d8storageConfig.ApiVersion, Resource: cr}
+		for _, cr := range d8storageConfig {
+			resourceSchema := schema.GroupVersionResource{Group: cr.Group, Version: cr.Version, Resource: cr.Resource}
 			storageCRs, err := kubeCl.Dynamic().Resource(resourceSchema).Namespace(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
 			if err != nil {
 				if errors.IsNotFound(err) {
