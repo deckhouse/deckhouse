@@ -6,7 +6,7 @@ properties:
       type: string
     x-examples:
     - ["pool.ntp.org"]
-    - ["pool.ntp.org", "ntp.ubuntu.com"]
+    - ["pool.ntp.org", "ntp.ubuntu.com", "time.google.com"]
     description: |
       NTP servers to sync.
     default: ["pool.ntp.org"]
