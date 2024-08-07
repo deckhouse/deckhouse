@@ -465,7 +465,7 @@ jobs:
           bastion_ip_file=""
           if [[ "${PROVIDER}" == "Static" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+          elif [[ "${PROVIDER}" == "VCD" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
@@ -932,7 +932,7 @@ jobs:
           bastion_ip_file=""
           if [[ "${PROVIDER}" == "Static" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+          elif [[ "${PROVIDER}" == "VCD" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
@@ -1399,7 +1399,7 @@ jobs:
           bastion_ip_file=""
           if [[ "${PROVIDER}" == "Static" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+          elif [[ "${PROVIDER}" == "VCD" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
@@ -1866,7 +1866,7 @@ jobs:
           bastion_ip_file=""
           if [[ "${PROVIDER}" == "Static" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+          elif [[ "${PROVIDER}" == "VCD" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
@@ -2333,7 +2333,7 @@ jobs:
           bastion_ip_file=""
           if [[ "${PROVIDER}" == "Static" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+          elif [[ "${PROVIDER}" == "VCD" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
@@ -2800,7 +2800,7 @@ jobs:
           bastion_ip_file=""
           if [[ "${PROVIDER}" == "Static" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+          elif [[ "${PROVIDER}" == "VCD" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
