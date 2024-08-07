@@ -77,9 +77,9 @@ func DeleteDeckhouseStorageCRs(kubeCl *client.KubernetesClient) error {
 		for _, cr := range d8storageConfig {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
-			resourceSchema := schema.GroupVersionResource{Group: cr.Group, Version: cr.Version, Resource: cr.Resource}
-			storageCRs, err := kubeCl.Dynamic().Resource(resourceSchema).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
+			storageCRs, err := kubeCl.Dynamic().Resource(cr).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 			if err != nil {
+				cancel()
 				if errors.IsNotFound(err) {
 					log.InfoF("Resources kind of %s not found, skipping...\n", cr)
 					continue
@@ -88,12 +88,14 @@ func DeleteDeckhouseStorageCRs(kubeCl *client.KubernetesClient) error {
 			}
 
 			for _, obj := range storageCRs.Items {
-				err := kubeCl.Dynamic().Resource(resourceSchema).Namespace(obj.GetNamespace()).Delete(ctx, obj.GetName(), metav1.DeleteOptions{})
+				err := kubeCl.Dynamic().Resource(cr).Namespace(obj.GetNamespace()).Delete(ctx, obj.GetName(), metav1.DeleteOptions{})
 				if err != nil {
+					cancel()
 					return fmt.Errorf("delete %s %s: %v", cr, obj.GetName(), err)
 				}
 				log.InfoF("%s/%s\n", obj.GetKind(), obj.GetName())
 			}
+			cancel()
 		}
 		return nil
 	})
