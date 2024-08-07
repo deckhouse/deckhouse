@@ -51,7 +51,11 @@ func newWebhookDataSource() *webhookDataSource {
 type webhookDataSource struct {
 }
 
-func (webhookDataSource) Fill(output *updater.WebhookData, release *v1alpha1.ModuleRelease, applyTime time.Time) {
+func (*webhookDataSource) Fill(output *updater.WebhookData, release *v1alpha1.ModuleRelease, applyTime time.Time) {
+	if output == nil {
+		panic("webhook data must be defined")
+	}
+
 	output.UpdateType = updater.UpdateTypeModule
 	output.Message = fmt.Sprintf("New module %s release %s is available. Release will be applied at: %s",
 		release.Spec.ModuleName, output.Version, applyTime.Format(time.RFC850))

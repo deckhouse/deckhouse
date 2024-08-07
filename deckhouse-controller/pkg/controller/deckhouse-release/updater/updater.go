@@ -52,7 +52,11 @@ func newWebhookDataSource() *webhookDataSource {
 type webhookDataSource struct {
 }
 
-func (webhookDataSource) Fill(output *updater.WebhookData, _ *v1alpha1.DeckhouseRelease, applyTime time.Time) {
+func (*webhookDataSource) Fill(output *updater.WebhookData, _ *v1alpha1.DeckhouseRelease, applyTime time.Time) {
+	if output == nil {
+		panic("webhook data must be defined")
+	}
+
 	output.UpdateType = updater.UpdateTypeDeckhouse
 	output.Message = fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", output.Version, applyTime.Format(time.RFC850))
 }
