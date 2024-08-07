@@ -28,7 +28,8 @@
     }
 
     &_name {
-      display: block;
+      display: flex;
+      gap: 11px;
       color: $color-main;
       font-weight: $font-weight-bold;
       font-family: monospace, 'Source Code Pro';
@@ -37,8 +38,8 @@
       cursor: pointer;
     }
 
-    &_name > .ancestors,
-    &_title > .ancestors {
+    &_name .ancestors,
+    &_title .ancestors {
       opacity: 55%;
       word-break: break-all;
     }
@@ -50,11 +51,6 @@
       text-transform: uppercase;
       line-height: 22px;
       margin-left: 20px;
-
-      //&:has(+ .resources__prop_description),
-      //&:has(+ .resources__attrs) {
-      //  padding-bottom: $text-spacing-s;
-      //}
 
       & + p.resources__attrs.required {
         display: inline-flex;
