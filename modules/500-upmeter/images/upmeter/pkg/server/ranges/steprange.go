@@ -29,7 +29,7 @@ type StepRange struct {
 }
 
 func (r StepRange) String() string {
-	return fmt.Sprintf("StepRange{From: %d, To: %d, Step: %d, Subranges: (N=%d)}", r.From, r.To, r.Step, len(r.Subranges))
+	return fmt.Sprintf("StepRange{From: %d, To: %d, Step: %d, Subranges: (%v)}", r.From, r.To, r.Step, r.Subranges)
 }
 
 type Range struct {
@@ -42,26 +42,26 @@ func (r Range) Dur() time.Duration {
 }
 
 func New(start, end time.Time, step time.Duration, includeCurrent bool) StepRange {
-	start = start.Truncate(step)
-	end = end.Truncate(step)
-	if includeCurrent {
-		end = end.Add(step)
+	startAligned := start.Truncate(step)
+	endAligned := end.Truncate(step)
+	if includeCurrent && endAligned != end {
+		endAligned = endAligned.Add(step)
 	}
 
 	return NewStepRange(
-		int64(start.Second()),
-		int64(end.Second()),
+		int64(startAligned.Unix()),
+		int64(endAligned.Unix()),
 		int64(step.Seconds()),
 	)
 }
 
-func AlignStep(requestedStep, stepAlignment time.Duration) time.Duration {
-	if requestedStep < stepAlignment {
+func AlignStep(step, align time.Duration) time.Duration {
+	if step < align {
 		// minimal step
-		return stepAlignment
+		return align
 	}
 	// reduce the step to make it aligned
-	return requestedStep - requestedStep%stepAlignment
+	return step - step%align
 }
 
 // New5MinStepRange returns SteRange aligned to 5 minute step.

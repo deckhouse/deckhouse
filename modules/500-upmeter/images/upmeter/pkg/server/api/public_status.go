@@ -118,10 +118,10 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	wantsPeek := r.URL.Query().Get("peek") == "1"
-	statuses, err := h.getGroupStatusList(wantsPeek)
+	peek := r.URL.Query().Get("peek") == "1"
+	statuses, err := h.getGroupStatusList(peek)
 	if err != nil {
-		log.Errorf("Cannot get status summary (peek=%v): %v", wantsPeek, err)
+		log.Errorf("Cannot get status summary (peek=%v): %v", peek, err)
 		// Skipping the error because the JSON structure is defined in advance.
 		out, _ := json.Marshal(&PublicStatusResponse{
 			Rows:   []GroupStatus{},
@@ -141,8 +141,8 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	w.Write(out)
 }
 
-// getGroupStatusList returns total statuses for each group for the current partial 5m timeslot plus
-// previous full 5m timeslot. If peek is true, then the current partial 5m timeslot is not included.
+// getGroupStatusList returns the most recent complete episode. If peek is true, then 30s episodes
+// are consideres instead of 5m episodes.
 func (h *PublicStatusHandler) getGroupStatusList(peek bool) ([]GroupStatus, error) {
 	daoCtx := h.DbCtx.Start()
 	defer daoCtx.Stop()
@@ -190,7 +190,7 @@ func (h *PublicStatusHandler) calcStatuses(rng ranges.StepRange, lister entity.R
 			muteDowntimeTypes: muteTypes,
 		}
 
-		groupSummary, err := h.episodeSummaryList(lister, filter)
+		groupSummaryList, err := h.getProbeSummaryList(lister, filter)
 		if err != nil {
 			return nil, fmt.Errorf("getting summary for group %s: %v", group, err)
 		}
@@ -209,26 +209,26 @@ func (h *PublicStatusHandler) calcStatuses(rng ranges.StepRange, lister entity.R
 				muteDowntimeTypes: muteTypes,
 			}
 
-			probeSummary, err := h.episodeSummaryList(lister, filter)
+			probeSummaryList, err := h.getProbeSummaryList(lister, filter)
 			if err != nil {
 				return nil, fmt.Errorf("getting summary for probe %s/%s: %v", group, groupRef.Probe, err)
 			}
 
-			av := calculateAvailability(probeSummary)
+			av := calculateAvailability(probeSummaryList)
 			if av < 0 {
 				continue
 			}
 			probeAvails = append(probeAvails, ProbeAvailability{
 				Probe:        probeRef.Probe,
 				Availability: av,
-				Status:       calculateStatus(probeSummary),
+				Status:       calculateStatus(probeSummaryList),
 			})
 		}
 
-		status := calculateStatus(groupSummary)
+		groupStatus := calculateStatus(groupSummaryList)
 		gs := GroupStatus{
-			status: status,
-			Status: status.String(),
+			status: groupStatus,
+			Status: groupStatus.String(),
 			Group:  group,
 			Probes: probeAvails,
 		}
@@ -238,15 +238,15 @@ func (h *PublicStatusHandler) calcStatuses(rng ranges.StepRange, lister entity.R
 	return groupStatuses, nil
 }
 
-func (h *PublicStatusHandler) episodeSummaryList(lister entity.RangeEpisodeLister, filter *statusFilter) ([]entity.EpisodeSummary, error) {
-	resp, err := getStatusSummary(lister, h.DowntimeMonitor, filter, false /* with total */)
+func (h *PublicStatusHandler) getProbeSummaryList(lister entity.RangeEpisodeLister, filter *statusFilter) ([]entity.EpisodeSummary, error) {
+	resp, err := getStatusSummary(lister, h.DowntimeMonitor, filter, false /* = without total */)
 	if err != nil {
 		return nil, fmt.Errorf("fetching summary: %w", err)
 	}
 
 	gpSummary, err := pickGroupProbeSummary(filter.probeRef, resp.Statuses)
 	if err != nil {
-		return nil, fmt.Errorf("flattening summary: %w", err)
+		return nil, fmt.Errorf("picking summary: %w", err)
 	}
 	return gpSummary, nil
 }

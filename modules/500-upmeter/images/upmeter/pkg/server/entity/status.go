@@ -99,13 +99,13 @@ type RangeEpisodeLister interface {
 	ListEpisodeSumsForRanges(rng ranges.StepRange, ref check.ProbeRef) ([]check.Episode, error)
 }
 
-func GetSummary(lister RangeEpisodeLister, ref check.ProbeRef, srng ranges.StepRange, incidents []check.DowntimeIncident, withTotal bool) (map[string]map[string][]EpisodeSummary, error) {
+func GetSummary(lister RangeEpisodeLister, ref check.ProbeRef, srng ranges.StepRange, incidents []check.DowntimeIncident, includeTotal bool) (map[string]map[string][]EpisodeSummary, error) {
 	episodes, err := lister.ListEpisodeSumsForRanges(srng, ref)
 	if err != nil {
 		return nil, fmt.Errorf("listing episodes for range %s: %w", srng, err)
 	}
 
-	statuses := calculateStatuses(episodes, incidents, srng.Subranges, ref, withTotal)
+	statuses := calculateStatuses(episodes, incidents, srng.Subranges, ref, includeTotal)
 	return statuses, nil
 }
 
@@ -131,14 +131,15 @@ aGroup:
 	- timeslot: 900
 	  up: 300
 	  down: 0
-	- timeslot: -1      # total for the period
-	  up: 300
+	- timeslot: -1      # total for the period if requested
+	  up: 900
 	  down: 0
 */
-func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncident, rangeList []ranges.Range, ref check.ProbeRef, withTotal bool) map[string]map[string][]EpisodeSummary {
+func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncident, rangeList []ranges.Range, ref check.ProbeRef, includeTotal bool) map[string]map[string][]EpisodeSummary {
 	// Combine multiple episodes into one for the same probe and timeslot. Basically, we deduce
 	// one single episode from possible alternatives.
-	episodes = combineEpisodesByTimeslot(episodes, rangeList[0].Dur())
+	slotSize := rangeList[0].Dur()
+	episodes = combineEpisodesByTimeslot(episodes, slotSize)
 
 	// Create table with empty statuses for each probe
 	//     Group  ->  Probe  ->  Slot -> *EpisodeSummary
@@ -159,7 +160,7 @@ func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncid
 
 	updateMute(statuses, incidents, rangeList)
 
-	if withTotal {
+	if includeTotal {
 		// We only use total column (timeslot=-1) for full representation in the 'webui', not status page
 		// Calculate group-level summaries including __total__
 		fillTotals(statuses, rangeList)

@@ -242,3 +242,125 @@ func Test_readjusting(t *testing.T) {
 		}
 	}
 }
+
+func TestNew(t *testing.T) {
+
+	start := time.Date(2024, time.November, 23, 21, 16, 87, 928888, time.UTC)
+	end := start.Add(52*time.Minute + 27*time.Second + 11*time.Nanosecond) // +10 steps by 300s and extra
+
+	type args struct {
+		start          time.Time
+		end            time.Time
+		step           time.Duration
+		includeCurrent bool
+	}
+	tests := []struct {
+		name string
+		args args
+		want StepRange
+	}{
+		{
+			name: "zero length with 300s step",
+			args: args{
+				start: time.Unix(0, 0),
+				end:   time.Unix(0, 0),
+				step:  5 * time.Minute,
+
+				includeCurrent: false,
+			},
+			want: StepRange{From: 0, To: 0, Step: 300, Subranges: []Range{{From: 0, To: 300}}},
+		},
+		{
+			name: "zero length with 420s step",
+			args: args{
+				start: time.Unix(0, 0),
+				end:   time.Unix(0, 0),
+				step:  420 * time.Second,
+
+				includeCurrent: false,
+			},
+			want: StepRange{
+				From:      0,
+				To:        420,
+				Step:      420,
+				Subranges: []Range{{From: 0, To: 420}},
+			},
+		},
+		{
+			name: "single-step 300s from epoch",
+			args: args{
+				start: time.Unix(0, 0),
+				end:   time.Unix(0, 0).Add(5 * time.Minute),
+				step:  5 * time.Minute,
+
+				includeCurrent: false,
+			},
+			want: StepRange{
+				From:      0,
+				To:        300,
+				Step:      300,
+				Subranges: []Range{{From: 0, To: 300}},
+			},
+		},
+		{
+			name: "multi-step 300s without current",
+			args: args{
+				start: start,
+				end:   end,
+				step:  5 * time.Minute,
+
+				includeCurrent: false,
+			},
+			want: StepRange{
+				From: 1732396500,
+				To:   1732399500, // +3000s = 10 steps by 300s
+				Step: 300,
+				Subranges: []Range{
+					{From: 1732396500, To: 1732396800},
+					{From: 1732396800, To: 1732397100},
+					{From: 1732397100, To: 1732397400},
+					{From: 1732397400, To: 1732397700},
+					{From: 1732397700, To: 1732398000},
+					{From: 1732398000, To: 1732398300},
+					{From: 1732398300, To: 1732398600},
+					{From: 1732398600, To: 1732398900},
+					{From: 1732398900, To: 1732399200},
+					{From: 1732399200, To: 1732399500},
+				}},
+		},
+		{
+			name: "multi-step 300s with current",
+			args: args{
+				start: start,
+				end:   end,
+				step:  5 * time.Minute,
+
+				includeCurrent: true,
+			},
+			want: StepRange{
+				From: 1732396500,
+				To:   1732399800, // +3300s = 11 steps by 300s
+				Step: 300,
+				Subranges: []Range{
+					{From: 1732396500, To: 1732396800},
+					{From: 1732396800, To: 1732397100},
+					{From: 1732397100, To: 1732397400},
+					{From: 1732397400, To: 1732397700},
+					{From: 1732397700, To: 1732398000},
+					{From: 1732398000, To: 1732398300},
+					{From: 1732398300, To: 1732398600},
+					{From: 1732398600, To: 1732398900},
+					{From: 1732398900, To: 1732399200},
+					{From: 1732399200, To: 1732399500},
+					{From: 1732399500, To: 1732399800},
+				}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := New(tt.args.start, tt.args.end, tt.args.step, tt.args.includeCurrent); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("New() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

@@ -134,13 +134,13 @@ func parseFilter(r *http.Request) (*statusFilter, error) {
 	return parsed, nil
 }
 
-func getStatusSummary(lister entity.RangeEpisodeLister, monitor *downtime.Monitor, filter *statusFilter, withTotal bool) (*StatusResponse, error) {
+func getStatusSummary(lister entity.RangeEpisodeLister, monitor *downtime.Monitor, filter *statusFilter, includeTotal bool) (*StatusResponse, error) {
 	incidents, err := fetchIncidents(monitor, filter.muteDowntimeTypes, filter.probeRef.Group, filter.stepRange)
 	if err != nil {
 		return nil, err
 	}
 
-	statuses, err := entity.GetSummary(lister, filter.probeRef, filter.stepRange, incidents, withTotal)
+	statuses, err := entity.GetSummary(lister, filter.probeRef, filter.stepRange, incidents, includeTotal)
 	if err != nil {
 		return nil, err
 	}
