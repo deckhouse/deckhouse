@@ -30,7 +30,7 @@ type Matcher struct {
 }
 
 func New(withBaseVersionLock bool) *Matcher {
-	baseVersion, _ := semver.NewVersion("v1.0.0")
+	baseVersion, _ := semver.NewVersion("v2.0.0")
 	return &Matcher{
 		withBaseVersionLock: withBaseVersionLock,
 		baseVersion:         baseVersion,
