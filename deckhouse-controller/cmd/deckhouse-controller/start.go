@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"os"
 	"strings"
 	"syscall"
@@ -39,7 +40,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addon-operator/kube-config/backend"
 	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
@@ -170,12 +170,13 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 	kubeConfigChannel := kubeConfigBackend.GetEventsChannel()
 
 	operator.SetupKubeConfigManager(kubeConfigBackend)
-	validation.RegisterAdmissionHandlers(operator)
 
 	err = operator.Setup()
 	if err != nil {
 		return err
 	}
+
+	validation.RegisterAdmissionHandlers(operator)
 
 	dController, err := controller.NewDeckhouseController(ctx, operator.KubeClient().RestConfig(), operator.ModuleManager, operator.MetricStorage)
 	if err != nil {

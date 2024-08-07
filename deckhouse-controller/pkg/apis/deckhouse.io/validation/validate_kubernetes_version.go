@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 )
 
@@ -50,6 +51,9 @@ func kubernetesVersionHandler(mm moduleManager) http.Handler {
 		if err := yaml.Unmarshal(clusterConfigurationRaw, &clusterConf); err != nil {
 			log.Debugf("failed to unmarshal cluster configuration: %v", err)
 			return nil, err
+		}
+		if clusterConf.KubernetesVersion == "Automatic" {
+			clusterConf.KubernetesVersion = config.DefaultKubernetesVersion
 		}
 		if moduleName, err := kubernetesversion.Instance().ValidateBaseVersion(clusterConf.KubernetesVersion); err != nil {
 			log.Debugf("failed to validate base version: %v", err)
