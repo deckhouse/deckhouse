@@ -70,8 +70,11 @@ spec:
                             description: ResourceName is the name identifying various
                               resources in a ResourceList.
                             type: string
+                            enum:
+                            - cpu
+                            - memory
                           type: array
-                          x-doc-default: ['ResourceCPU', 'ResourceMemory']
+                          x-doc-default: ['cpu', 'memory']
                         controlledValues:
                           description: Specifies which resource values should be controlled.
                           enum:
