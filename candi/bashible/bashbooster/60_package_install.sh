@@ -16,6 +16,8 @@
 bb-yum-or-apt-install() {
   if bb-yum?; then
       bb-yum-install "$@"
+	elif bb-apt-rpm?; then
+			bb-apt-rpm-install "$@"
   elif bb-apt?; then
       bb-apt-install "$@"
   fi
