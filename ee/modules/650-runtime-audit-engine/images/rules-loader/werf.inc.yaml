@@ -54,5 +54,5 @@ shell:
   install:
     - set -x
     - apt-get update
-    - apt-get install -y python3 python3-module-pip-run
+    - apt-get install -y python3 python3-module-pip
     - pip3 install -r /requirements.txt
