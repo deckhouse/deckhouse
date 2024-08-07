@@ -65,7 +65,7 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Adjust range to 5m slots.
 	rng := ranges.New5MinStepRange(filter.stepRange.From, filter.stepRange.To, filter.stepRange.Step)
-	log.Infof("[from to step] input [%d %d %d] adjusted to [%d, %d, %d]",
+	log.Infof("[from to step] input [%d %d %d] adjusted to [%d %d %d]",
 		filter.stepRange.From, filter.stepRange.To, filter.stepRange.Step,
 		rng.From, rng.To, rng.Step)
 	filter.stepRange = rng
@@ -83,7 +83,7 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	daoCtx := h.DbCtx.Start()
 	defer daoCtx.Stop()
 
-	resp, err := getStatusSummary(dao.NewEpisodeDao5m(daoCtx), h.DowntimeMonitor, filter)
+	resp, err := getStatusSummary(dao.NewEpisodeDao5m(daoCtx), h.DowntimeMonitor, filter, true /*with total*/)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, err.Error(), http.StatusInternalServerError)
@@ -134,13 +134,13 @@ func parseFilter(r *http.Request) (*statusFilter, error) {
 	return parsed, nil
 }
 
-func getStatusSummary(lister entity.RangeEpisodeLister, monitor *downtime.Monitor, filter *statusFilter) (*StatusResponse, error) {
+func getStatusSummary(lister entity.RangeEpisodeLister, monitor *downtime.Monitor, filter *statusFilter, withTotal bool) (*StatusResponse, error) {
 	incidents, err := fetchIncidents(monitor, filter.muteDowntimeTypes, filter.probeRef.Group, filter.stepRange)
 	if err != nil {
 		return nil, err
 	}
 
-	statuses, err := entity.GetSummary(lister, filter.probeRef, filter.stepRange, incidents)
+	statuses, err := entity.GetSummary(lister, filter.probeRef, filter.stepRange, incidents, withTotal)
 	if err != nil {
 		return nil, err
 	}

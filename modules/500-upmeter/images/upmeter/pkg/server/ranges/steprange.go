@@ -33,12 +33,35 @@ func (r StepRange) String() string {
 }
 
 type Range struct {
-	From int64
-	To   int64
+	To   int64 // in seconds
+	From int64 // in seconds
 }
 
 func (r Range) Dur() time.Duration {
 	return time.Duration(r.To-r.From) * time.Second
+}
+
+func New(start, end time.Time, step time.Duration, includeCurrent bool) StepRange {
+	start = start.Truncate(step)
+	end = end.Truncate(step)
+	if includeCurrent {
+		end = end.Add(step)
+	}
+
+	return NewStepRange(
+		int64(start.Second()),
+		int64(end.Second()),
+		int64(step.Seconds()),
+	)
+}
+
+func AlignStep(requestedStep, stepAlignment time.Duration) time.Duration {
+	if requestedStep < stepAlignment {
+		// minimal step
+		return stepAlignment
+	}
+	// reduce the step to make it aligned
+	return requestedStep - requestedStep%stepAlignment
 }
 
 // New5MinStepRange returns SteRange aligned to 5 minute step.
@@ -54,15 +77,15 @@ func New30SecStepRange(from, to, step int64) StepRange {
 }
 
 // NewStepRange aligns range borders and calculates subranges.
-func NewStepRange(from, to, step int64) StepRange {
-	to = alignEdgeForward(to, step)
-	count := (to - from) / step
-	from = to - step*count
+func NewStepRange(fromSeconds, toSeconds, stepSecods int64) StepRange {
+	toSeconds = alignEdgeForward(toSeconds, stepSecods)
+	count := (toSeconds - fromSeconds) / stepSecods
+	fromSeconds = toSeconds - stepSecods*count // align 'from'
 
 	res := StepRange{
-		From:      from,
-		To:        to,
-		Step:      step,
+		From:      fromSeconds,
+		To:        toSeconds,
+		Step:      stepSecods,
 		Subranges: make([]Range, 0),
 	}
 

@@ -38,25 +38,6 @@ type PublicStatusResponse struct {
 	Rows   []GroupStatus `json:"rows"`
 }
 
-type GroupStatus struct {
-	status PublicStatus
-	Status string              `json:"status"`
-	Group  string              `json:"group"`
-	Probes []ProbeAvailability `json:"probes"`
-}
-
-type ProbeAvailability struct {
-	// Probe is the name of the probe
-	Probe string `json:"probe"`
-
-	// Availability is the ratio represented as a fraction of 1, i.e. it is from 0 to 1 and it must
-	// neve be negative
-	Availability float64 `json:"availability"`
-
-	// Status is the high-level interpretation of the probe result
-	Status PublicStatus `json:"status"`
-}
-
 type PublicStatus int
 
 const (
@@ -97,6 +78,25 @@ func (s PublicStatus) String() string {
 	default:
 		return "Error"
 	}
+}
+
+type GroupStatus struct {
+	status PublicStatus
+	Status string              `json:"status"`
+	Group  string              `json:"group"`
+	Probes []ProbeAvailability `json:"probes"`
+}
+
+type ProbeAvailability struct {
+	// Probe is the name of the probe
+	Probe string `json:"probe"`
+
+	// Availability is the ratio represented as a fraction of 1, i.e. it is from 0 to 1 and it must
+	// neve be negative
+	Availability float64 `json:"availability"`
+
+	// Status is the high-level interpretation of the probe result
+	Status PublicStatus `json:"status"`
 }
 
 type PublicStatusHandler struct {
@@ -149,33 +149,26 @@ func (h *PublicStatusHandler) getGroupStatusList(peek bool) ([]GroupStatus, erro
 
 	now := time.Now()
 
+	var (
+		lister entity.RangeEpisodeLister
+		step   time.Duration
+	)
+
 	if peek {
-		// Observe only last fulfilled 30 seconds for the speed of availability calculation
-		return h.calcStatuses(
-			newOneMinuteStepRange(now),
-			dao.NewEpisodeDao30s(daoCtx),
-			func(ref check.ProbeRef, statuses summaryListByProbeByGroup) ([]entity.EpisodeSummary, error) {
-				slotSize := 30 * time.Second
-				return pickGroupProbeSummaryByLastCompleteEpisode(ref, statuses, slotSize)
-			},
-		)
+		// get one of most recent complete 30s episodes
+		step = 30 * time.Second
+		lister = dao.NewEpisodeDao30s(daoCtx)
+	} else {
+		// get one of most recent complete 5m episodes
+		step = 5 * time.Minute
+		lister = dao.NewEpisodeDao5m(daoCtx)
 	}
 
-	// Observe 10 minutes of fulfilled data for accuracy
-	return h.calcStatuses(
-		new15MinutesStepRange(now),
-		dao.NewEpisodeDao5m(daoCtx),
-		pickGroupProbeSummary,
-	)
+	stepRange := ranges.New(now.Add(-2*step), now, step, false)
+	return h.calcStatuses(stepRange, lister)
 }
 
-type summaryPicker func(ref check.ProbeRef, statuses summaryListByProbeByGroup) ([]entity.EpisodeSummary, error)
-
-func (h *PublicStatusHandler) calcStatuses(
-	rng ranges.StepRange,
-	lister entity.RangeEpisodeLister,
-	pickSummary summaryPicker,
-) ([]GroupStatus, error) {
+func (h *PublicStatusHandler) calcStatuses(rng ranges.StepRange, lister entity.RangeEpisodeLister) ([]GroupStatus, error) {
 	muteTypes := []string{
 		"Maintenance",
 		"InfrastructureMaintenance",
@@ -197,7 +190,7 @@ func (h *PublicStatusHandler) calcStatuses(
 			muteDowntimeTypes: muteTypes,
 		}
 
-		groupSummary, err := h.episodeSummaryList(lister, filter, pickSummary)
+		groupSummary, err := h.episodeSummaryList(lister, filter)
 		if err != nil {
 			return nil, fmt.Errorf("getting summary for group %s: %v", group, err)
 		}
@@ -216,7 +209,7 @@ func (h *PublicStatusHandler) calcStatuses(
 				muteDowntimeTypes: muteTypes,
 			}
 
-			probeSummary, err := h.episodeSummaryList(lister, filter, pickSummary)
+			probeSummary, err := h.episodeSummaryList(lister, filter)
 			if err != nil {
 				return nil, fmt.Errorf("getting summary for probe %s/%s: %v", group, groupRef.Probe, err)
 			}
@@ -245,17 +238,13 @@ func (h *PublicStatusHandler) calcStatuses(
 	return groupStatuses, nil
 }
 
-func (h *PublicStatusHandler) episodeSummaryList(
-	lister entity.RangeEpisodeLister,
-	filter *statusFilter,
-	pickSummary summaryPicker,
-) ([]entity.EpisodeSummary, error) {
-	resp, err := getStatusSummary(lister, h.DowntimeMonitor, filter)
+func (h *PublicStatusHandler) episodeSummaryList(lister entity.RangeEpisodeLister, filter *statusFilter) ([]entity.EpisodeSummary, error) {
+	resp, err := getStatusSummary(lister, h.DowntimeMonitor, filter, false /* with total */)
 	if err != nil {
 		return nil, fmt.Errorf("fetching summary: %w", err)
 	}
 
-	gpSummary, err := pickSummary(filter.probeRef, resp.Statuses)
+	gpSummary, err := pickGroupProbeSummary(filter.probeRef, resp.Statuses)
 	if err != nil {
 		return nil, fmt.Errorf("flattening summary: %w", err)
 	}
@@ -275,40 +264,9 @@ func calculateAvailability(summary []entity.EpisodeSummary) float64 {
 	return worked / measured
 }
 
-func new15MinutesStepRange(now time.Time) ranges.StepRange {
-	step := 5 * time.Minute
-	slotStart := now.Truncate(step)
-	from := slotStart.Add(-2 * step)
-	to := slotStart.Add(step)
-	return ranges.New5MinStepRange(from.Unix(), to.Unix(), int64(step.Seconds()))
-}
-
-// newOneMinuteStepRange returns a step range for the last 1 minute. It is used to peek the current
-// status. The range is 2 steps long to avoid missing data when user fetches recent 30s episode when
-// it hasn't been received yet from agents.
-func newOneMinuteStepRange(now time.Time) ranges.StepRange {
-	step := 30 * time.Second
-	to := now.Truncate(step)
-	from := to.Add(-2 * step) // 1min
-	return ranges.New30SecStepRange(from.Unix(), to.Unix(), int64(step.Seconds()))
-}
-
 var ErrNoData = fmt.Errorf("no data")
 
-// pickGroupProbeSummaryByLastCompleteEpisode returns the last fulfilled episode summary for the given probe.
-func pickGroupProbeSummaryByLastCompleteEpisode(ref check.ProbeRef, statuses summaryListByProbeByGroup, slotSize time.Duration) ([]entity.EpisodeSummary, error) {
-	summary, err := pickGroupProbeSummary(ref, statuses)
-	if err != nil {
-		return nil, fmt.Errorf("getting summary for slot size %s: %w", slotSize, err)
-	}
-	lastFulfilled, found := shrinkToFulfilled(summary, slotSize)
-	if !found {
-		return nil, fmt.Errorf("shrinking data to last complete episode: %w", ErrNoData)
-	}
-	return []entity.EpisodeSummary{lastFulfilled}, nil
-}
-
-// pickGroupProbeSummary
+// Returns the list of summaries for all probes in the group including the total column.
 func pickGroupProbeSummary(ref check.ProbeRef, statuses summaryListByProbeByGroup) ([]entity.EpisodeSummary, error) {
 	g := ref.Group
 	p := ref.Probe
@@ -325,25 +283,7 @@ func pickGroupProbeSummary(ref check.ProbeRef, statuses summaryListByProbeByGrou
 		return nil, fmt.Errorf("%w (empty row) for probe '%s/%s'", ErrNoData, g, p)
 	}
 
-	// Summary column in the end is implied, ignore summary column in the end
-	n := len(episodeSummaries) - 1
-	if n == 1 {
-		return episodeSummaries, nil
-	}
-	if n != 3 {
-		return nil, fmt.Errorf("unexpected count %d!=3 for probe '%s/%s'", n, g, p)
-	}
-
-	return episodeSummaries[:3], nil
-}
-
-func shrinkToFulfilled(summary []entity.EpisodeSummary, slotSize time.Duration) (entity.EpisodeSummary, bool) {
-	for i := len(summary) - 1; i >= 0; i-- {
-		if summary[i].Complete() {
-			return summary[i], true
-		}
-	}
-	return entity.EpisodeSummary{NoData: slotSize}, false
+	return episodeSummaries, nil
 }
 
 // calculateStatus returns the status for a group.

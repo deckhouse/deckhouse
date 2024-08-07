@@ -21,18 +21,7 @@ import (
 	"time"
 
 	"d8.io/upmeter/pkg/server/entity"
-	"d8.io/upmeter/pkg/server/ranges"
 )
-
-func Test_currentRange(t *testing.T) {
-	ts := time.Unix(1803468883, 90)
-	rng := new15MinutesStepRange(ts)
-
-	n := (rng.To - rng.From) / rng.Step
-	if n != 3 {
-		t.Errorf("expected to have 3 steps, got=%d in rng=%v", n, rng)
-	}
-}
 
 func Test_calculateStatus(t *testing.T) {
 	type args struct {
@@ -364,70 +353,6 @@ func Test_calculateAvailability(t *testing.T) {
 			}
 		})
 	}
-}
-
-func Test_newOneMinuteStepRange(t *testing.T) {
-	now := time.Date(2024, time.November, 13, 0o4, 42, 17, 647, time.UTC)
-	step := 30 * time.Second
-	aligned := now.Truncate(step)
-	// fmt.Println(aligned)
-	misaligned := aligned.Add(1 * time.Second).Add(1 * time.Millisecond)
-	// fmt.Println(aligned, misaligned)
-	misalignedAlittleBit := aligned.Add(1 * time.Nanosecond)
-	// fmt.Println(aligned, misaligned, misalignedAlittleBit)
-
-	// The range we expect is from the recent two 30s episodes. All arguments are in seconds
-	recentOneMinuteRange := ranges.NewStepRange(aligned.Add(-2*step).Unix(), aligned.Unix(), int64(step.Seconds()))
-
-	type args struct {
-		now time.Time
-	}
-	tests := []struct {
-		name string
-		args args
-		want ranges.StepRange
-	}{
-		{
-			name: "aligned time",
-			args: args{now: aligned},
-			want: recentOneMinuteRange,
-		},
-		{
-			name: "misaligned time by 1.001s",
-			args: args{now: misaligned},
-			want: recentOneMinuteRange,
-		},
-		{
-			name: "misaligned time by 1ns",
-			args: args{now: misalignedAlittleBit},
-			want: recentOneMinuteRange,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := newOneMinuteStepRange(tt.args.now); !stepRangeEqual(got, tt.want) {
-				t.Errorf("newOneMinuteRangetepRange() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func stepRangeEqual(a, b ranges.StepRange) bool {
-	if !(a.From == b.From && a.To == b.To && a.Step == b.Step) {
-		return false
-	}
-	if len(a.Subranges) != len(b.Subranges) {
-		return false
-	}
-
-	for i := range a.Subranges {
-		if !(a.Subranges[i].From == b.Subranges[i].From && a.Subranges[i].To == b.Subranges[i].To) {
-			return false
-		}
-	}
-
-	return true
 }
 
 func TestPublicStatus_Compare(t *testing.T) {

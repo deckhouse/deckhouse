@@ -99,13 +99,13 @@ type RangeEpisodeLister interface {
 	ListEpisodeSumsForRanges(rng ranges.StepRange, ref check.ProbeRef) ([]check.Episode, error)
 }
 
-func GetSummary(lister RangeEpisodeLister, ref check.ProbeRef, srng ranges.StepRange, incidents []check.DowntimeIncident) (map[string]map[string][]EpisodeSummary, error) {
+func GetSummary(lister RangeEpisodeLister, ref check.ProbeRef, srng ranges.StepRange, incidents []check.DowntimeIncident, withTotal bool) (map[string]map[string][]EpisodeSummary, error) {
 	episodes, err := lister.ListEpisodeSumsForRanges(srng, ref)
 	if err != nil {
 		return nil, fmt.Errorf("listing episodes for range %s: %w", srng, err)
 	}
 
-	statuses := calculateStatuses(episodes, incidents, srng.Subranges, ref)
+	statuses := calculateStatuses(episodes, incidents, srng.Subranges, ref, withTotal)
 	return statuses, nil
 }
 
@@ -131,8 +131,11 @@ aGroup:
 	- timeslot: 900
 	  up: 300
 	  down: 0
+	- timeslot: -1      # total for the period
+	  up: 300
+	  down: 0
 */
-func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncident, rangeList []ranges.Range, ref check.ProbeRef) map[string]map[string][]EpisodeSummary {
+func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncident, rangeList []ranges.Range, ref check.ProbeRef, withTotal bool) map[string]map[string][]EpisodeSummary {
 	// Combine multiple episodes into one for the same probe and timeslot. Basically, we deduce
 	// one single episode from possible alternatives.
 	episodes = combineEpisodesByTimeslot(episodes, rangeList[0].Dur())
@@ -156,8 +159,11 @@ func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncid
 
 	updateMute(statuses, incidents, rangeList)
 
-	// Calculate group-level summaries including __total__
-	calculateTotalForPeriod(statuses, rangeList)
+	if withTotal {
+		// We only use total column (timeslot=-1) for full representation in the 'webui', not status page
+		// Calculate group-level summaries including __total__
+		fillTotals(statuses, rangeList)
+	}
 
 	return transformTimestampedMapsToSortedArrays(statuses, ref)
 }
@@ -299,9 +305,9 @@ func updateMute(statuses map[string]map[string]map[int64]*EpisodeSummary, incide
 	}
 }
 
-// calculateTotalForPeriod calculates the total for a probe for the whole time range. It webui, it
+// fillTotals calculates the total for a probe for the whole time range. In webui, it
 // is rendered in the right-most 'Total' column for probes. It is the sum of all stats in the row.
-func calculateTotalForPeriod(statuses map[string]map[string]map[int64]*EpisodeSummary, ranges []ranges.Range) {
+func fillTotals(statuses map[string]map[string]map[int64]*EpisodeSummary, ranges []ranges.Range) {
 	start := ranges[0].From
 	end := ranges[len(ranges)-1].To
 	for group := range statuses {
