@@ -19,6 +19,7 @@ package deckhouse_release
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -189,7 +190,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 	case v1alpha1.PhaseDeployed:
 		// don't think we have to do anything with Deployed release
 		// probably, we have to move the Deployment's image update logic here
-		return ctrl.Result{}, nil
+		return r.reconcileDeployedRelease(ctx, dr)
 	}
 
 	// update pending release with suspend annotation
@@ -246,11 +247,6 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		r.clusterUUID = r.getClusterUUID(ctx)
 	}
 
-	releaseData, err := r.getReleaseData(ctx)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("get release data: %w", err)
-	}
-
 	clusterBootstrapping := true
 	var imagesRegistry string
 	registrySecret, err := r.getRegistrySecret(ctx)
@@ -278,6 +274,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		Mode:                   us.Update.Mode,
 		ClusterUUID:            r.clusterUUID,
 	}
+	releaseData := getReleaseData(dr)
 	deckhouseUpdater, err := d8updater.NewDeckhouseUpdater(
 		r.logger, r.client, r.dc, dus, releaseData, r.metricStorage, podReady,
 		clusterBootstrapping, imagesRegistry, r.moduleManager.GetEnabledModuleNames(),
@@ -345,10 +342,11 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	// some release is forced, burn everything, apply this patch!
 	if deckhouseUpdater.HasForceRelease() {
-		if deckhouseUpdater.ApplyForcedRelease() {
+		err = deckhouseUpdater.ApplyForcedRelease(ctx)
+		if err == nil {
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, fmt.Errorf("apply forced release: %w", err)
 	}
 
 	var windows update.Windows
@@ -359,8 +357,14 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		windows = r.updateSettings.Get().Update.Windows
 	}
 
-	if deckhouseUpdater.ApplyPredictedRelease(windows) {
-		return ctrl.Result{}, nil
+	err = deckhouseUpdater.ApplyPredictedRelease(windows)
+	if errors.Is(err, updater.ErrNotReadyForDeploy) {
+		//TODO: create custom error type with additional fields like reason end requeueAfter
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("apply predicted release: %w", err)
 	}
 
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
@@ -533,38 +537,6 @@ func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*co
 	return &secret, nil
 }
 
-// TODO: get from release object
-func (r *deckhouseReleaseReconciler) getReleaseData(ctx context.Context) (updater.DeckhouseReleaseData, error) {
-	var cm corev1.ConfigMap
-
-	key := types.NamespacedName{Namespace: "d8-system", Name: "d8-release-data"}
-	err := r.client.Get(ctx, key, &cm)
-	if apierrors.IsNotFound(err) {
-		return updater.DeckhouseReleaseData{}, nil
-	}
-	if err != nil {
-		return updater.DeckhouseReleaseData{}, fmt.Errorf("get config map %s: %w", key, err)
-	}
-
-	var isUpdating, notified bool
-	if v, ok := cm.Data["isUpdating"]; ok {
-		if v == "true" {
-			isUpdating = true
-		}
-	}
-
-	if v, ok := cm.Data["notified"]; ok {
-		if v == "true" {
-			notified = true
-		}
-	}
-
-	return updater.DeckhouseReleaseData{
-		IsUpdating: isUpdating,
-		Notified:   notified,
-	}, nil
-}
-
 func (r *deckhouseReleaseReconciler) isDeckhousePodReady() bool {
 	deckhousePodIP := os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS")
 
@@ -605,4 +577,29 @@ func (r *deckhouseReleaseReconciler) updateByImageHashLoop(ctx context.Context) 
 			r.logger.Errorf("deckhouse image tag update failed: %s", err)
 		}
 	}, 15*time.Second)
+}
+
+func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (ctrl.Result, error) {
+	if r.isDeckhousePodReady() {
+		data := getReleaseData(dr)
+		data.IsUpdating = false
+		err := r.newUpdaterKubeAPI().SaveReleaseData(ctx, dr, data)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("change updating flag: %w", err)
+		}
+		return ctrl.Result{}, nil
+	}
+
+	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+}
+
+func (r *deckhouseReleaseReconciler) newUpdaterKubeAPI() *d8updater.KubeAPI {
+	return d8updater.NewKubeAPI(r.client, r.dc, "")
+}
+
+func getReleaseData(dr *v1alpha1.DeckhouseRelease) updater.DeckhouseReleaseData {
+	return updater.DeckhouseReleaseData{
+		IsUpdating: dr.Annotations[d8updater.IsUpdatingAnnotation] == "true",
+		Notified:   dr.Annotations[d8updater.NotifiedAnnotation] == "true",
+	}
 }
