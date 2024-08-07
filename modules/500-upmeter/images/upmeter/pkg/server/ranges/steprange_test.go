@@ -244,7 +244,6 @@ func Test_readjusting(t *testing.T) {
 }
 
 func TestNew(t *testing.T) {
-
 	start := time.Date(2024, time.November, 23, 21, 16, 87, 928888, time.UTC)
 	end := start.Add(52*time.Minute + 27*time.Second + 11*time.Nanosecond) // +10 steps by 300s and extra
 
@@ -326,7 +325,8 @@ func TestNew(t *testing.T) {
 					{From: 1732398600, To: 1732398900},
 					{From: 1732398900, To: 1732399200},
 					{From: 1732399200, To: 1732399500},
-				}},
+				},
+			},
 		},
 		{
 			name: "multi-step 300s with current",
@@ -353,7 +353,8 @@ func TestNew(t *testing.T) {
 					{From: 1732398900, To: 1732399200},
 					{From: 1732399200, To: 1732399500},
 					{From: 1732399500, To: 1732399800},
-				}},
+				},
+			},
 		},
 	}
 	for _, tt := range tests {
