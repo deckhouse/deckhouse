@@ -341,7 +341,7 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	moduleName := mr.Spec.ModuleName
 
-	c.logger.Debugf("checking requirements of %s for module %s by extenders", mr.GetName(), mr.GetModuleName())
+	c.logger.Debugf("checking requirements of '%s' for module '%s' by extenders", mr.GetName(), mr.GetModuleName())
 	if err := extenders.CheckModuleReleaseRequirements(mr.GetName(), mr.Spec.Requirements); err != nil {
 		if err = c.updateModuleReleaseStatusMessage(ctx, mr, err.Error()); err != nil {
 			return ctrl.Result{Requeue: true}, err
