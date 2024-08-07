@@ -18,6 +18,7 @@ shell:
     - apt-get clean
     - find /var/lib/apt/lists/ /var/cache/apt/ -type f -delete
   install:
+    - set -x
     - apt-get update
     - apt-get install -y git
     - export SOURCE_REPO={{ .SOURCE_REPO }}
@@ -25,6 +26,6 @@ shell:
     - pip3 install -f file:///wheels --no-index -r /requirements.txt
     - rm -rf /wheels
     - apt-get remove -y git
-    - apt-get autoremove
+    - apt-get autoremove -y
     - apt-get clean
     - find /var/lib/apt/lists/ /var/cache/apt/ -type f -delete
