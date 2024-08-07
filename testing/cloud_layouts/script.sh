@@ -82,7 +82,7 @@ Provider specific environment variables:
 
   VCD:
 
-\$LAYOUT_VCLOUD_DIRECTOR_PASSWORD
+\$LAYOUT_VCD_PASSWORD
 
   Static:
 
