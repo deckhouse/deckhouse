@@ -57,13 +57,18 @@ if !exists(.cef.severity) {
 
 // GELFCodecRelabeling applies a set of rules to prevent encoding failures,
 //  1. If host field is missing, set it to node.
-//  2. Change timestamp field type to timestamp.
-//  3. Flatten the record because GELF does not support nested json objects.
-//  4. Replace dots in keys with underscores.
-//  5. Convert all values to strings except bool and int.
+//  2. Delete timestamp_end (not used by Graylog).
+//  3. Change timestamp field type to timestamp.
+//  4. Flatten the record because GELF does not support nested json objects.
+//  5. Replace dots in keys with underscores.
+//  6. Convert all values to strings except bool and int.
 const GELFCodecRelabeling Rule = `
 if !exists(.host) {
   .host = .node
+};
+
+if !exists(.timestamp_end) {
+  del(.timestamp_end)
 };
 
 .timestamp = parse_timestamp!(."timestamp", format: "%+");
