@@ -101,7 +101,6 @@ func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
 		}
 	case v1alpha1.EncodingCodecGELF:
 		encoding.Codec = "gelf"
-
 	}
 
 	result.Encoding = encoding
