@@ -68,6 +68,8 @@ if !exists(.host) {
 . = flatten(.);
 . = map_keys(., recursive: true) -> |key| {
   replace(key, ".", "_")
+  replace(key, "/", "_")
+  replace(key, "-", "_")
 };
 
 . = map_values(., true) -> |value| {
