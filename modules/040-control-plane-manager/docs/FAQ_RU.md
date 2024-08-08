@@ -331,17 +331,21 @@ https://10.2.1.102:2379, d282ac2ce600c1ce, 3.5.3, 182 MB, true, false, 42007, 40
 
 1. Установите утилиту [etcdutl](https://github.com/etcd-io/etcd/releases).
 1. С текущего локального снапшота (`/var/lib/etcd/member/snap/db`) выполните создание нового снапшота, где `HOSTNAME` название master-узла, а `ADDRESS` его адрес:
+
    ```shell
    ./etcdutl snapshot restore /var/lib/etcd/member/snap/db --name HOSTNAME \
    --initial-cluster=HOSTNAME=https://ADDRESS:2380 --initial-advertise-peer-urls=https://ADDRESS:2380 \
    --skip-hash-check=true --data-dir /var/lib/etcdtest
    ```
+
 1. Выполните команды, для использования нового снапшота:
+
    ```shell
    cp -r /var/lib/etcd /tmp/etcd-backup
    rm -rf /var/lib/etcd
    mv /var/lib/etcdtest /var/lib/etcd
    ```
+
 1. Найдите контейнеры `etcd` и `api-server` (`crictl ps -a | egrep "etcd|apiserver"`) и выполните их удаление (`crictl rm CONTAINER-ID`).
 1. Перезапустите master-узел.
 
