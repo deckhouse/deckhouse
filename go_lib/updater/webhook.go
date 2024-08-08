@@ -18,6 +18,11 @@ package updater
 
 import "time"
 
-type WebhookDataGetter[R Release] interface {
-	GetMessage(release R, time time.Time) string
+const (
+	SubjectDeckhouse = "Deckhouse"
+	SubjectModule    = "Module"
+)
+
+type WebhookDataSource[R Release] interface {
+	Fill(output *WebhookData, release R, applyTime time.Time)
 }

@@ -42,19 +42,25 @@ func NewDeckhouseUpdater(logger logger.Logger, client client.Client, dc dependen
 	podIsReady, clusterBootstrapping bool, imagesRegistry string, enabledModules []string) (*updater.Updater[*v1alpha1.DeckhouseRelease], error) {
 	return updater.NewUpdater[*v1alpha1.DeckhouseRelease](logger, updateSettings.NotificationConfig, updateSettings.Mode, releaseData,
 		podIsReady, clusterBootstrapping, newKubeAPI(client, dc, imagesRegistry),
-		newMetricUpdater(metricStorage), newValueSettings(updateSettings.DisruptionApprovalMode), newWebhookDataGetter(), enabledModules), nil
+		newMetricUpdater(metricStorage), newValueSettings(updateSettings.DisruptionApprovalMode), newWebhookDataSource(logger), enabledModules), nil
 }
 
-func newWebhookDataGetter() *webhookDataGetter {
-	return &webhookDataGetter{}
+func newWebhookDataSource(logger logger.Logger) *webhookDataSource {
+	return &webhookDataSource{logger: logger}
 }
 
-type webhookDataGetter struct {
+type webhookDataSource struct {
+	logger logger.Logger
 }
 
-func (w *webhookDataGetter) GetMessage(release *v1alpha1.DeckhouseRelease, releaseApplyTime time.Time) string {
-	version := fmt.Sprintf("%d.%d", release.GetVersion().Major(), release.GetVersion().Minor())
-	return fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", version, releaseApplyTime.Format(time.RFC850))
+func (s *webhookDataSource) Fill(output *updater.WebhookData, _ *v1alpha1.DeckhouseRelease, applyTime time.Time) {
+	if output == nil {
+		s.logger.Error("webhook data must be defined")
+		return
+	}
+
+	output.Subject = updater.SubjectDeckhouse
+	output.Message = fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", output.Version, applyTime.Format(time.RFC850))
 }
 
 func newKubeAPI(client client.Client, dc dependency.Container, imagesRegistry string) *kubeAPI {

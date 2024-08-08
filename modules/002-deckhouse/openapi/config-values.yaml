@@ -135,6 +135,7 @@ properties:
 
               ```json
               {
+                "subject":"Deckhouse",
                 "version": "1.36",
                 "requirements":  {"k8s": "1.20.0"},
                 "changelogLink": "https://github.com/deckhouse/deckhouse/changelog/1.36.md",
@@ -144,6 +145,8 @@ properties:
               ```
 
               Description of POST request fields:
+              - `subject` — string, the update event type. Possible values: `Deckhouse`, `Module`;
+              - `moduleName` — string, the name of the module. Set only if `subject: Module`.
               - `version` - string, minor version number;
               - `requirements` - object, version requirements;
               - `changelogLink` - string, a URL to the minor version changelog;
