@@ -61,27 +61,37 @@ spec:
                             type: string
                             description: |
                               Service name.
+                            pattern: '^[0-9a-z\-]+$'
+                            minLength: 1
                           namespace:
                             type: string
                             description: |
                               Service namespace.
+                            pattern: '^[0-9a-z\-]+$'
+                            minLength: 1
                           port:
                             type: integer
                             description: |
                               Service port.
+                            minimal: 1
                           path:
                             type: string
                             description: |
                               URI path.
+                            pattern: '^[0-9a-zA-Z._\/-]+$'
+                            minLength: 1
                       caBundle:
                         type: string
                         description: |
                           CA bundle to verify webhook certificate.
+                        pattern: '^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{4}|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+\/]{2}={2})$'
+                        minLength: 4
                   timeoutSeconds:
                     type: integer
                     description: |
                       Webhook timeout in seconds.
                     default: 5
+                    minimal: 1
       additionalPrinterColumns:
         - jsonPath: .webhooks[0].clientConfig.service.name
           name: Name
