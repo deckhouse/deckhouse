@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Col, Container, Row, Styles } from "sveltestrap";
+	import "../node_modules/bootstrap/dist/css/bootstrap.min.css";
+	import { Col, Container, Row } from "sveltestrap";
 	import Group from "./lib/Group.svelte";
 	import StatusText from "./lib/StatusText.svelte";
 	import { getGroupData } from "./en";
@@ -36,8 +37,6 @@
 		setInterval(update, 10e3);
 	}
 </script>
-
-<Styles />
 
 <Container style="width: 600px">
 	<Row class="mt-5 align-items-end">

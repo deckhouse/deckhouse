@@ -11,6 +11,7 @@
 	},
 	"devDependencies": {
 		"@sveltejs/vite-plugin-svelte": "^1.0.1",
+		"bootstrap": "^5.3.3",
 		"prettier": "^2.7.1",
 		"prettier-plugin-svelte": "^2.7.0",
 		"svelte": "^3.49.0",

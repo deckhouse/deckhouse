@@ -40,9 +40,9 @@ var (
 	group = "TheGroup"
 	probe = "TheProbe"
 
-	probeRef  = ref(group, probe)
-	probe2Ref = ref(group, probe+"2")
-	totalRef  = ref(group, dao.GroupAggregation)
+	probeRef = ref(group, probe)
+	// probe2Ref = ref(group, probe+"2")
+	totalRef = ref(group, dao.GroupAggregation)
 )
 
 func Test_CalculateStatuses_success_only(t *testing.T) {
@@ -57,7 +57,7 @@ func Test_CalculateStatuses_success_only(t *testing.T) {
 	}
 
 	t.Run("simple case with minimal step", func(t *testing.T) {
-		s := calculateStatuses(episodes, nil, ranges.New5MinStepRange(0, 900, 300).Subranges, probeRef)
+		s := calculateStatuses(episodes, nil, ranges.New5MinStepRange(0, 900, 300).Subranges, probeRef, true)
 
 		// Len should be 4: 3 episodes + one total episode for a period.
 		assertTree(g, s, probeRef, 3+1, "simple case with minimal step")
@@ -68,7 +68,7 @@ func Test_CalculateStatuses_success_only(t *testing.T) {
 	})
 
 	t.Run("mmm", func(t *testing.T) {
-		s := calculateStatuses(episodes, nil, ranges.New5MinStepRange(0, 1200, 300).Subranges, probeRef)
+		s := calculateStatuses(episodes, nil, ranges.New5MinStepRange(0, 1200, 300).Subranges, probeRef, true)
 
 		assertTree(g, s, probeRef, 4+1, "testGroup/testProbe len 4")
 		assertTimers(g, s[group][probe][0], counters{up: 300})
@@ -79,7 +79,7 @@ func Test_CalculateStatuses_success_only(t *testing.T) {
 	})
 
 	t.Run("2x step", func(t *testing.T) {
-		s := calculateStatuses(episodes, nil, ranges.New5MinStepRange(0, 1200, 600).Subranges, probeRef)
+		s := calculateStatuses(episodes, nil, ranges.New5MinStepRange(0, 1200, 600).Subranges, probeRef, true)
 
 		assertTree(g, s, probeRef, 2+1, "testGroup/testProbe len 2")
 		assertTimers(g, s[group][probe][0], counters{up: 600})
@@ -185,17 +185,17 @@ func newEpisode(ref check.ProbeRef, ts int64, seconds counters) check.Episode {
 	}
 }
 
-func newDowntimeIncident(start, end int64, affected ...string) check.DowntimeIncident {
-	return check.DowntimeIncident{
-		Start:        start,
-		End:          end,
-		Duration:     0,
-		Type:         "Maintenance",
-		Description:  "test",
-		Affected:     affected,
-		DowntimeName: "",
-	}
-}
+// func newDowntimeIncident(start, end int64, affected ...string) check.DowntimeIncident {
+// 	return check.DowntimeIncident{
+// 		Start:        start,
+// 		End:          end,
+// 		Duration:     0,
+// 		Type:         "Maintenance",
+// 		Description:  "test",
+// 		Affected:     affected,
+// 		DowntimeName: "",
+// 	}
+// }
 
 func assertTimers(g *WithT, got EpisodeSummary, expected counters) {
 	gotT := timers{
@@ -220,11 +220,11 @@ func assertTree(g *WithT, s map[string]map[string][]EpisodeSummary, ref check.Pr
 	g.Expect(s[group][probe]).Should(HaveLen(len), msg)
 }
 
-func setInfoTime(info *EpisodeSummary, c counters) {
-	t := ctimers(c)
-	info.Up = t.up
-	info.Down = t.down
-	info.Unknown = t.unknown
-	info.Muted = t.muted
-	info.NoData = t.nodata
-}
+// func setInfoTime(info *EpisodeSummary, c counters) {
+// 	t := ctimers(c)
+// 	info.Up = t.up
+// 	info.Down = t.down
+// 	info.Unknown = t.unknown
+// 	info.Muted = t.muted
+// 	info.NoData = t.nodata
+// }

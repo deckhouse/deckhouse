@@ -91,7 +91,7 @@ func Test_Save30sEpisode_Combines(t *testing.T) {
 		NoData:   initial.NoData,
 	}
 
-	_, err := save30sEpisode(dao.DbCtx, initial)
+	save30sEpisode(dao.DbCtx, initial)
 	saved, err := save30sEpisode(dao.DbCtx, want)
 	if err != nil {
 		t.Errorf("cannot save 30s episode: %v", err)
