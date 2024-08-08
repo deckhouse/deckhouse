@@ -7,7 +7,7 @@ ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 WORKDIR /dex
 COPY patches/client-groups.patch patches/static-user-groups.patch patches/gitlab-refresh-context.patch /
-RUN git clone --branch v2.41.0 --depth 1 ${SOURCE_REPO}/dexidp/dex.git . \
+RUN git clone --branch v2.41.1 --depth 1 ${SOURCE_REPO}/dexidp/dex.git . \
   && git apply /client-groups.patch \
   && git apply /static-user-groups.patch \
   && git apply /gitlab-refresh-context.patch
