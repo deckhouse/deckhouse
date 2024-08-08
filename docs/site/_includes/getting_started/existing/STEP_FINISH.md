@@ -19,7 +19,7 @@ Access to the documentation is restricted via the basic authentication mechanism
 
     {% snippetcut %}
 ```bash
-kubectl -n d8-system exec deploy/deckhouse -- sh -c "deckhouse-controller module values documentation -o json | jq -r '.documentation.internal.auth.password'"
+kubectl -n d8-system exec deploy/deckhouse -- sh -c "deckhouse-controller module values documentation -o json | jq -r '.internal.auth.password'"
 ```
 {% endsnippetcut %}
 
@@ -33,7 +33,7 @@ kubectl -n d8-system exec deploy/deckhouse -- sh -c "deckhouse-controller module
 
   {% offtopic title="Sample output..." %}
 ```
-$ kubectl -n d8-system exec deploy/deckhouse -- sh -c "deckhouse-controller module values documentation -o json | jq -r '.documentation.internal.auth.password'" 
+$ kubectl -n d8-system exec deploy/deckhouse -- sh -c "deckhouse-controller module values documentation -o json | jq -r '.internal.auth.password'" 
 3aE7nY1VlfiYCH4GFIqA
 ```
   {% endofftopic %}
