@@ -55,10 +55,13 @@ if !exists(.cef.severity) {
 
 `
 
-// GELFSetHostLabel sets host label to node if it is not set.
-// Required when collecting logs from kubernetes pods.
-const GELFSetHostLabel Rule = `
+// GELFCodecRelabeling applies a set of rules to prevent encoding failures,
+//  1. If host field is missing, set it to node.
+//  2. Flatten the record because GELF does not support nested json objects.
+const GELFCodecRelabeling Rule = `
 if !exists(.host) {
   .host = .node
 };
+
+. = flatten(.);
 `

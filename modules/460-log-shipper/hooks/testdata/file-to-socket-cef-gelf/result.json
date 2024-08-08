@@ -29,7 +29,7 @@
       "inputs": [
         "transform/source/test-source/01_local_timezone"
       ],
-      "source": "if !exists(.host) {\n  .host = .node\n};",
+      "source": "if !exists(.host) {\n  .host = .node\n};\n\n. = flatten(.);",
       "type": "remap"
     },
     "transform/source/test-source/00_clean_up": {
