@@ -1,5 +1,10 @@
 # Changelog v1.63
 
+## [MALFORMED]
+
+
+ - #9280 invalid type "Fix spec.version in the example in the documentation module.", missing summary
+
 ## Know before update
 
 
@@ -63,10 +68,12 @@
     Fix bootstrap error in the Getting Started `config.yml` for VK Cloud.
  - **[go_lib]** Fix work `registry-packages-proxy` with module sources. [#9112](https://github.com/deckhouse/deckhouse/pull/9112)
     `registry-packages-proxy` should be restarted.
+ - **[istio]** Fixed istio module operability in managed k8s setups. [#9275](https://github.com/deckhouse/deckhouse/pull/9275)
  - **[istio]** Istio 1.19 version compatibility extended with K8s versions 1.29 and 1.30. [#9217](https://github.com/deckhouse/deckhouse/pull/9217)
  - **[l2-load-balancer]** An internal refactoring and the fix for handling external and internal traffic policies in the LoadBalancer Service. [#9114](https://github.com/deckhouse/deckhouse/pull/9114)
  - **[log-shipper]** Make `extraLabels` and `CEF` encoding work for `Socket` destination. [#9149](https://github.com/deckhouse/deckhouse/pull/9149)
  - **[multitenancy-manager]** Fix templates bugs. [#9205](https://github.com/deckhouse/deckhouse/pull/9205)
+ - **[node-manager]** fix role rights for cluster-autoscaler 1.29, 1.30 [#9294](https://github.com/deckhouse/deckhouse/pull/9294)
  - **[node-manager]** Reducing unnecessary kube-apiserver logsl. [#9134](https://github.com/deckhouse/deckhouse/pull/9134)
     Reducing unnecessary kube-apiserver logs.
  - **[node-manager]** Added handling for graceful shutdown of node-critical pods during cluster scale-down. [#8609](https://github.com/deckhouse/deckhouse/pull/8609)
