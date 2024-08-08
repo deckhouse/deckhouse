@@ -339,17 +339,21 @@ This method may be necessary if the `--force-new-cluster` option doesn't restore
 
 1. Install the [etcdutl](https://github.com/etcd-io/etcd/releases) utility.
 1. From the current local snapshot (`/var/lib/etcd/member/snap/db`), create a new snapshot where `HOSTNAME` is the name of the master node and `ADDRESS` is its address:
+
    ```shell
     ./etcdutl snapshot restore /var/lib/etcd/member/snap/db --name HOSTNAME \
     --initial-cluster=HOSTNAME=https://ADDRESS:2380 --initial-advertise-peer-urls=https://ADDRESS:2380 \
     --skip-hash-check=true --data-dir /var/lib/etcdtest
    ```
+
 1. Execute the following commands to use the new snapshot:
+
    ```shell
     cp -r /var/lib/etcd /tmp/etcd-backup
     rm -rf /var/lib/etcd
     mv /var/lib/etcdtest /var/lib/etcd
    ```
+
 1. Locate the `etcd` and `api-server` containers (`crictl ps -a | egrep "etcd|apiserver"`) and remove them (`crictl rm CONTAINER-ID`).
 1. Restart the master node.
 
