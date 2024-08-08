@@ -66,7 +66,7 @@ if !exists(.host) {
   .host = .node
 };
 
-.timestamp = = parse_timestamp!(."timestamp", format: "%+");
+.timestamp = parse_timestamp!(."timestamp", format: "%+");
 
 . = flatten(.);
 
