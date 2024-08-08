@@ -12,7 +12,7 @@ kind: ModuleConfig
 metadata:
   name: documentation
 spec:
-  version: 2
+  version: 1
   enabled: true
   settings:
     nodeSelector:
