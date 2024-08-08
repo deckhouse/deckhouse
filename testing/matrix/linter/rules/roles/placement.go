@@ -159,10 +159,10 @@ func objectRBACPlacementServiceAccount(m utils.Module, object storage.StoreObjec
 		}
 
 		if strings.HasPrefix(objectName, "istiod") && namespace == "d8-istio" {
-                        // istiod Deployment is rendered by istio-operator with serviceAccountName according to its
-                        // naming conventions we can't change (i.e. istiod-v1x19).
-                        // In our convention it has to be named as "iop" according to template folder, but within the folder we render
-                        // not a single istiod instance, but several for different versions and can't use the shared ServiceAccount for them.
+			// istiod Deployment is rendered by istio-operator with serviceAccountName according to its
+			// naming conventions we can't change (i.e. istiod-v1x19).
+			// In our convention it has to be named as "iop" according to template folder, but within the folder we render
+			// not a single istiod instance, but several for different versions and can't use the shared ServiceAccount for them.
 			return errors.EmptyRuleError
 		}
 
