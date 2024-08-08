@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"flag"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -40,6 +41,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
@@ -103,7 +105,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("testdata cases", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}}"}}}, nil
+			return []v1.Layer{&utils.FakeLayer{}}, nil
 		}}, nil)
 
 		for _, en := range entries {
@@ -269,8 +271,9 @@ func (s stubModulesManager) DisableModuleHooks(_ string) {
 
 }
 
-func (s stubModulesManager) GetModule(_ string) *addonmodules.BasicModule {
-	return nil
+func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
+	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{})
+	return bm
 }
 
 func (s stubModulesManager) GetEnabledModuleNames() []string {
@@ -290,4 +293,37 @@ func singleDocToManifests(doc []byte) (result []string) {
 		}
 	}
 	return
+}
+
+func Test_validateModule(t *testing.T) {
+	log.SetOutput(io.Discard)
+
+	check := func(name string, failed bool) {
+		t.Helper()
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join("./testdata", name)
+			err := validateModule(
+				models.DeckhouseModuleDefinition{
+					Name:   name,
+					Weight: 900,
+					Path:   path,
+				},
+				nil,
+			)
+
+			if !failed {
+				require.NoError(t, err, "%s: unexpected error: %v", name, err)
+			}
+
+			if failed {
+				require.Error(t, err, "%s: got nil error", name)
+			}
+		})
+	}
+
+	check("module", false)
+	check("module-not-valid", true)
+	check("module-failed", true)
+	check("module-values-failed", true)
+	check("virtualization", false)
 }
