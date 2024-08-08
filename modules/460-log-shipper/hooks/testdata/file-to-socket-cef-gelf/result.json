@@ -29,7 +29,7 @@
       "inputs": [
         "transform/source/test-source/01_local_timezone"
       ],
-      "source": "if !exists(.host) {\n  .host = .node\n};\n\n. = flatten(.);\n. = map_keys(., recursive: true) -\u003e |key| {\n  key = replace(key, \".\", \"_\");\n  key = replace(key, \"/\", \"_\");\n  key = replace(key, \"-\", \"_\");\n  key\n};\n\n. = map_values(., true) -\u003e |value| {\n  if is_timestamp(value) {\n    value\n  } else if is_float(value) {\n    value\n  } else if is_integer(value) {\n    value\n  } else {\n    join(value, \", \") ?? to_string(value) ?? value\n  }\n};",
+      "source": "if !exists(.host) {\n  .host = .node\n};\n\n.timestamp = = parse_timestamp!(.\"timestamp\", format: \"%+\");\n\n. = flatten(.);\n\n. = map_keys(., recursive: true) -\u003e |key| {\n  key = replace(key, \".\", \"_\");\n  key = replace(key, \"/\", \"_\");\n  key = replace(key, \"-\", \"_\");\n  key\n};\n\n. = map_values(., true) -\u003e |value| {\n  if is_timestamp(value) {\n    value\n  } else if is_float(value) {\n    value\n  } else if is_integer(value) {\n    value\n  } else {\n    join(value, \", \") ?? to_string(value) ?? value\n  }\n};",
       "type": "remap"
     },
     "transform/source/test-source/00_clean_up": {
