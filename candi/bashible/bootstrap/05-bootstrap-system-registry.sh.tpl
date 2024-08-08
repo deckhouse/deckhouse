@@ -186,7 +186,7 @@ storage:
     blobdescriptor: inmemory
 
 http:
-  addr: localhost:5001
+  addr: 0.0.0.0:5001
   prefix: /
   secret: asecretforlocaldevelopment
   debug:
@@ -339,6 +339,7 @@ EOF
 chmod a+x "$IGNITER_DIR/start_system_registry_igniter.sh"
 chmod a+x "$IGNITER_DIR/stop_system_registry_igniter.sh"
 
+bash "$IGNITER_DIR/stop_system_registry_igniter.sh"
 bash "$IGNITER_DIR/start_system_registry_igniter.sh"
 
 {{- end }}

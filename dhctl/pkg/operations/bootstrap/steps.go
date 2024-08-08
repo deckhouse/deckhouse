@@ -46,6 +46,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/d8"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
@@ -280,6 +281,66 @@ func SetupSSHTunnelToRegistryPackagesProxy(sshCl *ssh.Client) (*frontend.Reverse
 	return tun, nil
 }
 
+func setupSSHTunnelToSystemRegistry(sshCl *ssh.Client) (*frontend.Tunnel, string, error) {
+	log.DebugF("Running local ssh tunnel for system registry")
+
+	port := "5001"
+	listenAddress := "127.0.0.1"
+
+	tun := sshCl.Tunnel("L", fmt.Sprintf("%s:%s:%s", port, listenAddress, port))
+	err := tun.Up()
+	if err != nil {
+		return nil, "", err
+	}
+	return tun, fmt.Sprintf("%s:%s", port, listenAddress), nil
+}
+
+func setupSSHTunnelToSystemRegistryAuth(sshCl *ssh.Client) (*frontend.Tunnel, string, error) {
+	log.DebugF("Running local ssh tunnel for system registry auth")
+
+	port := "5051"
+	listenAddress := "127.0.0.1"
+
+	tun := sshCl.Tunnel("L", fmt.Sprintf("%s:%s:%s", port, listenAddress, port))
+	err := tun.Up()
+	if err != nil {
+		return nil, "", err
+	}
+	return tun, fmt.Sprintf("%s:%s", port, listenAddress), nil
+}
+
+func pushDockerImagesToSystemRegistry(sshCl *ssh.Client, cfg *config.MetaConfig) error {
+	return log.Process("bootstrap", "Push images to the system registry", func() error {
+		registryUser := cfg.InternalRegistryAccess.UserRw
+		imagesBundlePath := "/deckhouse/candi/bundle/untar/"
+		d8Push := d8.NewMirrorPush().
+			WithInsecure(false).
+			WithTlsSkipVerify(true).
+			WithRegistryAuth(registryUser.Name, registryUser.Password)
+
+		authTun, _, err := setupSSHTunnelToSystemRegistryAuth(sshCl)
+		if err != nil {
+			return fmt.Errorf("failed to setup SSH tunnel to system registry auth: %v", err)
+		}
+		defer authTun.Stop()
+
+		if sshCl.Settings.BastionHost == "" {
+			registryAddress := fmt.Sprintf("%s:5001", sshCl.Settings.Host())
+			d8Push = d8Push.MirrorPush(imagesBundlePath, registryAddress)
+			return d8Push.Run()
+		} else {
+			systemRegistryTun, registryAddress, err := setupSSHTunnelToSystemRegistry(sshCl)
+			if err != nil {
+				return fmt.Errorf("failed to setup SSH tunnel to system registry: %v", err)
+			}
+			defer systemRegistryTun.Stop()
+
+			d8Push = d8Push.MirrorPush(imagesBundlePath, registryAddress)
+			return d8Push.Run()
+		}
+	})
+}
+
 type registryClientConfigGetter struct {
 	registry.ClientConfig
 }
@@ -496,6 +557,12 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 
 	if err := BootstrapMaster(nodeInterface, templateController); err != nil {
 		return err
+	}
+
+	if cfg.Registry.RegistryMode == "Detached" {
+		if err := pushDockerImagesToSystemRegistry(sshClient, cfg); err != nil {
+			return err
+		}
 	}
 
 	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
