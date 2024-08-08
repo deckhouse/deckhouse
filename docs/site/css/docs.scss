@@ -774,7 +774,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs ul.resources > li > .resources__prop_wrap {
-    & > .resources__prop_type {
+    & > .resources__prop_type,
+    & > .resources__prop_description,
+    & > p.resources__attrs:not(.required),
+    & > .language-yaml.highlighter-rouge {
         margin-left: 0;
     }
 
@@ -837,6 +840,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
     }
 }
 
+.docs ul > li.closed > .resources__prop_wrap:hover {
+    background: linear-gradient(180deg, #EFF3F9 0%, #FFF 100%);
+    border-radius: 4px;
+}
+
 .docs ul > li.closed > .resources__prop_wrap > span.resources__prop_name {
     margin-bottom: 0;
 }
@@ -873,7 +881,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     margin-bottom: 0;
 }
 
-.docs .language-yaml.highlighter-rouge {
+.docs .resources div:not(.resources__prop_description) > .language-yaml.highlighter-rouge {
     margin: 5px 0 10px 24px;
 }
 
