@@ -78,7 +78,7 @@ func (m *MirrorPush) MirrorPush(imagesBundlePath, registryAddress string) *Mirro
 	}
 
 	if app.IsDebug {
-		args = append(args, "--v=10")
+		env = append(env, "MIRROR_DEBUG_LOG=3")
 	}
 
 	args = append(
