@@ -68,18 +68,15 @@ func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
 		result.TLS = tls
 	}
 
-	encoding := Encoding{
-		Codec:           "json",
-		TimestampFormat: "rfc3339",
-	}
-	if spec.Encoding.Codec == v1alpha1.EncodingCodecText {
+	encoding := Encoding{TimestampFormat: "rfc3339"}
+
+	switch spec.Encoding.Codec {
+	case v1alpha1.EncodingCodecText:
 		encoding.Codec = "text"
-	}
-	if spec.Encoding.Codec == v1alpha1.EncodingCodecSyslog {
+	case v1alpha1.EncodingCodecSyslog:
 		encoding.Codec = "text"
 		// the main encoding is done by the vrl rule
-	}
-	if spec.Encoding.Codec == v1alpha1.EncodingCodecCEF {
+	case v1alpha1.EncodingCodecCEF:
 		encoding.Codec = "cef"
 		encoding.CEF = CEFEncoding{
 			Version:            "V1",
@@ -102,8 +99,11 @@ func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
 				"podowner":  "pod_owner",
 			},
 		}
-	}
-	result.Encoding = encoding
+	case v1alpha1.EncodingCodecGELF:
+		encoding.Codec = "gelf"
 
+	}
+
+	result.Encoding = encoding
 	return result
 }

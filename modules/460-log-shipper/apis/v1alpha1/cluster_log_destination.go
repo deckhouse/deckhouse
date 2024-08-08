@@ -118,6 +118,7 @@ const (
 	EncodingCodecCEF    EncodingCodec = "CEF"
 	EncodingCodecJSON   EncodingCodec = "JSON"
 	EncodingCodecSyslog EncodingCodec = "Syslog"
+	EncodingCodecGELF   EncodingCodec = "GELF"
 )
 
 type CommonEncoding struct {

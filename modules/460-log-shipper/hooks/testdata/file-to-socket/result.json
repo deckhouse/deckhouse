@@ -43,7 +43,6 @@
         "enabled": false
       },
       "encoding": {
-        "codec": "json",
         "timestamp_format": "rfc3339"
       },
       "mode": "tcp",

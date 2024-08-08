@@ -81,6 +81,25 @@
         "verify_hostname": false,
         "verify_certificate": true
       }
+    },
+    "destination/cluster/test-socket2-dest": {
+      "type": "socket",
+      "inputs": [
+        "transform/source/test-source/01_local_timezone"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "encoding": {
+        "codec": "gelf",
+        "timestamp_format": "rfc3339"
+      },
+      "mode": "tcp",
+      "address": "graylog.svc.cluster.local:9200",
+      "tls": {
+        "verify_hostname": true,
+        "verify_certificate": true
+      }
     }
   }
 }
