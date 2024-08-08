@@ -318,6 +318,10 @@ func pushDockerImagesToSystemRegistry(sshCl *ssh.Client, cfg *config.MetaConfig)
 			WithTlsSkipVerify(true).
 			WithRegistryAuth(registryUser.Name, registryUser.Password)
 
+		stdOutErrHandler := func(l string) {
+			log.InfoLn(l)
+		}
+
 		authTun, _, err := setupSSHTunnelToSystemRegistryAuth(sshCl)
 		if err != nil {
 			return fmt.Errorf("failed to setup SSH tunnel to system registry auth: %v", err)
@@ -327,17 +331,21 @@ func pushDockerImagesToSystemRegistry(sshCl *ssh.Client, cfg *config.MetaConfig)
 		if sshCl.Settings.BastionHost == "" {
 			registryAddress := fmt.Sprintf("%s:5001", sshCl.Settings.Host())
 			d8Push = d8Push.MirrorPush(imagesBundlePath, registryAddress)
-			return d8Push.Run()
-		} else {
-			systemRegistryTun, registryAddress, err := setupSSHTunnelToSystemRegistry(sshCl)
-			if err != nil {
-				return fmt.Errorf("failed to setup SSH tunnel to system registry: %v", err)
-			}
-			defer systemRegistryTun.Stop()
-
-			d8Push = d8Push.MirrorPush(imagesBundlePath, registryAddress)
-			return d8Push.Run()
+			return d8Push.WithStdoutHandler(stdOutErrHandler).
+				WithStderrHandler(stdOutErrHandler).
+				Run()
 		}
+
+		systemRegistryTun, registryAddress, err := setupSSHTunnelToSystemRegistry(sshCl)
+		if err != nil {
+			return fmt.Errorf("failed to setup SSH tunnel to system registry: %v", err)
+		}
+		defer systemRegistryTun.Stop()
+
+		d8Push = d8Push.MirrorPush(imagesBundlePath, registryAddress)
+		return d8Push.WithStdoutHandler(stdOutErrHandler).
+			WithStderrHandler(stdOutErrHandler).
+			Run()
 	})
 }
 
