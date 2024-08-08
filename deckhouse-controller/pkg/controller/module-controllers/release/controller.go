@@ -35,6 +35,8 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/shell-operator/pkg/metric_storage"
+	openapierrors "github.com/go-openapi/errors"
+	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -1041,8 +1043,23 @@ func validateModule(def models.DeckhouseModuleDefinition, values addonutils.Valu
 	}
 
 	err = dm.Validate()
-	if err != nil {
-		return fmt.Errorf("validate module: %w", err)
+	// Next we will need to record all validation errors except required (602).
+	var result, mErr *multierror.Error
+	if errors.As(err, &mErr) {
+		for _, me := range mErr.Errors {
+			var e *openapierrors.Validation
+			if errors.As(me, &e) {
+				if e.Code() == 602 {
+					continue
+				}
+			}
+			result = multierror.Append(result, me)
+		}
+	}
+	// Now result will contain all validation errors, if any, except required.
+
+	if result != nil {
+		return fmt.Errorf("validate module: %w", result)
 	}
 
 	return nil
