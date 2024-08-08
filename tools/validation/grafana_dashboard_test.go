@@ -486,7 +486,7 @@ func TestValidateGrafanaDashboardFile(t *testing.T) {
   "version": 1,
   "weekStart": ""
 }`
-	expected := &Messages{[]Message{
+	expected := &Messages{messages: []Message{
 		NewError("dashboard.json", "deprecated interval", "Panel Single Panel contains deprecated interval: 'interval_rv', consider using '$__rate_interval'"),
 		NewError("dashboard.json", "legacy alert rule", "Panel Single Panel contains legacy alert rule: 'Alert Rule Inside Single Panel', consider using external alertmanager"),
 		NewError("dashboard.json", "legacy datasource uid", "Panel Single Panel contains legacy datasource uid: 'prometheus_datasource_uid', consider resaving dashboard using newer version of Grafana"),
@@ -494,6 +494,7 @@ func TestValidateGrafanaDashboardFile(t *testing.T) {
 		NewError("dashboard.json", "deprecated panel type", "Panel Plugin Single Panel is of deprecated type: 'graph', consider using 'timeseries'"),
 		NewError("dashboard.json", "deprecated interval", "Panel Plugin Single Panel contains deprecated interval: 'interval_rv', consider using '$__rate_interval'"),
 		NewError("dashboard.json", "legacy datasource uid", "Panel Plugin Single Panel contains legacy datasource uid: 'prometheus_datasource_uid', consider resaving dashboard using newer version of Grafana"),
+		NewError("dashboard.json", "invalid prometheus datasource uid", "Panel Plugin Single Panel contains invalid datasource uid: 'prometheus_datasource_uid', required to be: '${ds_prometheus}'"),
 		NewError("dashboard.json", "deprecated interval", "Panel Panel Inside Row contains deprecated interval: 'interval_sx3', consider using '$__rate_interval'"),
 		NewError("dashboard.json", "legacy alert rule", "Panel Panel Inside Row contains legacy alert rule: 'Panel Inside Row Alert Rule', consider using external alertmanager"),
 		NewError("dashboard.json", "legacy datasource uid", "Panel Panel Inside Row contains legacy datasource uid: 'prometheus_datasource_uid', consider resaving dashboard using newer version of Grafana"),
@@ -501,6 +502,8 @@ func TestValidateGrafanaDashboardFile(t *testing.T) {
 		NewError("dashboard.json", "deprecated panel type", "Panel Plugin Panel Inside Row is of deprecated type: 'flant-statusmap-panel', consider using 'state-timeline'"),
 		NewError("dashboard.json", "deprecated interval", "Panel Plugin Panel Inside Row contains deprecated interval: 'interval_sx4', consider using '$__rate_interval'"),
 		NewError("dashboard.json", "legacy datasource uid", "Panel Plugin Panel Inside Row contains legacy datasource uid: 'prometheus_datasource_uid', consider resaving dashboard using newer version of Grafana"),
+		NewError("dashboard.json", "invalid prometheus datasource uid", "Panel Plugin Panel Inside Row contains invalid datasource uid: 'prometheus_datasource_uid', required to be: '${ds_prometheus}'"),
+		NewError("dashboard.json", "missing prometheus datasource variable", "Dashboard must contain prometheus variable with query type: 'prometheus' and name: 'ds_prometheus'"),
 	}}
 
 	actual := validateGrafanaDashboardFile("dashboard.json", []byte(in))
