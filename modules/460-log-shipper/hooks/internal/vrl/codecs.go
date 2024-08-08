@@ -67,7 +67,7 @@ if !exists(.host) {
   .host = .node
 };
 
-if !exists(.timestamp_end) {
+if exists(.timestamp_end) {
   del(.timestamp_end)
 };
 
