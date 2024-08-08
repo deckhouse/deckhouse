@@ -1,0 +1,11 @@
+istio:
+  fixes:
+    - summary: Fixed istio module operability in managed k8s setups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9275
+node-manager:
+  fixes:
+    - summary: fix typos in the build
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9295
+    - summary: fix role rights for cluster-autoscaler 1.29, 1.30
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9294
+
