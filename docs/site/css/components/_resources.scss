@@ -22,8 +22,9 @@
       width: calc(100% + 16px);
 
       &:hover {
-        background: linear-gradient(180deg, #EFF3F9 0%, #FFF 100%);
+        background: linear-gradient(180deg, #EFF3F9 0%, #FFF 100%) no-repeat;
         border-radius: 4px;
+        background-size: auto 80px;
       }
     }
 
