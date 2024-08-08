@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
@@ -102,7 +103,7 @@ func Serve(network, address string) error {
 	reflection.Register(s)
 
 	// init services
-	dhctlService := dhctl.New(podName, cacheDir)
+	dhctlService := dhctl.New(podName, cacheDir, config.NewSchemaStore())
 
 	// register services
 	pbdhctl.RegisterDHCTLServer(s, dhctlService)
