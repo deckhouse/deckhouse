@@ -22,7 +22,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Control-plane-manager :: kube-scheduler-extenders-test", func() {
+var _ = Describe("Control-plane-manager :: kube-scheduler-extenders-test", func() {
 	const initValues = `{"global": {"discovery": {"clusterDomain": "cluster.local"}}, "controlPlaneManager": {"internal": {"kubeSchedulerExtenders": [{}]}}}`
 	f := HookExecutionConfigInit(initValues, `{}`)
 
