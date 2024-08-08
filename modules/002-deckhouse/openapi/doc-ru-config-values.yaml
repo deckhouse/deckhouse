@@ -68,7 +68,7 @@ properties:
 
               ```json
               {
-                "updateType":"Deckhouse",
+                "subject":"Deckhouse",
                 "version": "1.36",
                 "requirements":  {"k8s": "1.20.0"},
                 "changelogLink": "https://github.com/deckhouse/deckhouse/changelog/1.36.md",
@@ -78,8 +78,8 @@ properties:
               ```
 
               Описание полей POST-запроса:
-              - `updateType` — строка, тип события обновления. Возможные значения: `Deckhouse`, `Module`;
-              - `moduleName` — строка, имя модуля. Устанавливается только если `updateType: Module`
+              - `subject` — строка, тип события обновления. Возможные значения: `Deckhouse`, `Module`;
+              - `moduleName` — строка, имя модуля. Устанавливается только если `subject: Module`
               - `version` — строка, номер минорной версии;
               - `requirements` — объект, требования к версии;
               - `changelogLink` — строка, ссылка на список изменений (changelog) минорной версии;

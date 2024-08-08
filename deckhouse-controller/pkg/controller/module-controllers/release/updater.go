@@ -63,7 +63,7 @@ func (s *webhookDataSource) Fill(output *updater.WebhookData, release *v1alpha1.
 		return
 	}
 
-	output.UpdateType = updater.UpdateTypeModule
+	output.Subject = updater.SubjectModule
 	output.Message = fmt.Sprintf("New module %s release %s is available. Release will be applied at: %s",
 		release.Spec.ModuleName, output.Version, applyTime.Format(time.RFC850))
 	output.ModuleName = release.GetModuleName()

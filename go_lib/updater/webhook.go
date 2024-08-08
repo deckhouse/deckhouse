@@ -19,8 +19,8 @@ package updater
 import "time"
 
 const (
-	UpdateTypeDeckhouse = "Deckhouse"
-	UpdateTypeModule    = "Module"
+	SubjectDeckhouse = "Deckhouse"
+	SubjectModule    = "Module"
 )
 
 type WebhookDataSource[R Release] interface {

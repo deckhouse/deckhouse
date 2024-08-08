@@ -97,7 +97,7 @@ func sendWebhookNotification(config *NotificationConfig, data WebhookData) error
 }
 
 type WebhookData struct {
-	UpdateType    string            `json:"updateType"`
+	Subject       string            `json:"subject"`
 	Version       string            `json:"version"`
 	Requirements  map[string]string `json:"requirements,omitempty"`
 	ChangelogLink string            `json:"changelogLink,omitempty"`

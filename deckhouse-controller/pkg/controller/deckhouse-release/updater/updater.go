@@ -59,7 +59,7 @@ func (s *webhookDataSource) Fill(output *updater.WebhookData, _ *v1alpha1.Deckho
 		return
 	}
 
-	output.UpdateType = updater.UpdateTypeDeckhouse
+	output.Subject = updater.SubjectDeckhouse
 	output.Message = fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", output.Version, applyTime.Format(time.RFC850))
 }
 
