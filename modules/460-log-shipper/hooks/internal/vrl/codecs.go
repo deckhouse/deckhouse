@@ -58,10 +58,28 @@ if !exists(.cef.severity) {
 // GELFCodecRelabeling applies a set of rules to prevent encoding failures,
 //  1. If host field is missing, set it to node.
 //  2. Flatten the record because GELF does not support nested json objects.
+//  3. Replace dots in keys with underscores.
+//  4. Convert all values to strings except bool and int.
 const GELFCodecRelabeling Rule = `
 if !exists(.host) {
   .host = .node
 };
 
 . = flatten(.);
+. = map_keys(., recursive: true) -> |key| {
+  replace(key, ".", "_")
+};
+
+. = map_values(., true) -> |value| {
+  if is_timestamp(value) {
+    value
+  } else if is_float(value) {
+    value
+  } else if is_integer(value) {
+    value
+  } else {
+    join(value, ", ") ?? to_string(value) ?? value
+  }
+};
+
 `
