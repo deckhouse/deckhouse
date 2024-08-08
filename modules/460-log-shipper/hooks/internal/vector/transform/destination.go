@@ -45,6 +45,10 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 		transforms = append(transforms, SyslogEncoding())
 	}
 
+	if dest.Spec.Type == v1alpha1.DestSocket && dest.Spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecGELF {
+		transforms = append(transforms, GELFHost())
+	}
+
 	if dest.Spec.Type == v1alpha1.DestSplunk {
 		transforms = append(transforms, DateTime())
 	}

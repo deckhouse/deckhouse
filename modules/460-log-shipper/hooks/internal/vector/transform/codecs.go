@@ -34,3 +34,17 @@ func CEFNameAndSeverity() *DynamicTransform {
 		},
 	}
 }
+
+func GELFHost() *DynamicTransform {
+	return &DynamicTransform{
+		CommonTransform: CommonTransform{
+			Name:   "gelf_host",
+			Type:   "remap",
+			Inputs: set.New(),
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"source":        vrl.GELFSetHostLabel.String(),
+			"drop_on_abort": false,
+		},
+	}
+}

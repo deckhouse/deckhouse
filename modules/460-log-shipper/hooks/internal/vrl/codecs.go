@@ -54,3 +54,11 @@ if !exists(.cef.severity) {
 };
 
 `
+
+// GELFSetHostLabel sets host label to node if it is not set.
+// Required when collecting logs from kubernetes pods.
+const GELFSetHostLabel Rule = `
+if !exists(.host) {
+  .host = .node
+};
+`

@@ -24,6 +24,14 @@
       "source": "if !exists(.cef) {\n  .cef = {};\n};\n\nif !exists(.cef.name) {\n  .cef.name = \"Deckhouse Event\";\n};\n\nif !exists(.cef.severity) {\n  .cef.severity = \"5\";\n} else if is_string(.cef.severity) {\n  if .cef.severity == \"Debug\" {\n    .cef.severity = \"0\";\n  };\n  if .cef.severity == \"Informational\" {\n    .cef.severity = \"3\";\n  };\n  if .cef.severity == \"Notice\" {\n    .cef.severity = \"4\";\n  };\n  if .cef.severity == \"Warning\" {\n    .cef.severity = \"6\";\n  };\n  if .cef.severity == \"Error\" {\n    .cef.severity = \"7\";\n  };\n  if .cef.severity == \"Critical\" {\n    .cef.severity = \"8\";\n  };\n  if .cef.severity == \"Emergency\" {\n    .cef.severity = \"10\";\n  };\n};",
       "type": "remap"
     },
+    "transform/destination/test-socket2-dest/00_gelf_host": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/test-source/01_local_timezone"
+      ],
+      "source": "if !exists(.host) {\n  .host = .node\n};",
+      "type": "remap"
+    },
     "transform/source/test-source/00_clean_up": {
       "drop_on_abort": false,
       "inputs": [
@@ -85,7 +93,7 @@
     "destination/cluster/test-socket2-dest": {
       "type": "socket",
       "inputs": [
-        "transform/source/test-source/01_local_timezone"
+        "transform/destination/test-socket2-dest/00_gelf_host"
       ],
       "healthcheck": {
         "enabled": false
