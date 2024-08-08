@@ -9,6 +9,7 @@ properties:
     - effectiveKubernetesVersion
     - pkiChecksum
     - rolloutEpoch
+    - kubeSchedulerExtenders
     properties:
       audit:
         type: object
