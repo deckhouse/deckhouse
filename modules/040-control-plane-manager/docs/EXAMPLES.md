@@ -2,6 +2,8 @@
 title: "Managing control plane: examples"
 ---
 
+## Control plane module config
+
 Below is a simple control plane configuration example:
 
 ```yaml
@@ -18,4 +20,24 @@ spec:
       - bakery.infra
       - devs.infra
       loadBalancer: {}
+```
+
+## Connect extender for kube-scheduler
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+type: KubeSchedulerWebhookConfiguration
+metadata:
+name: sds-replicated-volume
+Webhooks:
+- weight: 5
+  failurePolicy: Ignore
+  clientConfig:
+  service:
+  name: scheduler
+  namespace: d8-sds-replicated-volume
+  port: 8080
+  path: /scheduler
+  caBundle: ABCD=
+  timeoutSeconds: 5
 ```

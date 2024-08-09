@@ -1,9 +1,9 @@
 {{- define "schedulerConfig" }}
-{{- if semverCompare ">= 1.29" .clusterConfiguration.kubernetesVersion }}
+  {{- if semverCompare ">= 1.29" .clusterConfiguration.kubernetesVersion }}
 apiVersion: kubescheduler.config.k8s.io/v1
-{{- else }}
+  {{- else }}
 apiVersion: kubescheduler.config.k8s.io/v1beta3
-{{- end }}
+  {{- end }}
 kind: KubeSchedulerConfiguration
 clientConnection:
   kubeconfig: /etc/kubernetes/scheduler.conf
@@ -16,4 +16,19 @@ profiles:
       - maxSkew: 1
         topologyKey: topology.kubernetes.io/zone
         whenUnsatisfiable: ScheduleAnyway
+  {{- if .scheduler.extenders }}
+extenders:
+    {{- range $extender := .scheduler.extenders }}
+- urlPrefix: {{ $extender.urlPrefix }}
+  filterVerb: filter
+  prioritizeVerb: prioritize
+  weight: {{ $extender.weight }}
+  enableHTTPS: true
+  httpTimeout: {{ $extender.timeout }}s
+  nodeCacheCapable: true
+  ignorable: {{ $extender.ignorable }}
+  tlsConfig:
+    caData: {{ $extender.caData }}
+    {{- end }}
+  {{- end }}
 {{- end }}
