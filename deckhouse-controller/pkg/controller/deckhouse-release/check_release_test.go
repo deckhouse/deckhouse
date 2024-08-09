@@ -428,7 +428,79 @@ global:
 			},
 		}, nil)
 
+		dependency.TestDC.CRClient.ImageMock.When("v1.33.1").Then(&fake.FakeImage{
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.33.1"}`}}}, nil
+			},
+		}, nil)
+
 		suite.setupController("step-by-step-update-successfully.yaml", initValues, embeddedMUP)
+		err := suite.ctr.checkDeckhouseRelease(ctx)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Restore absent releases from a registry", func() {
+		dependency.TestDC.CRClient.ImageMock.When("stable").Then(&fake.FakeImage{
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{
+					&fakeLayer{},
+					&fakeLayer{FilesContent: map[string]string{
+						"version.json": `{"version":"v1.60.2"}`,
+					}},
+				}, nil
+			},
+		}, nil)
+
+		dependency.TestDC.CRClient.ImageMock.When("v1.58.1").Then(&fake.FakeImage{
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{
+					&fakeLayer{},
+					&fakeLayer{FilesContent: map[string]string{
+						"version.json": `{"version":"v1.58.1"}`,
+					}},
+				}, nil
+			},
+		}, nil)
+
+		dependency.TestDC.CRClient.ImageMock.When("v1.59.3").Then(&fake.FakeImage{
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{
+					&fakeLayer{},
+					&fakeLayer{FilesContent: map[string]string{
+						"version.json": `{"version":"v1.59.3"}`,
+					}},
+				}, nil
+			},
+		}, nil)
+
+		dependency.TestDC.CRClient.ImageMock.When("v1.60.2").Then(&fake.FakeImage{
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{
+					&fakeLayer{},
+					&fakeLayer{FilesContent: map[string]string{
+						"version.json": `{"version":"v1.60.2"}`,
+					}},
+				}, nil
+			},
+		}, nil)
+
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+			"v1.56.0",
+			"v1.57.0",
+			"v1.57.1",
+			"v1.57.2",
+			"v1.58.0",
+			"v1.58.1",
+			"v1.59.0",
+			"v1.59.1",
+			"v1.59.2",
+			"v1.59.3",
+			"v1.60.0",
+			"v1.60.1",
+			"v1.60.2",
+		}, nil)
+
+		suite.setupController("restore-absent-releases-from-registry.yaml", initValues, embeddedMUP)
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
