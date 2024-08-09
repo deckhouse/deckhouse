@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2024 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,24 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package terraform
+package controlplane
 
-type InfraActionHook interface {
-	BeforeAction(RunnerInterface) (runAfterAction bool, err error)
-	IsReady() error
-	AfterAction(RunnerInterface) error
-}
+import "fmt"
 
-type DummyHook struct{}
-
-func (c *DummyHook) BeforeAction(RunnerInterface) (runPostAction bool, err error) {
-	return false, nil
-}
-
-func (c *DummyHook) IsReady() error {
-	return nil
-}
-
-func (c *DummyHook) AfterAction(RunnerInterface) error {
-	return nil
-}
+var ErrSingleMasterClusterTerraformPlanHasDestructiveChanges = fmt.Errorf("single master cluster terraform plan has destructive changes")

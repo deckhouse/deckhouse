@@ -15,6 +15,7 @@
 package session
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -141,4 +142,97 @@ func TestSession_ChoiceNewHost(t *testing.T) {
 			require.Contains(t, ses.remainingHosts, h)
 		}
 	})
+}
+
+func TestSession_AddAvailableHosts(t *testing.T) {
+	tests := []struct {
+		hosts    []string
+		newHosts []string
+		expected []string
+	}{
+		{
+			newHosts: []string{"a", "b", "c"},
+			expected: []string{"a", "b", "c"},
+		},
+		{
+			hosts:    []string{"a", "b", "c"},
+			newHosts: []string{"a", "b", "c"},
+			expected: []string{"a", "b", "c"},
+		},
+		{
+			hosts:    []string{"a", "b", "c"},
+			newHosts: []string{"a", "b", "c", "d"},
+			expected: []string{"a", "b", "c", "d"},
+		},
+		{
+			hosts:    []string{"a", "b", "c"},
+			newHosts: []string{"a", "b"},
+			expected: []string{"a", "b", "c"},
+		},
+		{
+			hosts:    []string{"a", "b", "c"},
+			newHosts: []string{"a", "b", "d"},
+			expected: []string{"a", "b", "c", "d"},
+		},
+		{
+			hosts:    []string{"a"},
+			expected: []string{"a"},
+		},
+	}
+
+	for _, test := range tests {
+		s := NewSession(Input{
+			AvailableHosts: test.hosts,
+		})
+
+		s.AddAvailableHosts(test.newHosts...)
+
+		availableHosts := s.AvailableHosts()
+
+		sort.Strings(availableHosts)
+
+		require.Equal(t, test.expected, availableHosts)
+	}
+}
+
+func TestSession_RemoveAvailableHosts(t *testing.T) {
+	tests := []struct {
+		hosts       []string
+		removeHosts []string
+		expected    []string
+	}{
+		{
+			hosts:    []string{"a", "b", "c"},
+			expected: []string{"a", "b", "c"},
+		},
+		{
+			hosts:       []string{"a", "b", "c"},
+			removeHosts: []string{"a", "b", "c"},
+			expected:    []string{},
+		},
+		{
+			hosts:       []string{"a", "b", "c"},
+			removeHosts: []string{"a", "b"},
+			expected:    []string{"c"},
+		},
+		{
+			hosts:       []string{"a", "b", "c"},
+			removeHosts: []string{"a", "b", "d"},
+			expected:    []string{"c"},
+		},
+	}
+
+	for _, test := range tests {
+		s := NewSession(Input{
+			AvailableHosts: test.hosts,
+		})
+
+		s.RemoveAvailableHosts(test.removeHosts...)
+
+		availableHosts := s.AvailableHosts()
+
+		sort.Strings(availableHosts)
+
+		require.Equal(t, test.expected, availableHosts)
+	}
 }

@@ -132,8 +132,8 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		}
 
 		if masterNodeGroup.Replicas > 0 &&
-			masterNodeGroup.Replicas != len(masterNodeGroup.InstanceClass.ExternalIPAddresses) {
-			return nil, fmt.Errorf("number of masterNodeGroup.replicas should be equal to the length of masterNodeGroup.instanceClass.externalIPAddresses")
+			masterNodeGroup.Replicas > len(masterNodeGroup.InstanceClass.ExternalIPAddresses) {
+			return nil, fmt.Errorf("number of masterNodeGroup.replicas greater then the length of masterNodeGroup.instanceClass.externalIPAddresses")
 		}
 
 		nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
@@ -145,8 +145,8 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 
 			for _, nodeGroup := range yandexNodeGroups {
 				if nodeGroup.Replicas > 0 &&
-					nodeGroup.Replicas != len(nodeGroup.InstanceClass.ExternalIPAddresses) {
-					return nil, fmt.Errorf(`number of nodeGroups["%s"].replicas should be equal to the length of nodeGroups["%s"].instanceClass.externalIPAddresses`, nodeGroup.Name, nodeGroup.Name)
+					nodeGroup.Replicas > len(nodeGroup.InstanceClass.ExternalIPAddresses) {
+					return nil, fmt.Errorf(`number of nodeGroups["%s"].replicas greater then the length of nodeGroups["%s"].instanceClass.externalIPAddresses`, nodeGroup.Name, nodeGroup.Name)
 				}
 			}
 		}

@@ -30,6 +30,7 @@ type Input struct {
 	BastionUser    string
 	ExtraArgs      string
 	AvailableHosts []string
+	BecomePass     string
 }
 
 type AgentSettings struct {
@@ -68,6 +69,7 @@ type Session struct {
 	BastionPort string
 	BastionUser string
 	ExtraArgs   string
+	BecomePass  string
 
 	AgentSettings *AgentSettings
 
@@ -85,6 +87,7 @@ func NewSession(input Input) *Session {
 		BastionPort: input.BastionPort,
 		BastionUser: input.BastionUser,
 		ExtraArgs:   input.ExtraArgs,
+		BecomePass:  input.BecomePass,
 	}
 
 	s.SetAvailableHosts(input.AvailableHosts)
@@ -103,6 +106,58 @@ func (s *Session) ChoiceNewHost() {
 	defer s.lock.Unlock()
 	s.lock.Lock()
 
+	s.selectNewHost("")
+}
+
+func (s *Session) AddAvailableHosts(hosts ...string) {
+	defer s.lock.Unlock()
+	s.lock.Lock()
+
+	availableHostsMap := make(map[string]struct{}, len(s.availableHosts))
+
+	for _, host := range s.availableHosts {
+		availableHostsMap[host] = struct{}{}
+	}
+
+	for _, host := range hosts {
+		availableHostsMap[host] = struct{}{}
+	}
+
+	availableHosts := make([]string, 0, len(availableHostsMap))
+
+	for host := range availableHostsMap {
+		availableHosts = append(availableHosts, host)
+	}
+
+	s.availableHosts = availableHosts
+
+	s.resetUsedHosts()
+	s.selectNewHost("")
+}
+
+func (s *Session) RemoveAvailableHosts(hosts ...string) {
+	defer s.lock.Unlock()
+	s.lock.Lock()
+
+	availableHostsMap := make(map[string]struct{}, len(s.availableHosts))
+
+	for _, host := range s.availableHosts {
+		availableHostsMap[host] = struct{}{}
+	}
+
+	for _, host := range hosts {
+		delete(availableHostsMap, host)
+	}
+
+	availableHosts := make([]string, 0, len(availableHostsMap))
+
+	for host := range availableHostsMap {
+		availableHosts = append(availableHosts, host)
+	}
+
+	s.availableHosts = availableHosts
+
+	s.resetUsedHosts()
 	s.selectNewHost("")
 }
 
