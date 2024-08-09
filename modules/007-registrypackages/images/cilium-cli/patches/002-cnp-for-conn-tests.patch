@@ -1,0 +1,107 @@
+diff --git a/connectivity/manifests/client-egress-l7-tls.yaml b/connectivity/manifests/client-egress-l7-tls.yaml
+index 519045a8..5f8ce63c 100644
+--- a/connectivity/manifests/client-egress-l7-tls.yaml
++++ b/connectivity/manifests/client-egress-l7-tls.yaml
+@@ -15,6 +15,10 @@ specs:
+         protocol: UDP
+       - port: "53"
+         protocol: TCP
++      - port: "5353"
++        protocol: UDP
++      - port: "5335"
++        protocol: TCP
+       rules:
+         dns:
+           - matchPattern: "*"
+diff --git a/connectivity/manifests/client-egress-only-dns.yaml b/connectivity/manifests/client-egress-only-dns.yaml
+index b8177270..6adec70f 100644
+--- a/connectivity/manifests/client-egress-only-dns.yaml
++++ b/connectivity/manifests/client-egress-only-dns.yaml
+@@ -13,6 +13,10 @@ spec:
+         protocol: UDP
+       - port: "53"
+         protocol: TCP
++      - port: "5353"
++        protocol: UDP
++      - port: "5353"
++        protocol: TCP
+       rules:
+         dns:
+         - matchPattern: "*"
+diff --git a/connectivity/manifests/client-egress-to-cidr-k8s.yaml b/connectivity/manifests/client-egress-to-cidr-k8s.yaml
+index eb9f9080..42958412 100644
+--- a/connectivity/manifests/client-egress-to-cidr-k8s.yaml
++++ b/connectivity/manifests/client-egress-to-cidr-k8s.yaml
+@@ -17,3 +17,5 @@ spec:
+     - ports:
+       - port: "53"
+         protocol: ANY
++      - port: "5353"
++        protocol: ANY
+diff --git a/connectivity/manifests/client-egress-to-echo-knp.yaml b/connectivity/manifests/client-egress-to-echo-knp.yaml
+index 2723badb..6a26676e 100644
+--- a/connectivity/manifests/client-egress-to-echo-knp.yaml
++++ b/connectivity/manifests/client-egress-to-echo-knp.yaml
+@@ -21,6 +21,7 @@ spec:
+               - { key: 'io.kubernetes.pod.namespace', operator: In, values: [ "kube-system" ] }
+       ports:
+         - port: 53
++        - port: 5353
+           # protocol non specified corresponding to ANY in CNP
+     # When node-local-dns is deployed with local IP,
+     # Cilium labels its ip as world.
+diff --git a/connectivity/manifests/client-egress-to-echo.yaml b/connectivity/manifests/client-egress-to-echo.yaml
+index f4659870..82ca5332 100644
+--- a/connectivity/manifests/client-egress-to-echo.yaml
++++ b/connectivity/manifests/client-egress-to-echo.yaml
+@@ -21,6 +21,10 @@ spec:
+         protocol: UDP
+       - port: "53"
+         protocol: TCP
++      - port: "5353"
++        protocol: UDP
++      - port: "5353"
++        protocol: TCP
+     toEndpoints:
+     - matchExpressions:
+       - { key: 'k8s-app', operator: In, values: [ "kube-dns", "coredns", "node-local-dns", "nodelocaldns" ] }
+diff --git a/connectivity/manifests/client-egress-to-entities-k8s.yaml b/connectivity/manifests/client-egress-to-entities-k8s.yaml
+index 5802cdcf..ef93dbb7 100644
+--- a/connectivity/manifests/client-egress-to-entities-k8s.yaml
++++ b/connectivity/manifests/client-egress-to-entities-k8s.yaml
+@@ -17,3 +17,5 @@ spec:
+     - ports:
+       - port: "53"
+         protocol: ANY
++      - port: "5353"
++        protocol: ANY
+diff --git a/connectivity/manifests/client-egress-to-entities-world.yaml b/connectivity/manifests/client-egress-to-entities-world.yaml
+index 48ed871d..30a0d21d 100644
+--- a/connectivity/manifests/client-egress-to-entities-world.yaml
++++ b/connectivity/manifests/client-egress-to-entities-world.yaml
+@@ -23,6 +23,10 @@ spec:
+         protocol: UDP
+       - port: "53"
+         protocol: TCP
++      - port: "5353"
++        protocol: UDP
++      - port: "5353"
++        protocol: TCP
+   # When node-local-dns is deployed with local IP,
+   # Cilium labels its ip as world.
+   # This change prevents failing the connectivity
+diff --git a/connectivity/manifests/client-egress-to-fqdns-one-one-one-one.yaml b/connectivity/manifests/client-egress-to-fqdns-one-one-one-one.yaml
+index d6aecb1b..60222425 100644
+--- a/connectivity/manifests/client-egress-to-fqdns-one-one-one-one.yaml
++++ b/connectivity/manifests/client-egress-to-fqdns-one-one-one-one.yaml
+@@ -23,6 +23,10 @@ spec:
+         protocol: UDP
+       - port: "53"
+         protocol: TCP
++      - port: "5353"
++        protocol: UDP
++      - port: "5353"
++        protocol: TCP
+       rules:
+         dns:
+         - matchPattern: "*"

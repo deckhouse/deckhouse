@@ -1,0 +1,124 @@
+diff --git a/defaults/defaults.go b/defaults/defaults.go
+index 184eda2c..b1c68210 100644
+--- a/defaults/defaults.go
++++ b/defaults/defaults.go
+@@ -12,12 +12,12 @@ const (
+ 	Version = "v1.15.0"
+
+ 	AgentContainerName      = "cilium-agent"
+-	AgentServiceAccountName = "cilium"
+-	AgentClusterRoleName    = "cilium"
++	AgentServiceAccountName = "agent"
++	AgentClusterRoleName    = "d8:cni-cilium:agent"
+ 	AgentSecretsRoleName    = "cilium-secrets"
+ 	AgentConfigRoleName     = "cilium-config-agent"
+-	AgentDaemonSetName      = "cilium"
+-	AgentPodSelector        = "k8s-app=cilium"
++	AgentDaemonSetName      = "agent"
++	AgentPodSelector        = "app=agent"
+ 	AgentResourceQuota      = "cilium-resource-quota"
+ 	AgentImage              = "quay.io/cilium/cilium"
+
+@@ -33,13 +33,13 @@ const (
+
+ 	NodeInitDaemonSetName = "cilium-node-init"
+
+-	OperatorServiceAccountName = "cilium-operator"
+-	OperatorClusterRoleName    = "cilium-operator"
+-	OperatorPodSelector        = "io.cilium/app=operator"
++	OperatorServiceAccountName = "operator"
++	OperatorClusterRoleName    = "d8:cni-cilium:operator"
++	OperatorPodSelector        = "app=operator"
+ 	OperatorSecretsRoleName    = "cilium-operator-secrets"
+-	OperatorContainerName      = "cilium-operator"
++	OperatorContainerName      = "operator"
+ 	OperatorMetricsPortName    = "prometheus"
+-	OperatorDeploymentName     = "cilium-operator"
++	OperatorDeploymentName     = "operator"
+ 	OperatorResourceQuota      = "cilium-operator-resource-quota"
+ 	OperatorImage              = "quay.io/cilium/operator-generic"
+ 	OperatorImageAWS           = "quay.io/cilium/operator-aws"
+@@ -50,15 +50,15 @@ const (
+ 	RelayContainerName       = "hubble-relay"
+ 	RelayDeploymentName      = "hubble-relay"
+ 	RelayClusterRoleName     = "hubble-relay"
+-	RelayServiceAccountName  = "hubble-relay"
++	RelayServiceAccountName  = "relay"
+ 	RelayConfigMapName       = "hubble-relay-config"
+ 	RelayImage               = "quay.io/cilium/hubble-relay"
+ 	RelayServerSecretName    = "hubble-relay-server-certs"
+ 	RelayClientSecretName    = "hubble-relay-client-certs"
+ 	HubbleUIClientSecretName = "hubble-ui-client-certs"
+
+-	HubbleUIClusterRoleName    = "hubble-ui"
+-	HubbleUIServiceAccountName = "hubble-ui"
++	HubbleUIClusterRoleName    = "d8:cilium-hubble:ui:reader"
++	HubbleUIServiceAccountName = "ui"
+ 	HubbleUIDeploymentName     = "hubble-ui"
+ 	HubbleUIImage              = "quay.io/cilium/hubble-ui"
+ 	HubbleUIBackendImage       = "quay.io/cilium/hubble-ui-backend"
+diff --git a/internal/cli/cmd/cmd.go b/internal/cli/cmd/cmd.go
+index 0c38f5ac..a04fccb7 100644
+--- a/internal/cli/cmd/cmd.go
++++ b/internal/cli/cmd/cmd.go
+@@ -75,7 +75,7 @@ cilium connectivity test`,
+ 	}
+
+ 	cmd.PersistentFlags().StringVar(&contextName, "context", "", "Kubernetes configuration context")
+-	cmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "kube-system", "Namespace Cilium is running in")
++	cmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "d8-cni-cilium", "Namespace Cilium is running in")
+
+ 	cmd.AddCommand(
+ 		newCmdBgp(),
+diff --git a/sysdump/defaults.go b/sysdump/defaults.go
+index 0452cba0..231dc7c9 100644
+--- a/sysdump/defaults.go
++++ b/sysdump/defaults.go
+@@ -11,11 +11,11 @@ import (
+ )
+
+ const (
+-	labelPrefix = "k8s-app="
++	labelPrefix = "app="
+ )
+
+ const (
+-	DefaultCiliumLabelSelector               = labelPrefix + "cilium"
++	DefaultCiliumLabelSelector               = labelPrefix + "agent"
+ 	DefaultCiliumEnvoyLabelSelector          = labelPrefix + "cilium-envoy"
+ 	DefaultCiliumOperatorLabelSelector       = "io.cilium/app=operator"
+ 	DefaultClustermeshApiserverLabelSelector = labelPrefix + "clustermesh-apiserver"
+@@ -38,7 +38,7 @@ const (
+ 	DefaultQuick                             = false
+ 	DefaultOutputFileName                    = "cilium-sysdump-<ts>" // "<ts>" will be replaced with the timestamp
+ 	DefaultDetectGopsPID                     = false
+-	DefaultCNIConfigDirectory                = "/etc/cni/net.d/"
++	DefaultCNIConfigDirectory                = "/host/etc/cni/net.d/"
+ 	DefaultCNIConfigMapName                  = "cni-configuration"
+ 	DefaultTetragonNamespace                 = "kube-system"
+ 	DefaultTetragonLabelSelector             = "app.kubernetes.io/name=tetragon"
+@@ -60,9 +60,9 @@ var (
+
+ 	// DefaultCiliumNamespaces will be used to attempt to autodetect what namespace Cilium is installed in
+ 	// unless otherwise specified.
+-	DefaultCiliumNamespaces = []string{"kube-system", "cilium"}
++	DefaultCiliumNamespaces = []string{"kube-system", "cilium", "d8-cni-cilium"}
+
+ 	// DefaultCiliumSPIRENamespaces will be used to attempt to autodetect what namespace Cilium SPIRE is installed in
+ 	// unless otherwise specified.
+-	DefaultCiliumSPIRENamespaces = []string{"kube-system", "cilium", "cilium-spire"}
++	DefaultCiliumSPIRENamespaces = []string{"kube-system", "cilium", "cilium-spire", "d8-cni-cilium"}
+ )
+diff --git a/sysdump/sysdump.go b/sysdump/sysdump.go
+index ebe90e99..c279dbff 100644
+--- a/sysdump/sysdump.go
++++ b/sysdump/sysdump.go
+@@ -2471,7 +2471,7 @@ func detectCiliumNamespace(k KubernetesClient) (string, error) {
+ 			return "", fmt.Errorf("failed to detect Cilium namespace: %w", err)
+ 		}
+
+-		_, err = k.GetDaemonSet(ctx, ns.Name, "cilium", metav1.GetOptions{})
++		_, err = k.GetDaemonSet(ctx, ns.Name, "agent", metav1.GetOptions{})
+ 		if errors.IsNotFound(err) {
+ 			continue
+ 		}
