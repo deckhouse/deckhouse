@@ -154,6 +154,9 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 						namespace: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse", "module": "deckhouse"}),
 						},
+						"kube-system": {
+							LabelSelector: labels.SelectorFromSet(map[string]string{"name": "d8-cluster-configuration"}),
+						},
 					},
 				},
 				// for DeckhouseRelease controller

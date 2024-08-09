@@ -261,6 +261,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	auto, err := r.isKubernetesVersionAutomatic(ctx)
 	if err != nil {
+		r.logger.Errorf("failed to get automatic kubernetes version: %v", err)
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
 	}
 
