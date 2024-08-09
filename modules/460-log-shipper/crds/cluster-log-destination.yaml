@@ -533,7 +533,7 @@ spec:
                       properties:
                         codec:
                           type: string
-                          enum: ["Text", "JSON", "Syslog", "CEF"]
+                          enum: ["Text", "JSON", "Syslog", "CEF", "GELF"]
                           default: "JSON"
                     mode:
                       type: string
