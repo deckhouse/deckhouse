@@ -44,7 +44,6 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/000-common/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/migrate"
-	_ "github.com/deckhouse/deckhouse/modules/005-external-module-manager/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/010-cloud-data-crd/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/010-operator-prometheus-crd/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/010-prometheus-crd/hooks"

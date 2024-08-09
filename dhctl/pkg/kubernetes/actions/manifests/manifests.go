@@ -57,7 +57,6 @@ type DeckhouseDeploymentParams struct {
 	IsSecureRegistry       bool
 	MasterNodeSelector     bool
 	KubeadmBootstrap       bool
-	ExternalModulesEnabled bool // TODO remove this after integrating external-module-manager into deckhouse-controller
 }
 
 type imagesDigests map[string]map[string]interface{}
@@ -235,10 +234,19 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 					},
 				},
 				{
-					Name: "external-modules",
+					Name: "downloaded",
 					VolumeSource: apiv1.VolumeSource{
 						HostPath: &apiv1.HostPathVolumeSource{
-							Path: "/var/lib/deckhouse/external-modules",
+							Path: "/var/lib/deckhouse/downloaded",
+							Type: &hostPathDirectory,
+						},
+					},
+				},
+				{
+					Name: "host-deckhouse",
+					VolumeSource: apiv1.VolumeSource{
+						HostPath: &apiv1.HostPathVolumeSource{
+							Path: "/var/lib/deckhouse",
 							Type: &hostPathDirectory,
 						},
 					},
@@ -282,25 +290,25 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				MountPath: "/.kube",
 			},
 			{
-				Name:      "external-modules",
+				Name:      "downloaded",
 				ReadOnly:  false,
-				MountPath: "/deckhouse/external-modules",
+				MountPath: "/deckhouse/downloaded",
 			},
 		},
 	}
 
 	deckhouseInitContainer := apiv1.Container{
-		Name:            "init-external-modules",
+		Name:            "init-downloaded-modules",
 		Image:           initContainerImage,
 		ImagePullPolicy: apiv1.PullAlways,
 		Command: []string{
-			"sh", "-c", "mkdir -p /deckhouse/external-modules/modules && chown -hR 64535 /deckhouse/external-modules /deckhouse/external-modules/modules && chmod 0700 /deckhouse/external-modules /deckhouse/external-modules/modules",
+			"sh", "-c", `if [ -d "/host/deckhouse/external-modules" ] && [ -n "$(ls -A "/host/deckhouse/external-modules")" ]; then cp -r /host/deckhouse/external-modules/* /host/deckhouse/downloaded/ && rm -rf /host/deckhouse/external-modules; fi && mkdir -p /host/deckhouse/downloaded/modules && chown -hR 64535 /host/deckhouse/downloaded /host/deckhouse/downloaded/modules && chmod 0700 /host/deckhouse/downloaded /host/deckhouse/downloaded/modules`,
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
-				Name:      "external-modules",
+				Name:      "host-deckhouse",
 				ReadOnly:  false,
-				MountPath: "/deckhouse/external-modules",
+				MountPath: "/host/deckhouse",
 			},
 		},
 	}
@@ -385,15 +393,13 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		"/deckhouse/modules",
 	}
 
-	if params.ExternalModulesEnabled {
-		const externalModulesDir = "/deckhouse/external-modules/modules"
-		modulesDirs = append(modulesDirs, externalModulesDir)
-		deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
-		deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
-			Name:  "EXTERNAL_MODULES_DIR",
-			Value: externalModulesDir,
-		})
-	}
+	const downloadedModulesDir = "/deckhouse/downloaded/modules"
+	modulesDirs = append(modulesDirs, downloadedModulesDir)
+	deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
+	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
+		Name:  "DOWNLOADED_MODULES_DIR",
+		Value: downloadedModulesDir,
+	})
 
 	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
 		Name:  "MODULES_DIR",

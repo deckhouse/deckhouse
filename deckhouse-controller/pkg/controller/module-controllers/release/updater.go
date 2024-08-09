@@ -58,28 +58,28 @@ func (w *webhookDataGetter) GetMessage(release *v1alpha1.ModuleRelease, releaseA
 		release.Spec.ModuleName, version, releaseApplyTime.Format(time.RFC850))
 }
 
-func newKubeAPI(ctx context.Context, logger logger.Logger, client client.Client, externalModulesDir string, symlinksDir string,
+func newKubeAPI(ctx context.Context, logger logger.Logger, client client.Client, downloadedModulesDir string, symlinksDir string,
 	moduleManager moduleManager, dc dependency.Container) *kubeAPI {
 	return &kubeAPI{
-		ctx:                ctx,
-		logger:             logger,
-		client:             client,
-		externalModulesDir: externalModulesDir,
-		symlinksDir:        symlinksDir,
-		moduleManager:      moduleManager,
-		dc:                 dc,
+		ctx:                  ctx,
+		logger:               logger,
+		client:               client,
+		downloadedModulesDir: downloadedModulesDir,
+		symlinksDir:          symlinksDir,
+		moduleManager:        moduleManager,
+		dc:                   dc,
 	}
 }
 
 type kubeAPI struct {
 	ctx context.Context
 	// d8ClientSet        versioned.Interface
-	logger             logger.Logger
-	client             client.Client
-	externalModulesDir string
-	symlinksDir        string
-	moduleManager      moduleManager
-	dc                 dependency.Container
+	logger               logger.Logger
+	client               client.Client
+	downloadedModulesDir string
+	symlinksDir          string
+	moduleManager        moduleManager
+	dc                   dependency.Container
 }
 
 func (k *kubeAPI) UpdateReleaseStatus(release *v1alpha1.ModuleRelease, msg, phase string) error {
@@ -123,7 +123,7 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 		return fmt.Errorf("get module source: %w", err)
 	}
 
-	md := downloader.NewModuleDownloader(k.dc, k.externalModulesDir, &ms, utils.GenerateRegistryOptions(&ms))
+	md := downloader.NewModuleDownloader(k.dc, k.downloadedModulesDir, &ms, utils.GenerateRegistryOptions(&ms))
 	ds, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
 	if err != nil {
 		return fmt.Errorf("download module: %w", err)
@@ -134,7 +134,7 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 		return fmt.Errorf("update module release download statistic: %w", err)
 	}
 
-	moduleVersionPath := path.Join(k.externalModulesDir, moduleName, "v"+release.Spec.Version.String())
+	moduleVersionPath := path.Join(k.downloadedModulesDir, moduleName, "v"+release.Spec.Version.String())
 	relativeModulePath := generateModulePath(moduleName, release.Spec.Version.String())
 	newModuleSymlink := path.Join(k.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, moduleName))
 
@@ -161,7 +161,7 @@ func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
 	if err != nil {
 		currentModuleSymlink = "900-" + moduleName // fallback
 	}
-	err = enableModule(k.externalModulesDir, currentModuleSymlink, newModuleSymlink, relativeModulePath)
+	err = enableModule(k.downloadedModulesDir, currentModuleSymlink, newModuleSymlink, relativeModulePath)
 	if err != nil {
 		k.logger.Errorf("Module deploy failed: %v", err)
 		if e := k.suspendModuleVersionForRelease(release, err); e != nil {

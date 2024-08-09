@@ -41,6 +41,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
@@ -98,7 +99,7 @@ func (suite *PullOverrideControllerTestSuite) SetupSuite() {
 	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 	suite.T().Setenv("DECKHOUSE_NODE_NAME", "dev-master-0")
 	suite.tmpDir = suite.T().TempDir()
-	suite.T().Setenv("EXTERNAL_MODULES_DIR", suite.tmpDir)
+	suite.T().Setenv(d8env.DownloadedModulesDir, suite.tmpDir)
 	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0777)
 }
 
@@ -590,12 +591,12 @@ func (suite *PullOverrideControllerTestSuite) setupPullOverrideController(yamlDo
 	cl := fake.NewClientBuilder().WithScheme(sc).WithObjects(initObjects...).WithStatusSubresource(&v1alpha1.ModuleSource{}, &v1alpha1.ModulePullOverride{}).Build()
 
 	rec := &modulePullOverrideReconciler{
-		client:             cl,
-		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
-		dc:                 dependency.NewDependencyContainer(),
-		logger:             log.New(),
-		symlinksDir:        filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
-		moduleManager:      stubModulesManager{},
+		client:               cl,
+		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		dc:                   dependency.NewDependencyContainer(),
+		logger:               log.New(),
+		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
+		moduleManager:        stubModulesManager{},
 	}
 
 	suite.ctr = rec

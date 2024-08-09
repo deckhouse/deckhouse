@@ -36,7 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/mirror"
 )
 
-func PullExternalModulesToLocalFS(
+func PullDownloadableModulesToLocalFS(
 	sourceYmlPath, mirrorDirectoryPath, moduleFilterExpression string,
 	skipVerifyTLS bool,
 ) error {
@@ -53,7 +53,7 @@ func PullExternalModulesToLocalFS(
 		return fmt.Errorf("Parse dockerCfg: %w", err)
 	}
 
-	modules, err := mirror.GetExternalModulesFromRepo(src.Spec.Registry.Repo, authProvider, insecure, skipVerifyTLS)
+	modules, err := mirror.GetDownloadableModulesFromRepo(src.Spec.Registry.Repo, authProvider, insecure, skipVerifyTLS)
 	if err != nil {
 		return fmt.Errorf("Get external modules from %q: %w", src.Spec.Registry.Repo, err)
 	}
@@ -83,7 +83,7 @@ func PullExternalModulesToLocalFS(
 			return fmt.Errorf("Create module OCI Layouts: %w", err)
 		}
 
-		moduleImageSet, releasesImageSet, err := mirror.FindExternalModuleImages(&module, authProvider, filter != nil, insecure, skipVerifyTLS)
+		moduleImageSet, releasesImageSet, err := mirror.FindDownloadableModuleImages(&module, authProvider, filter != nil, insecure, skipVerifyTLS)
 		if err != nil {
 			return fmt.Errorf("Find external module images`: %w", err)
 		}
