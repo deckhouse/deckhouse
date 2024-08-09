@@ -1,0 +1,12 @@
+{{- tpl .Values.projectTemplate.resourcesTemplate .Values.project }}
+
+{{- /* boilerplate namespace, will be removed by PostRender if any other namespace definition exists */}}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.project.projectName }}
+  labels:
+    heritage: multitenancy-manager
+  annotations:
+    multitenancy-boilerplate: "true"

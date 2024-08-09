@@ -1,0 +1,30 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multitenancy-manager
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: multitenancy-manager
+  template:
+    metadata:
+      labels:
+        app: multitenancy-manager
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
+    spec:
+      imagePullSecrets:
+        - name: deckhouse-registry
+      hostNetwork: true
+      serviceAccountName: multitenancy-manager
+      containers:
+        - name: multitenancy-manager
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          image: {{ include "helm_lib_module_image" (list . "multitenancyManager") }}
+          args:
+            - /multitenancy-manager
