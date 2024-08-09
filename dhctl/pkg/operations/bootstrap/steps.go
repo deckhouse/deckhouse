@@ -324,7 +324,7 @@ func pushDockerImagesToSystemRegistry(sshCl *ssh.Client, cfg *config.MetaConfig)
 			return err
 		}
 		recreateTunFuncs = append(recreateTunFuncs, func() error {
-			return frontend.RecreateSshTune(ctx, authTun, func() (*frontend.Tunnel, error) {
+			return frontend.RecreateSshTun(ctx, authTun, func() (*frontend.Tunnel, error) {
 				return setupSSHTunnelToSystemRegistryAuth(sshCl)
 			})
 		})
@@ -341,7 +341,7 @@ func pushDockerImagesToSystemRegistry(sshCl *ssh.Client, cfg *config.MetaConfig)
 				return err
 			}
 			recreateTunFuncs = append(recreateTunFuncs, func() error {
-				return frontend.RecreateSshTune(ctx, distributionTun, func() (*frontend.Tunnel, error) {
+				return frontend.RecreateSshTun(ctx, distributionTun, func() (*frontend.Tunnel, error) {
 					return setupSSHTunnelToSystemRegistryDistribution(sshCl)
 				})
 			})
