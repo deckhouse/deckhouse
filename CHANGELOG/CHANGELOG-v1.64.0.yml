@@ -1,0 +1,12 @@
+deckhouse-controller:
+  features:
+    - summary: Restart controller if a ModuleRelease is Deployed phase is deleted
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9241
+  fixes:
+    - summary: Correct module validation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8989
+log-shipper:
+  features:
+    - summary: Add GELF codec to Socket destination. Now it is possible to send logs to Graylog.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9306
+
