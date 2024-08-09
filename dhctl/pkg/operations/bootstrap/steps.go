@@ -281,7 +281,7 @@ func SetupSSHTunnelToRegistryPackagesProxy(sshCl *ssh.Client) (*frontend.Reverse
 	return tun, nil
 }
 
-func setupSSHTunnelToSystemRegistry(sshCl *ssh.Client) (*frontend.Tunnel, string, error) {
+func setupSSHTunnelToSystemRegistry(sshCl *ssh.Client) (*frontend.Tunnel, error) {
 	log.DebugF("Running local ssh tunnel for system registry")
 
 	port := "5001"
@@ -289,13 +289,10 @@ func setupSSHTunnelToSystemRegistry(sshCl *ssh.Client) (*frontend.Tunnel, string
 
 	tun := sshCl.Tunnel("L", fmt.Sprintf("%s:%s:%s", port, listenAddress, port))
 	err := tun.Up()
-	if err != nil {
-		return nil, "", err
-	}
-	return tun, fmt.Sprintf("%s:%s", port, listenAddress), nil
+	return tun, err
 }
 
-func setupSSHTunnelToSystemRegistryAuth(sshCl *ssh.Client) (*frontend.Tunnel, string, error) {
+func setupSSHTunnelToSystemRegistryAuth(sshCl *ssh.Client) (*frontend.Tunnel, error) {
 	log.DebugF("Running local ssh tunnel for system registry auth")
 
 	port := "5051"
@@ -303,10 +300,78 @@ func setupSSHTunnelToSystemRegistryAuth(sshCl *ssh.Client) (*frontend.Tunnel, st
 
 	tun := sshCl.Tunnel("L", fmt.Sprintf("%s:%s:%s", port, listenAddress, port))
 	err := tun.Up()
-	if err != nil {
-		return nil, "", err
+	return tun, err
+}
+
+func sshTuneRecreate(sshCl *ssh.Client, runTun func(sshCl *ssh.Client) (*frontend.Tunnel, error)) (func(), error, <-chan error) {
+	healthMonitorErrorCh := make(chan error)
+	recreateTunErrorCh := make(chan error, 1)
+	shutdownCh := make(chan struct{})
+
+	tun, runTunErr := runTun(sshCl)
+	shutdownFunc := func() {
+		select {
+		case <-shutdownCh:
+		default:
+			close(shutdownCh)
+		}
+		select {
+		case <-recreateTunErrorCh:
+		default:
+			close(recreateTunErrorCh)
+		}
+		tun.Stop()
 	}
-	return tun, fmt.Sprintf("%s:%s", port, listenAddress), nil
+
+	if runTunErr != nil {
+		shutdownFunc()
+		return shutdownFunc, runTunErr, recreateTunErrorCh
+	}
+
+	tunAddress := tun.Address
+	go tun.HealthMonitor(healthMonitorErrorCh)
+
+	go func() {
+		defer func() {
+			log.InfoF("Stop tunnel %s\n", tunAddress)
+			shutdownFunc()
+		}()
+
+		for {
+			select {
+			case <-healthMonitorErrorCh:
+				var lastError error
+				log.ErrorF("Detected error in tunnel %s\n", tunAddress)
+				for retryCount := 0; retryCount < 10; retryCount++ {
+					select {
+					case <-shutdownCh:
+						return
+					default:
+					}
+					log.InfoF("[%d/10] Trying to recreate the tunnel %s\n", retryCount+1, tunAddress)
+					tun.Stop()
+					tun, lastError = runTun(sshCl)
+					if lastError != nil {
+						lastError = fmt.Errorf("error recreating the tunnel %s: %v", tunAddress, lastError.Error())
+						log.ErrorF("[%d/10] %s\n", retryCount+1, lastError.Error())
+						continue
+					}
+					go tun.HealthMonitor(healthMonitorErrorCh)
+					lastError = nil
+					log.InfoF("[%d/10] Successfully recreated the tunnel %s\n", retryCount+1, tunAddress)
+					break
+				}
+				if lastError != nil {
+					recreateTunErrorCh <- lastError
+					return
+				}
+			case <-shutdownCh:
+				return
+			}
+		}
+	}()
+
+	return shutdownFunc, nil, recreateTunErrorCh
 }
 
 func pushDockerImagesToSystemRegistry(sshCl *ssh.Client, cfg *config.MetaConfig) error {
@@ -318,33 +383,36 @@ func pushDockerImagesToSystemRegistry(sshCl *ssh.Client, cfg *config.MetaConfig)
 			WithTlsSkipVerify(true).
 			WithRegistryAuth(registryUser.Name, registryUser.Password)
 
-		stdOutErrHandler := func(l string) {
+		stdOutHandler := func(l string) {
 			log.InfoLn(l)
 		}
+		stdErrHandler := func(l string) {
+			log.ErrorLn(l)
+		}
 
-		authTun, _, err := setupSSHTunnelToSystemRegistryAuth(sshCl)
+		shutdownAuthTun, err, recreateAuthTuneErrCh := sshTuneRecreate(sshCl, setupSSHTunnelToSystemRegistryAuth)
 		if err != nil {
 			return fmt.Errorf("failed to setup SSH tunnel to system registry auth: %v", err)
 		}
-		defer authTun.Stop()
+		defer shutdownAuthTun()
 
 		if sshCl.Settings.BastionHost == "" {
 			registryAddress := fmt.Sprintf("%s:5001", sshCl.Settings.Host())
 			d8Push = d8Push.MirrorPush(imagesBundlePath, registryAddress)
-			return d8Push.WithStdoutHandler(stdOutErrHandler).
-				WithStderrHandler(stdOutErrHandler).
+			return d8Push.WithStdoutHandler(stdOutHandler).
+				WithStderrHandler(stdErrHandler).
 				Run()
 		}
 
-		systemRegistryTun, registryAddress, err := setupSSHTunnelToSystemRegistry(sshCl)
+		shutdownRegistryTun, err, recreateRegistryTunErrCh := sshTuneRecreate(sshCl, setupSSHTunnelToSystemRegistry)
 		if err != nil {
 			return fmt.Errorf("failed to setup SSH tunnel to system registry: %v", err)
 		}
-		defer systemRegistryTun.Stop()
+		defer shutdownRegistryTun()
 
-		d8Push = d8Push.MirrorPush(imagesBundlePath, registryAddress)
-		return d8Push.WithStdoutHandler(stdOutErrHandler).
-			WithStderrHandler(stdOutErrHandler).
+		d8Push = d8Push.MirrorPush(imagesBundlePath, "127.0.0.1:5001")
+		return d8Push.WithStdoutHandler(stdOutHandler).
+			WithStderrHandler(stdErrHandler).
 			Run()
 	})
 }
