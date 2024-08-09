@@ -15,6 +15,8 @@
 package hooks
 
 import (
+	"os"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -23,6 +25,8 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
+
+const bootstrappedFileName = "/tmp/cluster-is-bootstrapped"
 
 const (
 	isBootstrappedCmSnapName    = "is_bootstraped_cm"
@@ -116,7 +120,7 @@ func clusterIsBootstrapped(input *go_hook.HookInput) error {
 		// if we have cm here then set value and return
 		// configmap is source of truth
 		input.Values.Set(clusterBootstrapFlagPath, true)
-		return nil
+		return createBootstrappedFile()
 	}
 
 	// not have `is bootstrap` configmap
@@ -132,9 +136,21 @@ func clusterIsBootstrapped(input *go_hook.HookInput) error {
 		if readyRaw.(bool) {
 			createBootstrapClusterCm(input.PatchCollector)
 			input.Values.Set(clusterBootstrapFlagPath, true)
+			if err := createBootstrappedFile(); err != nil {
+				return err
+			}
 			break
 		}
 	}
 
 	return nil
+}
+
+func createBootstrappedFile() error {
+	if _, err := os.Stat(bootstrappedFileName); err == nil {
+		return nil
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	return os.WriteFile(bootstrappedFileName, []byte("true"), 0644)
 }
