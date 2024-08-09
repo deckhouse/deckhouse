@@ -128,4 +128,60 @@ metallb:
       value: frontend
 ```
 
+## An example for Bare metal (with L2LoadBalancer)
+
+{% alert level="warning" %} This feature is available in Enterprise Edition only. {% endalert %}
+
+Enable the `l2-load-balancer` module:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: l2-load-balancer
+spec:
+  enabled: true
+  version: 1
+```
+
+Deploy the _L2LoadBalancer_ resource:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: L2LoadBalancer
+metadata:
+  name: ingress
+spec:
+  addressPool:
+  - 192.168.2.100-192.168.2.150
+  nodeSelector:
+    node-role.kubernetes.io/loadbalancer: ""
+```
+
+Deploy the _IngressNginxController_ resource:
+* The **network.deckhouse.io/l2-load-balancer-name** annotation specifies the name of _L2LoadBalancer_ resource.
+* The **network.deckhouse.io/l2-load-balancer-external-ips-count** annotation specifies how many addresses will be allocated from the pool described in _L2LoadBalancer_.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+ name: main
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+  loadBalancer:
+    annotations:
+      network.deckhouse.io/l2-load-balancer-name: ingress
+      network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+```
+
+The platform created Service with the type `LoadBalancer`. It will be assigned the specified number of addresses:
+
+```shell
+$ kubectl -n d8-ingress-nginx get svc
+NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)                      AGE
+main-load-balancer     LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30689/TCP,443:30668/TCP   11s
+```
+
 {% endraw %}
