@@ -45,9 +45,9 @@ data:
     {{- fail (printf "unknown mode %s" .Values.cniCilium.internal.mode) }}
   {{- end }}
 
+  tunnel-port: {{ .Values.cniCilium.internal.tunnelPortVXLAN | quote }}
+
   {{- if has "virtualization" .Values.global.enabledModules }}
-  # Preserve default tunnel port 8472 for virtualization workloads
-  tunnel-port: "8469"
   enable-ip-masq-agent: "true"
   ip-masq-agent-config-path: /etc/config/ip-masq-agent
   # Use stable MAC addresses for pods

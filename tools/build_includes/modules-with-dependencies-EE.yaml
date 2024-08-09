@@ -459,8 +459,8 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/021-cni-cilium/monitoring/prometheus-rules
-  to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules
+- add: /ee/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
+  to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
   excludePaths:
     - images
     - templates
