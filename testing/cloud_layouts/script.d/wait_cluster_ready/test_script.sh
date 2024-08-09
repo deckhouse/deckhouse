@@ -149,8 +149,7 @@ Ingress $ingress_inlet check: $([ "$ingress" == "ok" ] && echo "success" || echo
 EOF
   fi
 
-  bundle=$(kubectl get mc deckhouse -o jsonpath='{.spec.settings.bundle}')
-  if [ "$bundle" == "Minimal" ] || kubectl -n d8-istio get po | grep istiod | grep -q Running; then
+  if kubectl -n d8-istio get po | grep istiod | grep -q Running; then
     istio="ok"
   else
     istio=""

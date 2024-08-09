@@ -17,7 +17,7 @@
 # limitations under the License.
 
 # <template: e2e_workflow_template>
-name: 'e2e: vCloudDirector'
+name: 'e2e: VCD'
 on:
   workflow_dispatch:
     inputs:
@@ -185,7 +185,7 @@ jobs:
         uses: actions/github-script@v6.4.1
         with:
           script: |
-            const provider = 'vclouddirector';
+            const provider = 'vcd';
             const kubernetesDefaultVersion = '1.27';
 
             const ci = require('./.github/scripts/js/ci');
@@ -195,7 +195,7 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_26:
-    name: "e2e: vCloudDirector, Containerd, Kubernetes 1.26"
+    name: "e2e: VCD, Containerd, Kubernetes 1.26"
     needs:
       - check_e2e_labels
       - git_info
@@ -206,12 +206,12 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "vclouddirector;Standard;containerd;1.26"
+      ran_for: "vcd;Standard;containerd;1.26"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      PROVIDER: vCloudDirector
+      PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.26"
@@ -242,7 +242,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'e2e: vCloudDirector, Containerd, Kubernetes 1.26';
+            const name = 'e2e: VCD, Containerd, Kubernetes 1.26';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -413,11 +413,11 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: vCloudDirector/Containerd/1.26"
+      - name: "Run e2e test: VCD/Containerd/1.26"
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          PROVIDER: vCloudDirector
+          PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.26"
@@ -469,7 +469,7 @@ jobs:
           bastion_ip_file=""
           if [[ "${PROVIDER}" == "Static" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+          elif [[ "${PROVIDER}" == "VCD" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
@@ -530,7 +530,7 @@ jobs:
         id: cleanup_cluster
         timeout-minutes: 60
         env:
-          PROVIDER: vCloudDirector
+          PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.26"
@@ -604,7 +604,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: failed_cluster_state_vclouddirector_containerd_1_26
+          name: failed_cluster_state_vcd_containerd_1_26
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -614,7 +614,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: test_output_vclouddirector_containerd_1_26
+          name: test_output_vcd_containerd_1_26
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -657,7 +657,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'e2e: vCloudDirector, Containerd, Kubernetes 1.26';
+            const name = 'e2e: VCD, Containerd, Kubernetes 1.26';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -678,7 +678,7 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_27:
-    name: "e2e: vCloudDirector, Containerd, Kubernetes 1.27"
+    name: "e2e: VCD, Containerd, Kubernetes 1.27"
     needs:
       - check_e2e_labels
       - git_info
@@ -689,12 +689,12 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "vclouddirector;Standard;containerd;1.27"
+      ran_for: "vcd;Standard;containerd;1.27"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      PROVIDER: vCloudDirector
+      PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.27"
@@ -725,7 +725,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'e2e: vCloudDirector, Containerd, Kubernetes 1.27';
+            const name = 'e2e: VCD, Containerd, Kubernetes 1.27';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -896,11 +896,11 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: vCloudDirector/Containerd/1.27"
+      - name: "Run e2e test: VCD/Containerd/1.27"
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          PROVIDER: vCloudDirector
+          PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.27"
@@ -952,7 +952,7 @@ jobs:
           bastion_ip_file=""
           if [[ "${PROVIDER}" == "Static" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+          elif [[ "${PROVIDER}" == "VCD" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
@@ -1013,7 +1013,7 @@ jobs:
         id: cleanup_cluster
         timeout-minutes: 60
         env:
-          PROVIDER: vCloudDirector
+          PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.27"
@@ -1087,7 +1087,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: failed_cluster_state_vclouddirector_containerd_1_27
+          name: failed_cluster_state_vcd_containerd_1_27
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -1097,7 +1097,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: test_output_vclouddirector_containerd_1_27
+          name: test_output_vcd_containerd_1_27
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -1140,7 +1140,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'e2e: vCloudDirector, Containerd, Kubernetes 1.27';
+            const name = 'e2e: VCD, Containerd, Kubernetes 1.27';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -1161,7 +1161,7 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_28:
-    name: "e2e: vCloudDirector, Containerd, Kubernetes 1.28"
+    name: "e2e: VCD, Containerd, Kubernetes 1.28"
     needs:
       - check_e2e_labels
       - git_info
@@ -1172,12 +1172,12 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "vclouddirector;Standard;containerd;1.28"
+      ran_for: "vcd;Standard;containerd;1.28"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      PROVIDER: vCloudDirector
+      PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.28"
@@ -1208,7 +1208,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'e2e: vCloudDirector, Containerd, Kubernetes 1.28';
+            const name = 'e2e: VCD, Containerd, Kubernetes 1.28';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -1379,11 +1379,11 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: vCloudDirector/Containerd/1.28"
+      - name: "Run e2e test: VCD/Containerd/1.28"
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          PROVIDER: vCloudDirector
+          PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.28"
@@ -1435,7 +1435,7 @@ jobs:
           bastion_ip_file=""
           if [[ "${PROVIDER}" == "Static" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+          elif [[ "${PROVIDER}" == "VCD" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
@@ -1496,7 +1496,7 @@ jobs:
         id: cleanup_cluster
         timeout-minutes: 60
         env:
-          PROVIDER: vCloudDirector
+          PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.28"
@@ -1570,7 +1570,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: failed_cluster_state_vclouddirector_containerd_1_28
+          name: failed_cluster_state_vcd_containerd_1_28
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -1580,7 +1580,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: test_output_vclouddirector_containerd_1_28
+          name: test_output_vcd_containerd_1_28
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -1623,7 +1623,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'e2e: vCloudDirector, Containerd, Kubernetes 1.28';
+            const name = 'e2e: VCD, Containerd, Kubernetes 1.28';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -1644,7 +1644,7 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_29:
-    name: "e2e: vCloudDirector, Containerd, Kubernetes 1.29"
+    name: "e2e: VCD, Containerd, Kubernetes 1.29"
     needs:
       - check_e2e_labels
       - git_info
@@ -1655,12 +1655,12 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "vclouddirector;Standard;containerd;1.29"
+      ran_for: "vcd;Standard;containerd;1.29"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      PROVIDER: vCloudDirector
+      PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.29"
@@ -1691,7 +1691,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'e2e: vCloudDirector, Containerd, Kubernetes 1.29';
+            const name = 'e2e: VCD, Containerd, Kubernetes 1.29';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -1862,11 +1862,11 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: vCloudDirector/Containerd/1.29"
+      - name: "Run e2e test: VCD/Containerd/1.29"
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          PROVIDER: vCloudDirector
+          PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.29"
@@ -1918,7 +1918,7 @@ jobs:
           bastion_ip_file=""
           if [[ "${PROVIDER}" == "Static" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+          elif [[ "${PROVIDER}" == "VCD" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
@@ -1979,7 +1979,7 @@ jobs:
         id: cleanup_cluster
         timeout-minutes: 60
         env:
-          PROVIDER: vCloudDirector
+          PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.29"
@@ -2053,7 +2053,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: failed_cluster_state_vclouddirector_containerd_1_29
+          name: failed_cluster_state_vcd_containerd_1_29
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -2063,7 +2063,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: test_output_vclouddirector_containerd_1_29
+          name: test_output_vcd_containerd_1_29
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -2106,7 +2106,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'e2e: vCloudDirector, Containerd, Kubernetes 1.29';
+            const name = 'e2e: VCD, Containerd, Kubernetes 1.29';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -2127,7 +2127,7 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_30:
-    name: "e2e: vCloudDirector, Containerd, Kubernetes 1.30"
+    name: "e2e: VCD, Containerd, Kubernetes 1.30"
     needs:
       - check_e2e_labels
       - git_info
@@ -2138,12 +2138,12 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "vclouddirector;Standard;containerd;1.30"
+      ran_for: "vcd;Standard;containerd;1.30"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      PROVIDER: vCloudDirector
+      PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.30"
@@ -2174,7 +2174,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'e2e: vCloudDirector, Containerd, Kubernetes 1.30';
+            const name = 'e2e: VCD, Containerd, Kubernetes 1.30';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -2345,11 +2345,11 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: vCloudDirector/Containerd/1.30"
+      - name: "Run e2e test: VCD/Containerd/1.30"
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          PROVIDER: vCloudDirector
+          PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.30"
@@ -2401,7 +2401,7 @@ jobs:
           bastion_ip_file=""
           if [[ "${PROVIDER}" == "Static" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+          elif [[ "${PROVIDER}" == "VCD" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
@@ -2462,7 +2462,7 @@ jobs:
         id: cleanup_cluster
         timeout-minutes: 60
         env:
-          PROVIDER: vCloudDirector
+          PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.30"
@@ -2536,7 +2536,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: failed_cluster_state_vclouddirector_containerd_1_30
+          name: failed_cluster_state_vcd_containerd_1_30
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -2546,7 +2546,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: test_output_vclouddirector_containerd_1_30
+          name: test_output_vcd_containerd_1_30
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -2589,7 +2589,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'e2e: vCloudDirector, Containerd, Kubernetes 1.30';
+            const name = 'e2e: VCD, Containerd, Kubernetes 1.30';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -2610,7 +2610,7 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_Automatic:
-    name: "e2e: vCloudDirector, Containerd, Kubernetes Automatic"
+    name: "e2e: VCD, Containerd, Kubernetes Automatic"
     needs:
       - check_e2e_labels
       - git_info
@@ -2621,12 +2621,12 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "vclouddirector;Standard;containerd;Automatic"
+      ran_for: "vcd;Standard;containerd;Automatic"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
-      PROVIDER: vCloudDirector
+      PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
       KUBERNETES_VERSION: "Automatic"
@@ -2657,7 +2657,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'e2e: vCloudDirector, Containerd, Kubernetes Automatic';
+            const name = 'e2e: VCD, Containerd, Kubernetes Automatic';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -2828,11 +2828,11 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: vCloudDirector/Containerd/Automatic"
+      - name: "Run e2e test: VCD/Containerd/Automatic"
         id: e2e_test_run
         timeout-minutes: 80
         env:
-          PROVIDER: vCloudDirector
+          PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
@@ -2884,7 +2884,7 @@ jobs:
           bastion_ip_file=""
           if [[ "${PROVIDER}" == "Static" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+          elif [[ "${PROVIDER}" == "VCD" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
@@ -2945,7 +2945,7 @@ jobs:
         id: cleanup_cluster
         timeout-minutes: 60
         env:
-          PROVIDER: vCloudDirector
+          PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
@@ -3019,7 +3019,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: failed_cluster_state_vclouddirector_containerd_Automatic
+          name: failed_cluster_state_vcd_containerd_Automatic
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -3029,7 +3029,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: test_output_vclouddirector_containerd_Automatic
+          name: test_output_vcd_containerd_Automatic
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -3072,7 +3072,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'e2e: vCloudDirector, Containerd, Kubernetes Automatic';
+            const name = 'e2e: VCD, Containerd, Kubernetes Automatic';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -3099,7 +3099,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       JOB_NAMES: |
-        {"run_containerd_1_26":"e2e: vCloudDirector, Containerd, Kubernetes 1.26","run_containerd_1_27":"e2e: vCloudDirector, Containerd, Kubernetes 1.27","run_containerd_1_28":"e2e: vCloudDirector, Containerd, Kubernetes 1.28","run_containerd_1_29":"e2e: vCloudDirector, Containerd, Kubernetes 1.29","run_containerd_1_30":"e2e: vCloudDirector, Containerd, Kubernetes 1.30","run_containerd_Automatic":"e2e: vCloudDirector, Containerd, Kubernetes Automatic"}
+        {"run_containerd_1_26":"e2e: VCD, Containerd, Kubernetes 1.26","run_containerd_1_27":"e2e: VCD, Containerd, Kubernetes 1.27","run_containerd_1_28":"e2e: VCD, Containerd, Kubernetes 1.28","run_containerd_1_29":"e2e: VCD, Containerd, Kubernetes 1.29","run_containerd_1_30":"e2e: VCD, Containerd, Kubernetes 1.30","run_containerd_Automatic":"e2e: VCD, Containerd, Kubernetes Automatic"}
     steps:
 
       # <template: checkout_step>
@@ -3121,7 +3121,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'workflow,final,no-skipped,restore-separate';
-            const name = 'e2e: vCloudDirector';
+            const name = 'e2e: VCD';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);

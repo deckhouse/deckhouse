@@ -3,7 +3,7 @@
 #
 
 # <template: e2e_workflow_template>
-name: 'destroy cluster: vCloudDirector'
+name: 'destroy cluster: VCD'
 on:
   workflow_dispatch:
     inputs:
@@ -74,10 +74,10 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_26:
-    name: "destroy cluster: vCloudDirector, Containerd, Kubernetes 1.26"
+    name: "destroy cluster: VCD, Containerd, Kubernetes 1.26"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.26' && github.event.inputs.layout == 'Standard' }}
     env:
-      PROVIDER: vCloudDirector
+      PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.26"
@@ -108,7 +108,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'destroy cluster: vCloudDirector, Containerd, Kubernetes 1.26';
+            const name = 'destroy cluster: VCD, Containerd, Kubernetes 1.26';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -222,7 +222,7 @@ jobs:
         if: ${{ success() }}
         id: cleanup_cluster
         env:
-          PROVIDER: vCloudDirector
+          PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.26"
@@ -337,7 +337,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'destroy cluster: vCloudDirector, Containerd, Kubernetes 1.26';
+            const name = 'destroy cluster: VCD, Containerd, Kubernetes 1.26';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -358,10 +358,10 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_27:
-    name: "destroy cluster: vCloudDirector, Containerd, Kubernetes 1.27"
+    name: "destroy cluster: VCD, Containerd, Kubernetes 1.27"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.27' && github.event.inputs.layout == 'Standard' }}
     env:
-      PROVIDER: vCloudDirector
+      PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.27"
@@ -392,7 +392,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'destroy cluster: vCloudDirector, Containerd, Kubernetes 1.27';
+            const name = 'destroy cluster: VCD, Containerd, Kubernetes 1.27';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -506,7 +506,7 @@ jobs:
         if: ${{ success() }}
         id: cleanup_cluster
         env:
-          PROVIDER: vCloudDirector
+          PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.27"
@@ -621,7 +621,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'destroy cluster: vCloudDirector, Containerd, Kubernetes 1.27';
+            const name = 'destroy cluster: VCD, Containerd, Kubernetes 1.27';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -642,10 +642,10 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_28:
-    name: "destroy cluster: vCloudDirector, Containerd, Kubernetes 1.28"
+    name: "destroy cluster: VCD, Containerd, Kubernetes 1.28"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.28' && github.event.inputs.layout == 'Standard' }}
     env:
-      PROVIDER: vCloudDirector
+      PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.28"
@@ -676,7 +676,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'destroy cluster: vCloudDirector, Containerd, Kubernetes 1.28';
+            const name = 'destroy cluster: VCD, Containerd, Kubernetes 1.28';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -790,7 +790,7 @@ jobs:
         if: ${{ success() }}
         id: cleanup_cluster
         env:
-          PROVIDER: vCloudDirector
+          PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.28"
@@ -905,7 +905,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'destroy cluster: vCloudDirector, Containerd, Kubernetes 1.28';
+            const name = 'destroy cluster: VCD, Containerd, Kubernetes 1.28';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -926,10 +926,10 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_29:
-    name: "destroy cluster: vCloudDirector, Containerd, Kubernetes 1.29"
+    name: "destroy cluster: VCD, Containerd, Kubernetes 1.29"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.29' && github.event.inputs.layout == 'Standard' }}
     env:
-      PROVIDER: vCloudDirector
+      PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.29"
@@ -960,7 +960,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'destroy cluster: vCloudDirector, Containerd, Kubernetes 1.29';
+            const name = 'destroy cluster: VCD, Containerd, Kubernetes 1.29';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -1074,7 +1074,7 @@ jobs:
         if: ${{ success() }}
         id: cleanup_cluster
         env:
-          PROVIDER: vCloudDirector
+          PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.29"
@@ -1189,7 +1189,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'destroy cluster: vCloudDirector, Containerd, Kubernetes 1.29';
+            const name = 'destroy cluster: VCD, Containerd, Kubernetes 1.29';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -1210,10 +1210,10 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_30:
-    name: "destroy cluster: vCloudDirector, Containerd, Kubernetes 1.30"
+    name: "destroy cluster: VCD, Containerd, Kubernetes 1.30"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.30' && github.event.inputs.layout == 'Standard' }}
     env:
-      PROVIDER: vCloudDirector
+      PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.30"
@@ -1244,7 +1244,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'destroy cluster: vCloudDirector, Containerd, Kubernetes 1.30';
+            const name = 'destroy cluster: VCD, Containerd, Kubernetes 1.30';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -1358,7 +1358,7 @@ jobs:
         if: ${{ success() }}
         id: cleanup_cluster
         env:
-          PROVIDER: vCloudDirector
+          PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.30"
@@ -1473,7 +1473,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'destroy cluster: vCloudDirector, Containerd, Kubernetes 1.30';
+            const name = 'destroy cluster: VCD, Containerd, Kubernetes 1.30';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -1494,10 +1494,10 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_automatic:
-    name: "destroy cluster: vCloudDirector, Containerd, Kubernetes Automatic"
+    name: "destroy cluster: VCD, Containerd, Kubernetes Automatic"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == 'Automatic' && github.event.inputs.layout == 'Standard' }}
     env:
-      PROVIDER: vCloudDirector
+      PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
       KUBERNETES_VERSION: "Automatic"
@@ -1528,7 +1528,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'destroy cluster: vCloudDirector, Containerd, Kubernetes Automatic';
+            const name = 'destroy cluster: VCD, Containerd, Kubernetes Automatic';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -1642,7 +1642,7 @@ jobs:
         if: ${{ success() }}
         id: cleanup_cluster
         env:
-          PROVIDER: vCloudDirector
+          PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
@@ -1757,7 +1757,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'destroy cluster: vCloudDirector, Containerd, Kubernetes Automatic';
+            const name = 'destroy cluster: VCD, Containerd, Kubernetes Automatic';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -1784,7 +1784,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       JOB_NAMES: |
-        {"run_containerd_1_26":"destroy cluster: vCloudDirector, Containerd, Kubernetes 1.26","run_containerd_1_27":"destroy cluster: vCloudDirector, Containerd, Kubernetes 1.27","run_containerd_1_28":"destroy cluster: vCloudDirector, Containerd, Kubernetes 1.28","run_containerd_1_29":"destroy cluster: vCloudDirector, Containerd, Kubernetes 1.29","run_containerd_1_30":"destroy cluster: vCloudDirector, Containerd, Kubernetes 1.30","run_containerd_automatic":"destroy cluster: vCloudDirector, Containerd, Kubernetes Automatic"}
+        {"run_containerd_1_26":"destroy cluster: VCD, Containerd, Kubernetes 1.26","run_containerd_1_27":"destroy cluster: VCD, Containerd, Kubernetes 1.27","run_containerd_1_28":"destroy cluster: VCD, Containerd, Kubernetes 1.28","run_containerd_1_29":"destroy cluster: VCD, Containerd, Kubernetes 1.29","run_containerd_1_30":"destroy cluster: VCD, Containerd, Kubernetes 1.30","run_containerd_automatic":"destroy cluster: VCD, Containerd, Kubernetes Automatic"}
     steps:
 
       # <template: checkout_step>
@@ -1806,7 +1806,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'workflow,final,no-skipped,restore-separate';
-            const name = 'destroy cluster: vCloudDirector';
+            const name = 'destroy cluster: VCD';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);

@@ -80,9 +80,9 @@ Provider specific environment variables:
 
 \$LAYOUT_VSPHERE_PASSWORD
 
-  vCloudDirector:
+  VCD:
 
-\$LAYOUT_VCLOUD_DIRECTOR_PASSWORD
+\$LAYOUT_VCD_PASSWORD
 
   Static:
 
@@ -338,7 +338,7 @@ function prepare_environment() {
     ssh_user="ubuntu"
     ;;
 
-"vCloudDirector")
+"VCD")
     # shellcheck disable=SC2016
     env VCD_PASSWORD="$(base64 -d <<<"$LAYOUT_VCD_PASSWORD")" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" \

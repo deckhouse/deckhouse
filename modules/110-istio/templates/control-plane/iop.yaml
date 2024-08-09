@@ -39,7 +39,7 @@ securityContext:
 
 {{ $supportedProviders := list "aws" "gcp" "azure" }}
 {{ $cloudPlatform := "none" }}
-{{ if hasKey .Values.global.clusterConfiguration "cloud" }}
+{{ if and (.Values.global.clusterConfiguration) (hasKey .Values.global.clusterConfiguration "cloud") }}
   {{ $currentProvider := .Values.global.clusterConfiguration.cloud.provider | lower }}
   {{ if has $currentProvider $supportedProviders }}
     {{ $cloudPlatform = $currentProvider }}

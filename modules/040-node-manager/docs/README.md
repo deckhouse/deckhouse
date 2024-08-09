@@ -137,6 +137,12 @@ Configuring/clearing up a node, joining it to a cluster, and disjoining it can b
 
   If necessary (for example, if the [StaticInstance](cr.html#staticinstance) resource associated with the server is deleted or the [number of group nodes](cr.html#nodegroup-v1-spec-staticinstances-count) is reduced), the Cluster API Provider Static connects to the cluster node, clears it, and disconnects it from the cluster.
 
+- **Manually with subsequent transfer of the Node under automatic control** of [Cluster API Provider Static](#cluster-api-provider-static).
+
+  > This feature is available starting with Deckhouse 1.63.
+
+  To transfer an existing cluster node under CAPS management, it is necessary to prepare the [StaticInstance](cr.html#staticinstance) and [SSHCredentials](cr.html#sshcredentials) resources for this node, as with automatic management in the point above, however the [StaticInstance](cr.html#staticinstance) resource must additionally be annotated as `static.node.deckhouse.io/skip-bootstrap-phase: ""`.
+
 ### Cluster API Provider Static
 
 > Cluster API Provider Static is available starting from Deckhouse version 1.54. The features described are under testing and active development. Functionality and resource specifications are subject to change. Keep this in mind when using it in production clusters.
@@ -178,6 +184,8 @@ The workflow for dealing with static nodes when using Cluster API Provider Stati
    - `Bootstraping`. The procedure for configuring the server (VM) and connecting the node to the cluster is in progress.
    - `Running`. The server is configured and the associated node is added to the cluster.
    - `Cleaning`. The procedure of cleaning up the server and disconnecting the node from the cluster is in progress.
+
+   > You can transfer the existing manually-bootstrapped cluster node under CAPS management by annotating its StaticInstance with `static.node.deckhouse.io/skip-bootstrap-phase: ""`.
 
 1. **Creating a [NodeGroup](cr.html#nodegroup) resource.**
 

@@ -11,7 +11,7 @@
 {!{- if eq $ctx.provider "vsphere"  -}!}
 {!{-   $layout = "Standard" -}!}
 {!{- end -}!}
-{!{- if eq $ctx.provider "vclouddirector"  -}!}
+{!{- if eq $ctx.provider "vcd"  -}!}
 {!{-   $layout = "Standard" -}!}
 {!{- end -}!}
 {!{- if eq $ctx.provider "static"  -}!}
@@ -86,7 +86,7 @@
 {!{- else if eq $provider "vsphere" }!}
   LAYOUT_VSPHERE_PASSWORD: ${{ secrets.LAYOUT_VSPHERE_PASSWORD }}
   LAYOUT_VSPHERE_BASE_DOMAIN: ${{ secrets.LAYOUT_VSPHERE_BASE_DOMAIN }}
-{!{- else if eq $provider "vclouddirector" }!}
+{!{- else if eq $provider "vcd" }!}
   LAYOUT_VCD_PASSWORD: ${{ secrets.LAYOUT_VCD_PASSWORD }}
   LAYOUT_VCD_USERNAME: ${{ secrets.LAYOUT_VCD_USERNAME }}
   LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -136,7 +136,7 @@ run: |
   bastion_ip_file=""
   if [[ "${PROVIDER}" == "Static" ]] ; then
     bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-  elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+  elif [[ "${PROVIDER}" == "VCD" ]] ; then
     bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
   fi
 
@@ -244,7 +244,7 @@ run: |
 {!{- else if eq $provider "vsphere" }!}
     -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
     -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
-{!{- else if eq $provider "vclouddirector" }!}
+{!{- else if eq $provider "vcd" }!}
     -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
     -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
     -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
