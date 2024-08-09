@@ -52,8 +52,8 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: gatekeeper-controller-manager
-  namespace: d8-admission-policy-engine
+  name: multitenancy-manager
+  namespace: d8-multitenancy-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
 spec:
   minAvailable: 1
