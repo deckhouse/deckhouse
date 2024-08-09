@@ -20,8 +20,12 @@ objectSelector: {}
   apiVersions:
   - '*'
   operations:
-  - CREATE
-  - UPDATE
+  {{- if $trackResource.operations }}
+    {{- $trackResource.operations | toYaml | nindent 4 }}
+  {{- else }}
+    - CREATE
+    - UPDATE
+  {{- end }}
   resources:
     {{- $trackResource.resources | toYaml | nindent 4 }}
   {{- end }}
