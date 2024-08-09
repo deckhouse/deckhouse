@@ -48,31 +48,31 @@ const (
 var transitions = map[Installation]map[Virtualization][]TransitionRule{
 	Existing: { // existing installation (ConfigMap exists)
 		On: { // Virtualization is on
-		 	// cm has configured 8469 port, will leave it as is
+			// cm has configured 8469 port, will leave it as is
 			TransitionRule{source: 8469, target: 8469},
-			
-		 	// dreamy case — virtualization was enabled with upgrading d8 simultaneously
+
+			// dreamy case — virtualization was enabled with upgrading d8 simultaneously
 			TransitionRule{source: 0, target: 8469},
-			
+
 			// dreamy case — virtualization was enabled with upgrading d8 simultaneously and
 			// someone configured the port for setup without virtualization 8472 manually, will set the right one
 			TransitionRule{source: 8472, target: 4298},
-			
+
 			// virtualization module was enabled on regular setup with the right port, will set the 4298
 			TransitionRule{source: 4299, target: 4298},
-			
+
 			// regular setup with enabled virtualization module and right port, will leave it as is
 			TransitionRule{source: 4298, target: 4298},
-			
+
 			// if the "source" port is non-standard and didn't mention here, will leave it as is and fire the alert
 		},
 		Off: { // Virtualization is off
 			// our previous standard setup, will set the old default port explicitly
 			TransitionRule{source: 0, target: 8472},
-			
+
 			// our previous standard setup with explicitly configured 8472 port, will leave the 8472
 			TransitionRule{source: 8472, target: 8472},
-			
+
 			// regular setup with standard 4299 port, will leave it as is
 			TransitionRule{source: 4299, target: 4299},
 		},
