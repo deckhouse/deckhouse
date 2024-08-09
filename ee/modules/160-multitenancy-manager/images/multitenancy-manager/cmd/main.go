@@ -7,7 +7,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"os"
 	"time"
 
@@ -16,9 +15,13 @@ import (
 	projectcontroller "controller/pkg/controller/project"
 	templatecontroller "controller/pkg/controller/template"
 	"controller/pkg/helm"
+
+	"github.com/go-logr/logr"
 	"go.uber.org/zap/zapcore"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -30,19 +33,15 @@ var (
 	templatesPath = "templates"
 	defaultPath   = "default"
 	helmNamespace = "d8-multitenancy-manager"
-	log           = ctrl.Log.WithName("multitenancy-manager")
 )
 
 func main() {
-	var probeAddr string
-	flag.StringVar(&probeAddr, "health-probe-address", ":0", "The address the probe endpoint binds to.")
-	flag.Parse()
-
 	// setup logger
+	log := ctrl.Log.WithName("multitenancy-manager")
 	ctrllog.SetLogger(zap.New(zap.Level(zapcore.Level(-4)), zap.UseDevMode(true)))
 
 	// initialize runtime manager
-	runtimeManager, err := setupRuntimeManager(probeAddr)
+	runtimeManager, err := setupRuntimeManager(log)
 	if err != nil {
 		panic(err)
 	}
@@ -69,7 +68,7 @@ func main() {
 	}
 }
 
-func setupRuntimeManager(probeAddress string) (ctrl.Manager, error) {
+func setupRuntimeManager(log logr.Logger) (ctrl.Manager, error) {
 	addToScheme := []func(s *runtime.Scheme) error{
 		v1alpha1.AddToScheme,
 		v1alpha2.AddToScheme,
@@ -87,7 +86,7 @@ func setupRuntimeManager(probeAddress string) (ctrl.Manager, error) {
 		LeaderElection:          false,
 		Scheme:                  scheme,
 		GracefulShutdownTimeout: pointer.Duration(10 * time.Second),
-		HealthProbeBindAddress:  probeAddress,
+		HealthProbeBindAddress:  ":9090",
 	}
 
 	runtimeManager, err := ctrl.NewManager(ctrl.GetConfigOrDie(), managerOpts)

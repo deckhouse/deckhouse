@@ -23,4 +23,6 @@ COPY --from=artifact /src/multitenancy-manager /multitenancy-manager
 COPY --from=artifact /src/templates /templates
 COPY --from=artifact /src/default /default
 
+EXPOSE 9090
+
 ENTRYPOINT [ "/multitenancy-manager" ]
