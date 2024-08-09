@@ -259,13 +259,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		}
 	}
 
-	auto, err := r.isKubernetesVersionAutomatic(ctx)
-	if err != nil {
-		r.logger.Errorf("failed to get automatic kubernetes version: %v", err)
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
-	}
-
-	if auto && len(dr.Spec.Requirements["autoK8sVersion"]) > 0 {
+	if r.isKubernetesVersionAutomatic(ctx) && len(dr.Spec.Requirements["autoK8sVersion"]) > 0 {
 		if moduleName, err := kubernetesversion.Instance().ValidateBaseVersion(dr.Spec.Requirements["autoK8sVersion"]); err != nil {
 			if r.moduleManager.IsModuleEnabled(moduleName) {
 				dr.Status.Message = err.Error()
@@ -638,20 +632,23 @@ func (r *deckhouseReleaseReconciler) updateByImageHashLoop(ctx context.Context) 
 	}, 15*time.Second)
 }
 
-func (r *deckhouseReleaseReconciler) isKubernetesVersionAutomatic(ctx context.Context) (bool, error) {
+func (r *deckhouseReleaseReconciler) isKubernetesVersionAutomatic(ctx context.Context) bool {
 	secret := new(corev1.Secret)
 	if err := r.client.Get(ctx, types.NamespacedName{Name: "d8-cluster-configuration", Namespace: "kube-system"}, secret); err != nil {
-		return false, fmt.Errorf("faliled to get secret %s: %w", secret.Name, err)
+		r.logger.Warnf("check kubernetes version: failed to get secret: %s", err.Error())
+		return false
 	}
 	var clusterConf struct {
 		KubernetesVersion string `json:"kubernetesVersion"`
 	}
 	clusterConfigurationRaw, ok := secret.Data["cluster-configuration.yaml"]
 	if !ok {
-		return false, fmt.Errorf("expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
+		r.logger.Warnf("check kubernetes version: expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
+		return false
 	}
 	if err := yaml.Unmarshal(clusterConfigurationRaw, &clusterConf); err != nil {
-		return false, err
+		r.logger.Warnf("check kubernetes version: failed to unmarshal cluster configuration: %s", err)
+		return false
 	}
-	return clusterConf.KubernetesVersion == "Automatic", nil
+	return clusterConf.KubernetesVersion == "Automatic"
 }
