@@ -1,0 +1,5 @@
+module: keepalived
+scopes:
+  - others
+crds:
+  - ee/modules/450-keepalived/crds/*.yaml

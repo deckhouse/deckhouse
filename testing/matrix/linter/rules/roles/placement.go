@@ -31,6 +31,7 @@ const (
 	UserAuthzClusterRolePath    = "templates/user-authz-cluster-roles.yaml"
 	RootRBACForUsPath           = "templates/rbac-for-us.yaml"
 	RootRBACToUsPath            = "templates/rbac-to-us.yaml"
+	RBACv2Path                  = "templates/rbac"
 )
 
 func isSystemNamespace(actual string) bool {
@@ -52,8 +53,7 @@ func ObjectRBACPlacement(m utils.Module, object storage.StoreObject) errors.Lint
 	if m.Name == "user-authz" || m.Name == "deckhouse" {
 		return errors.EmptyRuleError
 	}
-
-	if object.ShortPath() == UserAuthzClusterRolePath {
+	if object.ShortPath() == UserAuthzClusterRolePath || strings.HasPrefix(object.ShortPath(), RBACv2Path) {
 		return errors.EmptyRuleError
 	}
 
