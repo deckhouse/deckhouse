@@ -1,5 +1,5 @@
 ---
-image: {{ .ModuleName }}/flant-pricing
+image: {{ .ModuleName }}/{{ $.ImageName }}
 fromImage: common/shell-operator
 git:
 - add: /{{ $.ModulePath }}/modules/600-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
@@ -19,7 +19,8 @@ shell:
     - apt-get update
     - apt-get install -y python3 python3-module-pip curl
     - apt-get clean
+    - find /var/lib/apt/lists/ /var/cache/apt/ -type f -delete
   install:
     - python3 -m pip install -r /src/requirements.txt
 docker:
-  ENTRYPOINT: ["/shell-operator"]
+  ENTRYPOINT: ["tini", "--", "/shell-operator"]

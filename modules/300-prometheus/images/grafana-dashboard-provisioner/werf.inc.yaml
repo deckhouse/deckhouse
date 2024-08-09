@@ -1,28 +1,25 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /relocate
-  to: /
-  before: setup
-  includePaths:
-    - '**/*'
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /usr/lib/python3
-  to: /usr/lib/python3
-  before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /usr/lib64/python3
-  to: /usr/lib64/python3
-  before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /usr/lib64/python3.9
-  to: /usr/lib64/python3.9
-  before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /usr/local/lib/python3
-  to: /usr/local/lib/python3
-  before: setup
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/bin
+    to: /usr/bin
+    before: setup
+    includePaths:
+    - python3
+    - python3.12
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/lib/python3
+    to: /usr/lib/python3
+    before: setup
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/lib64/python3
+    to: /usr/lib64/python3
+    before: setup
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /usr/lib64/python3.12
+    to: /usr/lib64/python3.12
+    before: setup
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
   to: /hooks
@@ -31,9 +28,8 @@ git:
     - '**/*'
 
 ---
-{{- $pythonBinaries := "/usr/bin/python3" }}
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ $.Images.BASE_ALT_P11 }}
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
   to: /requirements.txt
@@ -41,8 +37,8 @@ git:
     install:
     - '**/*'
 shell:
+  beforeInstall:
+    - apt-get update
+    - apt-get install -y python3 python3-module-pip-run
   install:
-    - export SOURCE_REPO={{ .SOURCE_REPO }}
-    - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
-    - pip3 install -f file:///wheels --no-index -r /requirements.txt
-    - /binary_replace.sh -i "{{ $pythonBinaries }}" -o /relocate
+    - pip3 install -r /requirements.txt
