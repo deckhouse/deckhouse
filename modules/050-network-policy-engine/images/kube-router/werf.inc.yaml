@@ -1,4 +1,4 @@
-{{- $binaries := "/usr/lib64/libnetfilter_conntrack.so* /sbin/ipset /sbin/ip /usr/sbin/conntrack" }}
+{{- $binaries := "/usr/lib64/libnetfilter_conntrack.so* /sbin/ipset /sbin/ip /usr/sbin/conntrack /usr/bin/bash /usr/bin/cat" }}
 {{- $iptables_version := "1.8.10" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
@@ -26,6 +26,24 @@ shell:
     - export GOPROXY={{ $.GOPROXY }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-X github.com/cloudnativelabs/kube-router/v2/pkg/version.Version=${GIT_COMMIT} -X github.com/cloudnativelabs/kube-router/v2/pkg/version.BuildDate=${BUILD_DATE}" -o kube-router cmd/kube-router/kube-router.go
 ---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_19_ALPINE_DEV }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+git:
+- add: /{{ $.ModulePath }}/modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/iptables-wrapper
+  to: /src
+  stageDependencies:
+    install:
+      - '**/*'
+shell:
+  install:
+  - cd /src
+  - GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o iptables-wrapper main.go
+  - chown 64535:64535 iptables-wrapper
+  - chmod 0755 iptables-wrapper
+---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
@@ -44,8 +62,12 @@ import:
   - xtables-legacy-multi
   - xtables-nft-multi
   before: setup
-- image: common/iptables-wrapper
-  add: /iptables-wrapper
+#- image: common/iptables-wrapper
+#  add: /iptables-wrapper
+#  to: /iptables-wrapper
+#  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/iptables-wrapper
   to: /iptables-wrapper
   before: setup
 docker:
