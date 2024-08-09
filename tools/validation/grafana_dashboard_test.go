@@ -473,7 +473,35 @@ func TestValidateGrafanaDashboardFile(t *testing.T) {
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "isNone": true,
+          "selected": false,
+          "text": "None",
+          "value": ""
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus_datasource_uid"
+        },
+        "definition": "metric_name",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "dashboard_variable",
+        "options": [],
+        "query": {
+          "query": "metric_name",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
   },
   "time": {
     "from": "now-6h",
@@ -503,6 +531,7 @@ func TestValidateGrafanaDashboardFile(t *testing.T) {
 		NewError("dashboard.json", "deprecated interval", "Panel Plugin Panel Inside Row contains deprecated interval: 'interval_sx4', consider using '$__rate_interval'"),
 		NewError("dashboard.json", "legacy datasource uid", "Panel Plugin Panel Inside Row contains legacy datasource uid: 'prometheus_datasource_uid', consider resaving dashboard using newer version of Grafana"),
 		NewError("dashboard.json", "invalid prometheus datasource uid", "Panel Plugin Panel Inside Row contains invalid datasource uid: 'prometheus_datasource_uid', required to be: '${ds_prometheus}'"),
+		NewError("dashboard.json", "invalid prometheus datasource query variable", "Dashboard variable 'dashboard_variable' must use '${ds_prometheus}' as it's datasource"),
 		NewError("dashboard.json", "missing prometheus datasource variable", "Dashboard must contain prometheus variable with query type: 'prometheus' and name: 'ds_prometheus'"),
 	}}
 

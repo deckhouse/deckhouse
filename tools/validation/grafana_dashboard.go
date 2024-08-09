@@ -151,9 +151,17 @@ func validateGrafanaDashboardFile(fileName string, fileContent []byte) *Messages
 
 	var hasPrometheusDatasourceVariable bool
 	for _, dashboardTemplate := range dashboardTemplates {
-		if evaluatePrometheusDatasourceVariable(dashboardTemplate) {
+		if evaluatePrometheusDatasourceTemplateVariable(dashboardTemplate) {
 			hasPrometheusDatasourceVariable = true
-			break
+		}
+		if queryVariable, ok := evaluateInvalidPrometheusDatasourceQueryTemplateVariable(dashboardTemplate); ok {
+			msgs.Add(
+				NewError(
+					fileName,
+					"invalid prometheus datasource query variable",
+					fmt.Sprintf("Dashboard variable '%s' must use '%s' as it's datasource", queryVariable, prometheusDatasourceValidUID),
+				),
+			)
 		}
 	}
 	if !hasPrometheusDatasourceVariable {
@@ -282,7 +290,7 @@ func evaluateDeprecatedPanelType(panelType string) (replaceWith string, isDeprec
 	return replaceWith, isDeprecated
 }
 
-func evaluatePrometheusDatasourceVariable(dashboardTemplate gjson.Result) bool {
+func evaluatePrometheusDatasourceTemplateVariable(dashboardTemplate gjson.Result) bool {
 	templateType := dashboardTemplate.Get("type")
 	if !templateType.Exists() {
 		return false
@@ -299,4 +307,28 @@ func evaluatePrometheusDatasourceVariable(dashboardTemplate gjson.Result) bool {
 		return false
 	}
 	return true
+}
+
+func evaluateInvalidPrometheusDatasourceQueryTemplateVariable(dashboardTemplate gjson.Result) (string, bool) {
+	templateType := dashboardTemplate.Get("type")
+	if !templateType.Exists() {
+		return "", false
+	}
+	if templateType.String() != "query" {
+		return "", false
+	}
+	datasource := dashboardTemplate.Get("datasource")
+	if !datasource.Exists() {
+		return "", false
+	}
+	datasourceType := datasource.Get("type")
+	if datasourceType.String() != prometheusDatasourceType {
+		return "", false
+	}
+	datasourceUID := datasource.Get("uid")
+	if datasourceUID.String() == prometheusDatasourceValidUID {
+		return "", false
+	}
+	templateName := dashboardTemplate.Get("name")
+	return templateName.String(), true
 }
