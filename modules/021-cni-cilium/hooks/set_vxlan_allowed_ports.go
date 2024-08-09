@@ -126,16 +126,16 @@ func filterConfigMap(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 
 func setVXLANAllowedPorts(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_cni_cilium_config")
-	var installation = New
+	var installationStatus = New
 
 	if len(input.Snapshots["cilium-configmap"]) > 0 {
-		installation = Existing
+		installationStatus = Existing
 	}
 
-	var virtualization = Off
+	var virtualizationModuleStatus = Off
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
 	if enabledModules.Has("virtualization") {
-		virtualization = On
+		virtualizationModuleStatus = On
 	}
 
 	var targetPort, sourcePort int
@@ -144,16 +144,16 @@ func setVXLANAllowedPorts(input *go_hook.HookInput) error {
 		sourcePort = cm.Port
 	}
 
-	var transitionFounded bool
-	for _, rule := range transitions[installation][virtualization] {
+	var transitionFound bool
+	for _, rule := range transitions[installationStatus][virtualizationModuleStatus] {
 		if rule.source == sourcePort {
 			targetPort = rule.target
-			transitionFounded = true
+			transitionFound = true
 			break
 		}
 	}
 
-	if !transitionFounded {
+	if !transitionFound {
 		targetPort = sourcePort
 		input.MetricsCollector.Set("d8_cni_cilium_non_standard_vxlan_port", 1, map[string]string{"port": fmt.Sprintf("%d", targetPort)}, metrics.WithGroup("d8_cni_cilium_config"))
 	}
