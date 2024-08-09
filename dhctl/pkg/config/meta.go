@@ -49,22 +49,25 @@ type MetaConfig struct {
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
-	VersionMap       map[string]interface{} `json:"-"`
-	Images           imagesDigests          `json:"-"`
-	Registry         RegistryData           `json:"-"`
-	UUID             string                 `json:"clusterUUID,omitempty"`
-	InstallerVersion string                 `json:"-"`
-	ResourcesYAML    string                 `json:"-"`
+	VersionMap             map[string]interface{} `json:"-"`
+	Images                 imagesDigests          `json:"-"`
+	Registry               RegistryData           `json:"-"`
+	UpstreamRegistry       RegistryData           `json:"-"`
+	InternalRegistryAccess RegistryAccessData     `json:"_"`
+	UUID                   string                 `json:"clusterUUID,omitempty"`
+	InstallerVersion       string                 `json:"-"`
+	ResourcesYAML          string                 `json:"-"`
 }
 
 type imagesDigests map[string]map[string]interface{}
 
 type RegistryData struct {
-	Address   string `json:"address"`
-	Path      string `json:"path"`
-	Scheme    string `json:"scheme"`
-	CA        string `json:"ca"`
-	DockerCfg string `json:"dockerCfg"`
+	Address      string `json:"address"`
+	Path         string `json:"path"`
+	Scheme       string `json:"scheme"`
+	CA           string `json:"ca"`
+	DockerCfg    string `json:"dockerCfg"`
+	RegistryMode string `json:"registryMode"`
 }
 
 // Prepare extracts all necessary information from raw json messages to the root structure
@@ -100,6 +103,32 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		m.Registry.Address = parts[0]
 		if len(parts) == 2 {
 			m.Registry.Path = fmt.Sprintf("/%s", parts[1])
+		}
+
+		m.Registry.RegistryMode = m.DeckhouseConfig.RegistryMode
+
+		if m.DeckhouseConfig.RegistryMode != "" && m.DeckhouseConfig.RegistryMode != "Direct" {
+			var clusterDomain string
+			err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &clusterDomain)
+			if err != nil {
+				return nil, fmt.Errorf("unable to unmarshal clusterDomain from cluster configuration: %v", err)
+			}
+
+			internalRegistryData := RegistryData{
+				// The domain must be used in the address parameter (used when rendering templates when generating certificates)
+				Address: fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
+				Path:    m.Registry.Path,
+				// These parameters are filled in in the method `PrepareAfterGlobalCacheInit`:
+				// Scheme:       "",
+				// DockerCfg:    "",
+				// CA:           "",
+				// The parameters are not filled with default values. It is necessary to check e2e tests.
+				// Method `PrepareAfterGlobalCacheInit` should always be run.
+				// An error in the e2e tests will show that method `PrepareAfterGlobalCacheInit` was forgotten to run.
+				RegistryMode: m.DeckhouseConfig.RegistryMode,
+			}
+			m.UpstreamRegistry = m.Registry
+			m.Registry = internalRegistryData
 		}
 	}
 
@@ -159,18 +188,57 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 			return nil, fmt.Errorf("unable to unmarshal static nodes from provider cluster configuration: %v", err)
 		}
 	}
+	return m, nil
+}
 
-	m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
-	m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
-	m.Registry.CA = m.DeckhouseConfig.RegistryCA
-
-	parts := strings.SplitN(m.DeckhouseConfig.ImagesRepo, "/", 2)
-	m.Registry.Address = parts[0]
-	if len(parts) == 2 {
-		m.Registry.Path = fmt.Sprintf("/%s", parts[1])
+// Some of the information from the metaconfig is used to create a global cache.
+// This function is necessary to initialize the data after creating the global cache
+func (m *MetaConfig) PrepareAfterGlobalCacheInit() error {
+	type DockerCfg struct {
+		Auths map[string]struct {
+			Auth string `json:"auth"`
+		} `json:"auths"`
 	}
 
-	return m, nil
+	if len(m.InitClusterConfig) > 0 {
+		if m.DeckhouseConfig.RegistryMode != "" && m.DeckhouseConfig.RegistryMode != "Direct" {
+			internalRegistryAccessData, err := getRegistryAccessData()
+			if err != nil {
+				return fmt.Errorf("unable to get internal registry access data: %v", err)
+			}
+
+			dockerAuth := base64.StdEncoding.EncodeToString(
+				[]byte(fmt.Sprintf(
+					"%s:%s",
+					internalRegistryAccessData.UserRo.Name,
+					internalRegistryAccessData.UserRo.Password,
+				)),
+			)
+
+			dockerCfg, err := json.Marshal(
+				DockerCfg{
+					Auths: map[string]struct {
+						Auth string `json:"auth"`
+					}{
+						m.Registry.Address: struct {
+							Auth string `json:"auth"`
+						}{
+							Auth: dockerAuth,
+						},
+					},
+				},
+			)
+			if err != nil {
+				return fmt.Errorf("cannot marshal docker cfg: %v", err)
+			}
+
+			m.Registry.DockerCfg = string(base64.StdEncoding.EncodeToString(dockerCfg))
+			m.Registry.Scheme = "https"
+			m.Registry.CA = (*internalRegistryAccessData).CA.Cert
+			m.InternalRegistryAccess = *internalRegistryAccessData
+		}
+	}
+	return nil
 }
 
 func validateRegistryDockerCfg(cfg string) error {
@@ -337,9 +405,18 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	registryData, err := m.ParseRegistryData()
+	registryData, err := ParseRegistryData(m.Registry)
 	if err != nil {
 		return nil, err
+	}
+
+	if m.Registry.RegistryMode != "" && m.Registry.RegistryMode != "Direct" {
+		upstreamRegistryData, err := ParseRegistryData(m.UpstreamRegistry)
+		if err != nil {
+			return nil, err
+		}
+		result["upstreamRegistry"] = upstreamRegistryData
+		result["internalRegistryAccess"] = m.InternalRegistryAccess.ConvertToMap()
 	}
 
 	result["registry"] = registryData
@@ -390,7 +467,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	registryData, err := m.ParseRegistryData()
+	registryData, err := ParseRegistryData(m.Registry)
 	if err != nil {
 		return nil, err
 	}
@@ -421,6 +498,16 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 			configForBashibleBundleTemplate["proxy"] = proxyData
 		}
 	}
+
+	if m.Registry.RegistryMode != "" && m.Registry.RegistryMode != "Direct" {
+		upstreamRegistryData, err := ParseRegistryData(m.UpstreamRegistry)
+		if err != nil {
+			return nil, err
+		}
+		configForBashibleBundleTemplate["upstreamRegistry"] = upstreamRegistryData
+		configForBashibleBundleTemplate["internalRegistryAccess"] = m.InternalRegistryAccess.ConvertToMap()
+	}
+
 	configForBashibleBundleTemplate["registry"] = registryData
 
 	images := m.Images
@@ -491,6 +578,8 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 	}
 
 	out.Registry = m.Registry
+	out.UpstreamRegistry = m.UpstreamRegistry
+	out.InternalRegistryAccess = m.InternalRegistryAccess
 
 	if m.ClusterType != "" {
 		out.ClusterType = m.ClusterType
@@ -535,23 +624,6 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 	m.VersionMap = versionMap
 
 	return nil
-}
-
-func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
-	log.DebugF("registry data: %v\n", m.Registry)
-
-	ret := m.Registry.ConvertToMap()
-
-	if m.Registry.DockerCfg != "" {
-		auth, err := m.Registry.Auth()
-		if err != nil {
-			return nil, err
-		}
-
-		ret["auth"] = auth
-	}
-
-	return ret, nil
 }
 
 func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
@@ -635,11 +707,12 @@ func (m *MetaConfig) LoadInstallerVersion() error {
 
 func (r *RegistryData) ConvertToMap() map[string]interface{} {
 	return map[string]interface{}{
-		"address":   r.Address,
-		"path":      r.Path,
-		"scheme":    r.Scheme,
-		"ca":        r.CA,
-		"dockerCfg": r.DockerCfg,
+		"address":      r.Address,
+		"path":         r.Path,
+		"scheme":       r.Scheme,
+		"ca":           r.CA,
+		"dockerCfg":    r.DockerCfg,
+		"registryMode": r.RegistryMode,
 	}
 }
 
@@ -681,6 +754,23 @@ func (r *RegistryData) Auth() (string, error) {
 	}
 
 	return registryAuth, nil
+}
+
+func ParseRegistryData(data RegistryData) (map[string]interface{}, error) {
+	log.DebugF("registry data: %v\n", data)
+
+	ret := data.ConvertToMap()
+
+	if data.DockerCfg != "" {
+		auth, err := data.Auth()
+		if err != nil {
+			return nil, err
+		}
+
+		ret["auth"] = auth
+	}
+
+	return ret, nil
 }
 
 func getDNSAddress(serviceCIDR string) string {

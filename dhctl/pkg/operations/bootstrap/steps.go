@@ -18,6 +18,7 @@
 package bootstrap
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -26,6 +27,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"golang.org/x/sync/errgroup"
 	"math/big"
 	"net/http"
 	"os"
@@ -46,6 +48,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/d8"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
@@ -65,7 +68,7 @@ const (
 
 func BootstrapMaster(sshClient *ssh.Client, controller *template.Controller) error {
 	return log.Process("bootstrap", "Initial bootstrap", func() error {
-		for _, bootstrapScript := range []string{"01-network-scripts.sh", "02-base-pkgs.sh"} {
+		for _, bootstrapScript := range []string{"01-network-scripts.sh", "02-base-pkgs.sh", "04-discover-node-ip.sh", "05-bootstrap-system-registry.sh"} {
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
 
 			err := retry.NewLoop(fmt.Sprintf("Execute %s", bootstrapScript), 30, 5*time.Second).
@@ -280,6 +283,117 @@ func SetupSSHTunnelToRegistryPackagesProxy(sshCl *ssh.Client) (*frontend.Reverse
 	return tun, nil
 }
 
+func setupSSHTunnelToSystemRegistryDistribution(sshCl *ssh.Client) (*frontend.Tunnel, error) {
+	log.DebugF("Running local ssh tunnel for system registry distribution")
+
+	port := "5001"
+	listenAddress := "127.0.0.1"
+
+	tun := sshCl.Tunnel("L", fmt.Sprintf("%s:%s:%s", port, listenAddress, port))
+	err := tun.Up()
+	if err != nil {
+		return tun, fmt.Errorf("failed to setup SSH tunnel to system registry distribution: %v", err)
+	}
+	return tun, nil
+}
+
+func setupSSHTunnelToSystemRegistryAuth(sshCl *ssh.Client) (*frontend.Tunnel, error) {
+	log.DebugF("Running local ssh tunnel for system registry auth")
+
+	port := "5051"
+	listenAddress := "127.0.0.1"
+
+	tun := sshCl.Tunnel("L", fmt.Sprintf("%s:%s:%s", port, listenAddress, port))
+	err := tun.Up()
+	if err != nil {
+		return tun, fmt.Errorf("failed to setup SSH tunnel to system registry auth: %v", err)
+	}
+	return tun, nil
+}
+
+func pushDockerImagesToSystemRegistry(sshCl *ssh.Client, cfg *config.MetaConfig) error {
+	return log.Process("bootstrap", "Push images to the system registry", func() error {
+		ctx, ctxCancel := context.WithCancel(context.Background())
+		defer ctxCancel()
+
+		recreateTunFuncs := [](func() error){}
+
+		// Create auth tunnel
+		authTun, err := setupSSHTunnelToSystemRegistryAuth(sshCl)
+		if err != nil {
+			return err
+		}
+		recreateTunFuncs = append(recreateTunFuncs, func() error {
+			err := frontend.RecreateSshTun(ctx, authTun, func() (*frontend.Tunnel, error) {
+				return setupSSHTunnelToSystemRegistryAuth(sshCl)
+			})
+			ctxCancel()
+			return err
+		})
+
+		distributionAddress := fmt.Sprintf("%s:5001", sshCl.Settings.Host())
+
+		// Create distribution tunnel, if BastionHost != ""
+		if sshCl.Settings.BastionHost != "" {
+			distributionAddress = "127.0.0.1:5001"
+
+			distributionTun, err := setupSSHTunnelToSystemRegistryDistribution(sshCl)
+			if err != nil {
+				authTun.Stop()
+				return err
+			}
+			recreateTunFuncs = append(recreateTunFuncs, func() error {
+				err := frontend.RecreateSshTun(ctx, distributionTun, func() (*frontend.Tunnel, error) {
+					return setupSSHTunnelToSystemRegistryDistribution(sshCl)
+				})
+				ctxCancel()
+				return err
+			})
+		}
+
+		// Prepare mirror push function
+		mirrorPush := func() error {
+			registryUser := cfg.InternalRegistryAccess.UserRw
+			imagesBundlePath := "/deckhouse/candi/bundle/untar/"
+
+			stdOutHandler := func(l string) {
+				log.InfoLn(l)
+			}
+			stdErrHandler := func(l string) {
+				log.ErrorLn(l)
+			}
+			mirrorPushErrorCh := make(chan error, 1)
+
+			d8Push := d8.NewMirrorPush().
+				WithInsecure(false).
+				WithTlsSkipVerify(true).
+				WithRegistryAuth(registryUser.Name, registryUser.Password).
+				MirrorPush(imagesBundlePath, distributionAddress).
+				WithStdoutHandler(stdOutHandler).WithStderrHandler(stdErrHandler)
+			go func() {
+				mirrorPushErrorCh <- d8Push.Run()
+			}()
+			for {
+				select {
+				case <-ctx.Done():
+					d8Push.Stop()
+					return fmt.Errorf("mirror push stoped by context: %s", ctx.Err())
+				case err := <-mirrorPushErrorCh:
+					d8Push.Stop()
+					ctxCancel()
+					return err
+				}
+			}
+		}
+
+		g, ctx := errgroup.WithContext(ctx)
+		for _, f := range append(recreateTunFuncs, mirrorPush) {
+			g.Go(f)
+		}
+		return g.Wait()
+	})
+}
+
 type registryClientConfigGetter struct {
 	registry.ClientConfig
 }
@@ -411,8 +525,13 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 	log.DebugF("Got cluster domain: %s", clusterDomain)
 	log.DebugLn("Starting registry packages proxy")
 
+	registryPackagesProxyData := cfg.Registry
+	if cfg.Registry.RegistryMode != "" && cfg.Registry.RegistryMode != "Direct" {
+		registryPackagesProxyData = cfg.UpstreamRegistry
+	}
+
 	// we need clusterDomain to generate proper certificate for packages proxy
-	err = StartRegistryPackagesProxy(cfg.Registry, clusterDomain)
+	err = StartRegistryPackagesProxy(registryPackagesProxyData, clusterDomain)
 	if err != nil {
 		return fmt.Errorf("failed to start registry packages proxy: %v", err)
 	}
@@ -495,6 +614,12 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 
 	if err := BootstrapMaster(sshClient, templateController); err != nil {
 		return err
+	}
+
+	if cfg.Registry.RegistryMode == "Detached" {
+		if err := pushDockerImagesToSystemRegistry(sshClient, cfg); err != nil {
+			return err
+		}
 	}
 
 	return retry.NewLoop("Execute bundle", 30, 10*time.Second).

@@ -138,23 +138,33 @@ oom_score = 0
       conf_template = ""
     [plugins."io.containerd.grpc.v1.cri".registry]
       [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-          endpoint = ["https://registry-1.docker.io"]
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
+          {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+          endpoint = ["{{ .registry.scheme }}://localhost:5001", "{{ .registry.scheme }}://{{ .registry.address }}"]
+          {{- else }}
           endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
+          {{- end }}
       [plugins."io.containerd.grpc.v1.cri".registry.configs]
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".auth]
           auth = "{{ .registry.auth | default "" }}"
-  {{- if eq .registry.scheme "http" }}
+        {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."localhost:5001".auth]
+          auth = "{{ .registry.auth | default "" }}"
+        {{- end }}
+      {{- if eq .registry.scheme "http" }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
           insecure_skip_verify = true
-  {{- end }}
-  {{- if eq .runType "Normal" }}
-    {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
+        {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."localhost:5001".tls]
+          insecure_skip_verify = true
+        {{- end }}
+      {{- end }}
+      {{- if eq .runType "Normal" }}
+        {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $registryAddr | lower }}".tls]
           ca_file = "/usr/local/share/d8-ca-certificates/{{ $registryAddr | lower }}-ca.crt"
-    {{- end }}
-  {{- end }}
+        {{- end }}
+      {{- end }}
     [plugins."io.containerd.grpc.v1.cri".image_decryption]
       key_model = ""
     [plugins."io.containerd.grpc.v1.cri".x509_key_pair_streaming]
