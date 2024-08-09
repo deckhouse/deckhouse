@@ -170,12 +170,13 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 	kubeConfigChannel := kubeConfigBackend.GetEventsChannel()
 
 	operator.SetupKubeConfigManager(kubeConfigBackend)
-	validation.RegisterAdmissionHandlers(operator)
 
 	err = operator.Setup()
 	if err != nil {
 		return err
 	}
+
+	validation.RegisterAdmissionHandlers(operator)
 
 	dController, err := controller.NewDeckhouseController(ctx, operator.KubeClient().RestConfig(), operator.ModuleManager, operator.MetricStorage)
 	if err != nil {

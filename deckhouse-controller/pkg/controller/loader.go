@@ -33,6 +33,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 )
 
 var (
@@ -102,6 +103,11 @@ func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModu
 		return nil, err
 	}
 
+	dm, err := models.NewDeckhouseModule(def, moduleStaticValues, cb, vb)
+	if err != nil {
+		return nil, fmt.Errorf("new deckhouse module: %w", err)
+	}
+
 	// Load conversions
 	if _, err = os.Stat(filepath.Join(def.Path, "openapi", "conversions")); err == nil {
 		log.Debugf("conversions for %q module found", valuesModuleName)
@@ -117,9 +123,9 @@ func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModu
 		log.Debugf("conversions for %q module not found", valuesModuleName)
 	}
 
-	dm, err := models.NewDeckhouseModule(def, moduleStaticValues, cb, vb)
-	if err != nil {
-		return nil, fmt.Errorf("new deckhouse module: %w", err)
+	// Load constrains
+	if err = extenders.AddConstraints(def.Name, def.Requirements); err != nil {
+		return nil, err
 	}
 
 	if _, ok := dml.deckhouseModules[def.Name]; ok {

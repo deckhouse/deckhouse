@@ -55,6 +55,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
@@ -182,6 +183,7 @@ func (c *moduleReleaseReconciler) deleteReconcile(ctx context.Context, mr *v1alp
 	}
 
 	if mr.Status.Phase == v1alpha1.PhaseDeployed {
+		extenders.DeleteConstraints(mr.GetModuleName())
 		symlinkPath := filepath.Join(c.externalModulesDir, "modules", fmt.Sprintf("%d-%s", mr.Spec.Weight, mr.Spec.ModuleName))
 		err := os.RemoveAll(symlinkPath)
 		if err != nil {
@@ -342,6 +344,14 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 
 func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	moduleName := mr.Spec.ModuleName
+
+	c.logger.Debugf("checking requirements of '%s' for module '%s' by extenders", mr.GetName(), mr.GetModuleName())
+	if err := extenders.CheckModuleReleaseRequirements(mr.GetName(), mr.Spec.Requirements); err != nil {
+		if err = c.updateModuleReleaseStatusMessage(ctx, mr, err.Error()); err != nil {
+			return ctrl.Result{Requeue: true}, err
+		}
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
 
 	otherReleases := new(v1alpha1.ModuleReleaseList)
 	err := c.client.List(ctx, otherReleases, client.MatchingLabels{"module": moduleName})
@@ -942,6 +952,7 @@ type moduleManager interface {
 	GetModule(moduleName string) *addonmodules.BasicModule
 	RunModuleWithNewOpenAPISchema(moduleName, moduleSource, modulePath string) error
 	GetEnabledModuleNames() []string
+	IsModuleEnabled(moduleName string) bool
 }
 
 func (c *moduleReleaseReconciler) updateModuleReleaseDownloadStatistic(ctx context.Context, release *v1alpha1.ModuleRelease,

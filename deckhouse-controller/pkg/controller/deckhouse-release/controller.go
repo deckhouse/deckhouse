@@ -43,12 +43,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	d8updater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release/updater"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
@@ -244,6 +247,28 @@ func (r *deckhouseReleaseReconciler) patchSuspendAnnotation(dr *v1alpha1.Deckhou
 func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (ctrl.Result, error) {
 	if r.clusterUUID == "" {
 		r.clusterUUID = r.getClusterUUID(ctx)
+	}
+
+	if moduleName, err := deckhouseversion.Instance().ValidateBaseVersion(dr.Spec.Version); err != nil {
+		if r.moduleManager.IsModuleEnabled(moduleName) {
+			dr.Status.Message = err.Error()
+			if e := r.client.Status().Update(ctx, dr); e != nil {
+				return ctrl.Result{Requeue: true}, e
+			}
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
+		}
+	}
+
+	if r.isKubernetesVersionAutomatic(ctx) && len(dr.Spec.Requirements["autoK8sVersion"]) > 0 {
+		if moduleName, err := kubernetesversion.Instance().ValidateBaseVersion(dr.Spec.Requirements["autoK8sVersion"]); err != nil {
+			if r.moduleManager.IsModuleEnabled(moduleName) {
+				dr.Status.Message = err.Error()
+				if e := r.client.Status().Update(ctx, dr); e != nil {
+					return ctrl.Result{Requeue: true}, e
+				}
+				return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
+			}
+		}
 	}
 
 	releaseData, err := r.getReleaseData(ctx)
@@ -605,4 +630,25 @@ func (r *deckhouseReleaseReconciler) updateByImageHashLoop(ctx context.Context) 
 			r.logger.Errorf("deckhouse image tag update failed: %s", err)
 		}
 	}, 15*time.Second)
+}
+
+func (r *deckhouseReleaseReconciler) isKubernetesVersionAutomatic(ctx context.Context) bool {
+	secret := new(corev1.Secret)
+	if err := r.client.Get(ctx, types.NamespacedName{Name: "d8-cluster-configuration", Namespace: "kube-system"}, secret); err != nil {
+		r.logger.Warnf("check kubernetes version: failed to get secret: %s", err.Error())
+		return false
+	}
+	var clusterConf struct {
+		KubernetesVersion string `json:"kubernetesVersion"`
+	}
+	clusterConfigurationRaw, ok := secret.Data["cluster-configuration.yaml"]
+	if !ok {
+		r.logger.Warnf("check kubernetes version: expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
+		return false
+	}
+	if err := yaml.Unmarshal(clusterConfigurationRaw, &clusterConf); err != nil {
+		r.logger.Warnf("check kubernetes version: failed to unmarshal cluster configuration: %s", err)
+		return false
+	}
+	return clusterConf.KubernetesVersion == "Automatic"
 }
