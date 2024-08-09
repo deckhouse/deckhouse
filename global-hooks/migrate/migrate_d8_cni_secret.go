@@ -73,10 +73,10 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 				return err
 			}
 			if !exists {
-				continue
+				break
 			}
 			if !moduleEnabled {
-				continue
+				break
 			}
 			input.LogEntry.Infof("Module config for %s found, skipping migration", mc.GetName())
 			return removeD8CniSecret(input, kubeCl, d8cniSecret)
@@ -89,10 +89,10 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 	}
 
 	cniName := string(cniBytes)
-	cniModuleConfig := config.ModuleConfig{
+	cniModuleConfig := &config.ModuleConfig{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       config.ModuleConfigKind,
-			APIVersion: config.ModuleConfigVersion,
+			APIVersion: config.ModuleConfigGroup + "/" + config.ModuleConfigVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: cniName,
@@ -100,7 +100,7 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 	}
 
 	switch cniName {
-	case "simple-bridge":
+	case "cni-simple-bridge":
 		cniModuleConfig.Spec = config.ModuleConfigSpec{
 			Enabled: pointer.Bool(true),
 		}
@@ -130,7 +130,7 @@ func removeD8CniSecret(input *go_hook.HookInput, kubeCl k8s.Client, secret *v1.S
 }
 
 // create Module Config
-func createMC(input *go_hook.HookInput, kubeCl k8s.Client, mc config.ModuleConfig) error {
+func createMC(input *go_hook.HookInput, kubeCl k8s.Client, mc *config.ModuleConfig) error {
 	obj, err := sdk.ToUnstructured(mc)
 	if err != nil {
 		return err
