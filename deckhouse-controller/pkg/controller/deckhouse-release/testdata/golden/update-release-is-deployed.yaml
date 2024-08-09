@@ -61,13 +61,11 @@ status: {}
 ---
 apiVersion: v1
 data:
-  isUpdating: "false"
+  isUpdating: "true"
   notified: "false"
 kind: ConfigMap
 metadata:
   creationTimestamp: null
-  labels:
-    heritage: deckhouse
   name: d8-release-data
   namespace: d8-system
-  resourceVersion: "1000"
+  resourceVersion: "999"
