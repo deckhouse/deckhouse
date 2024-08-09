@@ -89,8 +89,9 @@ func filterExporterCM(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 }
 
 type matchResource struct {
-	APIGroups []string `json:"apiGroups"`
-	Resources []string `json:"resources"`
+	APIGroups  []string `json:"apiGroups"`
+	Resources  []string `json:"resources"`
+	Operations []string `json:"operations,omitempty"`
 }
 
 type matchData struct {

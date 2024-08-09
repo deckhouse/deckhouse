@@ -57,7 +57,7 @@ modules:
 `
 )
 
-var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
+var _ = FDescribe("Module :: admissionPolicyEngine :: helm template ::", func() {
 	f := SetupHelmConfig(`{"admissionPolicyEngine": {"denyVulnerableImages": {}, "podSecurityStandards": {}, "internal": {"podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
     {
       "metadata": {
@@ -93,7 +93,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
       }
     }
   ],
-	trackedConstraintResources: [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
+	trackedConstraintResources: [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]},{"apiGroups": [""],"resources": ["pods/exec","pods/attach"],"operations": ["CONNECT"]}],
 	trackedMutateResources: [{"apiGroups":[""],"resources":["pods"]}],
 	webhook: {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
 
@@ -158,8 +158,8 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 	})
 
 	Context("Cluster with deckhouse on master node and trivy-provider", func() {
-		trackedResourcesRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE"],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE"],"resources":["ingresses"]}]`
-		trivyProviderRules := `[{"apiGroups":["apps"],"apiVersions":["*"],"operations":["CREATE","UPDATE"],"resources":["deployments","daemonsets","statefulsets"]},{"apiGroups":["apps.kruise.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE"],"resources":["daemonsets"]},{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE"],"resources":["pods"]},{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE"],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE"],"resources":["ingresses"]}]
+		trackedResourcesRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE"],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE"],"resources":["ingresses"]},{"apiGroups": [""],"apiVersions":["*"],"resources": ["pods/exec","pods/attach"],"operations": ["CONNECT"]}]`
+		trivyProviderRules := `[{"apiGroups":["apps"],"apiVersions":["*"],"operations":["CREATE","UPDATE"],"resources":["deployments","daemonsets","statefulsets"]},{"apiGroups":["apps.kruise.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE"],"resources":["daemonsets"]},{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE"],"resources":["pods"]},{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE"],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE"],"resources":["ingresses"]},{"apiGroups": [""],"apiVersions":["*"],"resources": ["pods/exec","pods/attach"],"operations": ["CONNECT"]}]
 		`
 
 		BeforeEach(func() {

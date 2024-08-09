@@ -54,6 +54,10 @@ properties:
               type: array
               items:
                 type: string
+            operations:
+              type: array
+              items:
+                type: string
       trackedMutateResources:
         type: array
         default: []
@@ -65,6 +69,10 @@ properties:
               items:
                 type: string
             resources:
+              type: array
+              items:
+                type: string
+            operations:
               type: array
               items:
                 type: string
