@@ -1,0 +1,389 @@
+Subject: [PATCH] logs
+---
+Index: cluster-autoscaler/simulator/cluster.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/simulator/cluster.go b/cluster-autoscaler/simulator/cluster.go
+--- a/cluster-autoscaler/simulator/cluster.go	(revision 48a59072666081a7ec9f1db85c01af7fb85fc28c)
++++ b/cluster-autoscaler/simulator/cluster.go	(date 1723121994795)
+@@ -176,6 +176,16 @@
+ 		return nil, &UnremovableNode{Node: nodeInfo.Node(), Reason: NoPlaceToMovePods}
+ 	}
+ 	klog.V(2).Infof("node %s may be removed", nodeName)
++	klog.V(2).Infof("node %s may be removed; pods to be remove (%d)", nodeName, len(podsToRemove))
++	for _, p := range podsToRemove {
++		klog.V(2).Infof("node %s may be removed; pods to be remove %s/%s", nodeName, p.GetNamespace(), p.GetName())
++	}
++
++	klog.V(2).Infof("node %s may be removed; daemonset pods (%d)", nodeName, len(daemonSetPods))
++	for _, p := range daemonSetPods {
++		klog.V(2).Infof("node %s may be removed; daemonset pod %s/%s", nodeName, p.GetNamespace(), p.GetName())
++	}
++
+ 	return &NodeToBeRemoved{
+ 		Node:             nodeInfo.Node(),
+ 		PodsToReschedule: podsToRemove,
+Index: cluster-autoscaler/core/scaledown/eligibility/eligibility.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/core/scaledown/eligibility/eligibility.go b/cluster-autoscaler/core/scaledown/eligibility/eligibility.go
+--- a/cluster-autoscaler/core/scaledown/eligibility/eligibility.go	(revision 48a59072666081a7ec9f1db85c01af7fb85fc28c)
++++ b/cluster-autoscaler/core/scaledown/eligibility/eligibility.go	(date 1723114964035)
+@@ -64,6 +64,7 @@
+ // TODO(x13n): Node utilization could actually be calculated independently for
+ // all nodes and just used here. Next refactor...
+ func (c *Checker) FilterOutUnremovable(context *context.AutoscalingContext, scaleDownCandidates []*apiv1.Node, timestamp time.Time, unremovableNodes *unremovable.Nodes) ([]string, map[string]utilization.Info, []*simulator.UnremovableNode) {
++	klog.V(1).Infof("Starting FilterOutUnremovable")
+ 	ineligible := []*simulator.UnremovableNode{}
+ 	skipped := 0
+ 	utilizationMap := make(map[string]utilization.Info)
+@@ -82,6 +83,7 @@
+ 		if unremovableNodes.IsRecent(node.Name) {
+ 			ineligible = append(ineligible, &simulator.UnremovableNode{Node: node, Reason: simulator.RecentlyUnremovable})
+ 			skipped++
++			klog.V(2).Infof("FilterOutUnremovable: node %s skip nodes that were recently checked.", node.GetName())
+ 			continue
+ 		}
+
+@@ -90,6 +92,7 @@
+ 			utilizationMap[node.Name] = *utilInfo
+ 		}
+ 		if reason != simulator.NoReason {
++			klog.V(1).Infof("Node %s added to ineligible with reason %d", node.GetName(), reason)
+ 			ineligible = append(ineligible, &simulator.UnremovableNode{Node: node, Reason: reason})
+ 			continue
+ 		}
+@@ -158,7 +161,7 @@
+ 	// FORK-CHANGE: log added to identify underutilized nodes
+ 	klog.V(2).Infof("Node %s is underutilized: %s requested (%.6g%% of allocatable) is below the scale-down utilization threshold", node.Name, utilInfo.ResourceName, utilInfo.Utilization*100)
+
+-	klogx.V(4).UpTo(utilLogsQuota).Infof("Node %s - %s utilization %f", node.Name, utilInfo.ResourceName, utilInfo.Utilization)
++	klogx.V(2).UpTo(utilLogsQuota).Infof("Node %s - %s utilization %f", node.Name, utilInfo.ResourceName, utilInfo.Utilization)
+
+ 	return simulator.NoReason, &utilInfo
+ }
+Index: cluster-autoscaler/core/scaledown/unneeded/nodes.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/core/scaledown/unneeded/nodes.go b/cluster-autoscaler/core/scaledown/unneeded/nodes.go
+--- a/cluster-autoscaler/core/scaledown/unneeded/nodes.go	(revision 48a59072666081a7ec9f1db85c01af7fb85fc28c)
++++ b/cluster-autoscaler/core/scaledown/unneeded/nodes.go	(date 1723111906122)
+@@ -120,6 +120,9 @@
+ func (n *Nodes) RemovableAt(context *context.AutoscalingContext, ts time.Time, resourcesLeft resource.Limits, resourcesWithLimits []string, as scaledown.ActuationStatus) (empty, needDrain []simulator.NodeToBeRemoved, unremovable []*simulator.UnremovableNode) {
+ 	nodeGroupSize := utils.GetNodeGroupSizeMap(context.CloudProvider)
+ 	resourcesLeftCopy := resourcesLeft.DeepCopy()
++
++	klog.V(2).Infof("RemovableAt called with nodegroup size %s add as empty node and resources lest copy %v", nodeGroupSize, resourcesLeftCopy)
++
+ 	emptyNodes, drainNodes := n.splitEmptyAndNonEmptyNodes()
+
+ 	for nodeName, v := range emptyNodes {
+@@ -128,6 +131,7 @@
+ 			unremovable = append(unremovable, &simulator.UnremovableNode{Node: v.ntbr.Node, Reason: r})
+ 			continue
+ 		}
++		klog.V(2).Infof("Node %s add as empty node", nodeName)
+ 		empty = append(empty, v.ntbr)
+ 	}
+ 	for nodeName, v := range drainNodes {
+@@ -136,6 +140,7 @@
+ 			unremovable = append(unremovable, &simulator.UnremovableNode{Node: v.ntbr.Node, Reason: r})
+ 			continue
+ 		}
++		klog.V(2).Infof("Node %s add for drain", nodeName)
+ 		needDrain = append(needDrain, v.ntbr)
+ 	}
+ 	return
+@@ -217,8 +222,10 @@
+ 	needDrain = make(map[string]*node)
+ 	for name, v := range n.byName {
+ 		if len(v.ntbr.PodsToReschedule) > 0 {
++			klog.V(2).Infof("Node %s has %d pods to reshedule", name, len(v.ntbr.PodsToReschedule))
+ 			needDrain[name] = v
+ 		} else {
++			klog.V(2).Infof("For node %s has no pods to reshedule", name)
+ 			empty[name] = v
+ 		}
+ 	}
+Index: cluster-autoscaler/utils/drain/drain.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/utils/drain/drain.go b/cluster-autoscaler/utils/drain/drain.go
+--- a/cluster-autoscaler/utils/drain/drain.go	(revision 48a59072666081a7ec9f1db85c01af7fb85fc28c)
++++ b/cluster-autoscaler/utils/drain/drain.go	(date 1723121287325)
+@@ -18,6 +18,7 @@
+
+ import (
+ 	"fmt"
++	"k8s.io/klog/v2"
+ 	"strings"
+ 	"time"
+
+@@ -92,12 +93,14 @@
+ 	kubeSystemPDBs := make([]*policyv1.PodDisruptionBudget, 0)
+ 	for _, pdb := range pdbs {
+ 		if pdb.Namespace == "kube-system" {
++			klog.V(2).Infof("GetPodsForDeletionOnNodeDrain: skip kube-system pdb %s", pdb.GetName())
+ 			kubeSystemPDBs = append(kubeSystemPDBs, pdb)
+ 		}
+ 	}
+
+ 	for _, pod := range podList {
+ 		if pod_util.IsMirrorPod(pod) {
++			klog.V(2).Infof("GetPodsForDeletionOnNodeDrain: skip mirror-pod %s/%s", pod.GetNamespace(), pod.GetName())
+ 			continue
+ 		}
+
+@@ -106,6 +109,7 @@
+ 		// deletion without respecting any graceful termination.
+ 		if IsPodLongTerminating(pod, currentTime) {
+ 			// pod is being deleted for long enough - no need to care about it.
++			klog.V(2).Infof("GetPodsForDeletionOnNodeDrain: skip already deleting pod %s/%s", pod.GetNamespace(), pod.GetName())
+ 			continue
+ 		}
+
+@@ -117,16 +121,24 @@
+ 		if skipNodesWithCustomControllerPods {
+ 			// TODO(vadasambar): remove this when we get rid of skipNodesWithCustomControllerPods
+ 			replicated, isDaemonSetPod, blockingPod, err = legacyCheckForReplicatedPods(listers, pod, minReplica)
++			blockingReason := NoReason
++			if blockingPod != nil {
++				blockingReason = blockingPod.Reason
++			}
++			klog.V(2).Infof("GetPodsForDeletionOnNodeDrain: skipNodesWithCustomControllerPods is true pod %s/%s is replicated = %v; isDaemonSet %v; blokingReason; %v", pod.GetNamespace(), pod.GetName(), replicated, isDaemonSetPod, blockingReason)
+ 			if err != nil {
+ 				return []*apiv1.Pod{}, []*apiv1.Pod{}, blockingPod, err
+ 			}
+ 		} else {
+ 			replicated = ControllerRef(pod) != nil
+ 			isDaemonSetPod = pod_util.IsDaemonSetPod(pod)
++
++			klog.V(2).Infof("GetPodsForDeletionOnNodeDrain: skipNodesWithCustomControllerPods is false pod %s/%s is replicated = %v; isDaemonSet %v", pod.GetNamespace(), pod.GetName(), replicated, isDaemonSetPod)
+ 		}
+
+ 		if isDaemonSetPod {
+ 			daemonSetPods = append(daemonSetPods, pod)
++			klog.V(2).Infof("GetPodsForDeletionOnNodeDrain: skip daemonset pod %s/%s", pod.GetNamespace(), pod.GetName())
+ 			continue
+ 		}
+
+Index: cluster-autoscaler/simulator/drain.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/simulator/drain.go b/cluster-autoscaler/simulator/drain.go
+--- a/cluster-autoscaler/simulator/drain.go	(revision 48a59072666081a7ec9f1db85c01af7fb85fc28c)
++++ b/cluster-autoscaler/simulator/drain.go	(date 1723121536498)
+@@ -18,6 +18,7 @@
+
+ import (
+ 	"fmt"
++	"k8s.io/klog/v2"
+ 	"time"
+
+ 	apiv1 "k8s.io/api/core/v1"
+@@ -68,19 +69,25 @@
+ func GetPodsToMove(nodeInfo *schedulerframework.NodeInfo, deleteOptions NodeDeleteOptions, listers kube_util.ListerRegistry,
+ 	pdbs []*policyv1.PodDisruptionBudget, timestamp time.Time) (pods []*apiv1.Pod, daemonSetPods []*apiv1.Pod, blockingPod *drain.BlockingPod, err error) {
+ 	var drainPods, drainDs []*apiv1.Pod
++	klog.V(2).Infof("GetPodsToMove %s", nodeInfo.Node().GetName())
+ 	for _, podInfo := range nodeInfo.Pods {
++		klog.V(2).Infof("GetPodsToMove %s: check pod %s/%s", nodeInfo.Node().GetName(), podInfo.Pod.GetNamespace(), podInfo.Pod.GetName())
+ 		pod := podInfo.Pod
+ 		d := drainabilityStatus(pod, deleteOptions.DrainabilityRules)
++		klog.V(2).Infof("Pod drainability status %s/%s: %v", podInfo.Pod.GetNamespace(), podInfo.Pod.GetName(), d)
+ 		if d.Matched {
+ 			switch d.Reason {
+ 			case drain.NoReason:
+ 				if pod_util.IsDaemonSetPod(pod) {
+ 					drainDs = append(drainDs, pod)
++					klog.V(2).Infof("No reason for drain daemonset pod %s/%s; added to drainDs", podInfo.Pod.GetNamespace(), podInfo.Pod.GetName())
+ 				} else {
+ 					drainPods = append(drainPods, pod)
++					klog.V(2).Infof("No reason for drain general pod %s/%s; added to drainPods", podInfo.Pod.GetNamespace(), podInfo.Pod.GetName())
+ 				}
+ 				continue
+ 			default:
++				klog.V(2).Infof("Have reason for drain %s/%s; return error %v", podInfo.Pod.GetNamespace(), podInfo.Pod.GetName(), d.Error)
+ 				blockingPod = &drain.BlockingPod{pod, d.Reason}
+ 				err = d.Error
+ 				return
+@@ -88,6 +95,8 @@
+ 		}
+ 		pods = append(pods, podInfo.Pod)
+ 	}
++
++	klog.V(2).Infof("GetPodsToMove: GetPodsForDeletionOnNodeDrain %s", nodeInfo.Node().GetName())
+ 	pods, daemonSetPods, blockingPod, err = drain.GetPodsForDeletionOnNodeDrain(
+ 		pods,
+ 		pdbs,
+@@ -100,6 +109,11 @@
+ 	pods = append(pods, drainPods...)
+ 	daemonSetPods = append(daemonSetPods, drainDs...)
+ 	if err != nil {
++		reason := drain.NoReason
++		if blockingPod != nil {
++			reason = blockingPod.Reason
++		}
++		klog.V(2).Infof("GetPodsToMove: error while GetPodsForDeletionOnNodeDrain %v; reason %v", err, reason)
+ 		return pods, daemonSetPods, blockingPod, err
+ 	}
+ 	if pdbBlockingPod, err := checkPdbs(pods, pdbs); err != nil {
+Index: cluster-autoscaler/core/scaledown/planner/planner.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/core/scaledown/planner/planner.go b/cluster-autoscaler/core/scaledown/planner/planner.go
+--- a/cluster-autoscaler/core/scaledown/planner/planner.go	(revision 48a59072666081a7ec9f1db85c01af7fb85fc28c)
++++ b/cluster-autoscaler/core/scaledown/planner/planner.go	(date 1723123783737)
+@@ -132,6 +132,8 @@
+ // NodesToDelete returns all Nodes that could be removed right now, according
+ // to the Planner.
+ func (p *Planner) NodesToDelete(_ time.Time) (empty, needDrain []*apiv1.Node) {
++	klog.V(2).Infof("Starting p Planner.NodesToDelete")
++
+ 	nodes, err := allNodes(p.context.ClusterSnapshot)
+ 	if err != nil {
+ 		klog.Errorf("Nothing will scale down, failed to list nodes from ClusterSnapshot: %v", err)
+@@ -162,6 +164,9 @@
+ 			empty = append(empty, nodeToRemove.Node)
+ 		}
+ 	}
++
++	klog.V(2).Infof("Stopping Planner.NodesToDelete empty: %v; needDrain: %v", len(empty), len(needDrain))
++
+ 	return empty, needDrain
+ }
+
+@@ -250,29 +255,50 @@
+ // categorizeNodes determines, for each node, whether it can be eventually
+ // removed or if there are reasons preventing that.
+ func (p *Planner) categorizeNodes(podDestinations map[string]bool, scaleDownCandidates []*apiv1.Node) {
++	klog.V(2).Infof("Planner.categorizeNodes started with scaledown candidates (%d):", len(scaleDownCandidates))
++	for _, n := range scaleDownCandidates {
++		klog.V(2).Infof("Planner.categorizeNodes scaledown candidate: %s", n.GetName())
++	}
++
++	klog.V(2).Infof("Planner.categorizeNodes started with pod destinations (%d):", len(podDestinations))
++	for k := range podDestinations {
++		klog.V(2).Infof("Planner.categorizeNodes pod destinations: %s", k)
++	}
++
+ 	unremovableTimeout := p.latestUpdate.Add(p.context.AutoscalingOptions.UnremovableNodeRecheckTimeout)
+ 	unremovableCount := 0
+ 	var removableList []simulator.NodeToBeRemoved
+ 	p.unremovableNodes.Update(p.context.ClusterSnapshot.NodeInfos(), p.latestUpdate)
+ 	currentlyUnneededNodeNames, utilizationMap, ineligible := p.eligibilityChecker.FilterOutUnremovable(p.context, scaleDownCandidates, p.latestUpdate, p.unremovableNodes)
++
+ 	for _, n := range ineligible {
++		klog.V(2).Infof("Planner.categorizeNodes ineligible node %s added to unremovable with reason %d", n.Node.GetName(), n.Reason)
+ 		p.unremovableNodes.Add(n)
+ 	}
+ 	p.nodeUtilizationMap = utilizationMap
+ 	timer := time.NewTimer(p.context.ScaleDownSimulationTimeout)
+
+ 	for i, node := range currentlyUnneededNodeNames {
++		klog.V(2).Infof("Planner.categorizeNodes currently unneded node %s", node)
+ 		if timedOut(timer) {
+ 			klog.Warningf("%d out of %d nodes skipped in scale down simulation due to timeout.", len(currentlyUnneededNodeNames)-i, len(currentlyUnneededNodeNames))
+ 			break
+ 		}
+ 		if len(removableList) >= p.unneededNodesLimit() {
+-			klog.V(4).Infof("%d out of %d nodes skipped in scale down simulation: there are already %d unneeded nodes so no point in looking for more.", len(currentlyUnneededNodeNames)-i, len(currentlyUnneededNodeNames), len(removableList))
++			klog.V(2).Infof("%d out of %d nodes skipped in scale down simulation: there are already %d unneeded nodes so no point in looking for more.", len(currentlyUnneededNodeNames)-i, len(currentlyUnneededNodeNames), len(removableList))
+ 			break
+ 		}
++		klog.V(2).Infof("Planner.categorizeNodes starting simulation node removal: %s", node)
+ 		removable, unremovable := p.rs.SimulateNodeRemoval(node, podDestinations, p.latestUpdate, p.context.RemainingPdbTracker.GetPdbs())
+ 		if removable != nil {
++			klog.V(2).Infof("Planner.categorizeNodes node %s is removable", node)
++			klog.V(2).Infof("Planner.categorizeNodes node %s is removable. Pods for reschedule (%d):", node, len(removable.PodsToReschedule))
++			for _, pd := range removable.PodsToReschedule {
++				klog.V(2).Infof("Planner.categorizeNodes node %s is removable. Pod for reschedule %s/%s:", node, pd.GetNamespace(), pd.GetName())
++			}
++
+ 			_, inParallel, _ := p.context.RemainingPdbTracker.CanRemovePods(removable.PodsToReschedule)
++			klog.V(2).Infof("Planner.categorizeNodes node %s can remove pods in parallel %v ", node, inParallel)
+ 			if !inParallel {
+ 				removable.IsRisky = true
+ 			}
+@@ -281,10 +307,17 @@
+ 			removableList = append(removableList, *removable)
+ 		}
+ 		if unremovable != nil {
++			klog.V(2).Infof("Planner.categorizeNodes node %s is unremovable", node)
+ 			unremovableCount += 1
+ 			p.unremovableNodes.AddTimeout(unremovable, unremovableTimeout)
+ 		}
+ 	}
++
++	klog.V(2).Infof("Planner.categorizeNodes removable nodes (%d)", len(removableList))
++	for _, n := range removableList {
++		klog.V(2).Infof("Planner.categorizeNodes removable node %s; isRisky %v; pods to reshedule %d; daemonsed pods %d", n.Node.GetName(), n.IsRisky, len(n.PodsToReschedule), len(n.DaemonSetPods))
++	}
++
+ 	p.unneededNodes.Update(removableList, p.latestUpdate)
+ 	if unremovableCount > 0 {
+ 		klog.V(1).Infof("%v nodes found to be unremovable in simulation, will re-check them at %v", unremovableCount, unremovableTimeout)
+Index: cluster-autoscaler/core/static_autoscaler.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/core/static_autoscaler.go b/cluster-autoscaler/core/static_autoscaler.go
+--- a/cluster-autoscaler/core/static_autoscaler.go	(revision 48a59072666081a7ec9f1db85c01af7fb85fc28c)
++++ b/cluster-autoscaler/core/static_autoscaler.go	(date 1723112885083)
+@@ -574,7 +574,7 @@
+ 	if a.ScaleDownEnabled {
+ 		unneededStart := time.Now()
+
+-		klog.V(4).Infof("Calculating unneeded nodes")
++		klog.V(2).Infof("Calculating unneeded nodes")
+
+ 		var scaleDownCandidates []*apiv1.Node
+ 		var podDestinations []*apiv1.Node
+@@ -586,21 +586,34 @@
+ 		// is of little (if any) benefit.
+
+ 		if a.processors == nil || a.processors.ScaleDownNodeProcessor == nil {
++			klog.V(2).Infof("Scale-down. a.processor == nil ||  a.processors.ScaleDownNodeProcessor == nil. Scale down candidates are all nodes")
+ 			scaleDownCandidates = allNodes
+ 			podDestinations = allNodes
+ 		} else {
+ 			var err caerrors.AutoscalerError
++			klog.V(2).Infof("Start getting scale down candidates")
+ 			scaleDownCandidates, err = a.processors.ScaleDownNodeProcessor.GetScaleDownCandidates(
+ 				autoscalingContext, allNodes)
+ 			if err != nil {
+ 				klog.Error(err)
+ 				return err
+ 			}
++
++			klog.V(2).Infof("Got scale down candidates (%d):", len(scaleDownCandidates))
++			for _, n := range scaleDownCandidates {
++				klog.V(2).Infof("Scale down candidate: %s", n.GetName())
++			}
++
+ 			podDestinations, err = a.processors.ScaleDownNodeProcessor.GetPodDestinationCandidates(autoscalingContext, allNodes)
+ 			if err != nil {
+ 				klog.Error(err)
+ 				return err
+ 			}
++
++			klog.V(2).Infof("Got scale down pod destinations (%d):", len(podDestinations))
++			for _, n := range podDestinations {
++				klog.V(2).Infof("Scale down pod destination: %s", n.GetName())
++			}
+ 		}
+
+ 		actuationStatus := a.scaleDownActuator.CheckStatus()
