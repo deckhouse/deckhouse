@@ -14,35 +14,67 @@ metadata:
 rules:
   # istio groups
   - apiGroups:
-      - authentication.istio.io
-    resources:
-      - '*'
-    verbs:
-      - '*'
-  - apiGroups:
-      - config.istio.io
-    resources:
-      - '*'
-    verbs:
-      - '*'
-  - apiGroups:
       - install.istio.io
     resources:
-      - '*'
+      - istiooperators
+      - istiooperators/status
     verbs:
-      - '*'
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
   - apiGroups:
       - networking.istio.io
     resources:
-      - '*'
+      - destinationrules
+      - destinationrules/status
+      - envoyfilters
+      - envoyfilters/status
+      - gateways
+      - gateways/status
+      - proxyconfigs
+      - proxyconfigs/status
+      - serviceentries
+      - serviceentries/status
+      - sidecars
+      - sidecars/status
+      - virtualservices
+      - virtualservices/status
+      - workloadentries
+      - workloadentries/status
+      - workloadgroups
+      - workloadgroups/status
     verbs:
-      - '*'
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
   - apiGroups:
       - security.istio.io
     resources:
-      - '*'
+      - authorizationpolicies
+      - authorizationpolicies/status
+      - peerauthentications
+      - peerauthentications/status
+      - requestauthentications
+      - requestauthentications/status
     verbs:
-      - '*'
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
   # k8s groups
   - apiGroups:
       - admissionregistration.k8s.io
@@ -50,14 +82,28 @@ rules:
       - mutatingwebhookconfigurations
       - validatingwebhookconfigurations
     verbs:
-      - '*'
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
   - apiGroups:
       - apiextensions.k8s.io
     resources:
       - customresourcedefinitions.apiextensions.k8s.io
       - customresourcedefinitions
     verbs:
-      - '*'
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
   - apiGroups:
       - apps
       - extensions
@@ -69,13 +115,27 @@ rules:
       - replicasets
       - statefulsets
     verbs:
-      - '*'
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
   - apiGroups:
       - autoscaling
     resources:
       - horizontalpodautoscalers
     verbs:
-      - '*'
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
   - apiGroups:
       - monitoring.coreos.com
     resources:
@@ -89,7 +149,14 @@ rules:
     resources:
       - poddisruptionbudgets
     verbs:
-      - '*'
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
   - apiGroups:
       - rbac.authorization.k8s.io
     resources:
@@ -98,7 +165,9 @@ rules:
       - roles
       - rolebindings
     verbs:
-      - '*'
+      - get
+      - list
+      - watch
   - apiGroups:
       - coordination.k8s.io
     resources:
@@ -122,8 +191,14 @@ rules:
       - services
       - serviceaccounts
     verbs:
-      - '*'
-
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
