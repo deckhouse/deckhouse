@@ -150,7 +150,7 @@ func (t *Tunnel) ConsumeLines(r io.Reader, fn func(l string)) {
 	}
 }
 
-func RecreateSshTune(ctx context.Context, tun *Tunnel, recreateTun func() (*Tunnel, error)) error {
+func RecreateSshTun(ctx context.Context, tun *Tunnel, recreateTun func() (*Tunnel, error)) error {
 	if tun == nil {
 		return fmt.Errorf("error, an empty tunnel has been transmitted")
 	}
