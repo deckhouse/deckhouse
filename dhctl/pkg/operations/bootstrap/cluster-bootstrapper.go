@@ -563,12 +563,12 @@ func createResources(kubeCl *client.KubernetesClient, resourcesToCreate template
 	}
 
 	return log.Process("bootstrap", "Create Resources", func() error {
-		checkers, err := resources.GetCheckers(kubeCl, resourcesToCreate, metaConfig)
+		checkers, err := resources.GetCheckers(kubeCl, resourcesToCreate)
 		if err != nil {
 			return err
 		}
 
-		return resources.CreateResourcesLoop(kubeCl, resourcesToCreate, checkers)
+		return resources.CreateResourcesLoop(kubeCl, metaConfig, resourcesToCreate, checkers)
 	})
 }
 

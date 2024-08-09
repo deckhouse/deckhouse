@@ -15,6 +15,7 @@
 package resources
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -53,9 +54,9 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, resources, 2)
 
-		checkers, err := GetCheckers(nil, resources, nil)
+		checker, err := tryToGetClusterIsBootstrappedChecker(nil, resources, nil)
 		require.NoError(t, err)
-		require.Len(t, checkers, 0)
+		require.Nil(t, checker)
 	})
 
 	t.Run("with cloud static nodegroup", func(t *testing.T) {
@@ -71,9 +72,9 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, resources, 3)
 
-		checkers, err := GetCheckers(nil, resources, nil)
+		checker, err := tryToGetClusterIsBootstrappedChecker(nil, resources, nil)
 		require.NoError(t, err)
-		require.Len(t, checkers, 0, "should skip")
+		require.Nil(t, checker, "should skip")
 	})
 
 	t.Run("with cloud ephemeral nodegroup, but min and max per zone not set", func(t *testing.T) {
@@ -100,9 +101,9 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, resources, 3)
 
-		checkers, err := GetCheckers(nil, resources, nil)
+		checker, err := tryToGetClusterIsBootstrappedChecker(nil, resources, nil)
 		require.NoError(t, err)
-		require.Len(t, checkers, 0, "should skip")
+		require.Nil(t, checker, "should skip")
 	})
 
 	ngTemplate := func(name string, min, max int) string {
@@ -137,9 +138,9 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, resources, 3)
 
-		checkers, err := GetCheckers(nil, resources, nil)
+		checker, err := tryToGetClusterIsBootstrappedChecker(nil, resources, nil)
 		require.NoError(t, err)
-		require.Len(t, checkers, 0, "should skip")
+		require.Nil(t, checker, "should skip")
 	})
 
 	t.Run("with cloud ephemeral nodegroup, but min = 0 and max not zero", func(t *testing.T) {
@@ -149,11 +150,9 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, resources, 3)
 
-		checkers, err := GetCheckers(nil, resources, nil)
+		checker, err := tryToGetClusterIsBootstrappedChecker(nil, resources, nil)
 		require.NoError(t, err)
-		require.Len(t, checkers, 1, "should get check")
-
-		require.Equal(t, checkers[0].Name(), "Waiting for the cluster to become bootstrapped.")
+		require.NotNil(t, checker, "should get check")
 	})
 
 	t.Run("with cloud ephemeral nodegroup, but min not zero and max not zero", func(t *testing.T) {
@@ -163,11 +162,9 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, resources, 3)
 
-		checkers, err := GetCheckers(nil, resources, nil)
+		checker, err := tryToGetClusterIsBootstrappedChecker(nil, resources, nil)
 		require.NoError(t, err)
-		require.Len(t, checkers, 1, "should get check")
-
-		require.Equal(t, checkers[0].Name(), "Waiting for the cluster to become bootstrapped.")
+		require.NotNil(t, checker, "should get check")
 	})
 
 	t.Run("with multiple cloud ephemeral nodegroup", func(t *testing.T) {
@@ -179,11 +176,9 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, resources, 4)
 
-		checkers, err := GetCheckers(nil, resources, nil)
+		checker, err := tryToGetClusterIsBootstrappedChecker(nil, resources, nil)
 		require.NoError(t, err)
-		require.Len(t, checkers, 1, "should get one check")
-
-		require.Equal(t, checkers[0].Name(), "Waiting for the cluster to become bootstrapped.")
+		require.NotNil(t, checker, "should get one check")
 	})
 
 	t.Run("with multiple cloud ephemeral nodegroup", func(t *testing.T) {
@@ -195,11 +190,9 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, resources, 4)
 
-		checkers, err := GetCheckers(nil, resources, nil)
+		checker, err := tryToGetClusterIsBootstrappedChecker(nil, resources, nil)
 		require.NoError(t, err)
-		require.Len(t, checkers, 1, "should get one check")
-
-		require.Equal(t, checkers[0].Name(), "Waiting for the cluster to become bootstrapped.")
+		require.NotNil(t, checker, "should get one check")
 	})
 
 	t.Run("with one terra node without replicas", func(t *testing.T) {
@@ -215,9 +208,9 @@ spec:
 			},
 		}
 
-		checkers, err := GetCheckers(nil, resources, cnf)
+		checker, err := tryToGetClusterIsBootstrappedChecker(nil, resources, cnf)
 		require.NoError(t, err)
-		require.Len(t, checkers, 0, "should not get check")
+		require.Nil(t, checker, "should not get check")
 	})
 
 	t.Run("with one terra node with replicas", func(t *testing.T) {
@@ -227,11 +220,9 @@ spec:
 			},
 		}
 
-		checkers, err := GetCheckers(nil, nil, cnf)
+		checker, err := tryToGetClusterIsBootstrappedChecker(nil, nil, cnf)
 		require.NoError(t, err)
-		require.Len(t, checkers, 1, "should get one check")
-
-		require.Equal(t, checkers[0].Name(), "Waiting for the cluster to become bootstrapped.")
+		require.NotNil(t, checker, "should get one check")
 	})
 
 	t.Run("with multiple terra node with replicas", func(t *testing.T) {
@@ -242,11 +233,9 @@ spec:
 			},
 		}
 
-		checkers, err := GetCheckers(nil, nil, cnf)
+		checker, err := tryToGetClusterIsBootstrappedChecker(nil, nil, cnf)
 		require.NoError(t, err)
-		require.Len(t, checkers, 1, "should get one check")
-
-		require.Equal(t, checkers[0].Name(), "Waiting for the cluster to become bootstrapped.")
+		require.NotNil(t, checker, "should get one check")
 	})
 
 	t.Run("with one terra node with replicas an ephemeral node group", func(t *testing.T) {
@@ -262,11 +251,9 @@ spec:
 			},
 		}
 
-		checkers, err := GetCheckers(nil, resources, cnf)
+		checker, err := tryToGetClusterIsBootstrappedChecker(nil, resources, cnf)
 		require.NoError(t, err)
-
-		require.Len(t, checkers, 1, "should get one check")
-		require.Equal(t, checkers[0].Name(), "Waiting for the cluster to become bootstrapped.")
+		require.NotNil(t, checker, "should get one check")
 	})
 }
 
@@ -282,7 +269,7 @@ func newTestChecker(returns bool, err error) *testChecker {
 	}
 }
 
-func (n *testChecker) IsReady() (bool, error) {
+func (n *testChecker) IsReady(_ context.Context) (bool, error) {
 	return n.returns, n.err
 }
 
@@ -293,7 +280,7 @@ func (n *testChecker) Name() string {
 func TestWaiterStep(t *testing.T) {
 	t.Run("without checks", func(t *testing.T) {
 		w := NewWaiter(make([]Checker, 0))
-		ready, err := w.ReadyAll()
+		ready, err := w.ReadyAll(context.TODO())
 
 		require.NoError(t, err)
 		require.True(t, ready, "should ready")
@@ -301,7 +288,7 @@ func TestWaiterStep(t *testing.T) {
 
 	t.Run("with one ready check", func(t *testing.T) {
 		w := NewWaiter([]Checker{newTestChecker(true, nil)})
-		ready, err := w.ReadyAll()
+		ready, err := w.ReadyAll(context.TODO())
 
 		require.NoError(t, err)
 		require.True(t, ready, "should ready")
@@ -313,7 +300,7 @@ func TestWaiterStep(t *testing.T) {
 			newTestChecker(true, nil),
 			newTestChecker(true, nil),
 		})
-		ready, err := w.ReadyAll()
+		ready, err := w.ReadyAll(context.TODO())
 
 		require.NoError(t, err)
 		require.True(t, ready, "should ready")
@@ -325,8 +312,7 @@ func TestWaiterStep(t *testing.T) {
 			newTestChecker(false, fmt.Errorf("error")),
 			newTestChecker(true, nil),
 		})
-		w.WithAttempts(0)
-		ready, err := w.ReadyAll()
+		ready, err := w.ReadyAll(context.TODO())
 
 		require.Error(t, err, "should error")
 		require.False(t, ready)
@@ -338,7 +324,7 @@ func TestWaiterStep(t *testing.T) {
 			newTestChecker(false, nil),
 			newTestChecker(true, nil),
 		})
-		ready, err := w.ReadyAll()
+		ready, err := w.ReadyAll(context.TODO())
 
 		require.NoError(t, err)
 		require.False(t, ready, "should not ready")
@@ -351,7 +337,7 @@ func TestWaiterStep(t *testing.T) {
 			newTestChecker(true, nil),
 		})
 
-		_, err := w.ReadyAll()
+		_, err := w.ReadyAll(context.TODO())
 
 		require.NoError(t, err)
 		require.Len(t, w.checkers, 1, "should remove ready checks")

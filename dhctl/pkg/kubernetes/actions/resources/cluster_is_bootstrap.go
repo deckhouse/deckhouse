@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -163,6 +164,12 @@ func (n *clusterIsBootstrapCheck) hasBootstrappedCM() (bool, error) {
 	return hasCm, err
 }
 
+func (n *clusterIsBootstrapCheck) outputProgressInfo() {
+	n.outputNodeGroups()
+
+	n.outputMachineFailures()
+}
+
 func (n *clusterIsBootstrapCheck) outputNodeGroups() {
 	if n.attempts%4 != 0 {
 		return
@@ -218,7 +225,7 @@ func (n *clusterIsBootstrapCheck) Name() string {
 	return "Waiting for the cluster to become bootstrapped."
 }
 
-func (n *clusterIsBootstrapCheck) IsReady() (bool, error) {
+func (n *clusterIsBootstrapCheck) IsBootstrapped() (bool, error) {
 	defer func() {
 		n.attempts++
 		n.logger.LogInfoF("\n")
@@ -242,45 +249,52 @@ func (n *clusterIsBootstrapCheck) IsReady() (bool, error) {
 
 	n.logger.LogInfoF(notBootstrappedMsg)
 
-	n.outputNodeGroups()
-
-	n.outputMachineFailures()
-
 	return false, nil
 }
 
-func tryToGetClusterIsBootstrappedChecker(
-	kubeCl *client.KubernetesClient,
-	r *template.Resource) (*clusterIsBootstrapCheck, error) {
-	if !(r.GVK.Kind == "NodeGroup" && r.GVK.Group == "deckhouse.io" && r.GVK.Version == "v1") {
-		log.DebugF("tryToGetClusterIsBootstrappedChecker: skip GVK (%s %s %s)",
-			r.GVK.Version, r.GVK.Group, r.GVK.Kind)
-		return nil, nil
+func tryToGetClusterIsBootstrappedChecker(kubeCl *client.KubernetesClient, resources template.Resources, metaConfig *config.MetaConfig) (*clusterIsBootstrapCheck, error) {
+	if metaConfig != nil {
+		for _, terraNg := range metaConfig.GetTerraNodeGroups() {
+			if terraNg.Replicas > 0 {
+				return newClusterIsBootstrapCheck(&kubeNgGetter{kubeCl: kubeCl}, kubeCl), nil
+			}
+		}
 	}
 
-	ng, err := unstructuredToNodeGroup(&r.Object)
-	if err != nil {
-		return nil, err
+	for _, r := range resources {
+		if !(r.GVK.Kind == "NodeGroup" && r.GVK.Group == "deckhouse.io" && r.GVK.Version == "v1") {
+			log.DebugF("tryToGetClusterIsBootstrappedChecker: skip GVK (%s %s %s)",
+				r.GVK.Version, r.GVK.Group, r.GVK.Kind)
+			continue
+		}
+
+		ng, err := unstructuredToNodeGroup(&r.Object)
+		if err != nil {
+			return nil, err
+		}
+
+		if ng.Spec.NodeType != "CloudEphemeral" {
+			log.DebugF("Skip nodegroup %s, because type %s is not supported", ng.GetName(), ng.Spec.NodeType)
+			continue
+		}
+
+		if ng.Spec.CloudInstances.MinPerZone == nil || ng.Spec.CloudInstances.MaxPerZone == nil {
+			log.DebugF("Skip nodegroup %s, because type min and max per zone is not set", ng.GetName())
+			continue
+		}
+
+		if *ng.Spec.CloudInstances.MinPerZone < 0 || *ng.Spec.CloudInstances.MaxPerZone < 1 {
+			log.DebugF("Skip nodegroup %s, because type min (%d) and max (%d) per zone is incorrect",
+				ng.GetName(), *ng.Spec.CloudInstances.MinPerZone, *ng.Spec.CloudInstances.MaxPerZone)
+			continue
+		}
+
+		log.DebugF("Got readiness checker for nodegroup %s\n", ng.GetName())
+
+		return newClusterIsBootstrapCheck(&kubeNgGetter{kubeCl: kubeCl}, kubeCl), nil
 	}
 
-	if ng.Spec.NodeType != "CloudEphemeral" {
-		log.DebugF("Skip nodegroup %s, because type %s is not supported", ng.GetName(), ng.Spec.NodeType)
-		return nil, nil
-	}
-
-	if ng.Spec.CloudInstances.MinPerZone == nil || ng.Spec.CloudInstances.MaxPerZone == nil {
-		log.DebugF("Skip nodegroup %s, because type min and max per zone is not set", ng.GetName())
-		return nil, nil
-	}
-
-	if *ng.Spec.CloudInstances.MinPerZone < 0 || *ng.Spec.CloudInstances.MaxPerZone < 1 {
-		log.DebugF("Skip nodegroup %s, because type min (%d) and max (%d) per zone is incorrect",
-			ng.GetName(), *ng.Spec.CloudInstances.MinPerZone, *ng.Spec.CloudInstances.MaxPerZone)
-		return nil, nil
-	}
-
-	log.DebugF("Got readiness checker for nodegroup %s\n", ng.GetName())
-	return newClusterIsBootstrapCheck(&kubeNgGetter{kubeCl: kubeCl}, kubeCl), nil
+	return nil, nil
 }
 
 func unstructuredToNodeGroup(o *unstructured.Unstructured) (*NodeGroup, error) {

@@ -85,12 +85,12 @@ func (op *Detacher) Detach(ctx context.Context) error {
 			return fmt.Errorf("unable to get kube client: %w", err)
 		}
 
-		checkers, err := resources.GetCheckers(kubeClient, detachResources, nil)
+		checkers, err := resources.GetCheckers(kubeClient, detachResources)
 		if err != nil {
 			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
 
-		err = resources.CreateResourcesLoop(kubeClient, detachResources, checkers)
+		err = resources.CreateResourcesLoop(kubeClient, nil, detachResources, checkers)
 		if err != nil {
 			return fmt.Errorf("unable to create resources: %w", err)
 		}
