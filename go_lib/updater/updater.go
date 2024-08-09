@@ -43,9 +43,21 @@ const (
 	PhaseSkipped    = "Skipped"
 )
 
+type UpdateMode string
+
+const (
+	// ModeAutoPatch is default mode for updater,
+	// deckhouse automatically applies patch releases, but asks for approval of minor releases
+	ModeAutoPatch UpdateMode = "AutoPatch"
+	// ModeAuto is updater mode when deckhouse automatically applies all releases
+	ModeAuto UpdateMode = "Auto"
+	// ModeManual is updater mode when deckhouse downloads releases info, but does not apply them
+	ModeManual UpdateMode = "Manual"
+)
+
 type Updater[R Release] struct {
-	now          time.Time
-	inManualMode bool
+	now  time.Time
+	mode UpdateMode
 
 	logger logger.Logger
 
@@ -82,7 +94,7 @@ func NewUpdater[R Release](logger logger.Logger, notificationConfig *Notificatio
 	}
 	return &Updater[R]{
 		now:                         now,
-		inManualMode:                mode == "Manual",
+		mode:                        ParseUpdateMode(mode),
 		logger:                      logger,
 		predictedReleaseIndex:       -1,
 		currentDeployedReleaseIndex: -1,
@@ -220,7 +232,7 @@ func (du *Updater[R]) checkMinorReleaseConditions(predictedRelease *R, updateWin
 		}
 
 		// check: canary settings
-		if (*predictedRelease).GetApplyAfter() != nil && !du.inManualMode {
+		if (*predictedRelease).GetApplyAfter() != nil && !du.InManualMode() {
 			if du.now.Before(*(*predictedRelease).GetApplyAfter()) {
 				du.logger.Infof("Release %s is postponed by canary process. Waiting", (*predictedRelease).GetName())
 				err := du.updateStatus(predictedRelease, fmt.Sprintf("Release is postponed until: %s", (*predictedRelease).GetApplyAfter().Format(time.RFC822)), PhasePending)
@@ -231,7 +243,7 @@ func (du *Updater[R]) checkMinorReleaseConditions(predictedRelease *R, updateWin
 			}
 		}
 
-		if du.inManualMode {
+		if du.InManualMode() {
 			// check: release is approved in Manual mode
 			if !(*predictedRelease).GetManuallyApproved() {
 				du.logger.Infof("Release %s is waiting for manual approval", (*predictedRelease).GetName())
@@ -380,7 +392,7 @@ func (du *Updater[R]) ReleasesCount() int {
 }
 
 func (du *Updater[R]) InManualMode() bool {
-	return du.inManualMode
+	return du.mode == ModeManual
 }
 
 func (du *Updater[R]) runReleaseDeploy(predictedRelease, currentRelease *R) bool {
