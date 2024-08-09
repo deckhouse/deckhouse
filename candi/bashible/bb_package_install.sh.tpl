@@ -123,6 +123,7 @@ for ep in endpoints:
     response = urlopen(request, timeout=300)
   except HTTPError as e:
     print("Access to {} return HTTP Error {}: {}".format(url, e.getcode(), e.read()[:255]))
+    print('You can check via curl -v -k -H "Authorization: Bearer ${PACKAGES_PROXY_TOKEN}" "{}" > /dev/null'.format(url))
     continue
   except Exception as e:
     print("Access to {} return Error: {}".format(url, e))
