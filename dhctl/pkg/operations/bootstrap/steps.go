@@ -324,9 +324,11 @@ func pushDockerImagesToSystemRegistry(sshCl *ssh.Client, cfg *config.MetaConfig)
 			return err
 		}
 		recreateTunFuncs = append(recreateTunFuncs, func() error {
-			return frontend.RecreateSshTun(ctx, authTun, func() (*frontend.Tunnel, error) {
+			err := frontend.RecreateSshTun(ctx, authTun, func() (*frontend.Tunnel, error) {
 				return setupSSHTunnelToSystemRegistryAuth(sshCl)
 			})
+			ctxCancel()
+			return err
 		})
 
 		distributionAddress := fmt.Sprintf("%s:5001", sshCl.Settings.Host())
@@ -341,9 +343,11 @@ func pushDockerImagesToSystemRegistry(sshCl *ssh.Client, cfg *config.MetaConfig)
 				return err
 			}
 			recreateTunFuncs = append(recreateTunFuncs, func() error {
-				return frontend.RecreateSshTun(ctx, distributionTun, func() (*frontend.Tunnel, error) {
+				err := frontend.RecreateSshTun(ctx, distributionTun, func() (*frontend.Tunnel, error) {
 					return setupSSHTunnelToSystemRegistryDistribution(sshCl)
 				})
+				ctxCancel()
+				return err
 			})
 		}
 
@@ -373,7 +377,7 @@ func pushDockerImagesToSystemRegistry(sshCl *ssh.Client, cfg *config.MetaConfig)
 				select {
 				case <-ctx.Done():
 					d8Push.Stop()
-					return nil
+					return fmt.Errorf("mirror push stoped by context: %s", ctx.Err())
 				case err := <-mirrorPushErrorCh:
 					d8Push.Stop()
 					ctxCancel()
