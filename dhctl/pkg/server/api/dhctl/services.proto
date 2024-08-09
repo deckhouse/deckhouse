@@ -26,6 +26,7 @@ import "converge.proto";
 import "commander_attach.proto";
 import "commander_detach.proto";
 import "validation.proto";
+import "status.proto";
 
 service DHCTL {
   rpc Check (stream CheckRequest) returns (stream CheckResponse) {}
@@ -45,4 +46,8 @@ service Validation {
   rpc ValidateProviderSpecificClusterConfig (ValidateProviderSpecificClusterConfigRequest) returns (ValidateProviderSpecificClusterConfigResponse) {}
   rpc ValidateChanges (ValidateChangesRequest) returns (ValidateChangesResponse) {}
   rpc ParseConnectionConfig (ParseConnectionConfigRequest) returns (ParseConnectionConfigResponse) {}
+}
+
+service Status {
+  rpc GetStatus (GetStatusRequest) returns (GetStatusResponse) {}
 }
