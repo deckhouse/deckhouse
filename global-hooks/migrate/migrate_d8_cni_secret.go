@@ -38,6 +38,11 @@ import (
 This migration implements global hook which migrate cni settings from kube-system/d8-cni-configuration secret to appropriate module config.
 If secret doesn't exist, migration skipped.
 If module config for cni exists, migration skipped.
+Migration scheme:
+* cni-simple-bridge
+	Simply enable module cni-simple-bridge via ModuleConfig.
+* cni-flannel
+* cni-cilium
 */
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
