@@ -614,6 +614,125 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("Test auto-mode for postponed release", func() {
+		suite.setupController("auto-mode.yaml", initValues, embeddedMUP)
+		dr := suite.getDeckhouseRelease("v1.27.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Test autoPatch-mode for postponed patch release", func() {
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Mode = updater.ModeAutoPatch.String()
+
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+		suite.setupController("auto-patch-mode.yaml", initValues, mup)
+		dr := suite.getDeckhouseRelease("v1.26.3")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Test autoPatch-mode for postponed minor release", func() {
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Mode = updater.ModeAutoPatch.String()
+
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+		suite.setupController("auto-patch-mode-minor-release.yaml", initValues, mup)
+		dr := suite.getDeckhouseRelease("v1.27.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Test autoPatch-mode for approved minor release", func() {
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Mode = updater.ModeAutoPatch.String()
+
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+		suite.setupController("auto-patch-mode-minor-release-approved.yaml", initValues, mup)
+		dr := suite.getDeckhouseRelease("v1.27.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Test unknown-mode for postponed patch release", func() {
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Mode = updater.ModeAutoPatch.String()
+
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+		suite.setupController("unknown-mode.yaml", initValues, mup)
+		dr := suite.getDeckhouseRelease("v1.26.3")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Test unknown-mode for postponed minor release", func() {
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Mode = updater.ModeAutoPatch.String()
+
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+		suite.setupController("unknown-mode-minor-release.yaml", initValues, mup)
+		dr := suite.getDeckhouseRelease("v1.27.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Test manual-mode for approved minor release", func() {
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Mode = updater.ModeManual.String()
+
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+		suite.setupController("manual-mode-with-approved.yaml", initValues, mup)
+		dr := suite.getDeckhouseRelease("v1.27.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("ApplyNow: AutoPatch mode is set", func() {
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Mode = updater.ModeAutoPatch.String()
+
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+		suite.setupController("apply-now-autopatch-mode-is-set.yaml", initValues, mup)
+		dr := suite.getDeckhouseRelease("v1.26.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
 }
 
 func (suite *ControllerTestSuite) fetchResults() []byte {
