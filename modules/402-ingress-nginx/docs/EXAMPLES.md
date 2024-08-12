@@ -39,7 +39,13 @@ spec:
   inlet: "LoadBalancer"
 ```
 
-> **Caution!** In **GCP**, nodes must have an annotation enabling them to accept connections to external addresses for the NodePort type services.
+{% endraw %}
+
+{% alert level="warning" %}
+In **GCP**, nodes must have an annotation enabling them to accept connections to external addresses for the NodePort type services.
+{% endalert %}
+
+{% raw %}
 
 ## An example for OpenStack
 
@@ -91,9 +97,11 @@ spec:
     behindL7Proxy: true
 ```
 
+{% endraw %}
+
 ## An example for Bare metal (MetalLB Load Balancer)
 
-The `metallb` module is currently available only in the Enterprise Edition version.
+{% alert level="warning" %}This feature is available in Enterprise Edition only.{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -128,4 +136,58 @@ metallb:
       value: frontend
 ```
 
-{% endraw %}
+## An example for Bare metal (with L2LoadBalancer)
+
+{% alert level="warning" %}This feature is available in Enterprise Edition only.{% endalert %}
+
+1. Enable the `l2-load-balancer` module:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: l2-load-balancer
+   spec:
+     enabled: true
+     version: 1
+   ```
+
+1. Deploy the _L2LoadBalancer_ resource:
+
+   ```yaml
+   apiVersion: network.deckhouse.io/v1alpha1
+   kind: L2LoadBalancer
+   metadata:
+     name: ingress
+   spec:
+     addressPool:
+     - 192.168.2.100-192.168.2.150
+     nodeSelector:
+       node-role.kubernetes.io/loadbalancer: ""
+   ```
+
+1. Deploy the _IngressNginxController_ resource:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: IngressNginxController
+   metadata:
+    name: main
+   spec:
+     ingressClass: nginx
+     inlet: LoadBalancer
+     loadBalancer:
+       annotations:
+         # The name of _L2LoadBalancer_ resource.
+         network.deckhouse.io/l2-load-balancer-name: ingress
+         # The number of addresses that will be allocated from the pool described in _L2LoadBalancer_.
+         network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+   ```
+
+1. The platform will create a service with the type `LoadBalancer`, to which a specified number of addresses will be assigned:
+
+   ```shell
+   $ kubectl -n d8-ingress-nginx get svc
+   NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)                      AGE
+   main-load-balancer     LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30689/TCP,443:30668/TCP   11s
+   ```
