@@ -1,7 +1,7 @@
 ---
 title: Deckhouse CLI
 permalink: ru/deckhouse-cli/
-description: Deckhouse CLI — это интерфейс командной строки для работы с кластерами от Deckhouse Kubernetes Platform (DKP).
+description: Deckhouse CLI — интерфейс командной строки для работы с кластерами от разработчиков Deckhouse.
 lang: ru
 ---
 

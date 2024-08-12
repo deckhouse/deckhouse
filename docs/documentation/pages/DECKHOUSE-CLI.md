@@ -1,7 +1,7 @@
 ---
 title: Deckhouse CLI
 permalink: en/deckhouse-cli/
-description: Deckhouse CLI is a command line interface for cluster management created by the developers of Deckhouse Kubernetes Platform (DKP).
+description: Deckhouse CLI is a command line interface for cluster management created by the developers of Deckhouse.
 ---
 
 Deckhouse CLI is a command line interface for cluster management created by the developers of Deckhouse Kubernetes Platform (DKP). Starting with version 1.59, the DH CLI is automatically installed on all cluster nodes. You can also [install](#how-do-i-install-deckhouse-cli) the CLI on any machine and use it to operate clusters that are not managed by DKP.
