@@ -33,12 +33,12 @@ import:
 shell:
   setup:
     - export GOPROXY={{ $.GOPROXY }}
-    - git clone --depth 1 --branch v{{ $.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
+    - git clone --depth 1 --branch v{{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
     - cd /deckhouse-cli
     - task build:dist:all
     - mkdir -p /app/files/d8-cli
-    - mv dist/v{{ $.d8.d8CliVersion }}/* /app/files/d8-cli
-    - jq '[.[] | .version="v{{ $.d8.d8CliVersion }}"]' /static/tools.json > /app/tools.json
+    - mv dist/v{{ .CandiVersionMap.d8.d8CliVersion }}/* /app/files/d8-cli
+    - jq '[.[] | .version="v{{ .CandiVersionMap.d8.d8CliVersion }}"]' /static/tools.json > /app/tools.json
     - mv /static/robots.txt /app
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
