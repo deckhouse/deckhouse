@@ -138,6 +138,10 @@ func TestResourceMapper(t *testing.T) {
 				APIGroups: []string{"apps"},
 				Kinds:     []string{"Deployment"},
 			},
+			{
+				APIGroups: []string{""},
+				Kinds:     []string{"PodExecOptions"},
+			},
 		}
 
 		data, err := rmatch.convertKindsToResource(kinds)
@@ -155,6 +159,13 @@ func TestResourceMapper(t *testing.T) {
   - apps
   resources:
   - deployments
+- apiGroups:
+  - ""
+  resources:
+  - pods/attach
+  - pods/exec
+  operations:
+  - CONNECT
 `, string(data))
 	})
 
