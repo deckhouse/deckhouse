@@ -3,7 +3,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: {{ $.Chart.Name }}
+  name: k8s-metacollector
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
 spec:
