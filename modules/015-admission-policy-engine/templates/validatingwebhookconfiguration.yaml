@@ -81,8 +81,8 @@ webhooks:
   {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
-    - name: exclude-virtualization # exclude virtualization controller user from checking security standards
-      expression: '!(request.userInfo.username == "system:serviceaccount:d8-virtualization:kubevirt-internal-virtualization-controller")'
+    - name: 'exclude-virtualization'
+      expression: '!(["system:serviceaccount:d8-virtualization:kubevirt-internal-virtualization-controller", "system:serviceaccount:d8-virtualization:cdi-sa"].exists(e, (e == request.userInfo.username)))'
 {{- end }}
   timeoutSeconds: 3
   {{- include "validating.webhook.config" . | nindent 2 }}
