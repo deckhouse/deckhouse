@@ -110,6 +110,11 @@ spec:
                 state:
                   description: Brief description of the project status, such as Ready, Error, Pending, etc.
                   type: string
+                namespaces:
+                  description: Used namespaces.
+                  type: array
+                  items:
+                    type: string
                 sync:
                   description: Indicates that the project parameters have been successfully applied after creation or modification.
                   type: boolean
