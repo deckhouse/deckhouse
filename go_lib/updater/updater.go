@@ -135,7 +135,7 @@ func (du *Updater[R]) checkPatchReleaseConditions(predictedRelease *R) bool {
 		return true
 	}
 
-	if !release.GetManuallyApproved() {
+	if du.mode == ModeManual && !release.GetManuallyApproved() {
 		du.logger.Infof("Release %s is waiting for manual approval", release.GetName())
 		du.metricsUpdater.WaitingManual(release.GetName(), float64(du.totalPendingManualReleases))
 		err := du.updateStatus(predictedRelease, waitingManualApprovalMsg, PhasePending)
