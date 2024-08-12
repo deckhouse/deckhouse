@@ -88,7 +88,7 @@ var transitions = map[Installation]map[Virtualization][]TransitionRule{
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:        "/modules/cni-cilium/set-vxlan-allowed-ports",
+	Queue:        "/modules/cni-cilium/discover_vxlan_port",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "cilium-configmap",

@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: cni-cilium :: hooks :: set_vxlan_allowed_ports ::", func() {
+var _ = Describe("Modules :: cni-cilium :: hooks :: discover_vxlan_port ::", func() {
 	f := HookExecutionConfigInit(`{"cniCilium":{"internal":{}}}`, "")
 
 	Context("New cluster :: ConfigMap empty :: Virtualization Off", func() {
