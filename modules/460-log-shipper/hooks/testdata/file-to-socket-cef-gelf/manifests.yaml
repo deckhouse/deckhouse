@@ -10,6 +10,7 @@ spec:
       - /var/log/kube-audit/audit.log
   destinationRefs:
     - test-socket1-dest
+    - test-socket2-dest
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
@@ -28,3 +29,15 @@ spec:
         verifyHostname: false
   extraLabels:
     cef.severity: '1'
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: test-socket2-dest
+spec:
+  type: Socket
+  socket:
+    address: graylog.svc.cluster.local:9200
+    mode: TCP
+    encoding:
+      codec: GELF
