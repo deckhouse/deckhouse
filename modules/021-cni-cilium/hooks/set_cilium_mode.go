@@ -104,7 +104,13 @@ func setCiliumMode(input *go_hook.HookInput) error {
 		}
 	}
 
-	value, ok := input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
+	value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode")
+	if ok {
+		input.Values.Set("cniCilium.internal.masqueradeMode", value.String())
+		return nil
+	}
+
+	value, ok = input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
 	if ok && value.Bool() {
 		input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
 		return nil

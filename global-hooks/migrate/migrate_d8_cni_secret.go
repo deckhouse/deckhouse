@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 
@@ -41,9 +42,34 @@ If module config for cni exists, migration skipped.
 Migration scheme:
 * cni-simple-bridge
 	Simply enable module cni-simple-bridge via ModuleConfig.
+
 * cni-flannel
+	d8-cni-configuration secret contains flannel configuration in the JSON document in the field 'flannel'.
+	JSON:
+	"flannel": {
+		"podNetworkMode": ["VXLAN", "HostGW"]
+	}
+
+	We migrate podNetworkMode parameter to the ModuleConfig for cni-flannel.
+	If podNetworkMode is absent, `HostGW` is used as default.
+
 * cni-cilium
+	d8-cni-configuration secret contains cilium configuration in the JSON document in the field `cilium`.
+	JSON:
+	"cilium": {
+		"mode": ["Direct", "DirectWithNodeRoutes", "VXLAN"]
+		"masqueradeMode": ["Netfilter", "BPF"]
+	}
 */
+
+type FlannelConfig struct {
+	PodNetworkMode string `json:"podNetworkMode"`
+}
+
+type CiliumConfigStruct struct {
+	Mode           string `json:"mode,omitempty"`
+	MasqueradeMode string `json:"masqueradeMode,omitempty"`
+}
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 20},
@@ -100,15 +126,63 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 			APIVersion: config.ModuleConfigGroup + "/" + config.ModuleConfigVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: cniName,
+			Name: "cni-" + cniName,
 		},
 	}
 
 	switch cniName {
-	case "cni-simple-bridge":
+	case "simple-bridge":
 		cniModuleConfig.Spec = config.ModuleConfigSpec{
 			Enabled: pointer.Bool(true),
 		}
+	case "flannel":
+		flannelConfig := FlannelConfig{
+			PodNetworkMode: "HostGW",
+		}
+		flannelJSON, ok := d8cniSecret.Data["flannel"]
+		if ok {
+			err := json.Unmarshal(flannelJSON, &flannelConfig)
+			if err != nil {
+				return fmt.Errorf("cannot unmarshal flannel config: %v", err)
+			}
+		}
+		cniModuleConfig.Spec = config.ModuleConfigSpec{
+			Enabled: pointer.Bool(true),
+			Settings: config.SettingsValues{
+				"podNetworkMode": flannelConfig.PodNetworkMode,
+			},
+		}
+
+	case "cilium":
+		var ciliumConfig CiliumConfigStruct
+		ciliumJSON, ok := d8cniSecret.Data["cilium"]
+		if ok {
+			err := json.Unmarshal(ciliumJSON, &ciliumConfig)
+			if err != nil {
+				return fmt.Errorf("cannot unmarshal cilium config: %v", err)
+			}
+		}
+
+		var ciliumSettings config.SettingsValues
+		switch ciliumConfig.Mode {
+		case "VXLAN":
+			ciliumSettings["tunnelMode"] = "VXLAN"
+		case "Direct":
+			ciliumSettings["tunnelMode"] = "Disabled"
+		case "DirectWithNodeRoutes":
+			ciliumSettings["tunnelMode"] = "Disabled"
+			ciliumSettings["createNodeRoutes"] = "true"
+		default:
+			return fmt.Errorf("unknown cilium mode %s", ciliumConfig.Mode)
+		}
+
+		ciliumSettings["masquaradeMode"] = ciliumConfig.MasqueradeMode
+
+		cniModuleConfig.Spec = config.ModuleConfigSpec{
+			Enabled:  pointer.Bool(true),
+			Settings: ciliumSettings,
+		}
+
 	default:
 		return fmt.Errorf("unknown cni name: %s", cniName)
 	}

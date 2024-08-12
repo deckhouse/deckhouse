@@ -68,7 +68,7 @@ var _ = Describe("Global hooks :: migrate_d8_cni_secret ::", func() {
 	Context("Cluster has d8-cni-configuration secret for cni-simple-bridge", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
-			createFakeCNISecret("cni-simple-bridge", "")
+			createFakeCNISecret("simple-bridge", "")
 			f.RunHook()
 		})
 
@@ -80,6 +80,69 @@ var _ = Describe("Global hooks :: migrate_d8_cni_secret ::", func() {
 			mc := f.KubernetesResource("ModuleConfig", "", "cni-simple-bridge")
 			Expect(mc.Exists()).To(BeTrue())
 			Expect(mc.Field("spec.enabled").Bool()).To(BeTrue())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Cluster has d8-cni-configuration secret for cni-flannel (VXLAN mode)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			createFakeCNISecret("flannel", `{"podNetworkMode": "VXLAN"}`)
+			f.RunHook()
+		})
+
+		It("Should run succesfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("MC cni-flannel should be created, d8-cni-configuration secret should be removed", func() {
+			mc := f.KubernetesResource("ModuleConfig", "", "cni-flannel")
+			Expect(mc.Exists()).To(BeTrue())
+			Expect(mc.Field("spec.enabled").Bool()).To(BeTrue())
+			Expect(mc.Field("spec.settings.podNetworkMode").String()).To(Equal("VXLAN"))
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Cluster has d8-cni-configuration secret for cni-flannel (HostGW mode)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			createFakeCNISecret("flannel", `{"podNetworkMode": "HostGW"}`)
+			f.RunHook()
+		})
+
+		It("Should run succesfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("MC cni-flannel should be created, d8-cni-configuration secret should be removed", func() {
+			mc := f.KubernetesResource("ModuleConfig", "", "cni-flannel")
+			Expect(mc.Exists()).To(BeTrue())
+			Expect(mc.Field("spec.enabled").Bool()).To(BeTrue())
+			Expect(mc.Field("spec.settings.podNetworkMode").String()).To(Equal("HostGW"))
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Cluster has d8-cni-configuration secret for cni-flannel (mode doesn't set)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			createFakeCNISecret("flannel", "")
+			f.RunHook()
+		})
+
+		It("Should run succesfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("MC cni-flannel should be created, d8-cni-configuration secret should be removed", func() {
+			mc := f.KubernetesResource("ModuleConfig", "", "cni-flannel")
+			Expect(mc.Exists()).To(BeTrue())
+			Expect(mc.Field("spec.enabled").Bool()).To(BeTrue())
+			Expect(mc.Field("spec.settings.podNetworkMode").String()).To(Equal("HostGW"))
 			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
 			Expect(secret.Exists()).To(BeFalse())
 		})
