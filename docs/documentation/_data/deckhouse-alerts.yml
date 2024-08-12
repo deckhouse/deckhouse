@@ -106,7 +106,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: CniCiliumNonStandardVXLANPortFound
-      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/config.yaml
+      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/configmap.yaml
       moduleUrl: 021-cni-cilium
       module: cni-cilium
       edition: ce
