@@ -38,8 +38,8 @@ shell:
     - cd /deckhouse-cli
     - task build:dist:all
     - mkdir -p /app/files/d8-cli
-    - mv dist/{{ $version }}/* /app/files/d8-cli
-    - jq '[.[] | .version="{{ $version }}"]' /static/tools.json > /app/tools.json
+    - mv dist/v{{ $.d8.d8CliVersion }}/* /app/files/d8-cli
+    - jq '[.[] | .version="v{{ $.d8.d8CliVersion }}"]' /static/tools.json > /app/tools.json
     - mv /static/robots.txt /app
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
