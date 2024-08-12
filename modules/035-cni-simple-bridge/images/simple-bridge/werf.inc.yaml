@@ -1,4 +1,4 @@
-{{- $iptables_version := "1.8.10" }}
+{{- $iptables_version := "1.8.9" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
@@ -28,7 +28,7 @@ import:
 docker:
   ENTRYPOINT: ["/sbin/iptables-wrapper"]
 ---
-{{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge "}}
+{{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ .Images.BASE_ALT_DEV }}
