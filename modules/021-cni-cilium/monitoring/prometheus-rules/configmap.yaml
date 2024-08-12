@@ -1,4 +1,4 @@
-- name: d8.cni-cilium.config
+- name: d8.cni-cilium.configmap
   rules:
   - alert: CniCiliumNonStandardVXLANPortFound
     expr: max by (port) (d8_cni_cilium_non_standard_vxlan_port == 1)
