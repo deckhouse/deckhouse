@@ -99,7 +99,7 @@ spec:
       enabled: false
 
     podAnnotations:
-      istio-mtls-ca-bundle-hashsum: {{ md5sum (.Values.istio.internal.ca | toYaml) }}
+      istio-mtls-ca-bundle-hashsum: {{ .Values.istio.internal.ca | toYaml | sha256sum }}
 
     # We're deploying the istio-cni DS with module templates.
     cni:
