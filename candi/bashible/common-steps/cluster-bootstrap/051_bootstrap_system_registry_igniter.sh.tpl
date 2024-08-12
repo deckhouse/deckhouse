@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-{{- /*
 # Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,22 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-*/}}
-set -Eeo pipefail
 
 {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
-
-# Load bb_package_install.sh
-{{- if $bb_package_install := .Files.Get "/deckhouse/candi/bashible/bb_package_install.sh.tpl" -}}
-  {{- tpl ( $bb_package_install ) . | nindent 0 }}
-{{- end }}
-
-# Prepare D8_NODE_HOSTNAME for etcd
-{{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
-D8_NODE_HOSTNAME=$(hostname -s)
-{{- else }}
-D8_NODE_HOSTNAME=$(hostname)
-{{- end }}
 
 # Prepare UPSTREAM_REGISTRY vars for registryMode == Proxy
 {{- if eq .registry.registryMode "Proxy" }}
@@ -43,8 +27,7 @@ fi
 {{- end }}
 
 # Other vars
-IGNITER_DIR=/opt/deckhouse/tmp/system_registry_igniter
-discovered_node_ip="$(</opt/deckhouse/tmp/discovered-node-ip)"
+discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 internal_registry_domain="{{ .registry.address }}"
 if [[ "$internal_registry_domain" == *":"* ]]; then
     internal_registry_domain="$(echo "$internal_registry_domain" | cut -d':' -f1)"
@@ -61,11 +44,6 @@ mkdir -p $IGNITER_DIR
 mkdir -p /opt/deckhouse/system-registry/seaweedfs_data/
 
 # Prepare certs
-cat <<EOF > "/usr/local/share/ca-certificates/registry-ca.crt"
-{{ .registry.ca }}
-EOF
-update-ca-certificates
-
 cat <<EOF > "$IGNITER_DIR/ca.crt"
 {{ .internalRegistryAccess.ca.cert }}
 EOF
