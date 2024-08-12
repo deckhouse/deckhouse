@@ -1,0 +1,29 @@
+.docs-cards {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+
+.docs-card {
+    width: 48%;
+    padding: 30px;
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    margin-bottom: 30px;
+}
+
+.docs-card__title {
+    margin-top: 0px !important;
+    color: #2A5EFF;
+}
+
+.docs-card__title a {
+    color: #2A5EFF;
+    text-decoration: none;
+}
+
+.docs-card > *:last-child {
+    margin-bottom: 0px;
+}

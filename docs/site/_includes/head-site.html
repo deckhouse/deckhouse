@@ -9,33 +9,32 @@
 <meta name="theme-color" content="#ffffff">
 
 <!-- fonts -->
-{% asset font-awesome.min.css %}
+<!-- asset font-awesome.min.css -->
 <style type="text/css">
  {% capture fonts_file %}
-   {% include fonts.css %}
+   {% include assets/css/font-awesome.min.css %}
  {% endcapture %}
  {{ fonts_file | scssify }}
+
+{%- include assets/css/normalize.css %}
+{%- include assets/css/syntax.css %}
+{%- include assets/css/site.css %}
+{%- include assets/css/tab.css %}
+{%- include assets/css/docs.css %}
+{%- include assets/css/submenu.css %}
+{%- include assets/css/featherlight.min.css %}
+{%- include assets/css/cards.css %}
 </style>
 
-<!-- styles -->
-{% asset slick.css %}
-{% asset normalize.css %}
-{% asset syntax.css %}
-{% asset site.css %}
-{% asset tab.css %}
-{% asset submenu.css %}
-{% asset docs.css %}
-{% asset cards.css %}
-{% asset featherlight.min.css %}
-
 <!-- scripts -->
-{% asset jquery.min.js %}
-{% asset jquery.cookie.min.js %}
-{% asset bootstrap.min.js %}
-{% asset slick.min.js %}
+<script>
+{%- include assets/js/jquery.min.js %}
+{%- include assets/js/jquery.cookie.min.js %}
+{%- include assets/js/bootstrap.min.js %}
+{%- include assets/js/popper.min.js %}
+{%- include assets/js/tippy-bundle.umd.min.js %}
+</script>
 
-{% asset popper.min.js %}
-{% asset tippy-bundle.umd.min.js %}
 <script>
   $(document).ready(function() {
     tippy('[title]', {
@@ -48,19 +47,17 @@
       allowHTML: true
     });
   });
-</script>
 
-{% asset jquery.navgoco.min.js %}
-{% asset anchor.min.js %}
-{% asset toc.js %}
-{% asset details.js %}
-{% asset tab.js %}
-{% asset clipboard.min.js %}
-{% asset customscripts.js %}
-{% asset pdf.min.js %}
-{% asset pdf-slider.js %}
-{% asset popup-form.js %}
-<script>
+{%- include assets/js/jquery.navgoco.min.js %}
+{%- include assets/js/anchor.min.js %}
+{%- include assets/js/toc.js %}
+{%- include assets/js/details.js %}
+{%- include assets/js/tab.js %}
+{%- include assets/js/clipboard.min.js %}
+{%- include assets/js/customscripts.js %}
+<!--%- include assets/js/pdf.min.js %-->
+<!--%- include assets/js/pdf-slider.js %-->
+<!--%- include assets/js/popup-form.js %-->
     $(document).ready(function() {
         // Initialize navgoco with default options
         $("#mysidebar").navgoco({
@@ -103,53 +100,17 @@
         });
     });
 </script>
-{% if page.datatable == true %}
-<!-- Include the standard DataTables bits -->
-{% asset jquery.dataTables.css %}
-{% asset jquery.dataTables.min.js %}
-<!-- First, this walks through the tables that occur between ...-begin
-     and ...-end and add the "datatable" class to them.
-     Then it invokes DataTable's standard initializer
-     Credit here: http://www.beardedhacker.com/blog/2015/08/28/add-class-attribute-to-markdown-table/
-  -->
-<script>
-  $(document).ready(function(){
-      $('div.datatable-begin').nextUntil('div.datatable-end', 'table').addClass('display');
-      $('table.display').DataTable( {
-          paging: true,
-          stateSave: true,
-          searching: true
-      });
-   });
-</script>
-{% endif %}
-<script type="text/javascript">
-    $(document).ready(function () {
-        $('[data-slick]').slick({
-        infinite: true,
-        slidesToShow: 3,
-        autoplaySpeed: 5000,
-        variableWidth: true,
-        centerMode: true,
-        initialSlide: 1,
-        responsive: [{
-            breakpoint: 1500,
-            settings: {
-                initialSlide: 0,
-                slidesToShow: 1
-            }
-        }]
-        });
-    });
-</script>
+
 <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
 <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
 <!--[if lt IE 9]>
-{% asset html5shiv.js %}
-{% asset respond.min.js %}
+<script type="text/javascript">
+{%- include assets/js/html5shiv.js %}
+{%- include assets/js/respond.min.js %}
+</script>
 <![endif]-->
 
- <script type="text/javascript">
+<script type="text/javascript">
     $(document).ready(function () {
 
         function getCookie (name) {

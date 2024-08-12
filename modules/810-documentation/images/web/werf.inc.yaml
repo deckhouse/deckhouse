@@ -1,7 +1,7 @@
 {{ $_ := set . "Env" (.Env | default "FE") }}
 
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/nginx-static
+from: nginx:alpine
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site/documentation
@@ -13,8 +13,8 @@ import:
   - search-index.json
   - '*/sitemap*.xml'
   - '*/robots.txt'
-docker:
-  ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
+#docker:
+#  ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}/static
 from: {{ .Images.BASE_JEKYLL }}
