@@ -212,7 +212,7 @@ properties:
               releaseType defines which versions the notification will be sent to:
               `Minor`: only for releases with a new minor version
               `All`: for all releases including patch versions
-            x-examples: "All"
+            x-examples: ["All"]
             enum:
               - "All"
               - "Minor"
