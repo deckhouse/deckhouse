@@ -78,6 +78,8 @@ spec:
 
     pilot:
       enabled: true
+      podAnnotations:
+        istio-mtls-ca-bundle-hashsum: {{ $.Values.istio.internal.ca | toYaml | sha256sum }}
       k8s:
         env:
         - name: PILOT_SKIP_VALIDATE_TRUST_DOMAIN
@@ -97,9 +99,6 @@ spec:
     egressGateways:
     - name: istio-egressgateway
       enabled: false
-
-    podAnnotations:
-      istio-mtls-ca-bundle-hashsum: {{ $.Values.istio.internal.ca | toYaml | sha256sum }}
 
     # We're deploying the istio-cni DS with module templates.
     cni:
