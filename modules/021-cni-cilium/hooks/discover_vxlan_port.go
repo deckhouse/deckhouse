@@ -105,7 +105,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: filterConfigMap,
 		},
 	},
-}, setVXLANAllowedPorts)
+}, discoverVXLANPort)
 
 func filterConfigMap(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var cm v1.ConfigMap
@@ -122,7 +122,7 @@ func filterConfigMap(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	return cmInfo, nil
 }
 
-func setVXLANAllowedPorts(input *go_hook.HookInput) error {
+func discoverVXLANPort(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_cni_cilium_config")
 	var installationStatus = New
 
