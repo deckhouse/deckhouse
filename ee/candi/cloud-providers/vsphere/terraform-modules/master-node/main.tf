@@ -158,7 +158,7 @@ resource "vsphere_virtual_machine" "master" {
   disk {
     label            = "disk0"
     unit_number      = 0
-    size             = lookup(local.master_instance_class, "rootDiskSize", 30)
+    size             = lookup(local.master_instance_class, "rootDiskSize", 50)
     eagerly_scrub    = false
     thin_provisioned = false
   }

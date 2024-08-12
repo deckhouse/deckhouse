@@ -80,9 +80,9 @@ Provider specific environment variables:
 
 \$LAYOUT_VSPHERE_PASSWORD
 
-  vCloudDirector:
+  VCD:
 
-\$LAYOUT_VCLOUD_DIRECTOR_PASSWORD
+\$LAYOUT_VCD_PASSWORD
 
   Static:
 
@@ -338,7 +338,7 @@ function prepare_environment() {
     ssh_user="ubuntu"
     ;;
 
-"vCloudDirector")
+"VCD")
     # shellcheck disable=SC2016
     env VCD_PASSWORD="$(base64 -d <<<"$LAYOUT_VCD_PASSWORD")" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" \
@@ -356,7 +356,7 @@ function prepare_environment() {
         env VCD_ORG="$LAYOUT_VCD_ORG" \
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VCD_PASSWORD} ${VCD_SERVER} ${VCD_USERNAME} ${VCD_ORG}' \
         <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
-        
+
     ssh_user="ubuntu"
     ;;
 
@@ -435,10 +435,79 @@ function run-test() {
   wait_cluster_ready || return $?
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
+    test_requirements || return $?
     change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
     wait_deckhouse_ready || return $?
     wait_cluster_ready || return $?
   fi
+}
+
+function test_requirements() {
+  >&2 echo "Start check requirements ..."
+  if [ ! -f /deckhouse/release.yaml ]; then
+      >&2 echo "File /deckhouse/release.yaml not found"
+      return 1
+  fi
+
+  release=$(< /deckhouse/release.yaml)
+  if [ -z "${release:-}" ]; then return 1; fi
+  release=${release//\"/\\\"}
+
+  >&2 echo "Run script ... "
+
+  testScript=$(cat <<ENDSC
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+
+wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_386 -O /usr/bin/yq &&\
+ chmod +x /usr/bin/yq
+
+command -v yq >/dev/null 2>&1 || exit 1
+
+echo "$release" > /tmp/releaseFile.yaml
+
+echo 'apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  settings:
+    releaseChannel: Stable
+    update:
+      mode: Auto' | kubectl apply -f -
+
+echo 'apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  annotations:
+    dryrun: "true"
+  name: v1.96.3
+spec:
+  version: v1.96.3
+  requirements:
+' | yq '. | load("/tmp/releaseFile.yaml") as \$d1 | .spec.requirements=\$d1.requirements' | kubectl apply -f -
+
+rm /tmp/releaseFile.yaml
+
+sleep 5
+
+>&2 echo "Release status: \$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.phase}')"
+if [ ! -z "\$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.message}')" ]; then
+  >&2 echo "Error message: \$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.message}')"
+fi
+
+[[ "\$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.phase}')" == "Deployed" ]]
+ENDSC
+)
+
+  if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<$testScript; then
+    return 0
+  fi
+
+  write_deckhouse_logs
+  return 1
 }
 
 function bootstrap_static() {
@@ -562,6 +631,9 @@ ENDSSH
        ip route del default
        ip route add 10.111.0.0/16 dev lo
        ip route add 10.222.0.0/16 dev lo
+
+       #hack for relosve: 'error reading from /var/lib/apt/lists/partial/ftp.altlinux.org_pub_distributions_ALTLinux_p11_branch_x86%5f64-i586_base_release - fgets (0 Success)'
+       rm -f /var/lib/apt/lists/partial/ftp.altlinux.org_pub_distributions_ALTLinux_p11_branch_x86%5f64-i586_base_release
 ENDSSH
       initial_setup_failed=""
       break
@@ -806,6 +878,40 @@ function wait_cluster_ready() {
   $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${infoScript}";
 
   test_failed=
+
+  testNodeUserScript=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_nodeuser.sh")
+
+  testRunAttempts=5
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testNodeUserScript}"; then
+        test_failed=""
+        break
+    else
+      test_failed="true"
+      >&2 echo "Run test NodeUser script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds.."
+      sleep 30
+    fi
+  done
+
+  if [[ $test_failed == "true" ]] ; then
+    return 1
+  fi
+
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "user-e2e@$master_ip" whoami; then
+        >&2 echo "Connection via NodeUser SSH successful."
+        test_failed=""
+        break
+    else
+      test_failed="true"
+      >&2 echo "Connection via NodeUser SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds.."
+      sleep 30
+    fi
+  done
+
+  if [[ $test_failed == "true" ]] ; then
+    return 1
+  fi
 
   testScript=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
 

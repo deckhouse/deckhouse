@@ -54,6 +54,8 @@ spec:
       istio.deckhouse.io/ingress-gateway-class: "{{ $ingressGatewayClass }}"
   template:
     metadata:
+      annotations:
+        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
       labels:
         app: ingress-gateway-controller
         instance: {{ $controller.name }}

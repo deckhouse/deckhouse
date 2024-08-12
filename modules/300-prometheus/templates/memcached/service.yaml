@@ -10,9 +10,9 @@ spec:
   ports:
     - name: memcached
       port: 11211
-      targetPort: 11211
+      targetPort: memcached
     - name: http-metrics
       port: 9150
-      targetPort: 9150
+      targetPort: http-metrics
   selector:
     app: memcached

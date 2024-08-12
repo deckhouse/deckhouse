@@ -58,6 +58,11 @@ func NewChecker(
 func (pc *Checker) Static() error {
 	return pc.do("Preflight checks for static-cluster", []checkStep{
 		{
+			fun:            pc.CheckSingleSSHHostForStatic,
+			successMessage: "only one --ssh-host parameter used",
+			skipFlag:       app.OneSSHHostCheckArgName,
+		},
+		{
 			fun:            pc.CheckSSHCredential,
 			successMessage: "ssh credential is correctly",
 			skipFlag:       app.SSHCredentialsCheckArgName,
@@ -66,6 +71,11 @@ func (pc *Checker) Static() error {
 			fun:            pc.CheckSSHTunnel,
 			successMessage: "ssh tunnel between installer and node is possible",
 			skipFlag:       app.SSHForwardArgName,
+		},
+		{
+			fun:            pc.CheckStaticNodeSystemRequirements,
+			successMessage: "that node meets system requirements",
+			skipFlag:       app.SystemRequirementsArgName,
 		},
 		{
 			fun:            pc.CheckPythonAndItsModules,
@@ -87,16 +97,17 @@ func (pc *Checker) Static() error {
 			successMessage: "resolve the localhost domain",
 			skipFlag:       app.RegistryCredentialsCheckArgName,
 		},
-		{
-			fun:            pc.CheckSudoIsAllowedForUser,
-			successMessage: "sudo is allowed for user",
-			skipFlag:       app.SudoAllowedCheckArgName,
-		},
 	})
 }
 
 func (pc *Checker) Cloud() error {
-	return nil
+	return pc.do("Cloud deployment preflight checks", []checkStep{
+		{
+			fun:            pc.CheckCloudMasterNodeSystemRequirements,
+			successMessage: "cloud master node system requirements are met",
+			skipFlag:       app.SystemRequirementsArgName,
+		},
+	})
 }
 
 func (pc *Checker) Global() error {

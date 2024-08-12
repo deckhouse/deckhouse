@@ -10,4 +10,4 @@ spec:
   ports:
     - protocol: TCP
       port: 4443
-      targetPort: 4443
+      targetPort: webhook

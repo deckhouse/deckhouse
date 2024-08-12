@@ -10,7 +10,7 @@ There are three key stages in the life of a module:
 
 * **Development**: creating module code and its structure in the Git repository. The [**Module structure**](structure/) section describes the required components and the directories where they are located.
 * **Building and publishing**: creating a module artifact and pushing it to the container registry. The [**Building and publishing**](build/) section describes where images are stored in the registry and what images are available.
-* **Running in a cluster**: installing a module in a DKP cluster, enabling it, configuring it, and making sure it works as expected. The [**Running in a cluster**](module-development/run/) section describes how to run a configured module in a cluster.
+* **Running in a cluster**: installing a module in a DKP cluster, enabling it, configuring it, and making sure it works as expected. The [**Running in a cluster**](run/) section describes how to run a configured module in a cluster.
 
 ## Requirements
 

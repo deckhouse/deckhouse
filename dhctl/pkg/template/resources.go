@@ -168,6 +168,15 @@ func ParseResourcesContent(content string, data map[string]interface{}) (Resourc
 	return resources, nil
 }
 
+func (r Resources) String() string {
+	s := make([]string, 0)
+	for _, rr := range r {
+		s = append(s, fmt.Sprintf("%v", rr.Object.Object))
+	}
+
+	return strings.Join(s, ";")
+}
+
 func loadResources(path string, data map[string]interface{}) (Resources, error) {
 	fileContent, err := os.ReadFile(path)
 	if err != nil {

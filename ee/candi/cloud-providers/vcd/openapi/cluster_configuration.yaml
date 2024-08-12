@@ -12,7 +12,7 @@ apiVersions:
         Run the following command to change the configuration in a running cluster:
 
         ```shell
-        kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+        kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit provider-cluster-configuration
         ```
       x-doc-search: |
         ProviderClusterConfiguration
@@ -38,7 +38,7 @@ apiVersions:
             - name: worker
               replicas: 1
               instanceClass:
-                template: Templates/ubuntu-focal-20.04
+                template: Org/Templates/ubuntu-focal-20.04
                 sizingPolicy: 16cpu32ram
                 storageProfile: ssd
           provider:
@@ -76,13 +76,13 @@ apiVersions:
               additionalProperties: false
               required: [template, storageProfile, sizingPolicy]
               description: |
-                Partial contents of the fields of the [VCDInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-VCD/cr.html#VCDinstanceclass).
+                Partial contents of the fields of the [VCDInstanceClass](../cluster_configuration.html#vcdinstanceclass).
               properties:
                 rootDiskSizeGb:
                   description: |
                     root disk size in gigabytes.
-                  example: 20
-                  default: 20
+                  example: 50
+                  default: 50
                   type: integer
                 etcdDiskSizeGb:
                   description: |
@@ -111,7 +111,7 @@ apiVersions:
                   example: ssd
                 template:
                   description: |
-                    Path of the template OVA that is to be used. Consists of catalog and template path.
+                    Path of the template OVA that is to be used. Consists of organization (optional), catalog, template path.
                   type: string
                   example: Linux/ubuntu2204-cloud-ova
                 mainNetworkIPAddresses:
@@ -190,13 +190,13 @@ apiVersions:
                 additionalProperties: false
                 required: [template, storageProfile, sizingPolicy]
                 description: |
-                  Partial contents of the fields of the [VCDInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vcd/cr.html#VCDinstanceclass).
+                  Partial contents of the fields of the [VCDInstanceClass](../cluster_configuration.html#vcdinstanceclass).
                 properties:
                   rootDiskSizeGb:
                     description: |
                       root disk size in gigabytes.
-                    example: 20
-                    default: 20
+                    example: 50
+                    default: 50
                     type: integer
                   placementPolicy:
                     description: |
@@ -219,7 +219,7 @@ apiVersions:
                     example: ssd
                   template:
                     description: |
-                      Path of the template OVA that is to be used. Consists of catalog and template path.
+                      Path of the template OVA that is to be used. Consists of organization (optional), catalog, template path.
                     type: string
                     example: Linux/ubuntu2204-cloud-ova
                   mainNetworkIPAddresses:

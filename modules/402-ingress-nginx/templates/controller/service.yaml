@@ -1,6 +1,6 @@
 {{- $context := . }}
 {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
-  {{- if or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") }}
+  {{- if or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough")}}
     {{ $annotations := "" }}
     {{ $sourceRanges := "" }}
     {{- if and (eq $crd.spec.inlet "LoadBalancer") $crd.spec.loadBalancer }}
@@ -9,6 +9,9 @@
     {{- else if and (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") $crd.spec.loadBalancerWithProxyProtocol }}
       {{ $annotations = $crd.spec.loadBalancerWithProxyProtocol.annotations }}
       {{ $sourceRanges = $crd.spec.loadBalancerWithProxyProtocol.sourceRanges  }}
+    {{- else if and (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough") $crd.spec.loadBalancerWithSSLPassthrough }}
+      {{ $annotations = $crd.spec.loadBalancerWithSSLPassthrough.annotations }}
+      {{ $sourceRanges = $crd.spec.loadBalancerWithSSLPassthrough.sourceRanges  }}
     {{- end }}
 ---
 apiVersion: v1

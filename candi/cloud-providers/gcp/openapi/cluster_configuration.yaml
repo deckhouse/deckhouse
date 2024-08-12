@@ -11,7 +11,7 @@ apiVersions:
       Run the following command to change the configuration in a running cluster:
 
       ```shell
-      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit provider-cluster-configuration
       ```
     x-doc-search: |
       ProviderClusterConfiguration
@@ -29,7 +29,7 @@ apiVersions:
           instanceClass:
             machineType: n1-standard-4
             image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20240523a
-            diskSizeGb: 20
+            diskSizeGb: 50
         nodeGroups:
           - name: static
             replicas: 1
@@ -38,7 +38,7 @@ apiVersions:
             instanceClass:
               machineType: n1-standard-4
               image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20240523a
-              diskSizeGb: 20
+              diskSizeGb: 50
               additionalNetworkTags:
                 - tag1
               additionalLabels:
@@ -154,7 +154,7 @@ apiVersions:
                   The list of OS and their versions supported by Deckhouse can be found in the [Deckhouse documentation](https://deckhouse.ru/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
               diskSizeGb: &instanceClassDiskSizeGb
                 description: Instance disk size in gibibytes.
-                example: 20
+                example: 50
                 type: integer
               etcdDiskSizeGb:
                 description: Etcd disk size in gibibytes.

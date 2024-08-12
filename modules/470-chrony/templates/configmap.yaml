@@ -13,6 +13,7 @@ data:
     makestep 1.0 -1
     rtcsync
     bindaddress {{ .HostIP }}
+    port 4234
     cmdallow 127/8
 
     {{ if (eq .NTPRole "source") }}
@@ -21,7 +22,8 @@ data:
     {{ else if (eq .NTPRole "sink") }}
     local stratum 9
     allow 127/8
-    pool {{ .ChronyMastersService }} iburst
+    allow {{ .HostIP }}/32
+    pool {{ .ChronyMastersService }} iburst port 4234
     {{ end }}
 
     {{ range .NTPServers }}

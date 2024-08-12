@@ -9,7 +9,7 @@ metadata:
   annotations:
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.prometheus.auth.externalAuthentication }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.prometheus.auth.externalAuthentication.authSignInURL | quote }}
-    nginx.ingress.kubernetes.io/auth-url: {{ .Values.prometheus.auth.externalAuthentication.authURL | replace "grafana-dex-authenticator.d8-monitoring" "grafana-v10-dex-authenticator.d8-monitoring" | quote }}
+    nginx.ingress.kubernetes.io/auth-url: {{ .Values.prometheus.auth.externalAuthentication.authURL | quote }}
     nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
   {{- else }}
     nginx.ingress.kubernetes.io/auth-type: basic
@@ -24,6 +24,9 @@ metadata:
   {{- end }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/configuration-snippet: |
+      if ($host = '{{ include "helm_lib_module_public_domain" (list . "prometheus") }}' ) {
+        rewrite ^ {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}$request_uri permanent;
+      }
       proxy_ssl_certificate /etc/nginx/ssl/client.crt;
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
@@ -32,7 +35,7 @@ metadata:
     # This rewrite forbids users to log in and get higher privileges.
     nginx.ingress.kubernetes.io/server-snippet: |
       location = /login {
-        rewrite ^ {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana-v10") }} permanent;
+        rewrite ^ {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }} permanent;
       }
     nginx.ingress.kubernetes.io/affinity: cookie
 spec:
@@ -40,11 +43,12 @@ spec:
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:
-    - {{ include "helm_lib_module_public_domain" (list . "grafana-v10") }}
+    - {{ include "helm_lib_module_public_domain" (list . "grafana") }}
+    - {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
     secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   {{- end }}
   rules:
-  - host: {{ include "helm_lib_module_public_domain" (list . "grafana-v10") }}
+  - host: {{ include "helm_lib_module_public_domain" (list . "grafana") }}
     http:
       paths:
       - path: /
@@ -54,4 +58,14 @@ spec:
             name: grafana-v10
             port:
               name: https
+  - host: {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
+    http:
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+          backend:
+            service:
+              name: grafana
+              port:
+                name: https
 {{- end }}

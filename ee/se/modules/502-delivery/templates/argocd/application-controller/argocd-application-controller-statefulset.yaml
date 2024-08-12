@@ -194,6 +194,7 @@ spec:
           name: argocd-application-controller
           ports:
             - containerPort: 8082
+              name: metrics
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 14 }}

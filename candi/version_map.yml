@@ -36,9 +36,9 @@ k8s:
       livenessprobe: v2.11.0
   '1.27':
     status: available
-    patch: 15
+    patch: 16
     bashible: *bashible
-    clusterAutoscalerPatch: '0'
+    clusterAutoscalerPatch: 3
     ccm:
       openstack: v1.27.1
       yandex: v0.27.0
@@ -57,9 +57,9 @@ k8s:
       livenessprobe: v2.11.0
   '1.28':
     status: available
-    patch: 11
+    patch: 12
     bashible: *bashible
-    clusterAutoscalerPatch: '0'
+    clusterAutoscalerPatch: 3
     ccm:
       openstack: v1.28.0
       yandex: v0.27.0
@@ -78,9 +78,9 @@ k8s:
       livenessprobe: v2.11.0
   '1.29':
     status: available
-    patch: 6
+    patch: 7
     bashible: *bashible
-    clusterAutoscalerPatch: '0'
+    clusterAutoscalerPatch: 1
     ccm:
       openstack: v1.29.0
       yandex: v0.29.0
@@ -99,9 +99,9 @@ k8s:
       livenessprobe: v2.12.0
   '1.30':
     status: preview
-    patch: 2
+    patch: 3
     bashible: *bashible
-    clusterAutoscalerPatch: 2
+    clusterAutoscalerPatch: 1
     ccm:
       openstack: v1.30.0
       yandex: v0.29.0

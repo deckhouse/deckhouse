@@ -17,8 +17,14 @@ spec:
   # [<en>] Describes on which nodes the Ingress Controller will be located.
   # [<ru>] Описывает, на каких узлах будет находиться Ingress-контроллер.
   # [<en>] You might consider changing this.
+  # [<en>] More examples here.
+  # [<en>] https://deckhouse.io/documentation/v1/modules/402-ingress-nginx/examples.html
   # [<ru>] Возможно, захотите изменить.
+  # [<ru>] Больше примеров здесь
+  # [<ru>] https://deckhouse.ru/documentation/v1/modules/402-ingress-nginx/examples.html
   nodeSelector:
     node-role.kubernetes.io/control-plane: ""
   tolerations:
-  - operator: Exists
+  - effect: NoSchedule
+    key: dedicated.deckhouse.io
+    value: control-plane

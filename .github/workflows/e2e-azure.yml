@@ -468,7 +468,7 @@ jobs:
           bastion_ip_file=""
           if [[ "${PROVIDER}" == "Static" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+          elif [[ "${PROVIDER}" == "VCD" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
@@ -495,6 +495,7 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -586,6 +587,7 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -945,7 +947,7 @@ jobs:
           bastion_ip_file=""
           if [[ "${PROVIDER}" == "Static" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+          elif [[ "${PROVIDER}" == "VCD" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
@@ -972,6 +974,7 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -1063,6 +1066,7 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -1422,7 +1426,7 @@ jobs:
           bastion_ip_file=""
           if [[ "${PROVIDER}" == "Static" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+          elif [[ "${PROVIDER}" == "VCD" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
@@ -1449,6 +1453,7 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -1540,6 +1545,7 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -1899,7 +1905,7 @@ jobs:
           bastion_ip_file=""
           if [[ "${PROVIDER}" == "Static" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+          elif [[ "${PROVIDER}" == "VCD" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
@@ -1926,6 +1932,7 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -2017,6 +2024,7 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -2376,7 +2384,7 @@ jobs:
           bastion_ip_file=""
           if [[ "${PROVIDER}" == "Static" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+          elif [[ "${PROVIDER}" == "VCD" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
@@ -2403,6 +2411,7 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -2494,6 +2503,7 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -2853,7 +2863,7 @@ jobs:
           bastion_ip_file=""
           if [[ "${PROVIDER}" == "Static" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "vCloudDirector" ]] ; then
+          elif [[ "${PROVIDER}" == "VCD" ]] ; then
             bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           fi
 
@@ -2880,6 +2890,7 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
@@ -2971,6 +2982,7 @@ jobs:
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
             -v $(pwd)/testing:/deckhouse/testing \
+            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \

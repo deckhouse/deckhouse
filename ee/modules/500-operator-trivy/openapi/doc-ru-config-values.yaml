@@ -28,3 +28,9 @@ properties:
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
       Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+
+  reportResourceLabels:
+    description: |
+      Список дополнительных меток маркировки отчетов (VulnerabilityReport) Trivy.
+      
+      Значения этих меток будут соответствовать значениям меток сканируемых ресурсов.

@@ -17,34 +17,44 @@ limitations under the License.
 package alerttemplates
 
 import (
+	"bytes"
+	"cmp"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
+	"sort"
+	"strconv"
 	"strings"
 	"tools/helm_generate/helper"
 
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/helm"
+	"github.com/yuin/goldmark"
 	"gopkg.in/yaml.v3"
 )
 
-// ../deckhause/tools/helm_generate/runners/alert_templates/template_values/[module-name].yaml
+// ../deckhouse/tools/helm_generate/runners/alert_templates/template_values/[module-name].yaml
 const userDefinedValuesPath = "tools/helm_generate/runners/alert_templates/template_values"
 
-// ../deckhause/modules/[module-name]/monitoring/prometheus-rules[template-name].yaml or .tpl
+// ../deckhouse/modules/[module-name]/monitoring/prometheus-rules[template-name].yaml or .tpl
 const prometheusRules = "monitoring/prometheus-rules"
 
-// ../deckhause/modules/[module-name]/templates/_[helper-name].yaml or .tpl
+// ../deckhouse/modules/[module-name]/templates/_[helper-name].yaml or .tpl
 const helpersPath = "templates"
 
 // Deckhouse edition type
 const (
 	ce edition = "ce" // community edition
 	ee edition = "ee" // enterprise edition
+	be edition = "be" // basic edition
+	se edition = "se" // standard edition
 	fe edition = "fe" // fan edition
 )
+
+var deckhouseRoot = ""
 
 type edition string
 
@@ -54,8 +64,39 @@ type module struct {
 	Edition edition
 }
 
+type moduleAlert struct {
+	Name         string `yaml:"name"`
+	SourceFile   string `yaml:"sourceFile"`
+	ModuleUrl    string `yaml:"moduleUrl"`
+	Module       string `yaml:"module"`
+	Edition      string `yaml:"edition"`
+	Description  string `yaml:"description"`
+	Summary      string `yaml:"summary"`
+	Severity     string `yaml:"severity"`
+	MarkupFormat string `yaml:"markupFormat"`
+}
+
+// Function to check if a value exists in a slice
+func containsString(slice []string, value string) bool {
+	for _, v := range slice {
+		if v == value {
+			return true
+		}
+	}
+	return false
+}
+
+func stripHTMLTags(input string) string {
+    re := regexp.MustCompile(`<.*?>`)
+    return re.ReplaceAllString(input, "")
+}
+
 func run() error {
-	deckhouseRoot, err := helper.DeckhouseRoot()
+	var err error
+	d8Alerts := []moduleAlert{}
+	d8ModulesWithAlerts := []string{}
+
+	deckhouseRoot, err = helper.DeckhouseRoot()
 	if err != nil {
 		return err
 	}
@@ -63,14 +104,24 @@ func run() error {
 	for _, module := range modules(deckhouseRoot) {
 		yamlTemplates, tplTemplates := moduleTemplates(module)
 
+		moduleUrlName := module.Name
+		moduleName := module.Name
+		if substr := strings.SplitN(moduleName, "-", 2); len(substr) > 1 {
+			moduleName = substr[1]
+		}
+
 		if len(yamlTemplates) > 0 {
 			for templateName, templateContent := range yamlTemplates {
-				templateContent, err = injectToYaml(templateContent, module.Name, string(module.Edition), filepath.Join(module.Path, prometheusRules, templateName))
+				templateAlerts, err := getAlertsFromTemplate(templateContent, moduleName, moduleUrlName, string(module.Edition), filepath.Join(module.Path, prometheusRules, templateName))
 				if err != nil {
 					return err
 				}
 
-				io.WriteString(os.Stdout, string(templateContent))
+				d8Alerts = append(d8Alerts, templateAlerts...)
+
+				if !containsString(d8ModulesWithAlerts, moduleName) {
+					d8ModulesWithAlerts = append(d8ModulesWithAlerts, moduleName)
+				}
 			}
 		}
 
@@ -81,35 +132,106 @@ func run() error {
 			}
 			for templatePath, templateContent := range renderContent {
 				_, templateName := filepath.Split(templatePath)
-				templateContent, err := injectToYaml([]byte(templateContent), module.Name, string(module.Edition), filepath.Join(module.Path, prometheusRules, templateName))
+				templateAlerts, err := getAlertsFromTemplate([]byte(templateContent), moduleName, moduleUrlName, string(module.Edition), filepath.Join(module.Path, prometheusRules, templateName))
 				if err != nil {
 					return err
 				}
 
-				io.WriteString(os.Stdout, string(templateContent))
+				d8Alerts = append(d8Alerts, templateAlerts...)
+				if !containsString(d8ModulesWithAlerts, moduleName) {
+					d8ModulesWithAlerts = append(d8ModulesWithAlerts, moduleName)
+				}
 			}
 		}
+	}
+
+	slices.SortFunc(d8Alerts, func(a, b moduleAlert) int {
+		return cmp.Compare(strings.ToLower(fmt.Sprintf("%s %s %s %s", a.Name, a.Module, a.Severity, a.Description)), strings.ToLower(fmt.Sprintf("%s %s %s %s", b.Name, b.Module, b.Severity, b.Description)))
+	})
+	sort.Strings(d8ModulesWithAlerts)
+
+	data := map[string]interface{}{
+		"alerts":                d8Alerts,
+		"modules-having-alerts": d8ModulesWithAlerts,
+	}
+	d8AlertsDataYAML, _ := yaml.Marshal(data)
+
+	err = os.WriteFile(filepath.Join(deckhouseRoot, "docs/documentation/_data/deckhouse-alerts.yml"), d8AlertsDataYAML, 0666)
+	if err != nil {
+		panic(err)
 	}
 
 	return nil
 }
 
-func injectToYaml(templateContent []byte, name, edition, sourceFile string) ([]byte, error) {
+func getAlertsFromTemplate(templateContent []byte, moduleName, moduleUrlName, edition, sourceFile string) (alerts []moduleAlert, err error) {
 	var values []map[string]interface{}
-	err := yaml.Unmarshal(templateContent, &values)
+
+	err = yaml.Unmarshal(templateContent, &values)
 	if err != nil {
 		return nil, fmt.Errorf("error processing file %s - %w", sourceFile, err)
 	}
 
-	if substr := strings.SplitN(name, "-", 2); len(substr) > 1 {
-		name = substr[1]
+	for _, value := range values {
+		for _, alert := range value["rules"].([]interface{}) {
+			var description, markupFormat, severity, summary string
+
+			alertMap := alert.(map[string]interface{})
+
+			if _, ok := alertMap["alert"]; !ok {
+				// It is not an alerting rule (it is e. g. a recording rule), so skip it.
+				continue
+			}
+
+			alertAnnotations, ok := alertMap["annotations"].(map[string]interface{})
+			if ok {
+				description, ok = alertAnnotations["description"].(string)
+				if !ok {
+					description = "" // or any other default value
+				}
+				markupFormat, ok = alertAnnotations["plk_markup_format"].(string)
+				if !ok {
+					markupFormat = "default"
+				}
+				if summary, ok = alertAnnotations["summary"].(string); !ok {
+					summary = ""
+				} else {
+					var buf bytes.Buffer
+					if err := goldmark.Convert([]byte(strings.ReplaceAll(summary, "\n", " ")), &buf); err == nil {
+						summary = stripHTMLTags(string(buf.Bytes()))
+						//summary = strings.TrimLeft(summary,"<p>")
+						//summary = strings.TrimRight(summary,"</p>\n")
+					}
+				}
+			}
+
+			alertLabels, ok := alertMap["labels"].(map[string]interface{})
+			severity = "undefined"
+			if ok {
+			    // don't store severity if it is not a number (e.g. it can be a template)
+				if _, err := strconv.Atoi(alertLabels["severity_level"].(string)); err == nil {
+					severity, _ = alertLabels["severity_level"].(string)
+				}
+			}
+
+
+
+			alerts = append(alerts, moduleAlert{
+				Name:         alertMap["alert"].(string),
+				SourceFile:   sourceFile,
+				ModuleUrl:    moduleUrlName,
+				Module:       moduleName,
+				Edition:      edition,
+				Description:  description,
+				Summary:      summary,
+				Severity:     severity,
+				MarkupFormat: markupFormat,
+			})
+		}
 	}
 
-	values[0]["module"] = name
-	values[0]["edition"] = edition
-	values[0]["sourceFile"] = sourceFile
-
-	return yaml.Marshal(values)
+	//return yaml.Marshal(alerts)
+	return alerts, nil
 }
 
 func modules(deckhouseRoot string) (modules []module) {
@@ -119,7 +241,7 @@ func modules(deckhouseRoot string) (modules []module) {
 		if file.IsDir() {
 			md := module{
 				Name:    file.Name(),
-				Path:    filepath.Join(deckhouseRoot, "modules", file.Name()),
+				Path:    filepath.Join("modules", file.Name()),
 				Edition: ce,
 			}
 			modules = append(modules, md)
@@ -132,8 +254,21 @@ func modules(deckhouseRoot string) (modules []module) {
 		if file.IsDir() {
 			md := module{
 				Name:    file.Name(),
-				Path:    filepath.Join(deckhouseRoot, "ee/modules", file.Name()),
+				Path:    filepath.Join("ee/modules", file.Name()),
 				Edition: ee,
+			}
+			modules = append(modules, md)
+		}
+	}
+
+	// be modules
+	files, _ = os.ReadDir(filepath.Join(deckhouseRoot, "ee/be/modules"))
+	for _, file := range files {
+		if file.IsDir() {
+			md := module{
+				Name:    file.Name(),
+				Path:    filepath.Join("ee/be/modules", file.Name()),
+				Edition: be,
 			}
 			modules = append(modules, md)
 		}
@@ -145,8 +280,21 @@ func modules(deckhouseRoot string) (modules []module) {
 		if file.IsDir() {
 			md := module{
 				Name:    file.Name(),
-				Path:    filepath.Join(deckhouseRoot, "ee/fe/modules", file.Name()),
+				Path:    filepath.Join("ee/fe/modules", file.Name()),
 				Edition: fe,
+			}
+			modules = append(modules, md)
+		}
+	}
+
+	// se modules
+	files, _ = os.ReadDir(filepath.Join(deckhouseRoot, "ee/se/modules"))
+	for _, file := range files {
+		if file.IsDir() {
+			md := module{
+				Name:    file.Name(),
+				Path:    filepath.Join("ee/se/modules", file.Name()),
+				Edition: se,
 			}
 			modules = append(modules, md)
 		}
@@ -159,14 +307,14 @@ func moduleTemplates(module module) (yamlTemplates, tplTemplates map[string][]by
 	yamlTemplates = make(map[string][]byte)
 	tplTemplates = make(map[string][]byte)
 
-	files, err := os.ReadDir(filepath.Join(module.Path, prometheusRules))
+	files, err := os.ReadDir(filepath.Join(deckhouseRoot, module.Path, prometheusRules))
 	if err != nil {
 		return
 	}
 
 	for _, file := range files {
 		if !file.IsDir() {
-			content, err := os.ReadFile(filepath.Join(module.Path, prometheusRules, file.Name()))
+			content, err := os.ReadFile(filepath.Join(deckhouseRoot, module.Path, prometheusRules, file.Name()))
 			if err != nil {
 				continue
 			}
@@ -184,11 +332,6 @@ func moduleTemplates(module module) (yamlTemplates, tplTemplates map[string][]by
 }
 
 func readUserDefinedValues(moduleName string) (userDefinedValues []byte, err error) {
-	deckhouseRoot, err := helper.DeckhouseRoot()
-	if err != nil {
-		return nil, err
-	}
-
 	userDefinedValuesPath := filepath.Join(deckhouseRoot, userDefinedValuesPath, moduleName+".yaml")
 
 	return os.ReadFile(userDefinedValuesPath)
@@ -202,12 +345,12 @@ func renderHelmTemplate(module module, templateNames []string) (map[string]strin
 	defer renderDir.Remove()
 
 	for _, templateName := range templateNames {
-		if err := renderDir.AddTemplate(templateName, filepath.Join(module.Path, prometheusRules, templateName)); err != nil {
+		if err := renderDir.AddTemplate(templateName, filepath.Join(deckhouseRoot, module.Path, prometheusRules, templateName)); err != nil {
 			return nil, err
 		}
 	}
 
-	renderDir.AddHelper(filepath.Join(module.Path, helpersPath))
+	renderDir.AddHelper(filepath.Join(deckhouseRoot, module.Path, helpersPath))
 
 	userDefinedValuesRaw, err := readUserDefinedValues(module.Name)
 	if err != nil {
@@ -227,7 +370,7 @@ func renderHelmTemplate(module module, templateNames []string) (map[string]strin
 	r := helm.Renderer{}
 	result, err := r.RenderChartFromDir(renderDir.Path(), string(rawInitValues))
 	if err != nil {
-		templatePath := strings.ReplaceAll(err.Error(), "renderdir/templates", filepath.Join(module.Path, prometheusRules))
+		templatePath := strings.ReplaceAll(err.Error(), "renderdir/templates", filepath.Join(deckhouseRoot, module.Path, prometheusRules))
 		return result, fmt.Errorf("error processing template: %v", templatePath)
 	}
 

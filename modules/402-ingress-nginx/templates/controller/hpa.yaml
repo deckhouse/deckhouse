@@ -104,7 +104,7 @@ spec:
 
 {{- $context := . }}
 {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
-  {{- if or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") }}
+  {{- if or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough") }}
     {{- if ne $crd.spec.minReplicas $crd.spec.maxReplicas }}
       {{ include "ingress-controller-lb-hpa" (list $context $crd $crd.name) }}
     {{- end }}

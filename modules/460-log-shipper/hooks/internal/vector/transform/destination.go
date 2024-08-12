@@ -30,17 +30,15 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 	case v1alpha1.DestElasticsearch, v1alpha1.DestLogstash:
 		transforms = append(transforms, DeDotTransform())
 		fallthrough
-	case v1alpha1.DestVector, v1alpha1.DestKafka:
+	case v1alpha1.DestSocket, v1alpha1.DestVector, v1alpha1.DestKafka:
 		if len(dest.Spec.ExtraLabels) > 0 {
 			transforms = append(transforms, ExtraFieldTransform(dest.Spec.ExtraLabels))
 		}
-		if dest.Spec.Kafka.Encoding.Codec == v1alpha1.EncodingCodecCEF {
+
+		switch v1alpha1.EncodingCodecCEF {
+		case dest.Spec.Kafka.Encoding.Codec, dest.Spec.Socket.Encoding.Codec:
 			transforms = append(transforms, CEFNameAndSeverity())
 		}
-	}
-
-	if dest.Spec.Type == v1alpha1.DestSocket && dest.Spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecSyslog {
-		transforms = append(transforms, SyslogEncoding())
 	}
 
 	if dest.Spec.Type == v1alpha1.DestSplunk {
@@ -60,12 +58,21 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 	}
 
 	switch dest.Spec.Type {
-	case v1alpha1.DestElasticsearch, v1alpha1.DestLogstash, v1alpha1.DestVector:
+	case v1alpha1.DestSocket, v1alpha1.DestElasticsearch, v1alpha1.DestLogstash, v1alpha1.DestVector:
 		transforms = append(transforms, CleanUpParsedDataTransform())
 	case v1alpha1.DestLoki:
 		if len(dest.Spec.ExtraLabels) > 0 {
 			transforms = append(transforms, CreateParseDataTransforms())
 		}
+	}
+
+	/// encoding transforms go last to prevent mutating fields that have to be deleted
+	if dest.Spec.Type == v1alpha1.DestSocket && dest.Spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecSyslog {
+		transforms = append(transforms, SyslogEncoding())
+	}
+
+	if dest.Spec.Type == v1alpha1.DestSocket && dest.Spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecGELF {
+		transforms = append(transforms, GELFCodecRelabeling())
 	}
 
 	dTransforms, err := BuildFromMapSlice("destination", name, transforms)

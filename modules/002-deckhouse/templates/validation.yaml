@@ -60,24 +60,24 @@ spec:
     resourceRules:
       - apiGroups: ["*"]
         apiVersions: ["*"]
-        operations: ["CREATE", "UPDATE"]
-        resources: ["*"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["*"]
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'exclude-groups'
       expression: '!(["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups)))'
-    - name: 'exclude-kube-control-plane' # Ignore kube-controller manager and kube-scheduler
-      expression: '!(["system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler"].exists(e, (e == request.userInfo.username)))'
+    - name: 'exclude-users'
+      expression: '!(["kubernetes-admin", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler"].exists(e, (e == request.userInfo.username)))'
   validations:
     - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-")'
       reason: Forbidden
-      messageExpression: '''Creating an object with the `heritage: deckhouse` label is forbidden'''
+      messageExpression: '''Creating, updating and deleting an objects with the `heritage: deckhouse` label is forbidden'''
   auditAnnotations:
     - key: 'source-user'
       valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change object with the heritage label'"
 {{- else }}
   validations:
-    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || ["system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler"].exists(e, (e == request.userInfo.username)) || ["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups))'
+    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || ["kubernetes-admin", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler"].exists(e, (e == request.userInfo.username)) || ["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups))'
       reason: Forbidden
 {{- end }}
 ---

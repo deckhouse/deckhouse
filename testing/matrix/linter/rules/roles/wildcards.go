@@ -43,6 +43,10 @@ var skipCheckWildcards = map[string][]string{
 		// We read all resources from the `deckhouse.io` api group
 		"d8:deckhouse:webhook-handler",
 	},
+	"vertical-pod-autoscaler/templates/rbac-for-us.yaml": {
+		// VPA can scale CR and must have access to */scale subresources.
+		"d8:vertical-pod-autoscaler:controllers-reader",
+	},
 
 	// Have to be reviewed
 
@@ -58,26 +62,14 @@ var skipCheckWildcards = map[string][]string{
 	"cloud-provider-yandex/templates/cloud-controller-manager/rbac-for-us.yaml": {
 		"d8:cloud-provider-yandex:cloud-controller-manager",
 	},
-	"istio/templates/kiali/rbac-for-us.yaml": {
-		"d8:istio:kiali",
-	},
-	"istio/templates/operator/rbac-for-us.yaml": {
-		"d8:istio:operator",
-	},
 	"operator-prometheus/templates/rbac-for-us.yaml": {
 		"d8:operator-prometheus",
 	},
 	"prometheus-metrics-adapter/templates/rbac-for-us.yaml": {
 		"d8:prometheus-metrics-adapter:horizontal-pod-autoscaler-external-metrics",
 	},
-	"vertical-pod-autoscaler/templates/rbac-for-us.yaml": {
-		"d8:vertical-pod-autoscaler:controllers-reader",
-	},
 	"ingress-nginx/templates/kruise/rbac-for-us.yaml": {
 		"d8:ingress-nginx:kruise-role",
-	},
-	"cilium-hubble/templates/ui/rbac-for-us.yaml": {
-		"d8:cilium-hubble:ui:reader",
 	},
 	"okmeter/templates/rbac-for-us.yaml": {
 		"d8:okmeter",
@@ -107,6 +99,9 @@ var skipCheckWildcards = map[string][]string{
 	"cloud-provider-zvirt/templates/cloud-controller-manager/rbac-for-us.yaml": {
 		"d8:cloud-provider-zvirt:cloud-controller-manager",
 	},
+	"istio/templates/operator/rbac-for-us.yaml": {
+		"d8:istio:operator",
+	}, // istiod deploy doesn't work without wildcard
 }
 
 // ObjectRolesWildcard is a linter for checking the presence

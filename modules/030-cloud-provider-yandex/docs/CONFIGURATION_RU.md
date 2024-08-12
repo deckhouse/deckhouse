@@ -4,7 +4,7 @@ title: "Cloud provider — Yandex Cloud: настройки"
 
 > **Внимание!** При изменении настроек модуля **пересоздания существующих объектов `Machines` в кластере НЕ происходит** (новые объекты `Machine` будут создаваться с новыми параметрами). Пересоздание происходит только при изменении параметров `NodeGroup` и `YandexInstanceClass`. Подробнее в документации модуля [node-manager](../../modules/040-node-manager/faq.html#как-пересоздать-эфемерные-машины-в-облаке-с-новой-конфигурацией).
 
-{% include module-settings.liquid %}
+{% include module-alerts.liquid %}
 
 ## Storage
 
@@ -34,3 +34,5 @@ title: "Cloud provider — Yandex Cloud: настройки"
 Модуль подписывается на объекты Service с типом `LoadBalancer` и создает соответствующие `NetworkLoadBalancer` и `TargetGroup` в Yandex Cloud.
 
 Больше информации [в документации Kubernetes Cloud Controller Manager for Yandex Cloud](https://github.com/flant/yandex-cloud-controller-manager).
+
+{% include module-settings.liquid %}
