@@ -14,7 +14,7 @@ docker:
   LABEL:
     distro: all
     version: all
-    d8: {{ $version }}
+    d8: v{{ $.d8.d8CliVersion }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_22_BULLSEYE_DEV }}
