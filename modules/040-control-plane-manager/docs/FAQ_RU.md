@@ -330,13 +330,17 @@ https://10.2.1.102:2379, d282ac2ce600c1ce, 3.5.3, 182 MB, true, false, 42007, 40
 Данный вариант может понадобиться, если `--force-new-cluster` не восстанавливает работу etcd. Такое может случиться при неудачном converge master-узлов, когда новый master-узел был создан со старым диском etcd, поменял свой адрес из локальной сети, и другие master-узлы отсутствуют. Симптомы, при которых стоит использовать данный способ: контейнер etcd в бесконечном рестарте, в его логе ошибка: `panic: unexpected removal of unknown remote peer`.
 
 1. Установите утилиту [etcdutl](https://github.com/etcd-io/etcd/releases).
-1. С текущего локального снапшота (`/var/lib/etcd/member/snap/db`) выполните создание нового снапшота, где `HOSTNAME` название master-узла, а `ADDRESS` его адрес:
+1. С текущего локального снапшота базы etcd (`/var/lib/etcd/member/snap/db`) выполните создание нового снапшота:
 
    ```shell
-   ./etcdutl snapshot restore /var/lib/etcd/member/snap/db --name HOSTNAME \
-   --initial-cluster=HOSTNAME=https://ADDRESS:2380 --initial-advertise-peer-urls=https://ADDRESS:2380 \
+   ./etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
+   --initial-cluster=HOSTNAME=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://ADDRESS:2380 \
    --skip-hash-check=true --data-dir /var/lib/etcdtest
    ```
+
+   , где:
+   - `<HOSTNAME>` — название master-узла;
+   - `<ADDRESS>` — адрес master-узла.
 
 1. Выполните команды, для использования нового снапшота:
 
@@ -346,7 +350,18 @@ https://10.2.1.102:2379, d282ac2ce600c1ce, 3.5.3, 182 MB, true, false, 42007, 40
    mv /var/lib/etcdtest /var/lib/etcd
    ```
 
-1. Найдите контейнеры `etcd` и `api-server` (`crictl ps -a | egrep "etcd|apiserver"`) и выполните их удаление (`crictl rm CONTAINER-ID`).
+1. Найдите контейнеры `etcd` и `api-server`:
+
+   ```shell
+   crictl ps -a | egrep "etcd|apiserver"
+   ```
+
+1. Удалите найденные контейнеры `etcd` и `api-server`:
+
+   ```shell
+   crictl rm <CONTAINER-ID>
+   ```
+
 1. Перезапустите master-узел.
 
 ## Как настроить дополнительные политики аудита?
