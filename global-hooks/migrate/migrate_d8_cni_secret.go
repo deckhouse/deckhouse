@@ -152,6 +152,7 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 				"podNetworkMode": flannelConfig.PodNetworkMode,
 			},
 		}
+		cniModuleConfig.Spec.Version = 1
 
 	case "cilium":
 		ciliumConfig := CiliumConfigStruct{}
@@ -171,7 +172,7 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 			ciliumSettings["tunnelMode"] = "Disabled"
 		case "DirectWithNodeRoutes":
 			ciliumSettings["tunnelMode"] = "Disabled"
-			ciliumSettings["createNodeRoutes"] = "true"
+			ciliumSettings["createNodeRoutes"] = true
 		default:
 			return fmt.Errorf("unknown cilium mode %s", ciliumConfig.Mode)
 		}
@@ -182,6 +183,7 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 			Enabled:  pointer.Bool(true),
 			Settings: ciliumSettings,
 		}
+		cniModuleConfig.Spec.Version = 1
 
 	default:
 		return fmt.Errorf("unknown cni name: %s", cniName)
