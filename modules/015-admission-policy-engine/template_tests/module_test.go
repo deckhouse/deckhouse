@@ -50,6 +50,7 @@ clusterConfiguration:
 discovery:
   clusterMasterCount: 3
   prometheusScrapeInterval: 30
+  kubernetesVersion: "1.27.3"
   d8SpecificNodeCountByRole:
     system: 1
 modules:
@@ -57,7 +58,7 @@ modules:
 `
 )
 
-var _ = FDescribe("Module :: admissionPolicyEngine :: helm template ::", func() {
+var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 	f := SetupHelmConfig(`{"admissionPolicyEngine": {"denyVulnerableImages": {}, "podSecurityStandards": {}, "internal": {"podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
     {
       "metadata": {
