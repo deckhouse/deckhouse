@@ -50,6 +50,7 @@ git:
   - common-steps
   - bootstrap
   - bashible.sh.tpl
+  - detect_bundle.sh
 
   excludePaths:
   - "**/cluster-bootstrap"
