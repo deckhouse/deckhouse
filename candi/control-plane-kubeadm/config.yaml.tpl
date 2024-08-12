@@ -6,15 +6,15 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- if semverCompare ">= 1.26" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "ValidatingAdmissionPolicy=true" | join "," }}
 {{- end }}
+{{- if semverCompare "> 1.26" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "AdmissionWebhookMatchConditions=true" | join "," }}
+{{- end }}
 {{- if semverCompare "< 1.27" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" | join "," }}
 {{- end }}
 {{- if semverCompare "< 1.28" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "EndpointSliceTerminatingCondition=true" | join "," }}
     {{- $featureGates = list $featureGates "InTreePluginRBDUnregister=true" | join "," }}
-{{- end }}
-{{- if semverCompare "> 1.26" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = list $featureGates "AdmissionWebhookMatchConditions=true" | join "," }}
 {{- end }}
 
 apiVersion: kubeadm.k8s.io/v1beta3
