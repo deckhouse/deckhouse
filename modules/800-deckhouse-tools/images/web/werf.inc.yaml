@@ -1,4 +1,3 @@
-{{- $version := "v0.3.0" }}
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/nginx-static
 mount:
@@ -34,7 +33,7 @@ import:
 shell:
   setup:
     - export GOPROXY={{ $.GOPROXY }}
-    - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
+    - git clone --depth 1 --branch v{{ $.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
     - sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d v3.38.0
     - cd /deckhouse-cli
     - task build:dist:all
