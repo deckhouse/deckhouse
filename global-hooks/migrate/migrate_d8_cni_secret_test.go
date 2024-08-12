@@ -149,4 +149,184 @@ var _ = Describe("Global hooks :: migrate_d8_cni_secret ::", func() {
 
 	})
 
+	Context("Cluster has d8-cni-configuration secret for cni-cilium (VXLAN, BPF)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			createFakeCNISecret("cilium", `{"mode": "VXLAN", "masqueradeMode": "BPF"}`)
+			f.RunHook()
+		})
+
+		It("Should run succesfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("MC cni-cilium should be created, d8-cni-configuration secret should be removed", func() {
+			mc := f.KubernetesResource("ModuleConfig", "", "cni-cilium")
+			Expect(mc.Exists()).To(BeTrue())
+			Expect(mc.Field("spec.enabled").Bool()).To(BeTrue())
+			Expect(mc.Field("spec.settings.tunnelMode").String()).To(Equal("VXLAN"))
+			Expect(mc.Field("spec.settings.masqueradeMode").String()).To(Equal("BPF"))
+			Expect(mc.Field("spec.settings.createNodeRoutes").Bool()).To(BeFalse())
+
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Cluster has d8-cni-configuration secret for cni-cilium (VXLAN, Netfilter)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			createFakeCNISecret("cilium", `{"mode": "VXLAN", "masqueradeMode": "Netfilter"}`)
+			f.RunHook()
+		})
+
+		It("Should run succesfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("MC cni-cilium should be created, d8-cni-configuration secret should be removed", func() {
+			mc := f.KubernetesResource("ModuleConfig", "", "cni-cilium")
+			Expect(mc.Exists()).To(BeTrue())
+			Expect(mc.Field("spec.enabled").Bool()).To(BeTrue())
+			Expect(mc.Field("spec.settings.tunnelMode").String()).To(Equal("VXLAN"))
+			Expect(mc.Field("spec.settings.masqueradeMode").String()).To(Equal("Netfilter"))
+			Expect(mc.Field("spec.settings.createNodeRoutes").Bool()).To(BeFalse())
+
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Cluster has d8-cni-configuration secret for cni-cilium (Direct, BPF)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			createFakeCNISecret("cilium", `{"mode": "Direct", "masqueradeMode": "BPF"}`)
+			f.RunHook()
+		})
+
+		It("Should run succesfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("MC cni-cilium should be created, d8-cni-configuration secret should be removed", func() {
+			mc := f.KubernetesResource("ModuleConfig", "", "cni-cilium")
+			Expect(mc.Exists()).To(BeTrue())
+			Expect(mc.Field("spec.enabled").Bool()).To(BeTrue())
+			Expect(mc.Field("spec.settings.tunnelMode").String()).To(Equal("Disabled"))
+			Expect(mc.Field("spec.settings.masqueradeMode").String()).To(Equal("BPF"))
+			Expect(mc.Field("spec.settings.createNodeRoutes").Bool()).To(BeFalse())
+
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Cluster has d8-cni-configuration secret for cni-cilium (Direct, Netfilter)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			createFakeCNISecret("cilium", `{"mode": "Direct", "masqueradeMode": "Netfilter"}`)
+			f.RunHook()
+		})
+
+		It("Should run succesfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("MC cni-cilium should be created, d8-cni-configuration secret should be removed", func() {
+			mc := f.KubernetesResource("ModuleConfig", "", "cni-cilium")
+			Expect(mc.Exists()).To(BeTrue())
+			Expect(mc.Field("spec.enabled").Bool()).To(BeTrue())
+			Expect(mc.Field("spec.settings.tunnelMode").String()).To(Equal("Disabled"))
+			Expect(mc.Field("spec.settings.masqueradeMode").String()).To(Equal("Netfilter"))
+			Expect(mc.Field("spec.settings.createNodeRoutes").Bool()).To(BeFalse())
+
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Cluster has d8-cni-configuration secret for cni-cilium (DirectWithNodeRoutes, BPF)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			createFakeCNISecret("cilium", `{"mode": "DirectWithNodeRoutes", "masqueradeMode": "BPF"}`)
+			f.RunHook()
+		})
+
+		It("Should run succesfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("MC cni-cilium should be created, d8-cni-configuration secret should be removed", func() {
+			mc := f.KubernetesResource("ModuleConfig", "", "cni-cilium")
+			Expect(mc.Exists()).To(BeTrue())
+			Expect(mc.Field("spec.enabled").Bool()).To(BeTrue())
+			Expect(mc.Field("spec.settings.tunnelMode").String()).To(Equal("Disabled"))
+			Expect(mc.Field("spec.settings.masqueradeMode").String()).To(Equal("BPF"))
+			Expect(mc.Field("spec.settings.createNodeRoutes").Bool()).To(BeTrue())
+
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Cluster has d8-cni-configuration secret for cni-cilium (DirectWithNodeRoutes, Netfilter)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			createFakeCNISecret("cilium", `{"mode": "DirectWithNodeRoutes", "masqueradeMode": "Netfilter"}`)
+			f.RunHook()
+		})
+
+		It("Should run succesfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("MC cni-cilium should be created, d8-cni-configuration secret should be removed", func() {
+			mc := f.KubernetesResource("ModuleConfig", "", "cni-cilium")
+			Expect(mc.Exists()).To(BeTrue())
+			Expect(mc.Field("spec.enabled").Bool()).To(BeTrue())
+			Expect(mc.Field("spec.settings.tunnelMode").String()).To(Equal("Disabled"))
+			Expect(mc.Field("spec.settings.masqueradeMode").String()).To(Equal("Netfilter"))
+			Expect(mc.Field("spec.settings.createNodeRoutes").Bool()).To(BeTrue())
+
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Cluster has d8-cni-configuration secret for cni-cilium (DirectWithNodeRoutes, not set)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			createFakeCNISecret("cilium", `{"mode": "DirectWithNodeRoutes"}`)
+			f.RunHook()
+		})
+
+		It("Should run succesfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("MC cni-cilium should be created, d8-cni-configuration secret should be removed", func() {
+			mc := f.KubernetesResource("ModuleConfig", "", "cni-cilium")
+			Expect(mc.Exists()).To(BeTrue())
+			Expect(mc.Field("spec.enabled").Bool()).To(BeTrue())
+			Expect(mc.Field("spec.settings.tunnelMode").String()).To(Equal("Disabled"))
+			Expect(mc.Field("spec.settings.masqueradeMode").String()).To(BeEmpty())
+			Expect(mc.Field("spec.settings.createNodeRoutes").Bool()).To(BeTrue())
+
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Cluster has d8-cni-configuration secret for cni-cilium (not set, not set)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			createFakeCNISecret("cilium", "")
+			f.RunHook()
+		})
+
+		It("Should run succesfully", func() {
+			Expect(f).NotTo(ExecuteSuccessfully())
+		})
+	})
+
 })

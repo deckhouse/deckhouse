@@ -154,7 +154,7 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 		}
 
 	case "cilium":
-		var ciliumConfig CiliumConfigStruct
+		ciliumConfig := CiliumConfigStruct{}
 		ciliumJSON, ok := d8cniSecret.Data["cilium"]
 		if ok {
 			err := json.Unmarshal(ciliumJSON, &ciliumConfig)
@@ -163,7 +163,7 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 			}
 		}
 
-		var ciliumSettings config.SettingsValues
+		ciliumSettings := config.SettingsValues{}
 		switch ciliumConfig.Mode {
 		case "VXLAN":
 			ciliumSettings["tunnelMode"] = "VXLAN"
@@ -176,7 +176,7 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 			return fmt.Errorf("unknown cilium mode %s", ciliumConfig.Mode)
 		}
 
-		ciliumSettings["masquaradeMode"] = ciliumConfig.MasqueradeMode
+		ciliumSettings["masqueradeMode"] = ciliumConfig.MasqueradeMode
 
 		cniModuleConfig.Spec = config.ModuleConfigSpec{
 			Enabled:  pointer.Bool(true),
