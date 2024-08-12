@@ -124,6 +124,11 @@ properties:
                     Токен для авторизации на webhook.
 
                     Токен будет в заголовке `Authorization` в формате `Bearer <token>`.
+          releaseType:
+            description: |
+              releaseType определяет на какие версии будет отправлена нотификация:
+              `Minor`: только для релизов с новой минорной версией
+              `All`: для всех релизов включая патч версии
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.

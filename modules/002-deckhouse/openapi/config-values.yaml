@@ -206,6 +206,17 @@ properties:
                     The token for the webhook.
 
                     The token will be sent in the `Authorization` header in the format `Bearer <token>`.
+          releaseType:
+            type: string
+            description: |
+              releaseType defines which versions the notification will be sent to:
+              `Minor`: only for releases with a new minor version
+              `All`: for all releases including patch versions
+            x-examples: "All"
+            enum:
+              - "All"
+              - "Minor"
+            default: "Minor"
   nodeSelector:
     type: object
     additionalProperties:
