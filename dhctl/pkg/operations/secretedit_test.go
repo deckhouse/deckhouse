@@ -71,6 +71,5 @@ serviceSubnetCIDR: 10.222.0.0/16
 test: "25"
 `)
 		abstractEditing = Edit
-
 	})
 }
