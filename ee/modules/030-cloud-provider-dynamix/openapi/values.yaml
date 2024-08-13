@@ -271,3 +271,14 @@ properties:
               type: string
       cniSecretData:
         type: string
+      storageClasses:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            storageDomain:
+              type: string
+      defaultStorageClass:
+        type: string

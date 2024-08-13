@@ -13,5 +13,6 @@ volumeBindingMode: WaitForFirstConsumer
 parameters:
   pool: {{ $storageClass.pool | quote }}
   accountId: {{ $storageClass.accountId | quote }}
-  gid: {{ $storageClass.gid | quote }}
+  gId: {{ $storageClass.gid | quote }}
+  sepId: {{ $storageClass.sepId | quote }}
 {{- end }}
