@@ -169,9 +169,9 @@ func buildModuleConfigWithOverrides(
 	return mc, nil
 }
 
-func CheckOrSetupArbitaryCNIModuleConfig(moduleConfigs []*ModuleConfig, providerName string) (*ModuleConfig, error) {
+func CheckOrSetupArbitaryCNIModuleConfig(moduleConfigs []*ModuleConfig, schemasStore *SchemaStore, providerName string) (*ModuleConfig, error) {
 	for _, moduleConfig := range moduleConfigs {
-		switch moduleConfig.Name {
+		switch moduleConfig.GetName() {
 		case "cni-cilium", "cni-flannel", "cni-simple-bridge":
 			if *moduleConfig.Spec.Enabled {
 				log.InfoF("Found enabled ModuleConfig for '%s' cni, skipping creation.\n", moduleConfig.Name)
@@ -181,38 +181,50 @@ func CheckOrSetupArbitaryCNIModuleConfig(moduleConfigs []*ModuleConfig, provider
 	}
 
 	log.InfoLn("Doesn't found ModuleConfig for cni, creating.")
-	cniMC := &ModuleConfig{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: ModuleConfigGroup + "/" + ModuleConfigVersion,
-			Kind:       ModuleConfigKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{},
-		Spec: ModuleConfigSpec{
-			Enabled: pointer.Bool(true),
-			Version: 1,
-		},
-	}
+	cniMC := &ModuleConfig{}
+	cniMC.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   ModuleConfigGroup,
+		Version: ModuleConfigVersion,
+		Kind:    ModuleConfigKind,
+	})
+
+	cniMC.Spec.Enabled = pointer.Bool(true)
 
 	switch providerName {
 
 	// static or unknown provider
 	case "openstack":
-		cniMC.Name = "cni-cilium"
+		cniMC.SetName("cni-cilium")
+		v := schemasStore.GetModuleConfigVersion("cni-cilium")
+		cniMC.Spec.Version = v
 		cniMC.Spec.Settings = SettingsValues{
 			"tunnelMode":     "VXLAN",
 			"masqueradeMode": "BPF",
 		}
 
 	case "aws", "yandex", "gcp", "azure":
-		cniMC.Name = "cni-simple-bridge"
+		cniMC.SetName("cni-simple-bridge")
+		v := schemasStore.GetModuleConfigVersion("cni-simple-bridge")
+		cniMC.Spec.Version = v
 
 	default:
-		cniMC.Name = "cni-cilium"
+		cniMC.SetName("cni-cilium")
+		v := schemasStore.GetModuleConfigVersion("cni-cilium")
+		cniMC.Spec.Version = v
 		cniMC.Spec.Settings = SettingsValues{
 			"tunnelMode":       "Disabled",
 			"createNodeRoutes": true,
 			"masqueradeMode":   "Netfilter",
 		}
+	}
+	doc, err := yaml.Marshal(cniMC)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = schemasStore.Validate(&doc)
+	if err != nil {
+		return nil, err
 	}
 
 	return cniMC, nil
