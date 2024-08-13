@@ -14,4 +14,4 @@
 # limitations under the License.
 
 set -Eeo pipefail
-rm -f /opt/deckhouse/bin/auth_server
+rm -f /opt/deckhouse/bin/auth_server /opt/deckhouse/bin/registry

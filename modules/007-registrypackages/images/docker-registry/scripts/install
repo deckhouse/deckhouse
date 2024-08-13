@@ -15,4 +15,4 @@
 
 set -Eeo pipefail
 mkdir -p /opt/deckhouse/bin
-cp -f auth_server /opt/deckhouse/bin
+cp -f auth_server registry /opt/deckhouse/bin
