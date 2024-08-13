@@ -3,7 +3,7 @@ title: "How to start module in the DKP claster?"
 permalink: en/module-development/run/
 ---
 
-This section covers the process of running a configured module in a cluster managed by Deckhouse Kubernetes Platform (DKP).
+This section covers the process of running a configured module in a cluster managed by Deckhouse Platform Certified Security Edition (DKP).
 
 Follow these steps to run the module in a cluster:
 

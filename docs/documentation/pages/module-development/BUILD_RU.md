@@ -4,7 +4,7 @@ permalink: ru/module-development/build/
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) использует container registry для загрузки и обновления модуля. В container registry хранятся артефакты модуля. Артефакты модуля появляются в результате сборки модуля, после чего их можно загрузить (опубликовать) в registry.
+Deckhouse Platform Certified Security Edition (DKP) использует container registry для загрузки и обновления модуля. В container registry хранятся артефакты модуля. Артефакты модуля появляются в результате сборки модуля, после чего их можно загрузить (опубликовать) в registry.
 
 ## Состав артефактов модуля
 

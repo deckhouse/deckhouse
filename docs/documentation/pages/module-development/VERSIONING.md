@@ -51,7 +51,7 @@ The *ModuleConfig* resource allows you to control additional module options. The
 
 A warning is shown when attempting to enable functions that have stages other than `GA`.
 
-In the Deckhouse Kubernetes Platform (DKP) settings, you can define global rules that determine which features and at what stage can be enabled in a cluster. This helps prevent Experimental features from being used accidentally in production environments.
+In the Deckhouse Platform Certified Security Edition (DKP) settings, you can define global rules that determine which features and at what stage can be enabled in a cluster. This helps prevent Experimental features from being used accidentally in production environments.
 -->
 
 ## API versioning

@@ -73,7 +73,7 @@ lang: ru
    echo "FROM quay.io/giantswarm/helloworld:0.2.0" > images/hello-world-module/Dockerfile
    ```
 
-1. Замените образ в манифесте Deployment на хелпер библиотеки Deckhouse Kubernetes Platform. Это позволит использовать актуальный content-based-тэг образа.
+1. Замените образ в манифесте Deployment на хелпер библиотеки Deckhouse Platform Certified Security Edition. Это позволит использовать актуальный content-based-тэг образа.
 
    ```shell
    sed -Ei 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloWorldModule") }}/g' templates/deployment.yaml
@@ -127,11 +127,11 @@ lang: ru
 
 1. Убедитесь, что workflow публикации модуля выполнился успешно.
 
-Модуль стал доступным для подключения в кластере Deckhouse Kubernetes Platform.
+Модуль стал доступным для подключения в кластере Deckhouse Platform Certified Security Edition.
 
 ## Подключение модуля в кластере
 
-Пример подключения модуля `hello-world-module` в кластере Deckhouse Kubernetes Platform.
+Пример подключения модуля `hello-world-module` в кластере Deckhouse Platform Certified Security Edition.
 
 1. Создайте токен доступа в репозитории GitHub с правами для работы с GitHub Packages.
 1. Сгенерируйте строку аутентификации для доступа к GitHub Packages container registry в формате [dockerconfigjson](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#registry-secret-existing-credentials), указав имя пользователя (или организации) GitHub и токен доступа:
@@ -216,7 +216,7 @@ lang: ru
    hello-world-module-v0.0.1           Deployed     hello-world-module   22m            
    ```
 
-1. В случае успешной установки релизов дождитесь перезапуска пода Deckhouse Kubernetes Platform.
+1. В случае успешной установки релизов дождитесь перезапуска пода Deckhouse Platform Certified Security Edition.
 
    ```shell
    kubectl -n d8-system get pod -l app=deckhouse

@@ -3,7 +3,7 @@ title: "The list of alerts"
 permalink: en/alerts.html
 ---
 
-The page displays a list of all alerts of monitoring in the Deckhouse Kubernetes Platform.
+The page displays a list of all alerts of monitoring in the Deckhouse Platform Certified Security Edition.
 
 Alerts are grouped by modules. To the right of the alert name, there are icons indicating the minimum DKP edition in which the alert is available, and the alert severity.
 

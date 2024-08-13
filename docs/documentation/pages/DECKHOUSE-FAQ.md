@@ -480,8 +480,8 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
    ```
 
    where:
-   - `<EDITION>` — the edition code of the Deckhouse Kubernetes Platform (for example, `ee`, `se`, `cse`);
-   - `<LICENSE_KEY>` — Deckhouse Kubernetes Platform license key.
+   - `<EDITION>` — the edition code of the Deckhouse Platform Certified Security Edition (for example, `ee`, `se`, `cse`);
+   - `<LICENSE_KEY>` — Deckhouse Platform Certified Security Edition license key.
 
    > If the loading of images is interrupted, rerunning the command will resume the loading if no more than a day has passed since it stopped.
 

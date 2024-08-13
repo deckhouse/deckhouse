@@ -72,7 +72,7 @@ This section provides an example of creating a `hello-world-module` module based
    echo "FROM quay.io/giantswarm/helloworld:0.2.0" > images/hello-world-module/Dockerfile
    ```
 
-1. Replace the image in the Deployment manifest with the Deckhouse Kubernetes Platform library helper. This will allow you to use the current content-based image tag.
+1. Replace the image in the Deployment manifest with the Deckhouse Platform Certified Security Edition library helper. This will allow you to use the current content-based image tag.
 
    ```shell
    sed -Ei 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloWorldModule") }}/g' templates/deployment.yaml
@@ -126,11 +126,11 @@ Here's how you can publish version `v0.0.1` of the module to the *Alpha* release
 
 1. Confirm that the module publishing workflow has completed successfully.
 
-You can now access your module in a cluster managed by Deckhouse Kubernetes Platform.
+You can now access your module in a cluster managed by Deckhouse Platform Certified Security Edition.
 
 ## Enabling a module in a cluster
 
-The following is the sequence of steps to enable the `hello-world-module` in a cluster managed by Deckhouse Kubernetes Platform.
+The following is the sequence of steps to enable the `hello-world-module` in a cluster managed by Deckhouse Platform Certified Security Edition.
 
 1. Create an access token in the GitHub repository with permissions to handle GitHub Packages.
 1. Generate an authentication string to access the GitHub Packages container registry in [dockerconfigjson](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#registry-secret-existing-credentials) format; insert your GitHub username (or organization) and access token in the angle brackets below:
@@ -215,7 +215,7 @@ The following is the sequence of steps to enable the `hello-world-module` in a c
    hello-world-module-v0.0.1           Deployed     hello-world-module   22m            
    ```
 
-1. If the release has been successfully installed, wait for the Deckhouse Kubernetes Platform pod to restart.
+1. If the release has been successfully installed, wait for the Deckhouse Platform Certified Security Edition pod to restart.
 
    ```shell
    kubectl -n d8-system get pod -l app=deckhouse

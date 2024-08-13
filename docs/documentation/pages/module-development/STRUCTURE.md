@@ -82,7 +82,7 @@ Below is an example of the directory structure of a module created from a _templ
 
 The `/charts` directory contains Helm helper charts used when rendering templates.
 
-Deckhouse Kubernetes Platform (DKP) has its own library for working with templates called [lib-helm](https://github.com/deckhouse/lib-helm). You can read about the library's features [in the lib-helm repository](https://github.com/deckhouse/lib-helm/blob/main/charts/helm_lib/README.md). To add the library to the module, download the [tgz-archive](https://github.com/deckhouse/lib-helm/releases/) with the appropriate release and move it to the `/charts` directory of the module.
+Deckhouse Platform Certified Security Edition (DKP) has its own library for working with templates called [lib-helm](https://github.com/deckhouse/lib-helm). You can read about the library's features [in the lib-helm repository](https://github.com/deckhouse/lib-helm/blob/main/charts/helm_lib/README.md). To add the library to the module, download the [tgz-archive](https://github.com/deckhouse/lib-helm/releases/) with the appropriate release and move it to the `/charts` directory of the module.
 
 ## crds
 
@@ -301,7 +301,7 @@ There are two ways to define a container image:
 
 The image name matches the directory name for this module, written in _camelCase_ notation starting with a small letter. For example, the directory `/images/echo-server` corresponds to the image name `echoServer`.
 
-The built images have content-based tags that can be used when building other images. To use content-based image tags, [enable the lib-helm](#charts) library. You can also use other features of the [helm_lib library](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib) of Deckhouse Kubernetes Platform.
+The built images have content-based tags that can be used when building other images. To use content-based image tags, [enable the lib-helm](#charts) library. You can also use other features of the [helm_lib library](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib) of Deckhouse Platform Certified Security Edition.
 
 Below is an example of using a content-based image tag in a Helm chart:
 

@@ -4,7 +4,7 @@ title: "The user-authn module: usage"
 
 ## An example of the module configuration
 
-The example shows the configuration of the 'user-authn` module in the Deckhouse Kubernetes Platform.
+The example shows the configuration of the 'user-authn` module in the Deckhouse Platform Certified Security Edition.
 
 {% raw %}
 

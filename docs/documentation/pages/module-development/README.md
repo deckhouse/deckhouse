@@ -1,9 +1,9 @@
 ---
-title: "Deckhouse Kubernetes Platform module development"
+title: "Deckhouse Platform Certified Security Edition module development"
 permalink: en/module-development/
 ---
 
-Deckhouse Kubernetes Platform (DKP) supports both built-in modules and modules that can be fetched from a _module source_. This section describes how to create and run a custom module in the cluster using the module source.
+Deckhouse Platform Certified Security Edition (DKP) supports both built-in modules and modules that can be fetched from a _module source_. This section describes how to create and run a custom module in the cluster using the module source.
 
 There are three key stages in the life of a module:
 

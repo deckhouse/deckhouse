@@ -5,7 +5,7 @@ entries:
         en: Overview
         ru: Введение в документацию
       url: /deckhouse-overview.html
-    - title: Deckhouse Kubernetes Platform
+    - title: Deckhouse Platform Certified Security Edition
       folders:
         - title:
             en: Platform installation

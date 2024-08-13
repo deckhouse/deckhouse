@@ -83,7 +83,7 @@ lang: ru
 
 В папке `/charts` находятся вспомогательные чарты Helm, которые используются при рендере шаблонов.
 
-У Deckhouse Kubernetes Platform (DKP) существует собственная библиотека для работы с шаблонами – [lib-helm](https://github.com/deckhouse/lib-helm). О возможностях библиотеки можно почитать [в репозитории lib-helm](https://github.com/deckhouse/lib-helm/blob/main/charts/helm_lib/README.md). Чтобы положить библиотеку в модуль, загрузите [tgz-архив](https://github.com/deckhouse/lib-helm/releases/) с нужным релизом и переместите его в директорию `/charts` модуля.
+У Deckhouse Platform Certified Security Edition (DKP) существует собственная библиотека для работы с шаблонами – [lib-helm](https://github.com/deckhouse/lib-helm). О возможностях библиотеки можно почитать [в репозитории lib-helm](https://github.com/deckhouse/lib-helm/blob/main/charts/helm_lib/README.md). Чтобы положить библиотеку в модуль, загрузите [tgz-архив](https://github.com/deckhouse/lib-helm/releases/) с нужным релизом и переместите его в директорию `/charts` модуля.
 
 ## crds
 
@@ -302,7 +302,7 @@ if **name** == "**main**":
 
 Имя образа совпадает с именем директории для этого модуля, записанным в нотации _camelCase_ с маленькой буквы. Например, директории `/images/echo-server` соответствует имя образа `echoServer`.
 
-Собранные образы имеют content-based теги, которые можно использовать в сборке других образов. Чтобы использовать content-based теги образов, [подключите библиотеку lib-helm](#charts). Вы также можете воспользоваться другими функциями [библиотеки helm_lib](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib) Deckhouse Kubernetes Platform.
+Собранные образы имеют content-based теги, которые можно использовать в сборке других образов. Чтобы использовать content-based теги образов, [подключите библиотеку lib-helm](#charts). Вы также можете воспользоваться другими функциями [библиотеки helm_lib](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib) Deckhouse Platform Certified Security Edition.
 
 Пример использования content-based тега образа в Helm-чарте:
 

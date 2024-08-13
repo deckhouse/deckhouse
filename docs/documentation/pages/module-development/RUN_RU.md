@@ -4,7 +4,7 @@ permalink: ru/module-development/run/
 lang: ru
 ---
 
-В этом разделе рассмотрен процесс запуска настроенного модуля в кластере Deckhouse Kubernetes Platform (DKP).
+В этом разделе рассмотрен процесс запуска настроенного модуля в кластере Deckhouse Platform Certified Security Edition (DKP).
 
 Чтобы запустить модуль в кластере, необходимо выполнить следующие шаги:
 
