@@ -36,10 +36,11 @@ import (
 )
 
 var (
-	templatesPath      = "templates"
-	defaultPath        = "default"
-	helmNamespace      = "d8-multitenancy-manager"
-	serviceAccountName = "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
+	templatesPath           = "templates"
+	defaultPath             = "default"
+	helmNamespace           = "d8-multitenancy-manager"
+	serviceAccount          = "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
+	deckhouseServiceAccount = "system:serviceaccount:d8-system:deckhouse"
 )
 
 func main() {
@@ -77,11 +78,11 @@ func main() {
 	projectwebhook.Register(runtimeManager)
 
 	// register template webhook
-	templatewebhook.Register(runtimeManager, serviceAccountName)
+	templatewebhook.Register(runtimeManager, serviceAccount)
 
 	if prohibitOrphanNamespaces {
 		// register namespace webhook
-		namespacewebhook.Register(runtimeManager)
+		namespacewebhook.Register(runtimeManager, serviceAccount, deckhouseServiceAccount)
 	}
 
 	// start runtime manager
