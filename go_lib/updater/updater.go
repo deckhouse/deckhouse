@@ -68,14 +68,14 @@ type Updater[R Release] struct {
 	kubeAPI           KubeAPI[R]
 	metricsUpdater    MetricsUpdater
 	settings          Settings
-	webhookDataGetter WebhookDataGetter[R]
+	webhookDataSource WebhookDataSource[R]
 
 	enabledModules set.Set
 }
 
 func NewUpdater[R Release](logger logger.Logger, notificationConfig *NotificationConfig, mode string,
 	data DeckhouseReleaseData, podIsReady, isBootstrapping bool, kubeAPI KubeAPI[R], metricsUpdater MetricsUpdater,
-	settings Settings, webhookDataGetter WebhookDataGetter[R], enabledModules []string) *Updater[R] {
+	settings Settings, webhookDataSource WebhookDataSource[R], enabledModules []string) *Updater[R] {
 	now := time.Now().UTC()
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		now = time.Date(2021, 01, 01, 13, 30, 00, 00, time.UTC)
@@ -96,7 +96,7 @@ func NewUpdater[R Release](logger logger.Logger, notificationConfig *Notificatio
 		kubeAPI:           kubeAPI,
 		metricsUpdater:    metricsUpdater,
 		settings:          settings,
-		webhookDataGetter: webhookDataGetter,
+		webhookDataSource: webhookDataSource,
 
 		enabledModules: set.New(enabledModules...),
 	}
@@ -140,13 +140,13 @@ func (du *Updater[R]) checkReleaseNotification(predictedRelease *R, updateWindow
 
 	predictedReleaseVersion := (*predictedRelease).GetVersion()
 	if du.notificationConfig.WebhookURL != "" {
-		data := webhookData{
+		data := WebhookData{
 			Version:       fmt.Sprintf("%d.%d", predictedReleaseVersion.Major(), predictedReleaseVersion.Minor()),
 			Requirements:  (*predictedRelease).GetRequirements(),
 			ChangelogLink: (*predictedRelease).GetChangelogLink(),
 			ApplyTime:     releaseApplyTime.Format(time.RFC3339),
-			Message:       du.webhookDataGetter.GetMessage(*predictedRelease, releaseApplyTime),
 		}
+		du.webhookDataSource.Fill(&data, *predictedRelease, releaseApplyTime)
 
 		err := sendWebhookNotification(du.notificationConfig, data)
 		if err != nil {
