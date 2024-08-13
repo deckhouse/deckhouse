@@ -28,11 +28,11 @@
     secretKeyRef:
         name: dynamix-credentials
         key: controllerUrl
-  - name: DYNAMIX_INSECURE
-    valueFrom:
-      secretKeyRef:
-        name: dynamix-credentials
-        key: insecure
+- name: DYNAMIX_INSECURE
+  valueFrom:
+    secretKeyRef:
+      name: dynamix-credentials
+      key: insecure
 {{- end }}
 
 {{- define "csi_controller_volumes" }}
@@ -71,11 +71,11 @@
     secretKeyRef:
         name: dynamix-credentials
         key: controllerUrl
-  - name: DYNAMIX_INSECURE
-    valueFrom:
-      secretKeyRef:
-        name: dynamix-credentials
-        key: insecure
+- name: DYNAMIX_INSECURE
+  valueFrom:
+    secretKeyRef:
+      name: dynamix-credentials
+      key: insecure
 {{- end }}
 
 {{- define "csi_node_volumes" }}
