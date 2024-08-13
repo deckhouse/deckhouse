@@ -664,7 +664,7 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
   * Example:
 
     ```shell
-    kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse
+    kubectl exec -ti -n d8-system svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse
     ```
 
   * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `/tmp/ca.crt` in the Deckhouse Pod and add the `--ca-file /tmp/ca.crt` option to the script or put the content of CA into a variable as follows:
@@ -679,13 +679,13 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
     -----END CERTIFICATE-----
     EOF
     )
-    $ kubectl exec  -n d8-system deploy/deckhouse -c deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
+    $ kubectl exec  -n d8-system svc/deckhouse-leader -c deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
     ```
 
   * To view the list of available keys of the `deckhouse-controller helper change-registry` command, run the following command:
 
     ```shell
-    kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --help
+    kubectl exec -ti -n d8-system svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --help
     ```
 
     Example output:
@@ -847,7 +847,7 @@ To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
 1. Run the following command:
 
    ```shell
-   kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry registry.deckhouse.io/deckhouse/ce
+   kubectl exec -ti -n d8-system svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry registry.deckhouse.io/deckhouse/ce
    ```
 
 1. Wait for the Deckhouse Pod to become `Ready`:
@@ -912,7 +912,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
-   kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry.deckhouse.io/deckhouse/ee
+   kubectl exec -ti -n d8-system svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry.deckhouse.io/deckhouse/ee
    ```
 
 1. Wait for the Deckhouse Pod to become `Ready`:

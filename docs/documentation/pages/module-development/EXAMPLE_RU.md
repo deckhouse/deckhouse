@@ -225,7 +225,7 @@ lang: ru
 1. Включите модуль, выполнив следующую команду:
 
    ```shell
-   kubectl -ti -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable hello-world-module
+   kubectl -ti -n d8-system exec svc/deckhouse-leader -- deckhouse-controller module enable hello-world-module
    ```
 
    Через некоторое время объекты модуля появятся в кластере.
@@ -239,7 +239,7 @@ lang: ru
    или проверьте состояние очереди DKP:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue list
+   kubectl -n d8-system exec svc/deckhouse-leader -- deckhouse-controller queue list
    ```
 
 {% endraw %}

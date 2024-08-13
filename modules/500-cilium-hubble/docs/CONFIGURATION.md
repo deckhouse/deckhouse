@@ -18,7 +18,7 @@ If these options are disabled, the module will use basic auth with the auto-gene
 Use kubectl to see password:
 
 ```shell
-kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values cilium-hubble -o json | jq '.ciliumHubble.internal.auth.password'
+kubectl -n d8-system exec svc/deckhouse-leader -- deckhouse-controller module values cilium-hubble -o json | jq '.ciliumHubble.internal.auth.password'
 ```
 
 Delete the Secret to re-generate password:

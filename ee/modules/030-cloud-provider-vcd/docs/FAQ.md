@@ -64,5 +64,5 @@ type: Opaque
 
 ```shell
 
-kubectl -n d8-system exec -it deployments/deckhouse -- deckhouse-controller module enable cloud-provider-vcd
+kubectl -n d8-system exec -it svc/deckhouse-leader -- deckhouse-controller module enable cloud-provider-vcd
 ```

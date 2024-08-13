@@ -224,7 +224,7 @@ The following is the sequence of steps to enable the `hello-world-module` in a c
 1. Enable the module by running the following command:
 
    ```shell
-   kubectl -ti -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable hello-world-module
+   kubectl -ti -n d8-system exec svc/deckhouse-leader -- deckhouse-controller module enable hello-world-module
    ```
 
    After a while, the module objects will be available in the cluster.
@@ -238,7 +238,7 @@ The following is the sequence of steps to enable the `hello-world-module` in a c
   or check the status of the DKP queue:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue list
+   kubectl -n d8-system exec svc/deckhouse-leader -- deckhouse-controller queue list
    ```
 
 {% endraw %}

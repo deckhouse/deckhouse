@@ -37,7 +37,7 @@ We always appreciate helping users with debugging complex issues. Please follow 
 1. Collect all the necessary information by running the following command:
 
    ```sh
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse \
+   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse \
      -- deckhouse-controller collect-debug-info \
      > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```

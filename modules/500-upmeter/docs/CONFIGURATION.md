@@ -12,7 +12,7 @@ If these options are disabled, the module will use basic auth with the auto-gene
 Use kubectl to see password:
 
 ```shell
-kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.webui.password'
+kubectl -n d8-system exec svc/deckhouse-leader -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.webui.password'
 ```
 
 Delete the Secret to re-generate password:
@@ -24,7 +24,7 @@ kubectl -n d8-upmeter delete secret/basic-auth-webui
 Use kubectl to see password for status page:
 
 ```shell
-kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.status.password'
+kubectl -n d8-system exec svc/deckhouse-leader -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.status.password'
 ```
 
 Delete the Secret to re-generate password for status page:
