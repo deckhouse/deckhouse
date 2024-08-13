@@ -26,6 +26,7 @@
 ## Features
 
 
+ - **[admission-policy-engine]** Allow to create `virtualization` module's pods even in the restricted namespaces. [#9316](https://github.com/deckhouse/deckhouse/pull/9316)
  - **[candi]** Added support for Rosa Server OS. [#8666](https://github.com/deckhouse/deckhouse/pull/8666)
  - **[candi]** Build image for standalone run of Deckhouse installer. [#8613](https://github.com/deckhouse/deckhouse/pull/8613)
  - **[candi]** Added function to create user and group with specified IDs, logging warnings if they already exist or IDs are taken. [#8595](https://github.com/deckhouse/deckhouse/pull/8595)
@@ -103,6 +104,7 @@
     node-exporter will restart.
  - **[monitoring-kubernetes]** Fix false-positive results in precomputed metric `oom_kills:normalized`. [#8592](https://github.com/deckhouse/deckhouse/pull/8592)
  - **[multitenancy-manager]** Replace special characters in a AuthorizationRule `metadata.name`. [#8665](https://github.com/deckhouse/deckhouse/pull/8665)
+ - **[network-policy-engine]** Downgrade iptables version from 1.8.10 to 1.8.9 due to iptables chains overflow. You need to clear unwanted iptables rules manually or reboot the affected nodes. [#9340](https://github.com/deckhouse/deckhouse/pull/9340)
  - **[network-policy-engine]** The kube-router image now use the same iptables binaries as on the host to prevent incompatibility. [#9065](https://github.com/deckhouse/deckhouse/pull/9065)
  - **[node-manager]** Revert bashible drain annotations checks. [#9057](https://github.com/deckhouse/deckhouse/pull/9057)
  - **[operator-trivy]** Fix service URL to work in env where HTTP_PROXY/HTTPS_PROXY is set. [#8958](https://github.com/deckhouse/deckhouse/pull/8958)
@@ -111,6 +113,7 @@
  - **[prometheus]** Fix copying of Grafana v10 custom certificate. [#8749](https://github.com/deckhouse/deckhouse/pull/8749)
  - **[prometheus]** Expose Grafana v10 metrics. [#8723](https://github.com/deckhouse/deckhouse/pull/8723)
  - **[prometheus]** Update documentation. Remove the patch for Grafana 10. [#8580](https://github.com/deckhouse/deckhouse/pull/8580)
+ - **[registrypackages]** Downgrade iptables version from 1.8.10 to 1.8.9. [#9340](https://github.com/deckhouse/deckhouse/pull/9340)
  - **[registrypackages]** Fix detection of iptables nft support in iptables registry-package during install. [#9121](https://github.com/deckhouse/deckhouse/pull/9121)
 
 ## Chore
