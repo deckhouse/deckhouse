@@ -72,7 +72,7 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 
 	caTransport := cr.GetHTTPTransport(caContent)
 
-	if err := checkBearerSupport(ctx, newRepo.Registry, caTransport); err != nil {
+	if err := checkAuthSupport(ctx, newRepo.Registry, caTransport); err != nil {
 		return err
 	}
 
@@ -337,12 +337,8 @@ func checkImageExists(imageRef name.Reference, opts []remote.Option) error {
 // checkBearerSupport func checks that registry accepts bearer token authentification.
 // This is modified "ping" func from
 // https://github.com/google/go-containerregistry/blob/v0.5.1/pkg/v1/remote/transport/ping.go
-func checkBearerSupport(ctx context.Context, reg name.Registry, roundTripper http.RoundTripper) error {
+func checkAuthSupport(ctx context.Context, reg name.Registry, roundTripper http.RoundTripper) error {
 	client := &http.Client{Transport: roundTripper}
-
-	// This first attempts to use "https" for every request, falling back to http
-	// if the registry matches our localhost heuristic or if it is intentionally
-	// set to insecure via name.NewInsecureRegistry.
 	schemes := []string{"https"}
 	if reg.Scheme() == "http" {
 		schemes = append(schemes, "http")
@@ -356,12 +352,12 @@ func checkBearerSupport(ctx context.Context, reg name.Registry, roundTripper htt
 			continue
 		}
 
-		err = checkResponseForBearerSupport(resp, reg.Name())
+		err = checkResponseForAuthSupport(resp, reg.Name())
 		if err == nil {
 			return nil
 		}
 
-		errs = multierror.Append(errs, fmt.Errorf("check bearer support with %q scheme failed: %w", scheme, err))
+		errs = multierror.Append(errs, fmt.Errorf("check auth support with %q scheme failed: %w", scheme, err))
 	}
 
 	return errs.ErrorOrNil()
@@ -387,31 +383,34 @@ func makeRequestWithScheme(ctx context.Context, client *http.Client, scheme, reg
 	return resp, resp.Body.Close()
 }
 
-func checkResponseForBearerSupport(resp *http.Response, registryHost string) error {
+func checkResponseForAuthSupport(resp *http.Response, registryHost string) error {
 	if resp.StatusCode != http.StatusUnauthorized {
 		return transport.CheckError(resp, http.StatusUnauthorized)
 	}
 
-	if authHeaderWithBearer(resp.Header) {
+	if authHeader(resp.Header) {
 		return nil
 	}
 
-	return fmt.Errorf("can't use bearer token auth with registry %s", registryHost)
+	return fmt.Errorf("can't use bearer or basic auth with registry %s", registryHost)
 }
 
-func authHeaderWithBearer(header http.Header) bool {
-	const (
-		wwwAuthHeader = "WWW-Authenticate"
-		bearer        = "bearer"
-	)
+func authHeader(header http.Header) bool {
+	authSchemes := []string{"bearer", "basic"}
+	authHeader := header.Get(http.CanonicalHeaderKey("WWW-Authenticate"))
 
-	for _, h := range header[http.CanonicalHeaderKey(wwwAuthHeader)] {
-		if strings.HasPrefix(strings.ToLower(h), bearer) {
+	if authHeader == "" {
+		return false
+	}
+
+	lowerHeader := strings.ToLower(authHeader)
+	for _, scheme := range authSchemes {
+		if strings.HasPrefix(lowerHeader, scheme) {
 			return true
 		}
 	}
 
-	return strings.ToLower(header.Get(wwwAuthHeader)) == bearer
+	return false
 }
 
 type dockerCfgAuthEntry struct {
