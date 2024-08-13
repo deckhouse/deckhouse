@@ -32,7 +32,7 @@ git:
       - '**/*'
 shell:
   setup:
-  - export GOPROXY={{ $.GOPROXY }}
+  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=auto
   - git clone --depth 1 --branch {{ $docker_auth_version }} {{ $.SOURCE_REPO }}/cesanta/docker_auth.git
   - cd /docker_auth/auth_server
   - make build
