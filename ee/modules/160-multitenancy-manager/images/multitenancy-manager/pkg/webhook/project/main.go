@@ -52,7 +52,7 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 			}
 		}
 	}
-	if req.Operation == admissionv1.Update {
+	if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {
 		projectTemplate, err := v.projectTemplateByName(ctx, project.Spec.ProjectTemplateName)
 		if err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
