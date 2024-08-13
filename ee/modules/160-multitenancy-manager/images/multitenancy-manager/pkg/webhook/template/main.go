@@ -55,14 +55,12 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 	}
 	if req.Operation == admissionv1.Delete {
 		projects := new(v1alpha2.ProjectList)
-		if err := v.client.List(context.Background(), projects); err != nil {
+		if err := v.client.List(context.Background(), projects, client.MatchingLabels{helm.ProjectTemplateLabel: template.Name}); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
-		for _, project := range projects.Items {
-			if project.Spec.ProjectTemplateName == template.Name {
-				msg := fmt.Sprintf("The '%s' project template cannot be deleted, it is used in the '%s' project", template.Name, project.Name)
-				return admission.Denied(msg)
-			}
+		if len(projects.Items) > 0 {
+			msg := fmt.Sprintf("The '%s' project template cannot be deleted, it is used in the '%s' project", template.Name, projects.Items[0].Name)
+			return admission.Denied(msg)
 		}
 	}
 	return admission.Allowed("")

@@ -19,7 +19,6 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
-    failurePolicy: Ignore
     sideEffects: None
     clientConfig:
       caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
@@ -44,7 +43,6 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
-    failurePolicy: Ignore
     sideEffects: None
     clientConfig:
       caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
@@ -52,4 +50,4 @@ webhooks:
         name: multitenancy-manager
         namespace: d8-multitenancy-manager
         port: 9443
-        path: /validate/v1alpha2/templates
+        path: /validate/v1alpha1/templates
