@@ -196,7 +196,12 @@ func (c *ControllerService) ControllerPublishVolume(
 		return nil, fmt.Errorf("error required paramater NodeId can't parse: %w", err)
 	}
 
-	attached, err := c.hasDiskAttachedToVM(ctx, diskID, computeID)
+	vm, err := c.dynamixCloudAPI.ComputeSvc.GetVMByName(ctx, req.NodeId)
+	if err != nil {
+		return nil, fmt.Errorf("failed finding VM: %v, error: %w", req.NodeId, err)
+	}
+
+	attached, err := c.hasDiskAttachedToVM(ctx, diskID, vm.ID)
 	if err != nil {
 		klog.Errorf(err.Error())
 		return nil, err
@@ -252,10 +257,12 @@ func (c *ControllerService) ControllerUnpublishVolume(
 		return nil, fmt.Errorf("error required paramater VolumeId can't parse: %w", err)
 	}
 
-	computeID, err := strconv.ParseUint(req.NodeId, 10, 64)
+	vm, err := c.dynamixCloudAPI.ComputeSvc.GetVMByName(ctx, req.NodeId)
 	if err != nil {
-		return nil, fmt.Errorf("error required paramater NodeId can't parse: %w", err)
+		return nil, fmt.Errorf("failed finding VM: %v, error: %w", req.NodeId, err)
 	}
+
+	computeID := vm.ID
 
 	attached, err := c.hasDiskAttachedToVM(ctx, diskID, computeID)
 	if err != nil {
