@@ -620,7 +620,7 @@ Follow these steps for manual loading images of modules, connected from the modu
      --registry-login='<USER>' --registry-password='<PASSWORD>'
    ```
 
-   > Before pushind images, make sure that the path for loading into the registry exists (`/deckhouse/modules` in the example above), and the account being used has write permissions.
+   > Before pushing images, make sure that the path for loading into the registry exists (`/deckhouse/modules` in the example above), and the account being used has write permissions.
 
 1. After uploading the images to the air-gapped registry, edit the `ModuleSource` YAML manifest prepared in step 3:
 
