@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"time"
@@ -51,6 +52,8 @@ func main() {
 	// setup logger
 	log := ctrl.Log.WithName("multitenancy-manager")
 	ctrllog.SetLogger(zap.New(zap.Level(zapcore.Level(-4)), zap.UseDevMode(true)))
+
+	log.Info(fmt.Sprintf("starting multitenancy-manager with %v prohibit orphan namespaces option", prohibitOrphanNamespaces))
 
 	// initialize runtime manager
 	runtimeManager, err := setupRuntimeManager(log)
