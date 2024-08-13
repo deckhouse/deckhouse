@@ -24,6 +24,7 @@ const (
 	ParameterPool      = "pool"
 	ParameterAccountID = "accountId"
 	ParameterGID       = "gId"
+	ParameterSEPID     = "sepId"
 )
 
 type ControllerService struct {
@@ -45,20 +46,25 @@ func NewController(
 	}
 }
 
-func parseParameters(params map[string]string) (string, uint64, uint64, error) {
+func parseParameters(params map[string]string) (string, uint64, uint64, uint64, error) {
 	pool := params[ParameterPool]
 
 	accountID, err := strconv.ParseUint(params[ParameterAccountID], 10, 64)
 	if err != nil {
-		return "", 0, 0, fmt.Errorf("can't parse accountID: %v, %w ", params[ParameterAccountID], err)
+		return "", 0, 0, 0, fmt.Errorf("can't parse accountId: %v in StorageClass parameters, %w ", params[ParameterAccountID], err)
 	}
 
 	gID, err := strconv.ParseUint(params[ParameterGID], 10, 64)
 	if err != nil {
-		return "", 0, 0, fmt.Errorf("can't parse gID: %v, %w ", params[ParameterGID], err)
+		return "", 0, 0, 0, fmt.Errorf("can't parse gId: %v in StorageClass parameters, %w ", params[ParameterGID], err)
 	}
 
-	return pool, accountID, gID, nil
+	sepID, err := strconv.ParseUint(params[ParameterGID], 10, 64)
+	if err != nil {
+		return "", 0, 0, 0, fmt.Errorf("can't parse sepId: %v in StorageClass parameters, %w ", params[ParameterSEPID], err)
+	}
+
+	return pool, accountID, gID, sepID, nil
 }
 
 func (c *ControllerService) CreateVolume(
@@ -66,7 +72,7 @@ func (c *ControllerService) CreateVolume(
 	req *csi.CreateVolumeRequest,
 ) (*csi.CreateVolumeResponse, error) {
 	klog.Infof("Creating disk %s", req.Name)
-	pool, accountID, gID, err := parseParameters(req.Parameters)
+	pool, accountID, gID, sepID, err := parseParameters(req.Parameters)
 	if err != nil {
 		return nil, fmt.Errorf("error parse storageClass paramater %w", err)
 	}
@@ -126,6 +132,7 @@ func (c *ControllerService) CreateVolume(
 		diskName,
 		convertBytesToGigabytes(uint64(requiredSize)),
 		pool,
+		sepID,
 	)
 	if err != nil {
 		msg := fmt.Errorf("error while creating disk %s, error: %w", diskName, err)

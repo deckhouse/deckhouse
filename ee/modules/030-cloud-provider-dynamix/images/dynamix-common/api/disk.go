@@ -56,6 +56,7 @@ func (d *DiskService) CreateDisk(
 	diskName string,
 	size uint64,
 	pool string,
+	sepID uint64,
 
 ) (*disks.ItemDisk, error) {
 	var diskID uint64
@@ -68,6 +69,7 @@ func (d *DiskService) CreateDisk(
 			Name:      diskName,
 			Size:      size,
 			Pool:      pool,
+			SEPID:     sepID,
 			Type:      "D",
 		}
 		diskID, err = d.client.CloudAPI().Disks().Create(ctx, req)
