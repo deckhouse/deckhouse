@@ -69,21 +69,21 @@ func (m *manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	}
 
 	// get a project template for the project
-	m.log.Info("getting project template for project", "project", project.Name)
+	m.log.Info("getting project template for project", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
 	projectTemplate, err := m.projectTemplateByName(ctx, project.Spec.ProjectTemplateName)
 	if err != nil {
-		m.log.Error(err, "failed to get project template", "project", project.Name)
+		m.log.Error(err, "failed to get project template", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
 		if statusErr := m.setProjectStatus(ctx, project, v1alpha2.ProjectStateGettingTemplateError, err.Error()); statusErr != nil {
-			m.log.Error(statusErr, "failed to set project status", "project", project.Name)
+			m.log.Error(statusErr, "failed to set project status", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, err
 	}
 	// check if the project template exists
 	if projectTemplate == nil {
-		m.log.Info("project template not found for project", "project", project.Name)
+		m.log.Info("project template not found for project", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
 		if statusErr := m.setProjectStatus(ctx, project, v1alpha2.ProjectStateTemplateNotFound, "The project template not found"); statusErr != nil {
-			m.log.Error(statusErr, "failed to set project status", "project", project.Name)
+			m.log.Error(statusErr, "failed to set project status", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, err

@@ -22,6 +22,7 @@ import (
 	"github.com/go-logr/logr"
 	"go.uber.org/zap/zapcore"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 
@@ -82,6 +83,7 @@ func setupRuntimeManager(log logr.Logger) (ctrl.Manager, error) {
 	addToScheme := []func(s *runtime.Scheme) error{
 		v1alpha1.AddToScheme,
 		v1alpha2.AddToScheme,
+		v1.AddToScheme,
 	}
 
 	scheme := runtime.NewScheme()
