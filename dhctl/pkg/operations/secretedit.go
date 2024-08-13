@@ -31,6 +31,8 @@ import (
 
 const allowUnsafeAnnotation = "deckhouse.io/allow-unsafe"
 
+var abstractEditing = Edit
+
 func SecretEdit(kubeCl *client.KubernetesClient, name string, Namespace string, secret string, dataKey string) error {
 	config, err := kubeCl.CoreV1().Secrets(Namespace).Get(context.TODO(), secret, metav1.GetOptions{})
 	if err != nil {
@@ -40,7 +42,7 @@ func SecretEdit(kubeCl *client.KubernetesClient, name string, Namespace string, 
 	configData := config.Data[dataKey]
 
 	var modifiedData []byte
-	tomb.WithoutInterruptions(func() { modifiedData, err = Edit(configData) })
+	tomb.WithoutInterruptions(func() { modifiedData, err = abstractEditing(configData) })
 	if err != nil {
 		return err
 	}

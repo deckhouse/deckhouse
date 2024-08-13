@@ -41,6 +41,11 @@ data:
 `
 )
 
+func EditMock(data []byte) ([]byte, error) {
+	newData := string(data) + "test: \"25\"\n"
+	return []byte(newData), nil
+}
+
 func TestSecretEdit(t *testing.T) {
 	log.InitLogger("simple")
 
@@ -52,17 +57,20 @@ func TestSecretEdit(t *testing.T) {
 
 	t.Run("Secret editing", func(t *testing.T) {
 
+		abstractEditing = EditMock
 		err := SecretEdit(f, "test", secretTest.Namespace, secretTest.Name, "cluster-configuration.yaml")
 		require.NoError(t, err)
 
 		secretTestEdit, err := f.KubeClient.CoreV1().Secrets(secretTest.Namespace).Get(context.TODO(), secretTest.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
-		otherData := secretTestEdit.Data["cloud-provider-discovery-data.json"]
-		require.Equal(t, otherData, "eyJ0ZXN0IjogImRhdGEifQ==")
+		require.Equal(t, string(secretTestEdit.Data["cloud-provider-discovery-data.json"]), "{\"test\": \"data\"}")
 
-		testData := secretTestEdit.Data["cluster-configuration.yaml"]
-		require.Equal(t, testData, "cG9kU3VibmV0Tm9kZUNJRFJQcmVmaXg6ICIyNCIKc2VydmljZVN1Ym5ldENJRFI6IDEwLjIyMi4wLjAvMTYKdGVzdDogIjI1Igo=")
+		require.Equal(t, string(secretTestEdit.Data["cluster-configuration.yaml"]), `podSubnetNodeCIDRPrefix: "24"
+serviceSubnetCIDR: 10.222.0.0/16
+test: "25"
+`)
+		abstractEditing = Edit
 
 	})
 }
