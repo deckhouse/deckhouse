@@ -172,17 +172,15 @@ func buildModuleConfigWithOverrides(
 func CheckOrSetupArbitaryCNIModuleConfig(moduleConfigs []*ModuleConfig, providerName string) (*ModuleConfig, error) {
 	for _, moduleConfig := range moduleConfigs {
 		switch moduleConfig.Name {
-		case "cni-cilium":
-		case "cni-flannel":
-		case "cni-simple-bridge":
+		case "cni-cilium", "cni-flannel", "cni-simple-bridge":
 			if *moduleConfig.Spec.Enabled {
-				log.InfoF("found enabled ModuleConfig for '%s' cni, skipping creation\n", moduleConfig.Name)
+				log.InfoF("Found enabled ModuleConfig for '%s' cni, skipping creation.\n", moduleConfig.Name)
 				return nil, nil
 			}
 		}
 	}
 
-	log.InfoLn("doesn't found ModuleConfig for cni, creating")
+	log.InfoLn("Doesn't found ModuleConfig for cni, creating.")
 	cniMC := &ModuleConfig{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: ModuleConfigGroup + "/" + ModuleConfigVersion,
@@ -205,15 +203,9 @@ func CheckOrSetupArbitaryCNIModuleConfig(moduleConfigs []*ModuleConfig, provider
 			"masqueradeMode": "BPF",
 		}
 
-	case "aws":
-	case "yandex":
-	case "gcp":
-	case "azure":
+	case "aws", "yandex", "gcp", "azure":
 		cniMC.Name = "cni-simple-bridge"
 
-	case "zvirt":
-	case "vsphere":
-	case "vcd":
 	default:
 		cniMC.Name = "cni-cilium"
 		cniMC.Spec.Settings = SettingsValues{
