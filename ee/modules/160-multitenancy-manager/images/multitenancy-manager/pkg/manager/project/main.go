@@ -7,15 +7,21 @@ package project
 
 import (
 	"context"
+	"fmt"
 	"sync"
+	"time"
 
 	"controller/pkg/apis/deckhouse.io/v1alpha2"
 	"controller/pkg/helm"
 	"controller/pkg/validate"
 
 	"github.com/go-logr/logr"
+
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
 const (
@@ -23,7 +29,7 @@ const (
 )
 
 type Interface interface {
-	Init(ctx context.Context, defaultPath string) error
+	Init(ctx context.Context, checker healthz.Checker, defaultPath string) error
 	Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error)
 	Delete(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error)
 }
@@ -43,9 +49,24 @@ func New(client client.Client, helmClient helm.Interface, log logr.Logger) Inter
 	}
 }
 
-func (m *manager) Init(ctx context.Context, defaultPath string) error {
+func (m *manager) Init(ctx context.Context, checker healthz.Checker, defaultPath string) error {
 	m.init.Add(1)
 	defer m.init.Done()
+
+	m.log.Info("waiting for webhook server starting")
+	check := func(ctx context.Context) (bool, error) {
+		if err := checker(nil); err != nil {
+			m.log.Info("webhook server not startup yet")
+			return false, nil
+		}
+		m.log.Info("webhook server started")
+		return true, nil
+	}
+
+	if err := wait.PollUntilContextTimeout(ctx, time.Second, 7*time.Second, true, check); err != nil {
+		m.log.Error(err, "webhook server failed to start")
+		return fmt.Errorf("webhook server failed to start: %w", err)
+	}
 
 	m.log.Info("ensuring default project templates")
 	if err := m.ensureDefaultProjectTemplates(ctx, defaultPath); err != nil {

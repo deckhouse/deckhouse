@@ -7,21 +7,32 @@ package template
 
 import (
 	"context"
+	"fmt"
+	"sync"
+	"time"
+
 	"controller/pkg/apis/deckhouse.io/v1alpha1"
 	"controller/pkg/apis/deckhouse.io/v1alpha2"
 	"controller/pkg/helm"
 	"controller/pkg/validate"
+
 	"github.com/go-logr/logr"
+
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
 type Interface interface {
+	Init(ctx context.Context, checker healthz.Checker) error
 	Handle(ctx context.Context, template *v1alpha1.ProjectTemplate) (ctrl.Result, error)
 }
 type manager struct {
+	init   sync.WaitGroup
 	log    logr.Logger
 	client client.Client
 }
@@ -30,10 +41,36 @@ func New(client client.Client, log logr.Logger) Interface {
 	return &manager{
 		client: client,
 		log:    log.WithName("template-manager"),
+		init:   sync.WaitGroup{},
 	}
 }
 
+func (m *manager) Init(ctx context.Context, checker healthz.Checker) error {
+	m.init.Add(1)
+	defer m.init.Done()
+
+	m.log.Info("waiting for webhook server starting")
+	check := func(ctx context.Context) (bool, error) {
+		if err := checker(nil); err != nil {
+			m.log.Info("webhook server not startup yet")
+			return false, nil
+		}
+		m.log.Info("webhook server started")
+		return true, nil
+	}
+
+	if err := wait.PollUntilContextTimeout(ctx, time.Second, 7*time.Second, true, check); err != nil {
+		m.log.Error(err, "webhook server failed to start")
+		return fmt.Errorf("webhook server failed to start: %w", err)
+	}
+	return nil
+}
+
 func (m *manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate) (ctrl.Result, error) {
+	//wait for init
+	m.init.Wait()
+
+	// validate project template
 	if err := validate.ProjectTemplate(template); err != nil {
 		template.Status.Message = err.Error()
 		if err = m.client.Status().Update(ctx, template); err != nil {
@@ -42,6 +79,8 @@ func (m *manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 		}
 		return ctrl.Result{}, nil
 	}
+
+	// process template`s projects
 	projects, err := m.projectsByTemplate(ctx, template)
 	if err != nil {
 		m.log.Error(err, "failed to get projects for template", "template", template.Name)
@@ -70,6 +109,8 @@ func (m *manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 	} else {
 		m.log.Info("no projects found for template", "template", template.Name)
 	}
+
+	// set ready
 	template.Status.Ready = true
 	if err = m.client.Status().Update(ctx, template); err != nil {
 		m.log.Error(err, "failed to update template status", "template", template.Name)

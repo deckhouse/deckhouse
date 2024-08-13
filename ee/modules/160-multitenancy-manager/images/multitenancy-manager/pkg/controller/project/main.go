@@ -46,7 +46,7 @@ func Register(ctx context.Context, runtimeManager manager.Manager, helmClient he
 
 	// init project manager, project manager have to ensure default templates
 	if err := runtimeManager.Add(manager.RunnableFunc(func(ctx context.Context) error {
-		return r.projectManager.Init(ctx, defaultPath)
+		return r.projectManager.Init(ctx, runtimeManager.GetWebhookServer().StartedChecker(), defaultPath)
 	})); err != nil {
 		r.log.Error(err, "failed to init project manager")
 		return err

@@ -7,10 +7,14 @@ package template
 
 import (
 	"context"
+
 	"controller/pkg/apis/deckhouse.io/v1alpha1"
 	templatemanager "controller/pkg/manager/template"
+
 	"github.com/go-logr/logr"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -31,6 +35,14 @@ func Register(runtimeManager manager.Manager, log logr.Logger) error {
 	templateController, err := controller.New(controllerName, runtimeManager, controller.Options{Reconciler: r})
 	if err != nil {
 		log.Error(err, "failed to create template controller")
+		return err
+	}
+
+	// init template manager
+	if err = runtimeManager.Add(manager.RunnableFunc(func(ctx context.Context) error {
+		return r.templateManager.Init(ctx, runtimeManager.GetWebhookServer().StartedChecker())
+	})); err != nil {
+		r.log.Error(err, "failed to init template manager")
 		return err
 	}
 
