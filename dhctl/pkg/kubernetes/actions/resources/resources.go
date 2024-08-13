@@ -275,7 +275,9 @@ func CreateResourcesLoop(kubeCl *client.KubernetesClient, metaConfig *config.Met
 				return nil
 			}
 
-			clusterIsBootstrappedChecker.outputProgressInfo()
+			if clusterIsBootstrappedChecker != nil {
+				clusterIsBootstrappedChecker.outputProgressInfo()
+			}
 
 			return ErrNotAllResourcesCreated
 		})
