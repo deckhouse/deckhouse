@@ -81,7 +81,7 @@ func (c *ControllerService) CreateVolume(
 	req *csi.CreateVolumeRequest,
 ) (*csi.CreateVolumeResponse, error) {
 	klog.Infof("Creating disk %s", req.Name)
-	pool, accountID, gID, err := parseParameters(req.Parameters)
+	pool, accountID, gID, sepID, err := parseParameters(req.Parameters)
 	if err != nil {
 		return nil, fmt.Errorf("error parse storageClass paramater %w", err)
 	}
