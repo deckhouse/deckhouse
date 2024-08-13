@@ -743,6 +743,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
     margin-left: 0;
 }
 
+// For anchorjs-link offset
+.docs :target {
+  scroll-margin-top: 20px;
+}
+
 .docs ul.resources li::before {
   position: absolute;
   top: 52px;
