@@ -24,7 +24,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -97,7 +97,6 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 	}
 
 	for _, mc := range moduleConfigs.Items {
-
 		if slices.Contains([]string{"cni-cilium", "cni-flannel", "cni-simple-bridge"}, mc.GetName()) {
 			moduleEnabled, exists, err := unstructured.NestedBool(mc.UnstructuredContent(), "spec", "enabled")
 			if err != nil {
@@ -190,12 +189,12 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 	}
 
 	// create secret
-	err = createMC(input, kubeCl, cniModuleConfig)
+	err = createMC(kubeCl, cniModuleConfig)
 	if err != nil {
 		return err
 	}
 
-	//remove secret
+	// remove secret
 	return removeD8CniSecret(input, kubeCl, d8cniSecret)
 }
 
@@ -211,7 +210,7 @@ func removeD8CniSecret(input *go_hook.HookInput, kubeCl k8s.Client, secret *v1.S
 }
 
 // create Module Config
-func createMC(input *go_hook.HookInput, kubeCl k8s.Client, mc *config.ModuleConfig) error {
+func createMC(kubeCl k8s.Client, mc *config.ModuleConfig) error {
 	obj, err := sdk.ToUnstructured(mc)
 	if err != nil {
 		return err

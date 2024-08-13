@@ -60,7 +60,7 @@ var _ = Describe("Global hooks :: migrate_d8_cni_secret ::", func() {
 			f.RunHook()
 		})
 
-		It("Should run succesfully", func() {
+		It("Should run successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 	})
@@ -72,7 +72,7 @@ var _ = Describe("Global hooks :: migrate_d8_cni_secret ::", func() {
 			f.RunHook()
 		})
 
-		It("Should run succesfully", func() {
+		It("Should run successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
@@ -92,7 +92,7 @@ var _ = Describe("Global hooks :: migrate_d8_cni_secret ::", func() {
 			f.RunHook()
 		})
 
-		It("Should run succesfully", func() {
+		It("Should run successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
@@ -113,7 +113,7 @@ var _ = Describe("Global hooks :: migrate_d8_cni_secret ::", func() {
 			f.RunHook()
 		})
 
-		It("Should run succesfully", func() {
+		It("Should run successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
@@ -134,7 +134,7 @@ var _ = Describe("Global hooks :: migrate_d8_cni_secret ::", func() {
 			f.RunHook()
 		})
 
-		It("Should run succesfully", func() {
+		It("Should run successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
@@ -156,7 +156,7 @@ var _ = Describe("Global hooks :: migrate_d8_cni_secret ::", func() {
 			f.RunHook()
 		})
 
-		It("Should run succesfully", func() {
+		It("Should run successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
@@ -180,7 +180,7 @@ var _ = Describe("Global hooks :: migrate_d8_cni_secret ::", func() {
 			f.RunHook()
 		})
 
-		It("Should run succesfully", func() {
+		It("Should run successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
@@ -204,7 +204,7 @@ var _ = Describe("Global hooks :: migrate_d8_cni_secret ::", func() {
 			f.RunHook()
 		})
 
-		It("Should run succesfully", func() {
+		It("Should run successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
@@ -228,7 +228,7 @@ var _ = Describe("Global hooks :: migrate_d8_cni_secret ::", func() {
 			f.RunHook()
 		})
 
-		It("Should run succesfully", func() {
+		It("Should run successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
@@ -252,7 +252,7 @@ var _ = Describe("Global hooks :: migrate_d8_cni_secret ::", func() {
 			f.RunHook()
 		})
 
-		It("Should run succesfully", func() {
+		It("Should run successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
@@ -276,7 +276,7 @@ var _ = Describe("Global hooks :: migrate_d8_cni_secret ::", func() {
 			f.RunHook()
 		})
 
-		It("Should run succesfully", func() {
+		It("Should run successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
@@ -300,7 +300,7 @@ var _ = Describe("Global hooks :: migrate_d8_cni_secret ::", func() {
 			f.RunHook()
 		})
 
-		It("Should run succesfully", func() {
+		It("Should run successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
@@ -324,7 +324,7 @@ var _ = Describe("Global hooks :: migrate_d8_cni_secret ::", func() {
 			f.RunHook()
 		})
 
-		It("Should run succesfully", func() {
+		It("Should run successfully", func() {
 			Expect(f).NotTo(ExecuteSuccessfully())
 		})
 	})
