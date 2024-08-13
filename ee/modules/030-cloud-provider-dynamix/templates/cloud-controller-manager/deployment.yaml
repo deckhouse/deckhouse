@@ -59,7 +59,7 @@ spec:
       labels:
         app: cloud-controller-manager
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
