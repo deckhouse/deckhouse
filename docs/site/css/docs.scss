@@ -806,6 +806,16 @@ a.comparison-table__module-proprietaryOkmeter::after {
     padding-bottom: 0;
 }
 
+.docs .resources ul li .resources__prop_description + p,
+.docs .resources ul li .resources__attrs + p {
+    margin-left: 20px;
+    padding-top: 12px;
+}
+
+.docs .resources__prop_description ul {
+  padding-bottom: 16px;
+}
+
 .docs .resources__prop_description > ul > li {
     padding-left: 32px;
 }
