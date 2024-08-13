@@ -1,4 +1,4 @@
-# Delete the next line after merge in upstream
+# Delete the next line after merge dev_branch in upstream
 {{- $dev_branch := "feature/add-cilium" }}
 {{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
