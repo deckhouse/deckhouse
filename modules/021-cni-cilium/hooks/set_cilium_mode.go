@@ -30,7 +30,6 @@ func setCiliumMode(input *go_hook.HookInput) error {
 	value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode")
 	if ok {
 		input.Values.Set("cniCilium.internal.masqueradeMode", value.String())
-		return nil
 	}
 
 	if input.ConfigValues.Exists("cniCilium.tunnelMode") {
