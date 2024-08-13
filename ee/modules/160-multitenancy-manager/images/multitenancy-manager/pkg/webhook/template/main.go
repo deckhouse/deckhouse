@@ -42,9 +42,13 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 		if err := yaml.Unmarshal(req.Object.Raw, template); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
 		}
+
+		// cannot create/update template with deckhouse heritage
 		if msg := v.validateHeritage(req, template); msg != "" {
 			return admission.Denied(msg)
 		}
+
+		// cannot create/update invalid template
 		if err := validate.ProjectTemplate(template); err != nil {
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("project template validation failed: %v", err))
 		}
@@ -53,9 +57,13 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 		if err := yaml.Unmarshal(req.OldObject.Raw, template); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
 		}
+
+		// cannot delete template with deckhouse heritage
 		if msg := v.validateHeritage(req, template); msg != "" {
 			return admission.Denied(msg)
 		}
+
+		// cannot delete template if it is used
 		projects := new(v1alpha2.ProjectList)
 		if err := v.client.List(context.Background(), projects, client.MatchingLabels{helm.ProjectTemplateLabel: template.Name}); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)

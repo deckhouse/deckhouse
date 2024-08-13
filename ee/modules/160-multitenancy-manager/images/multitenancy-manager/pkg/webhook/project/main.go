@@ -40,6 +40,12 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
+	// cannot create/update without template
+	if project.Spec.ProjectTemplateName == "" {
+		return admission.Denied("project template name is required")
+	}
+
+	// cannot create/update project if its template does not exist
 	projectTemplate, err := v.projectTemplateByName(ctx, project.Spec.ProjectTemplateName)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
@@ -48,10 +54,13 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		msg := fmt.Sprintf("The '%s' project template not found", project.Spec.ProjectTemplateName)
 		return admission.Denied(msg)
 	}
+
+	// cannot create/update invalid project
 	if err = validate.Project(project, projectTemplate); err != nil {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("project validation failed: %v", err))
 	}
 
+	// cannot create project if a namespace with its name exists
 	if req.Operation == admissionv1.Create {
 		namespaces := new(v1.NamespaceList)
 		if err = v.client.List(context.Background(), namespaces); err != nil {
@@ -65,6 +74,7 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		}
 	}
 
+	// cannot change project template in project
 	if req.Operation == admissionv1.Update {
 		oldProject := new(v1alpha2.Project)
 		if err = yaml.Unmarshal(req.OldObject.Raw, oldProject); err != nil {
