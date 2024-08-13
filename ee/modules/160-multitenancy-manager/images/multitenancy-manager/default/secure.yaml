@@ -225,14 +225,14 @@ spec:
             - namespaceSelector:
                 matchLabels:
                   kubernetes.io/metadata.name: "d8-monitoring"
-            - podSelector:
+              podSelector:
                 matchLabels:
                   app: prometheus
             # Ingress nginx traffic.
             - namespaceSelector:
                 matchLabels:
                   kubernetes.io/metadata.name: "d8-ingress-nginx"
-            - podSelector:
+              podSelector:
                 matchLabels:
                   app: controller
       egress:

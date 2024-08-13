@@ -63,8 +63,6 @@ spec:
         - name: multitenancy-manager
           image: {{ include "helm_lib_module_image" (list . "multitenancyManager") }}
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
-          args:
-            - /multitenancy-manager
           imagePullPolicy: 'IfNotPresent'
           ports:
             - containerPort: 9090

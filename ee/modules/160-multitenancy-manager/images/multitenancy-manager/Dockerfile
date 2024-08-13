@@ -26,4 +26,4 @@ COPY --from=artifact /src/default /default
 EXPOSE 9090
 EXPOSE 9443
 
-ENTRYPOINT [ "/multitenancy-manager" ]
+CMD [ "/multitenancy-manager" ]

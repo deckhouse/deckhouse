@@ -10,25 +10,33 @@ import (
 	"strings"
 
 	"helm.sh/helm/v3/pkg/releaseutil"
+
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"sigs.k8s.io/yaml"
 )
 
 const (
 	ProjectRequireSyncAnnotation = "projects.deckhouse.io/require-sync"
 	ProjectLabel                 = "projects.deckhouse.io/project"
-	ProjectTemplateLabel         = "projects.deckhouse.io/project-template"
-	HeritageLabel                = "heritage"
-	HeritageValue                = "multitenancy-manager"
 )
 
-type PostRenderer struct {
+const ProjectTemplateLabel = "projects.deckhouse.io/project-template"
+
+const (
+	HeritageLabel = "heritage"
+	HeritageValue = "multitenancy-manager"
+)
+
+type postRenderer struct {
 	projectName     string
 	projectTemplate string
 }
 
-func newPostRenderer(projectName, projectTemplate string) *PostRenderer {
-	return &PostRenderer{
+func newPostRenderer(projectName, projectTemplate string) *postRenderer {
+	return &postRenderer{
 		projectName:     projectName,
 		projectTemplate: projectTemplate,
 	}
@@ -36,22 +44,20 @@ func newPostRenderer(projectName, projectTemplate string) *PostRenderer {
 
 // Run post renderer which will remove all namespaces except the project one
 // or will add a project namespace if it does not exist in manifests
-func (r *PostRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
-	if r.projectName == "" {
-		return renderedManifests, nil
-	}
+func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
+	var coreFound bool
 	builder := strings.Builder{}
-	manifests := releaseutil.SplitManifests(renderedManifests.String())
-	var namespaces []*unstructured.Unstructured
-	for _, manifest := range manifests {
+	for _, manifest := range releaseutil.SplitManifests(renderedManifests.String()) {
 		var object unstructured.Unstructured
 		if err = yaml.Unmarshal([]byte(manifest), &object); err != nil {
 			return renderedManifests, err
 		}
+
+		// skip empty manifests
 		if object.GetAPIVersion() == "" || object.GetKind() == "" {
-			// skip empty manifests
 			continue
 		}
+
 		// inject multitenancy-manager labels
 		labels := object.GetLabels()
 		if labels == nil {
@@ -61,28 +67,48 @@ func (r *PostRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 		labels[ProjectLabel] = r.projectName
 		labels[ProjectTemplateLabel] = r.projectTemplate
 		object.SetLabels(labels)
-		if object.GetAPIVersion() != "v1" || object.GetKind() != "Namespace" {
+
+		if object.GetKind() == "Namespace" {
+			// skip other namespaces
+			if object.GetName() != r.projectName {
+				continue
+			}
+			coreFound = true
+		} else {
 			object.SetNamespace(r.projectName)
-			data, _ := yaml.Marshal(object.Object)
-			builder.WriteString("\n---\n" + string(data))
-			continue
 		}
-		if object.GetName() != r.projectName {
-			// drop Namespace from manifests if it's not a project namespace
-			continue
-		}
-		namespaces = append(namespaces, &object)
+
+		data, _ := yaml.Marshal(object.Object)
+		builder.WriteString("\n---\n" + string(data))
 	}
-	result := bytes.NewBuffer(nil)
-	for _, ns := range namespaces {
-		if _, ok := ns.GetAnnotations()["multitenancy-boilerplate"]; ok && len(namespaces) > 1 {
-			continue
-		}
-		data, _ := yaml.Marshal(ns.Object)
-		result.WriteString("---\n")
-		result.Write(data)
-		break
+
+	// ensure core namespace
+	if !coreFound {
+		core := r.makeNamespace(r.projectName)
+		builder.WriteString("\n---\n" + string(core))
 	}
-	result.WriteString(builder.String())
-	return result, nil
+
+	buf := bytes.NewBuffer(nil)
+	buf.WriteString(builder.String())
+
+	return buf, nil
+}
+
+func (r *postRenderer) makeNamespace(name string) []byte {
+	obj := v1.Namespace{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Namespace",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				ProjectLabel:         r.projectName,
+				ProjectTemplateLabel: r.projectTemplate,
+				HeritageLabel:        HeritageValue,
+			},
+		},
+	}
+	data, _ := yaml.Marshal(obj)
+	return data
 }
