@@ -15,7 +15,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/pprof"
 	"os"
 	"path"
 	"runtime/trace"
@@ -199,37 +203,87 @@ func runApplication(kpApp *kingpin.Application) {
 }
 
 func EnableTrace() func() {
-	fName := os.Getenv("DHCTL_TRACE")
-	if fName == "" || fName == "0" || fName == "no" {
+	traceFile := os.Getenv("DHCTL_TRACE")
+	profFile := traceFile + ".prof"
+	if traceFile == "" || traceFile == "0" || traceFile == "no" {
 		return func() {}
 	}
-	if fName == "1" || fName == "yes" {
-		fName = "trace.out"
+	if traceFile == "1" || traceFile == "yes" {
+		traceFile = "trace.out"
+		profFile = traceFile + ".prof"
 	}
 
 	fns := make([]func(), 0)
 
-	f, err := os.Create(fName)
+	traceF, err := os.Create(traceFile)
 	if err != nil {
-		log.InfoF("failed to create trace output file '%s': %v", fName, err)
+		log.InfoF("failed to create trace output file '%s': %v", traceFile, err)
 		os.Exit(1)
 	}
+
+	profF, err := os.Create(profFile)
+	if err != nil {
+		log.InfoF("failed to create trace output file '%s': %v", profFile, err)
+		os.Exit(1)
+	}
+
 	fns = append([]func(){
 		func() {
-			if err := f.Close(); err != nil {
-				log.InfoF("failed to close trace file '%s': %v", fName, err)
+			if err := traceF.Close(); err != nil {
+				log.InfoF("failed to close trace file '%s': %v", traceFile, err)
 				os.Exit(1)
 			}
 		},
 	}, fns...)
 
-	if err := trace.Start(f); err != nil {
-		log.InfoF("failed to start trace to '%s': %v", fName, err)
+	if err := trace.Start(traceF); err != nil {
+		log.InfoF("failed to start trace to '%s': %v", traceFile, err)
 		os.Exit(1)
 	}
 	fns = append([]func(){
 		trace.Stop,
 	}, fns...)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/profile", pprof.Profile)
+
+	server := &http.Server{Addr: "127.0.0.1:17777", Handler: mux, ReadHeaderTimeout: 30 * time.Second}
+
+	start := time.Now()
+
+	go server.ListenAndServe()
+
+	fns = append([]func(){
+		func() {
+			defer profF.Close()
+
+			end := time.Now()
+
+			dur := end.Sub(start)
+			seconds := int64(dur.Seconds())
+			log.InfoF("Profiling took %v seconds", seconds)
+			resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:17777/profile?seconds=%d", seconds))
+			if err != nil {
+				log.ErrorLn(err)
+				return
+			}
+
+			defer resp.Body.Close()
+
+			if _, err := io.Copy(profF, resp.Body); err != nil {
+				log.ErrorLn(err)
+				return
+			}
+
+			ctx, cancel := context.WithTimeout(context.TODO(), 3*time.Second)
+			defer cancel()
+
+			if err := server.Shutdown(ctx); err != nil {
+				log.ErrorLn(err)
+				return
+			}
+		},
+	})
 
 	return func() {
 		for _, fn := range fns {
