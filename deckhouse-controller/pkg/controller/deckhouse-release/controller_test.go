@@ -672,7 +672,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Test unknown-mode for postponed patch release", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = updater.ModeAutoPatch.String()
+		mup.Update.Mode = "unknown"
 
 		dependency.TestDC.HTTPClient.DoMock.
 			Expect(&http.Request{}).
@@ -688,7 +688,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Test unknown-mode for postponed minor release", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = updater.ModeAutoPatch.String()
+		mup.Update.Mode = "unknown"
 
 		dependency.TestDC.HTTPClient.DoMock.
 			Expect(&http.Request{}).
