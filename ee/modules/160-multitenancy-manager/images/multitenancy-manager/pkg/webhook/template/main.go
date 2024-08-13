@@ -24,6 +24,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+const DeckhouseHeritage = "deckhouse"
+
 func Register(runtimeManager manager.Manager, serviceAccount string) {
 	hook := &webhook.Admission{Handler: &validator{client: runtimeManager.GetClient(), serviceAccount: serviceAccount}}
 	runtimeManager.GetWebhookServer().Register("/validate/v1alpha1/templates", hook)
@@ -41,7 +43,7 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 	}
 	if template.Labels != nil {
 		heritage, ok := template.Labels[helm.HeritageLabel]
-		if ok && heritage == helm.HeritageValue && req.UserInfo.Username != v.serviceAccount {
+		if ok && heritage == DeckhouseHeritage && req.UserInfo.Username != v.serviceAccount {
 			msg := fmt.Sprintf("The '%s' project template has the 'heritage' label with forbidden value: 'deckhouse'", template.Name)
 			return admission.Denied(msg)
 		}
@@ -57,7 +59,7 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 		for _, project := range projects.Items {
-			if template.Name == project.Name {
+			if project.Spec.ProjectTemplateName == template.Name {
 				msg := fmt.Sprintf("The '%s' project template cannot be deleted, it is used in the '%s' project", template.Name, project.Name)
 				return admission.Denied(msg)
 			}
