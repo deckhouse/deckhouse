@@ -121,9 +121,6 @@ type ProjectStatus struct {
 	// Current state.
 	State string `json:"state,omitempty"`
 
-	// Involved namespaces
-	Namespaces []string `json:"namespaces,omitempty"`
-
 	Sync bool `json:"sync,omitempty"`
 }
 
@@ -140,9 +137,4 @@ func (p *ProjectStatus) DeepCopyInto(newObj *ProjectStatus) {
 	newObj.Message = p.Message
 	newObj.State = p.State
 	newObj.Sync = p.Sync
-	if p.Namespaces != nil {
-		in, out := &p.Namespaces, &newObj.Namespaces
-		*in = make([]string, len(*out))
-		copy(*in, *out)
-	}
 }

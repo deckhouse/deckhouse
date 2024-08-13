@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"slices"
 	"strings"
 
 	"controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -102,12 +101,6 @@ func (m *manager) setProjectStatus(ctx context.Context, project *v1alpha2.Projec
 		project.Status.Sync = false
 		if state == v1alpha2.ProjectStateDeployed {
 			project.Status.Sync = true
-			if project.Status.Namespaces == nil {
-				project.Status.Namespaces = []string{}
-			}
-			if !slices.Contains(project.Status.Namespaces, project.Name) {
-				project.Status.Namespaces = append(project.Status.Namespaces, project.Name)
-			}
 		}
 		return m.client.Status().Update(ctx, project)
 	})
