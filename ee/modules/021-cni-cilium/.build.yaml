@@ -2,4 +2,4 @@ crds/*
 hooks/*
 images/*
 templates/*
-monitoring/*
+monitoring/prometheus-rules/*

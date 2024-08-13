@@ -105,6 +105,19 @@ alerts:
         Cloud data discoverer finds disks in the cloud for which there is no PersistentVolume in the cluster
       severity: "6"
       markupFormat: markdown
+    - name: CniCiliumNonStandardVXLANPortFound
+      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/configmap.yaml
+      moduleUrl: 021-cni-cilium
+      module: cni-cilium
+      edition: ce
+      description: |
+        There is non-standard VXLAN port in Cilium config: `{{$labels.port}}` does not fit the recommended range (4298 if the virtualization module enabled or 4299 for regular deckhouse setup).
+
+        Consider configuring the `tunnel-port` parameter in `cilium-configmap` ConfigMap (`d8-cni-cilium` namespace) according the recommended range. If you know why you need the non-standard port, just ignore the alert.
+      summary: |
+        There is non-standard VXLAN port in Cilium config
+      severity: "4"
+      markupFormat: markdown
     - name: CniCiliumOrphanEgressGatewayPolicyFound
       sourceFile: ee/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
       moduleUrl: 021-cni-cilium

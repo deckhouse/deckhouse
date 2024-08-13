@@ -18,6 +18,8 @@ properties:
                create routes to Pods on other Nodes.
                All Nodes must be located in the same L2 domain.
           * - `VXLAN` - VxLAN encapsulation.
+      tunnelPortVXLAN:
+        type: number
       masqueradeMode:
         type: string
         enum: ["Netfilter", "BPF"]
