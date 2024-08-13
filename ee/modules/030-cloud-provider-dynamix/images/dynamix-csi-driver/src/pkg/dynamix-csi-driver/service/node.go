@@ -23,9 +23,13 @@ import (
 	"k8s.io/utils/mount"
 )
 
+const (
+	deviceNamePrefix = "virtio-pci-0000:00:"
+)
+
 type NodeService struct {
 	csi.UnimplementedNodeServer
-	nodeID          string
+	nodeName        string
 	dynamixCloudAPI *dynamixapi.DynamixCloudAPI
 }
 
@@ -36,11 +40,11 @@ var NodeCaps = []csi.NodeServiceCapability_RPC_Type{
 }
 
 func NewNode(
-	nodeID string,
+	nodeName string,
 	dynamixCloudAPI *dynamixapi.DynamixCloudAPI,
 ) *NodeService {
 	return &NodeService{
-		nodeID:          nodeID,
+		nodeName:        nodeName,
 		dynamixCloudAPI: dynamixCloudAPI,
 	}
 }
@@ -145,7 +149,7 @@ func (n *NodeService) getDevicePath(ctx context.Context, diskID uint64) (string,
 		return "", msg
 	}
 
-	device := fmt.Sprintf("/dev/%s", disk.DeviceName)
+	device := fmt.Sprintf("/dev/disk/by-path/%s%.2d.0", deviceNamePrefix, disk.PCISlot)
 	_, err = os.Stat(device)
 	if err != nil {
 		klog.Errorf("Device path for disk ID %v does not exists", diskID)
@@ -299,7 +303,7 @@ func (n *NodeService) NodeExpandVolume(_ context.Context, req *csi.NodeExpandVol
 }
 
 func (n *NodeService) NodeGetInfo(context.Context, *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
-	return &csi.NodeGetInfoResponse{NodeId: n.nodeID}, nil
+	return &csi.NodeGetInfoResponse{NodeId: n.nodeName}, nil
 }
 
 func (n *NodeService) NodeGetCapabilities(context.Context, *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {

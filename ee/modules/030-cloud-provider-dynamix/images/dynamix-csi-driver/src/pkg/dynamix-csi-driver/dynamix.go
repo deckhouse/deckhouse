@@ -27,8 +27,8 @@ func NewDriver(cfg config.CSIConfig) (*csiDriver, error) {
 		return nil, errors.New("no driver name provided")
 	}
 
-	if cfg.NodeID == "" {
-		return nil, errors.New("no node id provided")
+	if cfg.NodeName == "" {
+		return nil, errors.New("no node name provided")
 	}
 
 	if cfg.Endpoint == "" {
@@ -56,7 +56,7 @@ func (d *csiDriver) Run() error {
 			d.client,
 		),
 		service.NewController(d.client),
-		service.NewNode(d.config.NodeID, d.client),
+		service.NewNode(d.config.NodeName, d.client),
 		d,
 	)
 	s.Wait()

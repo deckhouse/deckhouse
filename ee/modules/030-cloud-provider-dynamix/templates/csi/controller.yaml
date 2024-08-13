@@ -1,5 +1,5 @@
 {{- define "csi_controller_args" }}
-- "--nodeid=$(NODE_ID)"
+- "--node-name=$(NODE_ID)"
 - "--endpoint=unix:///csi/csi.sock"
 {{- end }}
 
@@ -8,6 +8,31 @@
   valueFrom:
     fieldRef:
       fieldPath: spec.nodeName
+- name: DYNAMIX_APP_ID
+  valueFrom:
+    secretKeyRef:
+      name: dynamix-credentials
+      key: appId
+- name: DYNAMIX_APP_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: dynamix-credentials
+      key: appSecret
+- name: DYNAMIX_OAUTH2_URL
+  valueFrom:
+    secretKeyRef:
+      name: dynamix-credentials
+      key: oAuth2Url
+- name: DYNAMIX_CONTROLLER_URL
+  valueFrom:
+    secretKeyRef:
+        name: dynamix-credentials
+        key: controllerUrl
+  - name: DYNAMIX_INSECURE
+    valueFrom:
+      secretKeyRef:
+        name: dynamix-credentials
+        key: insecure
 {{- end }}
 
 {{- define "csi_controller_volumes" }}
@@ -17,7 +42,7 @@
 {{- end }}
 
 {{- define "csi_node_args" }}
-- "--nodeid=$(NODE_ID)"
+- "--node-name=$(NODE_ID)"
 - "--endpoint=unix:///csi/csi.sock"
 {{- end }}
 
@@ -26,6 +51,31 @@
   valueFrom:
     fieldRef:
       fieldPath: spec.nodeName
+- name: DYNAMIX_APP_ID
+  valueFrom:
+    secretKeyRef:
+      name: dynamix-credentials
+      key: appId
+- name: DYNAMIX_APP_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: dynamix-credentials
+      key: appSecret
+- name: DYNAMIX_OAUTH2_URL
+  valueFrom:
+    secretKeyRef:
+      name: dynamix-credentials
+      key: oAuth2Url
+- name: DYNAMIX_CONTROLLER_URL
+  valueFrom:
+    secretKeyRef:
+        name: dynamix-credentials
+        key: controllerUrl
+  - name: DYNAMIX_INSECURE
+    valueFrom:
+      secretKeyRef:
+        name: dynamix-credentials
+        key: insecure
 {{- end }}
 
 {{- define "csi_node_volumes" }}

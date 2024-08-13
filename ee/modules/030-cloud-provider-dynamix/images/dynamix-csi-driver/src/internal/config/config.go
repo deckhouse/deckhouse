@@ -13,7 +13,7 @@ import (
 type CSIConfig struct {
 	DriverName    string
 	Endpoint      string
-	NodeID        string
+	NodeName      string
 	VendorVersion string
 	Credentials   config.Credentials
 }
@@ -25,7 +25,7 @@ func NewCSIConfig(version string) (CSIConfig, error) {
 	}
 	flag.StringVar(&cfg.Endpoint, "endpoint", "unix://tmp/csi.sock", "CSI endpoint")
 	flag.StringVar(&cfg.DriverName, "drivername", "dynamix.deckhouse.io", "name of the driver")
-	flag.StringVar(&cfg.NodeID, "nodeid", "", "node id")
+	flag.StringVar(&cfg.NodeName, "node-name", "", "node name")
 
 	credentialsConfig, err := config.NewCredentials()
 	if err != nil {
