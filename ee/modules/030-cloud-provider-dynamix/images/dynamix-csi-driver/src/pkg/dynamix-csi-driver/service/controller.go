@@ -191,11 +191,6 @@ func (c *ControllerService) ControllerPublishVolume(
 		return nil, fmt.Errorf("error required paramater VolumeId can't parse: %w", err)
 	}
 
-	computeID, err := strconv.ParseUint(req.NodeId, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("error required paramater NodeId can't parse: %w", err)
-	}
-
 	vm, err := c.dynamixCloudAPI.ComputeSvc.GetVMByName(ctx, req.NodeId)
 	if err != nil {
 		return nil, fmt.Errorf("failed finding VM: %v, error: %w", req.NodeId, err)
