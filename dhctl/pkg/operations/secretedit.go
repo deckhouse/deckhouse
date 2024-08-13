@@ -31,8 +31,8 @@ import (
 
 const allowUnsafeAnnotation = "deckhouse.io/allow-unsafe"
 
-func SecretEdit(kubeCl *client.KubernetesClient, name string, NameSpase string, secret string, dataKey string) error {
-	config, err := kubeCl.CoreV1().Secrets("kube-system").Get(context.TODO(), secret, metav1.GetOptions{})
+func SecretEdit(kubeCl *client.KubernetesClient, name string, Namespace string, secret string, dataKey string) error {
+	config, err := kubeCl.CoreV1().Secrets(Namespace).Get(context.TODO(), secret, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func SecretEdit(kubeCl *client.KubernetesClient, name string, NameSpase string, 
 				NewLoop(fmt.Sprintf("Update %s secret", name), 5, 5*time.Second).
 				Run(func() error {
 					_, err = kubeCl.CoreV1().
-						Secrets("kube-system").
+						Secrets(Namespace).
 						Update(context.TODO(), config, metav1.UpdateOptions{})
 					if err != nil {
 						return err
@@ -75,7 +75,7 @@ func SecretEdit(kubeCl *client.KubernetesClient, name string, NameSpase string, 
 						removeUnsafeAnnotation(config)
 
 						_, err = kubeCl.CoreV1().
-							Secrets("kube-system").
+							Secrets(Namespace).
 							Update(context.TODO(), config, metav1.UpdateOptions{})
 					}
 
