@@ -17,12 +17,16 @@ import (
 type csiDriver struct {
 	csi.UnimplementedGroupControllerServer
 
-	config config.CSIConfig
+	config *config.CSIConfig
 	mutex  sync.Mutex
 	client *dynamixapi.DynamixCloudAPI
 }
 
-func NewDriver(cfg config.CSIConfig) (*csiDriver, error) {
+func NewDriver(cfg *config.CSIConfig) (*csiDriver, error) {
+	if cfg == nil {
+		return nil, errors.New("no configuration provided")
+	}
+
 	if cfg.DriverName == "" {
 		return nil, errors.New("no driver name provided")
 	}

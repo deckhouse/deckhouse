@@ -18,9 +18,9 @@ type CSIConfig struct {
 	Credentials   config.Credentials
 }
 
-func NewCSIConfig(version string) (CSIConfig, error) {
+func NewCSIConfig(version string) (*CSIConfig, error) {
 	var err error
-	cfg := CSIConfig{
+	cfg := &CSIConfig{
 		VendorVersion: version,
 	}
 	flag.StringVar(&cfg.Endpoint, "endpoint", "unix://tmp/csi.sock", "CSI endpoint")
