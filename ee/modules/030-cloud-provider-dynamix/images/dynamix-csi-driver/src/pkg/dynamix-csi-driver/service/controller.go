@@ -196,7 +196,9 @@ func (c *ControllerService) ControllerPublishVolume(
 		return nil, fmt.Errorf("failed finding VM: %v, error: %w", req.NodeId, err)
 	}
 
-	attached, err := c.hasDiskAttachedToVM(ctx, diskID, vm.ID)
+	computeID := vm.ID
+
+	attached, err := c.hasDiskAttachedToVM(ctx, diskID, computeID)
 	if err != nil {
 		klog.Errorf(err.Error())
 		return nil, err
