@@ -175,8 +175,10 @@ func CheckOrSetupArbitaryCNIModuleConfig(moduleConfigs []*ModuleConfig, provider
 		case "cni-cilium":
 		case "cni-flannel":
 		case "cni-simple-bridge":
-			log.InfoF("found ModuleConfig for '%s' cni, skipping creation\n", moduleConfig.Name)
-			return nil, nil
+			if *moduleConfig.Spec.Enabled {
+				log.InfoF("found enabled ModuleConfig for '%s' cni, skipping creation\n", moduleConfig.Name)
+				return nil, nil
+			}
 		}
 	}
 
