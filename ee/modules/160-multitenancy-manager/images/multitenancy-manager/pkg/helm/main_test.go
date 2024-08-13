@@ -8,12 +8,13 @@ package helm
 import (
 	"bytes"
 	"fmt"
-	"github.com/google/go-cmp/cmp"
-	"helm.sh/helm/v3/pkg/releaseutil"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"controller/pkg/apis/deckhouse.io/v1alpha1"
 	"controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -23,6 +24,7 @@ import (
 
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/engine"
+	"helm.sh/helm/v3/pkg/releaseutil"
 
 	"sigs.k8s.io/yaml"
 )

@@ -225,16 +225,16 @@ spec:
             - namespaceSelector:
                 matchLabels:
                   kubernetes.io/metadata.name: "d8-monitoring"
-                podSelector:
-                  matchLabels:
-                    app: prometheus
+            - podSelector:
+                matchLabels:
+                  app: prometheus
             # Ingress nginx traffic.
             - namespaceSelector:
                 matchLabels:
                   kubernetes.io/metadata.name: "d8-ingress-nginx"
-                podSelector:
-                  matchLabels:
-                    app: controller
+            - podSelector:
+                matchLabels:
+                  app: controller
       egress:
         # Traffic within the project is allowed.
         - to:

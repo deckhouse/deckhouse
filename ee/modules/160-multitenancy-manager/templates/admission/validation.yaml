@@ -15,7 +15,6 @@ webhooks:
           - projects
         operations:
           - CREATE
-          - UPDATE
         scope: Cluster
     admissionReviewVersions:
       - v1
