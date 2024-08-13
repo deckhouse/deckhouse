@@ -1,2 +1,5 @@
 type: object
-properties: {}
+properties:
+  prohibitOrphanNamespaces:
+    description: |
+      Если эта опция включена - запретить создавать неймспейсы которые не являются частью проекта. 

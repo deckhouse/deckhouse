@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"time"
@@ -16,6 +17,7 @@ import (
 	projectcontroller "controller/pkg/controller/project"
 	templatecontroller "controller/pkg/controller/template"
 	"controller/pkg/helm"
+	namespacewebhook "controller/pkg/webhook/namespace"
 	projectwebhook "controller/pkg/webhook/project"
 	templatewebhook "controller/pkg/webhook/template"
 
@@ -41,6 +43,10 @@ var (
 )
 
 func main() {
+	var prohibitOrphanNamespaces bool
+	flag.BoolVar(&prohibitOrphanNamespaces, "prohibit-orphan-namespaces", false, "prohibit to create a namespace which is not a part of a Project")
+	flag.Parse()
+
 	// setup logger
 	log := ctrl.Log.WithName("multitenancy-manager")
 	ctrllog.SetLogger(zap.New(zap.Level(zapcore.Level(-4)), zap.UseDevMode(true)))
@@ -72,6 +78,11 @@ func main() {
 
 	// register template webhook
 	templatewebhook.Register(runtimeManager, serviceAccountName)
+
+	if prohibitOrphanNamespaces {
+		// register namespace webhook
+		namespacewebhook.Register(runtimeManager)
+	}
 
 	// start runtime manager
 	if err = runtimeManager.Start(ctrl.SetupSignalHandler()); err != nil {
