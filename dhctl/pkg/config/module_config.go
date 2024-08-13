@@ -23,7 +23,10 @@ import (
 	"github.com/iancoleman/strcase"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 const (
@@ -164,4 +167,59 @@ func buildModuleConfigWithOverrides(
 	}
 
 	return mc, nil
+}
+
+func CheckOrSetupArbitaryCNIModuleConfig(moduleConfigs []*ModuleConfig, providerName string) (*ModuleConfig, error) {
+	for _, moduleConfig := range moduleConfigs {
+		switch moduleConfig.Name {
+		case "cni-cilium":
+		case "cni-flannel":
+		case "cni-simple-bridge":
+			log.InfoF("found ModuleConfig for '%s' cni, skipping creation\n", moduleConfig.Name)
+			return nil, nil
+		}
+	}
+
+	log.InfoLn("doesn't found ModuleConfig for cni, creating")
+	cniMC := &ModuleConfig{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: ModuleConfigGroup + "/" + ModuleConfigVersion,
+			Kind:       ModuleConfigKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{},
+		Spec: ModuleConfigSpec{
+			Enabled: pointer.Bool(true),
+			Version: 1,
+		},
+	}
+
+	switch providerName {
+
+	// static or unknown provider
+	case "openstack":
+		cniMC.Name = "cni-cilium"
+		cniMC.Spec.Settings = SettingsValues{
+			"tunnelMode":     "VXLAN",
+			"masqueradeMode": "BPF",
+		}
+
+	case "aws":
+	case "yandex":
+	case "gcp":
+	case "azure":
+		cniMC.Name = "cni-simple-bridge"
+
+	case "zvirt":
+	case "vsphere":
+	case "vcd":
+	default:
+		cniMC.Name = "cni-cilium"
+		cniMC.Spec.Settings = SettingsValues{
+			"tunnelMode":       "Disabled",
+			"createNodeRoutes": true,
+			"masqueradeMode":   "Netfilter",
+		}
+	}
+
+	return cniMC, nil
 }

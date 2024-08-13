@@ -249,6 +249,16 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		}
 	}
 
+	// check if cni module config exists and if not, generate them depending on the selected cloud provider
+	cniMC, err := CheckOrSetupArbitaryCNIModuleConfig(metaConfig.ModuleConfigs, metaConfig.ProviderName)
+	if err != nil {
+		return nil, err
+	}
+
+	if cniMC != nil {
+		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, cniMC)
+	}
+
 	installConfig := DeckhouseInstaller{
 		UUID:                  metaConfig.UUID,
 		Registry:              metaConfig.Registry,
