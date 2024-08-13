@@ -638,7 +638,7 @@ Follow these steps for manual loading images of modules, connected from the modu
      registry:
        # Specify the authentication string for your registry.
        dockerCfg: <BASE64_REGISTRY_CREDENTIALS>
-       repo: 'corp.company.com:5000'
+       repo: 'corp.company.com:5000/deckhouse-modules'
        scheme: HTTPS
      # Select the appropriate release channel: Alpha, Beta, EarlyAccess, Stable, or RockSolid
      releaseChannel: "Stable"

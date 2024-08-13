@@ -639,7 +639,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
      registry:
        # Укажите строку аутентификации для вашего хранилища образов.
        dockerCfg: <BASE64_REGISTRY_CREDENTIALS>
-       repo: 'corp.company.com:5000'
+       repo: 'corp.company.com:5000/deckhouse-modules'
        scheme: HTTPS
      # Выберите подходящий канал обновлений: Alpha, Beta, EarlyAccess, Stable, RockSolid
      releaseChannel: "Stable"
