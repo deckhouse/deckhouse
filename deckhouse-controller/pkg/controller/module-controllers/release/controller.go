@@ -71,7 +71,7 @@ type moduleReleaseReconciler struct {
 	externalModulesDir string
 	symlinksDir        string
 
-	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpec
+	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpecContainer
 
 	preflightCountDown *sync.WaitGroup
 
@@ -94,7 +94,7 @@ const (
 func NewModuleReleaseController(
 	mgr manager.Manager,
 	dc dependency.Container,
-	embeddedPolicy *v1alpha1.ModuleUpdatePolicySpec,
+	embeddedPolicyContainer *v1alpha1.ModuleUpdatePolicySpecContainer,
 	mm moduleManager,
 	metricStorage *metric_storage.MetricStorage,
 	preflightCountDown *sync.WaitGroup,
@@ -110,7 +110,7 @@ func NewModuleReleaseController(
 		metricStorage:           metricStorage,
 		moduleManager:           mm,
 		symlinksDir:             filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
-		deckhouseEmbeddedPolicy: embeddedPolicy,
+		deckhouseEmbeddedPolicy: embeddedPolicyContainer,
 
 		delayTimer: time.NewTimer(3 * time.Second),
 
@@ -126,7 +126,7 @@ func NewModuleReleaseController(
 
 	ctr, err := controller.New("module-release", mgr, controller.Options{
 		MaxConcurrentReconciles: 3,
-		CacheSyncTimeout:        15 * time.Minute,
+		CacheSyncTimeout:        3 * time.Minute,
 		NeedLeaderElection:      pointer.Bool(false),
 		Reconciler:              c,
 	})
@@ -189,6 +189,10 @@ func (c *moduleReleaseReconciler) deleteReconcile(ctx context.Context, mr *v1alp
 		}
 		// TODO(yalosev): we have to disable module here somehow.
 		// otherwise, hooks from file system will fail
+
+		// restart controller for completely remove module
+		// TODO: we need another solution for remove module from modulemanager
+		c.emitRestart("a module release was removed")
 	}
 
 	if !controllerutil.ContainsFinalizer(mr, fsReleaseFinalizer) {
@@ -215,7 +219,7 @@ func (c *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, m
 
 		return ctrl.Result{Requeue: true}, nil // process to the next phase
 
-	case v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended:
+	case v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended, v1alpha1.PhaseSkipped:
 		if mr.Labels["status"] != strings.ToLower(mr.Status.Phase) {
 			// update labels
 			addLabels(mr, map[string]string{"status": strings.ToLower(mr.Status.Phase)})
@@ -261,7 +265,7 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 	if _, set := mr.GetAnnotations()[RegistrySpecChangedAnnotation]; set {
 		// if module is enabled - push runModule task in the main queue
 		c.logger.Infof("Applying new registry settings to the %s module", mr.Spec.ModuleName)
-		err := c.moduleManager.RunModuleWithNewStaticValues(mr.Spec.ModuleName, mr.ObjectMeta.Labels["source"], filepath.Join(c.externalModulesDir, mr.Spec.ModuleName, fmt.Sprintf("v%s", mr.Spec.Version)))
+		err := c.moduleManager.RunModuleWithNewOpenAPISchema(mr.Spec.ModuleName, mr.ObjectMeta.Labels["source"], filepath.Join(c.externalModulesDir, mr.Spec.ModuleName, fmt.Sprintf("v%s", mr.Spec.Version)))
 		if err != nil {
 			return ctrl.Result{Requeue: true}, err
 		}
@@ -377,7 +381,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "",
 				},
-				Spec: *c.deckhouseEmbeddedPolicy,
+				Spec: *c.deckhouseEmbeddedPolicy.Get(),
 			}
 		} else {
 			// get policy spec
@@ -404,13 +408,14 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	}
 
 	kubeAPI := newKubeAPI(ctx, c.logger, c.client, c.externalModulesDir, c.symlinksDir, c.moduleManager, c.dc)
-	releaseUpdater := newModuleUpdater(c.logger, nConfig, policy.Spec.Update.Mode, kubeAPI)
+	releaseUpdater := newModuleUpdater(c.logger, nConfig, policy.Spec.Update.Mode, kubeAPI, c.moduleManager.GetEnabledModuleNames())
 
 	pointerReleases := make([]*v1alpha1.ModuleRelease, 0, len(otherReleases.Items))
 	for _, r := range otherReleases.Items {
 		pointerReleases = append(pointerReleases, &r)
 	}
-	releaseUpdater.PrepareReleases(pointerReleases)
+	releaseUpdater.SetReleases(pointerReleases)
+
 	if releaseUpdater.ReleasesCount() == 0 {
 		return ctrl.Result{}, nil
 	}
@@ -438,17 +443,6 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 			}
 			// defer restart
 			modulesChangedReason = "one of modules is not enabled"
-		}
-
-		for _, index := range releaseUpdater.GetSkippedPatchesIndexes() {
-			release := otherReleases.Items[index]
-
-			release.Status.Phase = v1alpha1.PhaseSuperseded
-			release.Status.Message = ""
-			release.Status.TransitionTime = metav1.NewTime(c.dc.GetClock().Now().UTC())
-			if e := c.client.Status().Update(ctx, &release); e != nil {
-				return ctrl.Result{Requeue: true}, e
-			}
 		}
 
 		return ctrl.Result{}, nil
@@ -892,6 +886,7 @@ func (c *moduleReleaseReconciler) parseNotificationConfig(ctx context.Context) (
 		return nil, fmt.Errorf("get secret: %w", err)
 	}
 
+	// TODO: remove this dependency
 	jsonSettings, ok := secret.Data["updateSettings.json"]
 	if !ok {
 		return new(updater.NotificationConfig), nil
@@ -945,7 +940,8 @@ func restoreModuleSymlink(externalModulesDir, symlinkPath, moduleRelativePath st
 type moduleManager interface {
 	DisableModuleHooks(moduleName string)
 	GetModule(moduleName string) *addonmodules.BasicModule
-	RunModuleWithNewStaticValues(moduleName, moduleSource, modulePath string) error
+	RunModuleWithNewOpenAPISchema(moduleName, moduleSource, modulePath string) error
+	GetEnabledModuleNames() []string
 }
 
 func (c *moduleReleaseReconciler) updateModuleReleaseDownloadStatistic(ctx context.Context, release *v1alpha1.ModuleRelease,

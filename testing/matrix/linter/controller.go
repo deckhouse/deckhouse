@@ -39,7 +39,7 @@ import (
 )
 
 var (
-	workersQuantity = runtime.NumCPU() * 32
+	workersQuantity = runtime.NumCPU() * 8
 
 	renderedTemplatesHash = sync.Map{}
 )

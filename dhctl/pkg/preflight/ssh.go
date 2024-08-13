@@ -29,7 +29,7 @@ const (
 	DefaultTunnelRemotePort = 22322
 )
 
-var ErrAuthFailed = errors.New("authentication failed")
+var ErrAuthSSHFailed = errors.New("authentication failed")
 
 func (pc *Checker) CheckSSHTunnel() error {
 	if app.PreflightSkipSSHForword {
@@ -37,14 +37,18 @@ func (pc *Checker) CheckSSHTunnel() error {
 		return nil
 	}
 
-	log.DebugF("Checking ssh tunnel with remote port %d and local port %d\n", DefaultTunnelRemotePort, DefaultTunnelLocalPort)
+	log.DebugF(
+		"Checking ssh tunnel with remote port %d and local port %d\n",
+		DefaultTunnelRemotePort,
+		DefaultTunnelLocalPort,
+	)
 
 	builder := strings.Builder{}
 	builder.WriteString(strconv.Itoa(DefaultTunnelLocalPort))
 	builder.WriteString(":localhost:")
 	builder.WriteString(strconv.Itoa(DefaultTunnelRemotePort))
 
-	tun := pc.sshClient.Tunnel("L", builder.String())
+	tun := pc.sshClient.Tunnel("R", builder.String())
 	err := tun.Up()
 	if err != nil {
 		return fmt.Errorf(`Cannot setup tunnel to control-plane host: %w.
@@ -64,7 +68,24 @@ func (pc *Checker) CheckSSHCredential() error {
 	sshCheck := pc.sshClient.Check()
 	err := sshCheck.CheckAvailability()
 	if err != nil {
-		return fmt.Errorf("ssh %w. Please check ssh credential and try again", ErrAuthFailed)
+		return fmt.Errorf(
+			"ssh %w. Please check ssh credential and try again",
+			ErrAuthSSHFailed,
+		)
+	}
+	return nil
+}
+
+func (pc *Checker) CheckSingleSSHHostForStatic() error {
+	if app.PreflightSkipOneSSHHost {
+		log.InfoLn("Only one --ssh-host parameter used preflight check was skipped")
+		return nil
+	}
+
+	if len(pc.sshClient.Settings.AvailableHosts()) > 1 {
+		return fmt.Errorf(
+			"during the bootstrap of the first static master node, only one --ssh-host parameter is allowed",
+		)
 	}
 	return nil
 }

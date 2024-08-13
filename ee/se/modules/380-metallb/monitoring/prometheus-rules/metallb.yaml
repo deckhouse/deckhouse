@@ -9,8 +9,8 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__d8_metallb_failed: D8MetalLBConfigNotLoaded,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-      plk_grouped_by__d8_metallb_failed: D8MetalLBConfigNotLoaded,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_create_group_if_not_exists__d8_metallb_failed: ClusterHasD8MetalLBConfigNotLoaded,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__d8_metallb_failed: ClusterHasD8MetalLBConfigNotLoaded,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       description: |
         {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has not loaded.
         To figure out the problem, check controller logs:
@@ -28,8 +28,8 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__d8_metallb_failed: D8MetalLBConfigStale,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-      plk_grouped_by__d8_metallb_failed: D8MetalLBConfigStale,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_create_group_if_not_exists__d8_metallb_failed: ClusterHasD8MetalLBConfigStales,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__d8_metallb_failed: ClusterHasD8MetalLBConfigStales,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       description: |
         {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has run on a stale configuration, because the latest config failed to load.
         To figure out the problem, check controller logs:
@@ -47,8 +47,8 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__d8_metallb_failed: D8MetalLBBGPSessionDown,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-      plk_grouped_by__d8_metallb_failed: D8MetalLBBGPSessionDown,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_create_group_if_not_exists__d8_metallb_failed: ClusterHasD8MetalLBBGPSessionsDown,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__d8_metallb_failed: ClusterHasD8MetalLBBGPSessionsDown,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       description: |
         {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has BGP session {{ $labels.peer }} down.
         Details are in logs:

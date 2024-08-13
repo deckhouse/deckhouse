@@ -28,25 +28,25 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-const (
-	candiDir          = "/deckhouse/candi"
-	modulesDir        = "/deckhouse/modules"
-	globalHooksModule = "/deckhouse/global-hooks"
+var (
+	deckhouseDir      = "/deckhouse"
+	candiDir          = deckhouseDir + "/candi"
+	modulesDir        = deckhouseDir + "/modules"
+	globalHooksModule = deckhouseDir + "/global-hooks"
+	versionMap        = candiDir + "/version_map.yml"
+	imagesDigestsJSON = candiDir + "/images_digests.json"
+
 	// don't forget to update the version in release requirements (release.yaml) 'autoK8sVersion' key
 	DefaultKubernetesVersion = "1.27"
 )
 
-const (
-	versionMap        = "/deckhouse/candi/version_map.yml"
-	imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
-)
-
 func LoadConfigFromFile(paths []string, opts ...ValidateOption) (*MetaConfig, error) {
-	metaConfig, err := ParseConfig(paths, opts...)
+	metaConfig, err := ParseConfig(fs.RevealWildcardPaths(paths), opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -91,6 +91,11 @@ func numerateManifestLines(manifest []byte) string {
 func ParseConfig(paths []string, opts ...ValidateOption) (*MetaConfig, error) {
 	content := ""
 	for _, path := range paths {
+
+		if strings.Contains(path, "*") {
+			continue // skip wildcard paths, we revealed them in the previous step
+		}
+
 		log.DebugF("Have config file %s\n", path)
 		fileContent, err := os.ReadFile(path)
 		if err != nil {
@@ -303,4 +308,13 @@ deckhouse: {}
 	}
 
 	return metaConfig.Prepare()
+}
+
+func InitGlobalVars(pwd string) {
+	deckhouseDir = pwd + "/deckhouse"
+	candiDir = deckhouseDir + "/candi"
+	modulesDir = deckhouseDir + "/modules"
+	globalHooksModule = deckhouseDir + "/global-hooks"
+	versionMap = candiDir + "/version_map.yml"
+	imagesDigestsJSON = candiDir + "/images_digests.json"
 }

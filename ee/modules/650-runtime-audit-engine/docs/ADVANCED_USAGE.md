@@ -58,11 +58,11 @@ If you need to implement an action, use this [guide](https://github.com/falcosec
 You can use the [Falcosidekick](https://github.com/falcosecurity/falcosidekick) `/test` HTTP endpoint to send a test event to all enabled outputs.
 
 - Get a list of Pods in `d8-runtime-audit-engine` namespace:
-  
+
   ```shell
   kubectl -n d8-runtime-audit-engine get pods
   ```
-  
+
   Example of the output:
 
   ```text
@@ -82,22 +82,22 @@ You can use the [Falcosidekick](https://github.com/falcosecurity/falcosidekick) 
   ```shell
   kubectl run curl --image=curlimages/curl curl -X POST -H "Content-Type: application/json" -H "Accept: application/json" $POD_IP:2801/test
   ```
-  
+
 - Check a debug event metric:
-  
+
   ```shell
   kubectl -n d8-monitoring exec -it prometheus-main-0 prometheus --  \
     curl -s http://127.0.0.1:9090/api/v1/query\?query\=falco_events | jq
   ```
 
 - Example of the output part:
-  
+
   ```json
   {
     "metric": {
       "__name__": "falco_events",
       "container": "kube-rbac-proxy",
-      "instance": "192.168.199.60:8766",
+      "instance": "192.168.199.60:4212",
       "job": "runtime-audit-engine",
       "node": "dev-master-0",
       "priority": "Debug",

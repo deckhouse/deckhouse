@@ -110,7 +110,7 @@ It is highly not recommended to disable automatic updates! It will block updates
 To apply an update immediately, set the `release.deckhouse.io/apply-now : "true"` annotation on the [DeckhouseRelease](cr.html#deckhouserelease) resource.
 
 {% alert level="info" %}
-**Caution!** In this case, the update windows, settings [canary-release](modules/002-deckhouse/cr.html#deckhouserelease-v1alpha1-spec-applyafter) and [manual cluster update mode](modules/002-deckhouse/configuration.html#parameters-update-disruptionapprovalmode) will be ignored. The update will be applied immediately after the annotation is installed.
+**Caution!** In this case, the update windows, settings [canary-release](cr.html#deckhouserelease-v1alpha1-spec-applyafter) and [manual cluster update mode](modules/002-deckhouse/configuration.html#parameters-update-disruptionapprovalmode) will be ignored. The update will be applied immediately after the annotation is installed.
 {% endalert %}
 
 An example of a command to set the annotation to skip the update windows for version `v1.56.2`:
@@ -184,7 +184,7 @@ Possible options for action if something went wrong:
   ```
 
 - [Collect debugging information](modules/002-deckhouse/faq.html#how-to-collect-debug-info) and contact technical support.
-- Ask for help from the [community](https://deckhouse.ru/community/about.html).
+- Ask for help from the [community](https://deckhouse.io/community/about.html).
 {% endalert %}
 
 ### How do I know that a new version is available for the cluster?
@@ -205,7 +205,7 @@ You can get information in advance about updating minor versions of Deckhouse on
 
 ### How do I find out which version of Deckhouse is on which release channel?
 
-Information about which version of Deckhouse is on which release channel can be obtained at <https://flow.deckhouse.io>.
+Information about which version of Deckhouse is on which release channel can be obtained at <https://releases.deckhouse.io>.
 
 ### How does automatic Deckhouse update work?
 
@@ -238,6 +238,44 @@ Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignor
 ![The scheme of using the releaseChannel parameter during Deckhouse installation and operation](images/common/deckhouse-update-process.png)
 {% endofftopic %}
 
+### How to check the job queue in Deckhouse?
+
+To view the status of all Deckhouse job queues, run the following command:
+
+```shell
+kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+```
+
+Example of output (queues are empty):
+
+```console
+$ kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+Summary:
+- 'main' queue: empty.
+- 88 other queues (0 active, 88 empty): 0 tasks.
+- no tasks to handle.
+```
+
+To view the status of the `main` Deckhouse task queue, run the following command:
+
+```shell
+kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+```
+
+Example of output (38 tasks in the `main` queue):
+
+```console
+$ kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+Queue 'main': length 38, status: 'run first task'
+```
+
+Example of output (the `main` queue is empty):
+
+```console
+$ kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+Queue 'main': length 0, status: 'waiting for task 0s'
+```
+
 ### What do I do if Deckhouse fails to retrieve updates from the release channel?
 
 * Make sure that the desired release channel is [configured](#how-do-i-set-the-desired-release-channel).
@@ -257,7 +295,7 @@ Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignor
   Here is how you can retrieve the IP address of the Deckhouse container registry in a pod:
   
   ```shell
-  $ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- getent ahosts registry.deckhouse.io
+  $ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- getent ahosts registry.deckhouse.io
   46.4.145.194    STREAM registry.deckhouse.io
   46.4.145.194    DGRAM  registry.deckhouse.io
   ```
@@ -340,6 +378,12 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 
 ### Tips for configuring Nexus
 
+{% alert level="warning" %}
+When interacting with a `docker` repository located in Nexus (e. g. executing `docker pull`, `docker push` commands), you must specify the address in the `<NEXUS_URL>:<REPOSITORY_PORT>/<PATH>` format.  
+
+Using the `URL` value from the Nexus repository options is **not acceptable**
+{% endalert %}
+
 The following requirements must be met if the [Nexus](https://github.com/sonatype/nexus-public) repository manager is used:
 
 * `Docker Bearer Token Realm` must be enabled (*Administration* -> *Security* -> *Realms*).
@@ -385,6 +429,8 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
 
     ![Create a Nexus user](images/registry/nexus/nexus-user.png)
 
+Thus, Deckhouse images will be available at `https://<NEXUS_HOST>:<REPOSITORY_PORT>/deckhouse/ee:<d8s-version>`.
+
 ### Tips for configuring Harbor
 
 You need to use the Proxy Cache feature of a [Harbor](https://github.com/goharbor/harbor).
@@ -414,82 +460,85 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 This feature is only available in Standard Edition (SE), Enterprise Edition (EE), and Certified Security Edition (CSE).
 {% endalert %}
 
-1. [Download and install the Deckhouse CLI tool](https://github.com/deckhouse/deckhouse-cli/blob/main/README.md#how-to-install).
+{% alert level="info" %}
+Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current status of the release channels.
+{% endalert %}
+
+1. [Download and install the Deckhouse CLI tool](deckhouse-cli/).
 
 1. Pull Deckhouse images using the `d8 mirror pull` command.
 
    By default, `d8 mirror` pulls only the latest available patch versions for every actual Deckhouse release and the current set of officially supplied modules.
-   For example, for Deckhouse 1.52, only one version, `1.52.10`, will be pulled, as it is sufficient to update Deckhouse from version 1.51.
+   For example, for Deckhouse 1.59, only version `1.59.12` will be pulled, since this is sufficient for updating Deckhouse from 1.58 to 1.59.
 
-   The command below will pull Deckhouse tarballs for versions that are on the release channels (check [flow.deckhouse.io](https://flow.deckhouse.io) for the current status of the release channels):
-
-   ```shell
-   d8 mirror pull --license "<DECKHOUSE_LICENSE_KEY>" $(pwd)/d8.tar
-   ```
-
-   > If you interrupt the download before it is finished, calling the command again will check which images have already been downloaded, and the download will continue. This will only happen if no more than 24 hours have passed since the download interruption.
-   > Use the `--no-pull-resume` flag, to start the download from scratch.
-   >
-   > To skip the download of the Deckhouse modules, use the `--no-modules` flag.
-
-   To pull all Deckhouse images starting from a particular version, specify it in the `--min-version` parameter in the `X.Y` format.
-
-   For example, here is how you can pull all Deckhouse version images starting from version 1.45:
+   Run the following command (specify the edition code and the license key) to download actual images:
 
    ```shell
-   d8 mirror pull --license="<DECKHOUSE_LICENSE_KEY>" --min-version=1.45 $(pwd)/d8.tar
+   d8 mirror pull \
+     --source='registry.deckhouse.io/deckhouse/<EDITION>' \
+     --license='<LICENSE_KEY>' $(pwd)/d8.tar
    ```
 
-   > Note that `--min-version` parameter will be ignored if you specify version above the current rock-solid channel.
+   where:
+   - `<EDITION>` — the edition code of the Deckhouse Kubernetes Platform (for example, `ee`, `se`, `cse`);
+   - `<LICENSE_KEY>` — Deckhouse Kubernetes Platform license key.
 
-   You can also pull a single specific Deckhouse release by using the `--release=X.Y.Z` flag.
-   In this case, no release channels will be used and only one specific release will be pulled.
+   > If the loading of images is interrupted, rerunning the command will resume the loading if no more than a day has passed since it stopped.
 
-   > The simultaneous use of the `--min-version` and `--release` flags is not supported.
+   You can also use the following command options:
+   - `--no-pull-resume` — to forcefully start the download from the beginning;
+   - `--no-modules` — to skip downloading modules;
+   - `--min-version=X.Y` — to download all versions of Deckhouse starting from the specified minor version. This parameter will be ignored if a version higher than the version on the Rock Solid updates channel is specified. This parameter cannot be used simultaneously with the `--release` parameter;
+   - `--release=X.Y.Z` — to download only a specific version of Deckhouse (without considering update channels). This parameter cannot be used simultaneously with the `--min-version` parameter;
+   - `--gost-digest` — for calculating the checksum of the Deckhouse images in the format of GOST R 34.11-2012 (Streebog). The checksum will be displayed and written to a file with the extension `.tar.gostsum` in the folder with the tar archive containing Deckhouse images;
+   - `--source` — to specify the address of the Deckhouse source registry;
+      - To authenticate in the official Deckhouse image registry, you need to use a license key and the `--license` parameter;
+      - To authenticate in a third-party registry, you need to use the `--source-login` and `--source-password` parameters;
+   - `--images-bundle-chunk-size=N` — to specify the maximum file size (in GB) to split the image archive into. As a result of the operation, instead of a single file archive, a set of `.chunk` files will be created (e.g., `d8.tar.NNNN.chunk`). To upload images from such a set of files, specify the file name without the `.NNNN.chunk` suffix in the `d8 mirror push` command (e.g., `d8.tar` for files like `d8.tar.NNNN.chunk`).
 
-   To pull Deckhouse images from a specific registry repository, specify that repository with the `--source` flag.
-   The optional `--source-login` and `--source-password` flags are used to authenticate to a given registry.
-   If they are omitted, mirroring will be performed anonymously.
+   Additional configuration options for the `d8 mirror` family of commands are available as environment variables:
+    - `HTTP_PROXY`/`HTTPS_PROXY` — URL of the proxy server for HTTP(S) requests to hosts that are not listed in the variable `$NO_PROXY`;
+    - `NO_PROXY` — comma-separated list of hosts to exclude from proxying. Supported value formats include IP addresses (`1.2.3.4`), CIDR notations (`1.2.3.4/8`), domains, and the asterisk character (`*`).  The IP addresses and domain names can also include a literal port number (`1.2.3.4:80`). The domain name matches that name and all the subdomains. The domain name with a leading `.` matches subdomains only. For example, `foo.com` matches `foo.com` and `bar.foo.com`; `.y.com` matches `x.y.com` but does not match `y.com`. A single asterisk `*` indicates that no proxying should be done;
+    - `SSL_CERT_FILE` — path to the SSL certificate. If the variable is set, system certificates are not used;
+    - `SSL_CERT_DIR` — list of directories to search for SSL certificate files, separated by a colon. If set, system certificates are not used. [See more...](https://www.openssl.org/docs/man1.0.2/man1/c_rehash.html);
+    - `TMPDIR (*nix)`/`TMP (Windows)` — path to a temporary directory to use for image pulling and pushing. All processing is done in this directory, so make sure there is enough free disk space to accommodate the entire bundle you are downloading;
+    - `MIRROR_BYPASS_ACCESS_CHECKS` — set to `1` to skip validation of registry credentials;
 
-   For example, here is how you can pull images from a third-party registry:
+   Example of a command to download all versions of Deckhouse EE starting from version 1.59 (provide the license key):
 
    ```shell
-   d8 mirror pull --source="corp.company.com/sys/deckhouse" --source-login="<USER>" --source-password="<PASSWORD>" $(pwd)/d8.tar
+   d8 mirror pull \
+     --source='registry.deckhouse.io/deckhouse/ee' \
+     --license='<LICENSE_KEY>' --min-version=1.59 $(pwd)/d8.tar
    ```
 
-   > Note: the `--license` flag acts as a shortcut for `--source-login` and `--source-password` flags for the Deckhouse registry.
-   > If you specify both license and login+password pair for source registry, the latter will be used.
+   Example of a command for downloading Deckhouse images from a third-party registry:
 
-   `d8 mirror pull` supports digesting of the final set of Deckhouse images with the GOST R 34.11-2012 (Streebog) hash function (the `--gost-digest` parameter).
-   The checksum will be logged and written to a file with the `.tar.gostsum` extension next to the tar-archive containing the Deckhouse images.
+   ```shell
+   d8 mirror pull \
+     --source='corp.company.com:5000/sys/deckhouse' \
+     --source-login='<USER>' --source-password='<PASSWORD>' $(pwd)/d8.tar
+   ```
 
-   Also, `d8 mirror pull` supports splitting the image bundle into chunks of arbitrary size instead of dumping all the images into a single tar file.
-   To use this function, pass the desired chunk size in gigabytes using the `--images-bundle-chunk-size=N` flag.
-   This will create a series of smaller `.chunk` files instead of a single tar bundle.
-   To upload such a chunked bundle into your private registry, use `d8 mirror push` as specified below, passing the tar bundle path parameter as if you were pushing from a single-file bundle.
-   That is, point it to the `.tar` file as if it were in the bundle directory rather than any of the chunk files. `d8 mirror push` will then detect the chunked bundle automatically.
-
-1. Upload the bundle with the pulled Deckhouse images to a host with access to the air-gapped registry.
-   To continue, install and use the Deckhouse CLI tool on that host further on.
+1. Upload the bundle with the pulled Deckhouse images to a host with access to the air-gapped registry and install the [Deckhouse CLI](deckhouse-cli/) tool.
 
 1. Push the images to the air-gapped registry using the `d8 mirror push` command.
 
-   Example of pushing images from the `/tmp/d8-images/d8.tar` tarball:
+   Example of a command for pushing images from the `/tmp/d8-images/d8.tar` tarball (specify authorization data if necessary):
 
    ```shell
-   d8 mirror push /tmp/d8-images/d8.tar "your.private.registry.com:5000/deckhouse/ee" --registry-login="<USER>" --registry-password="<PASSWORD>"
+   d8 mirror push /tmp/d8-images/d8.tar 'corp.company.com:5000/sys/deckhouse' \
+     --registry-login='<USER>' --registry-password='<PASSWORD>'
    ```
 
-   > Please note that the images will be uploaded to the registry along the path specified in the `--registry` parameter (in the example above - /deckhouse/ee).
-   > Before running the command, make sure this path exists in your registry, and the account you are using has write permissions.
-
-   If your registry does not require authentication, you may omit both `--registry-login` and `--registry-password` flags.
+   > Before pushing images, make sure that the path for loading into the registry exists (`/sys/deckhouse` in the example above), and the account being used has write permissions.
+   > Harbor users, please note that you will not be able to upload images to the project root; instead use a dedicated repository in the project to host Deckhouse images.
 
 1. Once pushing images to the air-gapped private registry is complete, you are ready to install Deckhouse from it. Refer to the [Getting started](/gs/bm-private/step2.html) guide.
 
-   To run the installer, use its image from your private registry where Deckhouse images reside, rather than from the public registry. In other words, your address should look something like `your.private.registry.com:5000/deckhouse/ee/install:stable` instead of `registry.deckhouse.io/deckhouse/ee/install:stable`.
+   When launching the installer, use a repository where Deckhouse images have previously been loaded instead of official Deckhouse registry. For example, the address for launching the installer will look like `corp.company.com:5000/sys/deckhouse/install:stable` instead of `registry.deckhouse.io/deckhouse/ee/install:stable`.
 
-   During installation, add your registry address and authorization data to the `InitConfiguration` resource (the [imagesRepo](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-imagesrepo) and [registryDockerCfg](/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) parameters; you might refer to [step 3](/gs/bm-private/step3.html) of the Getting started guide as well).
+   During installation, add your registry address and authorization data to the [InitConfiguration](installing/configuration.html#initconfiguration) resource (the [imagesRepo](installing/configuration.html#initconfiguration-deckhouse-imagesrepo) and [registryDockerCfg](installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) parameters; you might refer to [step 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/gs/bm-private/step3.html) of the Getting started guide as well).
 
    After installation, apply DeckhouseReleases manifests that were generated by the `d8 mirror pull` command to your cluster via Deckhouse CLI as follows:
 
@@ -499,47 +548,101 @@ This feature is only available in Standard Edition (SE), Enterprise Edition (EE)
 
 ### Manually uploading images of Deckhouse modules into an air-gapped registry
 
-The steps below are necessary for manually loading images of modules connected from the module source (the [ModuleSource](cr.html#modulesource) resource):
+Follow these steps for manual loading images of modules, connected from the module source (the [ModuleSource](cr.html#modulesource) resource):
 
-1. [Download and install the Deckhouse CLI tool](https://github.com/deckhouse/deckhouse-cli/blob/main/README.md#how-to-install).
+1. [Download and install the Deckhouse CLI tool](deckhouse-cli/).
 
-   1. Pull module images from their source registry, defined as a `ModuleSource` resource, into a dedicated directory using the command `d8 mirror modules pull`.
+1. Create an authentication string for `registry.deckhouse.io` using the following command (provide the license key):
 
-      `d8 mirror modules pull` pulls only the module versions available in the module release channels at the time of copying unless the `--modules-filter` flag is set.
+   ```shell
+   LICENSE_KEY="LICENSE_KEY" base64 -w0 <<EOF
+     {
+       "auths": {
+         "registry.deckhouse.io": {
+           "auth": "$(echo -n license-token:${LICENSE_KEY} | base64 -w0)"
+         }
+       }
+     }
+   EOF
+   ```
 
-      The following command will pull module images from the source described in the `ModuleSource` resource located in the `$HOME/module_source.yml` file:
+1. Pull module images from their source registry, defined as a `ModuleSource` resource, into a dedicated directory using the `d8 mirror modules pull` command.
 
-      ```shell
-      d8 mirror modules pull -d /tmp/d8-modules -m $HOME/module_source.yml
-      ```
+   `d8 mirror modules pull` pulls only the module versions available in the module release channels at the time of copying unless the `--filter` flag is set.
 
-      To download only a specific set of modules of specific versions, use the `--modules-filter` flag followed by the list of required modules and their versions separated by the `;` character.
-      For example:
+   - Create a file with the `ModuleSource` resource (for example, `$HOME/module_source.yml`).
 
-      ```shell
-      d8 mirror modules pull -d /tmp/d8-modules -m $HOME/module_source.yml --modules-filter="deckhouse-admin:v1.0.0;deckhouse-admin:v1.3.3; sds-drbd:v0.0.1"
-      ```
+     Below is an example of a ModuleSource resource:
 
-1. Upload the directory with the pulled images of the Deckhouse modules to a host with access to the air-gapped registry.
-   To continue, install and use the Deckhouse CLI tool on that host further on.
+     ```yaml
+     apiVersion: deckhouse.io/v1alpha1
+     kind: ModuleSource
+     metadata:
+       name: deckhouse
+     spec:
+       registry:
+         # Specify credentials for the official Deckhouse registry obtained in step 2.
+         dockerCfg: <BASE64_REGISTRY_CREDENTIALS>
+         repo: registry.deckhouse.io/deckhouse/ee/modules
+         scheme: HTTPS
+       # Select the appropriate release channel: Alpha, Beta, EarlyAccess, Stable, or RockSolid
+       releaseChannel: "Stable"
+     ```
 
-1. Upload module images to the isolated registry using the `d8 mirror modules push` command.
+   - Download module images from the source described in the `ModuleSource` resource to the specified directory, using the command `d8 mirror modules pull`.
+
+     An example of a command:
+
+     ```shell
+     d8 mirror modules pull -d ./d8-modules -m $HOME/module_source.yml
+     ```
+
+     To download only a specific set of modules of specific versions, use the `--filter` flag followed by the list of required modules and their minimal required versions separated by the `;` character.
+
+     For example:
+
+     ```shell
+     d8 mirror modules pull -d /tmp/d8-modules -m $HOME/module_source.yml \
+       --filter='deckhouse-admin@1.3.3; sds-drbd@0.0.1'
+     ```
+
+     The command above will only pull the `deckhouse-admin` and `sds-drbd` modules. For `deckhouse-admin`, all available versions starting from `1.3.3` will be pulled; for `sds-drbd` — those starting from `0.0.1`.
+
+1. Upload the directory with the pulled images of the Deckhouse modules to a host with access to the air-gapped registry and install [Deckhouse CLI](deckhouse-cli/) tool.
+
+1. Upload module images to the air-gapped registry using the `d8 mirror modules push` command.
 
    Below is an example of a command for pushing images from the `/tmp/d8-modules` directory:
 
    ```shell
-   d8 mirror modules push -d /tmp/d8-modules --registry="your.private.registry.com:5000/deckhouse-modules" --registry-login="<USER>" --registry-password="<PASSWORD>"
+   d8 mirror modules push \
+     -d /tmp/d8-modules --registry='corp.company.com:5000/deckhouse-modules' \
+     --registry-login='<USER>' --registry-password='<PASSWORD>'
    ```
 
-   > Please note that the images will be uploaded to the registry along the path specified in the `--registry` parameter (in the example above - /deckhouse-modules).
-   > Before running the command, make sure this path exists in your registry, and the account you are using has write permissions.
+   > Before pushind images, make sure that the path for loading into the registry exists (`/deckhouse-modules` in the example above), and the account being used has write permissions.
 
-   If your registry does not require authentication, omit both `--registry-login` and `--registry-password` flags.
+1. After uploading the images to the air-gapped registry, edit the `ModuleSource` YAML manifest prepared in step 3:
 
-1. After uploading the images to the air-gapped registry, edit the `ModuleSource` YAML manifest:
+   * Change the `.spec.registry.repo` field to the address that you specified in the `--registry` parameter when you uploaded the images;
+   * Change the `.spec.registry.dockerCfg` field to a base64 string with the authorization data for your registry in `dockercfg` format. Refer to your registry's documentation for information on how to obtain this token.
 
-    * Change the `.spec.registry.repo` field to the address that you specified in the `--registry` parameter when you uploaded the images;
-    * Change the `.spec.registry.dockerCfg` field to a base64 string with the authorization data for your registry in `dockercfg` format. Refer to your registry's documentation for information on how to obtain this token.
+   An example:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleSource
+   metadata:
+     name: deckhouse
+   spec:
+     registry:
+       # Specify the authentication string for your registry.
+       dockerCfg: <BASE64_REGISTRY_CREDENTIALS>
+       repo: 'corp.company.com:5000'
+       scheme: HTTPS
+     # Select the appropriate release channel: Alpha, Beta, EarlyAccess, Stable, or RockSolid
+     releaseChannel: "Stable"
+   ```
 
 1. Apply the `ModuleSource` manifest you got in the previous step to the cluster.
 
@@ -547,7 +650,7 @@ The steps below are necessary for manually loading images of modules connected f
    d8 k apply -f $HOME/module_source.yml
    ```
 
-   Once the manifest has been applied, the modules are ready for use. For more detailed instructions on configuring and using modules, please refer to the module developer's documentation.
+   Once the manifest has been applied, the modules are ready for use. For more detailed instructions on configuring and using modules, please refer to the [module developer's documentation]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}/documentation/latest{% endif %}/module-development/).
 
 ### How do I switch a running Deckhouse cluster to use a third-party registry?
 
@@ -589,24 +692,24 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
 
     ```shell
     usage: deckhouse-controller helper change-registry [<flags>] <new-registry>
-    
+
     Change registry for deckhouse images.
-    
+
     Flags:
-    --help               Show context-sensitive help (also try --help-long and --help-man).
-    --user=USER          User with pull access to registry.
-    --password=PASSWORD  Password/token for registry user.
-    --ca-file=CA-FILE    Path to registry CA.
-    --insecure           Use HTTP while connecting to new registry.
-    --dry-run            Don't change deckhouse resources, only print them.
-    --new-deckhouse-tag=NEW-DECKHOUSE-TAG
-    New tag that will be used for deckhouse deployment image (by default
-    current tag from deckhouse deployment will be used).
-    
+      --help               Show context-sensitive help (also try --help-long and --help-man).
+      --user=USER          User with pull access to registry.
+      --password=PASSWORD  Password/token for registry user.
+      --ca-file=CA-FILE    Path to registry CA.
+      --scheme=SCHEME      Used scheme while connecting to registry, http or https.
+      --dry-run            Don't change deckhouse resources, only print them.
+      --new-deckhouse-tag=NEW-DECKHOUSE-TAG
+                          New tag that will be used for deckhouse deployment image (by default
+                          current tag from deckhouse deployment will be used).
+
     Args:
-    <new-registry>  Registry that will be used for deckhouse images (example:
-    registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need
-    http - provide '--insecure' flag
+      <new-registry>  Registry that will be used for deckhouse images (example:
+                      registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need
+                      http - provide '--scheme' flag with http value
     ```
 
 * Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
@@ -624,8 +727,7 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
 This method should only be used if there are no release channel images in your air-gapped registry.
 
 * If you want to install Deckhouse with automatic updates disabled:
-  * Use the tag of the installer image of the corresponding version. For example, use the image `your.private.registry.com/deckhouse/install:v1.44.3`, if you want to install release `v1.44.3`.
-  * Set the corresponding version number in the [deckhouse.devBranch](installing/configuration.html#initconfiguration-deckhouse-devbranch) parameter of the `InitConfiguration` resource.
+  * Use the tag of the installer image of the corresponding version. For example, use the image `your.private.registry.com/deckhouse/install:v1.60.5`, if you want to install release `v1.60.5`.
   * **Do not** set the [deckhouse.releaseChannel](installing/configuration.html#initconfiguration-deckhouse-releasechannel) parameter of the `InitConfiguration` resource.
 * If you want to disable automatic updates for an already installed Deckhouse (including patch release updates), then delete the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
 
@@ -703,7 +805,7 @@ The general cluster parameters are stored in the [ClusterConfiguration](installi
 To change the general cluster parameters, run the command:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
+kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
 ```
 
 After saving the changes, Deckhouse will bring the cluster configuration to the state according to the changed configuration. Depending on the size of the cluster, this may take some time.
@@ -715,7 +817,7 @@ Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER
 Regardless of the cloud provider used, its settings can be changed using the following command:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
 ### How do I change the configuration of a static cluster?
@@ -725,7 +827,7 @@ Settings of a static cluster are stored in the [StaticClusterConfiguration](inst
 To change the settings of a static cluster, run the command:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
 ```
 
 ### How to switch Deckhouse EE to CE?
@@ -760,24 +862,10 @@ To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
    kubectl -n d8-system delete po -l app=deckhouse
    ```
 
-1. Wait for Deckhouse to restart and to complete all tasks in the queue:
+1. Wait until Deckhouse restarts and [all tasks in the queue are completed](#how-to-check-the-job-queue-in-deckhouse):
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   ```
-
-   Example of output when there are still jobs in the queue (`length 38`):
-
-   ```console
-   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   Queue 'main': length 38, status: 'run first task'
-   ```
-
-   Example of output when the queue is empty (`length 0`):
-
-   ```console
-   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   Queue 'main': length 0, status: 'waiting for task 0s'
+   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
 1. On the master node, check the application of the new settings.
@@ -839,24 +927,10 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
    kubectl -n d8-system delete po -l app=deckhouse
    ```
 
-1. Wait for Deckhouse to restart and to complete all tasks in the queue:
+1. Wait until Deckhouse restarts and [all tasks in the queue are completed](#how-to-check-the-job-queue-in-deckhouse):
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   ```
-
-   Example of output when there are still jobs in the queue (`length 38`):
-
-   ```console
-   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   Queue 'main': length 38, status: 'run first task'
-   ```
-
-   Example of output when the queue is empty (`length 0`):
-
-   ```console
-   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   Queue 'main': length 0, status: 'waiting for task 0s'
+   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
 1. On the master node, check the application of the new settings.
@@ -889,13 +963,21 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 
    The output of the command should be empty.
 
+### How do I get access to Deckhouse controller in multimaster cluster?
+
+In clusters with multiple master nodes Deckhouse runs in high availability mode (in several instances). To access the active Deckhouse controller, you can use the following command (as an example of the command `deckhouse-controller queue list`):
+
+```shell
+kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+```
+
 ## How do I upgrade the Kubernetes version in a cluster?
 
 To upgrade the Kubernetes version in a cluster change the [kubernetesVersion](installing/configuration.html#clusterconfiguration-kubernetesversion) parameter in the [ClusterConfiguration](installing/configuration.html#clusterconfiguration) structure by making the following steps:
 1. Run the command:
 
    ```shell
-   kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
+   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
    ```
 
 1. Change the `kubernetesVersion` field.

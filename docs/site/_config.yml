@@ -17,6 +17,14 @@ site_description:
 github_repo_path: /deckhouse/deckhouse
 d8Revision: FE
 
+metrics:
+  google: G-4X28CEP7W2
+  yandex: 78422802
+
+chat_script_url:
+  en: "https://crm.flant.ru/upload/crm/site_button/loader_2_qurrbf.js"
+  ru: "https://crm.flant.ru/upload/crm/site_button/loader_3_20bbbd.js"
+
 assets:
   precompile: ['**/*.*']
 
@@ -119,7 +127,7 @@ defaults:
       type: "pages"
     values:
       d8Revision: ee
-      featureStatus: experimental
+      featureStatus: deprecated
   - scope:
       path: "*/500-operator-trivy"
       type: "pages"

@@ -318,6 +318,10 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleN
 		return "", digest.String(), nil, fmt.Errorf("fetch release metadata error: %v", err)
 	}
 
+	if moduleMetadata.Version == nil {
+		return "", digest.String(), nil, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
+	}
+
 	return "v" + moduleMetadata.Version.String(), digest.String(), moduleMetadata.Changelog, nil
 }
 

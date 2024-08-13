@@ -21,4 +21,7 @@ spec:
   selector:
     matchLabels:
       app: kube-router
+    namespaceSelector:
+      matchNames:
+      - d8-system
 {{- end }}

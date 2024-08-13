@@ -75,6 +75,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	ciliumEnabledStr := os.Getenv("MODULE_CNI_CILIUM_ENABLED")
+	if ciliumEnabledStr != "true" {
+		err = os.Remove("/etc/cni/net.d/05-cilium.conflist")
+		if err != nil && !os.IsNotExist(err) {
+			log.Fatal(err)
+		}
+	}
+
 	var flannelArgs []string
 	flannelArgs = append(flannelArgs, "flanneld")
 	flannelArgs = append(flannelArgs, os.Args[1:]...)

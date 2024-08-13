@@ -59,9 +59,10 @@ message ConvergeContinue {
 
 message ConvergeStartOptions {
   bool commander_mode = 1;
-  int32 log_width = 2;
-  google.protobuf.Duration resources_timeout = 3;
-  google.protobuf.Duration deckhouse_timeout = 4;
+  string commander_uuid = 2;
+  int32 log_width = 3;
+  google.protobuf.Duration resources_timeout = 4;
+  google.protobuf.Duration deckhouse_timeout = 5;
 }
 
 message ConvergeResult {

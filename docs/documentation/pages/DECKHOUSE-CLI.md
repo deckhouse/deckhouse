@@ -1,6 +1,7 @@
 ---
 title: Deckhouse CLI
 permalink: en/deckhouse-cli/
+description: Deckhouse CLI is a command line interface for cluster management created by the Deckhouse team.
 ---
 
 Deckhouse CLI is a command line interface for cluster management created by the developers of Deckhouse Kubernetes Platform (DKP). Starting with version 1.59, the DH CLI is automatically installed on all cluster nodes. You can also [install](#how-do-i-install-deckhouse-cli) the CLI on any machine and use it to operate clusters that are not managed by DKP.
@@ -33,27 +34,4 @@ On the command line, the utility can be invoked using the `d8` alias. All the co
 
 ## How do I install Deckhouse CLI?
 
-1. Download the archive for your OS/architecture:
-   * [Linux x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-linux-amd64.tar.gz)
-   * [macOS x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-darwin-amd64.tar.gz)
-   * [macOS ARM64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-darwin-arm64.tar.gz)
-
-1. Extract the archive:
-
-   ```bash
-   tar -xvf "d8-v${RELEASE_VERSION}-${OS}-${ARCH}.tar.gz" "${OS}-${ARCH}/d8"
-   ```
-
-1. Copy the `d8` file to a directory at the `PATH` variable on your system:
-
-   ```bash
-   sudo mv "${OS}-${ARCH}/d8" /usr/local/bin/
-   ```
-
-1. Check that the CLI is working:
-
-   ```bash
-   d8 help
-   ```
-
-Congrats, you have successfully installed Deckhouse CLI!
+{% include d8-cli-install/main.liquid %}

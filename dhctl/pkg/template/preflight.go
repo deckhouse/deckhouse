@@ -16,10 +16,12 @@ package template
 
 import "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 
-const (
-	checkPortsScriptPath     = candiBashibleDir + "/preflight/check_ports.sh"
-	checkLocalhostScriptPath = candiBashibleDir + "/preflight/check_localhost.sh"
-	preflightScriptDirPath   = candiBashibleDir + "/preflight/"
+var (
+	checkPortsScriptPath              = candiBashibleDir + "/preflight/check_ports.sh.tpl"
+	checkLocalhostScriptPath          = candiBashibleDir + "/preflight/check_localhost.sh.tpl"
+	checkProxyRevTunnelOpenScriptPath = candiBashibleDir + "/preflight/check_reverse_tunnel_open.sh.tpl"
+	killReverseTunnelPath             = candiBashibleDir + "/preflight/kill_reverse_tunnel.sh.tpl"
+	preflightScriptDirPath            = candiBashibleDir + "/preflight/"
 )
 
 func RenderAndSavePreflightCheckPortsScript() (string, error) {
@@ -35,6 +37,31 @@ func RenderAndSavePreflightCheckLocalhostScript() (string, error) {
 		"check_localhost.sh",
 		checkLocalhostScriptPath,
 		map[string]interface{}{},
+	)
+}
+
+func RenderAndSavePreflightReverseTunnelOpenScript(url string) (string, error) {
+	log.DebugLn("Start render proxy reverse tunnel open script")
+
+	return RenderAndSaveTemplate(
+		"check_reverse_tunnel_open.sh",
+		checkProxyRevTunnelOpenScriptPath,
+		map[string]interface{}{
+			"url": url,
+		},
+	)
+}
+
+func RenderAndSaveKillReverseTunnelScript(host, port string) (string, error) {
+	log.DebugLn("Start render kill reverse tunnel script")
+
+	return RenderAndSaveTemplate(
+		"kill_reverse_tunnel.sh",
+		killReverseTunnelPath,
+		map[string]interface{}{
+			"host": host,
+			"port": port,
+		},
 	)
 }
 

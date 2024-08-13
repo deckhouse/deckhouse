@@ -26,11 +26,15 @@ properties:
             isReady:
               type: boolean
               x-examples: [false]
+      kialiSigningKey:
+        type: string
+        x-examples:
+        - "FD9Q24PwNZkg4pV9cxTOV1Se5R0RD1sT"
       istioToK8sCompatibilityMap:
         type: object
         default:
           "1.16": ["1.22", "1.23", "1.24", "1.25"]
-          "1.19": ["1.25", "1.26", "1.27", "1.28"]
+          "1.19": ["1.25", "1.26", "1.27", "1.28", "1.29", "1.30"]
         additionalProperties:
           type: array
           items:

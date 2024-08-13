@@ -5,6 +5,8 @@ properties:
 
       Если не указано, используется StorageClass существующей PVC Loki, а если PVC пока нет, используется или [глобальный StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет, данные сохраняются в `emptyDir`.
 
+      `global.discovery.defaultStorageClass` применяется только при включении модуля, смена StorageClass по умолчанию в кластере не приведет к перезаказу диска.
+
       `false` — принудительное использование `emptyDir`. Удалить старый PVC и рестартануть под придется вручную.
 
       **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск Loki будет перезаказан, а все данные удалены.

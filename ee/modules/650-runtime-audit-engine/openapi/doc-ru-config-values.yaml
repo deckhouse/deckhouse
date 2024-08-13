@@ -4,3 +4,51 @@ properties:
     type: boolean
     description: |
       Если true, все события будут дублироваться в stdout.
+  resourcesRequests:
+    description: |
+      Настройки максимальных значений CPU и памяти, которые может запросить под при выборе узла (CPU requests, memory requests).
+
+      Если модуль `vertical-pod-autoscaler` выключен, максимальные значения становятся значениями по умолчанию.
+    properties:
+      mode:
+        description: |
+          Режим управления запросами ресурсов (requests):
+          - `Static` — классический, с помощью явного указания ограничения. Настраивается в секции параметров [static](#parameters-resourcesrequests-static);
+          - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-resourcesrequests-vpa).
+      vpa:
+        description: |
+          Настройка управления ресурсами в режиме `VPA`.
+        properties:
+          mode:
+            description: |
+              Режим работы VPA.
+          cpu:
+            description: |
+              Настройки VPA при работе с CPU.
+            properties:
+              max:
+                description: |
+                  Максимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
+              min:
+                description: |
+                  Минимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
+          memory:
+            description: |
+              Настройки VPA при работе с памятью.
+            properties:
+              max:
+                description: |
+                  Максимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
+              min:
+                description: |
+                  Минимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
+      static:
+        description: |
+          Настройка управления ресурсами в режиме `Static`.
+        properties:
+          cpu:
+            description: |
+              Настройка запроса CPU (CPU requests).
+          memory:
+            description: |
+              Настройка запроса памяти (memory requests).

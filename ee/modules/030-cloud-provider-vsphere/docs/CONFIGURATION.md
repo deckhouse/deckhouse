@@ -5,11 +5,11 @@ force_searchable: true
 
 The module is automatically enabled for all cloud clusters deployed in vSphere.
 
+{% include module-alerts.liquid %}
+
 If the cluster control plane is hosted on a virtual machines or bare-metal servers, the cloud provider uses the settings from the `cloud-provider-vsphere` module in the Deckhouse configuration (see below). Otherwise, if the cluster control plane is hosted in a cloud, the cloud provider uses the [VsphereClusterConfiguration](cluster_configuration.html#vsphereclusterconfiguration) structure for configuration.
 
 You can configure the number and parameters of ordering machines in the cloud via the [`NodeGroup`](../../modules/040-node-manager/cr.html#nodegroup) custom resource of the `node-manager` module. Also, in this custom resource, you can specify the instance class's name for the above group of nodes (the `cloudInstances.ClassReference` parameter of NodeGroup). In the case of the vSphere cloud provider, the instance class is the [`VsphereInstanceClass`](cr.html#vsphereinstanceclass) custom resource that stores specific parameters of the machines.
-
-{% include module-settings.liquid %}
 
 ## Storage
 
@@ -47,7 +47,7 @@ Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44
      * A tag from the tag category in `zoneTagCategory` (`k8s-zone` by default) **must be added** to the Cluster. This tag will indicate the **zone**.
   5. Folder for VirtualMachines to be created.
      * An optional parameter. By default, the root vm folder is used.
-  6. Create a role with the appropriate [set](#list-of-privileges-for-using-the-module) of privileges.
+  6. Create a role with the appropriate [set](#list-of-required-privileges) of privileges.
   7. Create a user and assign the above role to it.
 * A tag from the tag category in `regionTagCategory` (`k8s-region` by default) **must be added** to the Datacenter. This tag will indicate the region.
 
@@ -83,3 +83,5 @@ A detailed list of privileges required for Deckhouse Kubernetes Platform to work
     </tr>
   </tbody>
 </table>
+
+{% include module-settings.liquid %}

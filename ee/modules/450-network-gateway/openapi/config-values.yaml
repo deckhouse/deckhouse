@@ -74,4 +74,6 @@ properties:
 
       If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
 
+      `global.discovery.defaultStorageClass` is applied during module activation, changing default StorageClass in cluster won't result in disk re-provisioning.
+
       Dnsmasq (underlies our DHCP server) has its own mechanisms for protecting against the duplication of IP addresses if the lease database is lost (but it is better not to lose it).

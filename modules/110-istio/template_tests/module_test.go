@@ -78,6 +78,7 @@ const istioValues = `
           revision: "v1x16x2"
           fullVersion: "1.16.2"
           imageSuffix: "V1x16x2"
+      kialiSigningKey: "kiali"
       operatorVersionsToInstall:  []
       versionsToInstall: []
       federations: []

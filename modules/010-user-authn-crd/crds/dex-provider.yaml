@@ -273,7 +273,7 @@ spec:
                       type: array
                       default: ["openid", "profile", "email", "groups", "offline_access"]
                       description: |
-                        List of [additional scopes](https://github.com/dexidp/website/blob/main/content/docs/custom-scopes-claims-clients.md) to request in token response.
+                        List of [additional scopes](https://github.com/dexidp/website/blob/main/content/docs/configuration/custom-scopes-claims-clients.md) to request in token response.
                       items:
                         type: string
                     promptType:

@@ -28,7 +28,7 @@ const (
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation policies", func() {
-	f := SetupHelmConfig(`{admissionPolicyEngine: {podSecurityStandards: {}, internal: {"bootstrapped": true, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
+	f := SetupHelmConfig(`{global: {discovery: {kubernetesVersion: "1.27.3"}},admissionPolicyEngine: {podSecurityStandards: {}, internal: {"bootstrapped": true, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
 {
 	"metadata":{"name":"genpolicy"},
 	"spec":{

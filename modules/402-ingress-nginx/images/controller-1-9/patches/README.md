@@ -16,6 +16,7 @@ The `sleep` is needed to gracefully shut down ingress controllers behind a cloud
 * Enable pcre_jit.
 * Add the health check server to provide the way for an external load balancer to check that the ingress controller will be terminated soon.
 * Set default values for upstream_retries and total_upstream_response_time to avoid incorrect logs when it is a raw tcp request.
+* Set proxy connect timeout for auth locations.
 * Replace the status field with formatted status field which is explicitly converted to number to avoid incorrect logs when response status is 009.
 
 We do not intend to make a PR to the upstream with these changes, because there are only our custom features.

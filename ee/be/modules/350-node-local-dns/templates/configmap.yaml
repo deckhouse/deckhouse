@@ -25,10 +25,10 @@ data:
       }
 {{- if not (.Values.global.enabledModules | has "cni-cilium") }}
       bind {{ .Values.global.discovery.clusterDNSAddress }} 169.254.20.10
-      prometheus 127.0.0.1:9254
+      prometheus 127.0.0.1:4224
       health 127.0.0.1:9225
 {{- else }}
-      prometheus 127.0.0.1:9254
+      prometheus 127.0.0.1:4224
       health 0.0.0.0:9225
 {{- end }}
     }

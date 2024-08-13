@@ -12,7 +12,7 @@ apiVersions:
         Run the following command to change the configuration in a running cluster:
 
         ```shell
-        kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+        kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit provider-cluster-configuration
         ```
       x-doc-search: |
         ProviderClusterConfiguration
@@ -38,7 +38,7 @@ apiVersions:
             - name: worker
               replicas: 1
               instanceClass:
-                template: Templates/ubuntu-focal-20.04
+                template: Org/Templates/ubuntu-focal-20.04
                 sizingPolicy: 16cpu32ram
                 storageProfile: ssd
           provider:
@@ -76,13 +76,13 @@ apiVersions:
               additionalProperties: false
               required: [template, storageProfile, sizingPolicy]
               description: |
-                Partial contents of the fields of the [VCDInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-VCD/cr.html#VCDinstanceclass).
+                Partial contents of the fields of the [VCDInstanceClass](../cluster_configuration.html#vcdinstanceclass).
               properties:
                 rootDiskSizeGb:
                   description: |
                     root disk size in gigabytes.
-                  example: 20
-                  default: 20
+                  example: 50
+                  default: 50
                   type: integer
                 etcdDiskSizeGb:
                   description: |
@@ -93,14 +93,14 @@ apiVersions:
                 placementPolicy:
                   description: |
                     PlacementPolicy is the placement policy to be used on this machine.
-                    
+
                     If no placement policy is specified, default placement policy will be used to create the nodes.
                   type: string
                   example: Hypervisor1
                 sizingPolicy:
                   description: |
                     SizingPolicy is the sizing policy to be used on this machine.
-                    
+
                     If no sizing policy is specified, default sizing policy will be used to create the nodes.
                   type: string
                   example: 4Cpu8Memory
@@ -111,7 +111,7 @@ apiVersions:
                   example: ssd
                 template:
                   description: |
-                    Path of the template OVA that is to be used. Consists of catalog and template path.
+                    Path of the template OVA that is to be used. Consists of organization (optional), catalog, template path.
                   type: string
                   example: Linux/ubuntu2204-cloud-ova
                 mainNetworkIPAddresses:
@@ -190,25 +190,25 @@ apiVersions:
                 additionalProperties: false
                 required: [template, storageProfile, sizingPolicy]
                 description: |
-                  Partial contents of the fields of the [VCDInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vcd/cr.html#VCDinstanceclass).
+                  Partial contents of the fields of the [VCDInstanceClass](../cluster_configuration.html#vcdinstanceclass).
                 properties:
                   rootDiskSizeGb:
                     description: |
                       root disk size in gigabytes.
-                    example: 20
-                    default: 20
+                    example: 50
+                    default: 50
                     type: integer
                   placementPolicy:
                     description: |
                       PlacementPolicy is the placement policy to be used on this machine.
-                      
+
                       If no placement policy is specified, default placement policy will be used to create the nodes.
                     type: string
                     example: Hypervisor1
                   sizingPolicy:
                     description: |
                       SizingPolicy is the sizing policy to be used on this machine.
-                      
+
                       If no sizing policy is specified, default sizing policy will be used to create the nodes.
                     type: string
                     example: 4Cpu8Memory
@@ -219,7 +219,7 @@ apiVersions:
                     example: ssd
                   template:
                     description: |
-                      Path of the template OVA that is to be used. Consists of catalog and template path.
+                      Path of the template OVA that is to be used. Consists of organization (optional), catalog, template path.
                     type: string
                     example: Linux/ubuntu2204-cloud-ova
                   mainNetworkIPAddresses:
@@ -286,18 +286,46 @@ apiVersions:
             password:
               type: string
               description: The user's password.
+            apiToken:
+              type: string
+              description: |
+                The token for authentication.
+
+                > **Caution!** When using `apiToken`, leave `username` and `password` empty.
             insecure:
               type: boolean
               description:  Set to `true` if VCD has a self-signed certificate.
               x-doc-default: false
           required:
             - server
-            - username
-            - password
-      oneOf:
+      allOf:
+      - oneOf:
         - required: [layout]
           properties:
             layout:
               enum:
                 - Standard
               type: string
+      - oneOf:
+        - properties:
+            provider:
+              required: [apiToken]
+              type: object
+              properties:
+                username:
+                  not: {}
+                password:
+                  not: {}
+                apiToken:
+                  type: string
+        - properties:
+            provider:
+              required: [username, password]
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                apiToken:
+                  not: {}

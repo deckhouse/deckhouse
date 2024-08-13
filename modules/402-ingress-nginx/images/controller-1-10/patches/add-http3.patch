@@ -23,7 +23,7 @@ index 47f2120f1..10ddc5226 100644
  		ProxyStreamTimeout:               "600s",
  		ProxyStreamNextUpstream:          true,
 diff --git a/internal/ingress/controller/template/template.go b/internal/ingress/controller/template/template.go
-index 7cd6a0604..2247127b4 100644
+index 7cd6a0604..f6df09b8b 100644
 --- a/internal/ingress/controller/template/template.go
 +++ b/internal/ingress/controller/template/template.go
 @@ -276,6 +276,7 @@ var funcMap = text_template.FuncMap{
@@ -34,10 +34,29 @@ index 7cd6a0604..2247127b4 100644
  	"buildOpentelemetryForLocation":      buildOpentelemetryForLocation,
  	"shouldLoadOpentelemetryModule":      shouldLoadOpentelemetryModule,
  	"buildModSecurityForLocation":        buildModSecurityForLocation,
-@@ -1436,6 +1437,44 @@ func buildHTTPSListener(t, s interface{}) string {
+@@ -1380,7 +1381,7 @@ func buildHTTPListener(t, s interface{}) string {
+ 		addrV4 = tc.Cfg.BindAddressIpv4
+ 	}
+ 
+-	co := commonListenOptions(&tc, hostname)
++	co := commonListenOptions(&tc, hostname, false)
+ 
+ 	out = append(out, httpListener(addrV4, co, &tc)...)
+ 
+@@ -1413,7 +1414,7 @@ func buildHTTPSListener(t, s interface{}) string {
+ 		return ""
+ 	}
+ 
+-	co := commonListenOptions(&tc, hostname)
++	co := commonListenOptions(&tc, hostname, false)
+ 
+ 	addrV4 := []string{""}
+ 	if len(tc.Cfg.BindAddressIpv4) > 0 {
+@@ -1436,7 +1437,45 @@ func buildHTTPSListener(t, s interface{}) string {
  	return strings.Join(out, "\n")
  }
  
+-func commonListenOptions(template *config.TemplateConfig, hostname string) string {
 +func buildHTTP3Listener(t, s interface{}) string {
 +	var out []string
 +
@@ -53,7 +72,7 @@ index 7cd6a0604..2247127b4 100644
 +		return ""
 +	}
 +
-+	co := commonListenOptions(&tc, hostname)
++	co := commonListenOptions(&tc, hostname, true)
 +
 +	addrV4 := []string{""}
 +	if len(tc.Cfg.BindAddressIpv4) > 0 {
@@ -76,10 +95,24 @@ index 7cd6a0604..2247127b4 100644
 +	return strings.Join(out, "\n")
 +}
 +
- func commonListenOptions(template *config.TemplateConfig, hostname string) string {
++func commonListenOptions(template *config.TemplateConfig, hostname string, useHTTP3 bool) string {
  	var out []string
  
-@@ -1509,6 +1548,24 @@ func httpsListener(addresses []string, co string, tc *config.TemplateConfig) []s
+ 	if template.Cfg.UseProxyProtocol {
+@@ -1455,7 +1494,11 @@ func commonListenOptions(template *config.TemplateConfig, hostname string) strin
+ 		out = append(out, "reuseport")
+ 	}
+ 
+-	out = append(out, fmt.Sprintf("backlog=%v", template.BacklogSize))
++	//filter backlog, due to unavailable to use with quic
++	//https://mailman.nginx.org/pipermail/nginx-devel/2024-January/UM73PXAEESYS36KEQTYMA5HSC2GK2C4L.html
++	if !useHTTP3 {
++		out = append(out, fmt.Sprintf("backlog=%v", template.BacklogSize))
++	}
+ 
+ 	return strings.Join(out, " ")
+ }
+@@ -1509,6 +1552,24 @@ func httpsListener(addresses []string, co string, tc *config.TemplateConfig) []s
  	return out
  }
  

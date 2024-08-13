@@ -24,12 +24,12 @@ properties:
             Обновления минорной версии Deckhouse (обновление релиза, например, с `v1.26.*` на `v1.27.*`) применяются с учетом заданных окон обновлений либо, если окна обновлений не заданы, по мере появления обновлений на соответствующем канале обновлений.
           - `Manual` — ручной режим обновления минорной версии Deckhouse (обновление релиза, например, с `v1.26.*` на `v1.27.*`) необходимо подтверждение.
 
-            Для подтверждения обновления в соответствующем [custom resource `DeckhouseRelease`](https://deckhouse.ru/documentation/v1/modules/002-deckhouse/cr.html) необходимо установить поле `approved` в `true`.
+            Для подтверждения обновления в соответствующем [custom resource `DeckhouseRelease`](../../cr.html#deckhouserelease) необходимо установить поле `approved` в `true`.
       disruptionApprovalMode:
         description: |
           Режим обновления версий Deckhouse, имеющих disruptions (потенциально опасные изменения):
           - `Auto` — автоматический режим обновления.
-          - `Manual` — ручной режим обновления. Для применения обновления нужно установить аннотацию `release.deckhouse.io/disruption-approved=true` на соответствующий ресурс [DeckhouseRelease](cr.html#deckhouserelease).
+          - `Manual` — ручной режим обновления. Для применения обновления нужно установить аннотацию `release.deckhouse.io/disruption-approved=true` на соответствующий ресурс [DeckhouseRelease](../../cr.html#deckhouserelease).
       windows:
         description: |
           Список окон обновлений в течение суток.
@@ -68,6 +68,7 @@ properties:
 
               ```json
               {
+                "subject":"Deckhouse",
                 "version": "1.36",
                 "requirements":  {"k8s": "1.20.0"},
                 "changelogLink": "https://github.com/deckhouse/deckhouse/changelog/1.36.md",
@@ -77,6 +78,8 @@ properties:
               ```
 
               Описание полей POST-запроса:
+              - `subject` — строка, тип события обновления. Возможные значения: `Deckhouse`, `Module`;
+              - `moduleName` — строка, имя модуля. Устанавливается только если `subject: Module`
               - `version` — строка, номер минорной версии;
               - `requirements` — объект, требования к версии;
               - `changelogLink` — строка, ссылка на список изменений (changelog) минорной версии;

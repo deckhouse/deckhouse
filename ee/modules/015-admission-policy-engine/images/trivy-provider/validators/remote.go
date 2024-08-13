@@ -31,7 +31,6 @@ func NewRemoteValidator(remoteURL string, logger logr.Logger) *remoteValidator {
 			Scanners:            types.AllScanners,
 			ImageConfigScanners: types.AllImageConfigScanners,
 			ScanRemovedPackages: true,
-			ListAllPackages:     true,
 		},
 	}
 }
@@ -93,7 +92,7 @@ func mutateResult(results types.Results) string {
 		}
 
 		for _, mis := range result.Misconfigurations {
-			if mis.Status == types.StatusFailure {
+			if mis.Status == types.MisconfStatusFailure {
 				misIDs = append(misIDs, mis.ID)
 			}
 		}

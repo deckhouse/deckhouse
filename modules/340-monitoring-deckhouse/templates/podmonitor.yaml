@@ -13,7 +13,7 @@ spec:
     path: "/metrics"
     relabelings:
     - sourceLabels: [__meta_kubernetes_pod_container_port_number]
-      regex: "9650"
+      regex: "4222"
       action: keep
     - regex: endpoint|namespace|container
       action: labeldrop

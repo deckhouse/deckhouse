@@ -42,6 +42,7 @@ import (
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/client"
+	"caps-controller-manager/internal/controller"
 	"caps-controller-manager/internal/event"
 	"caps-controller-manager/internal/pool"
 	"caps-controller-manager/internal/scope"
@@ -64,17 +65,17 @@ type StaticMachineReconciler struct {
 	Recorder   *event.Recorder
 }
 
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticmachines,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticmachines/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticmachines/finalizers,verbs=update
-//+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines,verbs=get;list;watch;update;patch;delete
-//+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticmachines,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticmachines/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=staticmachines/finalizers,verbs=update
+// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines,verbs=get;list;watch;update;patch;delete
+// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines/status,verbs=get;update;patch
 
-//+kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;watch
-//+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
 
-//+kubebuilder:rbac:groups=deckhouse.io,resources=nodegroups,verbs=get;list;watch
-//+kubebuilder:rbac:groups=events.k8s.io,resources=events,verbs=create
+// +kubebuilder:rbac:groups=deckhouse.io,resources=nodegroups,verbs=get;list;watch
+// +kubebuilder:rbac:groups=events.k8s.io,resources=events,verbs=create
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -101,7 +102,7 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	machineScope, ok, err := NewMachineScope(ctx, r.Client, r.Config, staticMachine)
+	machineScope, ok, err := controller.NewMachineScope(ctx, r.Client, r.Config, staticMachine)
 	if err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "failed to create machine scope")
 	}

@@ -6,6 +6,9 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- if semverCompare ">= 1.26" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "ValidatingAdmissionPolicy=true" | join "," }}
 {{- end }}
+{{- if semverCompare "> 1.26" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "AdmissionWebhookMatchConditions=true" | join "," }}
+{{- end }}
 {{- if semverCompare "< 1.27" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" | join "," }}
 {{- end }}
@@ -48,8 +51,10 @@ apiServer:
     api-audiences: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}{{ with .apiserver.serviceAccount.additionalAPIAudiences }},{{ . | join "," }}{{ end }}
     {{- if .apiserver.serviceAccount.issuer }}
     service-account-issuer: {{ .apiserver.serviceAccount.issuer }}
+    service-account-jwks-uri: {{ .apiserver.serviceAccount.issuer }}/openid/v1/jwks
     {{- else }}
     service-account-issuer: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}
+    service-account-jwks-uri: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}/openid/v1/jwks
     {{- end }}
     service-account-key-file: /etc/kubernetes/pki/sa.pub
     service-account-signing-key-file: /etc/kubernetes/pki/sa.key
@@ -68,7 +73,7 @@ apiServer:
     anonymous-auth: "false"
     feature-gates: {{ $featureGates | quote }}
 {{- if semverCompare ">= 1.28" .clusterConfiguration.kubernetesVersion }}
-    runtime-config: "admissionregistration.k8s.io/v1beta1=true"
+    runtime-config: "admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true"
 {{- else if semverCompare ">= 1.26" .clusterConfiguration.kubernetesVersion }}
     runtime-config: "admissionregistration.k8s.io/v1alpha1=true"
 {{- end }}

@@ -30,11 +30,12 @@ import (
 )
 
 const (
-	packagesProxyPort = 5443
+	packagesProxyPort = 4219
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/node-manager",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
+	Queue:        "/modules/node-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "packages_proxy",
@@ -80,10 +81,10 @@ func handlePackagesProxyEndpoints(input *go_hook.HookInput) error {
 	endpointsList := endpointsSet.Slice() // sorted
 
 	if len(endpointsList) == 0 {
-		input.LogEntry.Warn("no kubernetes packages proxy endpoints host:port specified")
-		return nil
+		return fmt.Errorf("no packages proxy endpoints found")
 	}
 
+	input.LogEntry.Infof("found packages proxy endpoints: %v", endpointsList)
 	input.Values.Set("nodeManager.internal.packagesProxy.addresses", endpointsList)
 
 	return nil

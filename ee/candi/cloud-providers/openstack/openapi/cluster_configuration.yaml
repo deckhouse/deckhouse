@@ -11,7 +11,7 @@ apiVersions:
       Run the following command to change the configuration in a running cluster:
 
       ```shell
-      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit provider-cluster-configuration
       ```
     x-doc-search: |
       ProviderClusterConfiguration
@@ -39,7 +39,7 @@ apiVersions:
         masterNodeGroup:
           replicas: 1
           instanceClass:
-            rootDiskSize: 20
+            rootDiskSize: 50
             flavorName: m1.large
             imageName: "debian-11-genericcloud-amd64-20220911-1135"
           volumeTypeMap:
@@ -50,7 +50,7 @@ apiVersions:
             instanceClass:
               flavorName: m1.large
               imageName: "debian-11-genericcloud-amd64-20220911-1135"
-              rootDiskSize: 20
+              rootDiskSize: 50
               configDrive: false
               floatingIPPools:
                 - public
@@ -541,6 +541,8 @@ apiVersions:
             default: DirectRoutingWithPortSecurityEnabled
           externalNetworkName:
             <<: *externalNetworkName
+          externalNetworkDHCP:
+            <<: *externalNetworkDHCP
           masterWithExternalFloatingIP:
             description: |
               Defines if Floating IP must be assigned to master nodes.

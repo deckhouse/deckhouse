@@ -20,7 +20,6 @@ searchable: false
 * Актуализировать crd-all.gen.yaml и crd-operator.yaml в папке crds.
 * Чтобы обновить istio-дашборды необходимо выполнить скрипт `istio-grafana-dashboard.sh` и сложить в полученные json-ки в `monitoring/grafana-dashboards/istio/`. Что делает скрипт:
   * Клонирует репозиторий istio с необходимой версией.
-  * Заменяет все range'и `$__interval_sx4`.
   * Заменяет `irate` на `rate`.
   * Заменяет `Resolution` на `1/1`.
   * Убирает `Min Step`.

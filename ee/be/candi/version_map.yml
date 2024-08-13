@@ -2,6 +2,10 @@ bashible:
   redos: &redos
     '7.3':
     '8.0':
+  rosa: &rosa
+    '7.9':
+    '12.4':
+    '12.5':
   astra: &astra
     '1.7':
   altlinux:
@@ -9,21 +13,14 @@ bashible:
     '10.0':
     '10.1':
     '10.2':
+    '11':
 k8s:
-  '1.25':
-    bashible:
-      redos:
-        !!merge <<: *redos
-      astra:
-        !!merge <<: *astra
-    clusterApi:
-      vcd: v1.2.0
-    ccm:
-      vcd: 1.4.1
   '1.26':
     bashible:
       redos:
         !!merge <<: *redos
+      rosa:
+        !!merge <<: *rosa
       astra:
         !!merge <<: *astra
     clusterApi:
@@ -34,6 +31,8 @@ k8s:
     bashible:
       redos:
         !!merge <<: *redos
+      rosa:
+        !!merge <<: *rosa
       astra:
         !!merge <<: *astra
     clusterApi:
@@ -44,6 +43,8 @@ k8s:
     bashible:
       redos:
         !!merge <<: *redos
+      rosa:
+        !!merge <<: *rosa
       astra:
         !!merge <<: *astra
     clusterApi:
@@ -54,6 +55,20 @@ k8s:
     bashible:
       redos:
         !!merge <<: *redos
+      rosa:
+        !!merge <<: *rosa
+      astra:
+        !!merge <<: *astra
+    clusterApi:
+      vcd: v1.2.0
+    ccm:
+      vcd: 1.4.1
+  '1.30':
+    bashible:
+      redos:
+        !!merge <<: *redos
+      rosa:
+        !!merge <<: *rosa
       astra:
         !!merge <<: *astra
     clusterApi:

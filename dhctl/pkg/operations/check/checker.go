@@ -19,6 +19,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -33,6 +35,7 @@ type Params struct {
 	SSHClient     *ssh.Client
 	StateCache    dhctlstate.Cache
 	CommanderMode bool
+	CommanderUUID uuid.UUID
 	*commander.CommanderModeParams
 
 	TerraformContext *terraform.TerraformContext
@@ -49,13 +52,18 @@ func NewChecker(params *Params) *Checker {
 		panic("check operation currently supported only in commander mode")
 	}
 
+	// FIXME(dhctl-for-commander): commander uuid currently optional, make it required later
+	//if params.CommanderUUID == uuid.Nil {
+	//	panic("CommanderUUID required for check operation in commander mode!")
+	//}
+
 	return &Checker{
 		Params: params,
 	}
 }
 
 func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
-	kubeCl, err := c.kubeClient()
+	kubeCl, err := c.GetKubeClient()
 	if err != nil {
 		return nil, err
 	}
@@ -67,6 +75,16 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 
 	res := &CheckResult{
 		Status: CheckStatusInSync,
+	}
+
+	if c.CommanderMode {
+		shouldUpdate, err := commander.CheckShouldUpdateCommanderUUID(ctx, kubeCl, c.CommanderUUID)
+		if err != nil {
+			return nil, fmt.Errorf("uuid consistency check failed: %w", err)
+		}
+		if shouldUpdate {
+			res.Status = res.Status.CombineStatus(CheckStatusOutOfSync)
+		}
 	}
 
 	if metaConfig.ClusterType == config.CloudClusterType {
@@ -96,7 +114,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 	return res, nil
 }
 
-func (c *Checker) checkConfiguration(_ context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (CheckStatus, error) {
+func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (CheckStatus, error) {
 	clusterConfigurationData, err := metaConfig.ClusterConfigYAML()
 	if err != nil {
 		return "", fmt.Errorf("unable to get cluster config yaml: %w", err)
@@ -175,7 +193,7 @@ func resolveStatisticsStatus(status string) CheckStatus {
 	panic(fmt.Sprintf("unknown check infra status: %q", status))
 }
 
-func (c *Checker) kubeClient() (*client.KubernetesClient, error) {
+func (c *Checker) GetKubeClient() (*client.KubernetesClient, error) {
 	if c.KubeClient != nil {
 		return c.KubeClient, nil
 	}

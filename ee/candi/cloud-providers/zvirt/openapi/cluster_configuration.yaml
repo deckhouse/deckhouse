@@ -12,7 +12,7 @@ apiVersions:
       Run the following command to change the configuration in a running cluster:
 
       ```shell
-      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit provider-cluster-configuration
       ```
     x-doc-search: |
       ProviderClusterConfiguration
@@ -98,8 +98,8 @@ apiVersions:
               rootDiskSizeGb:
                 description: |
                   Root disk size in GiB to use in zVirt VirtualMachines.
-                example: 30
-                default: 30
+                example: 50
+                default: 50
                 type: integer
               etcdDiskSizeGb:
                 description: |

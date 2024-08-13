@@ -4,7 +4,7 @@
 {{- $name := index . 2 }}
 {{- $failover := index . 3 }}
 {{- $crdChecksum := toJson $crd | sha256sum }}
-{{- $loadBalancer := (or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol")) }}
+{{- $loadBalancer := (or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough")) }}
 {{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
 {{- $kubernetesVersion := $context.Values.global.discovery.kubernetesVersion }}
 
@@ -12,6 +12,7 @@
 {{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
 {{- $hostPort := $crd.spec.hostPort | default dict }}
 {{- $hostPortWithProxyProtocol := $crd.spec.hostPortWithProxyProtocol | default dict }}
+{{- $hostPortWithSSLPassthrough := $crd.spec.hostPortWithSSLPassthrough | default dict }}
 {{- $gracePeriod := 0 }}
 {{- $defaultGracePeriod := 60 }}
 {{- if $loadBalancer }}
@@ -62,7 +63,7 @@ kind: PodDisruptionBudget
 metadata:
   name: controller-{{ $name }}
   namespace: d8-ingress-nginx
-  {{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name "init" (now | date "20060102150405"))) | nindent 2 }}
+  {{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name)) | nindent 2 }}
 spec:
   maxUnavailable: 1
   selector:
@@ -128,6 +129,7 @@ spec:
         traffic.sidecar.istio.io/includeInboundPorts: ""
         traffic.sidecar.istio.io/includeOutboundIPRanges: {{ $context.Values.global.discovery.serviceSubnet | quote }}
         inject.istio.io/templates: "sidecar,d8-hold-istio-proxy-termination-until-application-stops"
+        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
       {{- end }}
     spec:
   {{- if $crd.spec.nodeSelector }}
@@ -175,7 +177,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /controller/healthz
-            port: 10354
+            port: 4207
             scheme: HTTPS
           initialDelaySeconds: 30
           timeoutSeconds: 5
@@ -184,7 +186,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /controller/healthz
-            port: 10354
+            port: 4207
             scheme: HTTPS
           initialDelaySeconds: 10
           periodSeconds: 2
@@ -230,6 +232,9 @@ spec:
     {{- end }}
         - --healthz-host=127.0.0.1
         - --election-id={{ printf "ingress-controller-leader-%s" $crd.spec.ingressClass }}
+        {{- if or (eq $crd.spec.inlet "HostPortWithSSLPassthrough") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough")}}
+        - --enable-ssl-passthrough
+        {{- end }}
         lifecycle:
           preStop:
             exec:
@@ -258,11 +263,26 @@ spec:
           hostPort: {{ $hostPortWithProxyProtocol.httpPort }}
     {{- end }}
   {{- end }}
+  {{- if eq $crd.spec.inlet "HostPortWithSSLPassthrough"}}
+    {{- if $hostPortWithSSLPassthrough.httpPort }}
+          hostPort: {{ $hostPortWithSSLPassthrough.httpPort }}
+    {{- end }}
+  {{- end }}
         - containerPort: 443
           protocol: TCP
   {{- if eq $crd.spec.inlet "HostPort"}}
     {{- if $hostPort.httpsPort }}
           hostPort: {{ $hostPort.httpsPort }}
+    {{- end }}
+  {{- end }}
+  {{- if eq $crd.spec.inlet "HostPortWithSSLPassthrough"}}
+    {{- if $hostPortWithSSLPassthrough.httpsPort }}
+          hostPort: {{ $hostPortWithSSLPassthrough.httpsPort }}
+    {{- end }}
+  {{- end }}
+  {{- if eq $crd.spec.inlet "HostPortWithProxyProtocol"}}
+    {{- if $hostPortWithProxyProtocol.httpsPort }}
+          hostPort: {{ $hostPortWithProxyProtocol.httpsPort }}
     {{- end }}
   {{- end }}
         - containerPort: 443
@@ -333,7 +353,7 @@ spec:
       - name: kube-rbac-proxy
         image: {{ include "helm_lib_module_image" (list $context "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):10354"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4207"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -375,7 +395,7 @@ spec:
               - -server
               - 127.0.0.1:10254
         ports:
-        - containerPort: 10354
+        - containerPort: 4207
           name: https-metrics
         resources:
           requests:

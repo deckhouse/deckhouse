@@ -34,11 +34,11 @@ const labels = {
   'e2e/run/gcp': { type: 'e2e-run', provider: 'gcp' },
   'e2e/run/openstack': { type: 'e2e-run', provider: 'openstack' },
   'e2e/run/vsphere': { type: 'e2e-run', provider: 'vsphere' },
+  'e2e/run/vcd': { type: 'e2e-run', provider: 'vcd' },
   'e2e/run/yandex-cloud': { type: 'e2e-run', provider: 'yandex-cloud' },
   'e2e/run/static': { type: 'e2e-run', provider: 'static' },
 
   // E2E: use Kubernetes version
-  'e2e/use/k8s/1.25': { type: 'e2e-use', ver: '1.25' },
   'e2e/use/k8s/1.26': { type: 'e2e-use', ver: '1.26' },
   'e2e/use/k8s/1.27': { type: 'e2e-use', ver: '1.27' },
   'e2e/use/k8s/1.28': { type: 'e2e-use', ver: '1.28' },

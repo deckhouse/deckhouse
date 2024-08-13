@@ -4,6 +4,8 @@
 
 | Table of contents |
 |---|
+| **Enable Ds Eviction** |
+| [helm_lib_prevent_ds_eviction_annotation](#helm_lib_prevent_ds_eviction_annotation) |
 | **Envs For Proxy** |
 | [helm_lib_envs_for_proxy](#helm_lib_envs_for_proxy) |
 | **High Availability** |
@@ -46,11 +48,14 @@
 | [helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs](#helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs) |
 | [helm_lib_module_pod_security_context_run_as_user_deckhouse](#helm_lib_module_pod_security_context_run_as_user_deckhouse) |
 | [helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs](#helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs) |
+| [helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted](#helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted) |
 | [helm_lib_module_pod_security_context_run_as_user_root](#helm_lib_module_pod_security_context_run_as_user_root) |
+| [helm_lib_module_pod_security_context_runtime_default](#helm_lib_module_pod_security_context_runtime_default) |
 | [helm_lib_module_container_security_context_not_allow_privilege_escalation](#helm_lib_module_container_security_context_not_allow_privilege_escalation) |
 | [helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux](#helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux) |
 | [helm_lib_module_container_security_context_read_only_root_filesystem](#helm_lib_module_container_security_context_read_only_root_filesystem) |
 | [helm_lib_module_container_security_context_privileged](#helm_lib_module_container_security_context_privileged) |
+| [helm_lib_module_container_security_context_escalated_sys_admin_privileged](#helm_lib_module_container_security_context_escalated_sys_admin_privileged) |
 | [helm_lib_module_container_security_context_privileged_read_only_root_filesystem](#helm_lib_module_container_security_context_privileged_read_only_root_filesystem) |
 | [helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all](#helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all) |
 | [helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add](#helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add) |
@@ -99,6 +104,18 @@
 | [helm_lib_deployment_on_master_strategy_and_replicas_for_ha](#helm_lib_deployment_on_master_strategy_and_replicas_for_ha) |
 | [helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha](#helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha) |
 | [helm_lib_deployment_strategy_and_replicas_for_ha](#helm_lib_deployment_strategy_and_replicas_for_ha) |
+
+## Enable Ds Eviction
+
+### helm_lib_prevent_ds_eviction_annotation
+
+ Adds `cluster-autoscaler.kubernetes.io/enable-ds-eviction` annotation to manage DaemonSet eviction by the Cluster Autoscaler. 
+ This is important to prevent the eviction of DaemonSet pods during cluster scaling.  
+
+#### Usage
+
+`{{ include "helm_lib_prevent_ds_eviction_annotation" . }} `
+
 
 ## Envs For Proxy
 
@@ -516,6 +533,19 @@ list:
 -  Template context with .Values, .Chart, etc 
 
 
+### helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted
+
+ returns SecurityContext parameters for Container with user and group "deckhouse" plus minimal required settings to comply with the Restricted mode of the Pod Security Standards 
+
+#### Usage
+
+`{{ include "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+
 ### helm_lib_module_pod_security_context_run_as_user_root
 
  returns PodSecurityContext parameters for Pod with user and group 0 
@@ -523,6 +553,19 @@ list:
 #### Usage
 
 `{{ include "helm_lib_module_pod_security_context_run_as_user_root" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_module_pod_security_context_runtime_default
+
+ returns PodSecurityContext parameters for Pod with seccomp profile RuntimeDefault 
+
+#### Usage
+
+`{{ include "helm_lib_module_pod_security_context_runtime_default" . }} `
 
 #### Arguments
 
@@ -572,6 +615,16 @@ list:
 #### Usage
 
 `{{ include "helm_lib_module_container_security_context_privileged" . }} `
+
+
+
+### helm_lib_module_container_security_context_escalated_sys_admin_privileged
+
+ returns SecurityContext parameters for Container running privileged with escalation and sys_admin 
+
+#### Usage
+
+`{{ include "helm_lib_module_container_security_context_escalated_sys_admin_privileged" . }} `
 
 
 

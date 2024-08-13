@@ -27,6 +27,10 @@ var (
 	PreflightSkipSSHCredentialsCheck       = false
 	PreflightSkipRegistryCredentials       = false
 	PreflightSkipContainerdExistCheck      = false
+	PreflightSkipPythonChecks              = false
+	PreflightSkipSudoIsAllowedForUserCheck = false
+	PreflightSkipSystemRequirementsCheck   = false
+	PreflightSkipOneSSHHost                = false
 )
 
 const (
@@ -39,6 +43,10 @@ const (
 	SSHCredentialsCheckArgName       = "preflight-skip-ssh-credentials-check"
 	RegistryCredentialsCheckArgName  = "preflight-skip-registry-credential"
 	ContainerdExistCheckArgName      = "preflight-skip-containerd-exist"
+	PythonChecksArgName              = "preflight-skip-python-checks"
+	SudoAllowedCheckArgName          = "preflight-skip-sudo-allowed"
+	SystemRequirementsArgName        = "preflight-skip-system-requirements-check"
+	OneSSHHostCheckArgName           = "preflight-skip-one-ssh-host"
 )
 
 func DefinePreflight(cmd *kingpin.CmdClause) {
@@ -72,4 +80,16 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(ContainerdExistCheckArgName, "Skip verifying contanerd exist").
 		Envar(configEnvName("PREFLIGHT_SKIP_CONTAINERD_EXIST")).
 		BoolVar(&PreflightSkipContainerdExistCheck)
+	cmd.Flag(PythonChecksArgName, "Skip verifying python installation").
+		Envar(configEnvName("PREFLIGHT_SKIP_PYTHON_CHECKS")).
+		BoolVar(&PreflightSkipPythonChecks)
+	cmd.Flag(SudoAllowedCheckArgName, "Skip verifying sudo is allowed for user").
+		Envar(configEnvName("PREFLIGHT_SKIP_SUDO_ALLOWED_CHECK")).
+		BoolVar(&PreflightSkipSudoIsAllowedForUserCheck)
+	cmd.Flag(SystemRequirementsArgName, "Skip verifying system requirements").
+		Envar(configEnvName("PREFLIGHT_SKIP_SYSTEM_REQUIREMENTS_CHECK")).
+		BoolVar(&PreflightSkipSystemRequirementsCheck)
+	cmd.Flag(OneSSHHostCheckArgName, "Skip verifying one ssh-host parametr").
+		Envar(configEnvName("PREFLIGHT_SKIP_ONE_SSH_HOST")).
+		BoolVar(&PreflightSkipOneSSHHost)
 }

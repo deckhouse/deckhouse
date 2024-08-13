@@ -3,7 +3,7 @@ module registry-packages-proxy
 go 1.19
 
 require (
-	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.19.0
 	github.com/sirupsen/logrus v1.9.3

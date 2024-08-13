@@ -2,6 +2,8 @@
 title: "The cilium-hubble module: configuration"
 ---
 
+{% include module-alerts.liquid %}
+
 {% include module-bundle.liquid %}
 
 The module will be left disabled unless `cni-cilium` is used regardless of `ciliumHubbleEnabled:` parameter.

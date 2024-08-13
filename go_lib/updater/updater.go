@@ -28,6 +28,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 const (
@@ -67,12 +68,14 @@ type Updater[R Release] struct {
 	kubeAPI           KubeAPI[R]
 	metricsUpdater    MetricsUpdater
 	settings          Settings
-	webhookDataGetter WebhookDataGetter[R]
+	webhookDataSource WebhookDataSource[R]
+
+	enabledModules set.Set
 }
 
 func NewUpdater[R Release](logger logger.Logger, notificationConfig *NotificationConfig, mode string,
 	data DeckhouseReleaseData, podIsReady, isBootstrapping bool, kubeAPI KubeAPI[R], metricsUpdater MetricsUpdater,
-	settings Settings, webhookDataGetter WebhookDataGetter[R]) *Updater[R] {
+	settings Settings, webhookDataSource WebhookDataSource[R], enabledModules []string) *Updater[R] {
 	now := time.Now().UTC()
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		now = time.Date(2021, 01, 01, 13, 30, 00, 00, time.UTC)
@@ -93,7 +96,9 @@ func NewUpdater[R Release](logger logger.Logger, notificationConfig *Notificatio
 		kubeAPI:           kubeAPI,
 		metricsUpdater:    metricsUpdater,
 		settings:          settings,
-		webhookDataGetter: webhookDataGetter,
+		webhookDataSource: webhookDataSource,
+
+		enabledModules: set.New(enabledModules...),
 	}
 }
 
@@ -135,13 +140,13 @@ func (du *Updater[R]) checkReleaseNotification(predictedRelease *R, updateWindow
 
 	predictedReleaseVersion := (*predictedRelease).GetVersion()
 	if du.notificationConfig.WebhookURL != "" {
-		data := webhookData{
+		data := WebhookData{
 			Version:       fmt.Sprintf("%d.%d", predictedReleaseVersion.Major(), predictedReleaseVersion.Minor()),
 			Requirements:  (*predictedRelease).GetRequirements(),
 			ChangelogLink: (*predictedRelease).GetChangelogLink(),
 			ApplyTime:     releaseApplyTime.Format(time.RFC3339),
-			Message:       du.webhookDataGetter.GetMessage(*predictedRelease, releaseApplyTime),
 		}
+		du.webhookDataSource.Fill(&data, *predictedRelease, releaseApplyTime)
 
 		err := sendWebhookNotification(du.notificationConfig, data)
 		if err != nil {
@@ -228,7 +233,7 @@ func (du *Updater[R]) checkMinorReleaseConditions(predictedRelease *R, updateWin
 
 		if du.inManualMode {
 			// check: release is approved in Manual mode
-			if !(*predictedRelease).GetApprovedStatus() {
+			if !(*predictedRelease).GetManuallyApproved() {
 				du.logger.Infof("Release %s is waiting for manual approval", (*predictedRelease).GetName())
 				du.metricsUpdater.WaitingManual((*predictedRelease).GetName(), float64(du.totalPendingManualReleases))
 				err := du.updateStatus(predictedRelease, waitingManualApprovalMsg, PhasePending)
@@ -359,6 +364,17 @@ func (du *Updater[R]) checkReleaseDisruptions(rl *R) bool {
 	return true
 }
 
+// SetReleases set and sort releases for updater
+func (du *Updater[R]) SetReleases(releases []R) {
+	if len(releases) == 0 {
+		return
+	}
+
+	sort.Sort(ByVersion[R](releases))
+
+	du.releases = releases
+}
+
 func (du *Updater[R]) ReleasesCount() int {
 	return len(du.releases)
 }
@@ -441,7 +457,7 @@ func (du *Updater[R]) PredictNextRelease() {
 
 	for i, release := range du.releases {
 		switch release.GetPhase() {
-		case PhaseSuperseded, PhaseSuspended:
+		case PhaseSuperseded, PhaseSuspended, PhaseSkipped:
 			// pass
 
 		case PhasePending:
@@ -469,9 +485,9 @@ func (du *Updater[R]) HasForceRelease() bool {
 }
 
 // ApplyForcedRelease deploys forced release without any checks (windows, requirements, approvals and so on)
-func (du *Updater[R]) ApplyForcedRelease() {
+func (du *Updater[R]) ApplyForcedRelease() bool {
 	if du.forcedReleaseIndex == -1 {
-		return
+		return true
 	}
 	forcedRelease := &(du.releases[du.forcedReleaseIndex])
 	var currentRelease *R
@@ -481,7 +497,7 @@ func (du *Updater[R]) ApplyForcedRelease() {
 
 	du.logger.Warnf("Forcing release %s", (*forcedRelease).GetName())
 
-	du.runReleaseDeploy(forcedRelease, currentRelease)
+	result := du.runReleaseDeploy(forcedRelease, currentRelease)
 
 	// remove annotation
 	err := du.kubeAPI.PatchReleaseAnnotations(*forcedRelease, map[string]any{
@@ -500,6 +516,8 @@ func (du *Updater[R]) ApplyForcedRelease() {
 			}
 		}
 	}
+
+	return result
 }
 
 // PredictedReleaseIsPatch shows if the predicted release is a patch with respect to the Deployed one
@@ -563,87 +581,9 @@ func (du *Updater[R]) processPendingRelease(index int, release R) {
 	du.predictedReleaseIndex = index
 }
 
-func (du *Updater[R]) patchInitialStatus(release R) R {
-	if release.GetPhase() != "" {
-		return release
-	}
-	release.SetApprovedStatus(true)
-
-	err := du.updateStatus(&release, "", PhasePending)
-	if err != nil {
-		du.logger.Error(err)
-	}
-
-	return release
-}
-
-func (du *Updater[R]) patchSuspendedStatus(release R) R {
-	if !release.GetSuspend() {
-		return release
-	}
-
-	err := du.kubeAPI.PatchReleaseAnnotations(release, map[string]any{
-		"release.deckhouse.io/suspended": nil,
-	})
-	if err != nil {
-		du.logger.Error("patch suspended annotation:", err)
-	}
-
-	err = du.updateStatus(&release, "", PhaseSuspended)
-	if err != nil {
-		du.logger.Error(err)
-	}
-
-	return release
-}
-
-// patch manual Pending release if update mode was changed
-func (du *Updater[R]) patchManualRelease(release R) R {
-	if release.GetPhase() != PhasePending {
-		return release
-	}
-
-	if !du.inManualMode {
-		return release
-	}
-
-	if !release.GetManuallyApproved() {
-		release.SetApprovedStatus(false)
-		du.totalPendingManualReleases++
-	} else {
-		release.SetApprovedStatus(true)
-	}
-
-	return release
-}
-
-// PrepareReleases fetches releases from snapshot and then:
-//   - patch releases with empty status (just created)
-//   - handle suspended releases (patch status and remove annotation)
-//   - patch manual releases (change status)
-func (du *Updater[R]) PrepareReleases(releases []R) {
-	if len(releases) == 0 {
-		return
-	}
-
-	for i, release := range releases {
-		release = du.patchInitialStatus(release)
-
-		release = du.patchSuspendedStatus(release)
-
-		release = du.patchManualRelease(release)
-
-		releases[i] = release
-	}
-
-	sort.Sort(ByVersion[R](releases))
-
-	du.releases = releases
-}
-
 func (du *Updater[R]) checkReleaseRequirements(rl *R) bool {
 	for key, value := range (*rl).GetRequirements() {
-		passed, err := requirements.CheckRequirement(key, value)
+		passed, err := requirements.CheckRequirement(key, value, du.enabledModules)
 		if !passed {
 			msg := fmt.Sprintf("%q requirement for DeckhouseRelease %q not met: %s", key, (*rl).GetVersion(), err)
 			if errors.Is(err, requirements.ErrNotRegistered) {
@@ -688,19 +628,38 @@ func (du *Updater[R]) changeNotifiedFlag(fl bool) error {
 }
 
 func (du *Updater[R]) saveReleaseData() error {
-	var release R
-
 	if du.predictedReleaseIndex != -1 {
-		release = du.releases[du.predictedReleaseIndex]
+		release := du.releases[du.predictedReleaseIndex]
+		return du.kubeAPI.SaveReleaseData(release, du.releaseData)
 	}
 
-	return du.kubeAPI.SaveReleaseData(release, du.releaseData)
+	return nil
 }
 
 func (du *Updater[R]) GetPredictedReleaseIndex() int {
 	return du.predictedReleaseIndex
 }
 
+func (du *Updater[R]) GetPredictedRelease() R {
+	var release R
+	if du.predictedReleaseIndex == -1 {
+		return release
+	}
+	return du.releases[du.predictedReleaseIndex]
+}
+
 func (du *Updater[R]) GetSkippedPatchesIndexes() []int {
 	return du.skippedPatchesIndexes
+}
+
+func (du *Updater[R]) GetSkippedPatchReleases() []R {
+	if len(du.skippedPatchesIndexes) == 0 {
+		return nil
+	}
+
+	skippedPatches := make([]R, 0, len(du.skippedPatchesIndexes))
+	for _, index := range du.skippedPatchesIndexes {
+		skippedPatches = append(skippedPatches, du.releases[index])
+	}
+	return skippedPatches
 }

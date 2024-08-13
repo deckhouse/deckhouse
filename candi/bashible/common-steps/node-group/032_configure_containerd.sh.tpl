@@ -149,6 +149,14 @@ oom_score = 0
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
           insecure_skip_verify = true
   {{- end }}
+  {{- if eq .runType "Normal" }}
+    {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
+			{{- if $ca }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $registryAddr | lower }}".tls]
+          ca_file = "/usr/local/share/d8-ca-certificates/{{ $registryAddr | lower }}-ca.crt"
+			{{- end }}
+    {{- end }}
+  {{- end }}
     [plugins."io.containerd.grpc.v1.cri".image_decryption]
       key_model = ""
     [plugins."io.containerd.grpc.v1.cri".x509_key_pair_streaming]

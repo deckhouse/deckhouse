@@ -34,10 +34,9 @@
         Cloud data discoverer cannot save data to k8s resource. See cloud data discoverer logs for more information:
         `kubectl -n {{`{{ $labels.namespace }}`}} logs deploy/cloud-data-discoverer`
 
-{{/* TODO remove condition with label namespace after release 1.61 when all yandex clusters applied cloud-migrator in discoverer  */}}
   - alert: ClusterHasOrphanedDisks
     for: 1h
-    expr: max by(job, id, name)(cloud_data_discovery_orphaned_disk_info{namespace!="d8-cloud-provider-yandex"} == 1)
+    expr: max by(job, id, name, namespace)(cloud_data_discovery_orphaned_disk_info == 1)
     labels:
       severity_level: "6"
       d8_module: node-manager

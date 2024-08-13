@@ -106,7 +106,7 @@ dhctl bootstrap --ssh-user=<username> --ssh-host=<master_ip> --ssh-agent-private
   --config=/config.yml \
   --ask-become-pass
 {%- elsif page.platform_type == "cloud" %}
-dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml --resources=/resources.yml
+dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml --config=/resources.yml
 {%- endif %}
 ```
 {% endsnippetcut %}

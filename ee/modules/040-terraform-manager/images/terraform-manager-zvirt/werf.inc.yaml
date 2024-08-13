@@ -6,7 +6,7 @@ git:
 import:
   - artifact: terraform-provider-ovirt
     add: /terraform-provider-ovirt
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.ovirt.namespace }}/{{ .TF.ovirt.type }}/{{ .TF.ovirt.version }}/linux_amd64/terraform-provider-ovirt
+    to: /plugins/registry.terraform.io/{{ .TF.ovirt.namespace }}/{{ .TF.ovirt.type }}/{{ .TF.ovirt.version }}/linux_amd64/terraform-provider-ovirt
     before: setup
 ---
 artifact: terraform-provider-ovirt

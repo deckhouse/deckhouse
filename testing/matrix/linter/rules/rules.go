@@ -25,6 +25,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
@@ -300,8 +301,11 @@ func (l *ObjectLinter) ApplyObjectRules(object storage.StoreObject) {
 
 	l.ErrorsList.Add(objectRevisionHistoryLimit(object))
 	l.ErrorsList.Add(objectHostNetworkPorts(object))
+	l.ErrorsList.Add(objectServiceTargetPort(object))
 
 	l.ErrorsList.Add(modules.PromtoolRuleCheck(l.Module, object))
+
+	l.ErrorsList.Add(roles.ObjectRolesWildcard(object))
 }
 
 func objectRecommendedLabels(object storage.StoreObject) errors.LintRuleError {
@@ -564,6 +568,73 @@ func objectSecurityContext(object storage.StoreObject) errors.LintRuleError {
 	return errors.EmptyRuleError
 }
 
+func skipServiceTargetPort(o *storage.StoreObject, port int32) bool {
+	// istiod is being deployed by istio-operator and ports are hardcoded.
+	if o.Unstructured.GetName() == "istiod" && o.Unstructured.GetNamespace() == "d8-istio" &&
+		(port == 15010 || port == 15012 || port == 15014 || port == 15017) {
+		return true
+	}
+	return false
+}
+
+func objectServiceTargetPort(object storage.StoreObject) errors.LintRuleError {
+	switch object.Unstructured.GetKind() {
+	case "Service":
+	default:
+		return errors.EmptyRuleError
+	}
+
+	converter := runtime.DefaultUnstructuredConverter
+	service := new(v1.Service)
+	err := converter.FromUnstructured(object.Unstructured.UnstructuredContent(), service)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, port := range service.Spec.Ports {
+		if port.TargetPort.Type == intstr.Int {
+			if port.TargetPort.IntVal == 0 {
+				return errors.NewLintRuleError(
+					"MANIFEST004",
+					object.Identity(),
+					nil,
+					"Service port must use an explicit named (non-numeric) target port",
+				)
+			}
+			if skipServiceTargetPort(&object, port.TargetPort.IntVal) {
+				continue
+			}
+			return errors.NewLintRuleError(
+				"MANIFEST004",
+				object.Identity(),
+				port.TargetPort.IntVal,
+				"Service port must use a named (non-numeric) target port",
+			)
+		}
+	}
+	return errors.EmptyRuleError
+}
+
+func skipHostNetworkPorts(o *storage.StoreObject, c *v1.Container, p *v1.ContainerPort, hostNetworkUsed bool) bool {
+	// The 5416 port is standard one which is already configured on client's side.
+	if o.Unstructured.GetKind() == "StatefulSet" && o.Unstructured.GetName() == "openvpn" &&
+		o.Unstructured.GetNamespace() == "d8-openvpn" && c.Name == "openvpn-tcp" {
+		if (hostNetworkUsed && p.ContainerPort == 5416) || p.HostPort == 5416 {
+			return true
+		}
+	}
+
+	// The node-local-dns module with flannel enabled need 53 port to intercept requests.
+	if o.Unstructured.GetKind() == "DaemonSet" && o.Unstructured.GetName() == "node-local-dns" &&
+		o.Unstructured.GetNamespace() == "kube-system" && c.Name == "coredns" {
+		if (hostNetworkUsed && p.ContainerPort == 53) || p.HostPort == 53 {
+			return true
+		}
+	}
+
+	return false
+}
+
 func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 	switch object.Unstructured.GetKind() {
 	case "Deployment", "DaemonSet", "StatefulSet", "Pod", "Job", "CronJob":
@@ -580,9 +651,6 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 			fmt.Sprintf("IsHostNetwork failed: %v", err),
 		)
 	}
-	if !hostNetworkUsed {
-		return errors.EmptyRuleError
-	}
 
 	containers, err := object.GetContainers()
 	if err != nil {
@@ -593,23 +661,36 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 			fmt.Sprintf("GetContainers failed: %v", err),
 		)
 	}
+	initContainers, err := object.GetInitContainers()
+	if err != nil {
+		return errors.NewLintRuleError(
+			"MANIFEST003",
+			object.Identity(),
+			nil,
+			fmt.Sprintf("GetInitContainers failed: %v", err),
+		)
+	}
+	containers = append(containers, initContainers...)
 
 	for _, c := range containers {
 		for _, p := range c.Ports {
-			if hostNetworkUsed && p.ContainerPort >= 10500 {
+			if skipHostNetworkPorts(&object, &c, &p, hostNetworkUsed) {
+				continue
+			}
+			if hostNetworkUsed && (p.ContainerPort < 4200 || p.ContainerPort >= 4300) {
 				return errors.NewLintRuleError(
 					"CONTAINER007",
-					object.Identity()+"; container = "+c.Name,
+					object.Identity()+" ; container = "+c.Name,
 					p.ContainerPort,
-					"Pod running in hostNetwork and it's container uses port >= 10500",
+					"Pod running in hostNetwork and it's container port doesn't fit the range [4200,4299]",
 				)
 			}
-			if p.HostPort >= 10500 {
+			if p.HostPort != 0 && (p.HostPort < 4200 || p.HostPort >= 4300) {
 				return errors.NewLintRuleError(
 					"CONTAINER007",
-					object.Identity()+"; container = "+c.Name,
+					object.Identity()+" ; container = "+c.Name,
 					p.HostPort,
-					"Container uses hostPort >= 10500",
+					"Container uses hostPort that doesn't fit the range [4200,4299]",
 				)
 			}
 		}

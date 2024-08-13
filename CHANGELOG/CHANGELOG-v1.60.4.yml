@@ -8,8 +8,6 @@ ingress-nginx:
     - summary: Fix pod descheduling from a not-ready node.
       pull_request: https://github.com/deckhouse/deckhouse/pull/8647
       impact: Kruise controller's pods will be recreadted.
-    - summary: Fix usage custom logs formats without our fields.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/8621
 monitoring-kubernetes:
   features:
     - summary: Add ConfigMap labels assembly.

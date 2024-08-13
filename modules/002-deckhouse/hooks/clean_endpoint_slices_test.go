@@ -61,10 +61,10 @@ metadata:
     name: deckhouse
 ports:
 - name: self
-  port: 9650
+  port: 4222
   protocol: TCP
 - name: webhook
-  port: 9651
+  port: 4223
   protocol: TCP
 ---
 addressType: IPv4
@@ -98,10 +98,10 @@ metadata:
     name: deckhouse
 ports:
 - name: self
-  port: 9650
+  port: 4222
   protocol: TCP
 - name: webhook
-  port: 9651
+  port: 4223
   protocol: TCP
 ---
 addressType: IPv4
@@ -130,10 +130,10 @@ metadata:
   namespace: d8-system
 ports:
 - name: self
-  port: 9650
+  port: 4222
   protocol: TCP
 - name: webhook
-  port: 9651
+  port: 4223
   protocol: TCP
 `
 			f.KubeStateSet(state)

@@ -15,9 +15,9 @@
   - record: oom_kills:normalized
     expr: |-
       max by (namespace, pod, container) (
-        label_replace(kube_pod_container_info, "raw_container_id", "$1", "container_id", "containerd://(.+)")
+        label_replace(kube_pod_container_info{container_id!=""}, "raw_container_id", "$1", "container_id", "containerd://(.+)")
         * on (raw_container_id) group_left
-        max by (raw_container_id) (label_replace(ebpf_exporter_oom_kills{cgroup_path=~".*slice.*"}, "raw_container_id", "$1", "cgroup_path", ".+cri-containerd-(.+).scope"))
+        max by (raw_container_id) (label_replace(ebpf_exporter_oom_kills{cgroup_path=~".+cri-containerd-.+.scope"}, "raw_container_id", "$1", "cgroup_path", ".+cri-containerd-(.+).scope"))
       )
   - record: oom_kills:normalized
     expr: |-

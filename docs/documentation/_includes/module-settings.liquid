@@ -28,10 +28,6 @@ spec:
   settings: # <-- {% if page.lang == 'ru' %}Параметры модуля из раздела "Параметры" ниже.{% else %}Module parameters from the "Parameters" section below.{% endif %}
 ```
 
-{%- if page.lang == 'ru' %}
-## Параметры
-{%- else %}
-## Parameters
-{%- endif %}
+## {{ site.data.i18n.common['parameters'][page.lang] }}
 
 {{ site.data.schemas[moduleKebabName].config-values | format_module_configuration: moduleKebabName }}

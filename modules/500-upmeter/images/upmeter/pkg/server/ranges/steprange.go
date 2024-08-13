@@ -29,16 +29,39 @@ type StepRange struct {
 }
 
 func (r StepRange) String() string {
-	return fmt.Sprintf("StepRange{From: %d, To: %d, Step: %d, Subranges: (N=%d)}", r.From, r.To, r.Step, len(r.Subranges))
+	return fmt.Sprintf("StepRange{From: %d, To: %d, Step: %d, Subranges: (%v)}", r.From, r.To, r.Step, r.Subranges)
 }
 
 type Range struct {
-	From int64
-	To   int64
+	To   int64 // in seconds
+	From int64 // in seconds
 }
 
 func (r Range) Dur() time.Duration {
 	return time.Duration(r.To-r.From) * time.Second
+}
+
+func New(start, end time.Time, step time.Duration, includeCurrent bool) StepRange {
+	startAligned := start.Truncate(step)
+	endAligned := end.Truncate(step)
+	if includeCurrent && endAligned != end {
+		endAligned = endAligned.Add(step)
+	}
+
+	return NewStepRange(
+		int64(startAligned.Unix()),
+		int64(endAligned.Unix()),
+		int64(step.Seconds()),
+	)
+}
+
+func AlignStep(step, align time.Duration) time.Duration {
+	if step < align {
+		// minimal step
+		return align
+	}
+	// reduce the step to make it aligned
+	return step - step%align
 }
 
 // New5MinStepRange returns SteRange aligned to 5 minute step.
@@ -53,16 +76,16 @@ func New30SecStepRange(from, to, step int64) StepRange {
 	return NewStepRange(from, to, step)
 }
 
-// New5MinStepRange aligns range borders and calculates subranges.
-func NewStepRange(from, to, step int64) StepRange {
-	to = alignEdgeForward(to, step)
-	count := (to - from) / step
-	from = to - step*count
+// NewStepRange aligns range borders and calculates subranges.
+func NewStepRange(fromSeconds, toSeconds, stepSecods int64) StepRange {
+	toSeconds = alignEdgeForward(toSeconds, stepSecods)
+	count := (toSeconds - fromSeconds) / stepSecods
+	fromSeconds = toSeconds - stepSecods*count // align 'from'
 
 	res := StepRange{
-		From:      from,
-		To:        to,
-		Step:      step,
+		From:      fromSeconds,
+		To:        toSeconds,
+		Step:      stepSecods,
 		Subranges: make([]Range, 0),
 	}
 
@@ -91,7 +114,7 @@ func alignStep(step, min int64) int64 {
 	return maxInt64(min, step-step%min)
 }
 
-// alignEdgeForward makes sure the edge is a multiple of step, rounded to bigger side.
+// alignEdgeForward makes sure the edge is a multiple of the step, rounded to bigger side.
 func alignEdgeForward(to, step int64) int64 {
 	if to%step == 0 {
 		return to

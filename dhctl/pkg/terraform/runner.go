@@ -15,13 +15,13 @@
 package terraform
 
 import (
-	"crypto/md5"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -36,10 +36,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
+var cloudProvidersDir = "/deckhouse/candi/cloud-providers/"
+
 const (
 	deckhouseClusterStateSuffix = "-dhctl.*.tfstate"
 	deckhousePlanSuffix         = "-dhctl.*.tfplan"
-	cloudProvidersDir           = "/deckhouse/candi/cloud-providers/"
 	varFileName                 = "cluster-config.auto.*.tfvars.json"
 
 	terraformHasChangesExitCode = 2
@@ -295,10 +296,10 @@ func (r *Runner) Init() error {
 	return log.Process("default", "terraform init ...", func() error {
 		args := []string{
 			"init",
+			fmt.Sprintf("-plugin-dir=%s/plugins", strings.TrimRight(os.Getenv("PWD"), "/")),
 			"-get-plugins=false",
 			"-no-color",
 			"-input=false",
-			fmt.Sprintf("-var-file=%s", r.variablesPath),
 			r.workingDir,
 		}
 
@@ -642,6 +643,7 @@ type PlanDestructiveChanges struct {
 type ValueChange struct {
 	CurrentValue interface{} `json:"current_value,omitempty"`
 	NextValue    interface{} `json:"next_value,omitempty"`
+	Type         string      `json:"type,omitempty"`
 }
 
 func (r *Runner) getPlanDestructiveChanges(planFile string) (*PlanDestructiveChanges, error) {
@@ -660,8 +662,6 @@ func (r *Runner) getPlanDestructiveChanges(planFile string) (*PlanDestructiveCha
 		return nil, fmt.Errorf("can't get terraform plan for %q\n%v", planFile, err)
 	}
 
-	os.WriteFile(fmt.Sprintf("/%x.json", md5.Sum([]byte(planFile))), result, os.ModePerm)
-
 	var changes struct {
 		ResourcesChanges []struct {
 			Change struct {
@@ -669,6 +669,7 @@ func (r *Runner) getPlanDestructiveChanges(planFile string) (*PlanDestructiveCha
 				Before  map[string]interface{} `json:"before,omitempty"`
 				After   map[string]interface{} `json:"after,omitempty"`
 			} `json:"change"`
+			Type string `json:"type"`
 		} `json:"resource_changes"`
 	}
 
@@ -692,10 +693,12 @@ func (r *Runner) getPlanDestructiveChanges(planFile string) (*PlanDestructiveCha
 				getOrCreateDestructiveChanges().ResourcesRecreated = append(getOrCreateDestructiveChanges().ResourcesRecreated, ValueChange{
 					CurrentValue: resource.Change.Before,
 					NextValue:    resource.Change.After,
+					Type:         resource.Type,
 				})
 			} else {
 				getOrCreateDestructiveChanges().ResourcesDeleted = append(getOrCreateDestructiveChanges().ResourcesDeleted, ValueChange{
 					CurrentValue: resource.Change.Before,
+					Type:         resource.Type,
 				})
 			}
 		}
@@ -715,4 +718,8 @@ func hasAction(actions []string, findAction string) bool {
 
 func buildTerraformPath(provider, layout, step string) string {
 	return filepath.Join(cloudProvidersDir, provider, "layouts", layout, step)
+}
+
+func InitGlobalVars(pwd string) {
+	cloudProvidersDir = pwd + "/deckhouse/candi/cloud-providers/"
 }

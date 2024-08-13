@@ -11,7 +11,7 @@ apiVersions:
       Run the following command to change the configuration in a running cluster:
 
       ```shell
-      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit provider-cluster-configuration
       ```
     x-doc-search: |
       ProviderClusterConfiguration
@@ -118,7 +118,7 @@ apiVersions:
                 enum: [gp3, gp2, io2, io1, st1, sc1]
               diskSizeGb:
                 description: Instance disk size in gibibytes.
-                example: 20
+                example: 50
                 type: integer
               etcdDisk:
                 type: object
@@ -256,7 +256,7 @@ apiVersions:
                   enum: [ gp3, gp2, io2, io1, st1, sc1 ]
                 diskSizeGb:
                   description: Instance disk size in gibibytes.
-                  example: 20
+                  example: 50
                   type: integer
             zones:
               type: array
@@ -429,7 +429,10 @@ apiVersions:
           type: string
         minItems: 1
         uniqueItems: true
-        description: The globally restricted set of zones that this cloud provider works with.
+        description: |
+          The globally restricted set of zones that this cloud provider works with.
+          
+          Restricts only the **creation** of nodes in the cluster.
       additionalRolePolicies:
         type: array
         items:

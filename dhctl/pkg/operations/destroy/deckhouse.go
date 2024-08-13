@@ -21,10 +21,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/google/uuid"
 )
 
 type DeckhouseDestroyerOptions struct {
 	CommanderMode bool
+	CommanderUUID uuid.UUID
 }
 
 type DeckhouseDestroyer struct {
@@ -120,6 +122,11 @@ func (g *DeckhouseDestroyer) deleteEntities(kubeCl *client.KubernetesClient) err
 	}
 
 	err = deckhouse.WaitForServicesDeletion(kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.DeleteAllD8StorageResources(kubeCl)
 	if err != nil {
 		return err
 	}

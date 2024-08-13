@@ -29,7 +29,9 @@ properties:
 
       If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
 
-      **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in disk reprovisioning and data loss.
+      `global.discovery.defaultStorageClass` is applied during module activation, changing default StorageClass in cluster won't result in disk re-provisioning.
+
+      **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in disk re-provisioning and data loss.
 
       Setting it to `false` forces the use of an emptyDir volume.
   https:

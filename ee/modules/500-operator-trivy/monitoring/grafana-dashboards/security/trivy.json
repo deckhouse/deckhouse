@@ -5,7 +5,7 @@
         "builtIn": 1,
         "datasource": {
           "type": "prometheus",
-          "uid": "$ds_prometheus"
+          "uid": "${ds_prometheus}"
         },
         "enable": true,
         "hide": true,

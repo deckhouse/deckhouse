@@ -25,6 +25,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/utils/pointer"
@@ -190,8 +191,6 @@ func (s *Service) bootstrap(
 	})
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
-	app.PreflightSkipDeckhouseVersionCheck = true
-	app.PreflightSkipAll = true
 	app.CacheDir = s.cacheDir
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
@@ -276,6 +275,14 @@ func (s *Service) bootstrap(
 	}
 	defer sshClient.Stop()
 
+	var commanderUUID uuid.UUID
+	if request.Options.CommanderUuid != "" {
+		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
+		if err != nil {
+			return &pb.BootstrapResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
+		}
+	}
+
 	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 		SSHClient:                  sshClient,
 		InitialState:               initialState,
@@ -283,6 +290,7 @@ func (s *Service) bootstrap(
 		DisableBootstrapClearCache: true,
 		OnPhaseFunc:                phaseSwitcher.switchPhase,
 		CommanderMode:              request.Options.CommanderMode,
+		CommanderUUID:              commanderUUID,
 		TerraformContext:           terraform.NewTerraformContext(),
 		ConfigPaths:                []string{configPath},
 		ResourcesPath:              resourcesPath,

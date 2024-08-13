@@ -39,4 +39,23 @@ func TestToClientConfig(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, c.Repository, "registry.deckhouse.io/deckhouse/ee")
 	})
+	t.Run("Host with port, path with leading slash", func(t *testing.T) {
+		sd := registrySecretData{
+			Address: "registry.deckhouse.io:30000",
+			Path:    "deckhouse/ee",
+		}
+		c, err := sd.toClientConfig()
+		require.NoError(t, err)
+		require.Equal(t, c.Repository, "registry.deckhouse.io:30000/deckhouse/ee")
+	})
+	t.Run("Host with port, path without leading slash", func(t *testing.T) {
+		sd := registrySecretData{
+			Address: "registry.deckhouse.io:30000",
+			Path:    "deckhouse/ee",
+		}
+		c, err := sd.toClientConfig()
+		require.NoError(t, err)
+		require.Equal(t, c.Repository, "registry.deckhouse.io:30000/deckhouse/ee")
+	})
+
 }

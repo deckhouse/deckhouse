@@ -227,7 +227,7 @@ func (pc *Checker) CheckRegistryCredentials() error {
 		return nil
 	}
 
-	image := pc.installConfig.GetImage(false)
+	image := pc.installConfig.GetImage(true)
 	log.DebugF("Image: %s\n", image)
 	// skip for CE edition
 	if image == "registry.deckhouse.ru/deckhouse/ce" {
@@ -242,13 +242,6 @@ func (pc *Checker) CheckRegistryCredentials() error {
 	authData, err := pc.metaConfig.Registry.Auth()
 	if err != nil {
 		return err
-	}
-
-	if authData == "" {
-		return fmt.Errorf(
-			"%w, credentials are not specified. If you are using CE edition in a closed environment, this check can be skipped by specifying the --preflight-skip-registry-credential flag",
-			ErrAuthRegistryFailed,
-		)
 	}
 
 	return checkRegistryAuth(ctx, pc.metaConfig, authData)

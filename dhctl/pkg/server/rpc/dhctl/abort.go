@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/utils/pointer"
@@ -261,6 +262,14 @@ func (s *Service) abort(
 	}
 	defer sshClient.Stop()
 
+	var commanderUUID uuid.UUID
+	if request.Options.CommanderUuid != "" {
+		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
+		if err != nil {
+			return &pb.AbortResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
+		}
+	}
+
 	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 		ConfigPaths:      []string{configPath},
 		ResourcesPath:    resourcesPath,
@@ -274,6 +283,7 @@ func (s *Service) abort(
 		ResetInitialState: true,
 		OnPhaseFunc:       phaseSwitcher.switchPhase,
 		CommanderMode:     request.Options.CommanderMode,
+		CommanderUUID:     commanderUUID,
 		TerraformContext:  terraform.NewTerraformContext(),
 	})
 

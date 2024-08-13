@@ -1,6 +1,7 @@
 ---
 title: Deckhouse CLI
 permalink: ru/deckhouse-cli/
+description: Deckhouse CLI — интерфейс командной строки для работы с кластерами от разработчиков Deckhouse.
 lang: ru
 ---
 
@@ -34,27 +35,4 @@ Deckhouse CLI — это интерфейс командной строки дл
 
 ## Как установить Deckhouse CLI?
 
-1. Скачайте архив для вашей ОС:
-   * [Linux x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-linux-amd64.tar.gz)
-   * [macOS x86-64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-darwin-amd64.tar.gz)
-   * [macOS ARM64]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-darwin-arm64.tar.gz)
-
-1. Распакуйте архив:
-
-   ```bash
-   tar -xvf "d8-v${RELEASE_VERSION}-${OS}-${ARCH}.tar.gz" "${OS}-${ARCH}/d8"
-   ```
-
-1. Переместите файл `d8` в каталог в переменной `PATH` вашей системы:
-
-   ```bash
-   sudo mv "${OS}-${ARCH}/d8" /usr/local/bin/
-   ```
-
-1. Проверьте, что утилита работает:
-
-   ```bash
-   d8 help
-   ```
-
-Готово, вы установили Deckhouse CLI.
+{% include d8-cli-install/main.liquid %}

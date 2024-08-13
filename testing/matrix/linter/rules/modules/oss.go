@@ -155,6 +155,7 @@ var skipOssChecks = map[string]struct{}{
 	"011-flow-schema":                         {},
 	"013-helm":                                {}, // helm in 002-deckhouse
 	"036-kube-proxy":                          {},
+	"025-static-routing-manager":              {},
 	"030-cloud-provider-aws":                  {},
 	"030-cloud-provider-azure":                {},
 	"030-cloud-provider-gcp":                  {},

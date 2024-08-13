@@ -1,14 +1,8 @@
-Subject: [PATCH] Check if the --secure-listen-address flag is set
----
-Index: main.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/main.go b/main.go
---- a/main.go	(revision fa09bd61bfd7fd1b6312aac131a1f65e5cf01296)
-+++ b/main.go	(date 1685608704416)
-@@ -139,6 +139,11 @@
+index 563d2329..9aeb09e3 100644
+--- a/main.go
++++ b/main.go
+@@ -195,6 +195,11 @@ func main() {
  	if err != nil {
  		klog.Fatalf("Failed to parse CLI flags: %v", err)
  	}
@@ -19,4 +13,4 @@ diff --git a/main.go b/main.go
 +
  	kcfg := initKubeConfig(cfg.kubeconfigLocation)
  
- 	upstreamURL, err := url.Parse(cfg.upstream)
+ 	upstreams, exludePaths, err := parseConfigFile(configFileName, cfg.upstream, cfg.upstreamCAFile)

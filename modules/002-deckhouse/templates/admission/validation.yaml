@@ -30,7 +30,7 @@ webhooks:
       service:
         name: deckhouse
         namespace: d8-system
-        port: 9651
+        port: 4223
         path: /validate/v1alpha1/modules
   - name: module-configs.deckhouse-webhook.deckhouse.io
     rules:
@@ -53,6 +53,6 @@ webhooks:
       service:
         name: deckhouse
         namespace: d8-system
-        port: 9651
+        port: 4223
         path: /validate/v1alpha1/module-configs
 {{- end }}

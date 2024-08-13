@@ -189,11 +189,11 @@ spec:
                   type: string
                   x-doc-examples: ["1.27"]
                   enum:
-                    - "1.25"
                     - "1.26"
                     - "1.27"
                     - "1.28"
                     - "1.29"
+                    - "1.30"
                 cri:
                   type: object
                   description: |
@@ -349,7 +349,7 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
                       x-doc-examples:
                         - environment: production
                           app: warp-drive-ai
@@ -359,13 +359,13 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
                       x-doc-examples:
                         - ai.fleet.com/discombobulate: "true"
                     taints:
                       type: array
                       description: |
-                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
 
                         **Caution!** Only `effect`, `key`, `value` fields are available.
                       x-doc-examples:
@@ -984,7 +984,7 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
                       x-doc-examples:
                         - environment: production
                           app: warp-drive-ai
@@ -994,13 +994,13 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
                       x-doc-examples:
                         - ai.fleet.com/discombobulate: "true"
                     taints:
                       type: array
                       description: |
-                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
 
                         **Caution!** Only `effect`, `key`, `value` fields are available.
                       x-doc-examples:
@@ -1774,7 +1774,7 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
                       x-doc-examples:
                       - environment: production
                         app: warp-drive-ai
@@ -1784,13 +1784,13 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
                       x-doc-examples:
                       - ai.fleet.com/discombobulate: "true"
                     taints:
                       type: array
                       description: |
-                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
 
                         **Caution!** Only `effect`, `key`, `value` fields are available.
                       x-doc-examples:
@@ -2044,13 +2044,13 @@ spec:
                           type: string
                           default: "Auto"
                           description: |
-                            Specify whether to:
+                            Defines the system resource reservation mode:
 
-                            * `Off` — Disable resource reservation.
-                            * `Auto` — Reserve resources based on the Node capacity.
-                            * `Static` — Provide your own resource reservation values via the `static` parameter.
+                            * `Off` — disables resource reservation.
+                            * `Auto` — reserves resources based on the Node capacity.
+                            * `Static` — reserves resources based on the values provided by the user via the `static` parameter.
 
-                            Note that currently we do not use a dedicated cgroup for resource reservation (`-system-reserved-cgroup` is not used).
+                            Note that currently we do not use a dedicated group `cgroup` for resource reservation (`-system-reserved-cgroup` is not used).
                         static:
                           type: object
                           anyOf:
@@ -2078,6 +2078,50 @@ spec:
                                 - type: integer
                                 - type: string
                               pattern: '\d+[Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m]'
+                    topologyManager:
+                      type: object
+                      description: |
+                        Controls a topology manager.
+
+                        The topology manager allows the Kubernetes scheduler to take resource topology data into account when scheduling pods.
+
+                        In a cluster with [NUMA](https://en.wikipedia.org/wiki/Non-Uniform_Memory_Access) nodes, the topology manager can improve application performance by aligning workloads with NUMA nodes that are more resource-efficient.
+
+                        For more information, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                          description: |
+                            Enables Topology Management on a node.
+                        scope:
+                          type: string
+                          default: Container
+                          description: |
+                            Defines granularity with which resources are aligned:
+                            - `Container`. The preferred resources are computed for a container. The computation does not take into account that multiple containers may belong to the same pod.
+                            - `Pod`. The preferred resources are computed for the pod. All containers in the pod are treated as a whole in the computation.
+                          enum:
+                            - Container
+                            - Pod
+                        policy:
+                          type: string
+                          default: None
+                          description: |
+                            Resource/topology alignment policy to use when scheduling a pod.
+
+                            There are four supported policies:
+                            - `None` — no resource alignment (default).
+                            - `BestEffort` — a preferred NUMA node is defined for each container. If there are no preferred nodes for the pod available, it will be scheduled to a node without taking topology manager data into account, while the already running pod will keep running.
+                            - `Restricted` — a preferred NUMA node is defined for each pod container. If there are no preferred nodes available, a new pod will not be scheduled to a node while an already running pod will be stopped.
+                            - `SingleNumaNode` — a preferred NUMA node is defined for each pod container. If there is no NUMA node available that suits **all pod containers**, a new pod will not be scheduled while an already running pod will be stopped.
+
+                            More information can be found in [the Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/#topology-manager-policies).
+                          enum:
+                            - None
+                            - BestEffort
+                            - Restricted
+                            - SingleNumaNode
                 update:
                   type: object
                   properties:

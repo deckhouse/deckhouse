@@ -48,6 +48,20 @@ metadata:
 data:
   audit-policy.yaml: %s
 `
+		configmap = `
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istiod-service-accounts
+  namespace: d8-istio
+  labels:
+    control-plane-manager.deckhouse.io/extra-audit-policy-config: ""
+data:
+  basicAuditPolicy: |
+    serviceAccounts:
+    - system:serviceaccount:d8-istio:istiod-v1x19x7
+    - system:serviceaccount:d8-istio:istiod-v1x16x9
+`
 		policyA = `
 apiVersion: audit.k8s.io/v1
 kind: Policy
@@ -159,6 +173,7 @@ rules:
 	Context("Cluster started with basic audit policies", func() {
 		BeforeEach(func() {
 			f.ValuesSet("controlPlaneManager.apiserver.basicAuditPolicyEnabled", true)
+			f.BindingContexts.Set(f.KubeStateSet(configmap))
 			f.RunHook()
 		})
 
@@ -168,14 +183,21 @@ rules:
 			var policy audit.Policy
 			_ = yaml.UnmarshalStrict(data, &policy)
 
+			istiodServiceAccounts := []string{
+				"system:serviceaccount:d8-istio:istiod-v1x19x7",
+				"system:serviceaccount:d8-istio:istiod-v1x16x9",
+			}
+
 			// All rules, except last three are dropping rules.
 			for i := 0; i < len(policy.Rules)-3; i++ {
 				Expect(policy.Rules[i].Level).To(Equal(audit.LevelNone))
 			}
 
+			allServiceAccounts := append(auditPolicyBasicServiceAccounts, istiodServiceAccounts...)
+
 			saRule := policy.Rules[len(policy.Rules)-3]
 			Expect(saRule.Level).To(Equal(audit.LevelMetadata))
-			Expect(saRule.Users).To(Equal(auditPolicyBasicServiceAccounts))
+			Expect(saRule.Users).To(Equal(allServiceAccounts))
 
 			namespaceRule := policy.Rules[len(policy.Rules)-2]
 			Expect(namespaceRule.Level).To(Equal(audit.LevelMetadata))

@@ -28,8 +28,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
-const (
-	kubeadmTemplateOpenAPI = "/deckhouse/candi/control-plane-kubeadm/openapi.yaml"
+var (
+	deckhouseDir           = "/deckhouse"
+	kubeadmTemplateOpenAPI = deckhouseDir + "/candi/control-plane-kubeadm/openapi.yaml"
 )
 
 func DefineRenderBashibleBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -211,4 +212,9 @@ func DefineCommandParseCloudDiscoveryData(kpApp *kingpin.Application, parentCmd 
 	})
 
 	return parseCmd
+}
+
+func InitGlobalVars(pwd string) {
+	deckhouseDir = pwd + "/deckhouse"
+	kubeadmTemplateOpenAPI = deckhouseDir + "/candi/control-plane-kubeadm/openapi.yaml"
 }

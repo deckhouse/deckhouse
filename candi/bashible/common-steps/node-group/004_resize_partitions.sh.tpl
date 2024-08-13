@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+export LC_MESSAGES=en_US.UTF 
 
 grow_partition() {
   # /dev/sda1 => /sys/block/*/sda1/partition
@@ -30,7 +31,8 @@ grow_partition() {
   # if partition number >=5 this is or logical partition and we must resize extended partition first, or non-mbr partition
   if [[ "${partition_number}" -ge 5 ]]; then
     # find extended partition number
-    ext_partition_number="$(parted "${disk}" print | grep extended | awk '{print $1}')"
+    ext_partition="$(fdisk -l "${disk}" | grep -i extended | awk '{print $1}')"
+		ext_partition_number=${ext_partition#disk}
 
     # Mbr extended partition
     if [[ -n "${ext_partition_number}" ]]; then

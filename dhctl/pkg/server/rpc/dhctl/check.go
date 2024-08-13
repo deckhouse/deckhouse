@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -237,10 +238,19 @@ func (s *Service) check(
 	}
 	defer sshClient.Stop()
 
+	var commanderUUID uuid.UUID
+	if request.Options.CommanderUuid != "" {
+		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
+		if err != nil {
+			return &pb.CheckResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
+		}
+	}
+
 	checker := check.NewChecker(&check.Params{
 		SSHClient:     sshClient,
 		StateCache:    cache.Global(),
 		CommanderMode: request.Options.CommanderMode,
+		CommanderUUID: commanderUUID,
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(request.ClusterConfig),
 			[]byte(request.ProviderSpecificClusterConfig),
@@ -250,14 +260,21 @@ func (s *Service) check(
 
 	result, checkErr := checker.Check(ctx)
 	resultData, marshalErr := json.Marshal(result)
-	err = errors.Join(checkErr, marshalErr)
+	state, extractStateErr := phases.ExtractDhctlState(cache.Global())
+	stateData, marshalStateErr := json.Marshal(state)
+
+	err = errors.Join(checkErr, marshalErr, extractStateErr, marshalStateErr)
 
 	if result != nil {
 		// todo: move onCheckResult call to check.Check() func (as in converge)
 		_ = onCheckResult(result)
 	}
 
-	return &pb.CheckResult{Result: string(resultData), Err: errToString(err)}
+	return &pb.CheckResult{
+		Result: string(resultData),
+		Err:    errToString(err),
+		State:  string(stateData),
+	}
 }
 
 func (s *Service) checkServerTransitions() []fsm.Transition {

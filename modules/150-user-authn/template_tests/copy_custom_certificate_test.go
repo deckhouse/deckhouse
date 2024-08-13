@@ -44,6 +44,7 @@ discovery:
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
 			f.ValuesSetFromYaml("userAuthn.https", `{"mode":"CustomCertificate"}`)
 			f.ValuesSetFromYaml("userAuthn.internal.dexTLS", `{"crt":"plainstring","key":"plainstring"}`)
 			f.ValuesSetFromYaml("userAuthn.internal.customCertificateData", `{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`)
@@ -66,6 +67,7 @@ discovery:
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
 			f.ValuesSetFromYaml("userAuthn.https", `{"mode":"CustomCertificate"}`)
 			f.ValuesSetFromYaml("userAuthn.internal.dexTLS", `{"crt":"plainstring","key":"plainstring"}`)
 			f.ValuesSetFromYaml("userAuthn.internal.customCertificateData", `{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`)

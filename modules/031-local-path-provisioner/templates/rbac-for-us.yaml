@@ -13,11 +13,11 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "local-path-provisioner")) | nindent 2 }}
 rules:
 - apiGroups: [ "" ]
-  resources: [ "nodes", "persistentvolumeclaims", "configmaps" ]
+  resources: [ "nodes", "persistentvolumeclaims", "configmaps", "pods", "pods/log" ]
   verbs: [ "get", "list", "watch" ]
 - apiGroups: [ "" ]
-  resources: [ "endpoints", "persistentvolumes", "pods" ]
-  verbs: [ "*" ]
+  resources: [ "persistentvolumes" ]
+  verbs: [ "get", "list", "watch", "create", "patch", "update", "delete" ]
 - apiGroups: [ "" ]
   resources: [ "events" ]
   verbs: [ "create", "patch" ]
@@ -38,3 +38,29 @@ subjects:
 - kind: ServiceAccount
   name: {{ .Chart.Name }}
   namespace: d8-{{ .Chart.Name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "local-path-provisioner")) | nindent 2 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "local-path-provisioner")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Chart.Name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Chart.Name }}
+    namespace: d8-{{ .Chart.Name }}

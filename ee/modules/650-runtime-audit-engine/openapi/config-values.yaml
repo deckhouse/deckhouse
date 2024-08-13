@@ -4,3 +4,137 @@ properties:
     type: boolean
     description: |
       If true, all events will be duplicated to stdout.
+  resourcesRequests:
+    required: ["mode"]
+    type: object
+    description: |
+      Max amounts of CPU and memory resources that the pod can request when selecting a node.
+
+      If the `vertical-pod-autoscaler` module is disabled, then these values become the default ones.
+    default: {}
+    x-examples:
+    - mode: VPA
+      vpa:
+        mode: Auto
+        cpu:
+          min: "50m"
+          max: 2
+        memory:
+          min: "256Mi"
+          max: "2Gi"
+    - mode: VPA
+      vpa:
+        mode: Initial
+        cpu:
+          min: 1
+          max: 3000m
+        memory:
+          min: 1024
+          max: 4096
+    - mode: Static
+      static:
+        cpu: "55m"
+        memory: "256Ki"
+    oneOf:
+      - properties:
+          mode:
+            enum: ["VPA"]
+          vpa: {}
+      - properties:
+          mode:
+            enum: ["Static"]
+          static: {}
+    properties:
+      mode:
+        type: string
+        description: |
+          Resource request management mode:
+          - `Static` is a classic one. In it, you explicitly specify requests. The parameters of this mode are defined in the [static](#parameters-resourcesrequests-static) parameter section;
+          - `VPA` mode uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-resourcesrequests-vpa) parameter section.
+        enum: ["VPA", "Static"]
+        default: "VPA"
+      vpa:
+        type: object
+        description: |
+          Resource request management options for the VPA mode.
+        required:
+          - mode
+          - cpu
+          - memory
+        default: {}
+        properties:
+          mode:
+            type: string
+            description: |
+              The VPA usage mode.
+            enum: ["Initial", "Auto"]
+            default: "Initial"
+          cpu:
+            type: object
+            description: |
+              CPU-related parameters.
+            default: {}
+            properties:
+              max:
+                oneOf:
+                  - type: string
+                    pattern: "^[0-9]+m?$"
+                  - type: number
+                description: |
+                  The maximum value that the VPA can set for the CPU requests.
+                default: "4000m"
+              min:
+                oneOf:
+                  - type: string
+                    pattern: "^[0-9]+m?$"
+                  - type: number
+                description: |
+                  The minimum value that the VPA can set for the CPU requests.
+                default: "50m"
+          memory:
+            type: object
+            description: |
+              The amount of memory requested.
+            default: {}
+            properties:
+              max:
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                  - type: number
+                description: |
+                  The maximum memory requests the VPA can set.
+                default: "5Gi"
+              min:
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                  - type: number
+                description: |
+                  The minimum memory requests the VPA can set.
+                default: "64Mi"
+      static:
+        type: object
+        description: |
+          Resource request management options for the `Static` mode.
+        required:
+          - cpu
+          - memory
+        default: {}
+        properties:
+          cpu:
+            oneOf:
+              - type: string
+                pattern: "^[0-9]+m?$"
+              - type: number
+            description: |
+              Configuring CPU requests.
+            default: "50m"
+          memory:
+            oneOf:
+              - type: string
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+              - type: number
+            description: |
+              Configuring memory requests.
+            default: "64Mi"

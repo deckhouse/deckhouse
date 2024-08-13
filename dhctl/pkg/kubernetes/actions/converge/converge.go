@@ -22,6 +22,7 @@ import (
 	"sort"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/uuid"
 	multierror "github.com/hashicorp/go-multierror"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -73,6 +74,7 @@ type Runner struct {
 	skipPhases    map[Phase]bool
 
 	commanderMode       bool
+	commanderUUID       uuid.UUID
 	commanderModeParams *commander.CommanderModeParams
 
 	stateCache dstate.Cache
@@ -99,6 +101,11 @@ func (r *Runner) WithCommanderModeParams(params *commander.CommanderModeParams) 
 
 func (r *Runner) WithCommanderMode(commanderMode bool) *Runner {
 	r.commanderMode = commanderMode
+	return r
+}
+
+func (r *Runner) WithCommanderUUID(commanderUUID uuid.UUID) *Runner {
+	r.commanderUUID = commanderUUID
 	return r
 }
 
@@ -288,7 +295,13 @@ func (r *Runner) converge() error {
 		if err != nil {
 			return fmt.Errorf("unable to get provider cluster config yaml: %w", err)
 		}
-		if err := deckhouse.ConvergeDeckhouseConfiguration(context.TODO(), r.kubeCl, metaConfig.UUID, clusterConfigurationData, providerClusterConfigurationData); err != nil {
+
+		clusterUUID, err := uuid.Parse(metaConfig.UUID)
+		if err != nil {
+			return fmt.Errorf("unable to parse cluster uuid %q: %w", metaConfig.UUID, err)
+		}
+
+		if err := deckhouse.ConvergeDeckhouseConfiguration(context.TODO(), r.kubeCl, clusterUUID, r.commanderUUID, clusterConfigurationData, providerClusterConfigurationData); err != nil {
 			return fmt.Errorf("unable to update deckhouse configuration: %w", err)
 		}
 

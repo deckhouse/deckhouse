@@ -9,7 +9,7 @@ metadata:
 spec:
   ports:
     - port: 443
-      targetPort: 9876
+      targetPort: webhook-server
   selector:
     control-plane: controller-manager
     app: kruise
@@ -24,7 +24,7 @@ metadata:
 spec:
   ports:
     - port: 8443
-      targetPort: 10354
+      targetPort: https-metrics
   selector:
     control-plane: controller-manager
     app: kruise

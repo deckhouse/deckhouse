@@ -168,13 +168,14 @@ type PrettyLogger struct {
 func NewPrettyLogger(opts LoggerOptions) *PrettyLogger {
 	res := &PrettyLogger{
 		processTitles: map[string]styleEntry{
-			"common":    {"🎈 ~ Common: %s", CommonOptions},
-			"terraform": {"🌱 ~ Terraform: %s", TerraformOptions},
-			"converge":  {"🛸 ~ Converge: %s", ConvergeOptions},
-			"bootstrap": {"⛵ ~ Bootstrap: %s", BootstrapOptions},
-			"mirror":    {"🪞 ~ Mirror: %s", MirrorOptions},
-			"attach":    {"📦 ~ Attach: %s", AttachOptions},
-			"default":   {"%s", BoldOptions},
+			"common":           {"🎈 ~ Common: %s", CommonOptions},
+			"terraform":        {"🌱 ~ Terraform: %s", TerraformOptions},
+			"converge":         {"🛸 ~ Converge: %s", ConvergeOptions},
+			"bootstrap":        {"⛵ ~ Bootstrap: %s", BootstrapOptions},
+			"mirror":           {"🪞 ~ Mirror: %s", MirrorOptions},
+			"commander/attach": {"⚓ ~ Attach to commander: %s", CommanderAttachOptions},
+			"commander/detach": {"🚢 ~ Detach from commander: %s", CommanderDetachOptions},
+			"default":          {"%s", BoldOptions},
 		},
 		isDebug: opts.IsDebug,
 	}
@@ -599,11 +600,16 @@ func (d *TeeLogger) FlushAndClose() error {
 		return nil
 	}
 
+	d.bufMutex.Lock()
+	defer d.bufMutex.Unlock()
+
 	err := d.buf.Flush()
 	if err != nil {
 		d.l.LogWarnF("Cannot flush TeeLogger: %v \n", err)
 		return err
 	}
+
+	d.buf = nil
 
 	err = d.out.Close()
 	if err != nil {
@@ -713,6 +719,10 @@ func (d *TeeLogger) writeToFile(content string) {
 
 	d.bufMutex.Lock()
 	defer d.bufMutex.Unlock()
+
+	if d.buf == nil {
+		return
+	}
 
 	if _, err := d.buf.Write([]byte(content)); err != nil {
 		d.l.LogDebugF("Cannot write to TeeLog: %v", err)

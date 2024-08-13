@@ -41,7 +41,7 @@ func (c *Command) Save(tarWriter *tar.Writer) error {
 
 	header := &tar.Header{
 		Name: c.File,
-		Mode: 0600,
+		Mode: 0o600,
 		Size: int64(len(fileContent)),
 	}
 
@@ -76,7 +76,7 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "global-values.json",
 			Cmd:  "bash",
-			Args: []string{"-c", `deckhouse-controller global values -o json | jq .`},
+			Args: []string{"-c", `deckhouse-controller global values -o json | jq '.internal.modules.kubeRBACProxyCA = "REDACTED" | .modulesImages.registry.dockercfg = "REDACTED"'`},
 		},
 		{
 			File: "deckhouse-enabled-modules.json",
@@ -160,8 +160,8 @@ func createTarball() *bytes.Buffer {
 		},
 		{
 			File: "terraform-check.json",
-			Cmd:  "kubectl",
-			Args: []string{"exec", "deploy/terraform-state-exporter", "--", "dhctl", "terraform", "check", "--logger-type", "json", "-o", "json"},
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl exec deploy/terraform-state-exporter -- dhctl terraform check --logger-type json -o json | jq -c '.terraform_plan[]?.variables.providerClusterConfiguration.value.provider = "REDACTED"'`},
 		},
 		{
 			File: "alerts.json",

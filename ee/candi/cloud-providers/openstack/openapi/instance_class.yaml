@@ -97,9 +97,8 @@ spec:
                     Paths to networks that VirtualMachines' secondary NICs will connect to.
 
                     **By default:** the value from `OpenStackCloudDiscoveryData` is used.
-                  x-doc-examples:
-                    - "BGP-network-VLAN-3894"
-                    - "External-VLAN-3699"
+                  x-doc-examples: 
+                  - ['BGP-network-VLAN-3894', 'External-VLAN-3699']
                   type: array
                   items:
                     type: string
@@ -110,9 +109,8 @@ spec:
                     They allow you to set firewall rules for provisioned instances.
 
                     The `SecurityGroups` may not be supported by the cloud provider.
-                  x-doc-examples:
-                  - "security-group-1"
-                  - "security-group-2"
+                  x-doc-examples: 
+                    - ["security-group-1", "security-group-2"]
                   type: array
                   items:
                     type: string

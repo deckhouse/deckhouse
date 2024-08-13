@@ -78,6 +78,7 @@ type Params struct {
 	DisableBootstrapClearCache bool
 	OnPhaseFunc                phases.DefaultOnPhaseFunc
 	CommanderMode              bool
+	CommanderUUID              uuid.UUID
 	TerraformContext           *terraform.TerraformContext
 
 	ConfigPaths             []string
@@ -227,6 +228,15 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 
+	if b.CommanderMode {
+		// FIXME(dhctl-for-commander): commander uuid currently optional, make it required later
+		//if b.CommanderUUID == uuid.Nil {
+		//	panic("CommanderUUID required for bootstrap operation in commander mode!")
+		//}
+		deckhouseInstallConfig.CommanderMode = b.CommanderMode
+		deckhouseInstallConfig.CommanderUUID = b.CommanderUUID
+	}
+
 	// During full bootstrap we use the "kubeadm and deckhouse on master nodes" hack
 	deckhouseInstallConfig.KubeadmBootstrap = true
 	deckhouseInstallConfig.MasterNodeSelector = true
@@ -352,49 +362,17 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	var clusterDomain string
-	err = json.Unmarshal(metaConfig.ClusterConfig["clusterDomain"], &clusterDomain)
-	if err != nil {
-		return err
-	}
-
-	// we need clusterDomain to generate proper certificate for packages proxy
-	err = StartRegistryPackagesProxy(metaConfig.Registry, clusterDomain)
-	if err != nil {
-		return fmt.Errorf("failed to start registry packages proxy: %v", err)
-	}
-
 	if err := WaitForSSHConnectionOnMaster(b.SSHClient); err != nil {
 		return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
 	}
 
-	// need closure for registry packages tunnel
-	runBashible := func() error {
-		tun, err := SetupSSHTunnelToRegistryPackagesProxy(b.SSHClient)
-		if err != nil {
-			return fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
-		}
-		defer func() {
-			err := tun.Stop()
-			if err != nil {
-				log.DebugF("Cannot stop SSH tunnel to registry packages proxy: %v\n", err)
-			}
-		}()
-
-		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecuteBashibleBundlePhase, false, stateCache, nil); err != nil {
-			return err
-		} else if shouldStop {
-			return nil
-		}
-
-		if err := RunBashiblePipeline(b.SSHClient, metaConfig, nodeIP, devicePath); err != nil {
-			return err
-		}
-
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecuteBashibleBundlePhase, false, stateCache, nil); err != nil {
+		return err
+	} else if shouldStop {
 		return nil
 	}
 
-	if err := runBashible(); err != nil {
+	if err := RunBashiblePipeline(b.SSHClient, metaConfig, nodeIP, devicePath); err != nil {
 		return err
 	}
 
@@ -585,12 +563,12 @@ func createResources(kubeCl *client.KubernetesClient, resourcesToCreate template
 	}
 
 	return log.Process("bootstrap", "Create Resources", func() error {
-		checkers, err := resources.GetCheckers(kubeCl, resourcesToCreate, metaConfig)
+		checkers, err := resources.GetCheckers(kubeCl, resourcesToCreate)
 		if err != nil {
 			return err
 		}
 
-		return resources.CreateResourcesLoop(kubeCl, resourcesToCreate, checkers)
+		return resources.CreateResourcesLoop(kubeCl, metaConfig, resourcesToCreate, checkers)
 	})
 }
 
