@@ -59,7 +59,7 @@ func parseParameters(params map[string]string) (string, uint64, uint64, uint64, 
 		return "", 0, 0, 0, fmt.Errorf("can't parse gId: %v in StorageClass parameters, %w ", params[ParameterGID], err)
 	}
 
-	sepID, err := strconv.ParseUint(params[ParameterGID], 10, 64)
+	sepID, err := strconv.ParseUint(params[ParameterSEPID], 10, 64)
 	if err != nil {
 		return "", 0, 0, 0, fmt.Errorf("can't parse sepId: %v in StorageClass parameters, %w ", params[ParameterSEPID], err)
 	}
