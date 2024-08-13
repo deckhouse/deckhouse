@@ -38,22 +38,24 @@ type validator struct {
 
 func (v *validator) Handle(_ context.Context, req admission.Request) admission.Response {
 	template := new(v1alpha1.ProjectTemplate)
-	if err := yaml.Unmarshal(req.Object.Raw, template); err != nil {
-		return admission.Errored(http.StatusBadRequest, err)
-	}
-	if template.Labels != nil {
-		heritage, ok := template.Labels[helm.HeritageLabel]
-		if ok && heritage == DeckhouseHeritage && req.UserInfo.Username != v.serviceAccount {
-			msg := fmt.Sprintf("The '%s' project template has the 'heritage' label with forbidden value: 'deckhouse'", template.Name)
+	if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {
+		if err := yaml.Unmarshal(req.Object.Raw, template); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		if msg := v.validateHeritage(req, template); msg != "" {
 			return admission.Denied(msg)
 		}
-	}
-	if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {
 		if err := validate.ProjectTemplate(template); err != nil {
-			return admission.Errored(http.StatusInternalServerError, err)
+			return admission.Errored(http.StatusBadRequest, fmt.Errorf("project template validation failed: %v", err))
 		}
 	}
 	if req.Operation == admissionv1.Delete {
+		if err := yaml.Unmarshal(req.OldObject.Raw, template); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		if msg := v.validateHeritage(req, template); msg != "" {
+			return admission.Denied(msg)
+		}
 		projects := new(v1alpha2.ProjectList)
 		if err := v.client.List(context.Background(), projects, client.MatchingLabels{helm.ProjectTemplateLabel: template.Name}); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
@@ -64,4 +66,14 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 		}
 	}
 	return admission.Allowed("")
+}
+
+func (v *validator) validateHeritage(req admission.Request, template *v1alpha1.ProjectTemplate) string {
+	if template.Labels != nil {
+		heritage, ok := template.Labels[helm.HeritageLabel]
+		if ok && heritage == DeckhouseHeritage && req.UserInfo.Username != v.serviceAccount {
+			return fmt.Sprintf("The '%s' project template has the 'heritage' label with forbidden value: 'deckhouse'", template.Name)
+		}
+	}
+	return ""
 }
