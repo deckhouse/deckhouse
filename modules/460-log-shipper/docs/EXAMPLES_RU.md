@@ -532,4 +532,71 @@ spec:
         log-shipper.deckhouse.io/exclude: "true"
 ```
 
+## Включить буферизацию
+
+Настройка буферизации логов необходима для улучшения надежности и производительности системы сбора логов. Буферизация может быть полезна в следующих случаях:
+
+1. Временные перебои с подключением:
+* Если есть временные перебои или нестабильность соединения с системой хранения логов (например, с Elasticsearch), буфер позволяет временно сохранять логи и отправить их, когда соединение восстановится.
+
+2. Сглаживание пиков нагрузки:
+* При внезапных всплесках объема логов буфер позволяет сгладить пиковую нагрузку на систему хранения логов, предотвращая её перегрузку и потенциальную потерю данных.
+
+3. Оптимизация производительности:
+* Буферизация помогает оптимизировать производительность системы сбора логов за счёт накопления логов и отправки их пачками, что снижает количество сетевых запросов и улучшает общую пропускную способность.
+
+### Пример включения буферизации в оперативной памяти
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: loki-storage
+spec:
+  buffer:
+    memory:
+      maxEvents: 4096
+    type: Memory
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+```
+
+### Пример включения буферизации на диске
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: loki-storage
+spec:
+  buffer:
+    disk:
+      maxSize: 1Gi
+    type: Disk
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+```
+
+### Пример определения поведения при переполнении буфера
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: loki-storage
+spec:
+  buffer:
+    disk:
+      maxSize: 1Gi
+    type: Disk
+    whenFull: DropNewest
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+```
+
+более подробное описание параметров доступно в ресурсе [ClusterLogDestination](cr.html#clusterlogdestination)
+
 {% endraw %}
