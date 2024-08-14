@@ -203,8 +203,7 @@ configOverrides:
 
 		iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
 		require.NoError(t, err)
-
-		require.Len(t, iCfg.ModuleConfigs, 6)
+		require.Len(t, iCfg.ModuleConfigs, 5)
 	})
 
 	t.Run("Correct parse module configs", func(t *testing.T) {
