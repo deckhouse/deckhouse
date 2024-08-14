@@ -1,0 +1,8 @@
+type: object
+properties:
+  debug:
+    description: |
+      Опция указывающая логгеру выводить stacktraces для предупреждений и ошибок.
+  numberOfWorkers:
+    description: |
+      Число одновременных асинхронных иполнителей для проб в каждом агенте.
