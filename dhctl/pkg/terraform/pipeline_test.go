@@ -17,7 +17,6 @@ package terraform
 import (
 	"encoding/json"
 	"fmt"
-	"k8s.io/utils/pointer"
 	"os"
 	"testing"
 
@@ -45,7 +44,7 @@ func TestGetMasterNodeResult(t *testing.T) {
 				MasterIPForSSH:               "1",
 				NodeInternalIP:               "1",
 				KubeDataDevicePath:           "1",
-				SystemRegistryDataDevicePath: pointer.String("1"),
+				SystemRegistryDataDevicePath: "1",
 			},
 			expectedErr: nil,
 		},
@@ -57,7 +56,7 @@ func TestGetMasterNodeResult(t *testing.T) {
 				MasterIPForSSH:               "test-data",
 				NodeInternalIP:               "test-data",
 				KubeDataDevicePath:           "test-data",
-				SystemRegistryDataDevicePath: pointer.String("test-data"),
+				SystemRegistryDataDevicePath: "test-data",
 			},
 			expectedErr: nil,
 		},

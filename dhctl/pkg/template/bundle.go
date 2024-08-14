@@ -151,10 +151,10 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 		return err
 	}
 
-	if dataDevices.SystemRegistryDataDevicePath != nil {
+	if len(dataDevices.SystemRegistryDataDevicePath) != 0 {
 		systemRegistryDataDevicePathFile := filepath.Join(templateController.TmpDir, bashibleDir, "system_registry_data_device_path")
 		log.InfoF("Create %q\n", systemRegistryDataDevicePathFile)
-		if err := fs.CreateFileWithContent(systemRegistryDataDevicePathFile, *dataDevices.SystemRegistryDataDevicePath); err != nil {
+		if err := fs.CreateFileWithContent(systemRegistryDataDevicePathFile, dataDevices.SystemRegistryDataDevicePath); err != nil {
 			return err
 		}
 	}

@@ -641,16 +641,14 @@ func SecretMasterKubernetesDataDevicePath(nodeName string, devicePath []byte) *a
 	)
 }
 
-func SecretMasterSystemRegistryDataDevicePath(nodeName string, devicePath *[]byte) *apiv1.Secret {
+func SecretMasterSystemRegistryDataDevicePath(nodeName string, devicePath []byte) *apiv1.Secret {
 	namespace := "d8-system"
 	secretName := "d8-masters-system-registry-data-device-path"
-	if devicePath != nil {
+	if len(devicePath) == 0 {
 		return generateSecret(
 			secretName,
 			namespace,
-			map[string][]byte{
-				nodeName: *devicePath,
-			},
+			map[string][]byte{},
 			map[string]string{},
 		)
 	}
@@ -658,6 +656,7 @@ func SecretMasterSystemRegistryDataDevicePath(nodeName string, devicePath *[]byt
 		secretName,
 		namespace,
 		map[string][]byte{
+			nodeName: devicePath,
 		},
 		map[string]string{},
 	)

@@ -25,5 +25,5 @@ output "kubernetes_data_device_path" {
 }
 
 output "system_registry_data_device_path" {
-  value = null
+  value = ""
 }

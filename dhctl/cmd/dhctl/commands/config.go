@@ -61,7 +61,7 @@ func DefineRenderBashibleBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			app.BundleName,
 			terraform.DataDevices{
 				KubeDataDevicePath: "",
-				SystemRegistryDataDevicePath: nil,
+				SystemRegistryDataDevicePath: "",
 			},
 		)
 	}

@@ -32,7 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
 var ErrNoTerraformState = errors.New("Terraform state is not found in outputs.")
@@ -92,7 +91,7 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 	}
 
 	getSystemRegistryDataDevicePathManifest := func() interface{} {
-		return manifests.SecretMasterSystemRegistryDataDevicePath(nodeName, stringsutil.ToPointerOfBytes(dataDevices.SystemRegistryDataDevicePath))
+		return manifests.SecretMasterSystemRegistryDataDevicePath(nodeName, []byte(dataDevices.SystemRegistryDataDevicePath))
 	}
 
 	tasks := []actions.ManifestTask{

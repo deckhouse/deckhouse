@@ -35,8 +35,8 @@ func (b *ClusterBootstrapper) ExecuteBashible() error {
 	if err != nil {
 		return err
 	}
-	
-	if metaConfig.SystemRegistryConfig.Enable && app.SystemRegistryDataDevicePath == nil {
+
+	if metaConfig.SystemRegistryConfig.Enable && len(app.SystemRegistryDataDevicePath) == 0 {
 		return fmt.Errorf("the '--system-registry-device-path' flag must be specified at RegistryMode!=Direct")
 	}
 	
