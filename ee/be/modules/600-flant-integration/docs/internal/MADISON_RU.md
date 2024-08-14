@@ -17,14 +17,14 @@ title: "Интеграция с Madison"
 * У модуля есть секретный value `flantIntegration.internal.madison.backends`, который заполняется автоматически списком адресов, в
   которые резолвится madison-direct.flant.com (каждые 10 минут).
 * Для каждого адреса в `flantIntegration.internal.madison.backends` генерируется отдельный deployment с `madison-proxy` (в названии
-  используется sha256sum от IP-адреса), который отправляет все запросы на соответствующий ему бекенд Madison'а (там нет
-  mash, один `madison-proxy` шлет запросы на один бекенд Madison'а).
+  используется sha256sum от IP-адреса), который отправляет все запросы на соответствующий ему бэкенд Madison'а (там нет
+  mash, один `madison-proxy` шлет запросы на один бэкенд Madison).
 * `madison-proxy` это Nginx с [простейшим конфигом](https://fox.flant.com/sys/deckhouse-oss/-/tree/main/modules/ee/340-flant-integration/images/madison-proxy/rootfs/etc/nginx/nginx.tmpl)
   , задача которого — эмулировать Alertmanager для Prometheus'а и передавать все пришедшие запросы в Madison. Он
   использует `flantIntegration.madisonAuthKey` для аутентификации в Madison.
 * Штатное поведение Prometheus'а — отправлять все алерты всем известным Alertmanager'ам. Так и происходит — каждый
   экземпляр Prometheus шлет информацию о каждом алерте каждому `madison-proxy`, который, в свою очередь, шлет алерт
-  своему бекенду Madison'а (дедуплицировать алерты — задача Madison).
+  своему бэкенду Madison'а (дедуплицировать алерты — задача Madison).
 * Доставка алертов до Madison работает до тех пор, пока жива хотя бы одна цепочка `madison-proxy` -> `madison backend`.
 
 ### Зачем так сделано?

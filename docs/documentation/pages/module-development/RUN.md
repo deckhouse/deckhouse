@@ -1,5 +1,5 @@
 ---
-title: "How to start module in the DKP claster?"
+title: "How to start module in the DKP cluster?"
 permalink: en/module-development/run/
 ---
 
