@@ -677,3 +677,7 @@ type stubModulesManager struct{}
 func (s stubModulesManager) GetEnabledModuleNames() []string {
 	return []string{"cert-manager", "prometheus"}
 }
+
+func (s stubModulesManager) IsModuleEnabled(_ string) bool {
+	return true
+}

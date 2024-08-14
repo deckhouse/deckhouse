@@ -331,6 +331,9 @@ func (c *moduleSourceReconciler) createModuleRelease(ctx context.Context, ms *v1
 			Changelog:  v1alpha1.Changelog(result.Changelog),
 		},
 	}
+	if result.ModuleDefinition != nil {
+		rl.Spec.Requirements = result.ModuleDefinition.Requirements
+	}
 
 	err := c.client.Create(ctx, rl)
 	if err != nil {
