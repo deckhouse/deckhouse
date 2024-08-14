@@ -7,7 +7,7 @@ package api
 
 import (
 	"context"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 	"net"
 
 	decort "repository.basistech.ru/BASIS/decort-golang-sdk"

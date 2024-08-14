@@ -21,10 +21,10 @@ import (
 )
 
 const (
-	ParameterPool      = "pool"
-	ParameterAccountID = "accountId"
-	ParameterGID       = "gId"
-	ParameterSEPID     = "sepId"
+	ParameterPool     = "pool"
+	ParameterAccount  = "account"
+	ParameterLocation = "location"
+	ParameterSEP      = "sep"
 )
 
 type ControllerService struct {
@@ -46,25 +46,35 @@ func NewController(
 	}
 }
 
-func parseParameters(params map[string]string) (string, uint64, uint64, uint64, error) {
+func (c *ControllerService) parseParameters(ctx context.Context, params map[string]string) (string, uint64, uint64, uint64, error) {
 	pool := params[ParameterPool]
 
-	accountID, err := strconv.ParseUint(params[ParameterAccountID], 10, 64)
+	account, err := c.dynamixCloudAPI.AccountService.GetAccountByName(ctx, params[ParameterAccount])
 	if err != nil {
-		return "", 0, 0, 0, fmt.Errorf("can't parse accountId: %v in StorageClass parameters, %w ", params[ParameterAccountID], err)
+		return "", 0, 0, 0, fmt.Errorf("can't get accountId by name: %v , %w ", params[ParameterAccount], err)
 	}
 
-	gID, err := strconv.ParseUint(params[ParameterGID], 10, 64)
+	location, err := c.dynamixCloudAPI.LocationService.GetLocationByName(ctx, params[ParameterLocation])
 	if err != nil {
-		return "", 0, 0, 0, fmt.Errorf("can't parse gId: %v in StorageClass parameters, %w ", params[ParameterGID], err)
+		return "", 0, 0, 0, fmt.Errorf("can't get gId by location name: %v, %w ", params[ParameterLocation], err)
 	}
 
-	sepID, err := strconv.ParseUint(params[ParameterSEPID], 10, 64)
+	sep, err := c.dynamixCloudAPI.SEPService.GetLocationByName(ctx, params[ParameterSEP])
 	if err != nil {
-		return "", 0, 0, 0, fmt.Errorf("can't parse sepId: %v in StorageClass parameters, %w ", params[ParameterSEPID], err)
+		return "", 0, 0, 0, fmt.Errorf("can't get sepId by name: %v, %w ", params[ParameterSEP], err)
 	}
 
-	return pool, accountID, gID, sepID, nil
+	return pool, account.ID, location.ID, sep.ID, nil
+}
+
+func checkRequiredParams(params map[string]string) error {
+	for _, paramName := range []string{ParameterPool, ParameterAccount, ParameterLocation, ParameterSEP} {
+		if len(params[paramName]) == 0 {
+			return fmt.Errorf("error required storageClass paramater %s wasn't set",
+				paramName)
+		}
+	}
+	return nil
 }
 
 func (c *ControllerService) CreateVolume(
@@ -72,15 +82,16 @@ func (c *ControllerService) CreateVolume(
 	req *csi.CreateVolumeRequest,
 ) (*csi.CreateVolumeResponse, error) {
 	klog.Infof("Creating disk %s", req.Name)
-	pool, accountID, gID, sepID, err := parseParameters(req.Parameters)
+
+	if err := checkRequiredParams(req.Parameters); err != nil {
+		return nil, err
+	}
+
+	pool, accountID, gID, sepID, err := c.parseParameters(ctx, req.Parameters)
 	if err != nil {
 		return nil, fmt.Errorf("error parse storageClass paramater %w", err)
 	}
 
-	if len(pool) == 0 {
-		return nil, fmt.Errorf("error required storageClass paramater %s wasn't set",
-			ParameterPool)
-	}
 	diskName := req.Name
 	if len(diskName) == 0 {
 		return nil, fmt.Errorf("error required request parameter Name was not provided")

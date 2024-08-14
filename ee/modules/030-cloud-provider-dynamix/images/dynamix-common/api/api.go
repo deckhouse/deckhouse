@@ -17,9 +17,12 @@ import (
 var ErrNotFound = errors.New("not found")
 
 type DynamixCloudAPI struct {
-	ComputeSvc  *ComputeService
-	PortalSvc   *PortalService
-	DiskService *DiskService
+	AccountService  *AccountService
+	ComputeSvc      *ComputeService
+	DiskService     *DiskService
+	LocationService *LocationService
+	PortalSvc       *PortalService
+	SEPService      *SEPService
 }
 
 func NewDynamixCloudAPI(config config.Credentials) (*DynamixCloudAPI, error) {
@@ -31,8 +34,11 @@ func NewDynamixCloudAPI(config config.Credentials) (*DynamixCloudAPI, error) {
 		SSLSkipVerify: config.Insecure,
 	})
 	return &DynamixCloudAPI{
-		ComputeSvc:  NewComputeService(decortClient),
-		PortalSvc:   NewPortalService(decortClient),
-		DiskService: NewDiskService(decortClient),
+		AccountService:  NewAccountService(decortClient),
+		ComputeSvc:      NewComputeService(decortClient),
+		DiskService:     NewDiskService(decortClient),
+		LocationService: NewLocationService(decortClient),
+		PortalSvc:       NewPortalService(decortClient),
+		SEPService:      NewSepService(decortClient),
 	}, nil
 }
