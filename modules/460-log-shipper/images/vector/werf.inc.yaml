@@ -10,8 +10,8 @@ import:
     add: /relocate
     to: /
     before: install
+docker:
   ENTRYPOINT: ["/usr/bin/vector"]
-
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_ALT_P11 }}
