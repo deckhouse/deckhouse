@@ -1488,8 +1488,14 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/src/sinks/websocket/sink.rs b/src/sinks/websocket/sink.rs
 --- a/src/sinks/websocket/sink.rs	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
-+++ b/src/sinks/websocket/sink.rs	(date 1723659299902)
-@@ -241,7 +241,7 @@
++++ b/src/sinks/websocket/sink.rs	(date 1723659848980)
+@@ -236,12 +236,12 @@
+ 
+     const fn should_encode_as_binary(&self) -> bool {
+         use vector_lib::codecs::encoding::Serializer::{
+-            Avro, Csv, Gelf, Json, Logfmt, Native, NativeJson, Protobuf, RawMessage, Text,
++            Avro, Cef, Csv, Gelf, Json, Logfmt, Native, NativeJson, Protobuf, RawMessage, Text,
+         };
  
          match self.encoder.serializer() {
              RawMessage(_) | Avro(_) | Native(_) | Protobuf(_) => true,
@@ -3302,3 +3308,4 @@ diff --git a/website/cue/reference/components/sinks/base/amqp.cue b/website/cue/
  					csv: """
  						Encodes an event as a CSV message.
  
+
