@@ -13,9 +13,10 @@
 # limitations under the License.
 
 {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+{{- $nodeTypeList := list "CloudEphemeral" "CloudPermanent" "CloudStatic" }}
 
-{{- if has .nodeGroup.nodeType $nodeTypeList }}
-  {{- if eq .nodeGroup.name "master" }}
+  {{- if has .nodeGroup.nodeType $nodeTypeList }}
+    {{- if eq .nodeGroup.name "master" }}
 function get_data_device_secret() {
   secret="d8-masters-system-registry-data-device-path"
 
@@ -87,4 +88,6 @@ if ! [ -b "$DATA_DEVICE" ]; then
   DATA_DEVICE=$(lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '.blockdevices[] | select (.type == "disk" and .mountpoint == null and .children == null) | .path')
 fi
 
+    {{- end  }}
+  {{- end  }}
 {{- end }}
