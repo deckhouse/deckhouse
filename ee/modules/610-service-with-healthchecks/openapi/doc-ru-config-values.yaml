@@ -1,0 +1,5 @@
+type: object
+properties:
+  debug:
+    description: |
+      Опция, указывающая логгеру выводить stacktraces для предупреждений и ошибок.
