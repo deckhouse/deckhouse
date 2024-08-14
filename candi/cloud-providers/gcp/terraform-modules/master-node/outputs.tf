@@ -27,3 +27,7 @@ output "master_ip_address_for_ssh" {
 output "kubernetes_data_device_path" {
   value = google_compute_instance.master.attached_disk.0.device_name
 }
+
+output "system_registry_data_device_path" {
+  value = null
+}

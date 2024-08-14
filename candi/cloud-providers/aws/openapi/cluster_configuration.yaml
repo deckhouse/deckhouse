@@ -130,6 +130,16 @@ apiVersions:
                   type:
                     description: Etcd disk type.
                     type: string
+              systemRegistryDisk:
+                type: object
+                default: {sizeGb: 40, type: "gp3"}
+                properties:
+                  sizeGb:
+                    description: System registry disk size in gibibytes.
+                    type: integer
+                  type:
+                    description: System registry disk type.
+                    type: string
           zones:
             type: array
             items:

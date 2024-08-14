@@ -27,3 +27,7 @@ output "master_ip_address_for_ssh" {
 output "kubernetes_data_device_path" {
   value = azurerm_virtual_machine_data_disk_attachment.kubernetes_data.lun
 }
+
+output "system_registry_data_device_path" {
+  value = null
+}

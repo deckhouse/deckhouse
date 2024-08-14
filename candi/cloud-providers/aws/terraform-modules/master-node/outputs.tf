@@ -23,3 +23,7 @@ output "master_private_ip" {
 output "kubernetes_data_device_path" {
   value = aws_volume_attachment.kubernetes_data.device_name
 }
+
+output "system_registry_data_device_path" {
+  value = null
+}

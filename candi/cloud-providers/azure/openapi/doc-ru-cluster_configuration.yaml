@@ -133,6 +133,9 @@ apiVersions:
               etcdDiskSizeGb:
                 description: |
                   Размер диска для etcd. Значение указывается в `ГиБ`.
+              systemRegistryDiskSizeGb:
+                description: |
+                  Размер диска для system registry. Значение указывается в `ГиБ`.
               additionalTags:
                 description: |
                   Список дополнительных тегов в формате `key: value`, которые будут назначены инстансам.
