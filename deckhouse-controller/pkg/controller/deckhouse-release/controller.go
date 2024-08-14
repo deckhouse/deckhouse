@@ -272,7 +272,6 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		}
 	}
 
-	releaseData := getReleaseData(dr)
 	clusterBootstrapping := true
 	var imagesRegistry string
 	registrySecret, err := r.getRegistrySecret(ctx)
