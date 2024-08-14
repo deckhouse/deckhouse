@@ -24,6 +24,11 @@ git:
   stageDependencies:
     install:
     - '**/*'
+- add: /{{ $.ModulePath }}modules/460-{{ $.ModuleName }}/images/{{ $.ImageName }}/binary_replace.sh
+  to: /binary_replace.sh
+  stageDependencies:
+    install:
+      - '**/*'
 shell:
   beforeInstall:
   - apt-get update
