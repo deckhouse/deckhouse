@@ -14,18 +14,18 @@ import (
 	"dynamix-common/retry"
 )
 
-type SepService struct {
+type SEPService struct {
 	client  *decort.DecortClient
 	retryer retry.Retryer
 }
 
-func NewSepService(client *decort.DecortClient) *SepService {
-	return &SepService{
+func NewSEPService(client *decort.DecortClient) *SEPService {
+	return &SEPService{
 		client:  client,
 		retryer: retry.NewRetryer(),
 	}
 }
-func (c *SepService) GetLocationByName(ctx context.Context, name string) (*sep.RecordSEP, error) {
+func (c *SEPService) GetLocationByName(ctx context.Context, name string) (*sep.RecordSEP, error) {
 	var result *sep.RecordSEP
 
 	err := c.retryer.Do(ctx, func() (bool, error) {
