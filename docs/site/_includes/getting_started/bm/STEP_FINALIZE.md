@@ -291,6 +291,8 @@ upmeter.example.com</code>
 </pre>
         </div>
       </li>
+      <li><strong>Important:</strong> The domain used in the template should not match the domain specified in the clusterDomain parameter and the internal service network zone. For example, if clusterDomain is set to <code>cluster.local</code> (the default value) and the service network zone is <code>ru-central1.internal</code>, then publicDomainTemplate cannot be <code>%s.cluster.local</code> or <code>%s.ru-central1.internal</code>.
+      </li>
     </ul>
   </li>
   <li><p>If you <strong>don't have a DNS server</strong>: on your PC add static entries (specify your public IP address in the <code>PUBLIC_IP</code>variable) that match the names of specific services to the public IP to the <code>/etc/hosts</code> file for Linux (<code>%SystemRoot%\system32\drivers\etc\hosts</code> for Windows):</p>
