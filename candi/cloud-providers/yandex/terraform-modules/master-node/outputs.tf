@@ -27,3 +27,7 @@ output "node_internal_ip_address" {
 output "kubernetes_data_device_path" {
   value = "/dev/disk/by-id/virtio-kubernetes-data"
 }
+
+output "system_registry_data_device_path" {
+  value = var.systemRegistryEnable ? "/dev/disk/by-id/virtio-system-registry-data" : null
+}
