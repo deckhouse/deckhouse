@@ -1,0 +1,102 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            spec:
+              description: Спецификация ServiceWithHealthchecks аналогична спецификации Service за исключением раздела healthcheck
+              properties:
+                healthcheck:
+                  properties:
+                    initialDelaySeconds:
+                      description: |-
+                        Время в секундах после страта пода, по истечении которого запускаются пробы. По умолчанию 10.
+                    periodSeconds:
+                      description: |-
+                        Период в секундах для повторных запусков проб. По умолчанию 10.
+                    probes:
+                      items:
+                        properties:
+                          failureThreshold:
+                            description: |-
+                              Минимальное непрерывное количество неудачных проб, после которого результат проб признается проваленым.
+                              Значение по умолчанию 3. Минимальное значение 1.
+                          timeoutSeconds:
+                            description: |-
+                              Количество секунд, по истечении которых проверка завершает работу.
+                              Значение по умолчанию 1. Минимальное значение 1.
+                          successThreshold:
+                            description: |-
+                              Минимальное непрерывное количество удачных проб, после которого результат проб признается успешным.
+                              Значение по умолчанию 1. Минимальное значение 1.
+                          mode:
+                            description: |-
+                              Режим для пробы. Может прнимать одно из перечисленных значений: HTTP, TCP, PostgreSQL
+                          http:
+                            properties:
+                              host:
+                                description: |-
+                                  Имя хоста для подключения, по умолчанию - IP-адрес пода.
+                                  Возможно, вы захотите задать «Host» в httpHeaders вместо этого.
+                              httpHeaders:
+                                description: Пользовательские заголовки для установки в запросе. HTTP допускает повторные заголовки.
+                                items:
+                                  properties:
+                                    name:
+                                      description: |-
+                                        Имя поля заголовка. При выводе оно будет канонизировано, поэтому имена, отличающиеся по регистру,
+                                        будут восприниматься как один и тот же заголовок.
+                                    value:
+                                      description: Значение поля для заголовка
+                                  type: object
+                                type: array
+                              method:
+                                description: Метод, который будет использоваться для запроса. По умолчанию используется GET.
+                              path:
+                                description: Путь к странице/ресурсу на HTTP-сервере.
+                              scheme:
+                                description: |-
+                                  Схема, используемая для подключения к хосту.
+                                  По умолчанию - HTTP.
+                              targetPort:
+                                description: |-
+                                  Имя или номер порта для доступа.
+                                  Номер должен находиться в диапазоне от 1 до 65535.
+                                  Имя должно быть IANA_SVC_NAME.
+                            type: object
+                          postgreSQL:
+                            properties:
+                              authSecretName:
+                                description: |-
+                                  Имя secret, расположенного в том же пространстве имен, что и этот ресурс.
+                                  Секрет может содержать следующие поля аутентификации:
+                                  tlsMode, clientCert, clientKey, caCert, password, user
+                              dbName:
+                                description: Имя БД используемое при подключении. Если не указать, то как имя БД будет использовано имя пользователя.
+                              query:
+                                description: |-
+                                  Запрос к PostgreSQL для тестирования.
+                                  Результат должен принимать одно из значений TRUE, 't', 'true', 'y', 'yes','1'
+                                  чтобы быть признаным успешным. По умолчанию: select 1
+                              targetPort:
+                                description: |-
+                                  Имя или номер порта для доступа.
+                                  Номер должен находиться в диапазоне от 1 до 65535.
+                                  Имя должно быть IANA_SVC_NAME.
+                            required:
+                              - targetPort
+                            type: object
+                          tcp:
+                            properties:
+                              targetPort:
+                                description: |-
+                                  Имя или номер порта для доступа.
+                                  Номер должен находиться в диапазоне от 1 до 65535.
+                                  Имя должно быть IANA_SVC_NAME.
+                            type: object
+                        type: object
+                      type: array
+                  type: object
+              type: object
+          type: object
