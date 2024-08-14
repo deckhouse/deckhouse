@@ -51,7 +51,7 @@ properties:
           Deckhouse minor version update mode (release change). **Does not affect patch version updates.**
           - `AutoPatch` – all patch releases are applied automatically. For minor updates  manual confirmation is required.
 
-          To confirm the update, edit [custom resource 'DeckhouseRelease'](../../cr.html#deckhouserelease), which corresponds to the version by setting the `approved' field to 'true'.
+            To confirm the update, set the `approved' field to 'true' in the corresponding [custom resource 'DeckhouseRelease'](../../cr.html#deckhouserelease).
           - `Auto` — all updates are applied automatically.
 
             Deckhouse minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the update windows or (if no update windows are set) as they appear on the corresponding release channel;
