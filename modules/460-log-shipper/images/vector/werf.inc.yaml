@@ -10,9 +10,6 @@ import:
     add: /relocate
     to: /
     before: install
-docker:
-  ENV:
-    LD_LIBRARY_PATH: "/usr/local/lib"
   ENTRYPOINT: ["/usr/bin/vector"]
 
 ---
@@ -24,11 +21,6 @@ git:
   stageDependencies:
     install:
     - '**/*'
-- add: /{{ $.ModulePath }}modules/460-{{ $.ModuleName }}/images/{{ $.ImageName }}/binary_replace.sh
-  to: /binary_replace.sh
-  stageDependencies:
-    install:
-      - '**/*'
 shell:
   beforeInstall:
   - apt-get update
@@ -40,9 +32,8 @@ shell:
   - git apply /patches/*.patch --verbose
   - make build
   - strip target/release/vector
-  - cp target/release/vector /usr/bin/vector
-  - /binary_replace.sh -i /usr/bin/vector -o /relocate
-  - mkdir -p /relocate/etc
+  - mkdir -p /relocate/etc /relocate/usr/bin
+  - cp target/release/vector /relocate/usr/bin/vector
   - cp -pr /etc/pki /relocate/etc
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
