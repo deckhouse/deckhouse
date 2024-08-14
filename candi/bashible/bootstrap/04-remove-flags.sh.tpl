@@ -17,7 +17,7 @@
 set -Eeo pipefail
 
 
-# Remove wait_for_docker_img_pushpush flag for 051_bootstrap_system_registry_img_push.sh step
+# Remove wait_for_docker_img_push flag for 051_bootstrap_system_registry_img_push.sh step
 {{- if and .registry.registryMode (eq .registry.registryMode "Detached") }}
 
 LOCK_FILE="/var/lib/bashible/wait_for_docker_img_push"
