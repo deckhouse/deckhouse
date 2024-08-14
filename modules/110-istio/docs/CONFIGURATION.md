@@ -12,7 +12,7 @@ If these options are disabled, the module will use basic auth with the auto-gene
 Use kubectl to see password:
 
 ```shell
-kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values istio -o json | jq '.istio.internal.auth.password'
+kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values istio -o json | jq '.istio.internal.auth.password'
 ```
 
 Delete the Secret to re-generate password:
