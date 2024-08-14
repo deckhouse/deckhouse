@@ -297,7 +297,7 @@ upmeter.example.com</code>
 </pre>
         </div>
       </li>
-      <li><strong>Важно:<strong/> Домен, используемый в шаблоне, не должен совпадать с доменом, указанным в параметре clusterDomain и внутренней сервисной зоне сети. Например, если clusterDomain установлен в cluster.local (по умолчанию), а сервисная зона сети — ru-central1.internal, то publicDomainTemplate не может быть %s.cluster.local или %s.ru-central1.internal.
+      <li><strong>Важно:<strong/> Домен, используемый в шаблоне, не должен совпадать с доменом, указанным в параметре clusterDomain и внутренней сервисной зоне сети. Например, если используется <code>clusterDomain: cluster.local</code> (значение по умолчанию), а сервисная зона сети — ru-central1.internal, то publicDomainTemplate не может быть <code>%s.cluster.local</code> или <code>%s.ru-central1.internal</code>.
       </li>
     </ul>
   </li>
