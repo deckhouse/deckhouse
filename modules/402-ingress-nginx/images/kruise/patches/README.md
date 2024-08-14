@@ -22,7 +22,7 @@ should be updated ASAP.
 Adds an extra spec field `.spec.replicas` which is set by the kruise controller every time an advanced daemonset set is reconcilied. The replicas value is calculated based on
 the number of nodes eligible for scheduling the advanced daemonset's pods (cordoned nodes are counted as eligible).
 Adds /scale subresource to advanced daemonset CRD so that a PDB could enforce its policy.
-Adds some extra logic to the kruise controller to deal with relevant PDB's (to make them resync when necessary) and timely update replicas' count in some conrner cases.
+Adds some extra logic to the kruise controller to deal with relevant PDB's (to make them resync when necessary) and timely update replicas' count in some corner cases.
 
 ### Go mod
 Updates library versions.
