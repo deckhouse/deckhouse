@@ -914,7 +914,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
-   kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry.deckhouse.ru/deckhouse/ee
+   kubectl exec -ti -n d8-system svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry.deckhouse.ru/deckhouse/ee
    ```
 
 1. Дождитесь перехода пода Deckhouse в статус `Ready`:
