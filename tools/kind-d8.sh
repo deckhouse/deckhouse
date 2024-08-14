@@ -364,6 +364,10 @@ configs_create() {
   cat <<EOF >${CONFIG_DIR}/kind.cfg
 apiVersion: kind.x-k8s.io/v1alpha4
 kind: Cluster
+featureGates:
+  "ValidatingAdmissionPolicy": true
+runtimeConfig:
+  "admissionregistration.k8s.io/v1alpha1": true
 nodes:
 - role: control-plane
   extraPortMappings:
@@ -466,6 +470,10 @@ EOF
   if [[ -n "$D8_LICENSE_KEY" ]]; then
     generate_ee_access_string "$D8_LICENSE_KEY"
     cat <<EOF >>${CONFIG_DIR}/config.yml
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
   imagesRepo: $D8_REGISTRY_PATH
   registryDockerCfg: $D8_EE_ACCESS_STRING
 EOF
