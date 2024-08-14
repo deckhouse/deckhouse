@@ -42,9 +42,10 @@ type MetaConfig struct {
 	MasterNodeGroupSpec  MasterNodeGroupSpec    `json:"-"`
 	TerraNodeGroupSpecs  []TerraNodeGroupSpec   `json:"-"`
 
-	ClusterConfig     map[string]json.RawMessage `json:"clusterConfiguration"`
-	InitClusterConfig map[string]json.RawMessage `json:"-"`
-	ModuleConfigs     []*ModuleConfig            `json:"-"`
+	ClusterConfig        map[string]json.RawMessage `json:"clusterConfiguration"`
+	InitClusterConfig    map[string]json.RawMessage `json:"-"`
+	SystemRegistryConfig SystemRegistryConfig       `json:"-"`
+	ModuleConfigs        []*ModuleConfig            `json:"-"`
 
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
@@ -53,7 +54,7 @@ type MetaConfig struct {
 	Images                 imagesDigests          `json:"-"`
 	Registry               RegistryData           `json:"-"`
 	UpstreamRegistry       RegistryData           `json:"-"`
-	InternalRegistryAccess RegistryAccessData     `json:"_"`
+	InternalRegistryAccess RegistryAccessData     `json:"-"`
 	UUID                   string                 `json:"clusterUUID,omitempty"`
 	InstallerVersion       string                 `json:"-"`
 	ResourcesYAML          string                 `json:"-"`
@@ -108,6 +109,8 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		m.Registry.RegistryMode = m.DeckhouseConfig.RegistryMode
 
 		if m.DeckhouseConfig.RegistryMode != "" && m.DeckhouseConfig.RegistryMode != "Direct" {
+			m.SystemRegistryConfig.Enable = true
+
 			var clusterDomain string
 			err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &clusterDomain)
 			if err != nil {
@@ -534,6 +537,8 @@ func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudC
 
 	if nodeGroupName != "master" {
 		result["nodeGroupName"] = nodeGroupName
+	} else {
+		result["systemRegistryEnable"] = m.SystemRegistryConfig.Enable
 	}
 
 	if len(m.UUID) > 0 {
@@ -586,6 +591,7 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 	out.Registry = m.Registry
 	out.UpstreamRegistry = m.UpstreamRegistry
 	out.InternalRegistryAccess = m.InternalRegistryAccess
+	out.SystemRegistryConfig = m.SystemRegistryConfig
 
 	if m.ClusterType != "" {
 		out.ClusterType = m.ClusterType

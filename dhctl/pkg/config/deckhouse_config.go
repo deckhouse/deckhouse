@@ -93,6 +93,7 @@ type DeckhouseInstaller struct {
 	ClusterConfig         []byte
 	ProviderClusterConfig []byte
 	StaticClusterConfig   []byte
+	SystemRegistryConfig  []byte
 	TerraformState        []byte
 	NodesTerraformState   map[string][]byte
 	CloudDiscovery        []byte
@@ -164,6 +165,11 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	staticClusterConfig, err := metaConfig.StaticClusterConfigYAML()
 	if err != nil {
 		return nil, fmt.Errorf("Marshal static config failed: %v", err)
+	}
+
+	systemRegistryConfig, err := metaConfig.SystemRegistryConfig.ToYAML()
+	if err != nil {
+		return nil, fmt.Errorf("Marshal system registry config failed: %v", err)
 	}
 
 	bundle := DefaultBundle
@@ -254,6 +260,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		UUID:                  metaConfig.UUID,
 		Registry:              metaConfig.Registry,
 		UpstreamRegistry:      metaConfig.UpstreamRegistry,
+		SystemRegistryConfig:  systemRegistryConfig,
 		DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
 		Bundle:                bundle,
 		LogLevel:              logLevel,

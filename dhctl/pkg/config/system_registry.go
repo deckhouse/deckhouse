@@ -17,6 +17,7 @@ package config
 import (
 	"fmt"
 	"math/rand"
+	"sigs.k8s.io/yaml"
 	"time"
 
 	"github.com/cloudflare/cfssl/csr"
@@ -24,6 +25,14 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/certificate"
 	"golang.org/x/crypto/bcrypt"
 )
+
+type SystemRegistryConfig struct {
+	Enable bool
+}
+
+func (cfg *SystemRegistryConfig) ToYAML() ([]byte, error) {
+	return yaml.Marshal(cfg)
+}
 
 type RegistryAccessData struct {
 	CA     certificate.Authority `json:"ca"`

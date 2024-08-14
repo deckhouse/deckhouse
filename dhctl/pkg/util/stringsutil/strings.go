@@ -60,3 +60,11 @@ func Sha256Encode(input string) string {
 
 	return fmt.Sprintf("%x", hasher.Sum(nil))
 }
+
+func ToPointerOfBytes(input *string) *[]byte {
+	if input == nil {
+		return nil
+	}
+	inByteFmt := []byte(*input)
+	return &inByteFmt
+}

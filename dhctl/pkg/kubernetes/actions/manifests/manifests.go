@@ -575,7 +575,7 @@ func SecretWithClusterConfig(data []byte) *apiv1.Secret {
 	)
 }
 
-func SecretWithProviderClusterConfig(configData, discoveryData []byte) *apiv1.Secret {
+func SecretWithProviderClusterConfig(configData, discoveryData, systemRegistryData []byte) *apiv1.Secret {
 	data := make(map[string][]byte)
 	if configData != nil {
 		data["cloud-provider-cluster-configuration.yaml"] = configData
@@ -583,6 +583,10 @@ func SecretWithProviderClusterConfig(configData, discoveryData []byte) *apiv1.Se
 
 	if discoveryData != nil {
 		data["cloud-provider-discovery-data.json"] = discoveryData
+	}
+
+	if systemRegistryData != nil {
+		data["system-registry-configuration.yaml"] = systemRegistryData
 	}
 
 	return generateSecret("d8-provider-cluster-configuration", "kube-system", data, nil)
@@ -626,12 +630,34 @@ func PatchWithNodeTerraformState(stateData []byte) interface{} {
 	}
 }
 
-func SecretMasterDevicePath(nodeName string, devicePath []byte) *apiv1.Secret {
+func SecretMasterKubernetesDataDevicePath(nodeName string, devicePath []byte) *apiv1.Secret {
 	return generateSecret(
 		"d8-masters-kubernetes-data-device-path",
 		"d8-system",
 		map[string][]byte{
 			nodeName: devicePath,
+		},
+		map[string]string{},
+	)
+}
+
+func SecretMasterSystemRegistryDataDevicePath(nodeName string, devicePath *[]byte) *apiv1.Secret {
+	namespace := "d8-system"
+	secretName := "d8-masters-system-registry-data-device-path"
+	if devicePath != nil {
+		return generateSecret(
+			secretName,
+			namespace,
+			map[string][]byte{
+				nodeName: *devicePath,
+			},
+			map[string]string{},
+		)
+	}
+	return generateSecret(
+		secretName,
+		namespace,
+		map[string][]byte{
 		},
 		map[string]string{},
 	)

@@ -104,9 +104,9 @@ func BootstrapMaster(nodeInterface node.Interface, controller *template.Controll
 	})
 }
 
-func PrepareBashibleBundle(bundleName, nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller) error {
+func PrepareBashibleBundle(bundleName, nodeIP string, dataDevices terraform.DataDevices, metaConfig *config.MetaConfig, controller *template.Controller) error {
 	return log.Process("bootstrap", "Prepare Bashible Bundle", func() error {
-		return template.PrepareBundle(controller, nodeIP, bundleName, devicePath, metaConfig)
+		return template.PrepareBundle(controller, nodeIP, bundleName, dataDevices, metaConfig)
 	})
 }
 
@@ -560,7 +560,7 @@ func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
 	return tlsCert, nil
 }
 
-func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string) error {
+func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP string, dataDevices terraform.DataDevices) error {
 	var clusterDomain string
 	err := json.Unmarshal(cfg.ClusterConfig["clusterDomain"], &clusterDomain)
 	if err != nil {
@@ -644,9 +644,10 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 		defer cleanUpTunnel()
 	}
 
-	if err = PrepareBashibleBundle(bundleName, nodeIP, devicePath, cfg, templateController); err != nil {
+	if err = PrepareBashibleBundle(bundleName, nodeIP, dataDevices, cfg, templateController); err != nil {
 		return err
 	}
+
 	tomb.RegisterOnShutdown("Delete templates temporary directory", func() {
 		if !app.IsDebug {
 			_ = os.RemoveAll(templateController.TmpDir)

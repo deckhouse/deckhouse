@@ -21,8 +21,9 @@ import (
 )
 
 var (
-	InternalNodeIP = ""
-	DevicePath     = ""
+	InternalNodeIP                       = ""
+	KubeDataDevicePath                   = ""
+	SystemRegistryDataDevicePath *string = nil
 
 	ResourcesPath    = ""
 	ResourcesTimeout = 15 * time.Minute
@@ -46,7 +47,10 @@ func DefineBashibleBundleFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("device-path", "Path of kubernetes-data device.").
 		Required().
 		Envar(configEnvName("DEVICE_PATH")).
-		StringVar(&DevicePath)
+		StringVar(&KubeDataDevicePath)
+	cmd.Flag("system-registry-device-path", "Path of system-registry-data device.").
+		Envar(configEnvName("SYSTEM_REGISTRY_DEVICE_PATH")).
+		StringVar(SystemRegistryDataDevicePath)
 }
 
 func DefineDeckhouseFlags(cmd *kingpin.CmdClause) {

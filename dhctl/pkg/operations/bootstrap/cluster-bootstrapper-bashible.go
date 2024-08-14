@@ -21,6 +21,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 func (b *ClusterBootstrapper) ExecuteBashible() error {
@@ -34,7 +35,11 @@ func (b *ClusterBootstrapper) ExecuteBashible() error {
 	if err != nil {
 		return err
 	}
-
+	
+	if metaConfig.SystemRegistryConfig.Enable && app.SystemRegistryDataDevicePath == nil {
+		return fmt.Errorf("the '--system-registry-device-path' flag must be specified at RegistryMode!=Direct")
+	}
+	
 	err = terminal.AskBecomePassword()
 	if err != nil {
 		return err
@@ -49,7 +54,15 @@ func (b *ClusterBootstrapper) ExecuteBashible() error {
 		}
 	}
 
-	if err := RunBashiblePipeline(b.NodeInterface, metaConfig, app.InternalNodeIP, app.DevicePath); err != nil {
+	if err := RunBashiblePipeline(
+		b.NodeInterface,
+		metaConfig,
+		app.InternalNodeIP,
+		terraform.DataDevices{
+			KubeDataDevicePath: app.KubeDataDevicePath,
+			SystemRegistryDataDevicePath: app.SystemRegistryDataDevicePath,
+		},
+	); err != nil {
 		return err
 	}
 

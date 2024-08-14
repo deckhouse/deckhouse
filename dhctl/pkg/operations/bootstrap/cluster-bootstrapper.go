@@ -278,7 +278,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	var nodeIP string
-	var devicePath string
+	var dataDevices terraform.DataDevices
 	var resourcesTemplateData map[string]interface{}
 
 	if metaConfig.ClusterType == config.CloudClusterType {
@@ -336,7 +336,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			}
 
 			nodeIP = masterOutputs.NodeInternalIP
-			devicePath = masterOutputs.KubeDataDevicePath
+			dataDevices = masterOutputs.GetDataDevices()
 
 			deckhouseInstallConfig.NodesTerraformState = make(map[string][]byte)
 			deckhouseInstallConfig.NodesTerraformState[masterNodeName] = masterOutputs.TerraformState
@@ -402,7 +402,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	if err := RunBashiblePipeline(b.NodeInterface, metaConfig, nodeIP, devicePath); err != nil {
+	if err := RunBashiblePipeline(b.NodeInterface, metaConfig, nodeIP, dataDevices); err != nil {
 		return err
 	}
 

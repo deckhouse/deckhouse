@@ -297,23 +297,6 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			},
 		},
 	}
-
-	// if cfg.Registry.RegistryMode != "" && cfg.Registry.RegistryMode != "Direct" {
-	// 	tasks = append(tasks, actions.ManifestTask{
-	// 		Name: `Secret "system-registry-init-configuration"`,
-	// 		Manifest: func() interface{} {
-	// 			return manifests.SystemRegistryInitialModuleConfig(cfg.Registry.RegistryMode, cfg.UpstreamRegistry)
-	// 		},
-	// 		CreateFunc: func(manifest interface{}) error {
-	// 			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
-	// 			return err
-	// 		},
-	// 		UpdateFunc: func(manifest interface{}) error {
-	// 			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(context.TODO(), manifest.(*apiv1.Secret), metav1.UpdateOptions{})
-	// 			return err
-	// 		},
-	// 	})
-	// }
 	
 	if cfg.IsRegistryAccessRequired() {
 		tasks = append(tasks, actions.ManifestTask{
@@ -381,7 +364,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name: `Secret "d8-provider-cluster-configuration"`,
 			Manifest: func() interface{} {
 				return manifests.SecretWithProviderClusterConfig(
-					cfg.ProviderClusterConfig, cfg.CloudDiscovery,
+					cfg.ProviderClusterConfig, cfg.CloudDiscovery, cfg.SystemRegistryConfig,
 				)
 			},
 			CreateFunc: func(manifest interface{}) error {

@@ -188,6 +188,17 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 		}
 
 		metaConfig.ProviderClusterConfig = parsedProviderClusterConfig
+
+		systemRegistryConfigData := providerClusterConfig.Data["system-registry-configuration.yaml"]
+		if len(systemRegistryConfigData) != 0 {
+			var parsedSystemRegistryConfig SystemRegistryConfig
+			if err := yaml.Unmarshal(systemRegistryConfigData, &parsedSystemRegistryConfig); err != nil {
+				return nil, err
+			}
+			metaConfig.SystemRegistryConfig = parsedSystemRegistryConfig
+		}
+
+		metaConfig.ProviderClusterConfig = parsedProviderClusterConfig
 	}
 
 	return metaConfig.Prepare()
