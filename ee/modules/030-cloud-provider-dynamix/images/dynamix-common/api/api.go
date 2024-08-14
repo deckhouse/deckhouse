@@ -39,6 +39,6 @@ func NewDynamixCloudAPI(config config.Credentials) (*DynamixCloudAPI, error) {
 		DiskService:     NewDiskService(decortClient),
 		LocationService: NewLocationService(decortClient),
 		PortalSvc:       NewPortalService(decortClient),
-		SEPService:      NewSepService(decortClient),
+		SEPService:      NewSEPService(decortClient),
 	}, nil
 }
