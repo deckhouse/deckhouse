@@ -12,7 +12,7 @@ title: "Модуль upmeter: настройки"
 Посмотреть сгенерированный пароль можно командой:
 
 ```shell
-kubectl -n d8-system exec svc/deckhouse-leader -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.webui.password'
+kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.webui.password'
 ```
 
 Чтобы сгенерировать новый пароль, нужно удалить Secret:
@@ -24,7 +24,7 @@ kubectl -n d8-upmeter delete secret/basic-auth-webui
 Посмотреть сгенерированный пароль для страницы статуса можно командой:
 
 ```shell
-kubectl -n d8-system exec svc/deckhouse-leader -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.status.password'
+kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.status.password'
 ```
 
 Чтобы сгенерировать новый пароль для страницы статуса, нужно удалить секрет:

@@ -267,7 +267,7 @@ module-test                           900      Disabled   example
 - Выполнить следующую команду (укажите имя модуля):
 
   ```shell
-  kubectl -ti -n d8-system exec svc/deckhouse-leader -- deckhouse-controller module enable <MODULE_NAME>
+  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
   ```
 
 - Создать ресурс `ModuleConfig` с параметром `enabled: true` и настройками модуля.

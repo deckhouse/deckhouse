@@ -31,7 +31,7 @@ properties:
       Сгенерированный ключ можно получить командой:
 
       ```shell
-      kubectl -n d8-system exec svc/deckhouse-leader -- deckhouse-controller module values flant-integration -o json | jq '.flantIntegration.internal.madisonAuthKey'
+      kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values flant-integration -o json | jq '.flantIntegration.internal.madisonAuthKey'
       ```
 
   licenseKey:

@@ -17,7 +17,7 @@ search: prometheus
 Посмотреть сгенерированный пароль можно командой:
 
 ```shell
-kubectl -n d8-system exec svc/deckhouse-leader -- deckhouse-controller module values prometheus -o json | jq '.prometheus.internal.auth.password'
+kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values prometheus -o json | jq '.prometheus.internal.auth.password'
 ```
 
 Чтобы сгенерировать новый пароль, нужно удалить Secret:
