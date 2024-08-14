@@ -55,14 +55,4 @@ apiVersions:
 
               Структура, указанная в параметре, будет использована для создания [глобальной конфигурации Deckhouse](../deckhouse-configure-global.html) (moduleConfig `global`) и [настроек модулей](../#настройка-модуля) (moduleConfig `<module-name>`).
 
-              Формат структуры:
-              ```yaml
-              configOverrides:
-                global:
-                  ... секция глобальных параметров
-                <moduleName>Enabled: true|false
-                <moduleName>:
-                  ... секция параметров модуля
-              ```
-
               **Внимание!** В `configOverrides` для включения/отключения модуля и указания его настроек используется название модуля в **camelCase** (например, `userAuthn`). После установки Deckhouse для управления модулем используется ресурс moduleConfig с названием модуля в **snake-case** (например, `user-authn`).
