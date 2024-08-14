@@ -209,9 +209,9 @@ properties:
           releaseType:
             type: string
             description: |
-              releaseType defines which versions the notification will be sent to:
-              `Minor`: only for releases with a new minor version
-              `All`: for all releases including patch versions
+              Defines the type of version for which the notification will be sent:
+              - `Minor` — only for updating the minor version.
+              - `All` — for any updates, including updating a patch version.
             x-examples: ["All"]
             enum:
               - "All"
