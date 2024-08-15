@@ -33,8 +33,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 )
 
 var (
