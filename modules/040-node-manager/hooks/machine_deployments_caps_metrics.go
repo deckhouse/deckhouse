@@ -21,6 +21,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
@@ -56,6 +57,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"d8-cloud-instance-manager"},
+				},
+			},
+			LabelSelector: &v1.LabelSelector{
+				MatchExpressions: []v1.LabelSelectorRequirement{
+					{
+						Key:      "caps-controller",
+						Operator: v1.LabelSelectorOpExists,
+					},
 				},
 			},
 			FilterFunc: filterMachineDeploymentStatus,

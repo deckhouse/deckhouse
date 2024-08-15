@@ -31,6 +31,13 @@ kind: MachineDeployment
 metadata:
   name: caps-worker
   namespace: d8-cloud-instance-manager
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    cluster.x-k8s.io/cluster-name: static
+    heritage: deckhouse
+    module: node-manager
+    node-group: caps-worker
+    caps-controller: ""
 spec:
   clusterName: static
   minReadySeconds: 0
@@ -63,6 +70,13 @@ kind: MachineDeployment
 metadata:
   name: caps-worker
   namespace: d8-cloud-instance-manager
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    cluster.x-k8s.io/cluster-name: static
+    heritage: deckhouse
+    module: node-manager
+    node-group: caps-worker
+    caps-controller: ""
 spec:
   clusterName: static
   minReadySeconds: 0
