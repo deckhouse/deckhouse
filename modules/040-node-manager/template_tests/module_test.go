@@ -667,6 +667,7 @@ metadata:
   namespace: d8-cloud-instance-manager
   name: worker
   labels:
+    caps-controller: ""
     heritage: deckhouse
     module: node-manager
     node-group: worker
