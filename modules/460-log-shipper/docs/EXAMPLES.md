@@ -484,11 +484,11 @@ The log buffering configuration is essential for improving the reliability and p
 
 1. Temporary connectivity disruptions:
 
-   If there are temporary disruptions or instability in the connection to the log storage system (such as Elasticsearch), a buffer allows logs to be temporarily stored and sent when the connection is restored.
+    If there are temporary disruptions or instability in the connection to the log storage system (such as Elasticsearch), a buffer allows logs to be temporarily stored and sent when the connection is restored.
 
 1. Smoothing out load peaks:
 
-   During sudden spikes in log volume, a buffer helps smooth out peak loads on the log storage system, preventing it from becoming overloaded and potentially losing data.
+    During sudden spikes in log volume, a buffer helps smooth out peak loads on the log storage system, preventing it from becoming overloaded and potentially losing data.
 
 1. Performance optimization:
   
