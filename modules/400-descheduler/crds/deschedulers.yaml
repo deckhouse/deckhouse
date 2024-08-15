@@ -19,6 +19,7 @@ spec:
       name: v1alpha1
       schema:
         openAPIV3Schema:
+          type: object
           description: Descheduler is a description of a single descheduler instance.
           properties:
             apiVersion:
@@ -54,7 +55,6 @@ spec:
                           operator:
                             type: string
                           tolerationSeconds:
-                            format: int64
                             type: integer
                           value:
                             type: string
@@ -185,7 +185,8 @@ spec:
                         minPodAge:
                           description: ignore eviction of pods with a creation time within this threshold
                           type: string
-                          format: duration
+                          pattern: '^(\d{1,2}[h])$|^(\d+[m])$|^((\d{1,2}[h])\s((([0]?|[1-5]{1})[0-9])[m]))$'
+
                     strategies:
                       type: object
                       description: List of strategies with corresponding parameters for a given Descheduler instances.
@@ -953,7 +954,6 @@ spec:
               type: object
           required:
             - spec
-          type: object
       served: true
       storage: true
       subresources:
