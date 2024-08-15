@@ -79,6 +79,7 @@ func ApplyCopierSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		// desired secret (target secret in a namespace) must not have secret-copier annotations to satisfy DeepEqual function
 		delete(s.Annotations, "secret-copier.deckhouse.io/created-at")
 		delete(s.Annotations, "secret-copier.deckhouse.io/updated-at")
+		delete(s.Annotations, "secret-copier.deckhouse.io/target-namespace-selector")
 	}
 
 	// Secrets with that label lead to D8CertmanagerOrphanSecretsChecksFailed alerts.
@@ -251,16 +252,17 @@ func createSecret(k8 k8s.Client, secret *Secret) error {
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        secret.Name,
-			Namespace:   secret.Namespace,
-			Labels:      secret.Labels,
-			Annotations: secret.Annotations,
+			Name:      secret.Name,
+			Namespace: secret.Namespace,
+			Labels:    secret.Labels,
+			Annotations: map[string]string{
+				"secret-copier.deckhouse.io/created-at": time.Now().UTC().Format(time.RFC3339),
+			},
 		},
 		Data: secret.Data,
 		Type: secret.Type,
 	}
-	maps.Copy(s.ObjectMeta.Annotations, map[string]string{
-		"secret-copier.deckhouse.io/created-at": time.Now().UTC().Format(time.RFC3339)})
+	maps.Copy(s.ObjectMeta.Annotations, secret.Annotations)
 
 	// Ignore error if target namespace is in Terminating phase
 	if _, err := k8.CoreV1().Secrets(secret.Namespace).Create(context.TODO(), s, metav1.CreateOptions{}); err != nil {
@@ -287,16 +289,17 @@ func updateSecret(k8 k8s.Client, secret *Secret) error {
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        secret.Name,
-			Namespace:   secret.Namespace,
-			Labels:      secret.Labels,
-			Annotations: secret.Annotations,
+			Name:      secret.Name,
+			Namespace: secret.Namespace,
+			Labels:    secret.Labels,
+			Annotations: map[string]string{
+				"secret-copier.deckhouse.io/updated-at": time.Now().UTC().Format(time.RFC3339),
+			},
 		},
 		Data: secret.Data,
 		Type: secret.Type,
 	}
-	maps.Copy(s.ObjectMeta.Annotations, map[string]string{
-		"secret-copier.deckhouse.io/updated-at": time.Now().UTC().Format(time.RFC3339)})
+	maps.Copy(s.ObjectMeta.Annotations, secret.Annotations)
 
 	if _, err := k8.CoreV1().Secrets(secret.Namespace).Update(context.TODO(), s, metav1.UpdateOptions{}); err != nil {
 		// deleting and create Secret if its validation fails
