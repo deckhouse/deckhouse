@@ -169,13 +169,13 @@ func buildModuleConfigWithOverrides(
 	return mc, nil
 }
 
-func CheckOrSetupArbitaryCNIModuleConfig(metaConfig *MetaConfig, schemasStore *SchemaStore) (*ModuleConfig, error) {
-	for _, moduleConfig := range metaConfig.ModuleConfigs {
+func CheckOrSetupArbitaryCNIModuleConfig(cfg *DeckhouseInstaller) error {
+	for _, moduleConfig := range cfg.ModuleConfigs {
 		switch moduleConfig.GetName() {
 		case "cni-cilium", "cni-flannel", "cni-simple-bridge":
 			if *moduleConfig.Spec.Enabled {
 				log.InfoF("Found enabled ModuleConfig for '%s' cni, skipping creation.\n", moduleConfig.Name)
-				return nil, nil
+				return nil
 			}
 		}
 	}
@@ -190,7 +190,7 @@ func CheckOrSetupArbitaryCNIModuleConfig(metaConfig *MetaConfig, schemasStore *S
 
 	cniMC.Spec.Enabled = pointer.Bool(true)
 
-	switch metaConfig.ProviderName {
+	switch cfg.ProviderName {
 
 	// static or unknown provider
 	case "openstack":
