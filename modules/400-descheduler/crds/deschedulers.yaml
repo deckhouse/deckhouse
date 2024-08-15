@@ -62,11 +62,30 @@ spec:
                     `globalParameters` and `strategies` follow the [descheduler's documentation](https://github.com/kubernetes-sigs/descheduler#policy-and-strategies).
                   properties:
                     globalParameters:
+                      type: object
                       description: Parameters that apply to all policies.
                       properties:
-                        evictFailedBarePods:
-                          description: Allows Pods without `ownerReferences` and in `failed` phase to be evicted.
-                          type: boolean
+                        nodeSelector:
+                          description: Limiting the nodes which are processed.
+                          type: string
+                        maxNoOfPodsToEvictPerNode:
+                          description: Restricts maximum of Pods to be evicted per node.
+                          type: integer
+                        maxNoOfPodsToEvictPerNamespace:
+                          description: Restricts maximum of Pods to be evicted per namespace.
+                          type: integer
+                        maxNoOfPodsToEvictTotal:
+                          description: Restricts maximum number of pods evicted from each node (summed through all strategies).
+                          type: integer
+
+                    defaultEvictor:
+                      type: object
+                      description: |
+                        The Default Evictor Plugin is used by default for filtering pods before processing them in an strategy plugin, or for applying a PreEvictionFilter of pods before eviction.
+                      properties:
+                        nodeSelector:
+                          description: Limiting the nodes which are processed.
+                          type: string
                         evictLocalStoragePods:
                           description: Allows Pods using local storage to be evicted.
                           type: boolean
@@ -76,15 +95,96 @@ spec:
                         ignorePvcPods:
                           description: Prevents Pods with PVCs from being evicted.
                           type: boolean
-                        maxNoOfPodsToEvictPerNamespace:
-                          description: Restricts maximum of Pods to be evicted per namespace.
+                        evictFailedBarePods:
+                          description: Allows Pods without `ownerReferences` and in `failed` phase to be evicted.
+                          type: boolean
+                        labelSelector:
+                          properties:
+                            matchExpressions:
+                              type: array
+                              description: List of label expressions that a node should have to qualify for the filter condition.
+                              items:
+                                properties:
+                                  key:
+                                    type: string
+                                    description: A label name.
+                                  operator:
+                                    type: string
+                                    description: A comparison operator.
+                                    enum:
+                                      - In
+                                      - NotIn
+                                      - Exists
+                                      - DoesNotExist
+                                  values:
+                                    type: array
+                                    description: A label value.
+                                    items:
+                                      type: string
+                                      pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                      minLength: 1
+                                      maxLength: 63
+                                oneOf:
+                                  - properties:
+                                      operator:
+                                        enum: [ Exists, DoesNotExist ]
+                                    required: [ key, operator ]
+                                    not:
+                                      required: [ values ]
+                                  - properties:
+                                      operator:
+                                        enum: [ In, NotIn ]
+                                    required: [ key, operator, values ]
+                                type: object
+                              x-doc-examples:
+                                - - key: tier
+                                    operator: In
+                                    values:
+                                      - production
+                                      - staging
+                                  - key: tier
+                                    operator: NotIn
+                                    values: [ production ]
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              type: object
+                          type: object
+                        priorityThreshold:
+                          type: object
+                          description: |
+                            Priority threshold can be configured via the Default Evictor Filter, and, only pods under the threshold can be evicted.
+                            You can specify this threshold by setting `priorityThreshold.name` (setting the threshold to the value of the given priority class)
+                            or `priorityThreshold.value` (directly setting the threshold) parameters.
+                            By default, this threshold is set to the value of system-cluster-critical priority class.
+                            Note: Setting `evictSystemCriticalPods` to `true` disables priority filtering entirely.
+                          properties:
+                            name:
+                              type: string
+                            value:
+                              type integer
+                          anyOf:
+                            - required: ["name"]
+                            - required: ["value"]
+                        nodeFit:
+                          description: |
+                            NodeFit can be configured via the Default Evictor Filter. If set to `true` the descheduler will consider whether or not the pods that meet eviction
+                            criteria will fit on other nodes before evicting them. If a pod cannot be rescheduled to another node, it will not be evicted.
+                            Currently the following criteria are considered when setting `nodeFit` to `true`:
+                            * A nodeSelector on the pod
+                            * Any tolerations on the pod and any taints on the other nodes
+                            * nodeAffinity on the pod
+                            * Resource requests made by the pod and the resources available on other nodes
+                            * Whether any of the other nodes are marked as unschedulable
+                            * Any podAntiAffinity between the pod and the pods on the other nodes
+                          type: boolean
+                        minReplicas:
+                          description: ignore eviction of pods where owner (e.g. ReplicaSet) replicas is below this threshold.
                           type: integer
-                        maxNoOfPodsToEvictPerNode:
-                          description: Restricts maximum of Pods to be evicted per node.
-                          type: integer
-                        nodeSelector:
+                        minPodAge:
+                          description: ignore eviction of pods with a creation time within this threshold
                           type: string
-                      type: object
+                          format: duration
                     strategies:
                       description: List of strategies with corresponding parameters for a given Descheduler instances.
                       properties:
