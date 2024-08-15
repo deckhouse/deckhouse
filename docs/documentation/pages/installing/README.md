@@ -321,6 +321,6 @@ dhctl bootstrap \
 
 ### Aborting the installation
 
-При установке в поддерживаемом облаке в случае прерывания установки или возникновения проблем во время установки в облаке могут остаться созданные ресурсы. Для их удаления используйте команду `dhctl bootstrap-phase abort`, выполнив ее в контейнере инсталлятора.
+If the installation was carried out in a supported cloud and was interrupted for any reason, or if problems occurred during the installation, resources that were created during the installation may end up residing in the cloud. To purge them, run the `dhctl bootstrap-phase abort` command in the installer container.
 
-> Обратите внимание, что **файл конфигурации**, передаваемый через параметр `--config` при запуске инсталлятора, должен быть **тот же, с которым производилась установка**.
+> Note that the **config file** that is passed via the `--config` parameter to run the installer must be the **same** as the one used to initiate the installation in the first place.
