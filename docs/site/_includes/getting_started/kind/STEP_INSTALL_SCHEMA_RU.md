@@ -32,6 +32,7 @@ bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/t
 - Либо выполните следующую команду для установки Deckhouse **Enterprise Edition**, указав лицензионный ключ:
   {% snippetcut selector="kind-install" %}
 ```shell
+ echo <LICENSE_KEY> | docker login -u license-token --password-stdin registry.deckhouse.io
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)" -- --key <LICENSE_KEY>
 ```
   {% endsnippetcut %}
