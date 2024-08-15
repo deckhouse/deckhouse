@@ -39,17 +39,17 @@ func (pc *Checker) CheckStaticNodeSystemRequirements() error {
 	}
 
 	buf.Reset()
-	physicalCoresCount, err := extractCPULogicalCoresCountFromNode(pc.sshClient, buf)
+	coresCount, err := extractCPULogicalCoresCountFromNode(pc.sshClient, buf)
 	if err != nil {
 		return err
 	}
 
 	failures := make([]string, 0)
-	if physicalCoresCount < minimumRequiredCPUCores {
+	if coresCount < minimumRequiredCPUCores {
 		failures = append(failures, fmt.Sprintf(
 			" - System requirements mandate at least %d CPU(s) on the node, but it has %d",
 			minimumRequiredCPUCores,
-			physicalCoresCount,
+			coresCount,
 		))
 	}
 
