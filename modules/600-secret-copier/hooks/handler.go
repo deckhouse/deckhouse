@@ -24,6 +24,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,7 +50,7 @@ type Secret struct {
 }
 
 type Namespace struct {
-	Name          string `json:"name,omitempty"`
+	Name          string `json:"name"`
 	Labels        map[string]string
 	IsTerminating bool `json:"is_terminating,omitempty"`
 }
@@ -145,20 +146,36 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(copierHandler))
 
 func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
+	log.Info("Start secret-copier...")
 	secrets, ok := input.Snapshots["secrets"]
 	if !ok {
 		input.LogEntry.Info("No Secrets received, skipping execution")
-		return nil
-	}
-	namespaces, ok := input.Snapshots["namespaces"]
-	if !ok {
-		input.LogEntry.Info("No Namespaces received, skipping execution")
 		return nil
 	}
 
 	k8, err := dc.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("can't init Kubernetes client: %v", err)
+	}
+
+	nss, err := k8.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("can't list namespaces: %v", err)
+	}
+
+	var namespaces []Namespace
+	for _, ns := range nss.Items {
+		if ns.Status.Phase == v1.NamespaceTerminating {
+			continue
+		}
+		if heritage, ok := ns.Labels["heritage"]; ok && heritage == "upmeter" {
+			continue
+		}
+		namespaces = append(namespaces, Namespace{
+			Name:          ns.Name,
+			Labels:        ns.Labels,
+			IsTerminating: ns.Status.Phase == v1.NamespaceTerminating,
+		})
 	}
 
 	secretsExists := make(map[string]*Secret)
@@ -175,11 +192,11 @@ func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 		namespaceLabelSelector := namespaceSelector(secret)
 
 		// Secrets in namespace `default` should be propagated to all other namespaces matching the selector.
-		for _, n := range namespaces {
-			namespace := n.(*Namespace)
+		for _, namespace := range namespaces {
 			if namespace.IsTerminating || namespace.Name == v1.NamespaceDefault {
 				continue
 			}
+
 			namespaceLabels := labels.Set(namespace.Labels)
 			if !namespaceLabelSelector.Matches(namespaceLabels) {
 				continue
