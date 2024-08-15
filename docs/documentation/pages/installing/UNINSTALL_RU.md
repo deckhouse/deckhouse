@@ -11,7 +11,8 @@ lang: ru
 1. Запустите инсталлятор Deckhouse:
 
    ```shell
-   docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.ru/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
+   docker run --pull=always -it [<MOUNT_OPTIONS>] \
+     registry.deckhouse.ru/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
    ```
 
    где:
@@ -35,7 +36,10 @@ lang: ru
 1. В запустившемся контейнере выполните команду:
 
    ```shell
-   dhctl destroy --ssh-user=<USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa  --yes-i-am-sane-and-i-understand-what-i-am-doing --ssh-host=<MASTER_IP>
+   dhctl destroy --ssh-user=<USER> \
+     --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+     --yes-i-am-sane-and-i-understand-what-i-am-doing \
+     --ssh-host=<MASTER_IP>
    ```
 
    где:
@@ -53,7 +57,8 @@ lang: ru
 2. Запустите инсталлятор Deckhouse:
 
    ```shell
-   docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.ru/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
+   docker run --pull=always -it [<MOUNT_OPTIONS>] \
+     registry.deckhouse.ru/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
    ```
 
    где:
@@ -77,7 +82,10 @@ lang: ru
 3. В запустившемся контейнере выполните команду:
 
    ```shell
-   dhctl destroy --ssh-user=<USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa  --yes-i-am-sane-and-i-understand-what-i-am-doing --ssh-host=<MASTER_IP>
+   dhctl destroy --ssh-user=<USER> \
+     --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+     --yes-i-am-sane-and-i-understand-what-i-am-doing \
+     --ssh-host=<MASTER_IP>
    ```
 
    где:
@@ -95,7 +103,8 @@ lang: ru
 1. Запустите инсталлятор Deckhouse:
 
    ```shell
-   docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.ru/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
+   docker run --pull=always -it [<MOUNT_OPTIONS>] \
+     registry.deckhouse.ru/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
    ```
 
    где:
@@ -119,7 +128,10 @@ lang: ru
 1. Выполните команду удаления кластера:
 
    ```shell
-   dhctl destroy --ssh-user=<USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa  --yes-i-am-sane-and-i-understand-what-i-am-doing --ssh-host=<MASTER_IP>
+   dhctl destroy --ssh-user=<USER> \
+     --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+     --yes-i-am-sane-and-i-understand-what-i-am-doing \
+     --ssh-host=<MASTER_IP>
    ```
 
    где:
