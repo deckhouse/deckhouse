@@ -137,5 +137,5 @@ Follow the steps below to delete a cluster that has been manually installed (e.g
    where:
    - `<USER>` — the user of the remote machine that ran the installation;
    - `<MASTER_IP>` — the IP address of the cluster's master node.
-   - 
+     
 The installer will then connect to the master node and delete all Deckhouse and Kubernetes cluster components on it.
