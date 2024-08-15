@@ -262,13 +262,18 @@ func CreateResourcesLoop(kubeCl *client.KubernetesClient, metaConfig *config.Met
 				return err
 			}
 
-			if clusterIsBootstrappedChecker != nil && !isBootstrapped {
+			if clusterIsBootstrappedChecker != nil {
 				var err error
 
-				isBootstrapped, err = clusterIsBootstrappedChecker.IsBootstrapped()
+				if !isBootstrapped {
+					isBootstrapped, err = clusterIsBootstrappedChecker.IsBootstrapped()
+				}
+
 				if err != nil {
 					return err
 				}
+			} else {
+				isBootstrapped = true
 			}
 
 			if isBootstrapped && err == nil {
