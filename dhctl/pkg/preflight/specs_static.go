@@ -39,7 +39,7 @@ func (pc *Checker) CheckStaticNodeSystemRequirements() error {
 	}
 
 	buf.Reset()
-	physicalCoresCount, err := extractCPUPhysicalCoresCountFromNode(pc.sshClient, buf)
+	physicalCoresCount, err := extractCPULogicalCoresCountFromNode(pc.sshClient, buf)
 	if err != nil {
 		return err
 	}
@@ -83,23 +83,22 @@ func extractRAMCapacityFromNode(sshCl *ssh.Client, buf *bytes.Buffer) (int, erro
 	return ramKb, nil
 }
 
-func extractCPUPhysicalCoresCountFromNode(sshCl *ssh.Client, buf *bytes.Buffer) (int, error) {
+func extractCPULogicalCoresCountFromNode(sshCl *ssh.Client, buf *bytes.Buffer) (int, error) {
 	err := sshCl.Command("cat", "/proc/cpuinfo").CaptureStdout(buf).Run()
 	if err != nil {
 		return 0, fmt.Errorf("Failed to read CPU info from /proc/cpuinfo: %w", err)
 	}
 
-	count, err := physicalCoresCountFromCPUInfo(buf)
+	count, err := logicalCoresCountFromCPUInfo(buf)
 	if err != nil {
 		return 0, fmt.Errorf("Failed to parse CPU info from /proc/cpuinfo: %w", err)
 	}
 	return count, nil
 }
 
-func physicalCoresCountFromCPUInfo(info *bytes.Buffer) (int, error) {
+func logicalCoresCountFromCPUInfo(info *bytes.Buffer) (int, error) {
 	scanner := bufio.NewScanner(info)
-	physicalCPUsToCores := make(map[string]int)
-	lastPhysicalId := ""
+	processors := make(map[string]struct{})
 	for scanner.Scan() {
 		line := scanner.Text()
 		if !strings.Contains(line, ":") {
@@ -107,25 +106,13 @@ func physicalCoresCountFromCPUInfo(info *bytes.Buffer) (int, error) {
 		}
 
 		field := strings.SplitN(line, ": ", 2)
-		switch strings.TrimSpace(field[0]) {
-		case "physical id":
-			lastPhysicalId = field[1]
-		case "cpu cores":
-			v, err := strconv.ParseInt(field[1], 10, 32)
-			if err != nil {
-				return 0, fmt.Errorf("Parse cpu cores entry for physical id %q: %w", lastPhysicalId, err)
-			}
-			physicalCPUsToCores[lastPhysicalId] = int(v)
+		if strings.TrimSpace(field[0]) == "processor" {
+			processors[strings.TrimSpace(field[1])] = struct{}{}
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return 0, fmt.Errorf("Failed to parse cpu info from /proc/cpuinfo: %w", err)
 	}
 
-	totalPhysicalCores := 0
-	for _, coreCount := range physicalCPUsToCores {
-		totalPhysicalCores += coreCount
-	}
-
-	return totalPhysicalCores, nil
+	return len(processors), nil
 }
