@@ -4,9 +4,9 @@ permalink: ru/uninstalling/
 lang: ru
 ---
 
-## Удаление кластера, развернутого в облачном провайдере
+## Удаление кластера, развёрнутого в облачном провайдере
 
-Для удаления кластера, развернутого в облачном провайдере, нужно выполнить несколько шагов:
+Для удаления кластера, развёрнутого в облачном провайдере, нужно выполнить несколько шагов:
 
 1. Запустите инсталлятор Deckhouse:
 
@@ -17,7 +17,7 @@ lang: ru
 
    где:
    - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как SSH-ключи доступа;
-   - `<DECKHOUSE_REVISION>` — [редакция](../revision-comparison.html) Deckhouse (например `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
+   - `<DECKHOUSE_REVISION>` — [редакция](../revision-comparison.html) Deckhouse (например, `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
    - `<RELEASE_CHANNEL>` — [канал обновлений](../modules/002-deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case. Должен совпадать с установленным в `config.yml`:
      - `alpha` — для канала обновлений *Alpha*;
      - `beta` — для канала обновлений *Beta*;
@@ -43,16 +43,16 @@ lang: ru
    ```
 
    где:
-   - `<USER>` — пользователь удаленной машины, из-под которого производилась установка;
+   - `<USER>` — пользователь удалённой машины, из-под которого производилась установка;
    - `<MASTER_IP>` — IP-адрес master-узла кластера.
 
 Инсталлятор подключится к кластеру, получит необходимые данные и произведёт удаление всех ресурсов и объектов в облаке, созданных при установке и работе DKP.
 
 ### Удаление гибридного кластера
 
-Для удаления гибридного кластера, состоящего из автоматически развернутых узлов в облаке и вручную подключенных статических узлов, выполните следующие действия:
+Для удаления гибридного кластера, состоящего из автоматически развёрнутых узлов в облаке и вручную подключённых статических узлов, выполните следующие действия:
 
-1. [Удалите](../modules/040-node-manager/faq.html#как-зачистить-узел-для-последующего-ввода-в-кластер) из кластера все вручную подключенные [дополнительные узлы](../modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetype) — CloudStatic и Static.
+1. [Удалите](../modules/040-node-manager/faq.html#как-зачистить-узел-для-последующего-ввода-в-кластер) из кластера все вручную подключённые [дополнительные узлы](../modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetype) — CloudStatic и Static.
 
 2. Запустите инсталлятор Deckhouse:
 
@@ -63,7 +63,7 @@ lang: ru
 
    где:
    - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как SSH-ключи доступа:
-   - `<DECKHOUSE_REVISION>` — [редакция](../revision-comparison.html) Deckhouse (например `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
+   - `<DECKHOUSE_REVISION>` — [редакция](../revision-comparison.html) Deckhouse (например, `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
    - `<RELEASE_CHANNEL>` — [канал обновлений](../modules/002-deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case. Должен совпадать с установленным в `config.yml`:
      - `alpha` — для канала обновлений *Alpha*;
      - `beta` — для канала обновлений *Beta*;
@@ -89,7 +89,7 @@ lang: ru
    ```
 
    где:
-   - `<USER>` — пользователь удаленной машины, из-под которого производилась установка;
+   - `<USER>` — пользователь удалённой машины, из-под которого производилась установка;
    - `<MASTER_IP>` — IP-адрес master-узла кластера.
 
 Инсталлятор подключится к кластеру, получит необходимые данные и произведёт удаление всех ресурсов и объектов в облаке, созданных при установке и работе DKP.
@@ -109,7 +109,7 @@ lang: ru
 
    где:
    - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как SSH-ключи доступа;
-   - `<DECKHOUSE_REVISION>` — [редакция](../revision-comparison.html) Deckhouse (например `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
+   - `<DECKHOUSE_REVISION>` — [редакция](../revision-comparison.html) Deckhouse (например, `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
    - `<RELEASE_CHANNEL>` — [канал обновлений](../modules/002-deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case. Должен совпадать с установленным в `config.yml`:
      - `alpha` — для канала обновлений *Alpha*;
      - `beta` — для канала обновлений *Beta*;
@@ -135,7 +135,7 @@ lang: ru
    ```
 
    где:
-   - `<USER>` — пользователь удаленной машины, из-под которого производилась установка;
+   - `<USER>` — пользователь удалённой машины, из-под которого производилась установка;
    - `<MASTER_IP>` — IP-адрес master-узла кластера.
 
-Инсталлятор подключится к master-узлу и удалит на нем все компоненты Deckhouse и кластера Kubernetes.
+Инсталлятор подключится к master-узлу и удалит на нём все компоненты Deckhouse и кластера Kubernetes.
