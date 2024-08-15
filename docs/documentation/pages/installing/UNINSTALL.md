@@ -6,61 +6,124 @@ lang: en
 
 ## Удаление кластера, развернутого в облачном провайдере
 
-Для удаления кластера, развернутого в облачном провайдере, запустите инсталлятор Deckhouse:
+Для удаления кластера, развернутого в облачном провайдере, нужно выполнить несколько шагов:
 
-```shell
-docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
-```
+1. Запустите инсталлятор Deckhouse:
 
-где:
-- `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как:
-  - SSH-ключи доступа;
-- `<DECKHOUSE_REVISION>` — [редакция](../revision-comparison.html) Deckhouse (например `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
-- `<RELEASE_CHANNEL>` — [канал обновлений](../modules/002-deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case. Должен совпадать с установленным в `config.yml`:
-  - `alpha` — для канала обновлений *Alpha*;
-  - `beta` — для канала обновлений *Beta*;
-  - `early-access` — для канала обновлений *Early Access*;
-  - `stable` — для канала обновлений *Stable*;
-  - `rock-solid` — для канала обновлений *Rock Solid*.
+   ```shell
+   docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
+   ```
 
-Пример запуска контейнера инсталлятора Deckhouse CE:
+   где:
+   - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как SSH-ключи доступа;
+   - `<DECKHOUSE_REVISION>` — [редакция](../revision-comparison.html) Deckhouse (например `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
+   - `<RELEASE_CHANNEL>` — [канал обновлений](../modules/002-deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case. Должен совпадать с установленным в `config.yml`:
+     - `alpha` — для канала обновлений *Alpha*;
+     - `beta` — для канала обновлений *Beta*;
+     - `early-access` — для канала обновлений *Early Access*;
+     - `stable` — для канала обновлений *Stable*;
+     - `rock-solid` — для канала обновлений *Rock Solid*.
 
-```shell
-docker run -it --pull=always \
-  -v "$PWD/dhctl-tmp:/tmp/dhctl" \
-  -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
-```
+   Пример запуска контейнера инсталлятора Deckhouse CE:
 
-В запустившемся контейнере выполните команду:
+   ```shell
+   docker run -it --pull=always \
+     -v "$PWD/dhctl-tmp:/tmp/dhctl" \
+     -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
+   ```
 
-```shell
-dhctl destroy --ssh-user=<USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa  --yes-i-am-sane-and-i-understand-what-i-am-doing --ssh-host=<MASTER_IP>
-```
+1. В запустившемся контейнере выполните команду:
 
-где:
-- `<USER>` — пользователь удаленной машины, из-под которого производилась установка;
-- `<MASTER_IP>` — IP-адрес master-узла кластера.
+   ```shell
+   dhctl destroy --ssh-user=<USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa  --yes-i-am-sane-and-i-understand-what-i-am-doing --ssh-host=<MASTER_IP>
+   ```
 
-Инсталлятор подключится к кластеру, получит его состояние и произведёт удаление всех компонентов, дисков, балансировщиков и узлов, из которых состоит кластер.
+   где:
+   - `<USER>` — пользователь удаленной машины, из-под которого производилась установка;
+   - `<MASTER_IP>` — IP-адрес master-узла кластера.
 
-## Удаление кластера, установленного вручную
+Инсталлятор подключится к кластеру, получит необходимые данные и произведёт удаление всех ресурсов и объектов в облаке, созданных при установке и работе DKP.
 
-Для удаления кластера, установленного вручную (например, bare metal), нужно выполнить несколько шагов.
+### Удаление гибридного кластера
+
+Для удаления гибридного кластера, состоящего из автоматически развернутых узлов в облаке и вручную подключенных статических узлов, выполните следующие действия:
+
+1. [Удалите](../modules/040-node-manager/faq.html#как-зачистить-узел-для-последующего-ввода-в-кластер) из кластера все вручную подключенные [дополнительные узлы](../modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetype) — CloudStatic и Static.
+
+2. Запустите инсталлятор Deckhouse:
+
+   ```shell
+   docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
+   ```
+
+   где:
+   - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как SSH-ключи доступа:
+   - `<DECKHOUSE_REVISION>` — [редакция](../revision-comparison.html) Deckhouse (например `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
+   - `<RELEASE_CHANNEL>` — [канал обновлений](../modules/002-deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case. Должен совпадать с установленным в `config.yml`:
+     - `alpha` — для канала обновлений *Alpha*;
+     - `beta` — для канала обновлений *Beta*;
+     - `early-access` — для канала обновлений *Early Access*;
+     - `stable` — для канала обновлений *Stable*;
+     - `rock-solid` — для канала обновлений *Rock Solid*.
+
+   Пример запуска контейнера инсталлятора Deckhouse CE:
+
+   ```shell
+   docker run -it --pull=always \
+     -v "$PWD/dhctl-tmp:/tmp/dhctl" \
+     -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
+   ```
+
+3. В запустившемся контейнере выполните команду:
+
+   ```shell
+   dhctl destroy --ssh-user=<USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa  --yes-i-am-sane-and-i-understand-what-i-am-doing --ssh-host=<MASTER_IP>
+   ```
+
+   где:
+   - `<USER>` — пользователь удаленной машины, из-под которого производилась установка;
+   - `<MASTER_IP>` — IP-адрес master-узла кластера.
+
+Инсталлятор подключится к кластеру, получит необходимые данные и произведёт удаление всех ресурсов и объектов в облаке, созданных при установке и работе DKP.
+
+## Удаление статического кластера
+
+Для удаления кластера, установленного вручную (например, bare metal), нужно выполнить несколько шагов:
 
 1. [Удалите](../modules/040-node-manager/faq.html#как-зачистить-узел-для-последующего-ввода-в-кластер) из кластера все дополнительные узлы.
 
-1. Запустите инсталлятор Deckhouse как в разделе выше:
-  ```shell
-  docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
-  ```
+1. Запустите инсталлятор Deckhouse:
+
+   ```shell
+   docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
+   ```
+
+   где:
+   - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как SSH-ключи доступа;
+   - `<DECKHOUSE_REVISION>` — [редакция](../revision-comparison.html) Deckhouse (например `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
+   - `<RELEASE_CHANNEL>` — [канал обновлений](../modules/002-deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case. Должен совпадать с установленным в `config.yml`:
+     - `alpha` — для канала обновлений *Alpha*;
+     - `beta` — для канала обновлений *Beta*;
+     - `early-access` — для канала обновлений *Early Access*;
+     - `stable` — для канала обновлений *Stable*;
+     - `rock-solid` — для канала обновлений *Rock Solid*.
+
+   Пример запуска контейнера инсталлятора Deckhouse CE:
+
+   ```shell
+   docker run -it --pull=always \
+     -v "$PWD/dhctl-tmp:/tmp/dhctl" \
+     -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
+   ```
 
 1. Выполните команду удаления кластера:
-  ```shell
-  dhctl destroy --ssh-user=<USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa  --yes-i-am-sane-and-i-understand-what-i-am-doing --ssh-host=<MASTER_IP>
-  ```
-где:
-- `<USER>` — пользователь удаленной машины, из-под которого производилась установка;
-- `<MASTER_IP>` — IP-адрес master-узла кластера.
 
-Инсталлятор подключится к master-узлу и удалит все компоненты Deckhouse и кластера Kubernetes.
+   ```shell
+   dhctl destroy --ssh-user=<USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa  --yes-i-am-sane-and-i-understand-what-i-am-doing --ssh-host=<MASTER_IP>
+   ```
 
+   где:
+   - `<USER>` — пользователь удаленной машины, из-под которого производилась установка;
+   - `<MASTER_IP>` — IP-адрес master-узла кластера.
+
+Инсталлятор подключится к master-узлу и удалит на нем все компоненты Deckhouse и кластера Kubernetes.
