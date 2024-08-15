@@ -294,12 +294,12 @@ func (i *Attacher) capture(
 			return fmt.Errorf("unable to parse resources: %w", err)
 		}
 
-		checkers, err := resources.GetCheckers(kubeClient, attachResources)
+		checkers, err := resources.GetCheckers(kubeClient, attachResources, nil)
 		if err != nil {
 			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
 
-		err = resources.CreateResourcesLoop(kubeClient, nil, attachResources, checkers)
+		err = resources.CreateResourcesLoop(kubeClient, attachResources, checkers)
 		if err != nil {
 			return fmt.Errorf("unable to create resources: %w", err)
 		}
