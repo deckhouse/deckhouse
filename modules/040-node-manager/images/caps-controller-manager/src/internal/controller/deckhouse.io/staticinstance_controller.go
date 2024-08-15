@@ -153,7 +153,9 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 		return r.adoptBootstrappedStaticInstance(ctx, instanceScope)
 	}
 
-	if instanceScope.Instance.Status.CurrentStatus == nil || instanceScope.Instance.Status.CurrentStatus.Phase == "" {
+	if instanceScope.Instance.Status.CurrentStatus == nil ||
+		instanceScope.Instance.Status.CurrentStatus.Phase == "" ||
+		instanceScope.Instance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseError {
 		conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceAddedToNodeGroupCondition)
 
 		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
