@@ -45,8 +45,8 @@ spec:
                     tolerations:
                       type: array
                       items:
+                        type: object
                         properties:
-                          type: object
                           effect:
                             type: string
                           key:
@@ -150,7 +150,6 @@ spec:
                             matchLabels:
                               additionalProperties:
                                 type: string
-                              type: object
                         priorityThreshold:
                           type: object
                           description: |
