@@ -82,6 +82,12 @@ func (i *InstanceScope) LoadSSHCredentials(ctx context.Context, recorder *event.
 		}
 		recorder.SendWarningEvent(i.Instance, nodeGroup, "StaticInstanceCredentialsUnavailable", err.Error())
 
+		i.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseError)
+		err := i.Patch(ctx)
+		if err != nil {
+			return errors.Wrap(err, "failed to set StaticInstance to Error phase")
+		}
+
 		return errors.Wrap(err, "failed to get StaticInstance credentials")
 	}
 
