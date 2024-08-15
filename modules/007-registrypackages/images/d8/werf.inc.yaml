@@ -4,6 +4,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_SCRATCH }}
+fromCacheVersion: 10
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
@@ -21,6 +22,7 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_22_BULLSEYE_DEV }}
+fromCacheVersion: 10
 git:
   - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /

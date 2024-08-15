@@ -954,7 +954,7 @@ function wait_cluster_ready() {
       test_failed=""
     else
       test_failed="true"
-      >&2 echo "Run test script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+      >&2 echo "Run test script via SSH failed. Sleeping 30 seconds..."
       sleep 30
     fi
 
