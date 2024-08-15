@@ -121,7 +121,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			FilterFunc:             ApplyCopierSecretFilter,
-			WaitForSynchronization: go_hook.Bool(false),
+			WaitForSynchronization: go_hook.Bool(true),
 		},
 		{
 			Name:       "namespaces",
@@ -139,7 +139,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			FilterFunc:             ApplyCopierNamespaceFilter,
-			WaitForSynchronization: go_hook.Bool(false),
+			WaitForSynchronization: go_hook.Bool(true),
 		},
 	},
 }, dependency.WithExternalDependencies(copierHandler))
