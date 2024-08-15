@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -85,6 +86,12 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	instanceScope, err := scope.NewInstanceScope(newScope, staticInstance)
 	if err != nil {
+		conditions.MarkFalse(staticInstance, clusterv1.MachineHasFailureReason, err.Error(), clusterv1.ConditionSeverityError, "")
+		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseError)
+		err2 := instanceScope.Patch(ctx)
+		if err2 != nil {
+			return ctrl.Result{}, errors.Wrap(err2, "failed to set StaticInstance to Error phase")
+		}
 		return ctrl.Result{}, errors.Wrap(err, "failed to create instance scope")
 	}
 	defer func() {
@@ -96,6 +103,12 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	err = instanceScope.LoadSSHCredentials(ctx, r.Recorder)
 	if err != nil {
+		conditions.MarkFalse(instanceScope.Instance, clusterv1.IncorrectExternalRefReason, err.Error(), clusterv1.ConditionSeverityError, "")
+		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseError)
+		err2 := instanceScope.Patch(ctx)
+		if err2 != nil {
+			return ctrl.Result{}, errors.Wrap(err2, "failed to set StaticInstance to Error phase")
+		}
 		return ctrl.Result{}, errors.Wrap(err, "failed to load SSHCredentials")
 	}
 
