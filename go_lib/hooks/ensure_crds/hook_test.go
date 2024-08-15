@@ -40,9 +40,10 @@ func TestEnsureCRDs(t *testing.T) {
 	//
 	list, err := cluster.Client.Dynamic().Resource(crdGVR).List(context.TODO(), apimachineryv1.ListOptions{})
 	require.NoError(t, err)
-	require.Len(t, list.Items, 4)
+	require.Len(t, list.Items, 5)
 
 	expected := []string{
+		"deschedulers.deckhouse.io",
 		"modulereleases.deckhouse.io",
 		"modules.deckhouse.io",
 		"modulesources.deckhouse.io",
@@ -51,6 +52,7 @@ func TestEnsureCRDs(t *testing.T) {
 
 	result := make([]string, 0, len(expected))
 	for _, item := range list.Items {
+		require.Equal(t, true, item.GetLabels()["heritage"] == "deckhouse")
 		result = append(result, item.GetName())
 	}
 	sort.Strings(result)
