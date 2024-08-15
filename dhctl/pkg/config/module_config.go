@@ -17,6 +17,7 @@ limitations under the License.
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -181,6 +182,7 @@ func CheckOrSetupArbitaryCNIModuleConfig(cfg *DeckhouseInstaller) error {
 	}
 
 	log.InfoLn("Doesn't found ModuleConfig for cni, creating.")
+	schemasStore := NewSchemaStore()
 	cniMC := &ModuleConfig{}
 	cniMC.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   ModuleConfigGroup,
@@ -190,7 +192,14 @@ func CheckOrSetupArbitaryCNIModuleConfig(cfg *DeckhouseInstaller) error {
 
 	cniMC.Spec.Enabled = pointer.Bool(true)
 
-	switch cfg.ProviderName {
+	pcc := make(map[string]json.RawMessage)
+	err := yaml.Unmarshal(cfg.ProviderClusterConfig, &pcc)
+	if err != nil {
+		return err
+	}
+
+	providerName := strings.ToLower(strings.TrimSuffix(string(pcc["kind"]), "ClusterConfiguration"))
+	switch providerName {
 
 	// static or unknown provider
 	case "openstack":
@@ -219,13 +228,18 @@ func CheckOrSetupArbitaryCNIModuleConfig(cfg *DeckhouseInstaller) error {
 	}
 	doc, err := yaml.Marshal(cniMC)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	_, err = schemasStore.Validate(&doc)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return cniMC, nil
+	if cfg.ModuleConfigs == nil {
+		cfg.ModuleConfigs = []*ModuleConfig{cniMC}
+	} else {
+		cfg.ModuleConfigs = append(cfg.ModuleConfigs, cniMC)
+	}
+	return nil
 }

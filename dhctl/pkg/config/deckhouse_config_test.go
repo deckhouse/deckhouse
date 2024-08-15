@@ -110,8 +110,8 @@ spec:
 		require.Equal(t, iCfg.LogLevel, "Info")
 		require.Equal(t, iCfg.Bundle, "Default")
 
-		// helm and deckhouseCm and cni mc
-		require.Len(t, iCfg.ModuleConfigs, 3)
+		// helm and deckhouseCm
+		require.Len(t, iCfg.ModuleConfigs, 2)
 
 		require.Contains(t, iCfg.ModuleConfigs[1].Spec.Settings, "bundle")
 		require.Equal(t, iCfg.ModuleConfigs[1].Spec.Settings["bundle"], "Default")
@@ -142,7 +142,7 @@ spec:
 		require.Equal(t, iCfg.LogLevel, "Debug")
 		require.Equal(t, iCfg.Bundle, "Minimal")
 
-		require.Len(t, iCfg.ModuleConfigs, 2)
+		require.Len(t, iCfg.ModuleConfigs, 1)
 	})
 
 	t.Run("Remove releaseChannel from module config and set to installer cfg for adding after bootstrap", func(t *testing.T) {
@@ -166,7 +166,7 @@ spec:
 		require.Equal(t, iCfg.LogLevel, "Info")
 		require.Equal(t, iCfg.Bundle, "Default")
 
-		require.Len(t, iCfg.ModuleConfigs, 2)
+		require.Len(t, iCfg.ModuleConfigs, 1)
 
 		require.NotContains(t, iCfg.ModuleConfigs[0].Spec.Settings, "releaseChannel")
 		require.Equal(t, iCfg.ReleaseChannel, "RockSolid")
@@ -203,6 +203,7 @@ configOverrides:
 
 		iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
 		require.NoError(t, err)
+
 		require.Len(t, iCfg.ModuleConfigs, 5)
 	})
 
@@ -232,7 +233,7 @@ spec:
 		iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
 		require.NoError(t, err)
 
-		require.Len(t, iCfg.ModuleConfigs, 3)
+		require.Len(t, iCfg.ModuleConfigs, 2)
 
 		assertModuleConfig(t, iCfg.ModuleConfigs[0], true, 1, map[string]interface{}{
 			"bundle":   "Minimal",
@@ -298,7 +299,7 @@ spec:
 		iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
 		require.NoError(t, err)
 
-		require.Len(t, iCfg.ModuleConfigs, 3)
+		require.Len(t, iCfg.ModuleConfigs, 2)
 
 		assertModuleConfig(t, iCfg.ModuleConfigs[0], true, 0, nil)
 	})
