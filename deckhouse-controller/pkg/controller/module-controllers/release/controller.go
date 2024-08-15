@@ -1056,21 +1056,9 @@ func createOrUpdateModuleDocumentationCR(
 
 // cleanUpModuleReleases finds and deletes all outdated releases of the module in Suspend, Skipped or Superseded phases, except for <outdatedReleasesKeepCount> most recent ones
 func (c *moduleReleaseReconciler) cleanUpModuleReleases(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
-	// get parent module source
-	ms := new(v1alpha1.ModuleSource)
-	err := c.client.Get(ctx, types.NamespacedName{Name: mr.GetModuleSource()}, ms)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			// parent is absent for some reason - throw a warning and forget about the release
-			c.logger.Warnf("couldn't find parent %s module source for %s module release to clean up outdated releases: %w", mr.GetModuleSource(), mr.GetModuleName(), err)
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{Requeue: true}, fmt.Errorf("couldn't get parent %s module source for %s module release to clean up: %w", mr.GetModuleSource(), mr.GetModuleName(), err)
-	}
-
 	// get related releases
 	var moduleReleasesFromSource v1alpha1.ModuleReleaseList
-	err = c.client.List(ctx, &moduleReleasesFromSource, client.MatchingLabels{"source": mr.GetModuleSource(), "module": mr.GetModuleName()})
+	err := c.client.List(ctx, &moduleReleasesFromSource, client.MatchingLabels{"source": mr.GetModuleSource(), "module": mr.GetModuleName()})
 	if err != nil {
 		return ctrl.Result{Requeue: true}, fmt.Errorf("couldn't list module releases to clean up: %w", err)
 	}
@@ -1084,13 +1072,11 @@ func (c *moduleReleaseReconciler) cleanUpModuleReleases(ctx context.Context, mr 
 
 	// get all outdated releases by module names
 	for _, rl := range moduleReleasesFromSource.Items {
-		if metav1.IsControlledBy(&rl, ms) {
-			if rl.Status.Phase == v1alpha1.PhaseSuperseded || rl.Status.Phase == v1alpha1.PhaseSuspended || rl.Status.Phase == v1alpha1.PhaseSkipped {
-				outdatedReleases[rl.Spec.ModuleName] = append(outdatedReleases[rl.Spec.ModuleName], outdatedRelease{
-					name:    rl.Name,
-					version: rl.Spec.Version,
-				})
-			}
+		if rl.Status.Phase == v1alpha1.PhaseSuperseded || rl.Status.Phase == v1alpha1.PhaseSuspended || rl.Status.Phase == v1alpha1.PhaseSkipped {
+			outdatedReleases[rl.Spec.ModuleName] = append(outdatedReleases[rl.Spec.ModuleName], outdatedRelease{
+				name:    rl.Name,
+				version: rl.Spec.Version,
+			})
 		}
 	}
 
