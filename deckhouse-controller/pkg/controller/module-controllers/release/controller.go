@@ -464,8 +464,14 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 
 	if releaseUpdater.PredictedReleaseIsPatch() {
 		// patch release does not respect update windows or ManualMode
-		if !releaseUpdater.ApplyPredictedRelease(nil) {
+		err = releaseUpdater.ApplyPredictedRelease(nil)
+		if errors.Is(err, updater.ErrNotReadyForDeploy) {
+			//TODO: create custom error type with additional fields like reason end requeueAfter
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		}
+
+		if err != nil {
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, fmt.Errorf("apply predicted release: %w", err)
 		}
 
 		modulesChangedReason = "a new module release found"
@@ -477,8 +483,14 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		windows = policy.Spec.Update.Windows
 	}
 
-	if !releaseUpdater.ApplyPredictedRelease(windows) {
+	err = releaseUpdater.ApplyPredictedRelease(windows)
+	if errors.Is(err, updater.ErrNotReadyForDeploy) {
+		//TODO: create custom error type with additional fields like reason end requeueAfter
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	if err != nil {
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, fmt.Errorf("apply predicted release: %w", err)
 	}
 
 	modulesChangedReason = "a new module release found"

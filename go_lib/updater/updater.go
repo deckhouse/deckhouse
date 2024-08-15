@@ -17,6 +17,7 @@ limitations under the License.
 package updater
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -43,6 +44,8 @@ const (
 	PhaseSuspended  = "Suspended"
 	PhaseSkipped    = "Skipped"
 )
+
+var ErrNotReadyForDeploy = errors.New("not ready for deploy")
 
 type Updater[R Release] struct {
 	now          time.Time
@@ -278,9 +281,9 @@ func (du *Updater[R]) checkMinorReleaseConditions(predictedRelease *R, updateWin
 //   - Canary settings
 //   - Manual approving
 //   - Release requirements
-func (du *Updater[R]) ApplyPredictedRelease(updateWindows update.Windows) bool {
+func (du *Updater[R]) ApplyPredictedRelease(updateWindows update.Windows) error {
 	if du.predictedReleaseIndex == -1 {
-		return false // has no predicted release
+		return fmt.Errorf("release not found") // has no predicted release
 	}
 
 	var currentRelease *R
@@ -306,7 +309,7 @@ func (du *Updater[R]) ApplyPredictedRelease(updateWindows update.Windows) bool {
 	}
 
 	if !readyForDeploy {
-		return false
+		return ErrNotReadyForDeploy
 	}
 
 	// all checks are passed, deploy release
@@ -384,41 +387,39 @@ func (du *Updater[R]) InManualMode() bool {
 	return du.inManualMode
 }
 
-func (du *Updater[R]) runReleaseDeploy(predictedRelease, currentRelease *R) bool {
+func (du *Updater[R]) runReleaseDeploy(predictedRelease, currentRelease *R) error {
+	ctx := context.TODO()
 	du.logger.Infof("Applying release %s", (*predictedRelease).GetName())
 
 	err := du.ChangeUpdatingFlag(true)
 	if err != nil {
-		du.logger.Error("change updating flag: ", err.Error())
-		return false
+		return fmt.Errorf("change updating flag: %w", err)
 	}
 	err = du.changeNotifiedFlag(false)
 	if err != nil {
-		du.logger.Error("change notified flag: ", err.Error())
-		return false
+		return fmt.Errorf("change notified flag: %w", err)
 	}
 
-	err = du.kubeAPI.DeployRelease(*predictedRelease)
+	err = du.kubeAPI.DeployRelease(ctx, *predictedRelease)
 	if err != nil {
-		du.logger.Error("deploy release: ", err)
-		return false
+		return fmt.Errorf("deploy release: %w", err)
 	}
 
 	err = du.updateStatus(predictedRelease, "", PhaseDeployed)
 	if err != nil {
-		du.logger.Error("update status to deployed: ", err)
-		return false
+		return fmt.Errorf("update status to deployed: %w", err)
 	}
 
 	// remove annotation if exists
 	if (*predictedRelease).GetApplyNow() {
 		err = du.kubeAPI.PatchReleaseAnnotations(
+			ctx,
 			*predictedRelease,
 			map[string]interface{}{
 				"release.deckhouse.io/apply-now": nil,
 			})
 		if err != nil {
-			du.logger.Error("remove apply-now annotation: ", err)
+			return fmt.Errorf("remove apply-now annotation: %w", err)
 		}
 	}
 
@@ -426,8 +427,7 @@ func (du *Updater[R]) runReleaseDeploy(predictedRelease, currentRelease *R) bool
 		// skip last deployed release
 		err = du.updateStatus(currentRelease, "", PhaseSuperseded)
 		if err != nil {
-			du.logger.Error("update status to superseded: ", err)
-			return false
+			return fmt.Errorf("update status to superseded: %w", err)
 		}
 	}
 
@@ -437,13 +437,12 @@ func (du *Updater[R]) runReleaseDeploy(predictedRelease, currentRelease *R) bool
 			// skip not-deployed patches
 			err = du.updateStatus(&release, "", PhaseSkipped)
 			if err != nil {
-				du.logger.Error("update status to skipped: ", err)
-				return false
+				return fmt.Errorf("update status to skipped: %w", err)
 			}
 		}
 	}
 
-	return true
+	return nil
 }
 
 // PredictNextRelease runs prediction of the next release to deploy.
@@ -486,9 +485,9 @@ func (du *Updater[R]) HasForceRelease() bool {
 }
 
 // ApplyForcedRelease deploys forced release without any checks (windows, requirements, approvals and so on)
-func (du *Updater[R]) ApplyForcedRelease() bool {
+func (du *Updater[R]) ApplyForcedRelease(ctx context.Context) error {
 	if du.forcedReleaseIndex == -1 {
-		return true
+		return nil
 	}
 	forcedRelease := &(du.releases[du.forcedReleaseIndex])
 	var currentRelease *R
@@ -501,11 +500,11 @@ func (du *Updater[R]) ApplyForcedRelease() bool {
 	result := du.runReleaseDeploy(forcedRelease, currentRelease)
 
 	// remove annotation
-	err := du.kubeAPI.PatchReleaseAnnotations(*forcedRelease, map[string]any{
+	err := du.kubeAPI.PatchReleaseAnnotations(ctx, *forcedRelease, map[string]any{
 		"release.deckhouse.io/force": nil,
 	})
 	if err != nil {
-		du.logger.Errorf("patch force annotation: %s", err.Error())
+		return fmt.Errorf("patch force annotation: %w", err)
 	}
 
 	// Outdate all previous releases
@@ -634,10 +633,12 @@ func (du *Updater[R]) changeNotifiedFlag(fl bool) error {
 
 func (du *Updater[R]) saveReleaseData() error {
 	if du.predictedReleaseIndex != -1 {
+		ctx := context.TODO()
 		release := du.releases[du.predictedReleaseIndex]
-		return du.kubeAPI.SaveReleaseData(release, du.releaseData)
+		return du.kubeAPI.SaveReleaseData(ctx, release, du.releaseData)
 	}
 
+	du.logger.Warn("save release data: release not found")
 	return nil
 }
 
