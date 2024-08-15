@@ -62,8 +62,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &v1.LabelSelector{
 				MatchExpressions: []v1.LabelSelectorRequirement{
 					{
-						Key:      "caps-controller",
-						Operator: v1.LabelSelectorOpExists,
+						Key:      "app",
+						Operator: v1.LabelSelectorOpIn,
+						Values: []string{
+							"caps-controller",
+						},
 					},
 				},
 			},

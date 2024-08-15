@@ -72,11 +72,11 @@ metadata:
   namespace: d8-cloud-instance-manager
   labels:
     app.kubernetes.io/managed-by: Helm
+    app: caps-controller
     cluster.x-k8s.io/cluster-name: static
     heritage: deckhouse
     module: node-manager
     node-group: caps-worker
-    caps-controller: ""
 spec:
   clusterName: static
   minReadySeconds: 0
