@@ -88,78 +88,21 @@ spec:
                     strategies:
                       description: List of strategies with corresponding parameters for a given Descheduler instances.
                       properties:
-                        highNodeUtilization:
+                        RemoveDuplicates:
                           required: [enabled]
                           description: >
-                            This strategy finds nodes that are under utilized and evicts Pods from the nodes in the hope
-                            that these Pods will be scheduled compactly into fewer nodes.
+                            This strategy plugin makes sure that there is only one pod associated with a `ReplicaSet` (RS), `ReplicationController` (RC), `StatefulSet`, or `Job `running on the same node.
+                            If there are more, those duplicate pods are evicted for better spreading of pods in a cluster. This issue could happen if some nodes went down due to whatever reasons,
+                            and pods on them were moved to other nodes leading to more than one pod associated with a RS or RC, for example, running on the same node. Once the failed nodes are
+                            ready again, this strategy could be enabled to evict those duplicate pods.
+                            It provides one optional parameter, `excludeOwnerKinds`, which is a list of `OwnerRef` `Kinds`.
+                            If a pod has any of these `Kinds` listed as an `OwnerRef`, that pod will not be considered for eviction.
+                            Note that pods created by `Deployments` are considered for eviction by this strategy.
+                            The `excludeOwnerKinds` parameter should include `ReplicaSet` to have pods created by `Deployments` excluded.
                           properties:
                             enabled:
                               type: boolean
-                            nodeFilter: &node-filter
-                              description: Filters Nodes to which the strategy applies.
-                              labelSelector:
-                                properties:
-                                  matchExpressions:
-                                    type: array
-                                    description: List of label expressions that a node should have to qualify for the filter condition.
-                                    items:
-                                      properties:
-                                        key:
-                                          type: string
-                                          description: A label name.
-                                        operator:
-                                          type: string
-                                          description: A comparison operator.
-                                          enum:
-                                            - In
-                                            - NotIn
-                                            - Exists
-                                            - DoesNotExist
-                                        values:
-                                          type: array
-                                          description: A label value.
-                                          items:
-                                            type: string
-                                            pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
-                                            minLength: 1
-                                            maxLength: 63
-                                      oneOf:
-                                        - properties:
-                                            operator:
-                                              enum: [ Exists, DoesNotExist ]
-                                          required: [ key, operator ]
-                                          not:
-                                            required: [ values ]
-                                        - properties:
-                                            operator:
-                                              enum: [ In, NotIn ]
-                                          required: [ key, operator, values ]
-                                      type: object
-                                    x-doc-examples:
-                                      - - key: tier
-                                          operator: In
-                                          values:
-                                            - production
-                                            - staging
-                                        - key: tier
-                                          operator: NotIn
-                                          values: [ production ]
-                                  matchLabels:
-                                    additionalProperties:
-                                      type: string
-                                    type: object
-                                type: object
-                              type: object
-                            priorityFilter: &priority-filter
-                              description: Only Pods with priority lower than this will be descheduled.
-                              thresholdPriority:
-                                format: int32
-                                type: integer
-                              thresholdPriorityClassName:
-                                type: string
-                              type: object
-                            namespaceFilter: &namespace-filter
+                            namespaces:
                               description: Restricts Namespaces to which this strategy applies.
                               namespaces:
                                 properties:
@@ -173,37 +116,37 @@ spec:
                                     type: array
                                 type: object
                               type: object
-                            nodeFit: &node-fit
-                              description: >
-                                If set to true, the descheduler will consider whether or not the Pods
-                                that meet eviction criteria will fit on other nodes before evicting them.
-                              type: boolean
-                          type: object
-                        removeDuplicates:
-                          required: [enabled]
-                          description: >
-                            This strategy plugin makes sure that there is only one pod associated with a ReplicaSet (RS), ReplicationController (RC), StatefulSet, or Job running on the same node. If there are more, those duplicate pods are evicted for better spreading of pods in a cluster. This issue could happen if some nodes went down due to whatever reasons, and pods on them were moved to other nodes leading to more than one pod associated with a RS or RC, for example, running on the same node. Once the failed nodes are ready again, this strategy could be enabled to evict those duplicate pods.
-                            It provides one optional parameter, excludeOwnerKinds, which is a list of OwnerRef Kinds. If a pod has any of these Kinds listed as an OwnerRef, that pod will not be considered for eviction. Note that pods created by Deployments are considered for eviction by this strategy. The excludeOwnerKinds parameter should include ReplicaSet to have pods created by Deployments excluded.
-                          properties:
-                            enabled:
-                              type: boolean
-                            namespaces: *namespace-filter
                             excludeOwnerKinds:
                               type: array
                               items:
                                 type: string
                                 enum: ["ReplicaSet", "StatefulSet", "ReplicationController", "Job"]
                           type: object
-                        lowNodeUtilization:
+                        LowNodeUtilization:
                           required: [enabled]
                           description: >
-                            This strategy finds nodes that are under utilized and evicts pods, if possible, from other nodes in the hope that recreation of evicted pods will be scheduled on these underutilized nodes. The parameters of this strategy are configured under nodeResourceUtilizationThresholds.
-                            The under utilization of nodes is determined by a configurable threshold thresholds. The threshold thresholds can be configured for cpu, memory, number of pods, and extended resources in terms of percentage (the percentage is calculated as the current resources requested on the node vs total allocatable. For pods, this means the number of pods on the node as a fraction of the pod capacity set for that node).
-                            If a node's usage is below threshold for all (cpu, memory, number of pods and extended resources), the node is considered underutilized. Currently, pods request resource requirements are considered for computing node resource utilization.
-                            There is another configurable threshold, targetThresholds, that is used to compute those potential nodes from where pods could be evicted. If a node's usage is above targetThreshold for any (cpu, memory, number of pods, or extended resources), the node is considered over utilized. Any node between the thresholds, thresholds and targetThresholds is considered appropriately utilized and is not considered for eviction. The threshold, targetThresholds, can be configured for cpu, memory, and number of pods too in terms of percentage.
-                            These thresholds, thresholds and targetThresholds, could be tuned as per your cluster requirements. Note that this strategy evicts pods from overutilized nodes (those with usage above targetThresholds) to underutilized nodes (those with usage below thresholds), it will abort if any number of underutilized nodes or overutilized nodes is zero.
-                            Additionally, the strategy accepts a useDeviationThresholds parameter. If that parameter is set to true, the thresholds are considered as percentage deviations from mean resource usage. thresholds will be deducted from the mean among all nodes and targetThresholds will be added to the mean. A resource consumption above (resp. below) this window is considered as overutilization (resp. underutilization).
-                            NOTE: Node resource consumption is determined by the requests and limits of pods, not actual usage. This approach is chosen in order to maintain consistency with the kube-scheduler, which follows the same design for scheduling pods onto nodes. This means that resource usage as reported by Kubelet (or commands like kubectl top) may differ from the calculated consumption, due to these components reporting actual usage metrics.
+                            This strategy finds nodes that are under utilized and evicts pods, if possible, from other
+                            nodes in the hope that recreation of evicted pods will be scheduled on these underutilized nodes.
+                            The parameters of this strategy are configured under `nodeResourceUtilizationThresholds`.
+                            The under utilization of nodes is determined by a configurable threshold thresholds.
+                            The threshold thresholds can be configured for cpu, memory, number of pods, and extended resources
+                            in terms of percentage (the percentage is calculated as the current resources requested on the node
+                            vs total allocatable. For pods, this means the number of pods on the node as a fraction of the pod capacity set for that node).
+                            If a node's usage is below threshold for all (cpu, memory, number of pods and extended resources),
+                            the node is considered underutilized. Currently, pods request resource requirements are considered for computing node resource utilization.
+                            There is another configurable threshold, `targetThresholds`, that is used to compute those potential
+                            nodes from where pods could be evicted. If a node's usage is above `targetThreshold` for any (cpu, memory, number of pods, or extended resources),
+                            the node is considered over utilized. Any node between the `thresholds` and `targetThresholds` is considered
+                            appropriately utilized and is not considered for eviction. The threshold, `targetThresholds`, can be configured for cpu, memory, and number of pods too in terms of percentage.
+                            These thresholds, `thresholds` and `targetThresholds`, could be tuned as per your cluster requirements.
+                            Note that this strategy evicts pods from overutilized nodes (those with usage above `targetThresholds`)
+                            to underutilized nodes (those with usage below `thresholds`), it will abort if any number of underutilized nodes or overutilized nodes is zero.
+                            Additionally, the strategy accepts a `useDeviationThresholds` parameter. If that parameter is set to true,
+                            the thresholds are considered as percentage deviations from mean resource usage. `thresholds` will be deducted from
+                            the mean among all nodes and `targetThresholds` will be added to the mean. A resource consumption above (resp. below) this window is considered as overutilization (resp. underutilization).
+                            NOTE: Node resource consumption is determined by the requests and limits of pods, not actual usage.
+                            This approach is chosen in order to maintain consistency with the kube-scheduler, which follows the same design for scheduling pods onto nodes.
+                            This means that resource usage as reported by Kubelet (or commands like kubectl top) may differ from the calculated consumption, due to these components reporting actual usage metrics.
                           properties:
                             enabled:
                               type: boolean
@@ -224,74 +167,700 @@ spec:
                             numberOfNodes:
                               type: int
                               description: |
+                                This parameter can be configured to activate the strategy only when the number of under utilized nodes are above the configured value.
+                                This could be helpful in large clusters where a few nodes could go under utilized frequently or for a short period of time.
+                                By default, `numberOfNodes` is set to zero.
+                            evictableNamespaces:
+                              description: Restricts Namespaces to which this strategy applies.
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              type: object
+                          type: object
+                        HighNodeUtilization:
+                          required: [enabled]
+                          description: >
+                            This strategy finds nodes that are under utilized and evicts pods from the nodes in the hope that these pods will be scheduled compactly into fewer nodes.
+                            Used in conjunction with node auto-scaling, this strategy is intended to help trigger down scaling of under utilized nodes.
+                            This strategy must be used with the scheduler scoring strategy MostAllocated. The parameters of this strategy are configured under nodeResourceUtilizationThresholds.
+                            Note: On GKE, it is not possible to customize the default scheduler config. Instead, you can use the optimize-utilization autoscaling strategy,
+                            which has the same effect as enabling the MostAllocated scheduler plugin. Alternatively, you can deploy a second custom scheduler and edit that scheduler's config yourself.
+                            The under utilization of nodes is determined by a configurable threshold `thresholds`. The threshold `thresholds` can be configured for cpu, memory, number of pods,
+                            and extended resources in terms of percentage. The percentage is calculated as the current resources requested on the node vs total allocatable.
+                            For pods, this means the number of pods on the node as a fraction of the pod capacity set for that node.
+                            If a node's usage is below threshold for all (cpu, memory, number of pods and extended resources), the node is considered underutilized.
+                            Currently, pods request resource requirements are considered for computing node resource utilization. Any node above thresholds is considered appropriately utilized
+                            and is not considered for eviction.
+                            The `thresholds` param could be tuned as per your cluster requirements. Note that this strategy evicts pods from underutilized nodes (those with usage below thresholds)
+                            so that they can be recreated in appropriately utilized nodes. The strategy will abort if any number of underutilized nodes or appropriately utilized nodes is zero.
+                            NOTE: Node resource consumption is determined by the requests and limits of pods, not actual usage. This approach is chosen in order to maintain consistency with the kube-scheduler,
+                            which follows the same design for scheduling pods onto nodes. This means that resource usage as reported by Kubelet (or commands like kubectl top) may differ from the calculated
+                            consumption, due to these components reporting actual usage metrics.
+                          properties:
+                            enabled:
+                              type: boolean
+                            thresholds:
+                              type: object
+                              description: |
+                                Key-value, like ` "cpu" : 20`
+                              additionalProperties: true
+                            numberOfNodes:
+                              type: int
+                              description: |
                                 This parameter can be configured to activate the strategy only when the number of under utilized nodes are above the configured value. This could be helpful in large clusters where a few nodes could go under utilized frequently or for a short period of time. By default, numberOfNodes is set to zero.
-                            evictableNamespaces: *namespace-filter
+                            evictableNamespaces:
+                              description: Restricts Namespaces to which this strategy applies.
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              type: object
                           type: object
-                        removeFailedPods:
+                        RemovePodsViolatingInterPodAntiAffinity:
                           required: [enabled]
-                          description: This strategy evicts Pods that are in failed status phase.
+                          description: >
+                            This strategy makes sure that pods violating interpod anti-affinity are removed from nodes.
+                            For example, if there is podA on a node and podB and podC (running on the same node) have anti-affinity rules
+                            which prohibit them to run on the same node, then podA will be evicted from the node so that podB and podC could run.
+                            This issue could happen, when the anti-affinity rules for podB and podC are created when they are already running on node.
                           properties:
                             enabled:
                               type: boolean
-                            nodeFilter: *node-filter
-                            priorityFilter: *priority-filter
-                            namespaceFilter: *namespace-filter
-                            nodeFit: *node-fit
+                            namespaces:
+                              description: Restricts Namespaces to which this strategy applies.
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              type: object
+                            labelSelector:
+                              properties:
+                                matchExpressions:
+                                  type: array
+                                  description: List of label expressions that a node should have to qualify for the filter condition.
+                                  items:
+                                    properties:
+                                      key:
+                                        type: string
+                                        description: A label name.
+                                      operator:
+                                        type: string
+                                        description: A comparison operator.
+                                        enum:
+                                          - In
+                                          - NotIn
+                                          - Exists
+                                          - DoesNotExist
+                                      values:
+                                        type: array
+                                        description: A label value.
+                                        items:
+                                          type: string
+                                          pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                          minLength: 1
+                                          maxLength: 63
+                                    oneOf:
+                                      - properties:
+                                          operator:
+                                            enum: [ Exists, DoesNotExist ]
+                                        required: [ key, operator ]
+                                        not:
+                                          required: [ values ]
+                                      - properties:
+                                          operator:
+                                            enum: [ In, NotIn ]
+                                        required: [ key, operator, values ]
+                                    type: object
+                                  x-doc-examples:
+                                    - - key: tier
+                                        operator: In
+                                        values:
+                                          - production
+                                          - staging
+                                      - key: tier
+                                        operator: NotIn
+                                        values: [ production ]
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
+                              type: object
                           type: object
-                        removePodsHavingTooManyRestarts:
+                        RemovePodsViolatingNodeAffinity:
                           required: [enabled]
-                          description: This strategy makes sure that Pods having too many restarts are removed from nodes.
+                          description: >
+                            This strategy makes sure all pods violating node affinity are eventually removed from nodes.
+                            Node affinity rules allow a pod to specify `requiredDuringSchedulingIgnoredDuringExecution` and/or `preferredDuringSchedulingIgnoredDuringExecution`.
+                            The `requiredDuringSchedulingIgnoredDuringExecution` type tells the scheduler to respect node affinity when scheduling the pod but kubelet to ignore
+                            in case node changes over time and no longer respects the affinity. When enabled, the strategy serves as a temporary implementation of
+                            `requiredDuringSchedulingRequiredDuringExecution` and evicts pod for kubelet that no longer respects node affinity.
+                            For example, there is podA scheduled on nodeA which satisfies the node affinity rule `requiredDuringSchedulingIgnoredDuringExecution`
+                            at the time of scheduling. Over time nodeA stops to satisfy the rule. When the strategy gets executed and there is another node available that
+                            satisfies the node affinity rule, podA gets evicted from nodeA.
+                            The `preferredDuringSchedulingIgnoredDuringExecution` type tells the scheduler to respect node affinity when scheduling if that's possible.
+                            If not, the pod gets scheduled anyway. It may happen that, over time, the state of the cluster changes and now the pod can be scheduled on a
+                            node that actually fits its preferred node affinity. When enabled, the strategy serves as a temporary implementation of
+                            `preferredDuringSchedulingPreferredDuringExecution`, so the pod will be evicted if it can be scheduled on a "better" node.
                           properties:
                             enabled:
                               type: boolean
-                            nodeFilter: *node-filter
-                            priorityFilter: *priority-filter
-                            namespaceFilter: *namespace-filter
-                            nodeFit: *node-fit
+                            nodeAffinityType:
+                              type: array
+                              items:
+                                type: string
+                                enum: ["requiredDuringSchedulingIgnoredDuringExecution", "preferredDuringSchedulingIgnoredDuringExecution"]
+                            namespaces:
+                              description: Restricts Namespaces to which this strategy applies.
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              type: object
+                            labelSelector:
+                              properties:
+                                matchExpressions:
+                                  type: array
+                                  description: List of label expressions that a node should have to qualify for the filter condition.
+                                  items:
+                                    properties:
+                                      key:
+                                        type: string
+                                        description: A label name.
+                                      operator:
+                                        type: string
+                                        description: A comparison operator.
+                                        enum:
+                                          - In
+                                          - NotIn
+                                          - Exists
+                                          - DoesNotExist
+                                      values:
+                                        type: array
+                                        description: A label value.
+                                        items:
+                                          type: string
+                                          pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                          minLength: 1
+                                          maxLength: 63
+                                    oneOf:
+                                      - properties:
+                                          operator:
+                                            enum: [ Exists, DoesNotExist ]
+                                        required: [ key, operator ]
+                                        not:
+                                          required: [ values ]
+                                      - properties:
+                                          operator:
+                                            enum: [ In, NotIn ]
+                                        required: [ key, operator, values ]
+                                    type: object
+                                  x-doc-examples:
+                                    - - key: tier
+                                        operator: In
+                                        values:
+                                          - production
+                                          - staging
+                                      - key: tier
+                                        operator: NotIn
+                                        values: [ production ]
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
+                              type: object
                           type: object
-                        removePodsViolatingInterPodAntiAffinity:
+                        RemovePodsViolatingNodeTaints:
                           required: [enabled]
-                          description: This strategy makes sure that Pods violating interpod anti-affinity are removed from nodes.
+                          description: >
+                            This strategy makes sure that pods violating NoSchedule taints on nodes are removed. For example there is a pod "podA" with a toleration to tolerate a
+                            taint key=value:NoSchedule scheduled and running on the tainted node. If the node's taint is subsequently updated/removed, taint is no longer satisfied
+                            by its pods tolerations and will be evicted.
+                            Node taints can be excluded from consideration by specifying a list of `excludedTaints`.
+                            If a node taint key or key=value matches an `excludedTaints` entry, the taint will be ignored.
+                            For example, `excludedTaints` entry "dedicated" would match all taints with key "dedicated", regardless of value. `excludedTaints` entry
+                            "dedicated=special-user" would match taints with key "dedicated" and value "special-user".
+                            If a list of `includedTaints` is provided, a taint will be considered if and only if it matches an included key or key=value from the list.
+                            Otherwise it will be ignored. Leaving `includedTaints` unset will include any taint by default.
                           properties:
                             enabled:
                               type: boolean
-                            nodeFilter: *node-filter
-                            priorityFilter: *priority-filter
-                            namespaceFilter: *namespace-filter
-                            nodeFit: *node-fit
+                            excludedTaints:
+                              type: array
+                              items:
+                                type: string
+                                example:
+                                - dedicated=special-user # exclude taints with key "dedicated" and value "special-user"
+                                - reserved # exclude all taints with key "reserved"
+                            includedTaints:
+                              type: array
+                              items:
+                                type: string
+                                example:
+                                  - decommissioned=end-of-life # include only taints with key "decommissioned" and value "end-of-life"
+                                  - reserved # include all taints with key "reserved"
+                            includePreferNoSchedule:
+                              type: boolean
+                            namespaces:
+                              description: Restricts Namespaces to which this strategy applies.
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              type: object
+                            labelSelector:
+                              properties:
+                                matchExpressions:
+                                  type: array
+                                  description: List of label expressions that a node should have to qualify for the filter condition.
+                                  items:
+                                    properties:
+                                      key:
+                                        type: string
+                                        description: A label name.
+                                      operator:
+                                        type: string
+                                        description: A comparison operator.
+                                        enum:
+                                          - In
+                                          - NotIn
+                                          - Exists
+                                          - DoesNotExist
+                                      values:
+                                        type: array
+                                        description: A label value.
+                                        items:
+                                          type: string
+                                          pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                          minLength: 1
+                                          maxLength: 63
+                                    oneOf:
+                                      - properties:
+                                          operator:
+                                            enum: [ Exists, DoesNotExist ]
+                                        required: [ key, operator ]
+                                        not:
+                                          required: [ values ]
+                                      - properties:
+                                          operator:
+                                            enum: [ In, NotIn ]
+                                        required: [ key, operator, values ]
+                                    type: object
+                                  x-doc-examples:
+                                    - - key: tier
+                                        operator: In
+                                        values:
+                                          - production
+                                          - staging
+                                      - key: tier
+                                        operator: NotIn
+                                        values: [ production ]
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
+                              type: object
                           type: object
-                        removePodsViolatingNodeAffinity:
+                        RemovePodsViolatingTopologySpreadConstraint:
                           required: [enabled]
-                          description: This strategy makes sure all Pods violating node affinity are eventually removed from nodes.
+                          description: >
+                            This strategy makes sure that pods violating topology spread constraints are evicted from nodes.
+                            Specifically, it tries to evict the minimum number of pods required to balance topology domains to within each constraint's maxSkew.
+                            This strategy requires k8s version 1.18 at a minimum.
+                            By default, this strategy only includes hard constraints, you can explicitly set constraints as shown below to include both:
+                            `constraints`:
+                            - DoNotSchedule
+                            - ScheduleAnyway
+                            The `topologyBalanceNodeFit` arg is used when balancing topology domains while the Default Evictor's nodeFit is used in pre-eviction to determine if a pod can be evicted.
+                            Strategy parameter `labelSelector` is not utilized when balancing topology domains and is only applied during eviction to determine if the pod can be evicted.
                           properties:
                             enabled:
                               type: boolean
-                            nodeFilter: *node-filter
-                            priorityFilter: *priority-filter
-                            namespaceFilter: *namespace-filter
-                            nodeFit: *node-fit
+                            constraints:
+                              type: array
+                              items:
+                                type: string
+                                enum: ["maxSkew", "topologyKey", "whenUnsatisfiable", "labelSelector", "matchLabelKeys", "nodeAffinityPolicy", "nodeTaintsPolicy"]
+                            topologyBalanceNodeFit:
+                              type: boolean
+                            namespaces:
+                              description: Restricts Namespaces to which this strategy applies.
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              type: object
+                            labelSelector:
+                              properties:
+                                matchExpressions:
+                                  type: array
+                                  description: List of label expressions that a node should have to qualify for the filter condition.
+                                  items:
+                                    properties:
+                                      key:
+                                        type: string
+                                        description: A label name.
+                                      operator:
+                                        type: string
+                                        description: A comparison operator.
+                                        enum:
+                                          - In
+                                          - NotIn
+                                          - Exists
+                                          - DoesNotExist
+                                      values:
+                                        type: array
+                                        description: A label value.
+                                        items:
+                                          type: string
+                                          pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                          minLength: 1
+                                          maxLength: 63
+                                    oneOf:
+                                      - properties:
+                                          operator:
+                                            enum: [ Exists, DoesNotExist ]
+                                        required: [ key, operator ]
+                                        not:
+                                          required: [ values ]
+                                      - properties:
+                                          operator:
+                                            enum: [ In, NotIn ]
+                                        required: [ key, operator, values ]
+                                    type: object
+                                  x-doc-examples:
+                                    - - key: tier
+                                        operator: In
+                                        values:
+                                          - production
+                                          - staging
+                                      - key: tier
+                                        operator: NotIn
+                                        values: [ production ]
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
+                              type: object
                           type: object
-                        removePodsViolatingNodeTaints:
+                        RemovePodsHavingTooManyRestarts:
                           required: [enabled]
-                          description: This strategy makes sure that Pods violating NoSchedule taints on nodes are removed.
+                          description: >
+                            This strategy makes sure that pods having too many restarts are removed from nodes.
+                            For example a pod with EBS/PD that can't get the volume/disk attached to the instance, then the pod should be re-scheduled to other nodes.
+                            Its parameters include `podRestartThreshold`, which is the number of restarts (summed over all eligible containers) at which a pod should be evicted,
+                            and `includingInitContainers`, which determines whether init container restarts should be factored into that calculation.
+                            You can also specify `states` parameter to only evict pods matching the following conditions:
+                            Pod Phase status of: Running
+                            Container State Waiting of: CrashLoopBackOff
+                            If a value for `states` is not specified, Pods in any state (even Running) are considered for eviction.
                           properties:
                             enabled:
                               type: boolean
-                            nodeFilter: *node-filter
-                            priorityFilter: *priority-filter
-                            namespaceFilter: *namespace-filter
-                            nodeFit: *node-fit
+                            podRestartThreshold:
+                              type: integer
+                            includingInitContainers:
+                              type: boolean
+                            states:
+                              type: array
+                              items:
+                                type: string
+                                enum: ["Running", "CrashLoopBackOff"]
+                            namespaces:
+                              description: Restricts Namespaces to which this strategy applies.
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              type: object
+                            labelSelector:
+                              properties:
+                                matchExpressions:
+                                  type: array
+                                  description: List of label expressions that a node should have to qualify for the filter condition.
+                                  items:
+                                    properties:
+                                      key:
+                                        type: string
+                                        description: A label name.
+                                      operator:
+                                        type: string
+                                        description: A comparison operator.
+                                        enum:
+                                          - In
+                                          - NotIn
+                                          - Exists
+                                          - DoesNotExist
+                                      values:
+                                        type: array
+                                        description: A label value.
+                                        items:
+                                          type: string
+                                          pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                          minLength: 1
+                                          maxLength: 63
+                                    oneOf:
+                                      - properties:
+                                          operator:
+                                            enum: [ Exists, DoesNotExist ]
+                                        required: [ key, operator ]
+                                        not:
+                                          required: [ values ]
+                                      - properties:
+                                          operator:
+                                            enum: [ In, NotIn ]
+                                        required: [ key, operator, values ]
+                                    type: object
+                                  x-doc-examples:
+                                    - - key: tier
+                                        operator: In
+                                        values:
+                                          - production
+                                          - staging
+                                      - key: tier
+                                        operator: NotIn
+                                        values: [ production ]
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
+                              type: object
                           type: object
-                        removePodsViolatingTopologySpreadConstraint:
+                        PodLifeTime:
                           required: [enabled]
-                          description: This strategy makes sure that Pods violating topology spread constraints are evicted from nodes.
+                          description: >
+                            This strategy evicts pods that are older than `maxPodLifeTimeSeconds`.
+                            You can also specify `states` parameter to only evict pods matching the following conditions:
+                            Pod Phase status of: Running, Pending, Unknown
+                            Pod Reason reasons of: NodeAffinity, NodeLost, Shutdown, UnexpectedAdmissionError
+                            Container State Waiting condition of: PodInitializing, ContainerCreating, ImagePullBackOff, CrashLoopBackOff, CreateContainerConfigError,
+                            ErrImagePull, ImagePullBackOff, CreateContainerError, InvalidImageName.
+                            If a value for `states` or `podStatusPhases` is not specified, Pods in any state (even Running) are considered for eviction.
                           properties:
                             enabled:
                               type: boolean
-                            nodeFilter: *node-filter
-                            priorityFilter: *priority-filter
-                            namespaceFilter: *namespace-filter
-                            nodeFit: *node-fit
+                            maxPodLifeTimeSeconds:
+                              type: integer
+                            includingInitContainers:
+                              type: boolean
+                            includingEphemeralContainers:
+                              type: boolean
+                            states:
+                              type: array
+                              items:
+                                type: string
+                                enum: ["Running", "Pending", "Unknown", "NodeAffinity", "NodeLost", "Shutdown", "UnexpectedAdmissionErrorPodInitializing", "ContainerCreating", "ImagePullBackOff", "CrashLoopBackOff", "CreateContainerConfigError", "ErrImagePull", "ImagePullBackOff", "CreateContainerError", "InvalidImageName"]
+                            namespaces:
+                              description: Restricts Namespaces to which this strategy applies.
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              type: object
+                            labelSelector:
+                              properties:
+                                matchExpressions:
+                                  type: array
+                                  description: List of label expressions that a node should have to qualify for the filter condition.
+                                  items:
+                                    properties:
+                                      key:
+                                        type: string
+                                        description: A label name.
+                                      operator:
+                                        type: string
+                                        description: A comparison operator.
+                                        enum:
+                                          - In
+                                          - NotIn
+                                          - Exists
+                                          - DoesNotExist
+                                      values:
+                                        type: array
+                                        description: A label value.
+                                        items:
+                                          type: string
+                                          pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                          minLength: 1
+                                          maxLength: 63
+                                    oneOf:
+                                      - properties:
+                                          operator:
+                                            enum: [ Exists, DoesNotExist ]
+                                        required: [ key, operator ]
+                                        not:
+                                          required: [ values ]
+                                      - properties:
+                                          operator:
+                                            enum: [ In, NotIn ]
+                                        required: [ key, operator, values ]
+                                    type: object
+                                  x-doc-examples:
+                                    - - key: tier
+                                        operator: In
+                                        values:
+                                          - production
+                                          - staging
+                                      - key: tier
+                                        operator: NotIn
+                                        values: [ production ]
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
+                              type: object
+                          type: object
+                        RemoveFailedPods:
+                          required: [enabled]
+                          description: >
+                            This strategy evicts pods that are in failed status phase. You can provide optional parameters to filter by failed pods and containters `reasons`, and `exitCodes`.
+                            `exitCodes` apply to failed pods containers with terminated state only.
+                            `reasons` and `exitCodes` can be expanded to include those of `InitContainers` as well by setting the optional parameter `includingInitContainers` to `true`.
+                            You can specify an optional parameter `minPodLifetimeSeconds` to evict pods that are older than specified seconds.
+                            Lastly, you can specify the optional parameter `excludeOwnerKinds` and if a pod has any of these `Kinds` listed as an `OwnerRef`, that pod will not be considered for eviction.
+                          properties:
+                            enabled:
+                              type: boolean
+                            minPodLifeTimeSeconds:
+                              type: integer
+                            excludeOwnerKinds:
+                              type: array
+                              items:
+                                type: string
+                                enum: [ "ReplicaSet", "StatefulSet", "ReplicationController", "Job" ]
+                            reasons:
+                              type: array
+                              items:
+                                type: string
+                                enum: [ "NodeAffinity", "NodeLost", "Shutdown", "UnexpectedAdmissionError"]
+                            exitCodes:
+                              type: array
+                              items:
+                                type: int
+                            includingInitContainers:
+                              type: boolean
+                            namespaces:
+                              description: Restricts Namespaces to which this strategy applies.
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              type: object
+                            labelSelector:
+                              properties:
+                                matchExpressions:
+                                  type: array
+                                  description: List of label expressions that a node should have to qualify for the filter condition.
+                                  items:
+                                    properties:
+                                      key:
+                                        type: string
+                                        description: A label name.
+                                      operator:
+                                        type: string
+                                        description: A comparison operator.
+                                        enum:
+                                          - In
+                                          - NotIn
+                                          - Exists
+                                          - DoesNotExist
+                                      values:
+                                        type: array
+                                        description: A label value.
+                                        items:
+                                          type: string
+                                          pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                          minLength: 1
+                                          maxLength: 63
+                                    oneOf:
+                                      - properties:
+                                          operator:
+                                            enum: [ Exists, DoesNotExist ]
+                                        required: [ key, operator ]
+                                        not:
+                                          required: [ values ]
+                                      - properties:
+                                          operator:
+                                            enum: [ In, NotIn ]
+                                        required: [ key, operator, values ]
+                                    type: object
+                                  x-doc-examples:
+                                    - - key: tier
+                                        operator: In
+                                        values:
+                                          - production
+                                          - staging
+                                      - key: tier
+                                        operator: NotIn
+                                        values: [ production ]
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
+                              type: object
                           type: object
                       type: object
                   type: object
