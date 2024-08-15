@@ -18,7 +18,7 @@ kind: MachineDeployment
 metadata:
   namespace: d8-cloud-instance-manager
   name: {{ $machineDeploymentName | quote }}
-  {{- include "helm_lib_module_labels" (list $context (dict "node-group" $ng.name "caps-controller" "" )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "node-group" $ng.name )) | nindent 2 }}
   annotations:
     checksum/instance-class: {{ $instance_class_checksum }}
     cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size: {{ $ng.cloudInstances.minPerZone | quote }}
