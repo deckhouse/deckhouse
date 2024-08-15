@@ -39,6 +39,9 @@ metadata:
 spec:
   version: 1
   enabled: true
+  settings:
+    bpfLBMode: SNAT
+    tunnelMode: VXLAN
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

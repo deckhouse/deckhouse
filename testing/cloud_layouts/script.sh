@@ -946,6 +946,23 @@ function wait_cluster_ready() {
       return 1
   fi
 
+  if [[ "Static OpenStack vSphere vCloudDirector" =~ $PROVIDER ]] ; then
+    testCilium=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_cilium.sh")
+
+    test_failed="true"
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testCilium}"; then
+      test_failed=""
+    else
+      test_failed="true"
+      >&2 echo "Run test script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+      sleep 30
+    fi
+
+    if [[ $test_failed == "true" ]] ; then
+        return 1
+    fi
+  fi
+
   write_deckhouse_logs
 }
 
