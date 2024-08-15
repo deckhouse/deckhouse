@@ -81,9 +81,6 @@ func ApplyCopierSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		delete(s.Annotations, "secret-copier.deckhouse.io/updated-at")
 	}
 
-	// Secrets with that annotation are always the main secret, delete to prevent loop.
-	delete(s.Annotations, "secret-copier.deckhouse.io/target-namespace-selector")
-
 	// Secrets with that label lead to D8CertmanagerOrphanSecretsChecksFailed alerts.
 	delete(s.Labels, "certmanager.k8s.io/certificate-name")
 
