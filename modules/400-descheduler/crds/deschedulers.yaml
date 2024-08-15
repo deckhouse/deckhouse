@@ -163,7 +163,7 @@ spec:
                             name:
                               type: string
                             value:
-                              type integer
+                              type: integer
                           anyOf:
                             - required: ["name"]
                             - required: ["value"]
@@ -186,7 +186,6 @@ spec:
                           description: ignore eviction of pods with a creation time within this threshold
                           type: string
                           pattern: '^(\d{1,2}[h])$|^(\d+[m])$|^((\d{1,2}[h])\s((([0]?|[1-5]{1})[0-9])[m]))$'
-
                     strategies:
                       type: object
                       description: List of strategies with corresponding parameters for a given Descheduler instances.
