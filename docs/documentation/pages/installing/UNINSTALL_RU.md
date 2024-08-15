@@ -62,4 +62,4 @@ dhctl destroy --ssh-user=<USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa  --yes
   - `<USER>` — пользователь удаленной машины, из-под которого производилась установка;
   - `<MASTER_IP>` — IP-адрес master-узла кластера.
   
-  Инсталлятор подключится к master-узлу и удалит все компоненты Deckhouse и кластера Kubernetes.
+  Инсталлятор подключится к master-узлу и удалит на нем все компоненты Deckhouse и кластера Kubernetes.
