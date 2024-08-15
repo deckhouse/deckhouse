@@ -79,8 +79,10 @@ func ApplyCopierSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		// desired secret (target secret in a namespace) must not have secret-copier annotations to satisfy DeepEqual function
 		delete(s.Annotations, "secret-copier.deckhouse.io/created-at")
 		delete(s.Annotations, "secret-copier.deckhouse.io/updated-at")
-		delete(s.Annotations, "secret-copier.deckhouse.io/target-namespace-selector")
 	}
+
+	// Secrets with that annotation are always the main secret, delete to prevent loop.
+	delete(s.Annotations, "secret-copier.deckhouse.io/target-namespace-selector")
 
 	// Secrets with that label lead to D8CertmanagerOrphanSecretsChecksFailed alerts.
 	delete(s.Labels, "certmanager.k8s.io/certificate-name")
