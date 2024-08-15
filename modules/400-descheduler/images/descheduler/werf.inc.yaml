@@ -1,7 +1,7 @@
-{{- $version := "0.21.0" }}
+{{- $version := "0.30.1" }}
 ---
 artifact: {{ .ModuleName }}/build-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+from: {{ .Images.BASE_GOLANG_22_ALPINE }}
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
@@ -12,7 +12,7 @@ shell:
     - mkdir /src
     - cd /src
     - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/descheduler.git .
-    - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version={{ $version }} -X main.gitCommit=b59995eeb8b3733c635059c041aa30c8c04f5e33" -o descheduler sigs.k8s.io/descheduler/cmd/descheduler
+    - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version={{ $version }} -X main.gitCommit=9f7e7fd5bb64989f5188eb42152370602c1c9eda" -o descheduler sigs.k8s.io/descheduler/cmd/descheduler
     - chown 64535:64535 descheduler
     - chmod 0700 descheduler
 ---
