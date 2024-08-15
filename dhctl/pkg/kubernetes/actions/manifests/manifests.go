@@ -243,7 +243,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 					},
 				},
 				{
-					Name: "host-deckhouse",
+					Name: "deckhouse",
 					VolumeSource: apiv1.VolumeSource{
 						HostPath: &apiv1.HostPathVolumeSource{
 							Path: "/var/lib/deckhouse",
@@ -302,13 +302,13 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		Image:           initContainerImage,
 		ImagePullPolicy: apiv1.PullAlways,
 		Command: []string{
-			"sh", "-c", `if [ -d "/host/deckhouse/external-modules" ] && [ -n "$(ls -A "/host/deckhouse/external-modules")" ]; then cp -r /host/deckhouse/external-modules/* /host/deckhouse/downloaded/ && rm -rf /host/deckhouse/external-modules; fi && mkdir -p /host/deckhouse/downloaded/modules && chown -hR 64535 /host/deckhouse/downloaded /host/deckhouse/downloaded/modules && chmod 0700 /host/deckhouse/downloaded /host/deckhouse/downloaded/modules`,
+			"sh", "-c", `if [ -d "/deckhouse/external-modules" ] && [ -n "$(ls -A "/deckhouse/external-modules")" ]; then cp -r /deckhouse/external-modules/* /deckhouse/downloaded/ && rm -rf /deckhouse/external-modules; fi && mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules`,
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
-				Name:      "host-deckhouse",
+				Name:      "deckhouse",
 				ReadOnly:  false,
-				MountPath: "/host/deckhouse",
+				MountPath: "/deckhouse",
 			},
 		},
 	}

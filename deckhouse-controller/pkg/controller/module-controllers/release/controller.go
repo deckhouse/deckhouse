@@ -24,11 +24,13 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/logger"
@@ -91,6 +93,8 @@ const (
 	fsReleaseFinalizer     = "modules.deckhouse.io/exist-on-fs"
 	sourceReleaseFinalizer = "modules.deckhouse.io/release-exists"
 	disabledByIgnorePolicy = `Update disabled by 'Ignore' update policy`
+
+	outdatedReleasesKeepCount = 3
 )
 
 func NewModuleReleaseController(
@@ -340,7 +344,7 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	return ctrl.Result{}, nil
+	return c.cleanUpModuleReleases(ctx, mr)
 }
 
 func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
@@ -495,7 +499,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	}
 
 	modulesChangedReason = "a new module release found"
-	return ctrl.Result{}, nil
+	return c.cleanUpModuleReleases(ctx, mr)
 }
 
 func (c *moduleReleaseReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
@@ -1048,4 +1052,67 @@ func createOrUpdateModuleDocumentationCR(
 	}
 
 	return nil
+}
+
+// cleanUpModuleReleases finds and deletes all outdated releases of the module in Suspend, Skipped or Superseded phases, except for <outdatedReleasesKeepCount> most recent ones
+func (c *moduleReleaseReconciler) cleanUpModuleReleases(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	// get parent module source
+	ms := new(v1alpha1.ModuleSource)
+	err := c.client.Get(ctx, types.NamespacedName{Name: mr.GetModuleSource()}, ms)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// parent is absent for some reason - throw a warning and forget about the release
+			c.logger.Warnf("couldn't find parent %s module source for %s module release to clean up outdated releases: %w", mr.GetModuleSource(), mr.GetModuleName(), err)
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{Requeue: true}, fmt.Errorf("couldn't get parent %s module source for %s module release to clean up: %w", mr.GetModuleSource(), mr.GetModuleName(), err)
+	}
+
+	// get related releases
+	var moduleReleasesFromSource v1alpha1.ModuleReleaseList
+	err = c.client.List(ctx, &moduleReleasesFromSource, client.MatchingLabels{"source": mr.GetModuleSource(), "module": mr.GetModuleName()})
+	if err != nil {
+		return ctrl.Result{Requeue: true}, fmt.Errorf("couldn't list module releases to clean up: %w", err)
+	}
+
+	type outdatedRelease struct {
+		name    string
+		version *semver.Version
+	}
+
+	outdatedReleases := make(map[string][]outdatedRelease, 0)
+
+	// get all outdated releases by module names
+	for _, rl := range moduleReleasesFromSource.Items {
+		if metav1.IsControlledBy(&rl, ms) {
+			if rl.Status.Phase == v1alpha1.PhaseSuperseded || rl.Status.Phase == v1alpha1.PhaseSuspended || rl.Status.Phase == v1alpha1.PhaseSkipped {
+				outdatedReleases[rl.Spec.ModuleName] = append(outdatedReleases[rl.Spec.ModuleName], outdatedRelease{
+					name:    rl.Name,
+					version: rl.Spec.Version,
+				})
+			}
+		}
+	}
+
+	// sort and delete all outdated releases except for <outdatedReleasesKeepCount> last releases per a module
+	for moduleName, releases := range outdatedReleases {
+		sort.Slice(releases, func(i, j int) bool { return releases[j].version.LessThan(releases[i].version) })
+		c.logger.Debugf("Found the following outdated releases for %s module: %v", moduleName, releases)
+		if len(releases) > outdatedReleasesKeepCount {
+			for i := outdatedReleasesKeepCount; i < len(releases); i++ {
+				releaseObj := &v1alpha1.ModuleRelease{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: releases[i].name,
+					},
+				}
+				err = c.client.Delete(ctx, releaseObj)
+				if err != nil && !apierrors.IsNotFound(err) {
+					return ctrl.Result{Requeue: true}, fmt.Errorf("couldn't clean up outdated release %q of %s module: %w", releases[i].name, moduleName, err)
+				}
+				c.logger.Infof("cleaned up outdated release %q of %q module", releases[i].name, moduleName)
+			}
+		}
+	}
+
+	return ctrl.Result{}, nil
 }

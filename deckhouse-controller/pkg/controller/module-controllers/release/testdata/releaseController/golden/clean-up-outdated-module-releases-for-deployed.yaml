@@ -5,6 +5,8 @@ metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/release-exists
   generation: 1
   name: test
   resourceVersion: "406077724"
@@ -18,10 +20,10 @@ spec:
   releaseChannel: ""
 status:
   message: ""
-  moduleErrors: []
-  modules: []
+  moduleErrors: null
+  modules: null
   modulesCount: 0
-  syncTime: "2019-10-17T15:33:00Z"
+  syncTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
@@ -31,7 +33,7 @@ metadata:
   creationTimestamp: null
   labels:
     module: echo
-    modules.deckhouse.io/update-policy: foxtrot
+    modules.deckhouse.io/update-policy: test-alpha
     release-checksum: 6f0b1c3f78bf63e712e225b2ac3030ce
     source: test
     status: superseded
@@ -63,7 +65,7 @@ metadata:
   creationTimestamp: null
   labels:
     module: echo
-    modules.deckhouse.io/update-policy: foxtrot
+    modules.deckhouse.io/update-policy: test-alpha
     release-checksum: 6f0b1c3f78bf63e712e225b2ac3030ce
     source: test
     status: suspended
@@ -95,7 +97,7 @@ metadata:
   creationTimestamp: null
   labels:
     module: echo
-    modules.deckhouse.io/update-policy: foxtrot
+    modules.deckhouse.io/update-policy: test-alpha
     release-checksum: 6f0b1c3f78bf63e712e225b2ac3030ce
     source: test
     status: superseded
@@ -125,9 +127,11 @@ metadata:
   annotations:
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
   labels:
     module: echo
-    modules.deckhouse.io/update-policy: foxtrot
+    modules.deckhouse.io/update-policy: test-alpha
     release-checksum: 6f0b1c3f78bf63e712e225b2ac3030ce
     source: test
     status: deployed
@@ -142,134 +146,6 @@ metadata:
 spec:
   moduleName: echo
   version: 0.4.54
-  weight: 910
-status:
-  approved: false
-  message: ""
-  phase: Deployed
-  pullDuration: 0s
-  size: 0
-  transitionTime: null
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
-  annotations:
-    release.deckhouse.io/notified: "false"
-  creationTimestamp: null
-  labels:
-    module: parca
-    modules.deckhouse.io/update-policy: foxtrot
-    release-checksum: 6f0b1c3f78bf63e712e225b2ac3030ce
-    source: test
-    status: suspended
-  name: parca-v0.5.63
-  ownerReferences:
-  - apiVersion: deckhouse.io/v1alpha1
-    controller: true
-    kind: ModuleSource
-    name: test
-    uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
-  resourceVersion: "1000"
-spec:
-  moduleName: parca
-  version: 0.5.63
-  weight: 910
-status:
-  approved: false
-  message: ""
-  phase: Suspended
-  pullDuration: 0s
-  size: 0
-  transitionTime: null
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
-  annotations:
-    release.deckhouse.io/notified: "false"
-  creationTimestamp: null
-  labels:
-    module: parca
-    modules.deckhouse.io/update-policy: foxtrot
-    release-checksum: 6f0b1c3f78bf63e712e225b2ac3030ce
-    source: test
-    status: superseded
-  name: parca-v0.5.64
-  ownerReferences:
-  - apiVersion: deckhouse.io/v1alpha1
-    controller: true
-    kind: ModuleSource
-    name: test
-    uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
-  resourceVersion: "1000"
-spec:
-  moduleName: parca
-  version: 0.5.64
-  weight: 910
-status:
-  approved: false
-  message: ""
-  phase: Superseded
-  pullDuration: 0s
-  size: 0
-  transitionTime: null
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
-  annotations:
-    release.deckhouse.io/notified: "false"
-  creationTimestamp: null
-  labels:
-    module: parca
-    modules.deckhouse.io/update-policy: foxtrot
-    release-checksum: 6f0b1c3f78bf63e712e225b2ac3030ce
-    source: test
-    status: superseded
-  name: parca-v0.5.65
-  ownerReferences:
-  - apiVersion: deckhouse.io/v1alpha1
-    controller: true
-    kind: ModuleSource
-    name: test
-    uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
-  resourceVersion: "1000"
-spec:
-  moduleName: parca
-  version: 0.5.65
-  weight: 910
-status:
-  approved: false
-  message: ""
-  phase: Superseded
-  pullDuration: 0s
-  size: 0
-  transitionTime: null
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
-  annotations:
-    release.deckhouse.io/notified: "false"
-  creationTimestamp: null
-  labels:
-    module: parca
-    modules.deckhouse.io/update-policy: foxtrot
-    release-checksum: 6f0b1c3f78bf63e712e225b2ac3030ce
-    source: test
-    status: deployed
-  name: parca-v0.6.0
-  ownerReferences:
-  - apiVersion: deckhouse.io/v1alpha1
-    controller: true
-    kind: ModuleSource
-    name: test
-    uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
-  resourceVersion: "1000"
-spec:
-  moduleName: parca
-  version: 0.6.0
   weight: 910
 status:
   approved: false

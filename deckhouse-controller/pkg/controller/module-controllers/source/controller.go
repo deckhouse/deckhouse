@@ -19,7 +19,6 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"sync"
@@ -50,8 +49,6 @@ import (
 const (
 	defaultScanInterval        = 3 * time.Minute
 	registryChecksumAnnotation = "modules.deckhouse.io/registry-spec-checksum"
-
-	outdatedReleasesKeepCount = 3
 )
 
 type moduleSourceReconciler struct {
@@ -213,11 +210,6 @@ func (c *moduleSourceReconciler) createOrUpdateReconcile(ctx context.Context, ms
 
 	// save checksums
 	c.saveSourceChecksums(ms.Name, modulesChecksums)
-
-	err = c.cleanUpModuleReleases(ctx, ms)
-	if err != nil {
-		return ctrl.Result{Requeue: true}, err
-	}
 
 	// everything is ok, check source on the other iteration
 	return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
@@ -419,73 +411,6 @@ func (c *moduleSourceReconciler) updateModuleSourceStatus(ctx context.Context, m
 	msCopy.Status.SyncTime = metav1.NewTime(c.dc.GetClock().Now().UTC())
 
 	return c.client.Status().Update(ctx, msCopy)
-}
-
-// cleanUpModuleReleases finds and deletes all outdated releases (in Suspend or Superseded phases) but three last related to the provided ModuleSource
-func (c *moduleSourceReconciler) cleanUpModuleReleases(ctx context.Context, ms *v1alpha1.ModuleSource) error {
-	// get related releases
-	var moduleReleasesFromSource v1alpha1.ModuleReleaseList
-	err := c.client.List(ctx, &moduleReleasesFromSource, client.MatchingLabels{"source": ms.Name})
-	if err != nil {
-		return fmt.Errorf("couldn't list module releases to clean up: %w", err)
-	}
-
-	type outdatedRelease struct {
-		name    string
-		version *semver.Version
-	}
-
-	outdatedReleases := make(map[string][]outdatedRelease, 0)
-
-	// get all outdated releases by module names
-	for _, rl := range moduleReleasesFromSource.Items {
-		if metav1.IsControlledBy(&rl, ms) {
-			if rl.Status.Phase == v1alpha1.PhaseSuperseded || rl.Status.Phase == v1alpha1.PhaseSuspended {
-				outdatedReleases[rl.Spec.ModuleName] = append(outdatedReleases[rl.Spec.ModuleName], outdatedRelease{
-					name:    rl.Name,
-					version: rl.Spec.Version,
-				})
-			}
-		}
-	}
-
-	// sort and delete all outdated releases except for three last releases per a module
-	for moduleName, releases := range outdatedReleases {
-		sort.Slice(releases, func(i, j int) bool { return releases[j].version.LessThan(releases[i].version) })
-		c.logger.Debugf("Found the following outdated releases for %s module: %v", moduleName, releases)
-		if len(releases) > outdatedReleasesKeepCount {
-			for i := outdatedReleasesKeepCount; i < len(releases); i++ {
-				c.logger.Infof("Clean up outdated release %q of %q module", releases[i].name, moduleName)
-				err = c.deleteModulesRelease(ctx, moduleName, releases[i].name, "v"+releases[i].version.String())
-				if err != nil {
-					c.logger.Warnf("Couldn't clean up outdated release %q of %s module: %s", releases[i], moduleName, err)
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
-// deleteModulesRelease deletes ModuleRelease from the cluster and file system
-func (c *moduleSourceReconciler) deleteModulesRelease(ctx context.Context, moduleName, releaseName, releaseVersion string) error {
-	modulePath := filepath.Join(c.downloadedModulesDir, moduleName, releaseVersion)
-	err := os.RemoveAll(modulePath)
-	if err != nil {
-		return fmt.Errorf("couldn't remove %s directory: %v", modulePath, err)
-	}
-
-	releaseObj := &v1alpha1.ModuleRelease{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: releaseName,
-		},
-	}
-	err = c.client.Delete(ctx, releaseObj)
-	if err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("couldn't remove %s ModuleRelease from the cluster: %v", releaseName, err)
-	}
-
-	return nil
 }
 
 // checkAndPropagateRegistrySettings checks if modules source registry settings were updated (comparing registryChecksumAnnotation annotation and current registry spec)

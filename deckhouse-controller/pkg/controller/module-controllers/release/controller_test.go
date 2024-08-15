@@ -31,6 +31,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -99,8 +101,6 @@ func (suite *ReleaseControllerTestSuite) TearDownSubTest() {
 }
 
 func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
-	entries, err := os.ReadDir("./testdata/releaseController")
-	require.NoError(suite.T(), err)
 	err = os.Setenv("TEST_EXTENDER_DECKHOUSE_VERSION", "v1.0.0")
 	require.NoError(suite.T(), err)
 	err = os.Setenv("TEST_EXTENDER_KUBERNETES_VERSION", "1.28.0")
@@ -110,19 +110,59 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}}"}}}, nil
 		}}, nil)
 
-		for _, en := range entries {
-			if en.IsDir() {
-				continue
-			}
+		suite.Run("simple", func() {
+			suite.setupReleaseController(string(suite.fetchTestFileData("simple.yaml")))
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
 
-			suite.Run(en.Name(), func() {
-				suite.setupReleaseController(string(suite.fetchTestFileData(en.Name())))
-				mr := suite.getModuleRelease(suite.testMRName)
-				_, err = suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
-				require.NoError(suite.T(), err)
-			})
-		}
+		suite.Run("with annotation", func() {
+			suite.setupReleaseController(string(suite.fetchTestFileData("with-annotation.yaml")))
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("deploy with outdated module releases", func() {
+			dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
+			suite.setupReleaseController(string(suite.fetchTestFileData("clean-up-outdated-module-releases-when-deploy.yaml")))
+			err := suite.updateModuleReleasesStatuses()
+			require.NoError(suite.T(), err)
+			mr := suite.getModuleRelease("echo-v0.4.54")
+			_, err = suite.ctr.reconcilePendingRelease(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("clean up for a deployed module release with outdated module releases", func() {
+			dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
+			suite.setupReleaseController(string(suite.fetchTestFileData("clean-up-outdated-module-releases-for-deployed.yaml")))
+			err := suite.updateModuleReleasesStatuses()
+			require.NoError(suite.T(), err)
+			mr := suite.getModuleRelease("echo-v0.4.54")
+			_, err = suite.ctr.reconcileDeployedRelease(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
 	})
+}
+
+func (suite *ReleaseControllerTestSuite) updateModuleReleasesStatuses() error {
+	var releases v1alpha1.ModuleReleaseList
+	err := suite.kubeClient.List(context.TODO(), &releases)
+	if err != nil {
+		return err
+	}
+
+	caser := cases.Title(language.English)
+	for _, release := range releases.Items {
+		release.Status.Phase = caser.String(release.ObjectMeta.Labels["status"])
+		err = suite.kubeClient.Status().Update(context.TODO(), &release)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (suite *ReleaseControllerTestSuite) setupReleaseController(yamlDoc string) {

@@ -31,8 +31,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -177,16 +175,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		suite.setupController(string(suite.fetchTestFileData("with-stale-error.yaml")))
 		ms := suite.getModuleSource(suite.testMSName)
 		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), ms)
-		require.NoError(suite.T(), err)
-	})
-
-	suite.Run("With outdated module releases", func() {
-		dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
-		suite.setupController(string(suite.fetchTestFileData("ms-with-module-releases.yaml")))
-		err := suite.updateModuleReleasesStatuses()
-		require.NoError(suite.T(), err)
-		ms := suite.getModuleSource(suite.testMSName)
-		_, err = suite.ctr.createOrUpdateReconcile(context.TODO(), ms)
 		require.NoError(suite.T(), err)
 	})
 }
@@ -415,25 +403,6 @@ func (suite *ControllerTestSuite) createFakeModuleSource(yamlObj string) *v1alph
 	require.NoError(suite.T(), err)
 
 	return &ms
-}
-
-func (suite *ControllerTestSuite) updateModuleReleasesStatuses() error {
-	var releases v1alpha1.ModuleReleaseList
-	err := suite.kubeClient.List(context.TODO(), &releases)
-	if err != nil {
-		return err
-	}
-
-	caser := cases.Title(language.English)
-	for _, release := range releases.Items {
-		release.Status.Phase = caser.String(release.ObjectMeta.Labels["status"])
-		err = suite.kubeClient.Status().Update(context.TODO(), &release)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (suite *ControllerTestSuite) getModuleSource(name string) *v1alpha1.ModuleSource {

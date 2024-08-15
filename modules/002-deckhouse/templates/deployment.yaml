@@ -113,7 +113,7 @@ spec:
         - name: init-downloaded-modules
           image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
           imagePullPolicy: Always
-          command: ['sh', '-c', 'if [ -d "/host/deckhouse/external-modules" ] && [ -n "$(ls -A "/host/deckhouse/external-modules")" ]; then cp -r /host/deckhouse/external-modules/* /host/deckhouse/downloaded/ && rm -rf /host/deckhouse/external-modules; fi && mkdir -p /host/deckhouse/downloaded/modules && chown -hR 64535 /host/deckhouse/downloaded /host/deckhouse/downloaded/modules && chmod 0700 /host/deckhouse/downloaded /host/deckhouse/downloaded/modules']
+          command: ['sh', '-c', 'if [ -d "/deckhouse/external-modules" ] && [ -n "$(ls -A "/deckhouse/external-modules")" ]; then cp -r /deckhouse/external-modules/* /deckhouse/downloaded/ && rm -rf /deckhouse/external-modules; fi && mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules']
           securityContext:
             runAsUser: 0
             runAsNonRoot: false
@@ -121,8 +121,8 @@ spec:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
           volumeMounts:
-            - mountPath: /host/deckhouse/
-              name: host-deckhouse
+            - mountPath: /deckhouse/
+              name: deckhouse
       containers:
         - name: deckhouse
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux" . | nindent 10 }}
@@ -301,7 +301,7 @@ spec:
       - name: certs
         secret:
           secretName: admission-webhook-certs
-      - name: host-deckhouse
+      - name: deckhouse
         hostPath:
           path: /var/lib/deckhouse
           type: DirectoryOrCreate
