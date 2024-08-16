@@ -48,7 +48,7 @@ Perform the following steps to delete a cluster deployed with a cloud provider
 
 The installer will then connect to the cluster, retrieve the necessary data, and delete all the resources and objects in the cloud that were created during the DKP installation and operation.
 
-### Deleting a hybrid cluster 
+### Deleting a hybrid cluster
 
 Follow these steps to delete a hybrid cluster consisting of the nodes that were automatically deployed in the cloud as well as the static nodes that were manually plugged in:
 
@@ -137,5 +137,5 @@ Follow the steps below to delete a cluster that has been manually installed (e.g
    where:
    - `<USER>` — the user of the remote machine that ran the installation;
    - `<MASTER_IP>` — the IP address of the cluster's master node.
-     
+
 The installer will then connect to the master node and delete all Deckhouse and Kubernetes cluster components on it.
