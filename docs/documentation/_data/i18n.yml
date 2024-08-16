@@ -77,6 +77,9 @@ common:
   x-kubernetes-int-or-string:
     en: integer or string
     ru: строка или число
+  of_x-kubernetes-int-or-string:
+    en: of integers or strings
+    ru: строк или чисел
   pattern:
     en: pattern
     ru: шаблон

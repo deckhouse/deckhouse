@@ -1,41 +1,67 @@
 @import "components/common/_variables.scss";
 
 .resources {
-  ul li {
-    margin: rem(14px) 0;
-    position: relative;
-  }
-
   ul, ol, li {
     & p:not(.resources__attrs) {
-        font-size: 14px;
-        margin: 0;
-        line-height: rem(20px);
-        padding-top: 0;
+      font-size: 14px;
+      margin: 0;
+      line-height: rem(20px);
+      padding-top: 0;
+      padding-bottom: $text-spacing-m;
+
+      &:last-child {
+        padding-bottom: 0;
+      }
     }
   }
 
   &__prop {
-    &_name {
-      display: block;
-      color: $color-main;
-      width: fit-content;
-      font-weight: $font-weight-bold;
-      font-family: monospace, 'Source Code Pro';
-      padding: 0;
+    &_wrap {
+      padding: 8px 8px 0;
+      margin-left: -24px;
+      width: calc(100% + 16px);
+
+      &:hover {
+        background: linear-gradient(180deg, #EFF3F9 0%, #FFF 100%) no-repeat;
+        border-radius: 4px;
+        background-size: auto 80px;
+      }
     }
 
-    &_name > .ancestors,
-    &_title > .ancestors {
+    &_name {
+      display: flex;
+      gap: 11px;
+      color: $color-main;
+      font-weight: $font-weight-bold;
+      font-family: monospace, 'Source Code Pro';
+      line-height: 22px;
+      margin-bottom: 6px;
+      cursor: pointer;
+
+      & .resources__prop_is_deprecated {
+        font-family: monospace, monospace;
+        font-size: 90%;
+        font-weight: normal;
+        line-height: 1rem;
+        background: #f9a3bb;
+        padding: 2px 4px;
+        border-radius: 4px;
+      }
+    }
+
+    &_name .ancestors,
+    &_title .ancestors {
       opacity: 55%;
       word-break: break-all;
     }
 
     &_type {
+      display: inline-block;
       color: $color-muted;
       font-style: normal;
       text-transform: uppercase;
-      font-size: rem(11px);
+      line-height: 22px;
+      margin-left: 20px;
 
       & + p.resources__attrs.required {
         display: inline-flex;
@@ -46,7 +72,8 @@
     }
 
     &_description {
-      margin-top: rem(7px);
+      margin-left: 20px;
+      padding-top: 12px;
 
       & ul {
         padding: rem(5px);
@@ -59,7 +86,7 @@
   }
 
   &__attrs {
-    margin-top: rem(7px);
+    margin-top: 1rem;
     margin-bottom: 0;
     display: flex;
     gap: 7px;
@@ -69,6 +96,7 @@
       font-weight: $font-weight-regular;
       font-style: italic;
       color: $color-muted;
+
       &.required {
         font-style: normal;
         color: #ff7a7a;
