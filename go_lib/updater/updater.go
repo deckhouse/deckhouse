@@ -27,6 +27,7 @@ import (
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	"k8s.io/utils/pointer"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
@@ -582,24 +583,40 @@ func (du *Updater[R]) processPendingRelease(index int, release R) {
 }
 
 func (du *Updater[R]) checkReleaseRequirements(rl *R) bool {
-	for key, value := range (*rl).GetRequirements() {
-		// these fields are checked by extenders in module release controller
-		if extenders.IsExtendersField(key) {
-			continue
-		}
-		passed, err := requirements.CheckRequirement(key, value, du.enabledModules)
-		if !passed {
-			msg := fmt.Sprintf("%q requirement for DeckhouseRelease %q not met: %s", key, (*rl).GetVersion(), err)
-			if errors.Is(err, requirements.ErrNotRegistered) {
-				du.logger.Error(err)
-				msg = fmt.Sprintf("%q requirement is not registered", key)
-			}
-			err := du.updateStatus(rl, msg, PhasePending)
+	switch any(*rl).(type) {
+	case *v1alpha1.ModuleRelease:
+		du.logger.Debugf("checking requirements of '%s' for module '%s' by extenders", (*rl).GetName(), (*rl).GetModuleName())
+		if err := extenders.CheckModuleReleaseRequirements((*rl).GetName(), (*rl).GetRequirements()); err != nil {
+			err = du.updateStatus(rl, err.Error(), PhasePending)
 			if err != nil {
 				du.logger.Error(err)
 			}
 			return false
 		}
+
+	case *v1alpha1.DeckhouseRelease:
+		for key, value := range (*rl).GetRequirements() {
+			// these fields are checked by extenders in module release controller
+			if extenders.IsExtendersField(key) {
+				continue
+			}
+			passed, err := requirements.CheckRequirement(key, value, du.enabledModules)
+			if !passed {
+				msg := fmt.Sprintf("%q requirement for DeckhouseRelease %q not met: %s", key, (*rl).GetVersion(), err)
+				if errors.Is(err, requirements.ErrNotRegistered) {
+					du.logger.Error(err)
+					msg = fmt.Sprintf("%q requirement is not registered", key)
+				}
+				err := du.updateStatus(rl, msg, PhasePending)
+				if err != nil {
+					du.logger.Error(err)
+				}
+				return false
+			}
+		}
+	default:
+		du.logger.Error("Unknown release %s type: %T", (*rl).GetName(), *rl)
+		return false
 	}
 
 	return true

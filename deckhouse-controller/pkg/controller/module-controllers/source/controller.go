@@ -42,6 +42,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	controllerUtils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
@@ -55,7 +56,7 @@ type moduleSourceReconciler struct {
 	client               client.Client
 	downloadedModulesDir string
 
-	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpecContainer
+	deckhouseEmbeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
 
 	dc dependency.Container
 
@@ -65,7 +66,7 @@ type moduleSourceReconciler struct {
 	moduleSourcesChecksum sourceChecksum
 }
 
-func NewModuleSourceController(mgr manager.Manager, dc dependency.Container, embeddedPolicyContainer *v1alpha1.ModuleUpdatePolicySpecContainer) error {
+func NewModuleSourceController(mgr manager.Manager, dc dependency.Container, embeddedPolicyContainer *helpers.ModuleUpdatePolicySpecContainer) error {
 	lg := log.WithField("component", "ModuleSourceController")
 
 	c := &moduleSourceReconciler{

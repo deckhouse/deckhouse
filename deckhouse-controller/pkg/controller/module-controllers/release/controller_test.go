@@ -43,6 +43,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
@@ -119,6 +120,34 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		suite.Run("with annotation", func() {
 			suite.setupReleaseController(string(suite.fetchTestFileData("with-annotation.yaml")))
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("deckhouse suitable version", func() {
+			suite.setupReleaseController(string(suite.fetchTestFileData("dVersion-suitable.yaml")))
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("deckhouse unsuitable version", func() {
+			suite.setupReleaseController(string(suite.fetchTestFileData("dVersion-suitable.yaml")))
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("kubernetes suitable version", func() {
+			suite.setupReleaseController(string(suite.fetchTestFileData("kVersion-suitable.yaml")))
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("kubernetes unsuitable version", func() {
+			suite.setupReleaseController(string(suite.fetchTestFileData("kVersion-suitable.yaml")))
 			mr := suite.getModuleRelease(suite.testMRName)
 			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
 			require.NoError(suite.T(), err)
@@ -213,7 +242,7 @@ type: Opaque
 		moduleManager:        stubModulesManager{},
 		delayTimer:           time.NewTimer(3 * time.Second),
 
-		deckhouseEmbeddedPolicy: v1alpha1.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
+		deckhouseEmbeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
 			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
 				Mode: "Auto",
 			},

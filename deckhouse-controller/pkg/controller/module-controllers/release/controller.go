@@ -55,6 +55,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -75,7 +76,7 @@ type moduleReleaseReconciler struct {
 	downloadedModulesDir string
 	symlinksDir          string
 
-	deckhouseEmbeddedPolicy *v1alpha1.ModuleUpdatePolicySpecContainer
+	deckhouseEmbeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
 
 	preflightCountDown *sync.WaitGroup
 
@@ -100,7 +101,7 @@ const (
 func NewModuleReleaseController(
 	mgr manager.Manager,
 	dc dependency.Container,
-	embeddedPolicyContainer *v1alpha1.ModuleUpdatePolicySpecContainer,
+	embeddedPolicyContainer *helpers.ModuleUpdatePolicySpecContainer,
 	mm moduleManager,
 	metricStorage *metric_storage.MetricStorage,
 	preflightCountDown *sync.WaitGroup,
@@ -446,7 +447,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		modulePath := generateModulePath(moduleName, deployedRelease.Spec.Version.String())
 		if !isModuleExistsOnFS(c.symlinksDir, currentModuleSymlink, modulePath) {
 			newModuleSymlink := path.Join(c.symlinksDir, fmt.Sprintf("%d-%s", deployedRelease.Spec.Weight, moduleName))
-			c.logger.Debugf("Module %q is not exists on the filesystem. Restoring", moduleName)
+			c.logger.Debugf("Module %q doesn't exist on the filesystem. Restoring", moduleName)
 			err = enableModule(c.downloadedModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
 			if err != nil {
 				c.logger.Errorf("Module restore failed: %v", err)

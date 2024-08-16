@@ -145,6 +145,10 @@ func (in *DeckhouseRelease) GetNotificationShift() bool {
 	return ok && v == "true"
 }
 
+func (mr *DeckhouseRelease) GetModuleName() string {
+	return ""
+}
+
 type DeckhouseReleaseSpec struct {
 	Version       string            `json:"version,omitempty"`
 	ApplyAfter    *metav1.Time      `json:"applyAfter,omitempty"`
