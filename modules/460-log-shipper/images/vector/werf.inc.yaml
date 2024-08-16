@@ -30,7 +30,12 @@ shell:
   - git clone --depth 1 --branch v0.40.0 {{ $.SOURCE_REPO }}/vectordotdev/vector.git
   - cd /vector
   - git apply /patches/*.patch --verbose
-  - make build
+  - cargo build \
+    --release \
+    -j $(($(nproc) /2)) \
+    --offline \
+    --no-default-features \
+    --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,sinks-kafka,sinks-splunk_hec,unix,rdkafka?/gssapi-vendored"
   - strip target/release/vector
   - mkdir -p /relocate/etc /relocate/usr/bin
   - cp target/release/vector /relocate/usr/bin/vector

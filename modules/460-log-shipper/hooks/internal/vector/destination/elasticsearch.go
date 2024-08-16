@@ -26,6 +26,8 @@ import (
 type Elasticsearch struct {
 	CommonSettings
 
+	APIVersion string `json:"api_version,omitempty"`
+
 	Endpoint string `json:"endpoint"`
 
 	Encoding Encoding `json:"encoding,omitempty"`
@@ -100,6 +102,7 @@ func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec) *El
 	}
 
 	return &Elasticsearch{
+		APIVersion: "v6",
 		CommonSettings: CommonSettings{
 			Name:   ComposeName(name),
 			Type:   "elasticsearch",
