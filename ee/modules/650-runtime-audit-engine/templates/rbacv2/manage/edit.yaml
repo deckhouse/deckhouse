@@ -5,8 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: runtime-audit-engine
-    rbac.deckhouse.io/aggregate-to-role: manager
-    rbac.deckhouse.io/aggregate-to-security: "true"
+    rbac.deckhouse.io/aggregate-to-security-as: manager
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-runtime-audit-engine

@@ -5,8 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: secret-copier
-    rbac.deckhouse.io/aggregate-to-role: viewer
-    rbac.deckhouse.io/aggregate-to-security: "true"
+    rbac.deckhouse.io/aggregate-to-security-as: viewer
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
   name: d8:manage:capability:module:secret-copier:view

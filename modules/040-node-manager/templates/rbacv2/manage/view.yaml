@@ -5,8 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: node-manager
-    rbac.deckhouse.io/aggregate-to-infrastructure: "true"
-    rbac.deckhouse.io/aggregate-to-role: viewer
+    rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-cloud-instance-manager

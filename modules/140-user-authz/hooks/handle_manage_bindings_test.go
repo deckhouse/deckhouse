@@ -37,11 +37,11 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-scope-bindings ::", f
 			resources := []string{
 				manageModuleRole("d8:manage:capability:module:test:edit", "others", "test-ns"),
 				manageModuleRole("d8:manage:capability:module:test2:edit", "others", "test2-ns"),
-				manageScopeRole("d8:manage:others:admin", "others"),
+				manageScopeRole("d8:manage:others:admin", "scope", "others"),
 				manageScopeBinding("test", "d8:manage:others:admin"),
 
 				manageModuleRole("d8:manage:capability:module:test3:edit", "test", "test2-ns"),
-				manageScopeRole("d8:manage:test:admin", "test"),
+				manageScopeRole("d8:manage:test:admin", "scope", "test"),
 				manageScopeBinding("test2", "d8:manage:test:admin"),
 			}
 			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
@@ -50,13 +50,34 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-scope-bindings ::", f
 
 		It("Should create RoleBinding", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:binding:test")
-			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:binding:test"))
-			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:binding:test")
-			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:binding:test"))
+			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:use:binding:test")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:binding:test"))
+			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:use:binding:test")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:binding:test"))
 
-			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:binding:test2")
-			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:binding:test2"))
+			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:use:binding:test2")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:binding:test2"))
+		})
+	})
+
+	Context("There`s ManageAllBinding", func() {
+		BeforeEach(func() {
+			resources := []string{
+				manageModuleRole("d8:manage:capability:module:test:edit", "others", "test-ns"),
+				manageModuleRole("d8:manage:capability:module:test2:edit", "others", "test2-ns"),
+				manageScopeRole("d8:manage:all:admin", "all", ""),
+				manageScopeBinding("test", "d8:manage:all:admin"),
+			}
+			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
+			f.RunHook()
+		})
+
+		It("Should create RoleBinding", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:use:binding:test")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:binding:test"))
+			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:use:binding:test")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:binding:test"))
 		})
 	})
 
@@ -74,19 +95,19 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-scope-bindings ::", f
 
 		It("Should delete RoleBinding", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:binding:test")
+			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:use:binding:test")
 			Expect(roleBinding).To(BeEmpty())
-			roleBinding = f.KubernetesResource("RoleBinding", "test-ns", "d8:binding:test2")
+			roleBinding = f.KubernetesResource("RoleBinding", "test-ns", "d8:use:binding:test2")
 			Expect(roleBinding).To(BeEmpty())
-			roleBinding = f.KubernetesResource("RoleBinding", "test-ns2", "d8:binding:test3")
+			roleBinding = f.KubernetesResource("RoleBinding", "test-ns2", "d8:use:binding:test3")
 			Expect(roleBinding).To(BeEmpty())
-			roleBinding = f.KubernetesResource("RoleBinding", "test-ns2", "d8:binding:test4")
+			roleBinding = f.KubernetesResource("RoleBinding", "test-ns2", "d8:use:binding:test4")
 			Expect(roleBinding).To(BeEmpty())
 		})
 	})
 })
 
-func manageScopeRole(name, scope string) string {
+func manageScopeRole(name, level, scope string) string {
 	role := rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
@@ -96,11 +117,13 @@ func manageScopeRole(name, scope string) string {
 			Name: name,
 			Labels: map[string]string{
 				"heritage":                "deckhouse",
-				"rbac.deckhouse.io/level": "scope",
+				"rbac.deckhouse.io/level": level,
 				"rbac.deckhouse.io/kind":  "manage",
-				"rbac.deckhouse.io/scope": scope,
 			},
 		},
+	}
+	if scope != "" {
+		role.Labels["rbac.deckhouse.io/scope"] = scope
 	}
 	marshaled, _ := yaml.Marshal(&role)
 	return string(marshaled)
@@ -119,7 +142,7 @@ func manageModuleRole(name, scope, namespace string) string {
 				"rbac.deckhouse.io/level":     "module",
 				"rbac.deckhouse.io/kind":      "manage",
 				"rbac.deckhouse.io/namespace": namespace,
-				fmt.Sprintf("rbac.deckhouse.io/aggregate-to-%s", scope): "true",
+				fmt.Sprintf("rbac.deckhouse.io/aggregate-to-%s-as", scope): "admin",
 			},
 		},
 	}

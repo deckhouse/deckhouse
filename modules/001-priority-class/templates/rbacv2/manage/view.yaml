@@ -5,8 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: priority-class
-    rbac.deckhouse.io/aggregate-to-kubernetes: "true"
-    rbac.deckhouse.io/aggregate-to-role: viewer
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
   name: d8:manage:capability:module:priority-class:view

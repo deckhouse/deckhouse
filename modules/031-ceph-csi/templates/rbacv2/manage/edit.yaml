@@ -5,9 +5,8 @@ metadata:
   labels:
     heritage: deckhouse
     module: ceph-csi
-    rbac.deckhouse.io/aggregate-to-infrastructure: "true"
-    rbac.deckhouse.io/aggregate-to-role: manager
-    rbac.deckhouse.io/aggregate-to-storage: "true"
+    rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
+    rbac.deckhouse.io/aggregate-to-storage-as: manager
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-ceph-csi

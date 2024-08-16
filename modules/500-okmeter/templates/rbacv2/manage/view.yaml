@@ -5,8 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: okmeter
-    rbac.deckhouse.io/aggregate-to-observability: "true"
-    rbac.deckhouse.io/aggregate-to-role: viewer
+    rbac.deckhouse.io/aggregate-to-observability-as: viewer
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-okmeter

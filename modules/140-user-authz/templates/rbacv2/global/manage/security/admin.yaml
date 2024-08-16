@@ -8,12 +8,11 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: scope
     rbac.deckhouse.io/scope: security
-    rbac.deckhouse.io/aggregate-to-role: disaster-admin
-    rbac.deckhouse.io/aggregate-to-security: "true"
     rbac.deckhouse.io/aggregate-to-all-as: admin
 aggregationRule:
   clusterRoleSelectors:
   - matchLabels:
-      rbac.deckhouse.io/aggregate-to-security: "true"
-      rbac.deckhouse.io/aggregate-to-role: admin
+      rbac.deckhouse.io/kind: manage
+      rbac.deckhouse.io/level: module
+      rbac.deckhouse.io/aggregate-to-security-as: admin
 rules: []

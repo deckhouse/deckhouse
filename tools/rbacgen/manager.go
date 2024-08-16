@@ -34,7 +34,7 @@ import (
 
 const allResources = "all"
 
-var scopeTemplate = "rbac.deckhouse.io/aggregate-to-%s"
+var scopeTemplate = "rbac.deckhouse.io/aggregate-to-%s-as"
 
 type moduleGenerator struct {
 	module             string
@@ -242,27 +242,45 @@ func (m *moduleGenerator) buildRoles(manageResources, useResources map[string][]
 	return manageRoles, useRoles
 }
 func (m *moduleGenerator) buildRole(rbacRole, rbacKind, rbacVerb string, rules []rbacv1.PolicyRule) *rbacv1.ClusterRole {
-	role := &rbacv1.ClusterRole{
-		TypeMeta: apimachineryv1.TypeMeta{
-			APIVersion: rbacv1.SchemeGroupVersion.String(),
-			Kind:       "ClusterRole",
-		},
-		ObjectMeta: apimachineryv1.ObjectMeta{
-			Name: fmt.Sprintf("d8:%s:capability:module:%s:%s", rbacKind, m.module, rbacVerb),
-			Labels: map[string]string{
-				"heritage":                            "deckhouse",
-				"module":                              m.module,
-				"rbac.deckhouse.io/kind":              rbacKind,
-				"rbac.deckhouse.io/aggregate-to-role": rbacRole,
+	var role *rbacv1.ClusterRole
+	if rbacKind == "use" {
+		role = &rbacv1.ClusterRole{
+			TypeMeta: apimachineryv1.TypeMeta{
+				APIVersion: rbacv1.SchemeGroupVersion.String(),
+				Kind:       "ClusterRole",
 			},
-		},
-		Rules: rules,
+			ObjectMeta: apimachineryv1.ObjectMeta{
+				Name: fmt.Sprintf("d8:%s:capability:module:%s:%s", rbacKind, m.module, rbacVerb),
+				Labels: map[string]string{
+					"heritage":                            "deckhouse",
+					"module":                              m.module,
+					"rbac.deckhouse.io/kind":              rbacKind,
+					"rbac.deckhouse.io/aggregate-to-role": rbacRole,
+				},
+			},
+			Rules: rules,
+		}
 	}
 	if rbacKind == "manage" {
-		for _, scope := range m.scopes {
-			role.ObjectMeta.Labels[fmt.Sprintf(scopeTemplate, scope)] = "true"
+		role = &rbacv1.ClusterRole{
+			TypeMeta: apimachineryv1.TypeMeta{
+				APIVersion: rbacv1.SchemeGroupVersion.String(),
+				Kind:       "ClusterRole",
+			},
+			ObjectMeta: apimachineryv1.ObjectMeta{
+				Name: fmt.Sprintf("d8:%s:capability:module:%s:%s", rbacKind, m.module, rbacVerb),
+				Labels: map[string]string{
+					"heritage":                "deckhouse",
+					"module":                  m.module,
+					"rbac.deckhouse.io/kind":  rbacKind,
+					"rbac.deckhouse.io/level": "module",
+				},
+			},
+			Rules: rules,
 		}
-		role.ObjectMeta.Labels["rbac.deckhouse.io/level"] = "module"
+		for _, scope := range m.scopes {
+			role.ObjectMeta.Labels[fmt.Sprintf(scopeTemplate, scope)] = rbacRole
+		}
 		if m.namespace != "none" {
 			if m.namespace == "" {
 				role.ObjectMeta.Labels["rbac.deckhouse.io/namespace"] = fmt.Sprintf("d8-%s", m.module)
