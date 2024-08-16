@@ -31,7 +31,7 @@ import (
 )
 
 // ExecSSHCommand executes a command on the StaticInstance.
-func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout io.Writer) error {
+func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout io.Writer) (err error) {
 	privateSSHKey, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.PrivateSSHKey)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode private ssh key")
@@ -44,15 +44,15 @@ func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout i
 		return errors.Wrap(err, "failed to create a temporary file for private ssh key")
 	}
 	defer func() {
-		err = sshKey.Close()
-		if err != nil {
-			err = errors.Wrapf(err, "failed to close temporary file '%s' with private ssh key", sshKey.Name())
+		errD := sshKey.Close()
+		if errD != nil {
+			err = errors.Wrapf(errD, "failed to close temporary file '%s' with private ssh key", sshKey.Name())
 			return
 		}
 
-		err = os.Remove(sshKey.Name())
-		if err != nil {
-			err = errors.Wrapf(err, "failed to remove temporary file '%s' with private ssh key", sshKey.Name())
+		errD = os.Remove(sshKey.Name())
+		if errD != nil {
+			err = errors.Wrapf(errD, "failed to remove temporary file '%s' with private ssh key", sshKey.Name())
 			return
 		}
 	}()
