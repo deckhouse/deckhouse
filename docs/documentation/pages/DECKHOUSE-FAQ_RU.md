@@ -953,14 +953,14 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Проверьте, не осталось ли в кластере подов с адресом registry для Deckhouse CE:
 
    ```shell
-   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ce"))))
-     | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
+   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+     | select(.image | contains("deckhouse.ru/deckhouse/ce"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
    Иногда могут оставаться запущенными некоторые static Pod'ы (например, `kubernetes-api-proxy-*`). Это связанно с тем, что kubelet не перезапускает под несмотря на изменение соответствующего манифеста, так как используемый образ одинаков для Deckhouse CE и EE. Выполните на любом master-узле следующую команду, чтобы убедиться, что соответствующие манифесты также были изменены:
 
    ```shell
-   grep -ri 'deckhouse.io/deckhouse/ce' /etc/kubernetes | grep -v backup
+   grep -ri 'deckhouse.ru/deckhouse/ce' /etc/kubernetes | grep -v backup
    ```
 
    Вывод команды должен быть пуст.
