@@ -24,13 +24,9 @@ import (
 )
 
 func TestValidateConfigWithVector(t *testing.T) {
-	if os.Getenv("D8_LOG_SHIPPER_VECTOR_VALIDATE") != "yes" {
-		t.Skip("Do not run this on CI")
-	}
-
 	containerImage := os.Getenv("D8_LOG_SHIPPER_VECTOR_VALIDATE_IMAGE")
 	if containerImage == "" {
-		containerImage = "timberio/vector:0.31.0-debian"
+		containerImage = "dev-registry.deckhouse.io/sys/deckhouse-oss@sha256:21965070ab324aba85725b568976b8f8d43d7fd562c2678d9ee173ee86381c11"
 	}
 
 	script := `
@@ -44,7 +40,7 @@ func TestValidateConfigWithVector(t *testing.T) {
 
 	t.Run(fmt.Sprintf("Executing from the %q image", containerImage), func(t *testing.T) {
 		cmd := exec.Command(
-			"docker",
+			"/usr/local/bin/docker",
 			"run",
 			"-t",
 			"-v", "/deckhouse:/deckhouse",
