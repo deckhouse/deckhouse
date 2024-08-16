@@ -49,7 +49,7 @@ spec:
                     type: object
                     required: ['service', 'caBundle']
                     description: |
-                      Конфигурация вебхука.
+                      ClientConfig определяет параметры доступа к вебхуку.
                     properties:
                       service:
                         type: object
@@ -76,7 +76,7 @@ spec:
                       caBundle:
                         type: string
                         description: |
-                          CA bundle для проверки сертификата вебхука.
+                          caBundle - это пакет CA в PEM-кодировке, который будет использоваться для проверки сертификата сервера webhook.
                   timeoutSeconds:
                     type: integer
                     description: |

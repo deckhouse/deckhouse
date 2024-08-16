@@ -47,7 +47,7 @@ spec:
                     type: object
                     required: ['service', 'caBundle']
                     description: |
-                      Webhook config.
+                      ClientConfig defines how to communicate with the webhook.
                     properties:
                       service:
                         type: object
@@ -88,15 +88,16 @@ spec:
                       caBundle:
                         type: string
                         description: |
-                          CA bundle to verify webhook certificate.
+                          caBundle is a PEM encoded CA bundle which will be used to validate the webhook's server certificate.
                         pattern: '^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{4}|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+\/]{2}={2})$'
                         minLength: 4
                   timeoutSeconds:
                     type: integer
                     description: |
                       Webhook timeout in seconds.
-                    default: 5
+                    default: 10
                     minimal: 1
+                    maximal: 60
       additionalPrinterColumns:
         - jsonPath: .webhooks[0].clientConfig.service.name
           name: Name
