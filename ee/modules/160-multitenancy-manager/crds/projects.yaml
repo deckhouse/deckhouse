@@ -110,6 +110,8 @@ spec:
               properties:
                 observedGeneration:
                   type: integer
+                templateGeneration:
+                  type: integer
                 conditions:
                   type: array
                   x-kubernetes-patch-strategy: "retainKeys"

@@ -125,6 +125,9 @@ type ProjectStatus struct {
 	// Observed generation
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
+	// Template generation
+	TemplateGeneration int64 `json:"templateGeneration,omitempty"`
+
 	// Project conditions
 	Conditions []Condition `json:"conditions,omitempty"`
 
@@ -150,6 +153,7 @@ func (p *ProjectStatus) DeepCopyInto(newObj *ProjectStatus) {
 		}
 	}
 	newObj.ObservedGeneration = p.ObservedGeneration
+	newObj.TemplateGeneration = p.TemplateGeneration
 	newObj.State = p.State
 }
 

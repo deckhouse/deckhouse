@@ -28,7 +28,7 @@ func (m *manager) projectTemplateByName(ctx context.Context, name string) (*v1al
 	return template, nil
 }
 
-func (m *manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Project, state string, condition *v1alpha2.Condition) error {
+func (m *manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Project, state string, templateGeneration int64, condition *v1alpha2.Condition) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
 			return err
@@ -44,6 +44,10 @@ func (m *manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Pro
 
 		if project.Status.ObservedGeneration != project.Generation {
 			project.Status.ObservedGeneration = project.Generation
+		}
+
+		if templateGeneration != 0 && project.Status.TemplateGeneration != templateGeneration {
+			project.Status.TemplateGeneration = templateGeneration
 		}
 
 		if condition != nil {

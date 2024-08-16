@@ -77,7 +77,7 @@ func (m *manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 // Handle ensures project`s resources
 func (m *manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error) {
 	// set deploying status
-	if err := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateDeploying, nil); err != nil {
+	if err := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateDeploying, 0, nil); err != nil {
 		m.log.Error(err, "failed to set project status")
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -95,7 +95,7 @@ func (m *manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	if err != nil {
 		m.log.Error(err, "failed to get project template", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
 		cond := m.makeCondition(v1alpha2.ConditionTypeProjectTemplateFound, v1alpha2.ConditionTypeFalse, err.Error())
-		if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, cond); statusErr != nil {
+		if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, 0, cond); statusErr != nil {
 			m.log.Error(statusErr, "failed to set project status", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -105,7 +105,7 @@ func (m *manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	if projectTemplate == nil {
 		m.log.Info("the project template not found for the project", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
 		cond := m.makeCondition(v1alpha2.ConditionTypeProjectTemplateFound, v1alpha2.ConditionTypeFalse, "The project template not found")
-		if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, cond); statusErr != nil {
+		if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, 0, cond); statusErr != nil {
 			m.log.Error(statusErr, "failed to set the project status", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -114,7 +114,7 @@ func (m *manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 
 	// update conditions
 	cond := m.makeCondition(v1alpha2.ConditionTypeProjectTemplateFound, v1alpha2.ConditionTypeTrue, "")
-	if statusErr := m.updateProjectStatus(ctx, project, "", cond); statusErr != nil {
+	if statusErr := m.updateProjectStatus(ctx, project, "", projectTemplate.Generation, cond); statusErr != nil {
 		m.log.Error(statusErr, "failed to update the project status", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -124,7 +124,7 @@ func (m *manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	if err = validate.Project(project, projectTemplate); err != nil {
 		m.log.Error(err, "failed to validate the project spec", "project", project.Name, "projectTemplate", projectTemplate.Name)
 		m.makeCondition(v1alpha2.ConditionTypeProjectValidated, v1alpha2.ConditionTypeFalse, err.Error())
-		if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, cond); statusErr != nil {
+		if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, projectTemplate.Generation, cond); statusErr != nil {
 			m.log.Error(statusErr, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -133,7 +133,7 @@ func (m *manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 
 	// update conditions
 	cond = m.makeCondition(v1alpha2.ConditionTypeProjectValidated, v1alpha2.ConditionTypeTrue, "")
-	if statusErr := m.updateProjectStatus(ctx, project, "", cond); statusErr != nil {
+	if statusErr := m.updateProjectStatus(ctx, project, "", projectTemplate.Generation, cond); statusErr != nil {
 		m.log.Error(statusErr, "failed to update the project status", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -142,7 +142,7 @@ func (m *manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	m.log.Info("upgrading resources for the project", "project", project.Name, "projectTemplate", projectTemplate.Name)
 	if err = m.helmClient.Upgrade(ctx, project, projectTemplate); err != nil {
 		cond = m.makeCondition(v1alpha2.ConditionTypeProjectResourcesUpgraded, v1alpha2.ConditionTypeFalse, err.Error())
-		if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, cond); statusErr != nil {
+		if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, projectTemplate.Generation, cond); statusErr != nil {
 			m.log.Error(statusErr, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -154,7 +154,7 @@ func (m *manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 
 	// set deployed status
 	m.log.Info("setting deployed status for the project", "project", project.Name, "projectTemplate", projectTemplate.Name)
-	if err = m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateDeployed, cond); err != nil {
+	if err = m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateDeployed, projectTemplate.Generation, cond); err != nil {
 		m.log.Error(err, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
 		return ctrl.Result{Requeue: true}, nil
 	}
