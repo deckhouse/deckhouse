@@ -160,6 +160,41 @@ $(document).ready(function(){
     })
 });
 
+$(document).ready(function(){
+  const tables = $('table');
+
+  if (tables.length === 0) {
+    return;
+  }
+
+  tables.each((_, table) => {
+    $(table).wrap("<div class='table-wrapper'></div>")
+  })
+});
+
+$(document).ready(function(){
+  const titles = $('.resources__prop_name');
+  const links = $('.resources__prop_wrap .anchorjs-link');
+
+  links.each((i, link) => {
+    $(link).click((e) => {
+      e.stopPropagation();
+    })
+  })
+
+  titles.each((i, title) => {
+    $(title).click(() => {
+      const firstList = $(title).parent('.resources__prop_wrap').parent('li').parent('ul');
+
+      if (firstList.hasClass('resources')) return;
+
+      const parentElem = $(title).parent('.resources__prop_wrap').parent('li');
+
+      parentElem.toggleClass('closed');
+    })
+  })
+});
+
 const openDiagram = function () {
   const button = $('[data-open-scheme]');
   const wrap = $('.functionality-block__diagram-wrap')
