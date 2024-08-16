@@ -126,26 +126,38 @@
   {{- if and $isArray }}<br>
     {{- range $example }}
       {{- if reflect.IsMap . }}
-         {{- transform.Highlight ( transform.Remarshal "yaml" ( . | jsonify ) ) "yaml" $hl_opts }}
+        <div class="language-yaml highlighter-rouge">
+          {{- transform.Highlight ( transform.Remarshal "yaml" ( . | jsonify ) ) "yaml" $hl_opts }}
+        </div>
       {{- else if reflect.IsSlice . }}
-         {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name . ) ) "yaml" $hl_opts }}
+        <div class="language-yaml highlighter-rouge">
+          {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name . ) ) "yaml" $hl_opts }}
+        </div>
       {{- else }}
          {{- if hasPrefix . "```" }}
            {{- . | markdownify }}
          {{- else }}
-           {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name . ) ) "yaml" $hl_opts }}
+           <div class="language-yaml highlighter-rouge">
+             {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name . ) ) "yaml" $hl_opts }}
+           </div>
          {{- end }}
       {{- end }}
     {{- end }}
   {{- else if reflect.IsMap $example }}
-     {{- transform.Highlight ( transform.Remarshal "yaml" ( $example | jsonify ) ) "yaml" $hl_opts }}
+    <div class="language-yaml highlighter-rouge">
+      {{- transform.Highlight ( transform.Remarshal "yaml" ( $example | jsonify ) ) "yaml" $hl_opts }}
+    </div>
   {{- else if reflect.IsSlice $example }}
-     {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name $example ) ) "yaml" $hl_opts }}
+    <div class="language-yaml highlighter-rouge">
+      {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name $example ) ) "yaml" $hl_opts }}
+    </div>
   {{- else }}
-     {{- if hasPrefix $example "```" }}
-       {{- $example | markdownify }}
-     {{- else }}
-       {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name $example ) ) "yaml" $hl_opts }}
+    {{- if hasPrefix $example "```" }}
+      {{- $example | markdownify }}
+    {{- else }}
+      <div class="language-yaml highlighter-rouge">
+        {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name $example ) ) "yaml" $hl_opts }}
+      </div>
      {{- end }}
   {{- end }}
 {{- end }}
