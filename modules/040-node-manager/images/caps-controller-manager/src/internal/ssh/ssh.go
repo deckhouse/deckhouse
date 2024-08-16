@@ -31,7 +31,7 @@ import (
 )
 
 // ExecSSHCommand executes a command on the StaticInstance.
-func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout io.Writer) (err error) {
+func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout io.Writer) error {
 	privateSSHKey, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.PrivateSSHKey)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode private ssh key")
