@@ -1,0 +1,84 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: kubeschedulerwebhookconfigurations.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: control-plane-manager
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: kubeschedulerwebhookconfigurations
+    singular: kubeschedulerwebhookconfiguration
+    kind: KubeSchedulerWebhookConfiguration
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ['webhooks']
+          description: |
+            Определяет конфигурацию внешнего вебхука планировщика (kube-scheduler).
+
+            Подключение внешнего вебхука к планировщику позволяет расширить возможности планировщика, и учитывать более сложные условия при планировании нагрузки в кластере.
+          properties:
+            webhooks:
+              type: array
+              items:
+                type: object
+                required: ['weight', 'clientConfig']
+                properties:
+                  weight:
+                    type: integer
+                    description: |
+                      Числовой множитель для оценок узла, которые генерирует вызов расчета приоритезации.
+                    minimum: 1
+                  failurePolicy:
+                    type: string
+                    enum: ['Fail', 'Ignore']
+                    description: |
+                      Политика реакции на событие, если вебхук вернул ошибку или недоступен:
+                      - `Fail` — падать с ошибкой;
+                      - `Ignore` — пропускать (игнорировать).
+                    default: Fail
+                  clientConfig:
+                    type: object
+                    required: ['service', 'caBundle']
+                    description: |
+                      ClientConfig определяет параметры доступа к вебхуку.
+                    properties:
+                      service:
+                        type: object
+                        required: ['name', 'namespace', 'port', 'path']
+                        description: |
+                          Параметры доступа к вебхуку через сервис в кластере.
+                        properties:
+                          name:
+                            type: string
+                            description: |
+                              Имя сервиса.
+                          namespace:
+                            type: string
+                            description: |
+                              Namespace сервиса.
+                          port:
+                            type: integer
+                            description: |
+                              Порт сервиса.
+                          path:
+                            type: string
+                            description: |
+                              URI путь.
+                      caBundle:
+                        type: string
+                        description: |
+                          caBundle - это пакет CA в PEM-кодировке, который будет использоваться для проверки сертификата сервера webhook.
+                  timeoutSeconds:
+                    type: integer
+                    description: |
+                      Таймаут срабатывания вебхука.
+                    default: 5

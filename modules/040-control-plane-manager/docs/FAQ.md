@@ -778,3 +778,19 @@ Finally, the scheduler assigns the Pod to the node with the highest ranking.
 - [Plugin system](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins)
 - [Node Filtering Details](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduler-perf-tuning/)
 - [Scheduler source code](https://github.com/kubernetes/kubernetes/tree/master/cmd/kube-scheduler)
+
+### How to change/extend the scheduler logic
+
+To change the logic of the scheduler it is possible to use the extension mechanism [Extenders](https://github.com/kubernetes/enhancements/blob/master/keps/sig-scheduling/624-scheduling-framework/README.md).
+
+Each plugin is a webhook that must satisfy the following requirements:
+* Use of TLS.
+* Accessibility through a service within the cluster.
+* Support for standard *Verbs* (filterVerb = filter, prioritizeVerb = prioritize).
+* It is also assumed that all plugins can cache node information (`nodeCacheCapable: true`).
+
+You can connect an extender using [KubeSchedulerWebhookConfiguration](cr.html#kubeschedulerwebhookconfiguration) resource.
+
+{% alert level="danger" %}
+When using the `failurePolicy: Fail` option, in case of an error in the webhook's operation, the scheduler will stop working and new pods will not be able to start.
+{% endalert %}

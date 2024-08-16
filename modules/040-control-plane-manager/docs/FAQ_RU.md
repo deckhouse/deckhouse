@@ -768,3 +768,19 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 - [Система плагинов](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins)
 - [Подробности фильтрации узлов](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduler-perf-tuning/)
 - [Исходный код scheduler](https://github.com/kubernetes/kubernetes/tree/master/cmd/kube-scheduler)
+
+### Как изменить/расширить логику работы планировщика
+
+Для изменения логики работы планировщика можно использовать [механизм плагинов расширения](https://github.com/kubernetes/enhancements/blob/master/keps/sig-scheduling/624-scheduling-framework/README.md).
+
+Каждый плагин представляет собой вебхук, отвечающий следующим требованиям:
+* Использование TLS.
+* Доступность через сервис внутри кластера.
+* Поддержка стандартных *Verbs* (filterVerb = filter, prioritizeVerb = prioritize).
+* Также, предполагается что все подключаемые плагины могут кэшировать информацию об узле (`nodeCacheCapable: true`).
+
+Подключить extender можно при помощи ресурса [KubeSchedulerWebhookConfiguration](cr.html#kubeschedulerwebhookconfiguration).
+
+{% alert level="danger" %}
+При использовании опции `failurePolicy: Fail`, в случе ошибки в работе вебхука, планировщик прекратит работу и новые поды не смогут запуститься.
+{% endalert %}
