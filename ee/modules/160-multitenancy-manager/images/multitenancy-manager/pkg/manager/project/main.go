@@ -141,7 +141,6 @@ func (m *manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	// upgrade project`s resources
 	m.log.Info("upgrading resources for the project", "project", project.Name, "projectTemplate", projectTemplate.Name)
 	if err = m.helmClient.Upgrade(ctx, project, projectTemplate); err != nil {
-		m.log.Error(err, "failed to upgrade resources for the project", "project", project.Name, "projectTemplate", projectTemplate.Name)
 		cond = m.makeCondition(v1alpha2.ConditionTypeProjectResourcesUpgraded, v1alpha2.ConditionTypeFalse, err.Error())
 		if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, cond); statusErr != nil {
 			m.log.Error(statusErr, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
