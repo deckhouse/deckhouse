@@ -34,7 +34,6 @@ shell:
     cargo build \
     --release \
     -j $(($(nproc) /2)) \
-    --offline \
     --no-default-features \
     --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,sinks-kafka,sinks-splunk_hec,unix,rdkafka?/gssapi-vendored"
   - strip target/release/vector
