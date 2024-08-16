@@ -46,7 +46,10 @@ const (
 	PhaseSkipped    = "Skipped"
 )
 
-var ErrNotReadyForDeploy = errors.New("not ready for deploy")
+var (
+	ErrNotReadyForDeploy  = errors.New("not ready for deploy")
+	ErrRequirementsNotMet = errors.New("release requirements not met")
+)
 
 type Updater[R Release] struct {
 	now          time.Time
@@ -284,7 +287,7 @@ func (du *Updater[R]) checkMinorReleaseConditions(predictedRelease *R, updateWin
 //   - Release requirements
 func (du *Updater[R]) ApplyPredictedRelease(updateWindows update.Windows) error {
 	if du.predictedReleaseIndex == -1 {
-		return fmt.Errorf("release not found") // has no predicted release
+		return ErrRequirementsNotMet // has no predicted release
 	}
 
 	var currentRelease *R
@@ -555,6 +558,7 @@ func (du *Updater[R]) PredictedReleaseIsPatch() bool {
 }
 
 func (du *Updater[R]) processPendingRelease(index int, release R) {
+	releaseRequirementsMet := du.checkReleaseRequirements(&release)
 	// check: already has predicted release and current is a patch
 	if du.predictedReleaseIndex >= 0 {
 		previousPredictedRelease := du.releases[du.predictedReleaseIndex]
@@ -566,7 +570,9 @@ func (du *Updater[R]) processPendingRelease(index int, release R) {
 			return
 		}
 		// it's a patch for predicted release, continue
-		du.skippedPatchesIndexes = append(du.skippedPatchesIndexes, du.predictedReleaseIndex)
+		if releaseRequirementsMet {
+			du.skippedPatchesIndexes = append(du.skippedPatchesIndexes, du.predictedReleaseIndex)
+		}
 	}
 
 	// if we have a deployed a release
@@ -579,7 +585,7 @@ func (du *Updater[R]) processPendingRelease(index int, release R) {
 	}
 
 	// release is predicted to be Deployed
-	if du.checkReleaseRequirements(&release) {
+	if releaseRequirementsMet {
 		du.predictedReleaseIndex = index
 	}
 }
