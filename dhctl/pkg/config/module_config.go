@@ -192,13 +192,27 @@ func CheckOrSetupArbitaryCNIModuleConfig(cfg *DeckhouseInstaller) error {
 
 	cniMC.Spec.Enabled = pointer.Bool(true)
 
+	// get provider cluster configuration
 	pcc := make(map[string]json.RawMessage)
 	err := yaml.Unmarshal(cfg.ProviderClusterConfig, &pcc)
 	if err != nil {
 		return err
 	}
 
+	// get cloud discovery data
+	cd := make(map[string]json.RawMessage)
+	err = yaml.Unmarshal(cfg.CloudDiscovery, &cd)
+	if err != nil {
+		return err
+	}
+
 	providerName := strings.ToLower(strings.TrimSuffix(string(pcc["kind"]), "ClusterConfiguration"))
+
+	var isVXLAN bool
+	if podNetworkMode, ok := cd["podNetworkMode"]; ok {
+		isVXLAN = string(podNetworkMode) == "VXLAN"
+	}
+
 	switch providerName {
 
 	// static or unknown provider
@@ -206,9 +220,17 @@ func CheckOrSetupArbitaryCNIModuleConfig(cfg *DeckhouseInstaller) error {
 		cniMC.SetName("cni-cilium")
 		v := schemasStore.GetModuleConfigVersion("cni-cilium")
 		cniMC.Spec.Version = v
-		cniMC.Spec.Settings = SettingsValues{
-			"tunnelMode":     "VXLAN",
-			"masqueradeMode": "BPF",
+		if isVXLAN {
+			cniMC.Spec.Settings = SettingsValues{
+				"tunnelMode":     "VXLAN",
+				"masqueradeMode": "BPF",
+			}
+		} else {
+			cniMC.Spec.Settings = SettingsValues{
+				"tunnelMode":       "Disabled",
+				"masqueradeMode":   "Netfilter",
+				"createNodeRoutes": true,
+			}
 		}
 
 	case "aws", "yandex", "gcp", "azure":
@@ -222,8 +244,8 @@ func CheckOrSetupArbitaryCNIModuleConfig(cfg *DeckhouseInstaller) error {
 		cniMC.Spec.Version = v
 		cniMC.Spec.Settings = SettingsValues{
 			"tunnelMode":       "Disabled",
-			"createNodeRoutes": true,
 			"masqueradeMode":   "Netfilter",
+			"createNodeRoutes": true,
 		}
 	}
 	doc, err := yaml.Marshal(cniMC)
