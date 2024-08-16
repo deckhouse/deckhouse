@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -36,7 +37,7 @@ import (
 )
 
 type nodeGroupGetter interface {
-	NodeGroups() ([]*NodeGroup, error)
+	NodeGroups() ([]*v1.NodeGroup, error)
 	MachineFailedEvents() ([]eventsv1.Event, error)
 }
 
@@ -44,7 +45,7 @@ type kubeNgGetter struct {
 	kubeCl *client.KubernetesClient
 }
 
-func (n *kubeNgGetter) NodeGroups() ([]*NodeGroup, error) {
+func (n *kubeNgGetter) NodeGroups() ([]*v1.NodeGroup, error) {
 	var ngs []unstructured.Unstructured
 	err := retry.NewSilentLoop("get machine failed events", 3, 3*time.Second).Run(func() error {
 		var err error
@@ -56,7 +57,7 @@ func (n *kubeNgGetter) NodeGroups() ([]*NodeGroup, error) {
 		return nil, err
 	}
 
-	nodegroups := make([]*NodeGroup, 0)
+	nodegroups := make([]*v1.NodeGroup, 0)
 	var errs error
 	for _, n := range ngs {
 		nn := n
@@ -289,14 +290,14 @@ func tryToGetClusterIsBootstrappedChecker(
 	return newClusterIsBootstrapCheck(&kubeNgGetter{kubeCl: kubeCl}, kubeCl), nil
 }
 
-func unstructuredToNodeGroup(o *unstructured.Unstructured) (*NodeGroup, error) {
+func unstructuredToNodeGroup(o *unstructured.Unstructured) (*v1.NodeGroup, error) {
 	content, err := o.MarshalJSON()
 	if err != nil {
 		log.ErrorF("Can not marshal nodegroup %s: %v", o.GetName(), err)
 		return nil, err
 	}
 
-	var ng NodeGroup
+	var ng v1.NodeGroup
 
 	err = json.Unmarshal(content, &ng)
 	if err != nil {
