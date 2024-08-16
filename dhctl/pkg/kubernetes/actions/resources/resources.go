@@ -254,7 +254,7 @@ func CreateResourcesLoop(kubeCl *client.KubernetesClient, metaConfig *config.Met
 
 	isBootstrapped := false
 
-	err = retry.NewSilentLoop("Wait for resources creation", math.MaxInt, 10*time.Second).
+	return retry.NewSilentLoop("Wait for resources creation", math.MaxInt, 10*time.Second).
 		WithContext(ctx).
 		Run(func() error {
 			err := resourceCreator.TryToCreate()
@@ -262,48 +262,57 @@ func CreateResourcesLoop(kubeCl *client.KubernetesClient, metaConfig *config.Met
 				return err
 			}
 
-			if clusterIsBootstrappedChecker != nil && !isBootstrapped {
+			if clusterIsBootstrappedChecker != nil {
 				var err error
 
-				isBootstrapped, err = clusterIsBootstrappedChecker.IsBootstrapped()
+				if !isBootstrapped {
+					isBootstrapped, err = clusterIsBootstrappedChecker.IsBootstrapped()
+				}
+
 				if err != nil {
 					return err
 				}
+			} else {
+				isBootstrapped = true
 			}
 
 			if isBootstrapped && err == nil {
 				return nil
 			}
 
-			clusterIsBootstrappedChecker.outputProgressInfo()
+			if clusterIsBootstrappedChecker != nil {
+				clusterIsBootstrappedChecker.outputProgressInfo()
+			}
 
 			return ErrNotAllResourcesCreated
 		})
-	if err != nil {
-		return err
-	}
 
-	waiter := NewWaiter(checkers)
-
-	err = retry.NewSilentLoop("Wait for resources readiness", math.MaxInt, 5*time.Second).
-		WithContext(ctx).
-		Run(func() error {
-			ready, err := waiter.ReadyAll(ctx)
-			if err != nil {
-				return err
-			}
-
-			if !ready {
-				return fmt.Errorf("not all resources are ready")
-			}
-
-			return nil
-		})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	// todo (name212) need more investigation. we can lost watchers. need to simplify code
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//waiter := NewWaiter(checkers)
+	//
+	//err = retry.NewSilentLoop("Wait for resources readiness", math.MaxInt, 5*time.Second).
+	//	WithContext(ctx).
+	//	Run(func() error {
+	//		ready, err := waiter.ReadyAll(ctx)
+	//		if err != nil {
+	//			return err
+	//		}
+	//
+	//		if !ready {
+	//			return fmt.Errorf("not all resources are ready")
+	//		}
+	//
+	//		return nil
+	//	})
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//return nil
 }
 
 func getUnstructuredName(obj *unstructured.Unstructured) string {

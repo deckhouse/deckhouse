@@ -83,6 +83,7 @@ func newKubeAPI(ctx context.Context, logger logger.Logger, client client.Client,
 }
 
 type kubeAPI struct {
+	//TODO: remove
 	ctx context.Context
 	// d8ClientSet        versioned.Interface
 	logger             logger.Logger
@@ -106,7 +107,7 @@ func (k *kubeAPI) UpdateReleaseStatus(release *v1alpha1.ModuleRelease, msg, phas
 	return nil
 }
 
-func (k *kubeAPI) PatchReleaseAnnotations(release *v1alpha1.ModuleRelease, annotations map[string]any) error {
+func (k *kubeAPI) PatchReleaseAnnotations(ctx context.Context, release *v1alpha1.ModuleRelease, annotations map[string]any) error {
 	patch, _ := json.Marshal(map[string]any{
 		"metadata": map[string]any{
 			"annotations": annotations,
@@ -114,22 +115,22 @@ func (k *kubeAPI) PatchReleaseAnnotations(release *v1alpha1.ModuleRelease, annot
 	})
 	p := client.RawPatch(types.MergePatchType, patch)
 
-	return k.client.Patch(k.ctx, release, p)
+	return k.client.Patch(ctx, release, p)
 }
 
 func (k *kubeAPI) PatchReleaseApplyAfter(release *v1alpha1.ModuleRelease, applyTime time.Time) error {
-	return k.PatchReleaseAnnotations(release, map[string]any{
+	return k.PatchReleaseAnnotations(context.TODO(), release, map[string]any{
 		"release.deckhouse.io/notification-time-shift": "true",
 		"release.deckhouse.io/applyAfter":              applyTime.Format(time.RFC3339),
 	})
 }
 
-func (k *kubeAPI) DeployRelease(release *v1alpha1.ModuleRelease) error {
+func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRelease) error {
 	moduleName := release.Spec.ModuleName
 
 	// download desired module version
 	var ms v1alpha1.ModuleSource
-	err := k.client.Get(k.ctx, types.NamespacedName{Name: release.GetModuleSource()}, &ms)
+	err := k.client.Get(ctx, types.NamespacedName{Name: release.GetModuleSource()}, &ms)
 	if err != nil {
 		return fmt.Errorf("get module source: %w", err)
 	}
@@ -197,12 +198,12 @@ func (k *kubeAPI) suspendModuleVersionForRelease(release *v1alpha1.ModuleRelease
 	return k.UpdateReleaseStatus(release, updater.PhaseSuspended, message)
 }
 
-func (k *kubeAPI) SaveReleaseData(release *v1alpha1.ModuleRelease, data updater.DeckhouseReleaseData) error {
+func (k *kubeAPI) SaveReleaseData(ctx context.Context, release *v1alpha1.ModuleRelease, data updater.DeckhouseReleaseData) error {
 	if release == nil {
 		return fmt.Errorf("empty release")
 	}
 
-	return k.PatchReleaseAnnotations(release, map[string]interface{}{
+	return k.PatchReleaseAnnotations(ctx, release, map[string]interface{}{
 		// "release.deckhouse.io/isUpdating": strconv.FormatBool(data.IsUpdating), // I don't think we need this flag for ModuleReleases
 		"release.deckhouse.io/notified": strconv.FormatBool(data.Notified),
 	})

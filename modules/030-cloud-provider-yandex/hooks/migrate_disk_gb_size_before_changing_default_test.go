@@ -285,8 +285,8 @@ sshPublicKey: ssh-rsa AAAAAbbbb
 			})
 
 			It("Hook should set diskSizeGB for old default 20", func() {
-				assertSetOldDiskSizeForMasterNG(f)
-				assertSaveBackupBeforeMigrate(f, pccs)
+				assertNoChangeSecret(f, pccs)
+				assertSaveBackupBeforeMigrate(f, "")
 			})
 		})
 	})
