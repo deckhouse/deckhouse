@@ -17,7 +17,6 @@ limitations under the License.
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -193,34 +192,35 @@ func CheckOrSetupArbitaryCNIModuleConfig(cfg *DeckhouseInstaller) error {
 	cniMC.Spec.Enabled = pointer.Bool(true)
 
 	// get provider cluster configuration
-	pcc := make(map[string]json.RawMessage)
+	type providerClusterConfiguration struct {
+		Kind string `json:"kind"`
+	}
+
+	pcc := providerClusterConfiguration{}
 	err := yaml.Unmarshal(cfg.ProviderClusterConfig, &pcc)
 	if err != nil {
 		return err
 	}
 
 	// get cloud discovery data
-	cd := make(map[string]json.RawMessage)
+	type cloudDiscoveryData struct {
+		PodNetworkMode string `json:"podNetworkMode"`
+	}
+
+	cd := cloudDiscoveryData{}
 	err = yaml.Unmarshal(cfg.CloudDiscovery, &cd)
 	if err != nil {
 		return err
 	}
 
-	providerName := strings.ToLower(strings.TrimSuffix(string(pcc["kind"]), "ClusterConfiguration"))
-
-	var isVXLAN bool
-	if podNetworkMode, ok := cd["podNetworkMode"]; ok {
-		isVXLAN = string(podNetworkMode) == "VXLAN"
-	}
+	providerName := strings.ToLower(strings.TrimSuffix(pcc.Kind, "ClusterConfiguration"))
 
 	switch providerName {
-
-	// static or unknown provider
 	case "openstack":
 		cniMC.SetName("cni-cilium")
 		v := schemasStore.GetModuleConfigVersion("cni-cilium")
 		cniMC.Spec.Version = v
-		if isVXLAN {
+		if cd.PodNetworkMode == "VXLAN" {
 			cniMC.Spec.Settings = SettingsValues{
 				"tunnelMode":     "VXLAN",
 				"masqueradeMode": "BPF",
@@ -238,6 +238,7 @@ func CheckOrSetupArbitaryCNIModuleConfig(cfg *DeckhouseInstaller) error {
 		v := schemasStore.GetModuleConfigVersion("cni-simple-bridge")
 		cniMC.Spec.Version = v
 
+	// static or unknown provider
 	default:
 		cniMC.SetName("cni-cilium")
 		v := schemasStore.GetModuleConfigVersion("cni-cilium")

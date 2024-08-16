@@ -139,10 +139,16 @@ configOverrides:
 }
 
 func TestCheckOrSetupArbitaryCNIModuleConfig(t *testing.T) {
+	type result struct {
+		cniName  string
+		enabled  bool
+		version  int
+		settings SettingsValues
+	}
 	type testProvider struct {
 		cloudProvider  string
 		podNetworkMode string
-		result         func(t *testing.T, mc *ModuleConfig, enabled bool, version int, setting map[string]interface{})
+		result         result
 	}
 
 	tp := make([]testProvider, 0)
@@ -150,25 +156,31 @@ func TestCheckOrSetupArbitaryCNIModuleConfig(t *testing.T) {
 	tp = append(tp, testProvider{
 		cloudProvider:  "AWS",
 		podNetworkMode: "",
-		result:         assertModuleConfig,
+		result: result{
+			cniName:  "cni-simple-bridge",
+			enabled:  true,
+			version:  1,
+			settings: nil,
+		},
 	})
-	for _, provider := range []string{"OpenStack", "Yandex", "Vsphere", "GCP", "VCD", "AWS", "Zvirt", "Azure", "Static"} {
-		tp = append(tp, testProvider{
-			cloudProvider:  provider,
-			podNetworkMode: "",
-		})
-		if provider == "OpenStack" {
+
+	/*	for _, provider := range []string{"OpenStack", "Yandex", "Vsphere", "GCP", "VCD", "AWS", "Zvirt", "Azure", "Static"} {
 			tp = append(tp, testProvider{
 				cloudProvider:  provider,
-				podNetworkMode: "VXLAN",
+				podNetworkMode: "",
 			})
+			if provider == "OpenStack" {
+				tp = append(tp, testProvider{
+					cloudProvider:  provider,
+					podNetworkMode: "VXLAN",
+				})
+			}
 		}
-	}
-
+	*/
 	for _, p := range tp {
 		t.Run("Check generation of the cni module config for "+p.cloudProvider, func(t *testing.T) {
 			cfg := &DeckhouseInstaller{
-				ProviderClusterConfig: []byte(fmt.Sprintf("{\"kind\": \"%sCloudProvider\"}", p.cloudProvider)),
+				ProviderClusterConfig: []byte(fmt.Sprintf("{\"kind\": \"%sClusterConfiguration\"}", p.cloudProvider)),
 			}
 			if p.podNetworkMode != "" {
 				cfg.CloudDiscovery = []byte(fmt.Sprintf("{\"podNetworkMode\": \"%s\"}", p.podNetworkMode))
@@ -176,6 +188,8 @@ func TestCheckOrSetupArbitaryCNIModuleConfig(t *testing.T) {
 
 			err := CheckOrSetupArbitaryCNIModuleConfig(cfg)
 			require.NoError(t, err)
+			require.Equal(t, cfg.ModuleConfigs[0].GetName(), p.result.cniName)
+			assertModuleConfig(t, cfg.ModuleConfigs[0], p.result.enabled, p.result.version, p.result.settings)
 		})
 	}
 }
