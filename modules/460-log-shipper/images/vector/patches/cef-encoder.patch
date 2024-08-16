@@ -101,13 +101,13 @@ diff --git a/website/cue/reference/components/sinks/base/webhdfs.cue b/website/c
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -116,6 +201,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/humio_logs.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -209,13 +209,13 @@ diff --git a/website/cue/reference/components/sinks/base/humio_logs.cue b/websit
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -116,6 +201,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/socket.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -317,13 +317,13 @@ diff --git a/website/cue/reference/components/sinks/base/socket.cue b/website/cu
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -62,6 +147,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/aws_sqs.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -425,13 +425,13 @@ diff --git a/website/cue/reference/components/sinks/base/aws_sqs.cue b/website/c
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -152,6 +237,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/http.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -533,13 +533,13 @@ diff --git a/website/cue/reference/components/sinks/base/http.cue b/website/cue/
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -163,6 +248,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/splunk_hec_logs.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -641,13 +641,13 @@ diff --git a/website/cue/reference/components/sinks/base/splunk_hec_logs.cue b/w
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -166,6 +251,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/loki.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -749,13 +749,13 @@ diff --git a/website/cue/reference/components/sinks/base/loki.cue b/website/cue/
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -165,6 +250,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/nats.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -857,13 +857,13 @@ diff --git a/website/cue/reference/components/sinks/base/nats.cue b/website/cue/
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -150,6 +235,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: lib/codecs/src/encoding/format/cef.rs
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -1176,8 +1176,8 @@ new file mode 100644
 +            &self.device.product,
 +            &self.device.version,
 +            &self.device.event_class_id,
-+            severity,
 +            name,
++            severity,
 +        ))?;
 +        if !formatted_extensions.is_empty() {
 +            formatted_extensions.sort();
@@ -1474,13 +1474,13 @@ diff --git a/website/cue/reference/components/sinks/base/console.cue b/website/c
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -50,6 +135,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: src/sinks/websocket/sink.rs
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -1490,20 +1490,20 @@ diff --git a/src/sinks/websocket/sink.rs b/src/sinks/websocket/sink.rs
 --- a/src/sinks/websocket/sink.rs	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
 +++ b/src/sinks/websocket/sink.rs	(date 1723659848980)
 @@ -236,12 +236,12 @@
- 
+
      const fn should_encode_as_binary(&self) -> bool {
          use vector_lib::codecs::encoding::Serializer::{
 -            Avro, Csv, Gelf, Json, Logfmt, Native, NativeJson, Protobuf, RawMessage, Text,
 +            Avro, Cef, Csv, Gelf, Json, Logfmt, Native, NativeJson, Protobuf, RawMessage, Text,
          };
- 
+
          match self.encoder.serializer() {
              RawMessage(_) | Avro(_) | Native(_) | Protobuf(_) => true,
 -            Csv(_) | Logfmt(_) | Gelf(_) | Json(_) | Text(_) | NativeJson(_) => false,
 +            Cef(_) | Csv(_) | Logfmt(_) | Gelf(_) | Json(_) | Text(_) | NativeJson(_) => false,
          }
      }
- 
+
 Index: src/codecs/encoding/config.rs
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -1623,13 +1623,13 @@ diff --git a/website/cue/reference/components/sinks/base/papertrail.cue b/websit
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -50,6 +135,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/aws_kinesis_firehose.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -1731,13 +1731,13 @@ diff --git a/website/cue/reference/components/sinks/base/aws_kinesis_firehose.cu
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -221,6 +306,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: src/codecs/encoding/encoder.rs
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -1763,7 +1763,7 @@ diff --git a/lib/codecs/src/encoding/format/mod.rs b/lib/codecs/src/encoding/for
 --- a/lib/codecs/src/encoding/format/mod.rs	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
 +++ b/lib/codecs/src/encoding/format/mod.rs	(date 1723658432803)
 @@ -5,6 +5,7 @@
- 
+
  mod avro;
  mod common;
 +mod cef;
@@ -1771,7 +1771,7 @@ diff --git a/lib/codecs/src/encoding/format/mod.rs b/lib/codecs/src/encoding/for
  mod gelf;
  mod json;
 @@ -19,6 +20,7 @@
- 
+
  pub use self::csv::{CsvSerializer, CsvSerializerConfig};
  pub use avro::{AvroSerializer, AvroSerializerConfig, AvroSerializerOptions};
 +pub use cef::{CefSerializer, CefSerializerConfig};
@@ -1879,13 +1879,13 @@ diff --git a/website/cue/reference/components/sinks/base/websocket.cue b/website
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -97,6 +182,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/pulsar.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -1987,13 +1987,13 @@ diff --git a/website/cue/reference/components/sinks/base/pulsar.cue b/website/cu
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -144,6 +229,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/gcp_chronicle_unstructured.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -2095,13 +2095,13 @@ diff --git a/website/cue/reference/components/sinks/base/gcp_chronicle_unstructu
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -119,6 +204,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/kafka.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -2203,13 +2203,13 @@ diff --git a/website/cue/reference/components/sinks/base/kafka.cue b/website/cue
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -105,6 +190,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/file.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -2311,13 +2311,13 @@ diff --git a/website/cue/reference/components/sinks/base/file.cue b/website/cue/
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -70,6 +155,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/gcp_cloud_storage.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -2419,13 +2419,13 @@ diff --git a/website/cue/reference/components/sinks/base/gcp_cloud_storage.cue b
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -208,6 +293,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -2527,13 +2527,13 @@ diff --git a/website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -242,6 +327,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: lib/codecs/src/encoding/mod.rs
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -2543,7 +2543,7 @@ diff --git a/lib/codecs/src/encoding/mod.rs b/lib/codecs/src/encoding/mod.rs
 --- a/lib/codecs/src/encoding/mod.rs	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
 +++ b/lib/codecs/src/encoding/mod.rs	(date 1723658498361)
 @@ -8,8 +8,8 @@
- 
+
  use bytes::BytesMut;
  pub use format::{
 -    AvroSerializer, AvroSerializerConfig, AvroSerializerOptions, CsvSerializer,
@@ -2556,7 +2556,7 @@ diff --git a/lib/codecs/src/encoding/mod.rs b/lib/codecs/src/encoding/mod.rs
 @@ -184,6 +184,13 @@
          avro: AvroSerializerOptions,
      },
- 
+
 +    /// Encodes an event as a CEF (Common Event Format) formatted message.
 +    ///
 +    Cef(
@@ -2570,7 +2570,7 @@ diff --git a/lib/codecs/src/encoding/mod.rs b/lib/codecs/src/encoding/mod.rs
 @@ -265,6 +272,12 @@
      }
  }
- 
+
 +impl From<CefSerializerConfig> for SerializerConfig {
 +    fn from(config: CefSerializerConfig) -> Self {
 +        Self::Cef(config)
@@ -2642,7 +2642,7 @@ diff --git a/lib/codecs/src/encoding/mod.rs b/lib/codecs/src/encoding/mod.rs
 @@ -480,6 +501,12 @@
      }
  }
- 
+
 +impl From<CefSerializer> for Serializer {
 +    fn from(serializer: CefSerializer) -> Self {
 +        Self::Cef(serializer)
@@ -2761,13 +2761,13 @@ diff --git a/website/cue/reference/components/sinks/base/gcp_pubsub.cue b/websit
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -117,6 +202,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/aws_s3.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -2869,13 +2869,13 @@ diff --git a/website/cue/reference/components/sinks/base/aws_s3.cue b/website/cu
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -330,6 +415,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/redis.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -2977,13 +2977,13 @@ diff --git a/website/cue/reference/components/sinks/base/redis.cue b/website/cue
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -103,6 +188,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/azure_blob.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -3085,13 +3085,13 @@ diff --git a/website/cue/reference/components/sinks/base/azure_blob.cue b/websit
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -184,6 +269,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/aws_kinesis_streams.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -3193,13 +3193,13 @@ diff --git a/website/cue/reference/components/sinks/base/aws_kinesis_streams.cue
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -221,6 +306,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 Index: website/cue/reference/components/sinks/base/amqp.cue
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -3301,11 +3301,11 @@ diff --git a/website/cue/reference/components/sinks/base/amqp.cue b/website/cue/
  				description: "The codec to use for encoding events."
  				required:    true
 @@ -66,6 +151,7 @@
- 
+
  						[apache_avro]: https://avro.apache.org/
  						"""
 +					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
  					csv: """
  						Encodes an event as a CSV message.
- 
+
 
