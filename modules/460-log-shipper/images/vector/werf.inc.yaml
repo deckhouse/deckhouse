@@ -30,7 +30,8 @@ shell:
   - git clone --depth 1 --branch v0.40.0 {{ $.SOURCE_REPO }}/vectordotdev/vector.git
   - cd /vector
   - git apply /patches/*.patch --verbose
-  - cargo build \
+  - |
+    cargo build \
     --release \
     -j $(($(nproc) /2)) \
     --offline \
