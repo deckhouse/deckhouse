@@ -102,11 +102,7 @@ func (m *manager) projectsByTemplate(ctx context.Context, template *v1alpha1.Pro
 	}
 	var result []*v1alpha2.Project
 	for _, project := range projects.Items {
-		if project.Status.State == v1alpha2.ProjectStateDeployed || project.Status.State == v1alpha2.ProjectStateError {
-			result = append(result, project.DeepCopy())
-			continue
-		}
-		m.log.Info("skipping not deployed project", "project", project.Name)
+		result = append(result, project.DeepCopy())
 	}
 	return result, nil
 }
