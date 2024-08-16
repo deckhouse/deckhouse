@@ -123,7 +123,7 @@ func (m *manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	m.log.Info("validating the project spec", "project", project.Name, "projectTemplate", projectTemplate.Name)
 	if err = validate.Project(project, projectTemplate); err != nil {
 		m.log.Error(err, "failed to validate the project spec", "project", project.Name, "projectTemplate", projectTemplate.Name)
-		m.makeCondition(v1alpha2.ConditionTypeProjectValidated, v1alpha2.ConditionTypeFalse, err.Error())
+		cond = m.makeCondition(v1alpha2.ConditionTypeProjectValidated, v1alpha2.ConditionTypeFalse, err.Error())
 		if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, projectTemplate.Generation, cond); statusErr != nil {
 			m.log.Error(statusErr, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
 			return ctrl.Result{Requeue: true}, nil
