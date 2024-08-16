@@ -103,7 +103,7 @@ spec:
   targetPort: 5353`
 )
 
-var _ = FDescribe("Global hooks :: migration_service_with_many_ports", func() {
+var _ = Describe("Global hooks :: migration_service_with_many_ports", func() {
 	f := HookExecutionConfigInit("{}", "{}")
 
 	Context("There are broken services and enabled modules", func() {
