@@ -32,7 +32,6 @@
       "type": "remap"
     },
     "transform/destination/test-es-dest/01_ratelimit": {
-      "exclude": "null",
       "inputs": [
         "transform/destination/test-es-dest/00_elastic_dedot"
       ],
@@ -82,7 +81,7 @@
       "healthcheck": {
         "enabled": false
       },
-      "api_version": "v6",
+      "api_version": "v8",
       "endpoint": "http://192.168.1.1:9200",
       "encoding": {
         "timestamp_format": "rfc3339"

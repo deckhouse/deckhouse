@@ -101,8 +101,14 @@ func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec) *El
 		tls.VerifyHostname = *spec.TLS.VerifyHostname
 	}
 
+	// We use autodetect logic from https://vector.dev/docs/reference/configuration/sinks/elasticsearch/#api_version
+	apiVersion := "v8"
+	if spec.DocType != "" {
+		apiVersion = "v6"
+	}
+
 	return &Elasticsearch{
-		APIVersion: "v6",
+		APIVersion: apiVersion,
 		CommonSettings: CommonSettings{
 			Name:   ComposeName(name),
 			Type:   "elasticsearch",

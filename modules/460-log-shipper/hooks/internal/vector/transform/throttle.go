@@ -40,7 +40,6 @@ func ThrottleTransform(rl v1alpha1.RateLimitSpec) (apis.LogTransform, error) {
 			Inputs: set.New(),
 		},
 		DynamicArgsMap: map[string]interface{}{
-			excludeField:  "null",
 			"threshold":   *rl.LinesPerMinute,
 			"window_secs": 60,
 		},
