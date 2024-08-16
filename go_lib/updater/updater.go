@@ -579,7 +579,9 @@ func (du *Updater[R]) processPendingRelease(index int, release R) {
 	}
 
 	// release is predicted to be Deployed
-	du.predictedReleaseIndex = index
+	if du.checkReleaseRequirements(&release) {
+		du.predictedReleaseIndex = index
+	}
 }
 
 func (du *Updater[R]) checkReleaseRequirements(rl *R) bool {

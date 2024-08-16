@@ -145,7 +145,7 @@ func (in *DeckhouseRelease) GetNotificationShift() bool {
 	return ok && v == "true"
 }
 
-func (mr *DeckhouseRelease) GetModuleName() string {
+func (in *DeckhouseRelease) GetModuleName() string {
 	return ""
 }
 
