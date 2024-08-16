@@ -78,6 +78,9 @@ spec:
         - jsonPath: .spec.description
           name: Description
           type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
       schema:
         openAPIV3Schema:
           type: object
@@ -93,6 +96,7 @@ spec:
                   description: |
                     The name of the [ProjectTemplate](cr.html#projecttemplate) resource that defines which resources will be created in the project.
                   type: string
+                  minLength: 1
                 parameters:
                   additionalProperties:
                     x-kubernetes-preserve-unknown-fields: true
@@ -104,12 +108,23 @@ spec:
             status:
               type: object
               properties:
-                message:
-                  description: Message indicating the cause of the current status.
-                  type: string
+                observedGeneration:
+                  type: integer
+                conditions:
+                  type: array
+                  x-kubernetes-patch-strategy: "retainKeys"
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      status:
+                        type: string
+                      message:
+                        type: string
                 state:
-                  description: Brief description of the project status, such as Ready, Error, Pending, etc.
+                  description: Brief description of the project status, such as Error, Deploying, Deployed, etc.
                   type: string
-                sync:
-                  description: Indicates that the project parameters have been successfully applied after creation or modification.
-                  type: boolean

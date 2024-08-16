@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: multitenancy-manager
+  namespace: d8-multitenancy-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+spec:
+  selector:
+    app: multitenancy-manager
+  ports:
+    - name: webhook
+      port: 9443
+      targetPort: webhook
+      protocol: TCP

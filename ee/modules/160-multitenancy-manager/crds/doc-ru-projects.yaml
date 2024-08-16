@@ -21,8 +21,20 @@ spec:
             status:
               description: ""
               properties:
-                message:
-                  description: Сообщение, указывающее на причину появления текущего статуса.
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      status:
+                        type: string
+                      message:
+                        type: string
                 state:
                   description: Короткое описание состояния проекта, например, Ready, Error, Pending, и т.д.
                 sync:
@@ -50,5 +62,3 @@ spec:
                   description: Сообщение, указывающее на причину появления текущего статуса.
                 state:
                   description: Короткое описание состояния проекта, например, Ready, Error, Pending, и т.д.
-                sync:
-                  description: Указывает на то, что параметры проекта были успешно применены после создания или изменения.
