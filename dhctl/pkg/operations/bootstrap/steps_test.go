@@ -191,11 +191,18 @@ func TestInstallDeckhouse(t *testing.T) {
 	}
 
 	t.Run("Does not have cluster uuid config map", func(t *testing.T) {
+
 		t.Run("should install Deckhouse", func(t *testing.T) {
+			err := os.Setenv("DHCTL_TEST", "yes")
+			require.NoError(t, err)
+			defer func() {
+				os.Unsetenv("DHCTL_TEST")
+			}()
+
 			fakeClient := client.NewFakeKubernetesClient()
 			createReadyDeckhousePod(fakeClient)
 
-			err := InstallDeckhouse(fakeClient, conf)
+			err = InstallDeckhouse(fakeClient, conf)
 
 			require.NoError(t, err, "Should install Deckhouse")
 

@@ -577,7 +577,7 @@ func CheckDHCTLDependencies(sshClient *ssh.Client) error {
 
 		for res := range resultsChan {
 			if res.err != nil {
-				return fmt.Errorf("Dependency '%d' check failed. Last error %v", res.name, res.err)
+				return fmt.Errorf("Dependency '%s' check failed. Last error %v", res.name, res.err)
 			}
 
 			log.Success(fmt.Sprintf("Dependency '%s' check success\n", res.name))
