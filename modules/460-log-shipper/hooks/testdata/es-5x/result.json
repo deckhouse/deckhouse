@@ -94,14 +94,14 @@
       "type": "filter"
     },
     "transform/source/test-source/06_log_filter": {
-      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        false;\n    } else {\n        includes([\"wvrr\"], data);\n    };\n} else if .parsed_data.foo == null {\n    \"null\";\n} else {\n    includes([\"wvrr\"], .parsed_data.foo);\n}",
+      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        false;\n    } else {\n        includes([\"wvrr\"], data);\n    };\n} else if .parsed_data.foo == null {\n    false;\n} else {\n    includes([\"wvrr\"], .parsed_data.foo);\n}",
       "inputs": [
         "transform/source/test-source/05_log_filter"
       ],
       "type": "filter"
     },
     "transform/source/test-source/07_log_filter": {
-      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        true;\n    } else {\n        !includes([\"wvrr\"], data);\n    };\n} else if .parsed_data.foo == null {\n    \"null\";\n} else {\n    !includes([\"wvrr\"], .parsed_data.foo);\n}",
+      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        true;\n    } else {\n        !includes([\"wvrr\"], data);\n    };\n} else if .parsed_data.foo == null {\n    false;\n} else {\n    !includes([\"wvrr\"], .parsed_data.foo);\n}",
       "inputs": [
         "transform/source/test-source/06_log_filter"
       ],
