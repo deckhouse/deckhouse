@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 func TestCheckRegistryAccessThroughProxy(t *testing.T) {
@@ -169,7 +169,7 @@ deckhouse:
 		installer, err := config.PrepareDeckhouseInstallConfig(metaConfig)
 		s.NoError(err)
 
-		preflightChecker := NewChecker(&ssh.Client{}, installer, metaConfig)
+		preflightChecker := NewChecker(ssh.NewNodeInterfaceWrapper(&ssh.Client{}), installer, metaConfig)
 
 		err = preflightChecker.CheckRegistryAccessThroughProxy()
 		if test.skipped {

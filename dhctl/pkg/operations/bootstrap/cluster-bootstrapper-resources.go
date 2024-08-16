@@ -21,6 +21,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
@@ -61,17 +62,18 @@ func (b *ClusterBootstrapper) CreateResources() error {
 		return nil
 	}
 
-	if b.SSHClient != nil {
-		if _, err := b.SSHClient.Start(); err != nil {
-			return fmt.Errorf("unable to start ssh client: %w", err)
-		}
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
+	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+		if _, err := wrapper.Client().Start(); err != nil {
+			return fmt.Errorf("unable to start ssh-client: %w", err)
 		}
 	}
 
+	if err := terminal.AskBecomePassword(); err != nil {
+		return err
+	}
+
 	return log.Process("bootstrap", "Create resources", func() error {
-		kubeCl, err := operations.ConnectToKubernetesAPI(b.SSHClient)
+		kubeCl, err := operations.ConnectToKubernetesAPI(b.NodeInterface)
 		if err != nil {
 			return err
 		}

@@ -24,9 +24,9 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/cmd"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/cmd"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 )
 
 type Command struct {
@@ -61,20 +61,19 @@ func NewCommand(sess *session.Session, name string, arg ...string) *Command {
 		Session:  sess,
 		Name:     name,
 		Args:     args,
+		Env:      os.Environ(),
 	}
 }
 
-func (c *Command) WithSSHArgs(args ...string) *Command {
+func (c *Command) WithSSHArgs(args ...string) {
 	c.SSHArgs = args
-	return c
 }
 
-func (c *Command) OnCommandStart(fn func()) *Command {
+func (c *Command) OnCommandStart(fn func()) {
 	c.onCommandStart = fn
-	return c
 }
 
-func (c *Command) Sudo() *Command {
+func (c *Command) Sudo() {
 	cmdLine := c.Name + " " + strings.Join(c.Args, " ")
 	sudoCmdLine := fmt.Sprintf(
 		`sudo -p SudoPassword -H -S -i bash -c 'echo SUDO-SUCCESS && %s'`,
@@ -124,16 +123,14 @@ func (c *Command) Sudo() *Command {
 		}
 		return ""
 	})
-	return c
 }
 
-func (c *Command) Cmd() *Command {
+func (c *Command) Cmd() {
 	c.cmd = cmd.NewSSH(c.Session).
 		WithArgs(c.SSHArgs...).
 		WithCommand(c.Name, c.Args...).Cmd()
 
 	c.Executor = process.NewDefaultExecutor(c.cmd)
-	return c
 }
 
 func (c *Command) Output() ([]byte, []byte, error) {
@@ -168,7 +165,13 @@ func (c *Command) CombinedOutput() ([]byte, error) {
 	return output, nil
 }
 
-func (c *Command) WithTimeout(timeout time.Duration) *Command {
+func (c *Command) WithTimeout(timeout time.Duration) {
 	c.Executor = c.Executor.WithTimeout(timeout)
-	return c
+}
+
+func (c *Command) WithEnv(env map[string]string) {
+	c.Env = make([]string, 0, len(env))
+	for k, v := range env {
+		c.Env = append(c.Env, fmt.Sprintf("%s=%s", k, v))
+	}
 }

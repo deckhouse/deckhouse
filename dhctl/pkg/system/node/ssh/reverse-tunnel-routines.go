@@ -27,7 +27,9 @@ func NewRunScriptReverseTunnelChecker(c *Client, scriptPath string) *RunScriptRe
 }
 
 func (s *RunScriptReverseTunnelChecker) CheckTunnel() (string, error) {
-	out, err := s.client.UploadScript(s.scriptPath).Sudo().Execute()
+	script := s.client.UploadScript(s.scriptPath)
+	script.Sudo()
+	out, err := script.Execute()
 	return string(out), err
 }
 
@@ -44,6 +46,8 @@ func NewRunScriptReverseTunnelKiller(c *Client, scriptPath string) *RunScriptRev
 }
 
 func (s *RunScriptReverseTunnelKiller) KillTunnel() (string, error) {
-	out, err := s.client.UploadScript(s.scriptPath).Sudo().Execute()
+	script := s.client.UploadScript(s.scriptPath)
+	script.Sudo()
+	out, err := script.Execute()
 	return string(out), err
 }

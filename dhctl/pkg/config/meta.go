@@ -234,6 +234,10 @@ func (m *MetaConfig) FindTerraNodeGroup(nodeGroupName string) []byte {
 	return nil
 }
 
+func (m *MetaConfig) IsStatic() bool {
+	return m.ClusterType == "Static"
+}
+
 func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings() map[string]interface{} {
 	static := make(map[string]interface{})
 

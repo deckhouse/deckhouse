@@ -155,9 +155,8 @@ func (e *Executor) OpenStdinPipe() *Executor {
 	return e
 }
 
-func (e *Executor) WithStdoutHandler(stdoutHandler func(l string)) *Executor {
+func (e *Executor) WithStdoutHandler(stdoutHandler func(l string)) {
 	e.StdoutHandler = stdoutHandler
-	return e
 }
 
 func (e *Executor) WithStdoutSplitter(fn bufio.SplitFunc) *Executor {
@@ -165,9 +164,8 @@ func (e *Executor) WithStdoutSplitter(fn bufio.SplitFunc) *Executor {
 	return e
 }
 
-func (e *Executor) WithStderrHandler(stderrHandler func(l string)) *Executor {
+func (e *Executor) WithStderrHandler(stderrHandler func(l string)) {
 	e.StderrHandler = stderrHandler
-	return e
 }
 
 func (e *Executor) WithStderrSplitter(fn bufio.SplitFunc) *Executor {
