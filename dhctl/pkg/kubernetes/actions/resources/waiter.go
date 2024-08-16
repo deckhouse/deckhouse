@@ -60,6 +60,7 @@ func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, 
 
 	constructors := []constructor{
 		tryToGetClusterIsBootstrappedChecker,
+		tryToGetResourceIsReadyChecker,
 	}
 
 	for _, r := range resources {
