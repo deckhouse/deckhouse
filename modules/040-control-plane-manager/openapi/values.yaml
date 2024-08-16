@@ -9,6 +9,7 @@ properties:
     - effectiveKubernetesVersion
     - pkiChecksum
     - rolloutEpoch
+    - kubeSchedulerExtenders
     properties:
       audit:
         type: object
@@ -54,3 +55,19 @@ properties:
             type: [integer, string]
           nodeStatusUpdateFrequency:
             type: [integer, string]
+      kubeSchedulerExtenders:
+        type: array
+        items:
+          type: object
+          properties:
+            urlPrefix:
+              type: string
+            weight:
+              type: integer
+            timeout:
+              type: integer
+            ignorable:
+              type: boolean
+            caData:
+              type: string
+        default: []
