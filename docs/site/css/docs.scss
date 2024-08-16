@@ -5,15 +5,18 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    margin: 25px 0 10px;
+    margin: 25px 0 40px;
 }
 
 .breadcrumbs__left {
-  width: 300px;
+    //width: 300px;
+    width: 297px;
+    margin-right: 64px;
 }
 
 .breadcrumbs__right {
   flex: 1;
+  margin-right: 64px;
 }
 
 .breadcrumbs {
@@ -225,7 +228,8 @@
 .search {
     display: inline-block;
     margin-left: 5px;
-    width: 250px;
+    //width: 250px;
+    width: 297px;
 }
 
 .search__results.active {
@@ -317,20 +321,17 @@
 
 .layout-sidebar {
   display: flex;
-  gap: 40px;
+  gap: 64px;
 }
 
 .layout-sidebar__wrap {
   margin-top: 25px;
 }
 
-.layout-sidebar__sidebar {
-  width: 330px;
-}
-
 .layout-sidebar__sidebar,
 .layout-sidebar__sidebar_right {
   position: relative;
+  width: 297px;
 }
 
 .layout-sidebar__sidebar_right {
@@ -676,7 +677,8 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs {
-    margin-bottom: 50px;
+    //margin-bottom: 50px;
+    margin-bottom: 112px;
 }
 
 .docs .hidden {
@@ -691,9 +693,8 @@ a.comparison-table__module-proprietaryOkmeter::after {
     font-weight: normal;
     font-style: normal;
     font-stretch: normal;
-    /* opacity: 0.7;
-    color: #00122c; */
-    color: #00122c;
+    //color: #00122c;
+    color: $color-text-secondary;
 }
 
 .docs p {
@@ -707,13 +708,16 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs ul, .docs ol {
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.5;
     letter-spacing: -0.3px;
-    /* margin: 0; */
     padding: 0;
     list-style-type: none;
-    /* color: #00122c; */
+}
+
+.docs p font {
+    font-style: italic;
+    margin-bottom: 40px;
 }
 
 .docs ul li {
@@ -722,57 +726,162 @@ a.comparison-table__module-proprietaryOkmeter::after {
     position: relative;
 }
 
+.docs ul > li::before {
+  content: '';
+  display: block;
+  background: #0066FF;
+  width: 6px;
+  height: 6px;
+  border-radius: 6px;
+  position: absolute;
+  left: -15px;
+  top: 7px;
+}
+
+.docs ul.resources li {
+    padding-left: 0;
+    margin-left: 0;
+}
+
+// For anchorjs-link offset
+.docs :target {
+  scroll-margin-top: 20px;
+}
+
+.docs ul.resources li::before {
+  position: absolute;
+  top: 52px;
+  left: 4px;
+  content: '';
+  display: block;
+  width: 1px;
+  height: calc(100% - 52px);
+  background: #ccc;
+}
+
+.docs ul.resources > li {
+    &::before {
+        display: none;
+    }
+
+    & > .resources__prop_wrap {
+        margin-left: -8px;
+        width: 100%;
+
+        > .resources__prop_name {
+            cursor: auto;
+        }
+
+        &:hover {
+            background: transparent;
+        }
+    }
+}
+
+.docs ul.resources > li > .resources__prop_wrap {
+    & > .resources__prop_type,
+    & > .resources__prop_description,
+    & > p.resources__attrs:not(.required),
+    & > .language-yaml.highlighter-rouge {
+        margin-left: 0;
+    }
+
+    & > .resources__prop_name > .plus-icon,
+    & > .resources__prop_name > .minus-icon {
+        display: none;
+    }
+}
+
+.docs ul.resources ul > li:not(.resources__prop_description li) {
+    padding-top: $text-spacing-l;
+    padding-bottom: 16px;
+    padding-left: 16px;
+
+    &.closed {
+        padding-bottom: 0;
+    }
+}
+
 .docs ol li {
     padding-bottom: 10px;
     margin-left: 30px;
 }
 
 .docs ul li:last-child, .docs ol li:last-child {
-    padding-bottom: 0px;
+    padding-bottom: 0;
 }
 
-.docs ul ol, .docs ol ul, .docs ul ul, .docs ol ol {
-    padding-top: 10px;
+.docs .resources ul li .resources__prop_description + p,
+.docs .resources ul li .resources__attrs + p {
+    margin-left: 20px;
+    padding-top: 12px;
 }
 
-.docs ul > li::before {
+.docs .resources__prop_description ul {
+  padding-bottom: 16px;
+}
+
+.docs .resources__prop_description > ul > li {
+    padding-left: 32px;
+}
+
+.docs .resources__prop_description > ul > li::before {
+    position: absolute;
     content: '';
+    left: 16px;
+    top: 8px;
     display: block;
     background: #0066FF;
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
     border-radius: 6px;
-    position: absolute;
-    left: -15px;
-    top: 7px;
+}
+
+.docs ul > li .plus-icon {
+    display: none;
+}
+
+.docs ul > li.closed {
+    &::before {
+        display: none;
+    }
+
+    & .minus-icon {
+        display: none;
+    }
+
+    & .plus-icon {
+        display: inline-block;
+    }
+}
+
+.docs ul > li.closed > .resources__prop_wrap:hover {
+    background: linear-gradient(180deg, #EFF3F9 0%, #FFF 100%);
+    border-radius: 4px;
+}
+
+.docs ul > li.closed > .resources__prop_wrap > span.resources__prop_name {
+    margin-bottom: 0;
+}
+
+.docs ul > li.closed > ul,
+.docs ul > li.closed > .resources__prop_wrap > div:not(.resources__prop_name),
+.docs ul > li.closed > .resources__prop_wrap > span,
+.docs ul > li.closed > .resources__prop_wrap > p,
+.docs ul > li.closed > .resources__prop_wrap > p.resources__attrs {
+    display: none;
+}
+
+.docs ul > li > .resources__prop_wrap > p.resources__attrs:not(.required) {
+    margin-left: 24px;
+}
+
+.docs .resources pre.highlight {
+  padding-left: 16px;
 }
 
 .docs ol {
     list-style-type: decimal;
-}
-
-.docs ul ul > li::before {
-    content: '';
-    display: block;
-    border: 1px solid #0066FF;
-    background: transparent;
-    width: 5px;
-    height: 5px;
-    border-radius: 6px;
-    position: absolute;
-    left: -15px;
-    top: 6px;
-}
-
-.docs ul ul ul li::before {
-    content: '';
-    display: block;
-    background: #0066FF;
-    width: 4px;
-    height: 4px;
-    position: absolute;
-    left: -15px;
-    top: 8px;
 }
 
 .docs ul li > p:first-child, .docs ol li > p:first-child {
@@ -784,7 +893,21 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs ul li pre, .docs ol li pre {
-    margin: 5px 0 10px 0px;
+    margin-bottom: 0;
+}
+
+.docs .resources div:not(.resources__prop_description) > .language-yaml.highlighter-rouge {
+    margin: 5px 0 10px 24px;
+}
+
+.docs li > .language-yaml.highlighter-rouge:last-child {
+    margin-bottom: 0;
+}
+
+.docs .resources__prop_description code,
+.docs code.resources__attrs_content {
+    background: transparent;
+    color: #00122C;
 }
 
 .docs:not(.docs--modules) h1,
@@ -793,7 +916,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 .docs:not(.docs--modules) h4,
 .docs:not(.docs--modules) h5,
 .docs:not(.docs--modules) h6 {
-    margin-bottom: 15px;
+    margin-bottom: 30px;
     margin-top: 30px;
 }
 
@@ -811,17 +934,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 40px;
 }
 
 .docs h1.docs__title {
-    /* font-size: 72px;
-    font-weight: 600;
-    font-style: normal;
-    font-stretch: normal;
-    line-height: 1.11;
-    letter-spacing: normal;
-    color: #00122c; */
     margin-top: 0;
     margin-bottom: 0;
 }
