@@ -295,7 +295,9 @@ properties:
           properties:
             name:
               type: string
-            storageDomain:
+            sep:
+              type: string
+            pool:
               type: string
       defaultStorageClass:
         type: string

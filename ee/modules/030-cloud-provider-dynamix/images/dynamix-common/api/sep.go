@@ -7,6 +7,7 @@ package api
 
 import (
 	"context"
+	"log"
 	"sort"
 
 	decort "repository.basistech.ru/BASIS/decort-golang-sdk"
@@ -60,6 +61,8 @@ func extractPoolsFromRecordSEP(item *sep.RecordSEP) []entity.Pool {
 	if !ok {
 		return result
 	}
+
+	log.Printf("raw pools: %+v", rawPools)
 
 	pools, ok := rawPools.([]struct {
 		Name   string

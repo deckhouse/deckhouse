@@ -110,13 +110,13 @@ func (d *Discoverer) DiscoveryData(
 
 	discoveryData.SEPs = mergeSEPs(discoveryData.SEPs, seps)
 
-	discoveryDataJson, err := json.Marshal(discoveryData)
+	discoveryDataJSON, err := json.Marshal(discoveryData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal discovery data: %w", err)
 	}
 
-	d.logger.Debugf("discovery data: %v", discoveryDataJson)
-	return discoveryDataJson, nil
+	d.logger.Debugf("discovery data: %v", discoveryDataJSON)
+	return discoveryDataJSON, nil
 }
 
 func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
