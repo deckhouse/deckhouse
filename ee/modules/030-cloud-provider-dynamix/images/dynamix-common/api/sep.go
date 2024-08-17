@@ -64,14 +64,15 @@ func extractPoolsFromRecordSEP(item *sep.RecordSEP) []entity.Pool {
 
 	log.Printf("raw pools: %+v", rawPools)
 
-	pools, ok := rawPools.([]map[string]interface{})
+	pools, ok := rawPools.([]interface{})
 	if !ok {
 		log.Printf("raw pools cannot type assert")
 		return result
 	}
 
-	for _, pool := range pools {
-		log.Printf("map pool: %+v", pool)
+	for _, poolI := range pools {
+		pool := poolI.(map[string]interface{})
+		log.Printf("map pools: %+v", pool)
 
 		if system, ok := pool["system"]; ok && system.(bool) {
 			continue
