@@ -71,6 +71,8 @@ func extractPoolsFromRecordSEP(item *sep.RecordSEP) []entity.Pool {
 	}
 
 	for _, pool := range pools {
+		log.Printf("map pool: %+v", pool)
+
 		if system, ok := pool["system"]; ok && system.(bool) {
 			continue
 		}
