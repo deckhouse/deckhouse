@@ -127,7 +127,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 		return fmt.Errorf("failed to unmarshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
-	input.Values.Set("cloudProviderZvirt.internal.providerDiscoveryData", discoveryData)
+	input.Values.Set("cloudProviderDynamix.internal.providerDiscoveryData", discoveryData)
 
 	handleDiscoveryDataVolumeTypes(input, discoveryData.SEPs)
 
@@ -217,19 +217,19 @@ func setStorageClassesValues(
 	storageClasses []storageClass,
 	defaultSCName string,
 ) {
-	values.Set("cloudProviderZvirt.internal.storageClasses", storageClasses)
+	values.Set("cloudProviderDynamix.internal.storageClasses", storageClasses)
 
-	def, ok := values.GetOk("cloudProviderZvirt.storageClass.default")
+	def, ok := values.GetOk("cloudProviderDynamix.storageClass.default")
 	if ok {
-		values.Set("cloudProviderZvirt.internal.defaultStorageClass", def.String())
+		values.Set("cloudProviderDynamix.internal.defaultStorageClass", def.String())
 		return
 	}
 
 	if defaultSCName != "" {
-		values.Set("cloudProviderZvirt.internal.defaultStorageClass", defaultSCName)
+		values.Set("cloudProviderDynamix.internal.defaultStorageClass", defaultSCName)
 		return
 	}
-	values.Remove("cloudProviderZvirt.internal.defaultStorageClass")
+	values.Remove("cloudProviderDynamix.internal.defaultStorageClass")
 }
 
 type storageClass struct {
