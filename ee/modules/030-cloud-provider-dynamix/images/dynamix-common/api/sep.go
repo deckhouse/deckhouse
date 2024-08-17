@@ -64,21 +64,22 @@ func extractPoolsFromRecordSEP(item *sep.RecordSEP) []entity.Pool {
 
 	log.Printf("raw pools: %+v", rawPools)
 
-	pools, ok := rawPools.([]struct {
-		Name   string
-		System bool
-	})
+	pools, ok := rawPools.([]map[string]interface{})
 	if !ok {
+		log.Printf("raw pools cannot type assert")
 		return result
 	}
 
 	for _, pool := range pools {
-		if pool.System {
+		if system, ok := pool["system"]; ok && system.(bool) {
 			continue
 		}
-		result = append(result, entity.Pool{
-			Name: pool.Name,
-		})
+
+		if name, ok := pool["name"]; ok {
+			result = append(result, entity.Pool{
+				Name: name.(string),
+			})
+		}
 	}
 	sort.SliceStable(result, func(i, j int) bool {
 		return result[i].Name < result[j].Name
