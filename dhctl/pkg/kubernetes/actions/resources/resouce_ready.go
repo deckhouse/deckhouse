@@ -66,7 +66,7 @@ func (c *resourceReadinessChecker) IsReady() (bool, error) {
 		return false, nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.TODO(), 3*time.Second)
 	defer cancel()
 
 	objectInCluster, err := c.kubeCl.Dynamic().
