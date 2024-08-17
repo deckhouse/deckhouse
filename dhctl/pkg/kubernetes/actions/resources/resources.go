@@ -210,6 +210,8 @@ func resourceToGVR(kubeCl *client.KubernetesClient, resource *template.Resource)
 		namespace = metav1.NamespaceDefault
 	}
 
+	docCopy.SetNamespace(namespace)
+
 	return &gvr, docCopy, nil
 }
 
