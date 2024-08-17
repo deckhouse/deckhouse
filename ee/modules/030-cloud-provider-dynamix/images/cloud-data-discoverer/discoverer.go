@@ -150,25 +150,34 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 	return nil, nil
 }
 
+func extractPoolNames(pools []entity.Pool) []string {
+	result := make([]string, 0, len(pools))
+	for _, pool := range pools {
+		result = append(result, pool.Name)
+	}
+
+	return result
+}
 func mergeSEPs(
 	seps []cloudDataV1.DynamixSEP,
 	cloudSeps []entity.SEP,
 ) []cloudDataV1.DynamixSEP {
 	result := []cloudDataV1.DynamixSEP{}
-	cloudSdsMap := make(map[string]cloudDataV1.DynamixSEP)
+	cloudSepsMap := make(map[string]cloudDataV1.DynamixSEP)
 	for _, sep := range cloudSeps {
 
-		cloudSdsMap[sep.Name] = cloudDataV1.DynamixSEP{
+		cloudSepsMap[sep.Name] = cloudDataV1.DynamixSEP{
 			Name:      sep.Name,
+			Pools:     extractPoolNames(sep.Pools),
 			IsEnabled: sep.IsActive && sep.IsCreated,
 			IsDefault: false,
 		}
 
-		result = append(result, cloudSdsMap[sep.Name])
+		result = append(result, cloudSepsMap[sep.Name])
 	}
 
 	for _, sep := range seps {
-		if _, ok := cloudSdsMap[sep.Name]; ok {
+		if _, ok := cloudSepsMap[sep.Name]; ok {
 			continue
 		}
 		result = append(result, sep)
@@ -178,8 +187,12 @@ func mergeSEPs(
 		return result[i].Name < result[j].Name
 	})
 
-	if len(result) > 0 {
-		result[0].IsDefault = true
+	for i := range result {
+		if result[i].IsEnabled {
+			result[i].IsDefault = true
+			break
+		}
 	}
+
 	return result
 }

@@ -17,7 +17,7 @@ package v1
 type DynamixCloudProviderDiscoveryData struct {
 	APIVersion string       `json:"apiVersion,omitempty"`
 	Kind       string       `json:"kind,omitempty"`
-	SEPs       []DynamixSEP `json:"storageDomains,omitempty"`
+	SEPs       []DynamixSEP `json:"sep,omitempty"`
 }
 
 type DynamixSEP struct {
