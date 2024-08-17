@@ -115,6 +115,19 @@ func checkObjectReadiness(object *unstructured.Unstructured, resourceName string
 		return true
 	}
 
+	// static instance case
+	currentStatus, ok := status["currentStatus"].(map[string]interface{})
+	if ok {
+		logger.LogDebugF("Found currentStatus field. Looks like StaticInstance resource\n", resourceName)
+		phase, ok := currentStatus["phase"].(string)
+		if ok {
+			logger.LogDebugF("Found currentStatus.phase field. Looks like StaticInstance resource\n", resourceName)
+			res := phase == "Running"
+			logger.LogDebugF("Found currentStatus.phase is %v. \n", resourceName, res)
+			return res
+		}
+	}
+
 	conditions, ok := status["conditions"].([]interface{})
 	if !ok {
 		logger.LogDebugF("Resource %s do not have 'status.conditions' key. Resource ready!\n", resourceName)
