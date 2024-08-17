@@ -268,6 +268,24 @@ properties:
             type: array
             items:
               type: string
+          seps:
+            type: array
+            items:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                pools:
+                  type: array
+                  items:
+                    type: string
+                isEnabled:
+                  type: boolean
+                isDefault:
+                  type: boolean
+            description: List of .
       cniSecretData:
         type: string
       storageClasses:

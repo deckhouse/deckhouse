@@ -33,5 +33,5 @@ apiVersions:
               type: boolean
             isDefault:
               type: boolean
-        description: List of storage classes.
+        description: List of .
 
