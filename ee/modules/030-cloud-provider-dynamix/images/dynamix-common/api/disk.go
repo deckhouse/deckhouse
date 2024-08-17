@@ -49,6 +49,30 @@ func (d *DiskService) ListDisksByName(
 	return result, nil
 }
 
+func (d *DiskService) ListDisksByAccountName(
+	ctx context.Context,
+	accountName string,
+) ([]disks.ItemDisk, error) {
+	var result []disks.ItemDisk
+
+	err := d.retryer.Do(ctx, func() (bool, error) {
+		req := disks.ListRequest{
+			AccountName: accountName,
+		}
+		resp, err := d.client.CloudAPI().Disks().List(ctx, req)
+		if err != nil {
+			return false, err
+		}
+		result = resp.Data
+		return true, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func (d *DiskService) CreateDisk(
 	ctx context.Context,
 	accountID uint64,

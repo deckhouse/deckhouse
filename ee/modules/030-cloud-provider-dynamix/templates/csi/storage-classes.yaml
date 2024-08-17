@@ -11,8 +11,8 @@ reclaimPolicy: Delete
 allowVolumeExpansion: false
 volumeBindingMode: WaitForFirstConsumer
 parameters:
+  account: {{ .Values.cloudProviderDynamix.internal.providerClusterConfiguration.account | quote }}
+  location: {{ .Values.cloudProviderDynamix.internal.providerClusterConfiguration.location | quote }}
+  sep: {{ $storageClass.sep | quote }}
   pool: {{ $storageClass.pool | quote }}
-  accountId: {{ $storageClass.accountId | quote }}
-  gId: {{ $storageClass.gid | quote }}
-  sepId: {{ $storageClass.sepId | quote }}
 {{- end }}

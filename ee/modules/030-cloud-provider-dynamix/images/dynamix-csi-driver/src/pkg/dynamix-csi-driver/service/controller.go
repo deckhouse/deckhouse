@@ -59,7 +59,7 @@ func (c *ControllerService) parseParameters(ctx context.Context, params map[stri
 		return "", 0, 0, 0, fmt.Errorf("can't get gId by location name: %v, %w ", params[ParameterLocation], err)
 	}
 
-	sep, err := c.dynamixCloudAPI.SEPService.GetLocationByName(ctx, params[ParameterSEP])
+	sep, err := c.dynamixCloudAPI.SEPService.GetSEPByName(ctx, params[ParameterSEP])
 	if err != nil {
 		return "", 0, 0, 0, fmt.Errorf("can't get sepId by name: %v, %w ", params[ParameterSEP], err)
 	}
