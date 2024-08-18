@@ -681,13 +681,13 @@ Deckhouse поддерживает работу только с Bearer token-с�
     -----END CERTIFICATE-----
     EOF
     )
-    $ kubectl exec -n d8-system svc/deckhouse-leader -c deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
+    $ kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
     ```
   
   * Просмотреть список доступных ключей команды `deckhouse-controller helper change-registry` можно, выполнив следующую команду:
 
     ```shell
-    kubectl exec -ti -n d8-system svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --help
+    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --help
     ```
 
     Пример вывода:
@@ -720,8 +720,8 @@ Deckhouse поддерживает работу только с Bearer token-с�
 * Проверьте, не осталось ли в кластере подов с оригинальным адресом registry:
 
   ```shell
-  kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io"))))
-    | .metadata.namespace + "\t" + .metadata.name' -r
+  kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+    | select(.image | startswith("registry.deckhouse"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
   ```
 
 ### Как создать кластер и запустить Deckhouse без использования каналов обновлений?
@@ -888,14 +888,14 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Проверьте, не осталось ли в кластере подов с адресом registry для Deckhouse EE:
 
    ```shell
-   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ee"))))
-     | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
+   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+     | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
    Иногда могут оставаться запущенными некоторые static Pod'ы (например, `kubernetes-api-proxy-*`). Это связанно с тем, что kubelet не перезапускает под несмотря на изменение соответствующего манифеста, так как используемый образ одинаков для Deckhouse CE и EE. Выполните на любом master-узле следующую команду, чтобы убедиться, что соответствующие манифесты также были изменены:
 
    ```shell
-   grep -ri 'deckhouse.io/deckhouse/ee' /etc/kubernetes | grep -v backup
+   grep -ri 'deckhouse.ru/deckhouse/ee' /etc/kubernetes | grep -v backup
    ```
 
    Вывод команды должен быть пуст.
@@ -953,14 +953,14 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Проверьте, не осталось ли в кластере подов с адресом registry для Deckhouse CE:
 
    ```shell
-   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ce"))))
-     | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
+   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+     | select(.image | contains("deckhouse.ru/deckhouse/ce"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
    Иногда могут оставаться запущенными некоторые static Pod'ы (например, `kubernetes-api-proxy-*`). Это связанно с тем, что kubelet не перезапускает под несмотря на изменение соответствующего манифеста, так как используемый образ одинаков для Deckhouse CE и EE. Выполните на любом master-узле следующую команду, чтобы убедиться, что соответствующие манифесты также были изменены:
 
    ```shell
-   grep -ri 'deckhouse.io/deckhouse/ce' /etc/kubernetes | grep -v backup
+   grep -ri 'deckhouse.ru/deckhouse/ce' /etc/kubernetes | grep -v backup
    ```
 
    Вывод команды должен быть пуст.
