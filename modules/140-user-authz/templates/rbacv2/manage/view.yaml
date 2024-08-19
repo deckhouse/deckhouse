@@ -8,7 +8,6 @@ metadata:
     rbac.deckhouse.io/aggregate-to-security-as: viewer
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
-    rbac.deckhouse.io/namespace: d8-user-authz
   name: d8:manage:capability:module:user-authz:view
 rules:
 - apiGroups:

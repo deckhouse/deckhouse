@@ -2453,7 +2453,7 @@ modules:
           - patch
           - delete
       use: null
-    namespace: d8-user-authz
+    namespace: none
     scopes:
     - security
   vertical-pod-autoscaler:
@@ -2622,7 +2622,6 @@ scopes:
     - d8-operator-trivy
     - d8-runtime-audit-engine
     - d8-user-authn
-    - d8-user-authz
   storage:
     modules:
     - ceph-csi
