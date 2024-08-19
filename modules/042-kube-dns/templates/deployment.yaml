@@ -1,8 +1,3 @@
-{{- define "coredns_resources" }}
-cpu: 20m
-memory: 40Mi
-{{- end }}
-
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -16,16 +11,21 @@ spec:
     apiVersion: "apps/v1"
     kind: Deployment
     name: d8-kube-dns
+    {{- if eq ($resourcesRequests.mode | default "") "VPA" }}
+      {{- $resourcesRequestsVPA := $resourcesRequests.vpa | default dict }}
+      {{- $resourcesRequestsVPA_CPU := $resourcesRequestsVPA.cpu | default dict }}
+      {{- $resourcesRequestsVPA_Memory := $resourcesRequestsVPA.memory | default dict }}
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: {{ $resourcesRequestsVPA.mode | default "Auto" | quote }}
   resourcePolicy:
     containerPolicies:
     - containerName: "coredns"
       minAllowed:
-        {{- include "coredns_resources" . | nindent 8 }}
+        cpu: {{ $resourcesRequestsVPA_CPU.min | default "20m" | quote }}
+        memory: {{ $resourcesRequestsVPA_Memory.min | default "40Mi" | quote }}
       maxAllowed:
-        cpu: 40m
-        memory: 50Mi
+        cpu: {{ $resourcesRequestsVPA_CPU.max | default "40m" | quote }}
+        memory: {{ $resourcesRequestsVPA_Memory.max | default "50Mi" | quote }}
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
