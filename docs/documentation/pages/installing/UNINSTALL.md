@@ -8,7 +8,13 @@ lang: en
 
 Perform the following steps to delete a cluster deployed with a cloud provider
 
-1. Run the Deckhouse installer:
+1. Find out the update channel set in the cluster. To do this, run the command:
+
+   ```shell
+   kubectl get mc deckhouse  -o jsonpath='{.spec.settings.releaseChannel}'
+   ```
+
+2. Run the Deckhouse installer:
 
    ```shell
    docker run --pull=always -it [<MOUNT_OPTIONS>] \
@@ -33,7 +39,7 @@ Perform the following steps to delete a cluster deployed with a cloud provider
      -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.ru/deckhouse/ce/install:stable bash
    ```
 
-1. In the container you have started, run the following command:
+3. In the container you have started, run the following command:
 
    ```shell
    dhctl destroy --ssh-user=<USER> \
@@ -48,13 +54,19 @@ Perform the following steps to delete a cluster deployed with a cloud provider
 
 The installer will then connect to the cluster, retrieve the necessary data, and delete all the resources and objects in the cloud that were created during the DKP installation and operation.
 
-### Deleting a hybrid cluster
+## Deleting a hybrid cluster
 
 Follow these steps to delete a hybrid cluster consisting of the nodes that were automatically deployed in the cloud as well as the static nodes that were manually plugged in:
 
 1. First, [delete](../modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) all the [extra nodes](../modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetype) (CloudStatic and Static) that were manually plugged in.
 
-2. Run the Deckhouse installer:
+2. Find out the update channel set in the cluster. To do this, run the command:
+
+   ```shell
+   kubectl get mc deckhouse  -o jsonpath='{.spec.settings.releaseChannel}'
+   ```
+
+3. Run the Deckhouse installer:
 
    ```shell
    docker run --pull=always -it [<MOUNT_OPTIONS>] \
@@ -79,7 +91,7 @@ Follow these steps to delete a hybrid cluster consisting of the nodes that were 
      -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
    ```
 
-3. In the container you have started, run the following command:
+4. In the container you have started, run the following command:
 
    ```shell
    dhctl destroy --ssh-user=<USER> \
@@ -100,7 +112,13 @@ Follow the steps below to delete a cluster that has been manually installed (e.g
 
 1. [Delete](../modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) all the extra nodes from the cluster.
 
-1. Run the Deckhouse installer:
+2. Find out the update channel set in the cluster. To do this, run the command:
+
+   ```shell
+   kubectl get mc deckhouse  -o jsonpath='{.spec.settings.releaseChannel}'
+   ```
+
+3. Run the Deckhouse installer:
 
    ```shell
    docker run --pull=always -it [<MOUNT_OPTIONS>] \
@@ -125,7 +143,7 @@ Follow the steps below to delete a cluster that has been manually installed (e.g
      -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
    ```
 
-1. Run the command below to delete the cluster:
+4. Run the command below to delete the cluster:
 
    ```shell
    dhctl destroy --ssh-user=<USER> \
