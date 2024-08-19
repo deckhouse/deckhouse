@@ -43,7 +43,7 @@ locals {
   net_type_extnet = "EXTNET"
 
   cloud_init_script = yamlencode(merge({
-    "hostname": local.master_node_name,
+    "hostname": local.node_name,
     "create_hostname_file": true,
     "ssh_deletekeys": true,
     "ssh_genkeytypes": ["rsa", "ecdsa", "ed25519"],
