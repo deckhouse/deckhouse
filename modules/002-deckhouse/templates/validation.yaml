@@ -109,36 +109,4 @@ apiVersion: admissionregistration.k8s.io/v1beta1
 {{- else }}
 apiVersion: admissionregistration.k8s.io/v1alpha1
 {{- end }}
-{{- $policyName := "machines.deckhouse.io" }}
-kind: ValidatingAdmissionPolicy
-metadata:
-  name: {{ $policyName }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
-spec:
-  failurePolicy: Fail
-  matchConstraints:
-    resourceRules:
-      - apiGroups: ["machine.sapcloud.io", "cluster.x-k8s.io"]
-        apiVersions: ["*"]
-        operations: ["DELETE"]
-        resources: ["*"]
-  validations:
-    - expression: '(request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username == "kubernetes-admin")'
-      reason: Forbidden
-      messageExpression: '''Operation on machine object is forbidden for this user by ValidatingAdmissionPolicy {{ $policyName }}'''
----
-{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
-apiVersion: admissionregistration.k8s.io/v1beta1
-{{- else }}
-apiVersion: admissionregistration.k8s.io/v1alpha1
-{{- end }}
-kind: ValidatingAdmissionPolicyBinding
-metadata:
-  name: {{ $policyName }}-binding
-  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
-spec:
-  policyName: {{ $policyName }}
-{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
-  validationActions: [Deny]
-{{- end }}
-{{- end }}
+
