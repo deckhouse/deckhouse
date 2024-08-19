@@ -35,6 +35,7 @@ d8 cilium connectivity test \
 --expected-drop-reasons="+No egress gateway found" \
 --expected-drop-reasons="+CT: Unknown L4 protocol" \
 --expected-drop-reasons="+No mapping for NAT masquerade" \
+--expected-drop-reasons="+Unsupported L2 protocol" \
 --sysdump-hubble-flows-count=1000000 \
 --sysdump-hubble-flows-timeout=5m \
 --sysdump-output-filename "cilium-sysdump-common-e2e-<ts>" \
