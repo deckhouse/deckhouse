@@ -66,6 +66,8 @@
        {{ partial "openapi/format-type" ( dict "type" $data.type "itemsType" $data.items.type ) }}
     {{ else if $data.type }}
        {{  partial "openapi/format-type" ( dict "type" $data.type ) }}
+    {{ else if index $data "x-kubernetes-int-or-string" }}
+       {{  partial "openapi/format-type" ( dict "type" "x-kubernetes-int-or-string" ) }}
     {{ end }}
   {{ end }}
 {{ end }}
