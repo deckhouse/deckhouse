@@ -65,11 +65,12 @@ function netplan_configure(){
     ip="$(echo "$metadata" | python3 -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc);[print(iface["ip"]) for iface in parsed["networkInterfaces"] if iface["mac"]==sys.argv[1]]' "$mac")"
     route_settings=""
     if ip_in_subnet "$ip" "$network_cidr"; then
-      read -r -d '' route_settings <<ROUTE_EOF
-        routes:
-        - to: $network_cidr
-          scope: link
+      route_settings=$(cat <<ROUTE_EOF
+routes:
+      - to: $network_cidr
+        scope: link
 ROUTE_EOF
+    )
     fi
 
   {{- /* # Configure the internal interface to route all vpc to all vm */}}
