@@ -1,3 +1,4 @@
+{{- $providerClusterConfiguration := .Values.cloudProviderDynamix.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
 {{- range $index, $storageClass := .Values.cloudProviderDynamix.internal.storageClasses }}
 ---
 apiVersion: storage.k8s.io/v1
@@ -11,8 +12,8 @@ reclaimPolicy: Delete
 allowVolumeExpansion: false
 volumeBindingMode: WaitForFirstConsumer
 parameters:
-  account: {{ .Values.cloudProviderDynamix.internal.providerClusterConfiguration.account | quote }}
-  location: {{ .Values.cloudProviderDynamix.internal.providerClusterConfiguration.location | quote }}
+  account: {{ $providerClusterConfiguration.account | quote }}
+  location: {{ $providerClusterConfiguration.location | quote }}
   sep: {{ $storageClass.sep | quote }}
   pool: {{ $storageClass.pool | quote }}
 {{- end }}
