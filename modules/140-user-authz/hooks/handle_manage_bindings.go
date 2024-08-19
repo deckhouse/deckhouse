@@ -246,8 +246,9 @@ func createBinding(binding *filteredUseBinding) *rbacv1.RoleBinding {
 			Name:      binding.Name,
 			Namespace: binding.Namespace,
 			Labels: map[string]string{
-				"heritage":                    "deckhouse",
-				"rbac.deckhouse.io/automated": "true",
+				"heritage":                       "deckhouse",
+				"rbac.deckhouse.io/automated":    "true",
+				"rbac.deckhouse.io/related-with": binding.RelatedWith,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
