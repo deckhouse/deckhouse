@@ -137,8 +137,9 @@ spec:
       valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to delete object of kind machines.sapcloud.io or machines.cluster.x-k8s'"
 {{- else }}
   validations:
-    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || ["kubernetes-admin", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler"].exists(e, (e == request.userInfo.username)) || ["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups)) || (has(request.kind) && ["StorageClass"].exists(e, (e == request.kind.kind)))'
+    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || ["kubernetes-admin", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler"].exists(e, (e == request.userInfo.username)) || ["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups))'
       reason: Forbidden
+      messageExpression: '''Deleting an object of kind machines.machine.sapcloud.io or machines.cluster.x-k8s.io is forbidden.'''
 {{- end }}
 ---
 {{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
