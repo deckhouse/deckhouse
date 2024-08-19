@@ -1383,26 +1383,6 @@ ul .resources__prop_name.deprecated {
   }
 }
 
-ul .resources__prop_title {
-  display: flex;
-  align-items: center;
-  color: #02003E;
-  width: fit-content;
-  font-weight: 700;
-  padding: 0;
-
-  & .resources__prop_is_deprecated {
-    font-family: monospace, monospace;
-    font-size: 90%;
-    font-weight: normal;
-    line-height: 1rem;
-    margin-left: 10px;
-    background: #f9a3bb;
-    padding: 2px 4px;
-    border-radius: 4px;
-  }
-}
-
 .pdf-slider {
   &__canvas {
     border: 1px solid rgba(241, 243, 244, .949);
