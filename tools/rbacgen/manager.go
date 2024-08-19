@@ -334,7 +334,7 @@ func (m *moduleGenerator) writeRoles(manageRoles, useRoles []*rbacv1.ClusterRole
 		if err != nil {
 			panic(err)
 		}
-		managePath := filepath.Join(m.path, "templates/rbacv2/manage", fmt.Sprintf("%s.yaml", name))
+		managePath := filepath.Join(m.path, "templates", "rbacv2", "manage", fmt.Sprintf("%s.yaml", name))
 		if err = os.WriteFile(managePath, result, 0644); err != nil {
 			return err
 		}
@@ -351,7 +351,8 @@ func (m *moduleGenerator) writeRoles(manageRoles, useRoles []*rbacv1.ClusterRole
 		if err != nil {
 			return err
 		}
-		// it fixes flaky test, because there is a possibility that PR marshaled docs locally docs will be different
+
+		// it fixes flaky test, because there is a possibility that PR marshaled docs and locally marshalled docs will be different
 		var tmp interface{}
 		if err = yaml.Unmarshal(marshaled, &tmp); err != nil {
 			panic(err)
@@ -360,7 +361,8 @@ func (m *moduleGenerator) writeRoles(manageRoles, useRoles []*rbacv1.ClusterRole
 		if err != nil {
 			panic(err)
 		}
-		usePath := filepath.Join(m.path, "templates/rbacv2/use", fmt.Sprintf("%s.yaml", name))
+
+		usePath := filepath.Join(m.path, "templates", "rbacv2", "use", fmt.Sprintf("%s.yaml", name))
 		if err = os.WriteFile(usePath, result, 0644); err != nil {
 			return err
 		}

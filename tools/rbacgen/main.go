@@ -24,8 +24,8 @@ import (
 	"slices"
 	"strings"
 
-	yaml "gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/yaml"
 )
 
 func cwd() string {
@@ -145,6 +145,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	// it fixes flaky test, because there is a possibility that PR marshaled docs locally docs will be different
 	var tmp interface{}
 	if err = yaml.Unmarshal(marshaled, &tmp); err != nil {
@@ -154,8 +155,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = os.WriteFile(filepath.Join(workDir, "docs/documentation/_data/rbac.yaml"), result, 0666)
-	if err != nil {
+
+	if err = os.WriteFile(filepath.Join(workDir, "docs", "documentation", "_data", "rbac.yaml"), result, 0666); err != nil {
 		panic(err)
 	}
 }
