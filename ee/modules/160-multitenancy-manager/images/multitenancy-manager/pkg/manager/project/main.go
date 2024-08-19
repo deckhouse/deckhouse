@@ -146,7 +146,8 @@ func (m *manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 			m.log.Error(statusErr, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, nil
+		// requeue to avoid helm lucky errors
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 
 	// update conditions
