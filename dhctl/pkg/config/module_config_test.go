@@ -145,39 +145,141 @@ func TestCheckOrSetupArbitaryCNIModuleConfig(t *testing.T) {
 		version  int
 		settings SettingsValues
 	}
+
 	type testProvider struct {
 		cloudProvider  string
 		podNetworkMode string
 		result         result
 	}
 
-	tp := make([]testProvider, 0)
-
-	tp = append(tp, testProvider{
-		cloudProvider:  "AWS",
-		podNetworkMode: "",
-		result: result{
-			cniName:  "cni-simple-bridge",
-			enabled:  true,
-			version:  1,
-			settings: nil,
+	testCases := []testProvider{
+		{
+			cloudProvider:  "AWS",
+			podNetworkMode: "",
+			result: result{
+				cniName:  "cni-simple-bridge",
+				enabled:  true,
+				version:  1,
+				settings: nil,
+			},
 		},
-	})
+		{
+			cloudProvider:  "GCP",
+			podNetworkMode: "",
+			result: result{
+				cniName:  "cni-simple-bridge",
+				enabled:  true,
+				version:  1,
+				settings: nil,
+			},
+		},
+		{
+			cloudProvider:  "Azure",
+			podNetworkMode: "",
+			result: result{
+				cniName:  "cni-simple-bridge",
+				enabled:  true,
+				version:  1,
+				settings: nil,
+			},
+		},
+		{
+			cloudProvider:  "Yandex",
+			podNetworkMode: "",
+			result: result{
+				cniName:  "cni-simple-bridge",
+				enabled:  true,
+				version:  1,
+				settings: nil,
+			},
+		},
+		{
+			cloudProvider:  "Openstack",
+			podNetworkMode: "VXLAN",
+			result: result{
+				cniName: "cni-cilium",
+				enabled: true,
+				version: 1,
+				settings: map[string]interface{}{
+					"tunnelMode":     "VXLAN",
+					"masqueradeMode": "BPF",
+				},
+			},
+		},
+		{
+			cloudProvider:  "Openstack",
+			podNetworkMode: "Direct",
+			result: result{
+				cniName: "cni-cilium",
+				enabled: true,
+				version: 1,
+				settings: map[string]interface{}{
+					"tunnelMode":       "Disabled",
+					"masqueradeMode":   "Netfilter",
+					"createNodeRoutes": true,
+				},
+			},
+		},
+		{
+			cloudProvider:  "VCD",
+			podNetworkMode: "",
+			result: result{
+				cniName: "cni-cilium",
+				enabled: true,
+				version: 1,
+				settings: map[string]interface{}{
+					"tunnelMode":       "Disabled",
+					"masqueradeMode":   "Netfilter",
+					"createNodeRoutes": true,
+				},
+			},
+		},
+		{
+			cloudProvider:  "ZVirt",
+			podNetworkMode: "",
+			result: result{
+				cniName: "cni-cilium",
+				enabled: true,
+				version: 1,
+				settings: map[string]interface{}{
+					"tunnelMode":       "Disabled",
+					"masqueradeMode":   "Netfilter",
+					"createNodeRoutes": true,
+				},
+			},
+		},
+		{
+			cloudProvider:  "Vsphere",
+			podNetworkMode: "",
+			result: result{
+				cniName: "cni-cilium",
+				enabled: true,
+				version: 1,
+				settings: map[string]interface{}{
+					"tunnelMode":       "Disabled",
+					"masqueradeMode":   "Netfilter",
+					"createNodeRoutes": true,
+				},
+			},
+		},
+		// static cluster
+		{
+			cloudProvider:  "",
+			podNetworkMode: "",
+			result: result{
+				cniName: "cni-cilium",
+				enabled: true,
+				version: 1,
+				settings: map[string]interface{}{
+					"tunnelMode":       "Disabled",
+					"masqueradeMode":   "Netfilter",
+					"createNodeRoutes": true,
+				},
+			},
+		},
+	}
 
-	/*	for _, provider := range []string{"OpenStack", "Yandex", "Vsphere", "GCP", "VCD", "AWS", "Zvirt", "Azure", "Static"} {
-			tp = append(tp, testProvider{
-				cloudProvider:  provider,
-				podNetworkMode: "",
-			})
-			if provider == "OpenStack" {
-				tp = append(tp, testProvider{
-					cloudProvider:  provider,
-					podNetworkMode: "VXLAN",
-				})
-			}
-		}
-	*/
-	for _, p := range tp {
+	for _, p := range testCases {
 		t.Run("Check generation of the cni module config for "+p.cloudProvider, func(t *testing.T) {
 			cfg := &DeckhouseInstaller{
 				ProviderClusterConfig: []byte(fmt.Sprintf("{\"kind\": \"%sClusterConfiguration\"}", p.cloudProvider)),
