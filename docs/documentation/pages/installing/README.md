@@ -319,8 +319,8 @@ dhctl bootstrap \
 - `<SSH_USER>` — SSH user on the server;
 - `--ssh-agent-private-keys` — file with the private SSH key for connecting via SSH.
 
-### Aborting the installation and uninstalling Deckhouse
+### Aborting the installation
 
-When installing in a supported cloud, the resources created may remain in the cloud if the installation is interrupted or there are problems during the installation. Use the `dhctl bootstrap-phase abort` command to delete those resources. Note that the configuration file passed via the `--config` flag must be the same as the one used for the installation.
+If the installation was carried out in a supported cloud and was interrupted for any reason, or if problems occurred during the installation, resources that were created during the installation may end up residing in the cloud. To purge them, run the `dhctl bootstrap-phase abort` command in the installer container.
 
-To delete a cluster running in a supported cloud and deployed after the Deckhouse installation, use the `dhctl destroy` command. In this case, `dhctl` will connect to the master node, retrieve the terraform state, and delete the resources created in the cloud in the correct fashion.
+> Note that the **config file** that is passed via the `--config` parameter to run the installer must be the **same** as the one used to initiate the installation in the first place.
