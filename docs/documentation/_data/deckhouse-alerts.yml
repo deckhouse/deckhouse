@@ -450,7 +450,7 @@ alerts:
       description: |
         Module update policy not found for {{ $labels.module_release }}
 
-        You need to remove label from MR: `kubectl label mr {{ $labels.module }} modules.deckhouse.io/update-policy-`.
+        You need to remove label from MR: `kubectl label mr {{ $labels.module_release }} modules.deckhouse.io/update-policy-`.
         A new suitable policy will be detected automatically.
       summary: |
         Module update policy not found for {{ $labels.module_release }}
