@@ -88,6 +88,31 @@ if ! [ -b "$DATA_DEVICE" ]; then
   DATA_DEVICE=$(lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '.blockdevices[] | select (.type == "disk" and .mountpoint == null and .children == null) | .path')
 fi
 
+mkdir -p /mnt/system-registry-data
+
+if ! file -s $DATA_DEVICE | grep -q ext4; then
+  mkfs.ext4 -F -L registry-data $DATA_DEVICE
+fi
+
+if grep -qv registry-data /etc/fstab; then
+  cat >> /etc/fstab << EOF
+LABEL=registry-data           /mnt/system-registry-data     ext4   defaults,discard,x-systemd.automount        0 0
+EOF
+fi
+
+if ! mount | grep -q $DATA_DEVICE; then
+  mount -L registry-data
+fi
+
+# if there is system-registry dir with regular files then we can't delete it
+# if there aren't files then we can delete dir to prevent symlink creation problems
+if [[ "$(find /opt/deckhouse/system-registry/ -type f 2>/dev/null | wc -l)" == "0" ]]; then
+  rm -rf /opt/deckhouse/system-registry
+  ln -s /mnt/system-registry-data /opt/deckhouse/system-registry
+fi
+
+touch /var/lib/bashible/system-registry-data-device-installed
+
     {{- end  }}
   {{- end  }}
 {{- end }}
