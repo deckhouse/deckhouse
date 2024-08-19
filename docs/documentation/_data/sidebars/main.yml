@@ -34,6 +34,10 @@ entries:
             - title: Custom Resources
               url: /cr.html
         - title:
+            en: Platform uninstalling
+            ru: Удаление платформы
+          url: /uninstalling/
+        - title:
             en: Module development
             ru: Разработка модуля
           folders:
