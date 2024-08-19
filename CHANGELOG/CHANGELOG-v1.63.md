@@ -43,6 +43,7 @@
 ## Fixes
 
 
+ - **[candi]** Fix bootstrap network script for nodes with many interfaces for cloud-provider Yandex Cloud. [#9408](https://github.com/deckhouse/deckhouse/pull/9408)
  - **[candi]** Fix for node bootstrap in CE. [#9323](https://github.com/deckhouse/deckhouse/pull/9323)
  - **[candi]** Add new dirs to cleanup on `cleanup_static_node.sh`. [#9159](https://github.com/deckhouse/deckhouse/pull/9159)
  - **[candi]** Fix work `registry-packages-proxy` with module sources. [#9112](https://github.com/deckhouse/deckhouse/pull/9112)
@@ -55,6 +56,8 @@
  - **[candi]** Fixed kubelet server certificate rotation. [#8603](https://github.com/deckhouse/deckhouse/pull/8603)
  - **[cloud-provider-vcd]** Create virtual machine NIC before the VM starts. [#9255](https://github.com/deckhouse/deckhouse/pull/9255)
  - **[cni-cilium]** Improved the `CiliumAgentUnreachableHealthEndpoints` metric expression to avoid false positives. [#9198](https://github.com/deckhouse/deckhouse/pull/9198)
+ - **[deckhouse]** Allow admins to change objects with `kind=StorageClass`. [#9398](https://github.com/deckhouse/deckhouse/pull/9398)
+ - **[deckhouse]** Allow admins to change objects with `kind=StorageClass`. [#9362](https://github.com/deckhouse/deckhouse/pull/9362)
  - **[deckhouse-controller]** Fix panic on invalid module image [#9231](https://github.com/deckhouse/deckhouse/pull/9231)
  - **[deckhouse-controller]** Deckhouse update metrics restored. [#9147](https://github.com/deckhouse/deckhouse/pull/9147)
  - **[dhctl]** Wait for resources required by manifest being created. [#9157](https://github.com/deckhouse/deckhouse/pull/9157)
@@ -64,12 +67,15 @@
  - **[dhctl]** Validate the length of the list of external IP addresses in the `YandexClusterConfiguration`. [#8877](https://github.com/deckhouse/deckhouse/pull/8877)
  - **[docs]** Fix zone and disk in `volumeTypeMap` VK Cloud `config.yml` from Getting Started. [#9005](https://github.com/deckhouse/deckhouse/pull/9005)
     Fix bootstrap error in the Getting Started `config.yml` for VK Cloud.
+ - **[global-hooks]** Fixed the Services with multiple ports broken by Helm. [#9392](https://github.com/deckhouse/deckhouse/pull/9392)
  - **[go_lib]** Fix work `registry-packages-proxy` with module sources. [#9112](https://github.com/deckhouse/deckhouse/pull/9112)
     `registry-packages-proxy` should be restarted.
  - **[istio]** Fix istio module operability in managed K8s setups. [#9275](https://github.com/deckhouse/deckhouse/pull/9275)
  - **[istio]** Istio 1.19 version compatibility extended with K8s versions 1.29 and 1.30. [#9217](https://github.com/deckhouse/deckhouse/pull/9217)
  - **[l2-load-balancer]** An internal refactoring and the fix for handling external and internal traffic policies in the LoadBalancer Service. [#9114](https://github.com/deckhouse/deckhouse/pull/9114)
+ - **[log-shipper]** Fix JSON codec for socket destination. [#9385](https://github.com/deckhouse/deckhouse/pull/9385)
  - **[log-shipper]** Make `extraLabels` and `CEF` encoding work for `Socket` destination. [#9149](https://github.com/deckhouse/deckhouse/pull/9149)
+ - **[multitenancy-manager]** Fix templates. [#9358](https://github.com/deckhouse/deckhouse/pull/9358)
  - **[multitenancy-manager]** Fix templates bugs. [#9205](https://github.com/deckhouse/deckhouse/pull/9205)
  - **[network-policy-engine]** Downgrade iptables version from `1.8.10` to `1.8.9` due to iptables chains overflow. You need to clear unwanted iptables rules manually or reboot the affected nodes. [#9315](https://github.com/deckhouse/deckhouse/pull/9315)
  - **[node-manager]** Fix role rights for cluster-autoscaler `1.29`, `1.30`. [#9294](https://github.com/deckhouse/deckhouse/pull/9294)
