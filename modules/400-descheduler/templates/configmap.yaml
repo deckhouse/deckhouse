@@ -33,12 +33,12 @@ data:
           priorityThreshold:
             {{- $d.priorityThreshold | toYaml | nindent 12 }}
           {{- end }}
-      {{- if dig "strategies" "lowNodeUtilization" $d }}
+      {{- if dig "strategies" "lowNodeUtilization" false $d }}
       - name: "LowNodeUtilization"
         args:
           {{- $d.strategies.lowNodeUtilization | toYaml | nindent 10 }}
       {{- end }}
-      {{- if dig "strategies" "highNodeUtilization" $d }}
+      {{- if dig "strategies" "highNodeUtilization" false $d }}
       - name: "HighNodeUtilization"
         args:
           {{- $d.strategies.highNodeUtilization | toYaml | nindent 10 }}
@@ -54,11 +54,11 @@ data:
         {{- if $d.strategies }}
         balance:
           enabled:
-          {{- if dig "strategies" "highNodeUtilization" $d }}
-          - name: "HighNodeUtilization"
+          {{- if dig "strategies" "highNodeUtilization" false $d }}
+          - "HighNodeUtilization"
           {{- end }}
-          {{- if dig "strategies" "lowNodeUtilization" $d }}
-          - name: "LowNodeUtilization"
+          {{- if dig "strategies" "lowNodeUtilization" false $d }}
+          - "LowNodeUtilization"
           {{- end }}
         {{- end }}
     {{- end }}
