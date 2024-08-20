@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"reflect"
 	"sync"
 	"syscall"
 	"time"
@@ -109,6 +110,7 @@ type Executor struct {
 	StdoutBuffer   *bytes.Buffer
 	StdoutSplitter bufio.SplitFunc
 	StdoutHandler  func(l string)
+	stdoutReadPipe *os.File
 
 	StderrBuffer   *bytes.Buffer
 	StderrSplitter bufio.SplitFunc
@@ -245,6 +247,7 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 		if err != nil {
 			return fmt.Errorf("unable to create os pipe for stdout: %s", err)
 		}
+		e.stdoutReadPipe = stdoutReadPipe
 		e.cmd.Stdout = stdoutWritePipe
 
 		// create pipe for StdoutHandler
@@ -343,9 +346,10 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 }
 
 func (e *Executor) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWritePipe io.Writer) {
-	if stdoutReadPipe == nil {
+	if stdoutReadPipe == nil || reflect.ValueOf(stdoutReadPipe).IsNil() {
 		return
 	}
+	log.DebugLn("Start read from streams for command: ", e.cmd.String())
 	buf := make([]byte, 16)
 	matchersDone := false
 	if len(e.Matchers) == 0 {
@@ -395,6 +399,7 @@ func (e *Executor) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWriteP
 		}
 
 		if err == io.EOF {
+			log.DebugLn("readFromStreams: EOF")
 			break
 		}
 	}

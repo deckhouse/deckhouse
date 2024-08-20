@@ -15,13 +15,10 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"io"
-	"net/http"
-	"net/http/pprof"
 	"os"
 	"path"
+	"runtime/pprof"
 	"runtime/trace"
 	"strings"
 	"time"
@@ -203,87 +200,65 @@ func runApplication(kpApp *kingpin.Application) {
 }
 
 func EnableTrace() func() {
-	traceFile := os.Getenv("DHCTL_TRACE")
-	profFile := traceFile + ".prof"
-	if traceFile == "" || traceFile == "0" || traceFile == "no" {
+	traceFileName := os.Getenv("DHCTL_TRACE")
+	cpuProfileFileName := traceFileName + ".prof.cpu"
+
+	if traceFileName == "" || traceFileName == "0" || traceFileName == "no" {
 		return func() {}
 	}
-	if traceFile == "1" || traceFile == "yes" {
-		traceFile = "trace.out"
-		profFile = traceFile + ".prof"
+	if traceFileName == "1" || traceFileName == "yes" {
+		traceFileName = "trace.out"
+		cpuProfileFileName = "pprof.cpu"
 	}
 
 	fns := make([]func(), 0)
 
-	traceF, err := os.Create(traceFile)
+	traceF, err := os.Create(traceFileName)
 	if err != nil {
-		log.InfoF("failed to create trace output file '%s': %v", traceFile, err)
-		os.Exit(1)
-	}
-
-	profF, err := os.Create(profFile)
-	if err != nil {
-		log.InfoF("failed to create trace output file '%s': %v", profFile, err)
+		log.InfoF("failed to create trace output file '%s': %v", traceFileName, err)
 		os.Exit(1)
 	}
 
 	fns = append([]func(){
 		func() {
 			if err := traceF.Close(); err != nil {
-				log.InfoF("failed to close trace file '%s': %v", traceFile, err)
+				log.InfoF("failed to close trace file '%s': %v", traceFileName, err)
+				os.Exit(1)
+			}
+		},
+	}, fns...)
+
+	profCPU, err := os.Create(cpuProfileFileName)
+	if err != nil {
+		log.InfoF("failed to create pprof cpu file '%s': %v", cpuProfileFileName, err)
+		os.Exit(1)
+	}
+
+	fns = append([]func(){
+		func() {
+			if err := profCPU.Close(); err != nil {
+				log.InfoF("failed to close pprof cpu file '%s': %v", cpuProfileFileName, err)
 				os.Exit(1)
 			}
 		},
 	}, fns...)
 
 	if err := trace.Start(traceF); err != nil {
-		log.InfoF("failed to start trace to '%s': %v", traceFile, err)
+		log.InfoF("failed to start trace to '%s': %v", traceFileName, err)
 		os.Exit(1)
 	}
 	fns = append([]func(){
 		trace.Stop,
 	}, fns...)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/profile", pprof.Profile)
-
-	server := &http.Server{Addr: "127.0.0.1:17777", Handler: mux, ReadHeaderTimeout: 30 * time.Second}
-
-	start := time.Now()
-
-	go server.ListenAndServe()
+	if err := pprof.StartCPUProfile(profCPU); err != nil {
+		log.InfoF("failed to start profile cpu to '%s': %v", cpuProfileFileName, err)
+		os.Exit(1)
+	}
 
 	fns = append([]func(){
-		func() {
-			defer profF.Close()
-
-			end := time.Now()
-
-			dur := end.Sub(start)
-			seconds := int64(dur.Seconds())
-			log.InfoF("Profiling took %v seconds", seconds)
-			resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:17777/profile?seconds=%d", seconds))
-			if err != nil {
-				log.ErrorLn(err)
-				return
-			}
-
-			defer resp.Body.Close()
-
-			if _, err := io.Copy(profF, resp.Body); err != nil {
-				log.ErrorLn(err)
-				return
-			}
-
-			ctx, cancel := context.WithTimeout(context.TODO(), 3*time.Second)
-			defer cancel()
-
-			if err := server.Shutdown(ctx); err != nil {
-				log.ErrorLn(err)
-				return
-			}
-		},
-	})
+		pprof.StopCPUProfile,
+	}, fns...)
 
 	return func() {
 		for _, fn := range fns {
