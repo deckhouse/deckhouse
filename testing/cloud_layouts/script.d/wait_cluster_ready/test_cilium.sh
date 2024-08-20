@@ -15,6 +15,8 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 
+kubectl -n d8-cni-cilium annotate pod -l app=agent safe-agent-updater-daemonset-generation- && kubectl -n d8-cni-cilium rollout restart ds safe-agent-updater
+
 mkdir -p cilium-junits
 
 d8 cilium status --wait
