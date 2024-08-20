@@ -201,6 +201,8 @@ spec:
               value: "/deckhouse/modules:/deckhouse/downloaded/modules"
             - name: DOWNLOADED_MODULES_DIR
               value: "/deckhouse/downloaded/"
+            - name: EXTERNAL_MODULES_DIR
+              value: "/deckhouse/downloaded/"
             - name: DEBUG_UNIX_SOCKET
               value: /tmp/shell-operator-debug.socket
             - name: HISTFILE
