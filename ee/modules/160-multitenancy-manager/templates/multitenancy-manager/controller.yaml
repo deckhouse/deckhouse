@@ -66,7 +66,7 @@ spec:
           imagePullPolicy: 'IfNotPresent'
           args:
             - /multitenancy-manager
-            - --prohibit-orphan-namespaces={{ .Values.multitenancyManager.prohibitOrphanNamespaces }}
+            - --allow-orphan-namespaces={{ .Values.multitenancyManager.allowNamespacesWithoutProjects }}
           ports:
             - containerPort: 9090
               name: healthz

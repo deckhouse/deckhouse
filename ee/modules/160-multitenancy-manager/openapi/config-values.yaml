@@ -1,7 +1,7 @@
 type: object
 properties:
-  prohibitOrphanNamespaces:
+  allowNamespacesWithoutProjects:
     type: boolean
-    default: false
+    default: true
     description: |
-      If this option is enabled - prohibit to create a namespace which is not a part of a Project.
+      If this option is disabled - prohibit to create a namespace which is not a part of a Project.

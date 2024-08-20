@@ -51,7 +51,7 @@ webhooks:
         namespace: d8-multitenancy-manager
         port: 9443
         path: /validate/v1alpha1/templates
-  {{ if .Values.multitenancyManager.prohibitOrphanNamespaces }}
+  {{ if not .Values.multitenancyManager.allowNamespacesWithoutProjects }}
   - name: namespaces.multitenancy-webhook.deckhouse.io
     rules:
       - apiGroups:

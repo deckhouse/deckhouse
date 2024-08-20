@@ -49,15 +49,15 @@ var (
 )
 
 func main() {
-	var prohibitOrphanNamespaces bool
-	flag.BoolVar(&prohibitOrphanNamespaces, "prohibit-orphan-namespaces", false, "prohibit to create a namespace which is not a part of a Project")
+	var allowOrphanNamespaces bool
+	flag.BoolVar(&allowOrphanNamespaces, "allow-orphan-namespaces", true, "allow to create a namespace which is not a part of a Project")
 	flag.Parse()
 
 	// setup logger
 	log := ctrl.Log.WithName("multitenancy-manager")
 	ctrllog.SetLogger(zap.New(zap.Level(zapcore.Level(-4)), zap.UseDevMode(true)))
 
-	log.Info(fmt.Sprintf("starting multitenancy-manager with %v prohibit orphan namespaces option", prohibitOrphanNamespaces))
+	log.Info(fmt.Sprintf("starting multitenancy-manager with %v allow orphan namespaces option", allowOrphanNamespaces))
 
 	// initialize runtime manager
 	runtimeManager, err := setupRuntimeManager(log)
@@ -87,7 +87,7 @@ func main() {
 	// register template webhook
 	templatewebhook.Register(runtimeManager, serviceAccount)
 
-	if prohibitOrphanNamespaces {
+	if !allowOrphanNamespaces {
 		// register namespace webhook
 		namespacewebhook.Register(runtimeManager, serviceAccount, deckhouseServiceAccount)
 	}

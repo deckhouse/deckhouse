@@ -1,5 +1,5 @@
 type: object
 properties:
-  prohibitOrphanNamespaces:
+  allowNamespacesWithoutProjects:
     description: |
-      Если эта опция включена - запретить создавать неймспейсы которые не являются частью проекта. 
+      Если эта опция выключена - запретить создавать неймспейсы которые не являются частью проекта. 
