@@ -160,7 +160,7 @@ chmod 600 /home/caps/.ssh/authorized_keys
 {% endsnippetcut %}
   </li>
   <li>
-    <p><strong>В операционных системах семейства Astra Linux</strong>, при использовании модуля мандатного контроля целостности Parsec сконфигурируйте максимальный уровень целостности для пользователя <code>caps</code>:</p>
+    <p><strong>В операционных системах семейства Astra Linux</strong>, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя <code>caps</code>:</p>
 {% snippetcut %}
 ```bash
 pdpl-user -i 63 caps
