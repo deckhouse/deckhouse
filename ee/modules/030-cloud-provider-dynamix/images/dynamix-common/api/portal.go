@@ -30,7 +30,7 @@ func (p *PortalService) Test(ctx context.Context) error {
 		if err != nil {
 			return false, err
 		}
-		return true, nil
+		return false, nil
 	})
 	if err != nil {
 		return err

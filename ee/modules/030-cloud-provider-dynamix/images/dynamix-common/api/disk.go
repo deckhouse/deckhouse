@@ -7,8 +7,8 @@ package api
 
 import (
 	"context"
-	"dynamix-common/retry"
 
+	"dynamix-common/retry"
 	decort "repository.basistech.ru/BASIS/decort-golang-sdk"
 	"repository.basistech.ru/BASIS/decort-golang-sdk/pkg/cloudapi/disks"
 )
@@ -40,7 +40,7 @@ func (d *DiskService) ListDisksByName(
 			return false, err
 		}
 		result = resp.Data
-		return true, nil
+		return false, nil
 	})
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func (d *DiskService) ListDisksByAccountName(
 			return false, err
 		}
 		result = resp.Data
-		return true, nil
+		return false, nil
 	})
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (d *DiskService) CreateDisk(
 		if err != nil {
 			return false, err
 		}
-		return true, nil
+		return false, nil
 	})
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func (d *DiskService) GetDisk(
 		}
 
 		result = &resp.Data[0]
-		return true, nil
+		return false, nil
 	})
 	if err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ func (d *DiskService) RemoveDisk(
 			return false, err
 		}
 
-		return true, nil
+		return false, nil
 	})
 	if err != nil {
 		return err
@@ -180,7 +180,7 @@ func (d *DiskService) Resize2Disk(
 			return false, err
 		}
 
-		return true, nil
+		return false, nil
 	})
 	if err != nil {
 		return err

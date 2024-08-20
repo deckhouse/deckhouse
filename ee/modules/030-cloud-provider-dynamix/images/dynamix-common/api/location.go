@@ -8,10 +8,9 @@ package api
 import (
 	"context"
 
+	"dynamix-common/retry"
 	decort "repository.basistech.ru/BASIS/decort-golang-sdk"
 	"repository.basistech.ru/BASIS/decort-golang-sdk/pkg/cloudapi/locations"
-
-	"dynamix-common/retry"
 )
 
 type LocationService struct {

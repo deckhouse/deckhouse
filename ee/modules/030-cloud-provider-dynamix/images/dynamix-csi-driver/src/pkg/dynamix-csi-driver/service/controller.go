@@ -12,7 +12,6 @@ import (
 	"strconv"
 
 	dynamixapi "dynamix-common/api"
-
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -21,10 +20,10 @@ import (
 )
 
 const (
-	ParameterPool     = "pool"
-	ParameterAccount  = "account"
-	ParameterLocation = "location"
-	ParameterSEP      = "sep"
+	ParameterPool            = "pool"
+	ParameterAccount         = "account"
+	ParameterLocation        = "location"
+	ParameterStorageEndpoint = "storageEndpoint"
 )
 
 type ControllerService struct {
@@ -59,16 +58,16 @@ func (c *ControllerService) parseParameters(ctx context.Context, params map[stri
 		return "", 0, 0, 0, fmt.Errorf("can't get gId by location name: %v, %w ", params[ParameterLocation], err)
 	}
 
-	sep, err := c.dynamixCloudAPI.SEPService.GetSEPByName(ctx, params[ParameterSEP])
+	storageEndpoint, err := c.dynamixCloudAPI.StorageEndpointService.GetStorageEndpointByName(ctx, params[ParameterStorageEndpoint])
 	if err != nil {
-		return "", 0, 0, 0, fmt.Errorf("can't get sepId by name: %v, %w ", params[ParameterSEP], err)
+		return "", 0, 0, 0, fmt.Errorf("can't get sepId by name: %v, %w ", params[ParameterStorageEndpoint], err)
 	}
 
-	return pool, account.ID, location.ID, sep.ID, nil
+	return pool, account.ID, location.ID, storageEndpoint.ID, nil
 }
 
 func checkRequiredParams(params map[string]string) error {
-	for _, paramName := range []string{ParameterPool, ParameterAccount, ParameterLocation, ParameterSEP} {
+	for _, paramName := range []string{ParameterPool, ParameterAccount, ParameterLocation, ParameterStorageEndpoint} {
 		if len(params[paramName]) == 0 {
 			return fmt.Errorf("error required storageClass paramater %s wasn't set",
 				paramName)
@@ -87,7 +86,7 @@ func (c *ControllerService) CreateVolume(
 		return nil, err
 	}
 
-	pool, accountID, gID, sepID, err := c.parseParameters(ctx, req.Parameters)
+	pool, accountID, gID, storageEndpointID, err := c.parseParameters(ctx, req.Parameters)
 	if err != nil {
 		return nil, fmt.Errorf("error parse storageClass paramater %w", err)
 	}
@@ -143,7 +142,7 @@ func (c *ControllerService) CreateVolume(
 		diskName,
 		convertBytesToGigabytes(uint64(requiredSize)),
 		pool,
-		sepID,
+		storageEndpointID,
 	)
 	if err != nil {
 		msg := fmt.Errorf("error while creating disk %s, error: %w", diskName, err)
@@ -343,7 +342,7 @@ func (c *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
 		newSize,
 	)
 	if err != nil {
-		return nil, status.Errorf(codes.ResourceExhausted, "failed to expand volume %v: %w", volumeID, err)
+		return nil, status.Errorf(codes.ResourceExhausted, "failed to expand volume %v: %v", volumeID, err)
 	}
 	klog.Infof("Expanded Disk %v to %v Gb", volumeID, newSize)
 

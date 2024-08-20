@@ -21,8 +21,8 @@ data "decort_extnet_list" "extnets" {
   name = local.extnet_name
 }
 
-data "decort_cb_sep_list" "seps" {
-  name = local.sep
+data "decort_cb_sep_list" "storage_endpoints" {
+  name = local.storage_endpoint
 }
 
 locals {
@@ -32,7 +32,7 @@ locals {
   rg_id = data.decort_rg_list.resource_group.items[0].rg_id
   vins_id = data.decort_vins_list.vins.items[0].vins_id
   extnet_id = data.decort_extnet_list.extnets.items[0].net_id
-  sep_id = data.decort_cb_sep_list.seps.items[0].sep_id
+  storage_endpoint_id = data.decort_cb_sep_list.storage_endpoints.items[0].sep_id
 }
 
 resource "decort_disk" "kubernetes_data_disk" {
@@ -41,7 +41,7 @@ resource "decort_disk" "kubernetes_data_disk" {
    gid = local.gid
    size_max = local.master_etcd_disk_size
    type = "D"    # disk type, always use "D" for extra disks
-   sep_id = local.sep_id
+   sep_id = local.storage_endpoint_id
    pool = local.pool
 }
 

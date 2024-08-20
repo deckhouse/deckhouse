@@ -13,6 +13,8 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -20,9 +22,6 @@ import (
 	storage "k8s.io/api/storage/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -101,9 +100,9 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 			}
 
 			storageClasses = append(storageClasses, storageClass{
-				Name: sc.Name,
-				SEP:  sc.Parameters["sep"],
-				Pool: sc.Parameters["pool"],
+				Name:            sc.Name,
+				StorageEndpoint: sc.Parameters["sep"],
+				Pool:            sc.Parameters["pool"],
 			})
 		}
 
@@ -129,14 +128,14 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 
 	input.Values.Set("cloudProviderDynamix.internal.providerDiscoveryData", discoveryData)
 
-	handleDiscoveryDataVolumeTypes(input, discoveryData.SEPs)
+	handleDiscoveryDataVolumeTypes(input, discoveryData.StorageEndpoints)
 
 	return nil
 }
 
 func handleDiscoveryDataVolumeTypes(
 	input *go_hook.HookInput,
-	volumeTypes []cloudDataV1.DynamixSEP,
+	volumeTypes []cloudDataV1.DynamixStorageEndpoint,
 ) {
 	var defaultSCName string
 
@@ -156,9 +155,9 @@ func handleDiscoveryDataVolumeTypes(
 		}
 
 		volumeTypesMap[getStorageClassName(volumeType.Name)] = storageClass{
-			Name: getStorageClassName(volumeType.Name),
-			SEP:  volumeType.Name,
-			Pool: volumeType.Pools[0],
+			Name:            getStorageClassName(volumeType.Name),
+			StorageEndpoint: volumeType.Name,
+			Pool:            volumeType.Pools[0],
 		}
 	}
 
@@ -177,9 +176,9 @@ func handleDiscoveryDataVolumeTypes(
 	storageClasses := make([]storageClass, 0, len(volumeTypes))
 	for name, sp := range volumeTypesMap {
 		sc := storageClass{
-			SEP:  sp.SEP,
-			Pool: sp.Pool,
-			Name: name,
+			StorageEndpoint: sp.StorageEndpoint,
+			Pool:            sp.Pool,
+			Name:            name,
 		}
 		storageClasses = append(storageClasses, sc)
 	}
@@ -233,7 +232,7 @@ func setStorageClassesValues(
 }
 
 type storageClass struct {
-	Name string `json:"name"`
-	SEP  string `json:"sep"`
-	Pool string `json:"pool"`
+	Name            string `json:"name"`
+	StorageEndpoint string `json:"storageEndpoint"`
+	Pool            string `json:"pool"`
 }

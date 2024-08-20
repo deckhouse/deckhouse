@@ -15,12 +15,12 @@
 package v1
 
 type DynamixCloudProviderDiscoveryData struct {
-	APIVersion string       `json:"apiVersion,omitempty"`
-	Kind       string       `json:"kind,omitempty"`
-	SEPs       []DynamixSEP `json:"seps,omitempty"`
+	APIVersion       string                   `json:"apiVersion,omitempty"`
+	Kind             string                   `json:"kind,omitempty"`
+	StorageEndpoints []DynamixStorageEndpoint `json:"storageEndpoints,omitempty"`
 }
 
-type DynamixSEP struct {
+type DynamixStorageEndpoint struct {
 	Name      string   `json:"name"`
 	Pools     []string `json:"pools"`
 	IsEnabled bool     `json:"isEnabled,omitempty"`

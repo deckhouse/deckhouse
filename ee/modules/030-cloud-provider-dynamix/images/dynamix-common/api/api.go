@@ -8,21 +8,20 @@ package api
 import (
 	"errors"
 
+	"dynamix-common/config"
 	decort "repository.basistech.ru/BASIS/decort-golang-sdk"
 	sdkconfig "repository.basistech.ru/BASIS/decort-golang-sdk/config"
-
-	"dynamix-common/config"
 )
 
 var ErrNotFound = errors.New("not found")
 
 type DynamixCloudAPI struct {
-	AccountService  *AccountService
-	ComputeSvc      *ComputeService
-	DiskService     *DiskService
-	LocationService *LocationService
-	PortalSvc       *PortalService
-	SEPService      *SEPService
+	AccountService         *AccountService
+	ComputeSvc             *ComputeService
+	DiskService            *DiskService
+	LocationService        *LocationService
+	PortalSvc              *PortalService
+	StorageEndpointService *StorageEndpointService
 }
 
 func NewDynamixCloudAPI(config config.Credentials) (*DynamixCloudAPI, error) {
@@ -34,11 +33,11 @@ func NewDynamixCloudAPI(config config.Credentials) (*DynamixCloudAPI, error) {
 		SSLSkipVerify: config.Insecure,
 	})
 	return &DynamixCloudAPI{
-		AccountService:  NewAccountService(decortClient),
-		ComputeSvc:      NewComputeService(decortClient),
-		DiskService:     NewDiskService(decortClient),
-		LocationService: NewLocationService(decortClient),
-		PortalSvc:       NewPortalService(decortClient),
-		SEPService:      NewSEPService(decortClient),
+		AccountService:         NewAccountService(decortClient),
+		ComputeSvc:             NewComputeService(decortClient),
+		DiskService:            NewDiskService(decortClient),
+		LocationService:        NewLocationService(decortClient),
+		PortalSvc:              NewPortalService(decortClient),
+		StorageEndpointService: NewStorageEndpointService(decortClient),
 	}, nil
 }

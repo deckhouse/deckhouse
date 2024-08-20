@@ -7,10 +7,10 @@ package dynamixcsidriver
 
 import (
 	"context"
-	"dynamix-csi-driver/internal/endpoint"
 	"encoding/json"
 	"sync"
 
+	"dynamix-csi-driver/internal/endpoint"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-csi/csi-lib-utils/protosanitizer"
 	"google.golang.org/grpc"

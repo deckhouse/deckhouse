@@ -14,6 +14,6 @@ volumeBindingMode: WaitForFirstConsumer
 parameters:
   account: {{ $providerClusterConfiguration.account | quote }}
   location: {{ $providerClusterConfiguration.location | quote }}
-  sep: {{ $storageClass.sep | quote }}
+  storageEndpoint: {{ $storageClass.storageEndpoint | quote }}
   pool: {{ $storageClass.pool | quote }}
 {{- end }}

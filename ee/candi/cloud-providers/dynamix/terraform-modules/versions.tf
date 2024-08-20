@@ -8,4 +8,5 @@ terraform {
       source  = "terraform-provider-decort/decort"
     }
   }
+  required_version = ">= 0.13"
 }

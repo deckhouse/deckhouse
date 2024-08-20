@@ -7,15 +7,14 @@ package main
 
 import (
 	"context"
-	"dynamix-common/config"
-	"dynamix-common/entity"
 	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
 
 	dynamixapi "dynamix-common/api"
-
+	"dynamix-common/config"
+	"dynamix-common/entity"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	"github.com/sirupsen/logrus"
@@ -60,7 +59,6 @@ func newCloudConfig() (*CloudConfig, error) {
 
 // Client Creates a dynamix client
 func (c *CloudConfig) client() (*dynamixapi.DynamixCloudAPI, error) {
-
 	client, err := dynamixapi.NewDynamixCloudAPI(c.Credentials)
 	if err != nil {
 		return nil, err
@@ -103,12 +101,12 @@ func (d *Discoverer) DiscoveryData(
 		return nil, fmt.Errorf("failed to get dynamix location: %w", err)
 	}
 
-	seps, err := dynamixCloidAPI.SEPService.ListSEPWithPoolsByGID(ctx, location.GID)
+	seps, err := dynamixCloidAPI.StorageEndpointService.ListStorageEndpointsWithPoolsByGID(ctx, location.GID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get sizing policies: %w", err)
 	}
 
-	discoveryData.SEPs = mergeSEPs(discoveryData.SEPs, seps)
+	discoveryData.StorageEndpoints = mergeSEPs(discoveryData.StorageEndpoints, seps)
 
 	discoveryDataJSON, err := json.Marshal(discoveryData)
 	if err != nil {
@@ -159,14 +157,14 @@ func extractPoolNames(pools []entity.Pool) []string {
 	return result
 }
 func mergeSEPs(
-	seps []cloudDataV1.DynamixSEP,
-	cloudSeps []entity.SEP,
-) []cloudDataV1.DynamixSEP {
-	result := []cloudDataV1.DynamixSEP{}
-	cloudSepsMap := make(map[string]cloudDataV1.DynamixSEP)
+	seps []cloudDataV1.DynamixStorageEndpoint,
+	cloudSeps []entity.StorageEndpoint,
+) []cloudDataV1.DynamixStorageEndpoint {
+	result := []cloudDataV1.DynamixStorageEndpoint{}
+	cloudSepsMap := make(map[string]cloudDataV1.DynamixStorageEndpoint)
 	for _, sep := range cloudSeps {
 
-		cloudSepsMap[sep.Name] = cloudDataV1.DynamixSEP{
+		cloudSepsMap[sep.Name] = cloudDataV1.DynamixStorageEndpoint{
 			Name:      sep.Name,
 			Pools:     extractPoolNames(sep.Pools),
 			IsEnabled: sep.IsActive && sep.IsCreated,

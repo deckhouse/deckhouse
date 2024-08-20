@@ -1,6 +1,11 @@
+/*
+Copyright 2024 Flant JSC
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+*/
+
 package entity
 
-type SEP struct {
+type StorageEndpoint struct {
 	ID        uint64
 	Name      string
 	IsActive  bool

@@ -10,10 +10,9 @@ import (
 	"k8s.io/klog/v2"
 	"net"
 
+	"dynamix-common/retry"
 	decort "repository.basistech.ru/BASIS/decort-golang-sdk"
 	"repository.basistech.ru/BASIS/decort-golang-sdk/pkg/cloudapi/compute"
-
-	"dynamix-common/retry"
 )
 
 type ComputeService struct {
@@ -124,7 +123,7 @@ func (c *ComputeService) AttachDiskToVM(ctx context.Context, diskID, computeID u
 			return false, err
 		}
 
-		return true, nil
+		return false, nil
 	})
 	if err != nil {
 		return err
@@ -144,7 +143,7 @@ func (c *ComputeService) DetachDiskFromVM(ctx context.Context, diskID, computeID
 			return false, err
 		}
 
-		return true, nil
+		return false, nil
 	})
 	if err != nil {
 		return err

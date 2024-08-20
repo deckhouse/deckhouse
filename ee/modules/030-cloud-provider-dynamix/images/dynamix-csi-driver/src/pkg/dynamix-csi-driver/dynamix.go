@@ -5,12 +5,12 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package dynamixcsidriver
 
 import (
-	"dynamix-csi-driver/internal/config"
-	"dynamix-csi-driver/pkg/dynamix-csi-driver/service"
 	"errors"
 	"sync"
 
 	dynamixapi "dynamix-common/api"
+	"dynamix-csi-driver/internal/config"
+	"dynamix-csi-driver/pkg/dynamix-csi-driver/service"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 

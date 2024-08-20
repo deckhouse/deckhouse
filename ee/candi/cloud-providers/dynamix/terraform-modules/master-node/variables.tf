@@ -31,7 +31,7 @@ locals{
   resource_group_name = join("-", [local.resource_name_prefix, "rg"])
   kubernetes_data_disk_name = join("-", [local.master_node_name, "kubernetes-data"])
   location = lookup(var.providerClusterConfiguration, "location", null)
-  sep = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "sep", null)
+  storage_endpoint = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "storageEndpoint", null)
   pool = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "pool", null)
   extnet_name = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "externalNetwork", null)
   vins_name = join("-", [local.resource_name_prefix, "vins"])
