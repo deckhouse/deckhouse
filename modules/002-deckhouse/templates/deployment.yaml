@@ -201,6 +201,7 @@ spec:
               value: "/deckhouse/modules:/deckhouse/downloaded/modules"
             - name: DOWNLOADED_MODULES_DIR
               value: "/deckhouse/downloaded/"
+            # For backward compatibility with current modules' hooks - remove after 1.69
             - name: EXTERNAL_MODULES_DIR
               value: "/deckhouse/downloaded/"
             - name: DEBUG_UNIX_SOCKET
