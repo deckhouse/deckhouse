@@ -62,10 +62,10 @@ properties:
       See https://grafana.com/docs/loki/v2.9.x/configure/ for more information.
     properties:
       ingestion_rate_mb:
-        type: float
+        type: number
         description: |
           Overall ingestion rate limit in megabytes per second.
-        default: 4.0
+        default: 4
       ingestion_burst_size_mb:
         type: integer
         description: |
