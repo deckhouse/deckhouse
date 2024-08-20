@@ -39,7 +39,13 @@ spec:
   inlet: LoadBalancer
 ```
 
-> **Внимание!** В GCP на узлах должна присутствовать аннотация, разрешающая принимать подключения на внешние адреса для сервисов с типом NodePort.
+{% endraw %}
+
+{% alert level="warning" %}
+В GCP на узлах должна присутствовать аннотация, разрешающая принимать подключения на внешние адреса для сервисов с типом NodePort.
+{% endalert %}
+
+{% raw %}
 
 ## Пример для OpenStack
 
@@ -91,9 +97,11 @@ spec:
     behindL7Proxy: true
 ```
 
+{% endraw %}
+
 ## Пример для bare metal (балансировщик MetalLB в режиме BGP)
 
-Модуль `metallb` на текущий момент доступен только в редакции Enterprise Edition Deckhouse.
+{% alert level="warning" %}Доступно только в Enterprise Edition.{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -128,4 +136,58 @@ metallb:
       value: frontend
 ```
 
-{% endraw %}
+## Пример для bare metal (балансировщик L2LoadBalancer)
+
+{% alert level="warning" %}Доступно только в Enterprise Edition.{% endalert %}
+
+1. Включите модуль `l2-load-balancer`:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: l2-load-balancer
+   spec:
+     enabled: true
+     version: 1
+   ```
+
+1. Создайте ресурс _L2LoadBalancer_:
+
+   ```yaml
+   apiVersion: network.deckhouse.io/v1alpha1
+   kind: L2LoadBalancer
+   metadata:
+     name: ingress
+   spec:
+     addressPool:
+     - 192.168.2.100-192.168.2.150
+     nodeSelector:
+       node-role.kubernetes.io/loadbalancer: "" # селектор узлов-балансировщиков
+   ```
+
+1. Создайте ресурс _IngressNginxController_:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: IngressNginxController
+   metadata:
+    name: main
+   spec:
+     ingressClass: nginx
+     inlet: LoadBalancer
+     loadBalancer:
+       annotations:
+         # Имя _L2LoadBalancer_.
+         network.deckhouse.io/l2-load-balancer-name: ingress
+         # Количество адресов, которые будут выделены из пула, описанного в _L2LoadBalancer_.
+         network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+   ```
+
+1. Платформа создаст сервис с типом `LoadBalancer`, которому будет присвоено заданное количество адресов:
+
+   ```shell
+   $ kubectl -n d8-ingress-nginx get svc
+   NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)                      AGE
+   main-load-balancer     LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30689/TCP,443:30668/TCP   11s
+   ```

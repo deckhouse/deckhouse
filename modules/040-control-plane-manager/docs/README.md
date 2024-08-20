@@ -11,7 +11,10 @@ The control-plane-manager:
 - **Upgrades/downgrades components**. Makes sure that the versions of the components in the cluster are the same.
 - **Manages the configuration of the etcd cluster** and its members. The CPM module scales master nodes and migrates the cluster from single-master to multi-master (and vice versa).
 - **Configures kubeconfig**. The CPM module maintains an up-to-date configuration for smooth kubectl operation. It generates, renews, updates kubeconfig with the cluster-admin rights, and creates a symlink for the root user so that kubeconfig can be used by default.
-
+- **Extends scheduler functionality** by integrating external plugins via webhooks. Manages by [KubeSchedulerWebhookConfiguration](cr.html#kubeschedulerwebhookconfiguration) resource. Allows more complex logic to be used in workload scheduling tasks within the cluster. For example:
+  - placing data storage application pods closer to the data itself,
+  - state-based node prioritization (network load, storage subsystem status, etc.),
+  - dividing nodes into zones, etc.
 ## Managing certificates
 
 The CPM module manages certificates of the `control-plane` components, such as:

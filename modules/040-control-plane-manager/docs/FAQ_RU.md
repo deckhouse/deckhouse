@@ -325,6 +325,45 @@ https://10.2.1.102:2379, d282ac2ce600c1ce, 3.5.3, 182 MB, true, false, 42007, 40
 
 > **Внимание!** Операция деструктивна, она полностью уничтожает консенсус и запускает etcd-кластер с состояния, которое сохранилось на узле. Любые pending-записи пропадут.
 
+### Что делать, если etcd постоянно перезапускается с ошибкой?
+
+Данный вариант может понадобиться, если `--force-new-cluster` не восстанавливает работу etcd. Такое может случиться при неудачном converge master-узлов, когда новый master-узел был создан со старым диском etcd, поменял свой адрес из локальной сети, и другие master-узлы отсутствуют. Симптомы, при которых стоит использовать данный способ: контейнер etcd в бесконечном рестарте, в его логе ошибка: `panic: unexpected removal of unknown remote peer`.
+
+1. Установите утилиту [etcdutl](https://github.com/etcd-io/etcd/releases).
+1. С текущего локального снапшота базы etcd (`/var/lib/etcd/member/snap/db`) выполните создание нового снапшота:
+
+   ```shell
+   ./etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
+   --initial-cluster=HOSTNAME=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://ADDRESS:2380 \
+   --skip-hash-check=true --data-dir /var/lib/etcdtest
+   ```
+
+   , где:
+   - `<HOSTNAME>` — название master-узла;
+   - `<ADDRESS>` — адрес master-узла.
+
+1. Выполните команды, для использования нового снапшота:
+
+   ```shell
+   cp -r /var/lib/etcd /tmp/etcd-backup
+   rm -rf /var/lib/etcd
+   mv /var/lib/etcdtest /var/lib/etcd
+   ```
+
+1. Найдите контейнеры `etcd` и `api-server`:
+
+   ```shell
+   crictl ps -a | egrep "etcd|apiserver"
+   ```
+
+1. Удалите найденные контейнеры `etcd` и `api-server`:
+
+   ```shell
+   crictl rm <CONTAINER-ID>
+   ```
+
+1. Перезапустите master-узел.
+
 ## Как настроить дополнительные политики аудита?
 
 1. Включите параметр [auditPolicyEnabled](configuration.html#parameters-apiserver-auditpolicyenabled) в настройках модуля:
@@ -579,7 +618,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Дождитесь выполнения заданий из очереди Deckhouse:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main
+   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
    ```
 
 1. Переведите кластер обратно в режим multi-master в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master) для облачных кластеров или [инструкцией](#как-добавить-master-узел-в-статическом-или-гибридном-кластере) для статических или гибридных кластеров.
@@ -729,3 +768,19 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 - [Система плагинов](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins)
 - [Подробности фильтрации узлов](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduler-perf-tuning/)
 - [Исходный код scheduler](https://github.com/kubernetes/kubernetes/tree/master/cmd/kube-scheduler)
+
+### Как изменить/расширить логику работы планировщика
+
+Для изменения логики работы планировщика можно использовать [механизм плагинов расширения](https://github.com/kubernetes/enhancements/blob/master/keps/sig-scheduling/624-scheduling-framework/README.md).
+
+Каждый плагин представляет собой вебхук, отвечающий следующим требованиям:
+* Использование TLS.
+* Доступность через сервис внутри кластера.
+* Поддержка стандартных *Verbs* (filterVerb = filter, prioritizeVerb = prioritize).
+* Также, предполагается что все подключаемые плагины могут кэшировать информацию об узле (`nodeCacheCapable: true`).
+
+Подключить extender можно при помощи ресурса [KubeSchedulerWebhookConfiguration](cr.html#kubeschedulerwebhookconfiguration).
+
+{% alert level="danger" %}
+При использовании опции `failurePolicy: Fail`, в случе ошибки в работе вебхука, планировщик прекратит работу и новые поды не смогут запуститься.
+{% endalert %}

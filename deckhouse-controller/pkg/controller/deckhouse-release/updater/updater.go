@@ -26,8 +26,6 @@ import (
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,37 +35,48 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
+const (
+	IsUpdatingAnnotation = "release.deckhouse.io/isUpdating"
+	NotifiedAnnotation   = "release.deckhouse.io/notified"
+)
+
 func NewDeckhouseUpdater(logger logger.Logger, client client.Client, dc dependency.Container,
 	updateSettings *updater.DeckhouseUpdateSettings, releaseData updater.DeckhouseReleaseData, metricStorage *metric_storage.MetricStorage,
 	podIsReady, clusterBootstrapping bool, imagesRegistry string, enabledModules []string) (*updater.Updater[*v1alpha1.DeckhouseRelease], error) {
 	return updater.NewUpdater[*v1alpha1.DeckhouseRelease](logger, updateSettings.NotificationConfig, updateSettings.Mode, releaseData,
-		podIsReady, clusterBootstrapping, newKubeAPI(client, dc, imagesRegistry),
-		newMetricUpdater(metricStorage), newValueSettings(updateSettings.DisruptionApprovalMode), newWebhookDataGetter(), enabledModules), nil
+		podIsReady, clusterBootstrapping, NewKubeAPI(client, dc, imagesRegistry),
+		newMetricUpdater(metricStorage), newValueSettings(updateSettings.DisruptionApprovalMode), newWebhookDataSource(logger), enabledModules), nil
 }
 
-func newWebhookDataGetter() *webhookDataGetter {
-	return &webhookDataGetter{}
+func newWebhookDataSource(logger logger.Logger) *webhookDataSource {
+	return &webhookDataSource{logger: logger}
 }
 
-type webhookDataGetter struct {
+type webhookDataSource struct {
+	logger logger.Logger
 }
 
-func (w *webhookDataGetter) GetMessage(release *v1alpha1.DeckhouseRelease, releaseApplyTime time.Time) string {
-	version := fmt.Sprintf("%d.%d", release.GetVersion().Major(), release.GetVersion().Minor())
-	return fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", version, releaseApplyTime.Format(time.RFC850))
+func (s *webhookDataSource) Fill(output *updater.WebhookData, _ *v1alpha1.DeckhouseRelease, applyTime time.Time) {
+	if output == nil {
+		s.logger.Error("webhook data must be defined")
+		return
+	}
+
+	output.Subject = updater.SubjectDeckhouse
+	output.Message = fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", output.Version, applyTime.Format(time.RFC850))
 }
 
-func newKubeAPI(client client.Client, dc dependency.Container, imagesRegistry string) *kubeAPI {
-	return &kubeAPI{client: client, dc: dc, imagesRegistry: imagesRegistry}
+func NewKubeAPI(client client.Client, dc dependency.Container, imagesRegistry string) *KubeAPI {
+	return &KubeAPI{client: client, dc: dc, imagesRegistry: imagesRegistry}
 }
 
-type kubeAPI struct {
+type KubeAPI struct {
 	client         client.Client
 	dc             dependency.Container
 	imagesRegistry string
 }
 
-func (api *kubeAPI) UpdateReleaseStatus(release *v1alpha1.DeckhouseRelease, msg, phase string) error {
+func (api *KubeAPI) UpdateReleaseStatus(release *v1alpha1.DeckhouseRelease, msg, phase string) error {
 	ctx := context.Background()
 	release.Status.Phase = phase
 	release.Status.Message = msg
@@ -76,8 +85,7 @@ func (api *kubeAPI) UpdateReleaseStatus(release *v1alpha1.DeckhouseRelease, msg,
 	return api.client.Status().Update(ctx, release)
 }
 
-func (api *kubeAPI) PatchReleaseAnnotations(release *v1alpha1.DeckhouseRelease, annotations map[string]any) error {
-	ctx := context.Background()
+func (api *KubeAPI) PatchReleaseAnnotations(ctx context.Context, release *v1alpha1.DeckhouseRelease, annotations map[string]any) error {
 	patch, _ := json.Marshal(map[string]any{
 		"metadata": map[string]any{
 			"annotations": annotations,
@@ -88,7 +96,7 @@ func (api *kubeAPI) PatchReleaseAnnotations(release *v1alpha1.DeckhouseRelease, 
 	return api.client.Patch(ctx, release, p)
 }
 
-func (api *kubeAPI) PatchReleaseApplyAfter(release *v1alpha1.DeckhouseRelease, applyTime time.Time) error {
+func (api *KubeAPI) PatchReleaseApplyAfter(release *v1alpha1.DeckhouseRelease, applyTime time.Time) error {
 	ctx := context.Background()
 	patch, _ := json.Marshal(map[string]interface{}{
 		"spec": map[string]interface{}{
@@ -105,8 +113,7 @@ func (api *kubeAPI) PatchReleaseApplyAfter(release *v1alpha1.DeckhouseRelease, a
 	return api.client.Patch(ctx, release, p)
 }
 
-func (api *kubeAPI) DeployRelease(release *v1alpha1.DeckhouseRelease) error {
-	ctx := context.Background()
+func (api *KubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.DeckhouseRelease) error {
 	key := client.ObjectKey{Namespace: "d8-system", Name: "deckhouse"}
 	var depl appsv1.Deployment
 	err := api.client.Get(ctx, key, &depl)
@@ -137,7 +144,7 @@ func (api *kubeAPI) DeployRelease(release *v1alpha1.DeckhouseRelease) error {
 					continue
 				}
 				// patch releases to trigger their requeue
-				_ = api.PatchReleaseAnnotations(&r, map[string]any{"triggered_by_dryrun": release.GetName()})
+				_ = api.PatchReleaseAnnotations(ctx, &r, map[string]any{"triggered_by_dryrun": release.GetName()})
 			}
 		}()
 		return nil
@@ -146,39 +153,10 @@ func (api *kubeAPI) DeployRelease(release *v1alpha1.DeckhouseRelease) error {
 	return api.client.Update(ctx, &depl)
 }
 
-func (api *kubeAPI) SaveReleaseData(release *v1alpha1.DeckhouseRelease, data updater.DeckhouseReleaseData) error {
-	ctx := context.Background()
-	cm := &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "d8-release-data",
-			Namespace: "d8-system",
-			Labels: map[string]string{
-				"heritage": "deckhouse",
-			},
-		},
-		Data: map[string]string{
-			// current release is updating
-			"isUpdating": strconv.FormatBool(data.IsUpdating),
-			// notification about next release is sent, flag will be reset when new release is deployed
-			"notified": strconv.FormatBool(data.Notified),
-		},
-	}
-
-	err := api.client.Create(ctx, cm)
-	if errors.IsAlreadyExists(err) {
-		err = api.client.Update(ctx, cm)
-	}
-	if err != nil {
-		return fmt.Errorf("update release data: %w", err)
-	}
-
-	return api.PatchReleaseAnnotations(release, map[string]interface{}{
-		"release.deckhouse.io/isUpdating": strconv.FormatBool(data.IsUpdating),
-		"release.deckhouse.io/notified":   strconv.FormatBool(data.Notified),
+func (api *KubeAPI) SaveReleaseData(ctx context.Context, release *v1alpha1.DeckhouseRelease, data updater.DeckhouseReleaseData) error {
+	return api.PatchReleaseAnnotations(ctx, release, map[string]interface{}{
+		IsUpdatingAnnotation: strconv.FormatBool(data.IsUpdating),
+		NotifiedAnnotation:   strconv.FormatBool(data.Notified),
 	})
 }
 

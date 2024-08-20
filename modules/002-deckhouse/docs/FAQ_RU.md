@@ -7,7 +7,7 @@ title: "Модуль deckhouse: FAQ"
 Вначале необходимо зайти внутрь пода Deckhouse:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -- bash
+kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- bash
 ```
 
 Далее необходимо выбрать, на каком узле запустить kube-bench.
@@ -37,7 +37,7 @@ kubectl logs job.batch/kube-bench
 1. Выполните следующую команду, чтобы собрать необходимые данные:
 
    ```sh
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse \
+   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse \
      -- deckhouse-controller collect-debug-info \
      > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```

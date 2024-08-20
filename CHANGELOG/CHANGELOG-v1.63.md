@@ -34,6 +34,7 @@
     ingress-nginx controllers' pods with controller version 1.10 will be recreated.
  - **[ingress-nginx]** Add SSLPassthrough inlets. [#9021](https://github.com/deckhouse/deckhouse/pull/9021)
  - **[l2-load-balancer]** The new module for redundant L2 load-balancing. [#8465](https://github.com/deckhouse/deckhouse/pull/8465)
+ - **[log-shipper]** Add GELF codec to Socket destination. Now it is possible to send logs to Graylog. [#9306](https://github.com/deckhouse/deckhouse/pull/9306)
  - **[node-manager]** Cluster API Provider Static can adopt manually bootstrapped static nodes. [#8753](https://github.com/deckhouse/deckhouse/pull/8753)
  - **[operator-trivy]** Add `reportResourceLabels` option. [#9022](https://github.com/deckhouse/deckhouse/pull/9022)
  - **[prometheus]** Made Grafana version 10 the default on primary domain, moved Grafana 8 to secondary domain. [#9076](https://github.com/deckhouse/deckhouse/pull/9076)
@@ -42,6 +43,8 @@
 ## Fixes
 
 
+ - **[candi]** Fix bootstrap network script for nodes with many interfaces for cloud-provider Yandex Cloud. [#9408](https://github.com/deckhouse/deckhouse/pull/9408)
+ - **[candi]** Fix for node bootstrap in CE. [#9323](https://github.com/deckhouse/deckhouse/pull/9323)
  - **[candi]** Add new dirs to cleanup on `cleanup_static_node.sh`. [#9159](https://github.com/deckhouse/deckhouse/pull/9159)
  - **[candi]** Fix work `registry-packages-proxy` with module sources. [#9112](https://github.com/deckhouse/deckhouse/pull/9112)
     `registry-packages-proxy` should be restarted.
@@ -51,7 +54,10 @@
  - **[candi]** Set bootstrap-network as first  bootstrap script. [#9040](https://github.com/deckhouse/deckhouse/pull/9040)
  - **[candi]** Fix index overflow when retrieving values from the list of external IP addresses. [#8877](https://github.com/deckhouse/deckhouse/pull/8877)
  - **[candi]** Fixed kubelet server certificate rotation. [#8603](https://github.com/deckhouse/deckhouse/pull/8603)
+ - **[cloud-provider-vcd]** Create virtual machine NIC before the VM starts. [#9255](https://github.com/deckhouse/deckhouse/pull/9255)
  - **[cni-cilium]** Improved the `CiliumAgentUnreachableHealthEndpoints` metric expression to avoid false positives. [#9198](https://github.com/deckhouse/deckhouse/pull/9198)
+ - **[deckhouse]** Allow admins to change objects with `kind=StorageClass`. [#9398](https://github.com/deckhouse/deckhouse/pull/9398)
+ - **[deckhouse]** Allow admins to change objects with `kind=StorageClass`. [#9362](https://github.com/deckhouse/deckhouse/pull/9362)
  - **[deckhouse-controller]** Fix panic on invalid module image [#9231](https://github.com/deckhouse/deckhouse/pull/9231)
  - **[deckhouse-controller]** Deckhouse update metrics restored. [#9147](https://github.com/deckhouse/deckhouse/pull/9147)
  - **[dhctl]** Wait for resources required by manifest being created. [#9157](https://github.com/deckhouse/deckhouse/pull/9157)
@@ -61,12 +67,18 @@
  - **[dhctl]** Validate the length of the list of external IP addresses in the `YandexClusterConfiguration`. [#8877](https://github.com/deckhouse/deckhouse/pull/8877)
  - **[docs]** Fix zone and disk in `volumeTypeMap` VK Cloud `config.yml` from Getting Started. [#9005](https://github.com/deckhouse/deckhouse/pull/9005)
     Fix bootstrap error in the Getting Started `config.yml` for VK Cloud.
+ - **[global-hooks]** Fixed the Services with multiple ports broken by Helm. [#9392](https://github.com/deckhouse/deckhouse/pull/9392)
  - **[go_lib]** Fix work `registry-packages-proxy` with module sources. [#9112](https://github.com/deckhouse/deckhouse/pull/9112)
     `registry-packages-proxy` should be restarted.
+ - **[istio]** Fix istio module operability in managed K8s setups. [#9275](https://github.com/deckhouse/deckhouse/pull/9275)
  - **[istio]** Istio 1.19 version compatibility extended with K8s versions 1.29 and 1.30. [#9217](https://github.com/deckhouse/deckhouse/pull/9217)
  - **[l2-load-balancer]** An internal refactoring and the fix for handling external and internal traffic policies in the LoadBalancer Service. [#9114](https://github.com/deckhouse/deckhouse/pull/9114)
+ - **[log-shipper]** Fix JSON codec for socket destination. [#9385](https://github.com/deckhouse/deckhouse/pull/9385)
  - **[log-shipper]** Make `extraLabels` and `CEF` encoding work for `Socket` destination. [#9149](https://github.com/deckhouse/deckhouse/pull/9149)
+ - **[multitenancy-manager]** Fix templates. [#9358](https://github.com/deckhouse/deckhouse/pull/9358)
  - **[multitenancy-manager]** Fix templates bugs. [#9205](https://github.com/deckhouse/deckhouse/pull/9205)
+ - **[network-policy-engine]** Downgrade iptables version from `1.8.10` to `1.8.9` due to iptables chains overflow. You need to clear unwanted iptables rules manually or reboot the affected nodes. [#9315](https://github.com/deckhouse/deckhouse/pull/9315)
+ - **[node-manager]** Fix role rights for cluster-autoscaler `1.29`, `1.30`. [#9294](https://github.com/deckhouse/deckhouse/pull/9294)
  - **[node-manager]** Reducing unnecessary kube-apiserver logsl. [#9134](https://github.com/deckhouse/deckhouse/pull/9134)
     Reducing unnecessary kube-apiserver logs.
  - **[node-manager]** Added handling for graceful shutdown of node-critical pods during cluster scale-down. [#8609](https://github.com/deckhouse/deckhouse/pull/8609)
@@ -75,6 +87,9 @@
  - **[registry-packages-proxy]** Fix work `registry-packages-proxy` with module sources. [#9112](https://github.com/deckhouse/deckhouse/pull/9112)
     `registry-packages-proxy` should be restarted.
  - **[registry-packages-proxy]** package-proxy in hostNetwork. [#9099](https://github.com/deckhouse/deckhouse/pull/9099)
+ - **[registrypackages]** Downgrade iptables version from `1.8.10` to `1.8.9`. [#9315](https://github.com/deckhouse/deckhouse/pull/9315)
+ - **[upmeter]** Fixed status page CSS in air-gapped environments. [#9287](https://github.com/deckhouse/deckhouse/pull/9287)
+ - **[upmeter]** Fixed flapping status page API. [#9287](https://github.com/deckhouse/deckhouse/pull/9287)
  - **[user-authn]** Allow to create users with invalid email. [#9171](https://github.com/deckhouse/deckhouse/pull/9171)
 
 ## Chore
@@ -91,6 +106,7 @@
  - **[deckhouse-controller]** Set default releaseChannel for ebedded deckhouse policy. [#9155](https://github.com/deckhouse/deckhouse/pull/9155)
  - **[dhctl]** Added resource type field to the terraform plan outputs [#9161](https://github.com/deckhouse/deckhouse/pull/9161)
  - **[docs]** Documented the new `d8 mirror modules` filter feature usage. [#9186](https://github.com/deckhouse/deckhouse/pull/9186)
+ - **[ingress-nginx]** Add an example of usage ingress-nginx with _L2LoadBalancer_ inlet. [#9214](https://github.com/deckhouse/deckhouse/pull/9214)
  - **[ingress-nginx]** Adjust RBAC for Kruise controller. [#9014](https://github.com/deckhouse/deckhouse/pull/9014)
     Kruise controller's pods will be recreated.
  - **[istio]** Remove references to static `BASE_SHELL_OPERATOR` image. [#9162](https://github.com/deckhouse/deckhouse/pull/9162)

@@ -34,6 +34,10 @@ entries:
             - title: Custom Resources
               url: /cr.html
         - title:
+            en: Platform uninstalling
+            ru: Удаление платформы
+          url: /uninstalling/
+        - title:
             en: Module development
             ru: Разработка модуля
           folders:
@@ -448,13 +452,19 @@ entries:
                 ru: Описание
               url: /modules/040-control-plane-manager/
             - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/040-control-plane-manager/configuration.html
+                - title: Custom Resources
+                  url: /modules/040-control-plane-manager/cr.html
+            - title:
                 en: Examples
                 ru: Примеры
               url: /modules/040-control-plane-manager/examples.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/040-control-plane-manager/configuration.html
             - title: FAQ
               url: /modules/040-control-plane-manager/faq.html
         - title:

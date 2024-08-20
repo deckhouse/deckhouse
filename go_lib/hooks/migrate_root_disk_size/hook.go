@@ -263,10 +263,9 @@ func needMigrateForDeckhouseInstallVersion(snaps go_hook.Snapshots) (bool, error
 	}
 
 	versionStr := is[0].(string)
-	// for dev build migrate always
+	// do not migrate for dev build
 	if versionStr == "dev" {
-		// for dev branches always run migration for testing purposes
-		return true, nil
+		return false, nil
 	}
 
 	version, err := semver.NewVersion(versionStr)

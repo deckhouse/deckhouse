@@ -32,6 +32,7 @@ bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/t
 - Or run the following command for installing Deckhouse **Enterprise Edition** by providing a license key:
   {% snippetcut selector="kind-install" %}
 ```shell
+ echo <LICENSE_KEY> | docker login -u license-token --password-stdin registry.deckhouse.io
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)" -- --key <LICENSE_KEY>
 ```
   {% endsnippetcut %}
@@ -64,6 +65,6 @@ Good luck!
 The user `admin` password for Grafana can also be found by running the command:
 {% snippetcut selector="kind-get-password" %}
 ```shell
-kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'"
+kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'"
 ```
 {% endsnippetcut %}

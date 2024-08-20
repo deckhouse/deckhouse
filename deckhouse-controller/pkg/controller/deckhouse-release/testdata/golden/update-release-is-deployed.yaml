@@ -3,9 +3,12 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
+  annotations:
+    release.deckhouse.io/isUpdating: "false"
+    release.deckhouse.io/notified: "false"
   creationTimestamp: null
   name: v1.26.0
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   version: v1.26.0
 status:
@@ -61,13 +64,11 @@ status: {}
 ---
 apiVersion: v1
 data:
-  isUpdating: "false"
+  isUpdating: "true"
   notified: "false"
 kind: ConfigMap
 metadata:
   creationTimestamp: null
-  labels:
-    heritage: deckhouse
   name: d8-release-data
   namespace: d8-system
-  resourceVersion: "1000"
+  resourceVersion: "999"

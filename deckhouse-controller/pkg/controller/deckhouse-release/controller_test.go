@@ -455,6 +455,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.26 is available. Release will be applied at: Friday, 01-Jan-21 14:30:00 UTC")
 		require.Contains(suite.T(), httpBody, `"version":"1.26"`)
+		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
 	})
 
 	suite.Run("Notification: after met conditions", func() {
@@ -494,6 +495,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.36 is available. Release will be applied at: Monday, 11-Nov-22 23:23:23 UTC")
 		require.Contains(suite.T(), httpBody, `"version":"1.36"`)
+		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
 	})
 
 	suite.Run("Notification: basic auth", func() {
@@ -674,4 +676,8 @@ type stubModulesManager struct{}
 
 func (s stubModulesManager) GetEnabledModuleNames() []string {
 	return []string{"cert-manager", "prometheus"}
+}
+
+func (s stubModulesManager) IsModuleEnabled(_ string) bool {
+	return true
 }

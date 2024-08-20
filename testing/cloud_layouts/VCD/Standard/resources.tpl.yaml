@@ -2,26 +2,33 @@
 apiVersion: deckhouse.io/v1
 kind: VCDInstanceClass
 metadata:
-  name: worker
+  name: system
 spec:
   rootDiskSizeGb: 30
   sizingPolicy: ${VCD_ORG}-MSK
-  storageProfile: Fast vHDD 
+  storageProfile: Fast vHDD
   template: private-templates/debian-12
 
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
-  name: worker
+  name: system
 spec:
   nodeType: CloudEphemeral
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/system: ""
+    taints:
+      - effect: NoExecute
+        key: dedicated.deckhouse.io
+        value: system
   cloudInstances:
     minPerZone: 1
     maxPerZone: 1
     classReference:
       kind: VCDInstanceClass
-      name: worker
+      name: system
   chaos:
     mode: Disabled
 

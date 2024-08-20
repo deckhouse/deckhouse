@@ -20,8 +20,12 @@ objectSelector: {}
   apiVersions:
   - '*'
   operations:
-  - CREATE
-  - UPDATE
+  {{- if $trackResource.operations }}
+    {{- $trackResource.operations | toYaml | nindent 4 }}
+  {{- else }}
+    - CREATE
+    - UPDATE
+  {{- end }}
   resources:
     {{- $trackResource.resources | toYaml | nindent 4 }}
   {{- end }}
@@ -61,7 +65,7 @@ webhooks:
   timeoutSeconds: 30
 
   {{- include "validating.webhook.config" . | nindent 2 }}
-  {{- end }}
+  {{- end }} # End of trivy-provider.deckhouse.io config
 
   {{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
 - name: admission-policy-engine.deckhouse.io
@@ -75,6 +79,11 @@ webhooks:
       operator: DoesNotExist
   rules:
   {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+  matchConditions:
+    - name: 'exclude-virtualization'
+      expression: '!(["system:serviceaccount:d8-virtualization:kubevirt-internal-virtualization-controller", "system:serviceaccount:d8-virtualization:cdi-sa"].exists(e, (e == request.userInfo.username)))'
+{{- end }}
   timeoutSeconds: 3
   {{- include "validating.webhook.config" . | nindent 2 }}
   {{- end }}

@@ -616,11 +616,11 @@ Follow these steps for manual loading images of modules, connected from the modu
 
    ```shell
    d8 mirror modules push \
-     -d /tmp/d8-modules --registry='corp.company.com:5000/deckhouse-modules' \
+     -d /tmp/d8-modules --registry='corp.company.com:5000/deckhouse/modules' \
      --registry-login='<USER>' --registry-password='<PASSWORD>'
    ```
 
-   > Before pushind images, make sure that the path for loading into the registry exists (`/deckhouse-modules` in the example above), and the account being used has write permissions.
+   > Before pushing images, make sure that the path for loading into the registry exists (`/deckhouse/modules` in the example above), and the account being used has write permissions.
 
 1. After uploading the images to the air-gapped registry, edit the `ModuleSource` YAML manifest prepared in step 3:
 
@@ -638,7 +638,7 @@ Follow these steps for manual loading images of modules, connected from the modu
      registry:
        # Specify the authentication string for your registry.
        dockerCfg: <BASE64_REGISTRY_CREDENTIALS>
-       repo: 'corp.company.com:5000'
+       repo: 'corp.company.com:5000/deckhouse/modules'
        scheme: HTTPS
      # Select the appropriate release channel: Alpha, Beta, EarlyAccess, Stable, or RockSolid
      releaseChannel: "Stable"
@@ -664,7 +664,7 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
   * Example:
 
     ```shell
-    kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse
+    kubectl exec -ti -n d8-system svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse
     ```
 
   * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `/tmp/ca.crt` in the Deckhouse Pod and add the `--ca-file /tmp/ca.crt` option to the script or put the content of CA into a variable as follows:
@@ -679,13 +679,13 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
     -----END CERTIFICATE-----
     EOF
     )
-    $ kubectl exec  -n d8-system deploy/deckhouse -c deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
+    $ kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
     ```
 
   * To view the list of available keys of the `deckhouse-controller helper change-registry` command, run the following command:
 
     ```shell
-    kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --help
+    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --help
     ```
 
     Example output:
@@ -718,8 +718,8 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
 * Check if there are Pods with original registry in cluster (if there are — restart them):
 
   ```shell
-  kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io"))))
-    | .metadata.namespace + "\t" + .metadata.name' -r
+  kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+    | select(.image | startswith("registry.deckhouse"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
   ```
 
 ### How to bootstrap a cluster and run Deckhouse without the usage of release channels?
@@ -847,7 +847,7 @@ To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
 1. Run the following command:
 
    ```shell
-   kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry registry.deckhouse.io/deckhouse/ce
+   kubectl exec -ti -n d8-system svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry registry.deckhouse.io/deckhouse/ce
    ```
 
 1. Wait for the Deckhouse Pod to become `Ready`:
@@ -886,8 +886,8 @@ To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
 1. Check if there are any Pods left in the cluster with the Deckhouse EE registry address:
 
    ```shell
-   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ee"))))
-     | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
+   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+     | select(.image | contains("deckhouse.io/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
    Sometimes, some static Pods may remain running (for example, `kubernetes-api-proxy-*`). This is due to the fact that kubelet does not restart the Pod despite changing the corresponding manifest, because the image used is the same for the Deckhouse CE and EE. To make sure that the corresponding manifests have also been changed, run the following command on any master node:
@@ -912,7 +912,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
-   kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry.deckhouse.io/deckhouse/ee
+   kubectl exec -ti -n d8-system svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry.deckhouse.io/deckhouse/ee
    ```
 
 1. Wait for the Deckhouse Pod to become `Ready`:
@@ -951,8 +951,8 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 1. Check if there are any Pods left in the cluster with the Deckhouse CE registry address:
 
    ```shell
-   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ce"))))
-     | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
+   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+     | select(.image | contains("deckhouse.io/deckhouse/ce"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
    Sometimes, some static Pods may remain running (for example, `kubernetes-api-proxy-*`). This is due to the fact that kubelet does not restart the Pod despite changing the corresponding manifest, because the image used is the same for the Deckhouse CE and EE. To make sure that the corresponding manifests have also been changed, run the following command on any master node:

@@ -1,0 +1,23 @@
+admission-policy-engine:
+  features:
+    - summary: Allow to create `virtualization` module's pods even in the restricted namespaces.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9316
+docs:
+  fixes:
+    - summary: Added a description to the Deckhouse CLI pages.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9343
+network-policy-engine:
+  fixes:
+    - summary: >-
+        Downgrade iptables version from 1.8.10 to 1.8.9 due to iptables chains overflow. You need to
+        clear unwanted iptables rules manually or reboot the affected nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9340
+registrypackages:
+  fixes:
+    - summary: Downgrade iptables version from 1.8.10 to 1.8.9.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9340
+testing:
+  fixes:
+    - summary: allow kubernetes-admin to make changes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9278
+
