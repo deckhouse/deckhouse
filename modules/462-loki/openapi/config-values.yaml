@@ -65,7 +65,7 @@ properties:
         type: float
         description: |
           Overall ingestion rate limit in megabytes per second.
-        default: 4
+        default: 4.0
       ingestion_burst_size_mb:
         type: integer
         description: |
