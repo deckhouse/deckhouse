@@ -77,7 +77,7 @@ func main() {
 	}
 
 	// register template controller
-	if err = templatecontroller.Register(runtimeManager, log, defaultPath); err != nil {
+	if err = templatecontroller.Register(runtimeManager, defaultPath, log); err != nil {
 		panic(err)
 	}
 

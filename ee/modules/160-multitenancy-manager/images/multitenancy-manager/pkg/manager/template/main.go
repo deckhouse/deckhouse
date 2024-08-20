@@ -27,25 +27,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
-var _ Interface = &manager{}
-
-type Interface interface {
-	Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup, defaultPath string) error
-	Handle(ctx context.Context, template *v1alpha1.ProjectTemplate) (ctrl.Result, error)
-}
-type manager struct {
-	log    logr.Logger
+type Manager struct {
 	client client.Client
+	log    logr.Logger
 }
 
-func New(client client.Client, log logr.Logger) Interface {
-	return &manager{
+func New(client client.Client, log logr.Logger) *Manager {
+	return &Manager{
 		client: client,
 		log:    log.WithName("template-manager"),
 	}
 }
 
-func (m *manager) Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup, defaultPath string) error {
+func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup, defaultPath string) error {
 	defer init.Done()
 
 	m.log.Info("waiting for webhook server starting")
@@ -78,7 +72,7 @@ func (m *manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 	return nil
 }
 
-func (m *manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate) (ctrl.Result, error) {
+func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate) (ctrl.Result, error) {
 	// validate project template
 	if err := validate.ProjectTemplate(template); err != nil {
 		if statusError := m.setTemplateStatus(ctx, template, err.Error(), false); statusError != nil {

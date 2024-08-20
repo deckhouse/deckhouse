@@ -31,7 +31,7 @@ import (
 
 const controllerName = "d8-project-controller"
 
-func Register(runtimeManager manager.Manager, helmClient helm.Interface, log logr.Logger) error {
+func Register(runtimeManager manager.Manager, helmClient *helm.Client, log logr.Logger) error {
 	r := &reconciler{
 		init:           &sync.WaitGroup{},
 		log:            log.WithName(controllerName),
@@ -65,11 +65,9 @@ func Register(runtimeManager manager.Manager, helmClient helm.Interface, log log
 		Complete(projectController)
 }
 
-var _ reconcile.Reconciler = &reconciler{}
-
 type reconciler struct {
 	init           *sync.WaitGroup
-	projectManager projectmanager.Interface
+	projectManager *projectmanager.Manager
 	client         client.Client
 	log            logr.Logger
 }

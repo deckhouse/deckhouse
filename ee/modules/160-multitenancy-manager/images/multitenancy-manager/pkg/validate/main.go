@@ -6,10 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package validate
 
 import (
-	"controller/pkg/apis/deckhouse.io/v1alpha1"
-	"controller/pkg/apis/deckhouse.io/v1alpha2"
 	"errors"
 	"fmt"
+
+	"controller/pkg/apis/deckhouse.io/v1alpha1"
+	"controller/pkg/apis/deckhouse.io/v1alpha2"
 
 	"github.com/go-jose/go-jose/v4/json"
 	"github.com/go-openapi/spec"

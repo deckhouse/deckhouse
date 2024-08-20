@@ -24,7 +24,7 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-func (m *manager) ensureDefaultProjectTemplates(ctx context.Context, templatesPath string) error {
+func (m *Manager) ensureDefaultProjectTemplates(ctx context.Context, templatesPath string) error {
 	dir, err := os.ReadDir(templatesPath)
 	if err != nil {
 		m.log.Error(err, "unable to read directory", "directory", templatesPath)
@@ -81,7 +81,7 @@ func (m *manager) ensureDefaultProjectTemplates(ctx context.Context, templatesPa
 	return nil
 }
 
-func (m *manager) setTemplateStatus(ctx context.Context, template *v1alpha1.ProjectTemplate, message string, ready bool) error {
+func (m *Manager) setTemplateStatus(ctx context.Context, template *v1alpha1.ProjectTemplate, message string, ready bool) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err := m.client.Get(ctx, types.NamespacedName{Name: template.Name}, template); err != nil {
 			return err
@@ -92,7 +92,7 @@ func (m *manager) setTemplateStatus(ctx context.Context, template *v1alpha1.Proj
 	})
 }
 
-func (m *manager) projectsByTemplate(ctx context.Context, template *v1alpha1.ProjectTemplate) ([]*v1alpha2.Project, error) {
+func (m *Manager) projectsByTemplate(ctx context.Context, template *v1alpha1.ProjectTemplate) ([]*v1alpha2.Project, error) {
 	projects := new(v1alpha2.ProjectList)
 	if err := m.client.List(ctx, projects, client.MatchingLabels{consts.ProjectTemplateLabel: template.Name}); err != nil {
 		return nil, err

@@ -21,6 +21,9 @@ const (
 	MultitenancyHeritage = "multitenancy-manager"
 	DeckhouseHeritage    = "deckhouse"
 )
+
 const ProjectFinalizer = "projects.deckhouse.io/project-exists"
+
+const HelmDriver = "secret"
 
 const ReleaseHashLabel = "hashsum"

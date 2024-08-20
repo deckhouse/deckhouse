@@ -26,7 +26,7 @@ import (
 
 const controllerName = "d8-template-controller"
 
-func Register(runtimeManager manager.Manager, log logr.Logger, defaultPath string) error {
+func Register(runtimeManager manager.Manager, defaultPath string, log logr.Logger) error {
 	r := &reconciler{
 		init:            &sync.WaitGroup{},
 		log:             log.WithName(controllerName),
@@ -63,7 +63,7 @@ var _ reconcile.Reconciler = &reconciler{}
 
 type reconciler struct {
 	init            *sync.WaitGroup
-	templateManager templatemanager.Interface
+	templateManager *templatemanager.Manager
 	client          client.Client
 	log             logr.Logger
 }

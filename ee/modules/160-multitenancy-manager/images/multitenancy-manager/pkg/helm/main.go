@@ -34,16 +34,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-const helmDriver = "secret"
-
-var _ Interface = &client{}
-
-type Interface interface {
-	Upgrade(ctx context.Context, project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error
-	Delete(ctx context.Context, releaseName string) error
-}
-
-type client struct {
+type Client struct {
 	conf      *action.Configuration
 	templates map[string][]byte
 	opts      *options
@@ -74,8 +65,8 @@ func WithTimeout(timeout time.Duration) Option {
 // Possible options:
 // WithHistoryMax - set maximum stored releases. Default: 3
 // WithTimeout - timeout for helm upgrade/delete. Default: 15 seconds
-func New(namespace, templatesPath string, log logr.Logger, opts ...Option) (Interface, error) {
-	c := &client{
+func New(namespace, templatesPath string, log logr.Logger, opts ...Option) (*Client, error) {
+	c := &Client{
 		opts: &options{
 			HistoryMax: 3,
 			Timeout:    time.Duration(15 * float64(time.Second)),
@@ -127,7 +118,7 @@ func parseHelmTemplates(templatesPath string) (map[string][]byte, error) {
 	return helmTemplates, nil
 }
 
-func (c *client) initActionConfig(namespace string) error {
+func (c *Client) initActionConfig(namespace string) error {
 	// create the rest config instance with ServiceAccount values loaded in them
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -142,11 +133,11 @@ func (c *client) initActionConfig(namespace string) error {
 	kubeConfig.CAFile = &config.CAFile
 	kubeConfig.Namespace = &namespace
 
-	return c.conf.Init(kubeConfig, namespace, helmDriver, klog.Infof)
+	return c.conf.Init(kubeConfig, namespace, consts.HelmDriver, klog.Infof)
 }
 
 // Upgrade upgrades resources
-func (c *client) Upgrade(ctx context.Context, project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
+func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
 	projectName := project.Name
 	templateName := template.Name
 	values := valuesFromProjectAndTemplate(project, template)
@@ -255,7 +246,7 @@ func valuesFromProjectAndTemplate(project *v1alpha2.Project, template *v1alpha1.
 	}
 }
 
-func (c *client) rollbackLatestRelease(releases []*release.Release) error {
+func (c *Client) rollbackLatestRelease(releases []*release.Release) error {
 	latestRelease := releases[0]
 
 	if latestRelease.Version == 1 || c.opts.HistoryMax == 1 || len(releases) == 1 {
@@ -281,7 +272,7 @@ func (c *client) rollbackLatestRelease(releases []*release.Release) error {
 }
 
 // Delete deletes resources
-func (c *client) Delete(_ context.Context, releaseName string) error {
+func (c *Client) Delete(_ context.Context, releaseName string) error {
 	uninstall := action.NewUninstall(c.conf)
 	uninstall.KeepHistory = false
 	uninstall.IgnoreNotFound = true

@@ -24,28 +24,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
-var _ Interface = &manager{}
-
-type Interface interface {
-	Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup) error
-	Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error)
-	Delete(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error)
-}
-type manager struct {
-	log        logr.Logger
+type Manager struct {
 	client     client.Client
-	helmClient helm.Interface
+	helmClient *helm.Client
+	log        logr.Logger
 }
 
-func New(client client.Client, helmClient helm.Interface, log logr.Logger) Interface {
-	return &manager{
-		log:        log.WithName("project-manager"),
+func New(client client.Client, helmClient *helm.Client, log logr.Logger) *Manager {
+	return &Manager{
 		client:     client,
 		helmClient: helmClient,
+		log:        log.WithName("project-manager"),
 	}
 }
 
-func (m *manager) Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup) error {
+func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup) error {
 	defer init.Done()
 
 	m.log.Info("waiting for webhook server starting")
@@ -73,7 +66,7 @@ func (m *manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 }
 
 // Handle ensures project`s resources
-func (m *manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error) {
+func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error) {
 	// set deploying status
 	if err := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateDeploying, 0, nil); err != nil {
 		m.log.Error(err, "failed to set project status")
@@ -170,16 +163,16 @@ func (m *manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 }
 
 // Delete deletes project`s resources
-func (m *manager) Delete(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error) {
+func (m *Manager) Delete(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error) {
 	// delete resources
 	if err := m.helmClient.Delete(ctx, project.Name); err != nil {
-		m.log.Error(err, "failed to delete project", "project", project.Name)
+		m.log.Error(err, "failed to delete the project", "project", project.Name)
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// remove finalizer
 	if err := m.removeFinalizer(ctx, project); err != nil {
-		m.log.Error(err, "failed to remove finalizer from project", "project", project.Name)
+		m.log.Error(err, "failed to remove finalizer from the project", "project", project.Name)
 		return ctrl.Result{Requeue: true}, nil
 	}
 

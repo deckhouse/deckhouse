@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func (m *manager) projectTemplateByName(ctx context.Context, name string) (*v1alpha1.ProjectTemplate, error) {
+func (m *Manager) projectTemplateByName(ctx context.Context, name string) (*v1alpha1.ProjectTemplate, error) {
 	template := new(v1alpha1.ProjectTemplate)
 	if err := m.client.Get(ctx, types.NamespacedName{Name: name}, template); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -31,7 +31,7 @@ func (m *manager) projectTemplateByName(ctx context.Context, name string) (*v1al
 	return template, nil
 }
 
-func (m *manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Project, state string, templateGeneration int64, condition *v1alpha2.Condition) error {
+func (m *Manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Project, state string, templateGeneration int64, condition *v1alpha2.Condition) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
 			return err
@@ -61,7 +61,7 @@ func (m *manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Pro
 	})
 }
 
-func (m *manager) setFinalizer(ctx context.Context, project *v1alpha2.Project) error {
+func (m *Manager) setFinalizer(ctx context.Context, project *v1alpha2.Project) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
 			return err
@@ -73,7 +73,7 @@ func (m *manager) setFinalizer(ctx context.Context, project *v1alpha2.Project) e
 	})
 }
 
-func (m *manager) removeFinalizer(ctx context.Context, project *v1alpha2.Project) error {
+func (m *Manager) removeFinalizer(ctx context.Context, project *v1alpha2.Project) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
 			return err
@@ -86,7 +86,7 @@ func (m *manager) removeFinalizer(ctx context.Context, project *v1alpha2.Project
 	})
 }
 
-func (m *manager) prepareProject(ctx context.Context, project *v1alpha2.Project) error {
+func (m *Manager) prepareProject(ctx context.Context, project *v1alpha2.Project) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
 			return err
@@ -102,7 +102,7 @@ func (m *manager) prepareProject(ctx context.Context, project *v1alpha2.Project)
 	})
 }
 
-func (m *manager) makeCondition(condType, condStatus, condMessage string) *v1alpha2.Condition {
+func (m *Manager) makeCondition(condType, condStatus, condMessage string) *v1alpha2.Condition {
 	return &v1alpha2.Condition{
 		Type:               condType,
 		Status:             condStatus,
