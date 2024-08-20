@@ -293,7 +293,7 @@ func testDeckhouseDeploy() *appsv1.Deployment {
 				Spec: v1.PodSpec{
 					InitContainers: []v1.Container{
 						{
-							Name:  "init-external-modules",
+							Name:  "init-downloaded-modules",
 							Image: "registry.example.com@sha256:79ed551f4d0ec60799a9bd67f35441df6d86443515dd8337284fb68d97a01b3d",
 						},
 					},

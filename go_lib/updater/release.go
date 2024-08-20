@@ -42,6 +42,7 @@ type DeckhouseReleaseData struct {
 
 type Release interface {
 	GetName() string
+	GetModuleName() string
 	GetApplyAfter() *time.Time
 	GetVersion() *semver.Version
 	GetRequirements() map[string]string

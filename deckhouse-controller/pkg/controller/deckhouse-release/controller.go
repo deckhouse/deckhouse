@@ -383,12 +383,12 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	}
 
 	err = deckhouseUpdater.ApplyPredictedRelease(windows)
-	if errors.Is(err, updater.ErrNotReadyForDeploy) {
-		//TODO: create custom error type with additional fields like reason end requeueAfter
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-	}
 
 	if err != nil {
+		if errors.Is(err, updater.ErrNotReadyForDeploy) || errors.Is(err, updater.ErrRequirementsNotMet) {
+			//TODO: create custom error type with additional fields like reason end requeueAfter
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		}
 		return ctrl.Result{}, fmt.Errorf("apply predicted release: %w", err)
 	}
 
