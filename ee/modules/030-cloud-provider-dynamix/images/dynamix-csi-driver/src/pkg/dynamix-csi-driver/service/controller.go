@@ -86,7 +86,7 @@ func (c *ControllerService) CreateVolume(
 		return nil, err
 	}
 
-	pool, accountID, gID, sepID, err := c.parseParameters(ctx, req.Parameters)
+	pool, accountID, gID, storageEndpointID, err := c.parseParameters(ctx, req.Parameters)
 	if err != nil {
 		return nil, fmt.Errorf("error parse storageClass paramater %w", err)
 	}

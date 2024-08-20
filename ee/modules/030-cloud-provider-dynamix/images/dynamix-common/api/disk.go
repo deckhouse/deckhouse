@@ -88,7 +88,7 @@ func (d *DiskService) ListDisksByAccountName(
 			return false, err
 		}
 		result = resp.Data
-		return true, nil
+		return false, nil
 	})
 	if err != nil {
 		return nil, err
