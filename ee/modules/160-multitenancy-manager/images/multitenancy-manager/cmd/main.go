@@ -38,7 +38,7 @@ import (
 var (
 	// path to helm templates
 	templatesPath = "templates"
-	// path to default templates
+	// path to default project templates
 	defaultPath = "default"
 	// helm release namespace
 	helmNamespace = "d8-multitenancy-manager"

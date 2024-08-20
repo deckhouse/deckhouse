@@ -8,9 +8,10 @@ package namespace
 import (
 	"context"
 	"fmt"
-	v1 "k8s.io/api/core/v1"
 	"net/http"
 	"slices"
+
+	v1 "k8s.io/api/core/v1"
 
 	"sigs.k8s.io/yaml"
 

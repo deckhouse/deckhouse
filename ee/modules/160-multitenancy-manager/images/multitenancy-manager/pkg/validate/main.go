@@ -29,8 +29,7 @@ func Project(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) erro
 	if err != nil {
 		return fmt.Errorf("can't load open api schema from '%s' ProjectTemplate spec: %s", template.Name, err)
 	}
-	transformer := additionalPropertiesTransformer{}
-	templateOpenAPI = transformer.transform(templateOpenAPI)
+	templateOpenAPI = transform(templateOpenAPI)
 	if err = validate.AgainstSchema(templateOpenAPI, project.Spec.Parameters, strfmt.Default); err != nil {
 		return fmt.Errorf("project '%s' doesn't match the OpenAPI schema for '%s' ProjectTemplate: %v", project.Name, template.Name, err)
 	}
@@ -59,12 +58,8 @@ func loadOpenAPISchema(properties map[string]interface{}) (*spec.Schema, error) 
 	return schema, nil
 }
 
-type additionalPropertiesTransformer struct {
-	Parent *spec.Schema
-}
-
-// Transform sets undefined AdditionalProperties to false recursively.
-func (t *additionalPropertiesTransformer) transform(s *spec.Schema) *spec.Schema {
+// transform sets undefined AdditionalProperties to false recursively.
+func transform(s *spec.Schema) *spec.Schema {
 	if s == nil {
 		return nil
 	}
@@ -79,16 +74,16 @@ func (t *additionalPropertiesTransformer) transform(s *spec.Schema) *spec.Schema
 				Allows: false,
 			}
 			ts := prop
-			s.Properties[k] = *t.transform(&ts)
+			s.Properties[k] = *transform(&ts)
 		}
 	}
 	if s.Items != nil {
 		if s.Items.Schema != nil {
-			s.Items.Schema = t.transform(s.Items.Schema)
+			s.Items.Schema = transform(s.Items.Schema)
 		}
 		for i, item := range s.Items.Schemas {
 			ts := item
-			s.Items.Schemas[i] = *t.transform(&ts)
+			s.Items.Schemas[i] = *transform(&ts)
 		}
 	}
 	return s

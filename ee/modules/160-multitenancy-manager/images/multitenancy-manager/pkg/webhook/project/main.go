@@ -11,11 +11,9 @@ import (
 	"net/http"
 	"strings"
 
-	"controller/pkg/apis/deckhouse.io/v1alpha1"
 	"controller/pkg/apis/deckhouse.io/v1alpha2"
+
 	v1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -54,15 +52,4 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 	}
 
 	return admission.Allowed("")
-}
-
-func (v *validator) projectTemplateByName(ctx context.Context, name string) (*v1alpha1.ProjectTemplate, error) {
-	template := new(v1alpha1.ProjectTemplate)
-	if err := v.client.Get(ctx, types.NamespacedName{Name: name}, template); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return template, nil
 }
