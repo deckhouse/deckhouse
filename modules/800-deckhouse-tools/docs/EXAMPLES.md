@@ -1,3 +1,3 @@
 ---
-title: "The documentation module: examples"
+title: "The deckhouse-tools module: examples"
 ---

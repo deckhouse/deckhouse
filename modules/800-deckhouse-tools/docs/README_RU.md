@@ -1,5 +1,5 @@
 ---
-title: "Модуль documentation"
+title: "Модуль deckhouse-tools"
 webIfaces:
 - name: documentation
 ---

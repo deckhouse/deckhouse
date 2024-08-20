@@ -1,5 +1,5 @@
 ---
-title: "The documentation module"
+title: "The deckhouse-tools module"
 webIfaces:
 - name: documentation
 ---

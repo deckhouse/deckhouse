@@ -1,3 +1,3 @@
 ---
-title: "Модуль documentation: примеры"
+title: "Модуль deckhouse-tools: примеры"
 ---
