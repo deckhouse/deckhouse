@@ -13,7 +13,9 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "d8-kube-dns" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   {{- include "helm_lib_resources_management_vpa_spec" (list "apps/v1" "Deployment" "d8-kube-dns" "coredns" .Values.kubeDns.resourcesRequests) | nindent 2 }}
-  {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+  {{- if eq (.Values.logShipper.resourcesRequests.mode) "VPA" }}
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+  {{- end }}
 {{- end }}
 
 ---
