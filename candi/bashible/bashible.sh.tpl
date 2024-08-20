@@ -35,24 +35,26 @@ function bb-event-error-create() {
     eventName="$(echo -n "${D8_NODE_HOSTNAME}")-$(echo $step | sed 's#.*/##; s/_/-/g')"
     nodeName="${D8_NODE_HOSTNAME}"
     eventLog="/var/lib/bashible/step.log"
-    kubectl_exec apply -f - <<EOF || true
-        apiVersion: events.k8s.io/v1
-        kind: Event
-        metadata:
-          name: bashible-error-${eventName}
-        regarding:
-          apiVersion: v1
-          kind: Node
-          name: ${nodeName}
-          uid: ${nodeName}
-        note: '$(tail -c 500 ${eventLog})'
-        reason: BashibleStepFailed
-        type: Warning
-        reportingController: bashible
-        reportingInstance: '${D8_NODE_HOSTNAME}'
-        eventTime: '$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")'
-        action: "BashibleStepExecution"
+    if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
+      kubectl_exec apply -f - <<EOF || true
+          apiVersion: events.k8s.io/v1
+          kind: Event
+          metadata:
+            name: bashible-error-${eventName}
+          regarding:
+            apiVersion: v1
+            kind: Node
+            name: ${nodeName}
+            uid: ${nodeName}
+          note: '$(tail -c 500 ${eventLog})'
+          reason: BashibleStepFailed
+          type: Warning
+          reportingController: bashible
+          reportingInstance: '${D8_NODE_HOSTNAME}'
+          eventTime: '$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")'
+          action: "BashibleStepExecution"
 EOF
+    fi
 }
 
 function annotate_node() {
