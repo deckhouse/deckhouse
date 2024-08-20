@@ -13,7 +13,7 @@ import (
 
 	"controller/pkg/apis/deckhouse.io/v1alpha1"
 	"controller/pkg/apis/deckhouse.io/v1alpha2"
-	"controller/pkg/helm"
+	"controller/pkg/consts"
 
 	admissionv1 "k8s.io/api/admission/v1"
 
@@ -23,8 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"sigs.k8s.io/yaml"
 )
-
-const DeckhouseHeritage = "deckhouse"
 
 func Register(runtimeManager manager.Manager, serviceAccount string) {
 	hook := &webhook.Admission{Handler: &validator{client: runtimeManager.GetClient(), serviceAccount: serviceAccount}}
@@ -65,7 +63,7 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 
 		// cannot delete template if it is used
 		projects := new(v1alpha2.ProjectList)
-		if err := v.client.List(context.Background(), projects, client.MatchingLabels{helm.ProjectTemplateLabel: template.Name}); err != nil {
+		if err := v.client.List(context.Background(), projects, client.MatchingLabels{consts.ProjectTemplateLabel: template.Name}); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 		if len(projects.Items) > 0 {
@@ -78,8 +76,8 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 
 func (v *validator) validateHeritage(req admission.Request, template *v1alpha1.ProjectTemplate) string {
 	if template.Labels != nil {
-		heritage, ok := template.Labels[helm.HeritageLabel]
-		if ok && heritage == DeckhouseHeritage && req.UserInfo.Username != v.serviceAccount {
+		heritage, ok := template.Labels[consts.HeritageLabel]
+		if ok && heritage == consts.DeckhouseHeritage && req.UserInfo.Username != v.serviceAccount {
 			return fmt.Sprintf("The '%s' project template has the 'heritage' label with forbidden value: 'deckhouse'", template.Name)
 		}
 	}

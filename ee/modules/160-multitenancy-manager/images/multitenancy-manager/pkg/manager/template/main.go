@@ -11,8 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"controller/pkg/consts"
+
 	"controller/pkg/apis/deckhouse.io/v1alpha1"
-	"controller/pkg/helm"
 	"controller/pkg/validate"
 
 	"github.com/go-logr/logr"
@@ -25,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
+
+var _ Interface = &manager{}
 
 type Interface interface {
 	Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup, defaultPath string) error
@@ -103,7 +106,7 @@ func (m *manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 				if project.Annotations == nil {
 					project.Annotations = map[string]string{}
 				}
-				project.Annotations[helm.ProjectRequireSyncAnnotation] = helm.ProjectRequireSyncKeyTrue
+				project.Annotations[consts.ProjectRequireSyncAnnotation] = consts.ProjectRequireSyncKeyTrue
 				return m.client.Update(ctx, project)
 			})
 			if err != nil {

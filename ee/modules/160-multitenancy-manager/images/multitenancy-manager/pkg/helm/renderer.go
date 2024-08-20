@@ -11,6 +11,8 @@ import (
 
 	"github.com/go-logr/logr"
 
+	"controller/pkg/consts"
+
 	"helm.sh/helm/v3/pkg/releaseutil"
 
 	v1 "k8s.io/api/core/v1"
@@ -18,22 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"sigs.k8s.io/yaml"
-)
-
-const HashLabel = "hashsum"
-
-const (
-	ProjectRequireSyncAnnotation = "projects.deckhouse.io/require-sync"
-	ProjectRequireSyncKeyTrue    = "true"
-	ProjectRequireSyncKeyFalse   = "false"
-	ProjectLabel                 = "projects.deckhouse.io/project"
-)
-
-const ProjectTemplateLabel = "projects.deckhouse.io/project-template"
-
-const (
-	HeritageLabel = "heritage"
-	HeritageValue = "multitenancy-manager"
 )
 
 type postRenderer struct {
@@ -72,9 +58,9 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 		if labels == nil {
 			labels = make(map[string]string, 1)
 		}
-		labels[HeritageLabel] = HeritageValue
-		labels[ProjectLabel] = r.projectName
-		labels[ProjectTemplateLabel] = r.projectTemplate
+		labels[consts.HeritageLabel] = consts.MultitenancyHeritage
+		labels[consts.ProjectLabel] = r.projectName
+		labels[consts.ProjectTemplateLabel] = r.projectTemplate
 		object.SetLabels(labels)
 
 		if object.GetKind() == "Namespace" {
@@ -112,9 +98,9 @@ func (r *postRenderer) makeNamespace(name string) []byte {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
-				ProjectLabel:         r.projectName,
-				ProjectTemplateLabel: r.projectTemplate,
-				HeritageLabel:        HeritageValue,
+				consts.ProjectLabel:         r.projectName,
+				consts.ProjectTemplateLabel: r.projectTemplate,
+				consts.HeritageLabel:        consts.MultitenancyHeritage,
 			},
 		},
 	}

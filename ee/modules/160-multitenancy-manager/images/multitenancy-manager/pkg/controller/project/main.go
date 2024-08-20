@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"controller/pkg/apis/deckhouse.io/v1alpha2"
+	"controller/pkg/consts"
 	"controller/pkg/helm"
 	projectmanager "controller/pkg/manager/project"
 
@@ -64,6 +65,8 @@ func Register(runtimeManager manager.Manager, helmClient helm.Interface, log log
 		Complete(projectController)
 }
 
+var _ reconcile.Reconciler = &reconciler{}
+
 type reconciler struct {
 	init           *sync.WaitGroup
 	projectManager projectmanager.Interface
@@ -113,7 +116,7 @@ func (p customPredicate[T]) Update(e event.TypedUpdateEvent[T]) bool {
 	}
 
 	if e.ObjectNew.GetAnnotations() != nil {
-		if val, ok := e.ObjectNew.GetAnnotations()[helm.ProjectRequireSyncAnnotation]; ok && val == helm.ProjectRequireSyncKeyTrue {
+		if val, ok := e.ObjectNew.GetAnnotations()[consts.ProjectRequireSyncAnnotation]; ok && val == consts.ProjectRequireSyncKeyTrue {
 			return true
 		}
 	}

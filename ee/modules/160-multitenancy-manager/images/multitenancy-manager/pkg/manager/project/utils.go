@@ -7,13 +7,16 @@ package project
 
 import (
 	"context"
+
 	"controller/pkg/apis/deckhouse.io/v1alpha1"
 	"controller/pkg/apis/deckhouse.io/v1alpha2"
-	"controller/pkg/helm"
+	"controller/pkg/consts"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
+
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -63,8 +66,8 @@ func (m *manager) setFinalizer(ctx context.Context, project *v1alpha2.Project) e
 		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
 			return err
 		}
-		if !controllerutil.ContainsFinalizer(project, Finalizer) {
-			controllerutil.AddFinalizer(project, Finalizer)
+		if !controllerutil.ContainsFinalizer(project, consts.ProjectFinalizer) {
+			controllerutil.AddFinalizer(project, consts.ProjectFinalizer)
 		}
 		return m.client.Update(ctx, project)
 	})
@@ -75,10 +78,10 @@ func (m *manager) removeFinalizer(ctx context.Context, project *v1alpha2.Project
 		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
 			return err
 		}
-		if !controllerutil.ContainsFinalizer(project, Finalizer) {
+		if !controllerutil.ContainsFinalizer(project, consts.ProjectFinalizer) {
 			return nil
 		}
-		controllerutil.RemoveFinalizer(project, Finalizer)
+		controllerutil.RemoveFinalizer(project, consts.ProjectFinalizer)
 		return m.client.Update(ctx, project)
 	})
 }
@@ -91,9 +94,9 @@ func (m *manager) prepareProject(ctx context.Context, project *v1alpha2.Project)
 		if project.Labels == nil {
 			project.Labels = map[string]string{}
 		}
-		project.Labels[helm.ProjectTemplateLabel] = project.Spec.ProjectTemplateName
+		project.Labels[consts.ProjectTemplateLabel] = project.Spec.ProjectTemplateName
 		if project.Annotations != nil {
-			delete(project.Annotations, helm.ProjectRequireSyncAnnotation)
+			delete(project.Annotations, consts.ProjectRequireSyncAnnotation)
 		}
 		return m.client.Update(ctx, project)
 	})

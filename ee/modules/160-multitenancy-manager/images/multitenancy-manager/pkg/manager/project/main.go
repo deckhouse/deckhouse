@@ -24,9 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
-const (
-	Finalizer = "projects.deckhouse.io/project-exists"
-)
+var _ Interface = &manager{}
 
 type Interface interface {
 	Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup) error

@@ -16,7 +16,7 @@ import (
 
 	"controller/pkg/apis/deckhouse.io/v1alpha1"
 	"controller/pkg/apis/deckhouse.io/v1alpha2"
-	"controller/pkg/helm"
+	"controller/pkg/consts"
 	"controller/pkg/validate"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -94,7 +94,7 @@ func (m *manager) setTemplateStatus(ctx context.Context, template *v1alpha1.Proj
 
 func (m *manager) projectsByTemplate(ctx context.Context, template *v1alpha1.ProjectTemplate) ([]*v1alpha2.Project, error) {
 	projects := new(v1alpha2.ProjectList)
-	if err := m.client.List(ctx, projects, client.MatchingLabels{helm.ProjectTemplateLabel: template.Name}); err != nil {
+	if err := m.client.List(ctx, projects, client.MatchingLabels{consts.ProjectTemplateLabel: template.Name}); err != nil {
 		return nil, err
 	}
 	if len(projects.Items) == 0 {

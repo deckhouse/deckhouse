@@ -59,6 +59,8 @@ func Register(runtimeManager manager.Manager, log logr.Logger, defaultPath strin
 		Complete(templateController)
 }
 
+var _ reconcile.Reconciler = &reconciler{}
+
 type reconciler struct {
 	init            *sync.WaitGroup
 	templateManager templatemanager.Interface

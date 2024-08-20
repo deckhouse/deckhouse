@@ -16,6 +16,7 @@ import (
 
 	"controller/pkg/apis/deckhouse.io/v1alpha1"
 	"controller/pkg/apis/deckhouse.io/v1alpha2"
+	"controller/pkg/consts"
 
 	"github.com/fatih/structs"
 
@@ -169,7 +170,7 @@ func (c *client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 			install.Timeout = c.opts.Timeout
 			install.UseReleaseName = true
 			install.Labels = map[string]string{
-				HashLabel: hash,
+				consts.ReleaseHashLabel: hash,
 			}
 			install.PostRenderer = post
 			if _, err = install.RunWithContext(ctx, ch, values); err != nil {
@@ -184,7 +185,7 @@ func (c *client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 	}
 
 	releaseutil.Reverse(releases, releaseutil.SortByRevision)
-	if releaseHash, ok := releases[0].Labels[HashLabel]; ok {
+	if releaseHash, ok := releases[0].Labels[consts.ReleaseHashLabel]; ok {
 		if releaseHash == hash && releases[0].Info.Status == release.StatusDeployed {
 			c.log.Info("release is up to date", "release", projectName, "namespace", projectName)
 			return nil
@@ -204,7 +205,7 @@ func (c *client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 	upgrade.MaxHistory = int(c.opts.HistoryMax)
 	upgrade.Timeout = c.opts.Timeout
 	upgrade.Labels = map[string]string{
-		HashLabel: hash,
+		consts.ReleaseHashLabel: hash,
 	}
 	upgrade.PostRenderer = post
 
