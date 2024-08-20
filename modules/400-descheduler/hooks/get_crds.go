@@ -43,8 +43,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, getCRDsHandler)
 
 type DeschedulerSnapshotItem struct {
-	name string
-	spec dsv1alpha1.DeschedulerSpec
+	Name string
+	Spec dsv1alpha1.DeschedulerSpec
 }
 
 func applyDeschedulerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -56,8 +56,8 @@ func applyDeschedulerFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}
 
 	return DeschedulerSnapshotItem{
-		name: ds.Name,
-		spec: ds.Spec,
+		Name: ds.Name,
+		Spec: ds.Spec,
 	}, nil
 }
 
@@ -78,22 +78,22 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	for _, v := range input.Snapshots["deschedulers"] {
 		item := v.(DeschedulerSnapshotItem)
 		de := &DefaultEvictor{}
-		if item.spec.DefaultEvictor != nil {
-			if item.spec.DefaultEvictor.NodeSelector != nil {
-				de.NodeSelector = metav1.FormatLabelSelector(item.spec.DefaultEvictor.NodeSelector)
+		if item.Spec.DefaultEvictor != nil {
+			if item.Spec.DefaultEvictor.NodeSelector != nil {
+				de.NodeSelector = metav1.FormatLabelSelector(item.Spec.DefaultEvictor.NodeSelector)
 			}
-			if item.spec.DefaultEvictor.LabelSelector != nil {
-				de.LabelSelector = item.spec.DefaultEvictor.LabelSelector
+			if item.Spec.DefaultEvictor.LabelSelector != nil {
+				de.LabelSelector = item.Spec.DefaultEvictor.LabelSelector
 			}
-			if item.spec.DefaultEvictor.PriorityThreshold != nil {
-				de.PriorityThreshold = item.spec.DefaultEvictor.PriorityThreshold
+			if item.Spec.DefaultEvictor.PriorityThreshold != nil {
+				de.PriorityThreshold = item.Spec.DefaultEvictor.PriorityThreshold
 			}
 		}
 
 		internalValues = append(internalValues, InternalValuesDeschedulerSpec{
-			Name:           item.name,
+			Name:           item.Name,
 			DefaultEvictor: de,
-			Strategies:     item.spec.Strategies,
+			Strategies:     item.Spec.Strategies,
 		})
 	}
 
