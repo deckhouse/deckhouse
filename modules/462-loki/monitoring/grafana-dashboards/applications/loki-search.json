@@ -55,7 +55,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "${loki}"
+        "uid": "$loki"
       },
       "fieldConfig": {
         "defaults": {
@@ -140,7 +140,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "${loki}"
+            "uid": "$loki"
           },
           "editorMode": "code",
           "expr": "sum(count_over_time({$label=\"$value\"} |~ \"$search\" [$__interval]))",
@@ -154,7 +154,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "${loki}"
+        "uid": "$loki"
       },
       "gridPos": {
         "h": 25,
@@ -197,11 +197,6 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": false,
-          "text": "d8-loki",
-          "value": "P3603B8DDCEA59141"
-        },
         "hide": 0,
         "includeAll": false,
         "label": "Source",
