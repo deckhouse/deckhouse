@@ -178,7 +178,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "{$loki}"
+            "uid": "${loki}"
           },
           "expr": "{$label=\"$value\"} |= \"$search\" | logfmt",
           "hide": false,
