@@ -109,15 +109,6 @@ properties:
         memory:
           min: "256Mi"
           max: "2Gi"
-    - mode: VPA
-      vpa:
-        mode: Initial
-        cpu:
-          min: 1
-          max: 3000m
-        memory:
-          min: 1024
-          max: 4096
     - mode: Static
       static:
         cpu: "55m"
@@ -155,7 +146,7 @@ properties:
             description: |
               The VPA usage mode.
             enum: ["Initial", "Auto"]
-            default: "Initial"
+            default: "Auto"
           cpu:
             type: object
             description: |
@@ -169,7 +160,7 @@ properties:
                   - type: number
                 description: |
                   The maximum value that the VPA can set for the CPU requests.
-                default: "500m"
+                default: "40m"
               min:
                 oneOf:
                   - type: string
@@ -177,7 +168,7 @@ properties:
                   - type: number
                 description: |
                   The minimum value that the VPA can set for the CPU requests.
-                default: "50m"
+                default: "20m"
           memory:
             type: object
             description: |
@@ -191,7 +182,7 @@ properties:
                   - type: number
                 description: |
                   The maximum memory requests the VPA can set.
-                default: "2048Mi"
+                default: "50Mi"
               min:
                 oneOf:
                   - type: string
@@ -199,7 +190,7 @@ properties:
                   - type: number
                 description: |
                   The minimum memory requests the VPA can set.
-                default: "64Mi"
+                default: "40Mi"
       static:
         type: object
         description: |
@@ -216,7 +207,7 @@ properties:
               - type: number
             description: |
               Configuring CPU requests.
-            default: "50m"
+            default: "20m"
           memory:
             oneOf:
               - type: string
@@ -224,4 +215,4 @@ properties:
               - type: number
             description: |
               Configuring memory requests.
-            default: "64Mi"
+            default: "40Mi"
