@@ -160,6 +160,14 @@ chmod 600 /home/caps/.ssh/authorized_keys
 {% endsnippetcut %}
   </li>
   <li>
+    <p><strong>В операционных системах семейства Astra Linux</strong>, при использовании модуля мандатного контроля целостности Parsec сконфигурируйте максимальный уровень целостности для пользователя <code>caps</code>:</p>
+{% snippetcut %}
+```bash
+pdpl-user -i 63 caps
+```
+{% endsnippetcut %}
+  </li>
+  <li>
     <p>Создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> для добавляемого узла. Для этого выполните на <strong>master-узле</strong> следующую команду, указав IP-адрес добавляемого узла:</p>
 {% snippetcut %}
 ```bash

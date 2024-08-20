@@ -146,7 +146,13 @@ spec:
      chown -R caps:caps /home/caps/
      ```
 
-1. Создайте в кластере ресурс [SSHCredentials](cr.html#sshcredentials).
+  * В операционных системах семейства Astra Linux, при использовании модуля мандатного контроля целостности Parsec, настройте максимальный уровень целостности для пользователя `caps`:
+
+  ```shell
+  pdpl-user -i 63 caps
+  ```
+
+2. Создайте в кластере ресурс [SSHCredentials](cr.html#sshcredentials).
 
    В директории с ключами пользователя **на сервере** выполните следующую команду для получения закрытого ключа в формате Base64:
 
@@ -174,7 +180,7 @@ spec:
    EOF
    ```
 
-1. Создайте в кластере ресурс [StaticInstance](cr.html#staticinstance), указав IP-адрес сервера статического узла:
+3. Создайте в кластере ресурс [StaticInstance](cr.html#staticinstance), указав IP-адрес сервера статического узла:
 
    ```shell
    kubectl create -f - <<EOF
@@ -191,7 +197,7 @@ spec:
    EOF
    ```
 
-1. Создайте в кластере ресурс [NodeGroup](cr.html#nodegroup):
+4. Создайте в кластере ресурс [NodeGroup](cr.html#nodegroup):
 
    ```shell
    kubectl create -f - <<EOF
