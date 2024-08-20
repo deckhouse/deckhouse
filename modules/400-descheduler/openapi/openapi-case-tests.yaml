@@ -4,14 +4,15 @@ positive:
         deschedulers: []
     - internal:
         deschedulers:
-        - apiVersion: deckhouse.io/v1alpha1
-          metadata:
-            name: test
-          spec:
-            deploymentTemplate: {}
-            deschedulerPolicy:
-              globalParameters:
-                evictFailedBarePods: true
-              strategies:
-                highNodeUtilization:
-                  enabled: true
+          - name: test1
+            strategies:
+              lowNodeUtilization:
+                thresholds:
+                  cpu: 10
+                  memory: 20
+                  pods: 30
+                targetThresholds:
+                  cpu: 40
+                  memory: 50
+                  pods: 50
+                  gpu: "gpuNode"
