@@ -29,31 +29,3 @@ properties:
             type: string
           ca:
             type: string
-      resourcesRequests:
-        type: object
-        default: {}
-        properties:
-          vpa:
-            type: object
-            default: {}
-            properties:
-              mode:
-                type: string
-              cpu:
-                type: object
-                default: {}
-                properties:
-                  max:
-                    type: string
-                    x-examples: ["200m"]
-                  min:
-                    type: string
-              memory:
-                type: object
-                default: {}
-                properties:
-                  max:
-                    type: string
-                  min:
-                    type: string
-                    x-examples: ["100Mi"]
