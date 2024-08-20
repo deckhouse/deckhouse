@@ -91,3 +91,50 @@ properties:
     items:
       type: string
       pattern: '^[0-9a-zA-Z\.-]+$'
+  resourcesRequests:
+    required: ['mode']
+    type: object
+    description: |
+      Max amounts of CPU and memory resources that the pod can request when selecting a node (if the VPA is disabled, then these values become the default ones).
+    properties:
+      vpa:
+        type: object
+        description: |
+          Parameters of the vpa mode.
+        properties:
+          mode:
+            type: string
+            description: |
+              The VPA usage mode.
+            enum: ['Initial', 'Auto']
+            default: 'Auto'
+          cpu:
+            type: object
+            description: |
+              CPU-related parameters.
+            properties:
+              max:
+                description: |
+                  Maximum allowed CPU requests.
+                default: '40m'
+                type: string
+              min:
+                description: |
+                  Minimum allowed CPU requests.
+                default: '20m'
+                type: string
+          memory:
+            type: object
+            description: |
+              The amount of memory requested.
+            properties:
+              max:
+                description: |
+                  Maximum allowed memory requests.
+                default: '50Mi'
+                type: string
+              min:
+                description: |
+                  Minimum allowed memory requests.
+                default: '40Mi'
+                type: string

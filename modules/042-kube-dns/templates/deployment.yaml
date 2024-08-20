@@ -1,4 +1,7 @@
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- $resourcesRequestsVPA := $resourcesRequests.vpa | default dict }}
+{{- $resourcesRequestsVPA_CPU := $resourcesRequestsVPA.cpu | default dict }}
+{{- $resourcesRequestsVPA_Memory := $resourcesRequestsVPA.memory | default dict }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -11,10 +14,6 @@ spec:
     apiVersion: "apps/v1"
     kind: Deployment
     name: d8-kube-dns
-    {{- if eq ($resourcesRequests.mode | default "") "VPA" }}
-      {{- $resourcesRequestsVPA := $resourcesRequests.vpa | default dict }}
-      {{- $resourcesRequestsVPA_CPU := $resourcesRequestsVPA.cpu | default dict }}
-      {{- $resourcesRequestsVPA_Memory := $resourcesRequestsVPA.memory | default dict }}
   updatePolicy:
     updateMode: {{ $resourcesRequestsVPA.mode | default "Auto" | quote }}
   resourcePolicy:
