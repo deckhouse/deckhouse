@@ -42,6 +42,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, getCRDsHandler)
 
+type DeschedulerSnapshotItem struct {
+	name string
+	spec dsv1alpha1.DeschedulerSpec
+}
+
 func applyDeschedulerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	ds := &dsv1alpha1.Descheduler{}
 
@@ -50,10 +55,14 @@ func applyDeschedulerFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 		return nil, err
 	}
 
-	return ds.Spec, nil
+	return DeschedulerSnapshotItem{
+		name: ds.Name,
+		spec: ds.Spec,
+	}, nil
 }
 
 type InternalValuesDeschedulerSpec struct {
+	Name           string                `json:"name" yaml:"name"`
 	DefaultEvictor *DefaultEvictor       `json:"defaultEvictor,omitempty" yaml:"defaultEvictor,omitempty"`
 	Strategies     dsv1alpha1.Strategies `json:"strategies" yaml:"strategies"`
 }
@@ -67,23 +76,24 @@ type DefaultEvictor struct {
 func getCRDsHandler(input *go_hook.HookInput) error {
 	internalValues := make([]InternalValuesDeschedulerSpec, 0)
 	for _, v := range input.Snapshots["deschedulers"] {
-		spec := v.(dsv1alpha1.DeschedulerSpec)
+		item := v.(DeschedulerSnapshotItem)
 		de := &DefaultEvictor{}
-		if spec.DefaultEvictor != nil {
-			if spec.DefaultEvictor.NodeSelector != nil {
-				de.NodeSelector = metav1.FormatLabelSelector(spec.DefaultEvictor.NodeSelector)
+		if item.spec.DefaultEvictor != nil {
+			if item.spec.DefaultEvictor.NodeSelector != nil {
+				de.NodeSelector = metav1.FormatLabelSelector(item.spec.DefaultEvictor.NodeSelector)
 			}
-			if spec.DefaultEvictor.LabelSelector != nil {
-				de.LabelSelector = spec.DefaultEvictor.LabelSelector
+			if item.spec.DefaultEvictor.LabelSelector != nil {
+				de.LabelSelector = item.spec.DefaultEvictor.LabelSelector
 			}
-			if spec.DefaultEvictor.PriorityThreshold != nil {
-				de.PriorityThreshold = spec.DefaultEvictor.PriorityThreshold
+			if item.spec.DefaultEvictor.PriorityThreshold != nil {
+				de.PriorityThreshold = item.spec.DefaultEvictor.PriorityThreshold
 			}
 		}
 
 		internalValues = append(internalValues, InternalValuesDeschedulerSpec{
+			Name:           item.name,
 			DefaultEvictor: de,
-			Strategies:     spec.Strategies,
+			Strategies:     item.spec.Strategies,
 		})
 	}
 

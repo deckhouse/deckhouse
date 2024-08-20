@@ -3,21 +3,20 @@ cpu: 25m
 memory: 50Mi
 {{- end }}
 
-{{- range $d := .Values.descheduler.internal.deschedulers }}
-  {{- $deschedulerSpec := $d.spec }}
+{{- if len .Values.descheduler.internal.deschedulers }}
   {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: descheduler-{{ $d.metadata.name | sha1sum }}
+  name: descheduler
   namespace: d8-descheduler
   {{- include "helm_lib_module_labels" (list $ (dict "app" "descheduler")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: descheduler-{{ $d.metadata.name | sha1sum }}
+    name: descheduler
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
@@ -33,35 +32,33 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: descheduler-{{ $d.metadata.name | sha1sum }}
+  name: descheduler
   namespace: d8-descheduler
   {{- include "helm_lib_module_labels" (list $ (dict "app" "descheduler")) | nindent 2 }}
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      app: descheduler-{{ $d.metadata.name }}
+      app: descheduler
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: descheduler-{{ $d.metadata.name | sha1sum }}
+  name: descheduler
   namespace: d8-descheduler
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "descheduler" "name" $d.metadata.name)) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "descheduler")) | nindent 2 }}
 spec:
   replicas: 1
   revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: descheduler
-      name: {{ $d.metadata.name }}
   template:
     metadata:
       labels:
         app: descheduler
-        name: {{ $d.metadata.name }}
       annotations:
-        checksum/config: {{ $deschedulerSpec | toJson | sha256sum }}
+        checksum/config: {{ $.Values.descheduler.internal.deschedulers | toJson | sha256sum }}
     spec:
       serviceAccountName: descheduler
       imagePullSecrets:
@@ -89,11 +86,11 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
-{{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "descheduler_resources" $ | nindent 12 }}
-{{- end }}
+  {{- end }}
       volumes:
       - name: policy-volume
         configMap:
-          name: descheduler-policy-{{ $d.metadata.name | sha1sum }}
+          name: descheduler-policy
 {{- end }}

@@ -12,6 +12,8 @@ properties:
         items:
           type: object
           properties:
+            name:
+              type: string
             defaultEvictor:
               type: object
               properties:
@@ -149,4 +151,5 @@ properties:
                 - required: ["lowNodeUtilization"]
                 - required: ["highNodeUtilization"]
           required:
+            - name
             - strategies

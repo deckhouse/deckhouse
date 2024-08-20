@@ -34,16 +34,10 @@ const globalValues = `
   enabledModules: ["vertical-pod-autoscaler-crd"]
   modules:
     placement: {}
-  modulesImages:
-    registry: registry.deckhouse.io/deckhouse/fe
-    registryDockercfg: Y2ZnCg==
-    digests:
-      descheduler:
-        descheduler: digeststring
   discovery:
-    kubernetesVersion: 1.16.15
+    kubernetesVersion: 1.29.1
     d8SpecificNodeCountByRole:
-      master: 42
+      master: 3
 `
 
 var _ = Describe("Module :: monitoring-kubernetes-control-plane :: helm template ::", func() {
@@ -54,36 +48,55 @@ var _ = Describe("Module :: monitoring-kubernetes-control-plane :: helm template
 			moduleValues := `
 internal:
   deschedulers:
-  - apiVersion: deckhouse.io/v1alpha1
-    kind: Descheduler
-    metadata:
-      name: test
-    spec:
-      deploymentTemplate: {}
-      deschedulerPolicy:
-        globalParameters:
-          evictFailedBarePods: true
-        strategies:
-          highNodeUtilization:
-            enabled: true
-          lowNodeUtilization:
-            enabled: true
-          podLifeTime:
-            enabled: true
-          removeDuplicates:
-            enabled: true
-          removeFailedPods:
-            enabled: true
-          removePodsHavingTooManyRestarts:
-            enabled: true
-          removePodsViolatingInterPodAntiAffinity:
-            enabled: true
-          removePodsViolatingNodeAffinity:
-            enabled: false
-          removePodsViolatingNodeTaints:
-            enabled: true
-          removePodsViolatingTopologySpreadConstraint:
-            enabled: true
+  - name: test1
+    strategies:
+      lowNodeUtilization:
+        thresholds:
+          cpu: 10
+          memory: 20
+          pods: 30
+        targetThresholds:
+          cpu: 40
+          memory: 50
+          pods: 50
+          gpu: "gpuNode"
+  - name: test2
+    strategies:
+      lowNodeUtilization:
+        thresholds:
+          cpu: 10
+          memory: 20
+          pods: 30
+        targetThresholds:
+          cpu: 40
+          memory: 50
+          pods: 50
+          gpu: "gpuNode"
+      highNodeUtilization:
+        thresholds:
+          cpu: 14
+          memory: 23
+          pods: 3
+  - defaultEvictor:
+      labelSelector:
+        matchExpressions:
+        - key: dbType
+          operator: In
+          values:
+          - test1
+          - test2
+        matchLabels:
+          app: test1
+      nodeSelector: node.deckhouse.io/group=test1,node.deckhouse.io/type in (test1,test2)
+      priorityThreshold:
+        value: 1000
+    name: test5
+    strategies:
+      highNodeUtilization:
+        thresholds:
+          cpu: 14
+          memory: 23
+          pods: 3
 `
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSetFromYaml("descheduler", moduleValues)
