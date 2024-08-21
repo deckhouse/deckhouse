@@ -42,9 +42,9 @@ case "$ID" in
     esac
     name_is_not_supported
   ;;
-  mos)
+  mosos-arbat)
     case "$VERSION" in 12)
-        echo "rosa" && exit 0 ;;
+        echo "opensuse" && exit 0 ;;
     esac
     name_is_not_supported
   ;;
@@ -101,4 +101,8 @@ bundle="debian"
 if yum -q --version >/dev/null 2>/dev/null; then
   bundle="centos"
 fi
+if zypper --version >/dev/null 2>/dev/null; then
+  bundle="opensuse"
+fi
+
 try_bundle "${bundle}"

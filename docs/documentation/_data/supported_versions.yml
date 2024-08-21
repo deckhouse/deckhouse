@@ -32,9 +32,9 @@ osDistributions:
     ru_support: 'true'
     en_support: 'false'
     additional_notes: 'true'
-  '_mos':
+  '_mosos-arbat':
     name: 'МОС Сервер'
-    url: https://hub.mos.ru/mos/iso
+    url: https://mosos.mos.ru/
     ru_support: 'true'
     en_support: 'false'
     additional_notes: 'true'
