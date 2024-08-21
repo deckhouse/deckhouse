@@ -21,15 +21,17 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+
 	rbacv1 "k8s.io/api/rbac/v1"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apimachineryv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apimachineryYaml "k8s.io/apimachinery/pkg/util/yaml"
-	"os"
-	"path/filepath"
+
 	"sigs.k8s.io/yaml"
-	"slices"
-	"strings"
 )
 
 const allResources = "all"
@@ -322,20 +324,8 @@ func (m *moduleGenerator) writeRoles(manageRoles, useRoles []*rbacv1.ClusterRole
 			return err
 		}
 		marshaled, err := yaml.Marshal(role)
-		if err != nil {
-			return err
-		}
-		// it fixes flaky test, because there is a possibility that PR marshaled docs locally docs will be different
-		var tmp interface{}
-		if err = yaml.Unmarshal(marshaled, &tmp); err != nil {
-			panic(err)
-		}
-		result, err := yaml.Marshal(tmp)
-		if err != nil {
-			panic(err)
-		}
 		managePath := filepath.Join(m.path, "templates", "rbacv2", "manage", fmt.Sprintf("%s.yaml", name))
-		if err = os.WriteFile(managePath, result, 0644); err != nil {
+		if err = os.WriteFile(managePath, marshaled, 0644); err != nil {
 			return err
 		}
 	}
@@ -351,19 +341,8 @@ func (m *moduleGenerator) writeRoles(manageRoles, useRoles []*rbacv1.ClusterRole
 		if err != nil {
 			return err
 		}
-
-		// it fixes flaky test, because there is a possibility that PR marshaled docs and locally marshalled docs will be different
-		var tmp interface{}
-		if err = yaml.Unmarshal(marshaled, &tmp); err != nil {
-			panic(err)
-		}
-		result, err := yaml.Marshal(tmp)
-		if err != nil {
-			panic(err)
-		}
-
 		usePath := filepath.Join(m.path, "templates", "rbacv2", "use", fmt.Sprintf("%s.yaml", name))
-		if err = os.WriteFile(usePath, result, 0644); err != nil {
+		if err = os.WriteFile(usePath, marshaled, 0644); err != nil {
 			return err
 		}
 	}

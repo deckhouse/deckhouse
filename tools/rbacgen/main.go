@@ -146,17 +146,7 @@ func main() {
 		panic(err)
 	}
 
-	// it fixes flaky test, because there is a possibility that PR marshaled docs locally docs will be different
-	var tmp interface{}
-	if err = yaml.Unmarshal(marshaled, &tmp); err != nil {
-		panic(err)
-	}
-	result, err := yaml.Marshal(tmp)
-	if err != nil {
-		panic(err)
-	}
-
-	if err = os.WriteFile(filepath.Join(workDir, "docs", "documentation", "_data", "rbac.yaml"), result, 0666); err != nil {
+	if err = os.WriteFile(filepath.Join(workDir, "docs", "documentation", "_data", "rbac.yaml"), marshaled, 0666); err != nil {
 		panic(err)
 	}
 }
