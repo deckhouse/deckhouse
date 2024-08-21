@@ -1,59 +1,42 @@
 ---
-title: "Модуль descheduler"
+title: "The descheduler module"
 ---
 
-Модуль запускает в кластере [descheduler](https://github.com/kubernetes-incubator/descheduler/) с набором [стратегий](#стратегии), заданных в custom resource `Descheduler`.
+The module runs a [descheduler](https://github.com/kubernetes-sigs/descheduler) with [strategies](#strategies) defined in a `Descheduler` custom resource.
 
-descheduler каждые 15 минут вытесняет Pod'ы, которые удовлетворяют включенным в custom resource `Descheduler` стратегиям. Это приводит к принудительному запуску процесса шедулинга в отношении вытесненных подов.
+descheduler every 15 minutes evicts Pods that satisfy strategies enabled in the `Descheduler` custom resource. This leads to forced run the scheduling process for evicted Pods.
 
-## Особенности работы descheduler
+## Nuances of descheduler operation
 
-* При вытеснении подов с нагруженного узла учитывается класс приоритета (ознакомьтесь с модулем [priority-class](../001-priority-class/)).
-* Поды с [priorityClassName](../001-priority-class/) `system-cluster-critical` или `system-node-critical` (*критичные* поды) не вытесняются.
-* Поды без контроллера или с контроллером DaemonSet не вытесняются.
-* Поды с local storage не вытесняются.
-* Best-effort-поды вытесняются раньше, чем Burstable и Guaranteed.
-* Учитывается [Pod Disruption Budget](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/): если вытеснение пода приведет к нарушению условий PDB, то под не вытесняется.
+* descheduler do not take into account pods in `d8-*` and `kube-system` namespaces;
+* Pods with local storage enabled are never evicts;
+* Pods that are associated with a DaemonSet are never evicts;
+* Pods with [priorityClassName](../001-priority-class/) set to `system-cluster-critical` or `system-node-critical` (*critical* Pods) are never evicts;
+* descheduler takes into account the priority class when evicting Pods from a high-loaded node (check out the [priority-class](../001-priority-class/) module);
+* The Best effort Pods are evicted before Burstable and Guaranteed ones;
+* descheduler takes into account the [Pod Disruption Budget](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/): the Pod will not be evicted if descheduling violates the PDB;
+* descheduler takes into account node fitting. If no nodes available to start evicted pod, pod is not evicted.
 
-## Стратегии
+To limit pods set, `labelSelector` param is used.
+To set up node fit list, `nodeSelector` param is used. `nodeSelector` has the same syntax as `labelSelector`. Node fit list always excludes nodes with labels `node.deckhouse.io/group: master` and `node.deckhouse.io/group: system`.
 
-Включить, выключить, настроить стратегии можно в custom resource [`Descheduler`](cr.html).
+## Strategies
 
 ### HighNodeUtilization
 
-Данная стратегия находит ненагруженные узлы и вытесняет с них поды в надежде что эти поды будут компактно распределены по меньшему количеству узлов. Эта стратегия должна использоваться со стратегией планировщика `MostRequestedPriority`.
+This strategy finds nodes that are under utilized and evicts pods from the nodes in the hope that these pods will be scheduled compactly into fewer nodes. Used in conjunction with node auto-scaling, this strategy is intended to help trigger down scaling of under utilized nodes. This strategy must be used with the scheduler scoring strategy MostAllocated.
+The under utilization of nodes is determined by a configurable threshold thresholds. The threshold thresholds can be configured for cpu, memory, number of pods, and extended resources in terms of percentage. The percentage is calculated as the current resources requested on the node vs total allocatable. For pods, this means the number of pods on the node as a fraction of the pod capacity set for that node.
+If a node's usage is below threshold for all (cpu, memory, number of pods and extended resources), the node is considered underutilized. Currently, pods request resource requirements are considered for computing node resource utilization. Any node above thresholds is considered appropriately utilized and is not considered for eviction.
+The thresholds param could be tuned as per your cluster requirements. Note that this strategy evicts pods from underutilized nodes (those with usage below thresholds) so that they can be recreated in appropriately utilized nodes. The strategy will abort if any number of underutilized nodes or appropriately utilized nodes is zero.
+
+NOTE: Node resource consumption is determined by the requests and limits of pods, not actual usage. This approach is chosen in order to maintain consistency with the kube-scheduler, which follows the same design for scheduling pods onto nodes. This means that resource usage as reported by Kubelet (or commands like kubectl top) may differ from the calculated consumption, due to these components reporting actual usage metrics.
 
 ### LowNodeUtilization
 
-Данная стратегия находит нагруженные и ненагруженные узлы в кластере по CPU/памяти/подам (в процентах) и при наличии и тех и других вытесняет поды с нагруженных узлов в надежде что поды будут запущены на ненагруженных узлах. Данная стратегия учитывает не реально потребленные ресурсы на узле, а реквесты у подов.
+This strategy finds nodes that are under utilized and evicts pods, if possible, from other nodes in the hope that recreation of evicted pods will be scheduled on these underutilized nodes.
+The under utilization of nodes is determined by a configurable threshold thresholds. The threshold thresholds can be configured for cpu, memory, number of pods, and extended resources in terms of percentage (the percentage is calculated as the current resources requested on the node vs total allocatable. For pods, this means the number of pods on the node as a fraction of the pod capacity set for that node).
+If a node's usage is below threshold for all (cpu, memory, number of pods and extended resources), the node is considered underutilized. Currently, pods request resource requirements are considered for computing node resource utilization.
+There is another configurable threshold, targetThresholds, that is used to compute those potential nodes from where pods could be evicted. If a node's usage is above targetThreshold for any (cpu, memory, number of pods, or extended resources), the node is considered over utilized. Any node between the thresholds, thresholds and targetThresholds is considered appropriately utilized and is not considered for eviction. The threshold, targetThresholds, can be configured for cpu, memory, and number of pods too in terms of percentage.
+These thresholds, thresholds and targetThresholds, could be tuned as per your cluster requirements. Note that this strategy evicts pods from overutilized nodes (those with usage above targetThresholds) to underutilized nodes (those with usage below thresholds), it will abort if any number of underutilized nodes or overutilized nodes is zero.
 
-### PodLifeTime
-
-Эта стратегия гарантирует, что поды в состоянии Pending старше 24 часов будут удалены с узлов.
-
-### RemoveDuplicates
-
-Данная стратегия следит за тем, чтобы на одном узле не было запущенно более одного пода одного контроллера (RS, RC, Deploy, Job). Если таких подов два на одном узле, descheduler убивает один под.
-
-К примеру, у нас есть 3 узла (один из них более нагружен), и мы хотим выкатить 6 реплик приложения. Так как один из узлов перегружен, scheduler привяжет к нагруженному узлу 0 или 1 под. Остальные реплики поедут на другие узлы, и в таком случае descheduler будет каждые 15 минут прибивать «лишние» поды на ненагруженных узлах и надеяться, что scheduler привяжет их к этому нагруженному узлу.
-
-### RemovePodsHavingTooManyRestarts
-
-Эта стратегия гарантирует, что поды, имеющие больше 100 перезапусков контейнеров (включая init-контейнеры), будут удалены с узлов.
-
-### RemovePodsViolatingInterPodAntiAffinity
-
-Данная стратегия следит за тем, чтобы все «нарушители» anti-affinity были удалены. В какой ситуации может быть нарушен InterPodAntiAffinity, нам самим придумать не удалось, а в официальной документации по descheduler написано что-то недостаточно убедительное:
-> This strategy makes sure that Pods violating interpod anti-affinity are removed from nodes. For example, if there is podA on node and podB and podC (running on same node) have anti-affinity rules which prohibit them to run on the same node, then podA will be evicted from the node so that podB and podC could run. This issue could happen, when the anti-affinity rules for Pods B, C are created when they are already running on node.
-
-### RemovePodsViolatingNodeAffinity
-
-Данная стратегия отвечает за кейс, когда под был привязан к узлу по условиям (`requiredDuringSchedulingIgnoredDuringExecution`), но потом узел перестал им удовлетворять. Тогда descheduler увидит это и сделает все, чтобы под переехал туда, где он будет удовлетворять условиям.
-
-### RemovePodsViolatingNodeTaints
-
-Эта стратегия гарантирует, что поды, нарушающие NoSchedule на узлах, будут удалены. Например, есть под, имеющий toleration и запущенный на узле с соответствующим taint. Если taint на узле будет изменен или удален, под будет вытеснен с узла.
-
-### RemovePodsViolatingTopologySpreadConstraint
-
-Эта стратегия гарантирует, что поды, нарушающие [Pod Topology Spread Constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/), будут вытеснены с узлов.
+NOTE: Node resource consumption is determined by the requests and limits of pods, not actual usage. This approach is chosen in order to maintain consistency with the kube-scheduler, which follows the same design for scheduling pods onto nodes. This means that resource usage as reported by Kubelet (or commands like kubectl top) may differ from the calculated consumption, due to these components reporting actual usage metrics.
