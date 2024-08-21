@@ -23,6 +23,16 @@ To set up node fit list, `nodeSelector` param is used. `nodeSelector` has the sa
 ## Strategies
 
 ### HighNodeUtilization
+
+This strategy finds nodes that are under utilized and evicts pods from the nodes in the hope that these pods will be scheduled compactly into fewer nodes. Used in conjunction with node auto-scaling, this strategy is intended to help trigger down scaling of under utilized nodes. This strategy must be used with the scheduler scoring strategy MostAllocated.
+The under utilization of nodes is determined by a configurable threshold thresholds. The threshold thresholds can be configured for cpu, memory, number of pods, and extended resources in terms of percentage. The percentage is calculated as the current resources requested on the node vs total allocatable. For pods, this means the number of pods on the node as a fraction of the pod capacity set for that node.
+If a node's usage is below threshold for all (cpu, memory, number of pods and extended resources), the node is considered underutilized. Currently, pods request resource requirements are considered for computing node resource utilization. Any node above thresholds is considered appropriately utilized and is not considered for eviction.
+The thresholds param could be tuned as per your cluster requirements. Note that this strategy evicts pods from underutilized nodes (those with usage below thresholds) so that they can be recreated in appropriately utilized nodes. The strategy will abort if any number of underutilized nodes or appropriately utilized nodes is zero.
+
+NOTE: Node resource consumption is determined by the requests and limits of pods, not actual usage. This approach is chosen in order to maintain consistency with the kube-scheduler, which follows the same design for scheduling pods onto nodes. This means that resource usage as reported by Kubelet (or commands like kubectl top) may differ from the calculated consumption, due to these components reporting actual usage metrics.
+
+### LowNodeUtilization
+
 This strategy finds nodes that are under utilized and evicts pods, if possible, from other nodes in the hope that recreation of evicted pods will be scheduled on these underutilized nodes.
 The under utilization of nodes is determined by a configurable threshold thresholds. The threshold thresholds can be configured for cpu, memory, number of pods, and extended resources in terms of percentage (the percentage is calculated as the current resources requested on the node vs total allocatable. For pods, this means the number of pods on the node as a fraction of the pod capacity set for that node).
 If a node's usage is below threshold for all (cpu, memory, number of pods and extended resources), the node is considered underutilized. Currently, pods request resource requirements are considered for computing node resource utilization.
@@ -30,7 +40,3 @@ There is another configurable threshold, targetThresholds, that is used to compu
 These thresholds, thresholds and targetThresholds, could be tuned as per your cluster requirements. Note that this strategy evicts pods from overutilized nodes (those with usage above targetThresholds) to underutilized nodes (those with usage below thresholds), it will abort if any number of underutilized nodes or overutilized nodes is zero.
 
 NOTE: Node resource consumption is determined by the requests and limits of pods, not actual usage. This approach is chosen in order to maintain consistency with the kube-scheduler, which follows the same design for scheduling pods onto nodes. This means that resource usage as reported by Kubelet (or commands like kubectl top) may differ from the calculated consumption, due to these components reporting actual usage metrics.
-
-### LowNodeUtilization
-
-This strategy finds underutilized or overutilized nodes using cpu/memory/Pods (in %) thresholds and evicts Pods from overutilized nodes hoping that these Pods will be rescheduled on underutilized nodes. Note that this strategy takes into account Pod requests instead of actual resources consumed.
