@@ -45,7 +45,7 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 
 	// other namespaces can be created only by deckhouse or multitenancy-manager
 	if !slices.Contains([]string{v.serviceAccount, v.deckhouseServiceAccount}, req.UserInfo.Username) {
-		return admission.Denied(fmt.Sprintf("namespaces can be created only as a part of project"))
+		return admission.Denied(fmt.Sprintf("namespaces can be created only as a part of a Project"))
 	}
 
 	return admission.Allowed("")
