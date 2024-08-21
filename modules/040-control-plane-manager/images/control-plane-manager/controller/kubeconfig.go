@@ -71,10 +71,13 @@ func renewKubeconfig(componentName string) error {
 			return err
 		}
 
-		if err := validateKubeconfig(path, tmpPath, componentName); err != nil {
-			return prepareKubeconfig(componentName, false)
+		err, remove := validateKubeconfig(path, tmpPath)
+		if err != nil {
+			log.Error(err)
 		}
-
+		if remove {
+			removeFile(path)
+		}
 	}
 
 	if _, err := os.Stat(path); err == nil {
@@ -86,8 +89,7 @@ func renewKubeconfig(componentName string) error {
 	return prepareKubeconfig(componentName, false)
 }
 
-func validateKubeconfig(path string, tmpPath string, componentName string) (error, bool) {
-	var remove bool
+func validateKubeconfig(path string, tmpPath string) (error, bool) {
 
 	currentKubeconfig, err := loadKubeconfig(path)
 	if err != nil {
@@ -99,56 +101,41 @@ func validateKubeconfig(path string, tmpPath string, componentName string) (erro
 	}
 
 	if len(currentKubeconfig.Clusters) == 0 {
-		log.Errorf("clusters field of kubeconfig %s is empty", path)
-		remove = true
+		return fmt.Errorf("clusters field of kubeconfig %s is empty", path), true
 	}
 
 	if len(tmpKubeconfig.Clusters) == 0 {
-		log.Errorf("clusters field of kubeconfig %s is empty", tmpPath)
-		remove = true
+		return fmt.Errorf("clusters field of kubeconfig %s is empty", tmpPath), true
 	}
 
 	if len(currentKubeconfig.AuthInfos) == 0 {
-		log.Errorf("users field of kubeconfig %s is empty", path)
-		remove = true
+		return fmt.Errorf("users field of kubeconfig %s is empty", path), true
 	}
 
 	certData := currentKubeconfig.AuthInfos[0].AuthInfo.ClientCertificateData
 	if len(certData) == 0 {
-		log.Errorf("client-certificate-data field of kubeconfig %s is empty", path)
-		remove = true
+		return fmt.Errorf("client-certificate-data field of kubeconfig %s is empty", path), true
 	}
 
 	block, _ := pem.Decode(certData)
 	if len(block.Bytes) == 0 {
-		log.Errorf("cannot pem decode client-certificate-data field of kubeconfig %s", path)
-		remove = true
+		return fmt.Errorf("cannot pem decode client-certificate-data field of kubeconfig %s", path), true
 	}
 
 	cert, err := x509.ParseCertificate(block.Bytes)
-
 	if err != nil {
-		log.Errorf("cannot pem decode client-certificate-data field of kubeconfig %v", err)
-		remove = true
+		return fmt.Errorf("cannot parse certificate from client-certificate-data field of kubeconfig %s: %v", path, err), true
 	}
 
 	if currentKubeconfig.Clusters[0].Cluster.Server != tmpKubeconfig.Clusters[0].Cluster.Server {
-		log.Infof("kubeconfig %s address field changed", path)
-		remove = true
+		return fmt.Errorf("kubeconfig %s address field changed", path), true
 	}
 
 	if certificateExpiresSoon(cert, 30*24*time.Hour) {
-		log.Infof("client certificate in kubeconfig %s is expiring in less than 30 days", path)
-		remove = true
+		return fmt.Errorf("client certificate in kubeconfig %s is expiring in less than 30 days", path), true
 	}
 
-	if remove {
-		if err := removeFile(path); err != nil {
-			log.Error(err)
-		}
-	}
-
-	return nil
+	return nil, false
 }
 
 func prepareKubeconfig(componentName string, isTemp bool) error {
