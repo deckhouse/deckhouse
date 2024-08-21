@@ -266,6 +266,8 @@ spec:
                           additionalProperties: true
                   anyOf:
                     - required: ["lowNodeUtilization", "highNodeUtilization"]
+                    - required: ["lowNodeUtilization"]
+                    - required: ["highNodeUtilization"]
               required:
                 - strategies
           required:

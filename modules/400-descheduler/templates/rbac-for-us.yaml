@@ -12,8 +12,14 @@ metadata:
   name: d8:descheduler
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
+- apiGroups: ["events.k8s.io"]
+  resources: ["events"]
+  verbs: ["create", "update"]
 - apiGroups: [""]
   resources: ["nodes"]
+  verbs: ["get", "watch", "list"]
+- apiGroups: [""]
+  resources: ["namespaces"]
   verbs: ["get", "watch", "list"]
 - apiGroups: [""]
   resources: ["pods"]
@@ -21,12 +27,6 @@ rules:
 - apiGroups: [""]
   resources: ["pods/eviction"]
   verbs: ["create"]
-- apiGroups: [""]
-  resources: ["events"]
-  verbs: ["create", "update"]
-- apiGroups: [""]
-  resources: ["namespaces"]
-  verbs: ["get", "list"]
 - apiGroups: ["scheduling.k8s.io"]
   resources: ["priorityclasses"]
   verbs: ["get", "watch", "list"]
