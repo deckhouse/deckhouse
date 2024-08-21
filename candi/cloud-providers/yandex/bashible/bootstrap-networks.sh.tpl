@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 */}}
+set +e
 shopt -s extglob
 
 function ip_in_subnet(){
@@ -98,5 +99,6 @@ if which netplan 2>/dev/null 1>&2; then
 fi
 
 shopt -u extglob
+set -e
 
 
