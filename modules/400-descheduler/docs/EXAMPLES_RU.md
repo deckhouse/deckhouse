@@ -19,7 +19,6 @@ spec:
         cpu: 50
 ```
 
-
 ## Пример стратегии HighNodeUtilization
 
 ```yaml
