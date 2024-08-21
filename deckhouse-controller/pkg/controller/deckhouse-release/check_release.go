@@ -550,7 +550,7 @@ func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(actual, target *semver.Vers
 	return nextVersion, nil
 }
 
-func (dcr *DeckhouseReleaseChecker) nextVersion(actual, target *semver.Version) (next *semver.Version, err error) {
+func (dcr *DeckhouseReleaseChecker) nextVersion(actual, target *semver.Version) (*semver.Version, error) {
 	if actual.Major() != target.Major() {
 		return nil, fmt.Errorf("major version updated") // TODO step by step update for major version
 	}
