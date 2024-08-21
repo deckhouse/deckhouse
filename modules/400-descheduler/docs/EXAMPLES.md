@@ -9,7 +9,7 @@ title: "The descheduler module: examples"
 apiVersion: deckhouse.io/v1alpha1
 kind: Descheduler
 metadata:
-  name: lownodeutilization
+  name: low-node-utilization
 spec:
   strategies:
     lowNodeUtilization:
@@ -26,7 +26,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: Descheduler
 metadata:
-  name: highnodeutilization
+  name: high-node-utilization
 spec:
   strategies:
     highNodeUtilization:
