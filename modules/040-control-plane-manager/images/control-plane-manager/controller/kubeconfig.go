@@ -65,64 +65,16 @@ func renewKubeconfig(componentName string) error {
 	path := filepath.Join(kubernetesConfigPath, componentName+".conf")
 	log.Infof("generate or renew %s kubeconfig", path)
 	if _, err := os.Stat(path); err == nil && config.ConfigurationChecksum != config.LastAppliedConfigurationChecksum {
-		var remove bool
 		tmpPath := filepath.Join(config.TmpPath, path)
 		log.Infof("configuration has changed since last kubeconfig generation (last applied checksum %s, configuration checksum %s), verifying kubeconfig", config.LastAppliedConfigurationChecksum, config.ConfigurationChecksum)
 		if err := prepareKubeconfig(componentName, true); err != nil {
 			return err
 		}
 
-		currentKubeconfig, err := loadKubeconfig(path)
-		if err != nil {
-			return err
-		}
-		tmpKubeconfig, err := loadKubeconfig(tmpPath)
-		if err != nil {
-			return err
+		if err := validateKubeconfig(path, tmpPath, componentName); err != nil {
+			return prepareKubeconfig(componentName, false)
 		}
 
-		if len(currentKubeconfig.Clusters) == 0 {
-			return fmt.Errorf("clusters field of kubeconfig %s is empty", path)
-		}
-
-		if len(tmpKubeconfig.Clusters) == 0 {
-			return fmt.Errorf("clusters field of kubeconfig %s is empty", tmpPath)
-		}
-
-		if currentKubeconfig.Clusters[0].Cluster.Server != tmpKubeconfig.Clusters[0].Cluster.Server {
-			log.Infof("kubeconfig %s address field changed", path)
-			remove = true
-		}
-
-		if len(currentKubeconfig.AuthInfos) == 0 {
-			return fmt.Errorf("users field of kubeconfig %s is empty", path)
-		}
-
-		certData := currentKubeconfig.AuthInfos[0].AuthInfo.ClientCertificateData
-		if len(certData) == 0 {
-			return fmt.Errorf("client-certificate-data field of kubeconfig %s is empty", path)
-		}
-
-		block, _ := pem.Decode(certData)
-		if len(block.Bytes) == 0 {
-			return fmt.Errorf("cannot pem decode client-rtificate-data field of kubeconfig %s", path)
-		}
-
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return err
-		}
-
-		if certificateExpiresSoon(cert, 30*24*time.Hour) {
-			log.Infof("client certificate in kubeconfig %s is expiring in less than 30 days", path)
-			remove = true
-		}
-
-		if remove {
-			if err := removeFile(path); err != nil {
-				log.Error(err)
-			}
-		}
 	}
 
 	if _, err := os.Stat(path); err == nil {
@@ -132,6 +84,71 @@ func renewKubeconfig(componentName string) error {
 	// regenerate kubeconfig
 	log.Infof("generate new kubeconfig %s", path)
 	return prepareKubeconfig(componentName, false)
+}
+
+func validateKubeconfig(path string, tmpPath string, componentName string) (error, bool) {
+	var remove bool
+
+	currentKubeconfig, err := loadKubeconfig(path)
+	if err != nil {
+		return err, true
+	}
+	tmpKubeconfig, err := loadKubeconfig(tmpPath)
+	if err != nil {
+		return err, true
+	}
+
+	if len(currentKubeconfig.Clusters) == 0 {
+		log.Errorf("clusters field of kubeconfig %s is empty", path)
+		remove = true
+	}
+
+	if len(tmpKubeconfig.Clusters) == 0 {
+		log.Errorf("clusters field of kubeconfig %s is empty", tmpPath)
+		remove = true
+	}
+
+	if len(currentKubeconfig.AuthInfos) == 0 {
+		log.Errorf("users field of kubeconfig %s is empty", path)
+		remove = true
+	}
+
+	certData := currentKubeconfig.AuthInfos[0].AuthInfo.ClientCertificateData
+	if len(certData) == 0 {
+		log.Errorf("client-certificate-data field of kubeconfig %s is empty", path)
+		remove = true
+	}
+
+	block, _ := pem.Decode(certData)
+	if len(block.Bytes) == 0 {
+		log.Errorf("cannot pem decode client-certificate-data field of kubeconfig %s", path)
+		remove = true
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+
+	if err != nil {
+		log.Errorf("cannot pem decode client-certificate-data field of kubeconfig %v", err)
+		remove = true
+	}
+
+	if currentKubeconfig.Clusters[0].Cluster.Server != tmpKubeconfig.Clusters[0].Cluster.Server {
+		log.Infof("kubeconfig %s address field changed", path)
+		remove = true
+	}
+
+	if certificateExpiresSoon(cert, 30*24*time.Hour) {
+		log.Infof("client certificate in kubeconfig %s is expiring in less than 30 days", path)
+		remove = true
+	}
+
+	if remove {
+		if err := removeFile(path); err != nil {
+			log.Error(err)
+		}
+	}
+
+	return nil
 }
 
 func prepareKubeconfig(componentName string, isTemp bool) error {
