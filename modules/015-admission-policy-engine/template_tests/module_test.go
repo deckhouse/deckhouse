@@ -94,7 +94,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
       }
     }
   ],
-	trackedConstraintResources: [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]},{"apiGroups": [""],"resources": ["pods/exec","pods/attach"],"operations": ["CONNECT"]}],
+	trackedConstraintResources: [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]},{"apiGroups": [""],"resources": ["pods/exec","pods/attach"],"operations": ["CONNECT"]},{"apiGroups": ["constraints.gatekeeper.sh"],"resources": ["*"],"operations": ["CREATE","UPDATE"]}],
 	trackedMutateResources: [{"apiGroups":[""],"resources":["pods"]}],
 	webhook: {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
 
