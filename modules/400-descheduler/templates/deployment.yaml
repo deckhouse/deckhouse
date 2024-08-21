@@ -80,7 +80,7 @@ spec:
         - "--logging-format"
         - "json"
         - "--v"
-        - "6"
+        - "4"
         - "--descheduling-interval"
         - "15m"
         resources:
