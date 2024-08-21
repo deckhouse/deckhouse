@@ -24,7 +24,7 @@ cilium_daemonset_generation=$(kubectl -n d8-cni-cilium get ds agent -o 'jsonpath
 cilium_daemonset_count_desired=$(kubectl -n d8-cni-cilium get ds agent -o 'jsonpath={..status.desiredNumberScheduled}') 2>/dev/null
 >&2 echo "The number of desired Cilium Pods is "$cilium_daemonset_count_desired
 
-sleep 10
+sleep 30
 
 testRunAttempts=$cilium_daemonset_count_desired
 for ((i=1; i<=$testRunAttempts; i++)); do
@@ -48,7 +48,7 @@ for ((i=1; i<=$testRunAttempts; i++)); do
 done
 
 if [[ $test_failed == "true" ]] ; then
-  return 1
+  exit 1
 fi
 
 #
