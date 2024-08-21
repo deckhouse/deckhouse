@@ -1,7 +1,7 @@
 ---
 title: "The deckhouse-tools module"
 webIfaces:
-- name: documentation
+- name: deckhouse-tools
 ---
 
 The module creates a web UI with links to download Deckhouse tools (currently d8-cli for all systems).

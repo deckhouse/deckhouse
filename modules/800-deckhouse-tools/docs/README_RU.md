@@ -1,7 +1,7 @@
 ---
 title: "Модуль deckhouse-tools"
 webIfaces:
-- name: documentation
+- name: deckhouse-tools
 ---
 
 Этот модуль создает веб-интерфейс с ссылками на скачивание утилит Deckhouse (в настоящее время d8-cli под различные операционные системы).
