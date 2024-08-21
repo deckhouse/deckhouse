@@ -1314,6 +1314,16 @@ entries:
                 en: Description
                 ru: Описание
               url: /modules/600-secret-copier/
+        - title: deckhouse-tools
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/800-deckhouse-tools/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/800-deckhouse-tools/configuration.html
     - title:
         en: Bare Metal
         ru: Bare Metal

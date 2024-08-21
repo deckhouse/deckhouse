@@ -1,10 +1,9 @@
 ---
 title: "Модуль deckhouse-tools: настройки"
+description: "Настройка модуля deckhouse-tools"
 ---
 
 У модуля нет обязательных настроек.
-
-<!-- SCHEMA -->
 
 ## Пример конфигурации
 
@@ -17,3 +16,5 @@ spec:
   enabled: true
   version: 1
 ```
+
+<!-- SCHEMA -->
