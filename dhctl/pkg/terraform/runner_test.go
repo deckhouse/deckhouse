@@ -263,6 +263,7 @@ var destructivelyChanged = &PlanDestructiveChanges{
 				"timeouts":                  nil,
 				"zone":                      "ru-central1-c",
 			},
+			Type: "yandex_compute_instance",
 		},
 	},
 }
