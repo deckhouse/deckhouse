@@ -32,6 +32,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metrics "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
@@ -119,6 +120,9 @@ func setupRuntimeManager(log logr.Logger) (ctrl.Manager, error) {
 		GracefulShutdownTimeout: pointer.Duration(10 * time.Second),
 		HealthProbeBindAddress:  ":9090",
 		WebhookServer:           webhook.NewServer(webhook.Options{CertDir: "/certs"}),
+		Metrics: metrics.Options{
+			BindAddress: "0",
+		},
 	}
 
 	runtimeManager, err := ctrl.NewManager(ctrl.GetConfigOrDie(), managerOpts)
