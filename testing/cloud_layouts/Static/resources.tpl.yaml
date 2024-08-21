@@ -20,20 +20,38 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: SSHCredentials
 metadata:
-  name: caps-id
+  name: caps-0
 spec:
   privateSSHKey: '${b64_SSH_KEY}'
-  user: '${WORKER_USER}'
+  user: '${WORKER_0_USER}'
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: StaticInstance
 metadata:
-  name: static
+  name: worker-0
 spec:
-  address: '${WORKER_IP}'
+  address: '${WORKER_0_IP}'
   credentialsRef:
     kind: SSHCredentials
-    name: caps-id
+    name: caps-0
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SSHCredentials
+metadata:
+  name: caps-1
+spec:
+  privateSSHKey: '${b64_SSH_KEY}'
+  user: '${WORKER_1_USER}'
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: worker-1
+spec:
+  address: '${WORKER_1_IP}'
+  credentialsRef:
+    kind: SSHCredentials
+    name: caps-1
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -42,7 +60,7 @@ metadata:
 spec:
   nodeType: Static
   staticInstances:
-    count: 1
+    count: 2
   disruptions:
     approvalMode: Manual
   nodeTemplate:
