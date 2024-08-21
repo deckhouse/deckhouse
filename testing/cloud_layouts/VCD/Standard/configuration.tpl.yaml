@@ -35,6 +35,18 @@ metadata:
   name: cni-cilium
 spec:
   enabled: true
+  settings:
+    bpfLBMode: SNAT
+    tunnelMode: VXLAN
+  version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cilium-hubble
+spec:
+  enabled: true
+  version: 2
 
 ---
 apiVersion: deckhouse.io/v1
