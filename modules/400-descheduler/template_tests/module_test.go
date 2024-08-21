@@ -110,7 +110,7 @@ internal:
 			Expect(cm.Field(`data.policy\.yaml`)).To(MatchYAML(`---
 apiVersion: descheduler/v1alpha2
 kind: DeschedulerPolicy
-nodeSelector: '! node-role.kubernetes.io/control-plane, ! node-role.deckhouse.io/system'
+nodeSelector: 'node.deckhouse.io/group notin (master,system)'
 profiles:
 - name: test1
   pluginConfig:
