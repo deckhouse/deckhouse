@@ -946,7 +946,7 @@ function wait_cluster_ready() {
       return 1
   fi
 
-  if [[ "Static OpenStack vSphere vCloudDirector" =~ $PROVIDER ]] ; then
+  if [[ "Static OpenStack vSphere VCD" =~ $PROVIDER ]] ; then
     testCilium=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_cilium.sh")
 
     test_failed="true"
