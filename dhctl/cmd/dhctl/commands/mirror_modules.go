@@ -45,7 +45,7 @@ func DefineMirrorModulesCommand(parent *kingpin.Application) *kingpin.CmdClause 
 		}
 
 		return log.Process("mirror", "Pull Modules to local filesystem", func() error {
-			return operations.PullExternalModulesToLocalFS(
+			return operations.PullDownloadableModulesToLocalFS(
 				app.MirrorModulesSourcePath,
 				app.MirrorModulesDirectory,
 				app.MirrorModulesFilter,
