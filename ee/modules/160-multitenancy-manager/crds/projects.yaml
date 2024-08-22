@@ -108,9 +108,16 @@ spec:
             status:
               type: object
               properties:
+                namespaces:
+                  description: Used namespaces.
+                  type: array
+                  items:
+                    type: string
                 observedGeneration:
+                  description: The last observed project`s generation
                   type: integer
                 templateGeneration:
+                  description: The last observed template`s generation
                   type: integer
                 conditions:
                   type: array

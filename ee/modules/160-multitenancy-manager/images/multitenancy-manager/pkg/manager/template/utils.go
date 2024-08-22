@@ -51,33 +51,41 @@ func (m *Manager) ensureDefaultProjectTemplates(ctx context.Context, templatesPa
 			m.log.Error(err, "invalid project template", "file", file.Name())
 			return err
 		}
-		m.log.Info("creating project template", "file", file.Name())
-		if err = m.client.Create(ctx, projectTemplate); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-					existingProjectTemplate := new(v1alpha1.ProjectTemplate)
-					if err = m.client.Get(ctx, types.NamespacedName{Name: projectTemplate.Name}, existingProjectTemplate); err != nil {
-						m.log.Error(err, "failed to fetch project template", "file", file.Name())
-						return err
-					}
-					existingProjectTemplate.Spec = projectTemplate.Spec
-					m.log.Info("project template already exists, try to update it", "file", file.Name())
-					if err = m.client.Update(ctx, existingProjectTemplate); err != nil {
-						m.log.Error(err, "failed to update project template", "file", file.Name())
-						return err
-					}
-					return nil
-				})
-				if err != nil {
+		if err = m.ensureProjectTemplate(ctx, projectTemplate); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *Manager) ensureProjectTemplate(ctx context.Context, projectTemplate *v1alpha1.ProjectTemplate) error {
+	m.log.Info("ensuring project template", "projectTemplate", projectTemplate.Name)
+	if err := m.client.Create(ctx, projectTemplate); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				existingProjectTemplate := new(v1alpha1.ProjectTemplate)
+				if err = m.client.Get(ctx, types.NamespacedName{Name: projectTemplate.Name}, existingProjectTemplate); err != nil {
+					m.log.Error(err, "failed to fetch project template", "projectTemplate", projectTemplate.Name)
 					return err
 				}
-			} else {
-				m.log.Error(err, "failed to create project template", "file", file.Name())
+
+				existingProjectTemplate.Spec = projectTemplate.Spec
+				existingProjectTemplate.Labels = projectTemplate.Labels
+				existingProjectTemplate.Annotations = projectTemplate.Annotations
+
+				m.log.Info("project template already exists, try to update it", "projectTemplate", projectTemplate.Name)
+				return m.client.Update(ctx, existingProjectTemplate)
+			})
+			if err != nil {
+				m.log.Error(err, "failed to update project template", "projectTemplate", projectTemplate.Name)
 				return err
 			}
+		} else {
+			m.log.Error(err, "failed to create project template", "projectTemplate", projectTemplate.Name)
+			return err
 		}
-		m.log.Info("successfully ensured project template", "file", file.Name())
 	}
+	m.log.Info("successfully ensured project template", "projectTemplate", projectTemplate.Name)
 	return nil
 }
 

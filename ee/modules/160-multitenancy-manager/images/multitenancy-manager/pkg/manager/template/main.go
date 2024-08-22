@@ -56,12 +56,12 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 		m.log.Error(err, "webhook server failed to start")
 		return fmt.Errorf("webhook server failed to start: %w", err)
 	}
-
 	// to make sure that the server is started, without working server reconcile is failed
 	if err := wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, false, check); err != nil {
 		m.log.Error(err, "webhook server failed to start")
 		return fmt.Errorf("webhook server failed to start: %w", err)
 	}
+	m.log.Info("webhook server started")
 
 	m.log.Info("ensuring default project templates")
 	if err := m.ensureDefaultProjectTemplates(ctx, defaultPath); err != nil {
@@ -100,7 +100,7 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 				if project.Annotations == nil {
 					project.Annotations = map[string]string{}
 				}
-				project.Annotations[consts.ProjectRequireSyncAnnotation] = consts.ProjectRequireSyncKeyTrue
+				project.Annotations[consts.ProjectRequireSyncAnnotation] = "true"
 				return m.client.Update(ctx, project)
 			})
 			if err != nil {

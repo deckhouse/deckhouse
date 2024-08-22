@@ -87,7 +87,12 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, nil
 	}
 
-	// handle deletion
+	// skip virtual projects
+	if project.Name == consts.DeckhouseProjectName || project.Name == consts.OthersProjectName {
+		return reconcile.Result{}, nil
+	}
+
+	// handle the project deletion
 	if !project.DeletionTimestamp.IsZero() {
 		r.log.Info("deleting project", "project", project.Name)
 		return r.projectManager.Delete(ctx, project)
@@ -113,8 +118,9 @@ func (p customPredicate[T]) Update(e event.TypedUpdateEvent[T]) bool {
 		return false
 	}
 
-	if e.ObjectNew.GetAnnotations() != nil {
-		if val, ok := e.ObjectNew.GetAnnotations()[consts.ProjectRequireSyncAnnotation]; ok && val == consts.ProjectRequireSyncKeyTrue {
+	// skip projects that do not require sync
+	if annotations := e.ObjectNew.GetAnnotations(); annotations != nil {
+		if val, ok := annotations[consts.ProjectRequireSyncAnnotation]; ok && val == "true" {
 			return true
 		}
 	}

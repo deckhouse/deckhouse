@@ -5,15 +5,14 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package consts
 
-const (
-	ProjectRequireSyncAnnotation = "projects.deckhouse.io/require-sync"
-	ProjectRequireSyncKeyTrue    = "true"
-	ProjectRequireSyncKeyFalse   = "false"
-)
+const ProjectRequireSyncAnnotation = "projects.deckhouse.io/require-sync"
+
+const ProjectFinalizer = "projects.deckhouse.io/project-exists"
 
 const (
 	ProjectLabel         = "projects.deckhouse.io/project"
 	ProjectTemplateLabel = "projects.deckhouse.io/project-template"
+	ProjectVirtualLabel  = "projects.deckhouse.io/virtual-project"
 )
 
 const (
@@ -22,8 +21,17 @@ const (
 	DeckhouseHeritage    = "deckhouse"
 )
 
-const ProjectFinalizer = "projects.deckhouse.io/project-exists"
-
 const HelmDriver = "secret"
 
 const ReleaseHashLabel = "hashsum"
+
+const (
+	DeckhouseProjectName = "deckhouse"
+	OthersProjectName    = "others"
+
+	VirtualTemplate = "virtual"
+)
+const (
+	DeckhouseNamespacePrefix  = "d8-"
+	KubernetesNamespacePrefix = "kube-"
+)

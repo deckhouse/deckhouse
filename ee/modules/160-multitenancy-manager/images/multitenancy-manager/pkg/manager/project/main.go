@@ -8,16 +8,21 @@ package project
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	"controller/pkg/apis/deckhouse.io/v1alpha2"
+	"controller/pkg/consts"
 	"controller/pkg/helm"
 	"controller/pkg/validate"
 
 	"github.com/go-logr/logr"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,14 +59,23 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 		m.log.Error(err, "webhook server failed to start")
 		return fmt.Errorf("webhook server failed to start: %w", err)
 	}
-
 	// to make sure that the server is started, without working server reconcile is failed
 	if err := wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, false, check); err != nil {
 		m.log.Error(err, "webhook server failed to start")
 		return fmt.Errorf("webhook server failed to start: %w", err)
 	}
-
 	m.log.Info("webhook server started")
+
+	m.log.Info("ensuring virtual projects")
+	if err := m.ensureVirtualProjects(ctx); err != nil {
+		m.log.Error(err, "failed to ensure virtual projects")
+		return fmt.Errorf("failed to ensure virtual projects: %w", err)
+	}
+	m.log.Info("ensured virtual projects")
+
+	// start reconcile loop
+	go wait.UntilWithContext(ctx, m.reconcileVirtualProjects, 3*time.Minute)
+
 	return nil
 }
 
@@ -178,4 +192,63 @@ func (m *Manager) Delete(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 
 	m.log.Info("successfully deleted project", "project", project.Name)
 	return ctrl.Result{}, nil
+}
+
+// reconcile virtual projects
+func (m *Manager) reconcileVirtualProjects(ctx context.Context) {
+	m.log.Info("reconciling virtual projects")
+
+	deckhouseProject := new(v1alpha2.Project)
+	if err := m.client.Get(ctx, types.NamespacedName{Name: consts.DeckhouseProjectName}, deckhouseProject); err != nil {
+		m.log.Error(err, "failed to get the deckhouse virtual project")
+		return
+	}
+
+	othersProject := new(v1alpha2.Project)
+	if err := m.client.Get(ctx, types.NamespacedName{Name: consts.OthersProjectName}, othersProject); err != nil {
+		m.log.Error(err, "failed to get the others virtual project")
+		return
+	}
+
+	namespaces := new(corev1.NamespaceList)
+	if err := m.client.List(ctx, namespaces); err != nil {
+		m.log.Error(err, "failed to list namespaces")
+	}
+	var deckhouseNamespaces, othersNamespaces []string
+	for _, namespace := range namespaces.Items {
+		if labels := namespace.GetLabels(); labels != nil {
+			if val, ok := labels[consts.HeritageLabel]; ok && val == consts.MultitenancyHeritage {
+				continue
+			}
+			if _, ok := labels[consts.ProjectTemplateLabel]; ok {
+				continue
+			}
+		}
+		if strings.HasPrefix(namespace.Name, consts.DeckhouseNamespacePrefix) || strings.HasPrefix(namespace.Name, consts.KubernetesNamespacePrefix) {
+			deckhouseNamespaces = append(deckhouseNamespaces, namespace.Name)
+		} else {
+			othersNamespaces = append(othersNamespaces, namespace.Name)
+		}
+	}
+	if err := m.updateVirtualProject(ctx, deckhouseProject, deckhouseNamespaces); err != nil {
+		m.log.Error(err, "failed to update the deckhouse virtual project")
+		return
+	}
+	if err := m.updateVirtualProject(ctx, othersProject, othersNamespaces); err != nil {
+		m.log.Error(err, "failed to update the other virtual project")
+		return
+	}
+}
+
+func (m *Manager) updateVirtualProject(ctx context.Context, project *v1alpha2.Project, namespaces []string) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
+			return err
+		}
+		project.Status.Namespaces = namespaces
+		project.Status.TemplateGeneration = 1
+		project.Status.ObservedGeneration = project.Generation
+		project.Status.State = v1alpha2.ProjectStateDeployed
+		return m.client.Status().Update(ctx, project)
+	})
 }
