@@ -72,11 +72,7 @@ func (e *Extender) getKubernetesVersion() {
 			}
 			instance.logger.Warnf("cannot parse TEST_EXTENDER_KUBERNETES_VERSION env variable value %q: %v", val, err)
 		}
-		if err := e.waitForFileExists("/tmp/kubectl_version"); err != nil {
-			e.err = err
-			return
-		}
-		content, err := os.ReadFile("/tmp/kubectl_version")
+		content, err := e.waitForFileExists("/tmp/kubectl_version")
 		if err != nil {
 			e.err = err
 			return
@@ -92,16 +88,24 @@ func (e *Extender) getKubernetesVersion() {
 	})
 }
 
-func (e *Extender) waitForFileExists(path string) error {
+func (e *Extender) waitForFileExists(path string) ([]byte, error) {
 	e.logger.Debugf("waiting for file %s", path)
 	for {
 		if _, err := os.Stat(path); err == nil {
 			e.logger.Debugf("file %s exists", path)
-			return nil
+			content, err := os.ReadFile(path)
+			if err != nil {
+				return nil, err
+			}
+			if content == nil || len(content) == 0 {
+				e.logger.Debugf("file %s is empty", path)
+				continue
+			}
+			return content, nil
 		} else if os.IsNotExist(err) {
 			time.Sleep(10 * time.Millisecond)
 		} else {
-			return err
+			return nil, err
 		}
 	}
 }
