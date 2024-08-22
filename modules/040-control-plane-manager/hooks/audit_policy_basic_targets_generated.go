@@ -63,6 +63,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-cloud-provider-azure:cloud-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-azure:cloud-data-discoverer",
 	"system:serviceaccount:d8-cloud-provider-dynamix:cloud-controller-manager",
+	"system:serviceaccount:d8-cloud-provider-dynamix:cloud-data-discoverer",
 	"system:serviceaccount:d8-cloud-provider-gcp:cloud-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-gcp:cloud-data-discoverer",
 	"system:serviceaccount:d8-cloud-provider-openstack:cloud-controller-manager",
