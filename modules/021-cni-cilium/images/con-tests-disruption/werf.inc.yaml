@@ -14,6 +14,7 @@ shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /src/test-connection-disruption
   - make clean
   - make
 ---

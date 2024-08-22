@@ -66,6 +66,9 @@ func skipDistrolessImageCheckIfNeeded(image string) bool {
 	switch image {
 	case "base-cilium-dev/werf.inc.yaml",
 		"cilium-envoy/werf.inc.yaml",
+		"con-tests-alpine-curl/werf.inc.yaml",
+		"con-tests-disruption/werf.inc.yaml",
+		"con-tests-json-mock/werf.inc.yaml",
 		"drbd-reactor/Dockerfile",
 		"linstor-affinity-controller/Dockerfile",
 		"linstor-csi/Dockerfile",
