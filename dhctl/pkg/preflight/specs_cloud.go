@@ -80,7 +80,7 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 		ramAmountPropertyPath = []string{"masterNodeGroup", "instanceClass", "memory"}
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSizeGb"}
 		// externalDiskSizeDefault = 30
-	case "DynamixlusterConfiguration":
+	case "DynamixClusterConfiguration":
 		coreCountPropertyPath = []string{"masterNodeGroup", "instanceClass", "numCPUs"}
 		ramAmountPropertyPath = []string{"masterNodeGroup", "instanceClass", "memory"}
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSizeGb"}
