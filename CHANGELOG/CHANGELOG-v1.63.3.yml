@@ -1,0 +1,17 @@
+admission-policy-engine:
+  features:
+    - summary: Add validating `spec.enforcementAction` in constraints resources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9427
+candi:
+  fixes:
+    - summary: Fix catch exit codes in cloud-providers bootstrap-network scripts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9448
+    - summary: Before running `kubectl` check if it exists.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9438
+istio:
+  fixes:
+    - summary: >-
+        Granted permissions for `istio-cni-node` to restart pods without properly configured
+        iptables for traffic redirection.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9444
+

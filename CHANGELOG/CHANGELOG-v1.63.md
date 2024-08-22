@@ -11,6 +11,7 @@
 ## Features
 
 
+ - **[admission-policy-engine]** Add validating `spec.enforcementAction` in constraints resources. [#9427](https://github.com/deckhouse/deckhouse/pull/9427)
  - **[candi]** Add support for ALT Linux p11. [#9040](https://github.com/deckhouse/deckhouse/pull/9040)
  - **[candi]** Add ModuleSource custom CA on nodes. [#9000](https://github.com/deckhouse/deckhouse/pull/9000)
     If cluster has ModuleSource resources with custom CA, containerd will be restarted on all nodes in cluster.
@@ -43,6 +44,8 @@
 ## Fixes
 
 
+ - **[candi]** Fix catch exit codes in cloud-providers bootstrap-network scripts. [#9448](https://github.com/deckhouse/deckhouse/pull/9448)
+ - **[candi]** Before running `kubectl` check if it exists. [#9438](https://github.com/deckhouse/deckhouse/pull/9438)
  - **[candi]** Fix bootstrap network script for nodes with many interfaces for cloud-provider Yandex Cloud. [#9408](https://github.com/deckhouse/deckhouse/pull/9408)
  - **[candi]** Fix for node bootstrap in CE. [#9323](https://github.com/deckhouse/deckhouse/pull/9323)
  - **[candi]** Add new dirs to cleanup on `cleanup_static_node.sh`. [#9159](https://github.com/deckhouse/deckhouse/pull/9159)
@@ -70,6 +73,7 @@
  - **[global-hooks]** Fixed the Services with multiple ports broken by Helm. [#9392](https://github.com/deckhouse/deckhouse/pull/9392)
  - **[go_lib]** Fix work `registry-packages-proxy` with module sources. [#9112](https://github.com/deckhouse/deckhouse/pull/9112)
     `registry-packages-proxy` should be restarted.
+ - **[istio]** Granted permissions for `istio-cni-node` to restart pods without properly configured iptables for traffic redirection. [#9444](https://github.com/deckhouse/deckhouse/pull/9444)
  - **[istio]** Fix istio module operability in managed K8s setups. [#9275](https://github.com/deckhouse/deckhouse/pull/9275)
  - **[istio]** Istio 1.19 version compatibility extended with K8s versions 1.29 and 1.30. [#9217](https://github.com/deckhouse/deckhouse/pull/9217)
  - **[l2-load-balancer]** An internal refactoring and the fix for handling external and internal traffic policies in the LoadBalancer Service. [#9114](https://github.com/deckhouse/deckhouse/pull/9114)
@@ -120,5 +124,6 @@
  - **[registrypackages]** Updated d8-cli to `v0.3.0`. [#9158](https://github.com/deckhouse/deckhouse/pull/9158)
  - **[runtime-audit-engine]** The webhook-handler port moved from `9680` to `4227` (to the DKP range 4200-4299). [#8887](https://github.com/deckhouse/deckhouse/pull/8887)
     In the runtime-audit-engine, the webhook-handler port moved from `9680` to `4227`. This may require updating firewall policies before upgrading the cluster.
+ - **[snapshot-controller]** Bump snapshot-controller version to `v8.0.1`. [#9428](https://github.com/deckhouse/deckhouse/pull/9428)
  - **[user-authn]** Validate email and password on user create. [#9059](https://github.com/deckhouse/deckhouse/pull/9059)
 
