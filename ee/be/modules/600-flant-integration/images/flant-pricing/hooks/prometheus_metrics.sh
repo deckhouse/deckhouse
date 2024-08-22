@@ -330,7 +330,8 @@ function node_os_image_metrics() {
                 "(?:(almalinux).*(7|8))",
                 "(?:(redos).*(7|8))",
                 "(?:(rosa).*(7|12))",
-                "(?:(mosos).*",
+                "(?:(mosos).*(15)",
+                "(?:(opensuse).*(15))",
                 "(?:(astra))"
               ] | join("|")
             ).captures // [{string: "unknown"}] |
