@@ -16,7 +16,7 @@ apiVersions:
         type: array
         items:
           type: string
-      seps:
+      storageEndpoints:
         type: array
         items:
           type: object

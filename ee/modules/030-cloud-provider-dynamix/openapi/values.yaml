@@ -84,7 +84,7 @@ properties:
               instanceClass:
                 type: object
                 additionalProperties: false
-                required: [ numCPUs, memory, imageName, storage_endpoint, pool, externalNetwork ]
+                required: [ numCPUs, memory, imageName, storageEndpoint, pool, externalNetwork ]
                 description: |
                   Partial contents of the fields of the [DynamixInstanceClass](cr.html#dynamixinstanceclass).
                 properties: &instanceClassProperties
@@ -117,7 +117,7 @@ properties:
                     description: |
                       OS image name to use for VM deployment.
                     example: 1
-                  storage_endpoint:
+                  storageEndpoint:
                     type: string
                     description: |
                       Storage name.
@@ -194,7 +194,7 @@ properties:
                 instanceClass:
                   type: object
                   additionalProperties: false
-                  required: [ numCPUs, memory, osImageId, pool, externalNetworkID ]
+                  required: [ numCPUs, memory, imageName, pool, externalNetworkID ]
                   description: |
                     Partial contents of the fields of the.
                   properties:
@@ -268,7 +268,7 @@ properties:
             type: array
             items:
               type: string
-          storage_endpoints:
+          storageEndpoints:
             type: array
             items:
               type: object
@@ -295,7 +295,7 @@ properties:
           properties:
             name:
               type: string
-            storage_endpoint:
+            storageEndpoint:
               type: string
             pool:
               type: string
