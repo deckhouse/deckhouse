@@ -437,10 +437,23 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 			}
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
+		patch, _ := json.Marshal(map[string]any{
+			"metadata": map[string]any{
+				"labels": map[string]any{
+					UpdatePolicyLabel: policy.Name,
+				},
+			},
+		})
+		p := client.RawPatch(types.MergePatchType, patch)
+
+		err = c.client.Patch(ctx, mr, p)
+		if err != nil {
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		}
 	}
 
-	kubeAPI := newKubeAPI(ctx, c.logger, c.client, c.downloadedModulesDir, c.symlinksDir, c.moduleManager, c.dc)
-	releaseUpdater := newModuleUpdater(c.logger, nConfig, policy.Spec.Update.Mode, kubeAPI, c.moduleManager.GetEnabledModuleNames())
+	k8 := newKubeAPI(ctx, c.logger, c.client, c.downloadedModulesDir, c.symlinksDir, c.moduleManager, c.dc)
+	releaseUpdater := newModuleUpdater(c.logger, nConfig, policy.Spec.Update.Mode, k8, c.moduleManager.GetEnabledModuleNames())
 
 	pointerReleases := make([]*v1alpha1.ModuleRelease, 0, len(otherReleases.Items))
 	for _, r := range otherReleases.Items {
