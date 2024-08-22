@@ -62,39 +62,36 @@ func applyDeschedulerFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 }
 
 type InternalValuesDeschedulerSpec struct {
-	Name           string                `json:"name" yaml:"name"`
-	DefaultEvictor *DefaultEvictor       `json:"defaultEvictor,omitempty" yaml:"defaultEvictor,omitempty"`
-	Strategies     dsv1alpha1.Strategies `json:"strategies" yaml:"strategies"`
-}
-
-type DefaultEvictor struct {
-	NodeSelector      string                        `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
-	LabelSelector     *metav1.LabelSelector         `json:"labelSelector,omitempty" yaml:"labelSelector,omitempty"`
-	PriorityThreshold *dsv1alpha1.PriorityThreshold `json:"priorityThreshold,omitempty" yaml:"priorityThreshold,omitempty"`
+	Name                      string                             `json:"name" yaml:"name"`
+	FitNodesLabelSelector     string                             `json:"fitNodesLabelSelector,omitempty" yaml:"fitNodesLabelSelector,omitempty"`
+	PodLabelSelector          *metav1.LabelSelector              `json:"podLabelSelector,omitempty" yaml:"podLabelSelector,omitempty"`
+	PodNamespaceLabelSelector *metav1.LabelSelector              `json:"podNamespaceLabelSelector,omitempty" yaml:"podNamespaceLabelSelector,omitempty"`
+	PriorityClassThreshold    *dsv1alpha1.PriorityClassThreshold `json:"priorityClassThreshold,omitempty" yaml:"priorityClassThreshold,omitempty"`
+	Strategies                dsv1alpha1.Strategies              `json:"strategies" yaml:"strategies"`
 }
 
 func getCRDsHandler(input *go_hook.HookInput) error {
-	internalValues := make([]InternalValuesDeschedulerSpec, 0)
+	internalValues := make([]InternalValuesDeschedulerSpec, 0, len(input.Snapshots["deschedulers"]))
 	for _, v := range input.Snapshots["deschedulers"] {
 		item := v.(DeschedulerSnapshotItem)
-		de := &DefaultEvictor{}
-		if item.Spec.DefaultEvictor != nil {
-			if item.Spec.DefaultEvictor.NodeSelector != nil {
-				de.NodeSelector = metav1.FormatLabelSelector(item.Spec.DefaultEvictor.NodeSelector)
-			}
-			if item.Spec.DefaultEvictor.LabelSelector != nil {
-				de.LabelSelector = item.Spec.DefaultEvictor.LabelSelector
-			}
-			if item.Spec.DefaultEvictor.PriorityThreshold != nil {
-				de.PriorityThreshold = item.Spec.DefaultEvictor.PriorityThreshold
-			}
+		ds := &InternalValuesDeschedulerSpec{
+			Name:       item.Name,
+			Strategies: item.Spec.Strategies,
+		}
+		if item.Spec.FitNodesLabelSelector != nil {
+			ds.FitNodesLabelSelector = metav1.FormatLabelSelector(item.Spec.FitNodesLabelSelector)
+		}
+		if item.Spec.PodLabelSelector != nil {
+			ds.PodLabelSelector = item.Spec.PodLabelSelector
+		}
+		if item.Spec.PodNamespaceLabelSelector != nil {
+			ds.PodNamespaceLabelSelector = item.Spec.PodNamespaceLabelSelector
+		}
+		if item.Spec.PriorityClassThreshold != nil {
+			ds.PriorityClassThreshold = item.Spec.PriorityClassThreshold
 		}
 
-		internalValues = append(internalValues, InternalValuesDeschedulerSpec{
-			Name:           item.Name,
-			DefaultEvictor: de,
-			Strategies:     item.Spec.Strategies,
-		})
+		internalValues = append(internalValues, *ds)
 	}
 
 	input.Values.Set(deschedulerSpecsValuesPath, internalValues)

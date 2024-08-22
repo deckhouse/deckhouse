@@ -37,17 +37,14 @@ type Descheduler struct {
 }
 
 type DeschedulerSpec struct {
-	DefaultEvictor *DefaultEvictor `json:"defaultEvictor,omitempty" yaml:"defaultEvictor,omitempty"`
-	Strategies     Strategies      `json:"strategies" yaml:"strategies"`
+	FitNodesLabelSelector     *metav1.LabelSelector   `json:"fitNodesLabelSelector,omitempty" yaml:"fitNodesLabelSelector,omitempty"`
+	PodLabelSelector          *metav1.LabelSelector   `json:"podLabelSelector,omitempty" yaml:"podLabelSelector,omitempty"`
+	PodNamespaceLabelSelector *metav1.LabelSelector   `json:"podNamespaceLabelSelector,omitempty" yaml:"podNamespaceLabelSelector,omitempty"`
+	PriorityClassThreshold    *PriorityClassThreshold `json:"priorityClassThreshold,omitempty" yaml:"priorityClassThreshold,omitempty"`
+	Strategies                Strategies              `json:"strategies" yaml:"strategies"`
 }
 
-type DefaultEvictor struct {
-	NodeSelector      *metav1.LabelSelector `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
-	LabelSelector     *metav1.LabelSelector `json:"labelSelector,omitempty" yaml:"labelSelector,omitempty"`
-	PriorityThreshold *PriorityThreshold    `json:"priorityThreshold,omitempty" yaml:"priorityThreshold,omitempty"`
-}
-
-type PriorityThreshold struct {
+type PriorityClassThreshold struct {
 	Name  string `json:"name,omitempty" yaml:"name,omitempty"`
 	Value int    `json:"value,omitempty" yaml:"value,omitempty"`
 }
