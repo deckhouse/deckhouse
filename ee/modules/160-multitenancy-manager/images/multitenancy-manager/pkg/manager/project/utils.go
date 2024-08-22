@@ -36,6 +36,7 @@ func (m *Manager) ensureVirtualProjects(ctx context.Context) error {
 		},
 		Spec: v1alpha2.ProjectSpec{
 			ProjectTemplateName: consts.VirtualTemplate,
+			Description:         "This is a virtual project",
 		},
 	}
 	if err := m.ensureProject(ctx, deckhouseProject); err != nil {
@@ -55,6 +56,7 @@ func (m *Manager) ensureVirtualProjects(ctx context.Context) error {
 		},
 		Spec: v1alpha2.ProjectSpec{
 			ProjectTemplateName: consts.VirtualTemplate,
+			Description:         "This is a virtual project",
 		},
 	}
 	if err := m.ensureProject(ctx, othersProject); err != nil {

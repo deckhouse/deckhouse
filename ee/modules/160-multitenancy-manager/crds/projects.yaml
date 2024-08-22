@@ -121,7 +121,6 @@ spec:
                   type: integer
                 conditions:
                   type: array
-                  x-kubernetes-patch-strategy: "retainKeys"
                   items:
                     type: object
                     properties:

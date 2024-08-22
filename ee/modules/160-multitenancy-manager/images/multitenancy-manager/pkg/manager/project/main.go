@@ -151,8 +151,9 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 			m.log.Error(statusErr, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
 			return ctrl.Result{Requeue: true}, nil
 		}
-		// requeue to avoid helm lucky errors
-		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+		// TODO: come with a better solution handling helm errors
+		// requeue to avoid helm fluky errors
+		return ctrl.Result{RequeueAfter: 1 * time.Minute}, nil
 	}
 
 	// update conditions
@@ -238,6 +239,8 @@ func (m *Manager) reconcileVirtualProjects(ctx context.Context) {
 		m.log.Error(err, "failed to update the other virtual project")
 		return
 	}
+
+	m.log.Info("virtual projects reconciled")
 }
 
 func (m *Manager) updateVirtualProject(ctx context.Context, project *v1alpha2.Project, namespaces []string) error {
@@ -245,6 +248,7 @@ func (m *Manager) updateVirtualProject(ctx context.Context, project *v1alpha2.Pr
 		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
 			return err
 		}
+		project.Status.Conditions = nil
 		project.Status.Namespaces = namespaces
 		project.Status.TemplateGeneration = 1
 		project.Status.ObservedGeneration = project.Generation
