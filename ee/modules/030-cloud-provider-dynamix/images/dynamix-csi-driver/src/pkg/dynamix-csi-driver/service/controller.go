@@ -91,15 +91,6 @@ func (c *ControllerService) CreateVolume(
 		return nil, fmt.Errorf("error parse storageClass paramater %w", err)
 	}
 
-	if err := checkRequiredParams(req.Parameters); err != nil {
-		return nil, err
-	}
-
-	pool, accountID, gID, storageEndpointID, err := c.parseParameters(ctx, req.Parameters)
-	if err != nil {
-		return nil, fmt.Errorf("error parse storageClass paramater %w", err)
-	}
-
 	diskName := req.Name
 	if len(diskName) == 0 {
 		return nil, fmt.Errorf("error required request parameter Name was not provided")
