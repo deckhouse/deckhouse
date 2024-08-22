@@ -194,7 +194,7 @@ properties:
                 instanceClass:
                   type: object
                   additionalProperties: false
-                  required: [ numCPUs, memory, imageName, pool, externalNetworkID ]
+                  required: [ numCPUs, memory, imageName, externalNetwork ]
                   description: |
                     Partial contents of the fields of the.
                   properties:

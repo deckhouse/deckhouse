@@ -189,7 +189,7 @@ apiVersions:
             instanceClass:
               type: object
               additionalProperties: false
-              required: [numCPUs, memory, imageName, storageEndpoint, pool, externalNetwork]
+              required: [numCPUs, memory, imageName, externalNetwork]
               description: |
                 Partial contents of the fields of the.
               properties:
