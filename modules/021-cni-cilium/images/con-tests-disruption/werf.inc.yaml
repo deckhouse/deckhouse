@@ -1,0 +1,30 @@
+{{- $disruptionVersion := "0.0.14" }}
+{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
+---
+# Based on https://github.com/cilium/test-connection-disruption/blob/v0.0.14/Dockerfile
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-disruption-artifact
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - mkdir -p /src/test-connection-disruption
+  - git clone --depth 1 --branch v{{ $disruptionVersion }} {{ $.SOURCE_REPO }}/cilium/test-connection-disruption.git /src/test-connection-disruption
+  install:
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - make clean
+  - make
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-disruption
+from: busybox:1.36.1
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-disruption-artifact
+  add: /src/test-connection-disruption/client
+  to: /usr/bin/tcd-client
+  before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-disruption-artifact
+  add: /src/test-connection-disruption/server
+  to: /usr/bin/tcd-server
+  before: install

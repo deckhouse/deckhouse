@@ -1,0 +1,27 @@
+{{- $jsonMockVersion := "1.3.8" }}
+{{- $_ := set . "SOURCE_REPO" "https://github.com" }}
+---
+# Based on https://github.com/cilium/json-mock/blob/v1.3.8/Dockerfile
+image: {{ $.ModuleName }}/{{ $.ImageName }}-json-mock
+from: node:21.5.0-slim@sha256:c88704924204ee6d4e9da02275a8fd27355502f7177e4175cd0d3a4375a9c9c8
+git:
+- url: {{ $.SOURCE_REPO }}/cilium/json-mock.git
+  tag: v{{ $jsonMockVersion }}
+  add: /
+  to: /
+  includePaths:
+  - run.sh
+  - default.json
+  - middleware.js
+  stageDependencies:
+    setup:
+    - '**/*'
+shell:
+  install:
+  - npm install -g json-server@v0.17.4
+  - apt-get update && apt-get upgrade -y
+  - apt-get install -y tini curl iproute2
+  - apt-get autoremove -y && apt-get clean
+  - rm -rf /var/lib/apt/lists/*
+docker:
+  CMD: ["bash", "/run.sh"]
