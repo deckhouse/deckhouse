@@ -20,9 +20,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/flant/addon-operator/pkg/utils/logger"
-
 	"github.com/Masterminds/semver/v3"
+	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/fsnotify/fsnotify"
 )
 
