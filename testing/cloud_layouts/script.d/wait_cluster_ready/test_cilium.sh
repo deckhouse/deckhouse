@@ -85,4 +85,5 @@ d8 cilium connectivity test \
 --sysdump-output-filename "cilium-sysdump-common-e2e-<ts>" \
 --junit-file "cilium-junits/common-e2e.xml" \
 --junit-property github_job_step="Run tests common-e2e" \
---request-timeout 30s
+--request-timeout 30s \
+--external-target one.one.one.one.
