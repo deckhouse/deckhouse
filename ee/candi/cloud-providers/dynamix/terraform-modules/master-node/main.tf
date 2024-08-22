@@ -45,7 +45,7 @@ resource "decort_disk" "kubernetes_data_disk" {
    pool = local.pool
 }
 
-resource "decort_cb_kvmvm" "master_vm" {
+resource "decort_kvmvm" "master_vm" {
   name = local.master_node_name
   driver = local.driver
   rg_id = local.rg_id
