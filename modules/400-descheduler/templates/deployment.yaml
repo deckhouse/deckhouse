@@ -76,14 +76,11 @@ spec:
         - mountPath: /policy
           name: policy-volume
         args:
-        - "--policy-config-file"
-        - "/policy/policy.yaml"
-        - "--logging-format"
-        - "json"
-        - "--v"
-        - "4"
-        - "--descheduling-interval"
-        - "15m"
+        - --bind-address=127.0.0.1
+        - --policy-config-file=/policy/policy.yaml
+        - --logging-format=json
+        - --v=4
+        - --descheduling-interval="15m"
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
