@@ -4,7 +4,29 @@ positive:
         deschedulers: []
     - internal:
         deschedulers:
-          - name: test1
+          - fitNodesLabelSelector: node.deckhouse.io/group in (test1,test2)
+            name: test1
+            podLabelSelector:
+              matchExpressions:
+                - key: dbType
+                  operator: In
+                  values:
+                    - test1
+                    - test2
+              matchLabels:
+                app: test1
+            priorityClassThreshold:
+              value: 1000
+            podNamespaceLabelSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: test
+            strategies:
+              highNodeUtilization:
+                thresholds:
+                  cpu: 14
+                  memory: 23
+                  pods: 3
+          - name: test2
             strategies:
               lowNodeUtilization:
                 thresholds:

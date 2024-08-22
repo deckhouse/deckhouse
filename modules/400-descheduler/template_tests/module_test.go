@@ -77,20 +77,28 @@ internal:
           cpu: 14
           memory: 23
           pods: 3
-  - defaultEvictor:
-      labelSelector:
-        matchExpressions:
-        - key: dbType
-          operator: In
-          values:
-          - test1
-          - test2
-        matchLabels:
-          app: test1
-      nodeSelector: node.deckhouse.io/group=test1,node.deckhouse.io/type in (test1,test2)
-      priorityThreshold:
-        value: 1000
-    name: test5
+  - name: test3
+    fitNodesLabelSelector: node.deckhouse.io/group=test1,node.deckhouse.io/type in (test1,test2)
+    podLabelSelector:
+      matchExpressions:
+      - key: dbType
+        operator: In
+        values:
+        - test1
+        - test2
+      matchLabels:
+        app: test1
+    podNamespaceLabelSelector:
+      matchExpressions:
+      - key: dbType
+        operator: In
+        values:
+        - test1
+        - test2
+      matchLabels:
+        app: test1
+    priorityClassThreshold:
+      value: 1000
     strategies:
       highNodeUtilization:
         thresholds:
@@ -110,7 +118,6 @@ internal:
 			Expect(cm.Field(`data.policy\.yaml`)).To(MatchYAML(`---
 apiVersion: descheduler/v1alpha2
 kind: DeschedulerPolicy
-nodeSelector: 'node.deckhouse.io/group notin (master,system)'
 profiles:
 - name: test1
   pluginConfig:
@@ -179,14 +186,35 @@ profiles:
     preEvictionFilter:
       enabled:
       - DefaultEvictor
-- name: test5
+- name: test3
   pluginConfig:
   - args:
       evictFailedBarePods: true
       evictLocalStoragePods: false
       evictSystemCriticalPods: false
       ignorePvcPods: false
+      labelSelector:
+        matchExpressions:
+        - key: dbType
+          operator: In
+          values:
+          - test1
+          - test2
+        matchLabels:
+          app: test1
+      namespaceLabelSelector:
+        matchExpressions:
+        - key: dbType
+          operator: In
+          values:
+          - test1
+          - test2
+        matchLabels:
+          app: test1
       nodeFit: true
+      nodeSelector: node.deckhouse.io/group=test1,node.deckhouse.io/type in (test1,test2)
+      priorityThreshold:
+        value: 1000
     name: DefaultEvictor
   - args:
       thresholds:

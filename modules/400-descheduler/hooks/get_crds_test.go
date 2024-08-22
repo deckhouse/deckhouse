@@ -74,12 +74,11 @@ kind: Descheduler
 metadata:
   name: test3
 spec:
-  defaultEvictor:
-    nodeSelector:
-      matchExpressions:
-      - key: node.deckhouse.io/group
-        operator: In
-        values: ["test1", "test2"]
+  fitNodesLabelSelector:
+    matchExpressions:
+    - key: node.deckhouse.io/group
+      operator: In
+      values: ["test1", "test2"]
   strategies:
     highNodeUtilization:
       thresholds:
@@ -95,10 +94,11 @@ kind: Descheduler
 metadata:
   name: test4
 spec:
-  defaultEvictor:
-    nodeSelector:
-      matchLabels:
-        node.deckhouse.io/group: test1
+  fitNodesLabelSelector:
+    matchExpressions:
+    - key: node.deckhouse.io/group
+      operator: In
+      values: ["test1", "test2"]
   strategies:
     highNodeUtilization:
       thresholds:
@@ -114,23 +114,23 @@ kind: Descheduler
 metadata:
   name: test5
 spec:
-  defaultEvictor:
-    nodeSelector:
-      matchLabels:
-        node.deckhouse.io/group: test1
-      matchExpressions:
-      - key: node.deckhouse.io/type
-        operator: In
-        values: ["test1", "test2"]
-    labelSelector:
-      matchLabels:
-        app: test1
-      matchExpressions:
-      - key: dbType
-        operator: In
-        values: ["test1", "test2"]
-    priorityThreshold:
-      value: 1000
+  fitNodesLabelSelector:
+    matchExpressions:
+    - key: node.deckhouse.io/group
+      operator: In
+      values: ["test1", "test2"]
+  podLabelSelector:
+    matchLabels:
+      app: test1
+    matchExpressions:
+    - key: dbType
+      operator: In
+      values: ["test1", "test2"]
+  podNamespaceLabelSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: test
+  priorityClassThreshold:
+    value: 1000
   strategies:
     highNodeUtilization:
       thresholds:
@@ -167,8 +167,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 		It("Should run without errors", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
-- defaultEvictor: {}
-  name: test
+- name: test
   strategies:
     lowNodeUtilization:
       targetThresholds:
@@ -194,8 +193,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 		It("Should run without errors", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
-- defaultEvictor: {}
-  name: test
+- name: test
   strategies:
     lowNodeUtilization:
       targetThresholds:
@@ -207,8 +205,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
         cpu: 10
         memory: 20
         pods: 30
-- defaultEvictor: {}
-  name: test2
+- name: test2
   strategies:
     highNodeUtilization:
       thresholds:
@@ -239,8 +236,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 		It("Should run without errors", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
-- defaultEvictor:
-    nodeSelector: node.deckhouse.io/group in (test1,test2)
+- fitNodesLabelSelector: node.deckhouse.io/group in (test1,test2)
   name: test3
   strategies:
     highNodeUtilization:
@@ -262,8 +258,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 		It("Should run without errors", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
-- defaultEvictor:
-    nodeSelector: node.deckhouse.io/group=test1
+- fitNodesLabelSelector: node.deckhouse.io/group in (test1,test2)
   name: test4
   strategies:
     highNodeUtilization:
@@ -285,20 +280,22 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 		It("Should run without errors", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
-- defaultEvictor:
-    labelSelector:
-      matchExpressions:
+- fitNodesLabelSelector: node.deckhouse.io/group in (test1,test2)
+  name: test5
+  podLabelSelector:
+    matchExpressions:
       - key: dbType
         operator: In
         values:
         - test1
         - test2
-      matchLabels:
-        app: test1
-    nodeSelector: node.deckhouse.io/group=test1,node.deckhouse.io/type in (test1,test2)
-    priorityThreshold:
-      value: 1000
-  name: test5
+    matchLabels:
+      app: test1
+  priorityClassThreshold:
+    value: 1000
+  podNamespaceLabelSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: test
   strategies:
     highNodeUtilization:
       thresholds:

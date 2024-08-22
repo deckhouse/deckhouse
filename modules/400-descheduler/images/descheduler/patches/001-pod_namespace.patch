@@ -1,0 +1,143 @@
+Subject: [PATCH] Support of the namespaceLabelSelector in DefaultEvictor plugin
+---
+Index: pkg/framework/plugins/defaultevictor/defaultevictor.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/framework/plugins/defaultevictor/defaultevictor.go b/pkg/framework/plugins/defaultevictor/defaultevictor.go
+--- a/pkg/framework/plugins/defaultevictor/defaultevictor.go	(revision 9f7e7fd5bb64989f5188eb42152370602c1c9eda)
++++ b/pkg/framework/plugins/defaultevictor/defaultevictor.go	(date 1724267818861)
+@@ -18,14 +18,17 @@
+ 	"context"
+ 	"errors"
+ 	"fmt"
++	"strings"
+
+ 	v1 "k8s.io/api/core/v1"
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/apimachinery/pkg/labels"
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
++
+ 	"k8s.io/client-go/tools/cache"
+ 	"k8s.io/klog/v2"
++
+ 	nodeutil "sigs.k8s.io/descheduler/pkg/descheduler/node"
+ 	podutil "sigs.k8s.io/descheduler/pkg/descheduler/pod"
+ 	frameworktypes "sigs.k8s.io/descheduler/pkg/framework/types"
+@@ -75,6 +78,14 @@
+ 		args:   defaultEvictorArgs,
+ 	}
+
++	// don't use pods from d8-* and kube-system namespaces
++	ev.constraints = append(ev.constraints, func(pod *v1.Pod) error {
++		if strings.HasPrefix(pod.Namespace, "d8-") || pod.Namespace == "kube-system" {
++			return fmt.Errorf("pod in the deckhouse namespace(%s)", pod.Namespace)
++		}
++		return nil
++	})
++
+ 	if defaultEvictorArgs.EvictFailedBarePods {
+ 		klog.V(1).InfoS("Warning: EvictFailedBarePods is set to True. This could cause eviction of pods without ownerReferences.")
+ 		ev.constraints = append(ev.constraints, func(pod *v1.Pod) error {
+@@ -155,6 +166,25 @@
+ 		})
+ 	}
+
++	// check pod by namespace label filter
++	if defaultEvictorArgs.NamespaceLabelSelector != nil {
++		indexName := "metadata.namespace"
++		indexer, err := getNamespacesListByLabelSelector(indexName, defaultEvictorArgs.NamespaceLabelSelector, handle)
++		if err != nil {
++			return nil, err
++		}
++		ev.constraints = append(ev.constraints, func(pod *v1.Pod) error {
++			objs, err := indexer.ByIndex(indexName, pod.Namespace)
++			if err != nil {
++				return fmt.Errorf("unable to list namespaces for namespaceLabelSelector filter in the policy parameter")
++			}
++			if len(objs) == 0 {
++				return fmt.Errorf("pod namespace do not match the namespaceLabelSelector filter in the policy parameter")
++			}
++			return nil
++		})
++	}
++
+ 	if defaultEvictorArgs.MinReplicas > 1 {
+ 		indexName := "metadata.ownerReferences"
+ 		indexer, err := getPodIndexerByOwnerRefs(indexName, handle)
+@@ -260,3 +290,31 @@
+ 	indexer := podInformer.GetIndexer()
+ 	return indexer, nil
+ }
++
++func getNamespacesListByLabelSelector(indexName string, labelSelector *metav1.LabelSelector, handle frameworktypes.Handle) (cache.Indexer, error) {
++	nsInformer := handle.SharedInformerFactory().Core().V1().Namespaces().Informer()
++	if err := nsInformer.AddIndexers(cache.Indexers{
++		indexName: func(obj interface{}) ([]string, error) {
++			ns, ok := obj.(*v1.Namespace)
++			if !ok {
++				return []string{}, errors.New("unexpected object")
++			}
++
++			selector, err := metav1.LabelSelectorAsSelector(labelSelector)
++			if err != nil {
++				return []string{}, errors.New("could not get selector from label selector")
++			}
++			if labelSelector != nil && !selector.Empty() {
++				if !selector.Matches(labels.Set(ns.Labels)) {
++					return []string{}, nil
++				}
++			}
++			return []string{ns.GetName()}, nil
++		},
++	}); err != nil {
++		return nil, err
++	}
++
++	indexer := nsInformer.GetIndexer()
++	return indexer, nil
++}
+Index: pkg/framework/plugins/defaultevictor/types.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/framework/plugins/defaultevictor/types.go b/pkg/framework/plugins/defaultevictor/types.go
+--- a/pkg/framework/plugins/defaultevictor/types.go	(revision 9f7e7fd5bb64989f5188eb42152370602c1c9eda)
++++ b/pkg/framework/plugins/defaultevictor/types.go	(date 1724246467456)
+@@ -15,6 +15,7 @@
+
+ import (
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++
+ 	"sigs.k8s.io/descheduler/pkg/api"
+ )
+
+@@ -31,6 +32,7 @@
+ 	EvictSystemCriticalPods bool                   `json:"evictSystemCriticalPods"`
+ 	IgnorePvcPods           bool                   `json:"ignorePvcPods"`
+ 	EvictFailedBarePods     bool                   `json:"evictFailedBarePods"`
++	NamespaceLabelSelector  *metav1.LabelSelector  `json:"namespaceLabelSelector"`
+ 	LabelSelector           *metav1.LabelSelector  `json:"labelSelector"`
+ 	PriorityThreshold       *api.PriorityThreshold `json:"priorityThreshold"`
+ 	NodeFit                 bool                   `json:"nodeFit"`
+Index: pkg/framework/plugins/defaultevictor/defaults.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/framework/plugins/defaultevictor/defaults.go b/pkg/framework/plugins/defaultevictor/defaults.go
+--- a/pkg/framework/plugins/defaultevictor/defaults.go	(revision 9f7e7fd5bb64989f5188eb42152370602c1c9eda)
++++ b/pkg/framework/plugins/defaultevictor/defaults.go	(date 1724246467461)
+@@ -43,6 +43,9 @@
+ 	if !args.EvictFailedBarePods {
+ 		args.EvictFailedBarePods = false
+ 	}
++	if args.NamespaceLabelSelector == nil {
++		args.NamespaceLabelSelector = nil
++	}
+ 	if args.LabelSelector == nil {
+ 		args.LabelSelector = nil
+ 	}

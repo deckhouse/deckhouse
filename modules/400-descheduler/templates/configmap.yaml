@@ -10,28 +10,31 @@ data:
   policy.yaml: |
     apiVersion: "descheduler/v1alpha2"
     kind: "DeschedulerPolicy"
-    nodeSelector: "node.deckhouse.io/group notin (master,system)"
     profiles:
     {{- range $d := .Values.descheduler.internal.deschedulers }}
     - name: {{ $d.name }}
       pluginConfig:
       - name: "DefaultEvictor"
         args:
-          {{- if $d.nodeSelector }}
-          nodeSelector: {{ $d.nodeSelector }}
+          {{- if $d.fitNodesLabelSelector }}
+          nodeSelector: {{ $d.fitNodesLabelSelector }}
           {{- end }}
           evictLocalStoragePods: false
           evictSystemCriticalPods: false
           ignorePvcPods: false
           evictFailedBarePods: true
           nodeFit: true
-          {{- if $d.labelSelector }}
+          {{- if $d.podLabelSelector }}
           labelSelector:
-            {{- $d.labelSelector | toYaml | nindent 12 }}
+            {{- $d.podLabelSelector | toYaml | nindent 12 }}
           {{- end }}
-          {{- if $d.priorityThreshold }}
+          {{- if $d.podNamespaceLabelSelector }}
+          namespaceLabelSelector:
+            {{- $d.podNamespaceLabelSelector | toYaml | nindent 12 }}
+          {{- end }}
+          {{- if $d.priorityClassThreshold }}
           priorityThreshold:
-            {{- $d.priorityThreshold | toYaml | nindent 12 }}
+            {{- $d.priorityClassThreshold | toYaml | nindent 12 }}
           {{- end }}
       {{- if dig "strategies" "lowNodeUtilization" false $d }}
       - name: "LowNodeUtilization"
