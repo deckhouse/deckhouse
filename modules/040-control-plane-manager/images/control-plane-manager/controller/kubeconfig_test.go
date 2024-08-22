@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -43,6 +44,20 @@ func TestLoadAndParseKubeconfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
+}
+
+func TestValidateKubeconfig(t *testing.T) {
+	err, remove := validateKubeconfig("testdata/kubeconfig.conf", "testdata/kubeconfig_tmp.conf")
+	if err != nil {
+		if strings.Contains(err.Error(), "is expiring in less than 30 days") {
+			if !remove {
+				t.Fatalf("expected remove to be true when certificate is expiring, got %v", remove)
+			}
+			t.Log("Warning: client certificate is expiring soon, remove flag is correctly set to true.")
+		} else {
+			t.Fatal(err)
+		}
+	}
 }
 
 func TestCheckEtcdManifest(t *testing.T) {
