@@ -323,4 +323,4 @@ The consumption of data-plane resources (istio-sidecar) is affected by many fact
 * complexity of Service Mesh configuration.
 
 A rough estimate of the overhead for an istio-sidecar instance is 0.5 vCPU for 1000 requests/sec and 50MB RAM.
-istio-sidcars also increase latency in network requests — about 2.5ms per request.
+istio-sidecars also increase latency in network requests — about 2.5ms per request.
