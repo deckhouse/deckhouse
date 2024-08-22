@@ -608,6 +608,8 @@ ENDSSH
        ip route del default
        ip route add 10.111.0.0/16 dev lo
        ip route add 10.222.0.0/16 dev lo
+       ip route add 1.1.1.1/32 via 192.168.199.1
+       ip route add 1.0.0.1/32 via 192.168.199.1
 ENDSSH
       initial_setup_failed=""
       break
@@ -631,6 +633,8 @@ ENDSSH
        ip route del default
        ip route add 10.111.0.0/16 dev lo
        ip route add 10.222.0.0/16 dev lo
+       ip route add 1.1.1.1/32 via 192.168.199.1
+       ip route add 1.0.0.1/32 via 192.168.199.1
 
        #hack for relosve: 'error reading from /var/lib/apt/lists/partial/ftp.altlinux.org_pub_distributions_ALTLinux_p11_branch_x86%5f64-i586_base_release - fgets (0 Success)'
        rm -f /var/lib/apt/lists/partial/ftp.altlinux.org_pub_distributions_ALTLinux_p11_branch_x86%5f64-i586_base_release
@@ -657,6 +661,8 @@ ENDSSH
        ip route del default
        ip route add 10.111.0.0/16 dev lo
        ip route add 10.222.0.0/16 dev lo
+       ip route add 1.1.1.1/32 via 192.168.199.1
+       ip route add 1.0.0.1/32 via 192.168.199.1
 ENDSSH
       initial_setup_failed=""
       break
