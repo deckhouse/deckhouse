@@ -29,6 +29,16 @@ objectSelector: {}
   resources:
     {{- $trackResource.resources | toYaml | nindent 4 }}
   {{- end }}
+- apiGroups:
+  - constraints.gatekeeper.sh
+  apiVersions:
+  - '*'
+  operations:
+  - CREATE
+  - UPDATE
+  resources:
+  - '*'
+  scope: '*'
 {{- end }}
 
 {{- if .Values.admissionPolicyEngine.internal.bootstrapped }}
