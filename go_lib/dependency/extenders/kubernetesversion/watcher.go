@@ -20,6 +20,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/flant/addon-operator/pkg/utils/logger"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/fsnotify/fsnotify"
 )
@@ -28,6 +30,7 @@ type versionWatcher struct {
 	ch          chan<- *semver.Version
 	lastVersion *semver.Version
 	watcher     *fsnotify.Watcher
+	logger      logger.Logger
 }
 
 func (w *versionWatcher) watch(path string) (err error) {
@@ -60,8 +63,12 @@ func (w *versionWatcher) handler(path string) error {
 	if err != nil {
 		return err
 	}
+	if content == nil || len(content) == 0 {
+		return nil
+	}
 	parsed, err := semver.NewVersion(strings.TrimSpace(string(content)))
 	if err != nil {
+		w.logger.Error("failed to parse version", "path", path, "content", string(content), "err", err)
 		return err
 	}
 	if w.lastVersion == nil || !w.lastVersion.Equal(parsed) {

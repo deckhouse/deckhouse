@@ -109,7 +109,7 @@ func (e *Extender) waitForFileExists(path string) error {
 // update kubernetes version if kubectl_version is updated
 func (e *Extender) watchForKubernetesVersion() {
 	versionCh := make(chan *semver.Version)
-	watcher := &versionWatcher{ch: versionCh}
+	watcher := &versionWatcher{ch: versionCh, logger: e.logger}
 	go func() {
 		if err := watcher.watch("/tmp/kubectl_version"); err != nil {
 			e.mtx.Lock()
@@ -150,6 +150,9 @@ func (e *Extender) IsTerminator() bool {
 
 // Filter implements Extender interface, it is used by scheduler in addon-operator
 func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
+	if !e.versionMatcher.Has(name) {
+		return nil, nil
+	}
 	e.getKubernetesVersion()
 	e.mtx.Lock()
 	if e.err != nil {
@@ -157,9 +160,6 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 		return nil, &scherror.PermanentError{Err: fmt.Errorf("parse kubernetes version failed: %s", e.err)}
 	}
 	e.mtx.Unlock()
-	if !e.versionMatcher.Has(name) {
-		return nil, nil
-	}
 	if err := e.versionMatcher.Validate(name); err != nil {
 		e.logger.Errorf("requirements of the '%s' module are not satisfied: current kubernetes version is not suitable: %s", name, err.Error())
 		return pointer.Bool(false), fmt.Errorf("requirements are not satisfied: current kubernetes version is not suitable: %s", err.Error())
