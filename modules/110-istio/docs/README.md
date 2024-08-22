@@ -306,7 +306,7 @@ Using Istio will incur additional resource costs for both **control-plane** (ist
 ### control-plane
 
 The istiod controller continuously monitors the cluster configuration, compiles the settings for the istio-sidecars and distributes them over the network. Accordingly, the more applications and their instances, the more services, and the more frequently this configuration changes, the more computational resources are required and the greater the load on the network. Two approaches are supported to reduce the load on controller instances:
-* horizontal scaling (module configuration [`controlPlane.replicasManagement`](configuration.html#parameters-controlplane-replicasmanagement)) — The more controller instances, the fewer instances of istio-sidecars to serve for each controller and the less CPU and network load.
+* horizontal scaling (module configuration [`controlPlane.replicasManagement`](configuration.html#parameters-controlplane-replicasmanagement)) — the more controller instances, the fewer instances of istio-sidecars to serve for each controller and the less CPU and network load.
 * data-plane segmentation using the [*Sidecar*](istio-cr.html#sidecar) resource (recommended approach) — the smaller the scope of an individual istio-sidecar, the less data in the data-plane needs to be updated and the less CPU and network overhead.
 
 A rough estimate of overhead for a control-plane instance that serves 1000 services and 2000 istio-sidecars is 1 vCPU and 1.5GB RAM.
