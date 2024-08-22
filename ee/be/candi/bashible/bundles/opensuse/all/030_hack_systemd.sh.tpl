@@ -3,5 +3,5 @@
 
 # hack to avoid problems due to systemd difference for suse and ubuntu
 if [[ ! -e /lib/systemd ]]; then
-  ln -s /lib/systemd /var/lib/systemd
+  ln -s /var/lib/systemd /lib/systemd
 fi
