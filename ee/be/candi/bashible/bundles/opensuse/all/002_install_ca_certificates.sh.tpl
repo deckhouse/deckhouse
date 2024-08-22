@@ -2,9 +2,10 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE.
 
 bb-zypper-install ca-certificates
-# hack to avoid problems with certs in alpine busybox for kube-apiserver
+# Hack to avoid problems with certs in d8-curl and possible with alpine busybox for kube-apiserver
 if [[ ! -e /etc/ssl/certs/ca-certificates.crt ]]; then
-  ln -s /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
+  mkdir -p /etc/ssl/certs
+  ln -s /var/lib/ca-certificates/ca-bundle.pem /etc/ssl/certs/ca-certificates.crt
 fi
 
 {{- if .registry.ca }}
@@ -14,12 +15,12 @@ _update_ca_certificates() {
   update-ca-certificates
 }
 
-bb-sync-file /etc/pki/ca-trust/source/anchors/registry-ca.crt - registry-ca-changed << "EOF"
+bb-sync-file /var/lib/ca-certificates/pem/registry-ca.pem - registry-ca-changed << "EOF"
 {{ .registry.ca }}
 EOF
 {{- else }}
-if [ -f /etc/pki/ca-trust/source/anchors/registry-ca.crt ]; then
-  rm -f /etc/pki/ca-trust/source/anchors/registry-ca.crt
+if [ -f /var/lib/ca-certificates/pem/registry-ca.pem ]; then
+  rm -f /var/lib/ca-certificates/pem/registry-ca.pem
   _update_ca_certificates
 fi
 {{- end }}
