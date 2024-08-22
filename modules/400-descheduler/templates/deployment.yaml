@@ -83,7 +83,7 @@ spec:
         - "--logging-format"
         - "json"
         - "--v"
-        - "4"
+        - "6"
         - "--descheduling-interval"
         - "15m"
         resources:
