@@ -77,7 +77,7 @@ spec:
           name: policy-volume
         args:
         - "--bind-address"
-        - "--127.0.0.1"
+        - "127.0.0.1"
         - "--policy-config-file"
         - "/policy/policy.yaml"
         - "--logging-format"
