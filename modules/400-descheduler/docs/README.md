@@ -17,8 +17,9 @@ descheduler every 15 minutes evicts Pods that satisfy strategies enabled in the 
 * descheduler takes into account the [Pod Disruption Budget](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/): the Pod will not be evicted if descheduling violates the PDB;
 * descheduler takes into account node fitting. If no nodes available to start evicted pod, pod is not evicted.
 
-To limit pods set, `labelSelector` parameter is used.
-To set up node fit list, `nodeSelector` parameter is used. `nodeSelector` has the same syntax as `labelSelector`. Node fit list always excludes nodes with labels `node.deckhouse.io/group: master` and `node.deckhouse.io/group: system`. 
+To limit pods set by labels, `podlabelSelector` parameter is used. `podlabelSelector` has the same syntax as kubernetes labelSelector.
+To limit pods set by namespace, `podNamespaceLabelSelector` parameter is used. `podNamespaceLabelSelector` has the same syntax as kubernetes labelSelector.
+To set up node fit list, `fitNodesLabelSelector` parameter is used. `fitNodesLabelSelector` has the same syntax as kubernetes labelSelector.
 
 ## Strategies
 
