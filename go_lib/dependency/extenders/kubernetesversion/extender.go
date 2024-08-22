@@ -97,7 +97,7 @@ func (e *Extender) waitForFileExists(path string) ([]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			if content == nil || len(content) == 0 {
+			if len(content) == 0 {
 				e.logger.Debugf("file %s is empty", path)
 				continue
 			}

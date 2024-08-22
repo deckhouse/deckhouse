@@ -63,7 +63,7 @@ func (w *versionWatcher) handler(path string) error {
 	if err != nil {
 		return err
 	}
-	if content == nil || len(content) == 0 {
+	if len(content) == 0 {
 		return nil
 	}
 	parsed, err := semver.NewVersion(strings.TrimSpace(string(content)))
