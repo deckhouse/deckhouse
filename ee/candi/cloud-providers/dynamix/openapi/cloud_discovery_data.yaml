@@ -33,5 +33,5 @@ apiVersions:
               type: boolean
             isDefault:
               type: boolean
-        description: List of .
+        description: List of storage endpoints.
 
