@@ -7,15 +7,12 @@ package api
 
 import (
 	"context"
-	"fmt"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 	"net"
-	"strconv"
-
-	decort "repository.basistech.ru/BASIS/decort-golang-sdk"
-	"repository.basistech.ru/BASIS/decort-golang-sdk/pkg/cloudapi/compute"
 
 	"dynamix-common/retry"
+	decort "repository.basistech.ru/BASIS/decort-golang-sdk"
+	"repository.basistech.ru/BASIS/decort-golang-sdk/pkg/cloudapi/compute"
 )
 
 type ComputeService struct {
@@ -56,15 +53,10 @@ func (c *ComputeService) GetVMByName(ctx context.Context, name string) (*compute
 	return vm, nil
 }
 
-func (c *ComputeService) GetVMByID(ctx context.Context, id string) (*compute.ItemCompute, error) {
-	computeID, err := strconv.ParseUint(id, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse compute id [%s]: %v", id, err)
-	}
-
+func (c *ComputeService) GetVMByID(ctx context.Context, computeID uint64) (*compute.ItemCompute, error) {
 	var vm *compute.ItemCompute
 
-	err = c.retryer.WithAttempts(5).Do(ctx, func() (bool, error) {
+	err := c.retryer.WithAttempts(5).Do(ctx, func() (bool, error) {
 		computes, err := c.client.CloudAPI().Compute().List(ctx, compute.ListRequest{
 			ByID: computeID,
 		})
@@ -117,4 +109,45 @@ func (c *ComputeService) GetVMIPAddresses(vm *compute.ItemCompute) ([]string, []
 	}
 
 	return externalIPs, localIPs, nil
+}
+
+func (c *ComputeService) AttachDiskToVM(ctx context.Context, diskID, computeID uint64) error {
+	err := c.retryer.Do(ctx, func() (bool, error) {
+		req := compute.DiskAttachRequest{
+			DiskID:    diskID,
+			ComputeID: computeID,
+			DiskType:  "D",
+		}
+		_, err := c.client.CloudAPI().Compute().DiskAttach(ctx, req)
+		if err != nil {
+			return false, err
+		}
+
+		return false, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *ComputeService) DetachDiskFromVM(ctx context.Context, diskID, computeID uint64) error {
+	err := c.retryer.Do(ctx, func() (bool, error) {
+		req := compute.DiskDetachRequest{
+			DiskID:    diskID,
+			ComputeID: computeID,
+		}
+		_, err := c.client.CloudAPI().Compute().DiskDetach(ctx, req)
+		if err != nil {
+			return false, err
+		}
+
+		return false, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
