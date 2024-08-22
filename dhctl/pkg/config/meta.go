@@ -132,6 +132,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		}
 
 		if masterNodeGroup.Replicas > 0 &&
+			len(masterNodeGroup.InstanceClass.ExternalIPAddresses) > 0 &&
 			masterNodeGroup.Replicas != len(masterNodeGroup.InstanceClass.ExternalIPAddresses) {
 			return nil, fmt.Errorf("number of masterNodeGroup.replicas should be equal to the length of masterNodeGroup.instanceClass.externalIPAddresses")
 		}
@@ -145,6 +146,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 
 			for _, nodeGroup := range yandexNodeGroups {
 				if nodeGroup.Replicas > 0 &&
+					len(nodeGroup.InstanceClass.ExternalIPAddresses) > 0 &&
 					nodeGroup.Replicas != len(nodeGroup.InstanceClass.ExternalIPAddresses) {
 					return nil, fmt.Errorf(`number of nodeGroups["%s"].replicas should be equal to the length of nodeGroups["%s"].instanceClass.externalIPAddresses`, nodeGroup.Name, nodeGroup.Name)
 				}
