@@ -14,8 +14,6 @@ bashible:
     '10.1':
     '10.2':
     '11':
-  opensuse: &opensuse
-    '15.5':
 k8s:
   '1.26':
     bashible:
@@ -25,8 +23,6 @@ k8s:
         !!merge <<: *rosa
       astra:
         !!merge <<: *astra
-      opensuse:
-        !!merge <<: *opensuse
     clusterApi:
       vcd: v1.2.0
     ccm:
@@ -39,8 +35,6 @@ k8s:
         !!merge <<: *rosa
       astra:
         !!merge <<: *astra
-      opensuse:
-        !!merge <<: *opensuse
     clusterApi:
       vcd: v1.2.0
     ccm:
@@ -53,8 +47,6 @@ k8s:
         !!merge <<: *rosa
       astra:
         !!merge <<: *astra
-      opensuse:
-        !!merge <<: *opensuse
     clusterApi:
       vcd: v1.2.0
     ccm:
@@ -67,8 +59,6 @@ k8s:
         !!merge <<: *rosa
       astra:
         !!merge <<: *astra
-      opensuse:
-        !!merge <<: *opensuse
     clusterApi:
       vcd: v1.2.0
     ccm:
@@ -81,8 +71,6 @@ k8s:
         !!merge <<: *rosa
       astra:
         !!merge <<: *astra
-      opensuse:
-        !!merge <<: *opensuse
     clusterApi:
       vcd: v1.2.0
     ccm:
