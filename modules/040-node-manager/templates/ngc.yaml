@@ -30,4 +30,3 @@ spec:
     esac
 
     bb-yum-or-apt-install $pkg_name
-    

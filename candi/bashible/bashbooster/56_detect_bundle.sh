@@ -75,5 +75,3 @@ bb-is-bundle(){
     bb-exit 1 "ERROR: ${PRETTY_NAME} is not supported."
   fi
 }
-
-
