@@ -27,6 +27,16 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
+type testState struct{}
+
+func (s *testState) SetGlobalPreflightchecksWasRan() error {
+	return nil
+}
+
+func (s *testState) GlobalPreflightchecksWasRan() (bool, error) {
+	return false, nil
+}
+
 func TestCheckRegistryAccessThroughProxy(t *testing.T) {
 	tests := map[string]func(*testing.T){
 		"getProxyFromMetaConfig_NoProxy":    getProxyFromMetaConfigSuccessNoProxy,
@@ -169,7 +179,9 @@ deckhouse:
 		installer, err := config.PrepareDeckhouseInstallConfig(metaConfig)
 		s.NoError(err)
 
-		preflightChecker := NewChecker(ssh.NewNodeInterfaceWrapper(&ssh.Client{}), installer, metaConfig)
+		bootstrapState := &testState{}
+
+		preflightChecker := NewChecker(ssh.NewNodeInterfaceWrapper(&ssh.Client{}), installer, metaConfig, bootstrapState)
 
 		err = preflightChecker.CheckRegistryAccessThroughProxy()
 		if test.skipped {

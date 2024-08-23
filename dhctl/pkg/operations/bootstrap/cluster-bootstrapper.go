@@ -259,12 +259,12 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	deckhouseInstallConfig.KubeadmBootstrap = true
 	deckhouseInstallConfig.MasterNodeSelector = true
 
-	preflightChecker := preflight.NewChecker(b.NodeInterface, deckhouseInstallConfig, metaConfig)
+	bootstrapState := NewBootstrapState(stateCache)
+
+	preflightChecker := preflight.NewChecker(b.NodeInterface, deckhouseInstallConfig, metaConfig, bootstrapState)
 	if err := preflightChecker.Global(); err != nil {
 		return err
 	}
-
-	bootstrapState := NewBootstrapState(stateCache)
 
 	if shouldStop, err := b.PhasedExecutionContext.StartPhase(phases.BaseInfraPhase, true, stateCache); err != nil {
 		return err

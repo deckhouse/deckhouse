@@ -16,9 +16,13 @@
 
 package bootstrap
 
-import "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+import (
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+)
 
 const PostBootstrapResultCacheKey = "post-bootstrap-result"
+
+const PreflightBootstrapResultCacheKey = "preflight-bootstrap-result"
 
 type State struct {
 	cache state.Cache
@@ -36,6 +40,33 @@ func (s *State) SavePostBootstrapScriptResult(result string) error {
 
 func (s *State) PostBootstrapScriptResult() ([]byte, error) {
 	return s.cache.Load(PostBootstrapResultCacheKey)
+}
+
+func (s *State) SetGlobalPreflightchecksWasRan() error {
+	return s.cache.Save(PreflightBootstrapResultCacheKey, []byte("yes"))
+}
+
+func (s *State) GlobalPreflightchecksWasRan() (bool, error) {
+	preflightcachefile, err := s.cache.InCache(PreflightBootstrapResultCacheKey)
+	return preflightcachefile, err
+}
+
+func (s *State) SetCloudPreflightchecksWasRan() error {
+	return s.cache.Save(PreflightBootstrapResultCacheKey, []byte("yes"))
+}
+
+func (s *State) CloudPreflightchecksWasRan() (bool, error) {
+	preflightcachefile, err := s.cache.InCache(PreflightBootstrapResultCacheKey)
+	return preflightcachefile, err
+}
+
+func (s *State) SetStaticPreflightchecksWasRan() error {
+	return s.cache.Save(PreflightBootstrapResultCacheKey, []byte("yes"))
+}
+
+func (s *State) StaticPreflightchecksWasRan() (bool, error) {
+	preflightcachefile, err := s.cache.InCache(PreflightBootstrapResultCacheKey)
+	return preflightcachefile, err
 }
 
 func (s *State) Clean() {
