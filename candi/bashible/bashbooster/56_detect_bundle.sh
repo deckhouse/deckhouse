@@ -70,7 +70,7 @@ bb-is-bundle(){
   esac
   
   if [ -n "$os" ]; then
-    bb-exit 0 "$os"
+    echo "$os"
   else
     bb-exit 1 "ERROR: ${PRETTY_NAME} is not supported."
   fi
