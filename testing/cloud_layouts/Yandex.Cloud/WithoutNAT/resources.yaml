@@ -39,6 +39,8 @@ spec:
   diskSizeGB: 30
   diskType: network-ssd
   memory: 8192
+  # openSUSE Leap 15.4
+  imageID: fd8brdtkb9hike6n0aau
 ---
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
