@@ -70,6 +70,7 @@ github.com/evanphx/json-patch v5.6.0+incompatible h1:jBYDEEiFBPxA0v50tFdvOzQQTCv
 github.com/evanphx/json-patch v5.6.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/flant/addon-operator v1.4.3-0.20240823114907-4a9d8352fa34 h1:5/n491dsMeleRDN1M//ssx9ydPOA1iEKUYfLT7Y3Dfw=
 github.com/flant/addon-operator v1.4.3-0.20240823114907-4a9d8352fa34/go.mod h1:CbitgIV/9NRBKOmts6bbkfXARjYyXEsNexwqNM7DPbg=
+github.com/flant/addon-operator v1.4.3-0.20240823123311-613c0a2a9ae2/go.mod h1:CbitgIV/9NRBKOmts6bbkfXARjYyXEsNexwqNM7DPbg=
 github.com/flant/go-openapi-validate v0.19.12-flant.0 h1:xk6kvc9fHKMgUdB6J7kbpbLR5vJOUzKAK8p3nrD7mDk=
 github.com/flant/go-openapi-validate v0.19.12-flant.0/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/gogost/v5 v5.13.0 h1:xU60PYSePgtvS7Z1zP9jeT/7e0KsLlFZ/VAn6m+kAJc=
