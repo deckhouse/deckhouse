@@ -12,4 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-yum-install nfs-utils
+bb-yum-or-apt-install() {
+  if bb-yum?; then
+      bb-yum-install "$@"
+  elif bb-apt-rpm?; then
+      bb-apt-rpm-install "$@"
+  elif bb-apt?; then
+      bb-apt-install "$@"
+  else
+      bb-log-error "Unsupported package manager"
+      return 1
+  fi
+}
