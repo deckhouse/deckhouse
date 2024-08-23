@@ -95,18 +95,29 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}()
 
+	status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason)
 	err = instanceScope.LoadSSHCredentials(ctx, r.Recorder)
 	if err != nil {
-		conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason, err.Error(), clusterv1.ConditionSeverityError, "")
-		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseError)
+		if status == nil || status.Status != corev1.ConditionFalse || status.Reason != err.Error() {
+			conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason, err.Error(), clusterv1.ConditionSeverityError, "")
+		}
+		if instanceScope.Instance.Status.CurrentStatus == nil || instanceScope.Instance.Status.CurrentStatus.Phase == "" {
+			instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseError)
+		}
 		err2 := instanceScope.Patch(ctx)
 		if err2 != nil {
 			return ctrl.Result{}, errors.Wrap(err2, "failed to set StaticInstance to Error phase")
 		}
 		return ctrl.Result{}, errors.Wrap(err, "failed to load SSHCredentials")
 	} else {
-		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseInit)
-		conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason)
+		if instanceScope.Instance.Status.CurrentStatus == nil ||
+			instanceScope.Instance.Status.CurrentStatus.Phase == "" ||
+			instanceScope.Instance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseError {
+			instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseInit)
+		}
+		if status == nil || status.Status != corev1.ConditionTrue {
+			conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason)
+		}
 		err = instanceScope.Patch(ctx)
 		if err != nil {
 			return ctrl.Result{}, errors.Wrap(err, "failed to set StaticInstance to Error phase")
