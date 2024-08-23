@@ -2,12 +2,12 @@ type: object
 properties:
   ingressClass:
     description: |
-      Класс Ingress-контроллера веб-интерфейса документации.
+      Класс Ingress-контроллера веб-интерфейса модуля.
 
       Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
   auth:
     description: |
-      Параметры для аутентификации и авторизации доступа к веб-интерфейсу deckhouse-tools.
+      Параметры для аутентификации и авторизации доступа к веб-интерфейсу модуля.
     properties:
       externalAuthentication:
         description: |
@@ -25,7 +25,7 @@ properties:
               URL-адрес для перенаправления пользователя на проверку аутентификации (если служба аутентификации вернула код ответа HTTP, отличный от 200).
       allowedUserGroups:
         description: |
-          Массив из групп, пользователи которых имеют доступ к веб-интерфейсу deckhouse-tools.
+          Массив из групп, пользователи которых имеют доступ к веб-интерфейсу модуля.
 
           Этот параметр используется, если включен модуль `user-authn` или установлен параметр `externalAuthentication`.
 
@@ -54,7 +54,7 @@ properties:
         properties:
           secretName:
             description: |
-              Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для веб-интерфейса документации.
+              Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для веб-интерфейса модуля.
 
               Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   nodeSelector:

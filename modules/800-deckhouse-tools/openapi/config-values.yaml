@@ -4,14 +4,14 @@ properties:
     type: string
     pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
     description: |
-      The class of the Ingress controller of the deckhouse-tools web UI.
+      The class of the Ingress controller of the module web interface.
 
       An optional parameter; by default, the `modules.ingressClass` global value is used.
   auth:
     type: object
     default: {}
     description: |
-      Parameters to authenticate and authorize access to the deckhouse-tools web interface.
+      Parameters to authenticate and authorize access to the module web interface.
     properties:
       externalAuthentication:
         type: object
@@ -42,7 +42,7 @@ properties:
           type: string
         default: []
         description: |
-          An array of groups whose users can browse the deckhouse-tools.
+          An array of groups whose users can browse the module web interface.
 
           This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
@@ -73,8 +73,8 @@ properties:
           The HTTPS usage mode:
           - `CertManager` — the web UI is accessed over HTTPS using a certificate obtained from a clusterIssuer specified in the `certManager.clusterIssuerName` parameter.
           - `CustomCertificate` — the web UI is accessed over HTTPS using a certificate from the `d8-system` namespace.
-          - `Disabled` — in this mode, the deckhouse-tools web UI can only be accessed over HTTP.
-          - `OnlyInURI` — the deckhouse-tools web UI will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
+          - `Disabled` — in this mode, the module web interface can only be accessed over HTTP.
+          - `OnlyInURI` — the module web interface will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
         enum:
           - "Disabled"
           - "CertManager"
@@ -100,7 +100,7 @@ properties:
           secretName:
             type: string
             description: |
-              The name of the secret in the `d8-system` namespace to use with the deckhouse-tools web UI.
+              The name of the secret in the `d8-system` namespace to use with the module web interface.
 
               This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
   nodeSelector:
