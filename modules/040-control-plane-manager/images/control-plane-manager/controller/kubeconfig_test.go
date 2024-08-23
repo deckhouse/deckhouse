@@ -22,6 +22,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/pkg/errors"
 )
 
 func TestLoadAndParseKubeconfig(t *testing.T) {
@@ -47,13 +49,13 @@ func TestLoadAndParseKubeconfig(t *testing.T) {
 }
 
 func TestValidateKubeconfig(t *testing.T) {
-	err, remove := validateKubeconfig("testdata/kubeconfig.conf", "testdata/kubeconfig_tmp.conf")
+	err := validateKubeconfig("testdata/kubeconfig.conf", "testdata/kubeconfig_tmp.conf")
 	if err != nil {
 		if strings.Contains(err.Error(), "is expiring in less than 30 days") {
-			if !remove {
-				t.Fatalf("expected remove to be true when certificate is expiring, got %v", remove)
+			if !errors.Is(err, ErrCertExpiringSoon) {
+				t.Fatalf("expected remove to be true when certificate is expiring, got %v", err)
 			}
-			t.Log("Warning: client certificate is expiring soon, remove flag is correctly set to true.")
+			t.Log("Warning: client certificate is expiring soon, kubeconfig will be recreated.")
 		} else {
 			t.Fatal(err)
 		}

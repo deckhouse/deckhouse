@@ -28,12 +28,44 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	configv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/yaml"
 )
+
+var (
+	ErrClustersFieldEmpty        = errors.New("clusters field is empty")
+	ErrUsersFieldEmpty           = errors.New("users field is empty")
+	ErrCertDataFieldEmpty        = errors.New("client-certificate-data field is empty")
+	ErrCertDecodeFailed          = errors.New("cannot PEM decode client-certificate-data")
+	ErrCertParseFailed           = errors.New("cannot parse certificate from client-certificate-data")
+	ErrServerAddressChanged      = errors.New("kubeconfig address field changed")
+	ErrCertExpiringSoon          = errors.New("client certificate is expiring in less than 30 days")
+	ErrCantReadOrUnmarshalConfig = errors.New("cannot read or unmarshal kubeconfig")
+)
+
+var shouldRecreteKubeConfigErrors = []error{
+	ErrClustersFieldEmpty,
+	ErrUsersFieldEmpty,
+	ErrCertDataFieldEmpty,
+	ErrCertDecodeFailed,
+	ErrCertParseFailed,
+	ErrServerAddressChanged,
+	ErrCertExpiringSoon,
+	ErrCantReadOrUnmarshalConfig,
+}
+
+func shouldRecreteKubeConfig(err error) bool {
+	for _, e := range shouldRecreteKubeConfigErrors {
+		if errors.Is(err, e) {
+			return true
+		}
+	}
+	return false
+}
 
 func renewKubeconfigs() error {
 	log.Info("phase: renew kubeconfigs")
@@ -71,11 +103,11 @@ func renewKubeconfig(componentName string) error {
 			return err
 		}
 
-		err, remove := validateKubeconfig(path, tmpPath)
+		err := validateKubeconfig(path, tmpPath)
 		if err != nil {
 			log.Error(err)
 		}
-		if remove {
+		if shouldRecreteKubeConfig(err) {
 			removeFile(path)
 		}
 	}
@@ -89,53 +121,52 @@ func renewKubeconfig(componentName string) error {
 	return prepareKubeconfig(componentName, false)
 }
 
-func validateKubeconfig(path string, tmpPath string) (error, bool) {
-
+func validateKubeconfig(path string, tmpPath string) error {
 	currentKubeconfig, err := loadKubeconfig(path)
 	if err != nil {
-		return err, true
+		return fmt.Errorf("%w", err)
 	}
 	tmpKubeconfig, err := loadKubeconfig(tmpPath)
 	if err != nil {
-		return err, true
+		return fmt.Errorf("%w", err)
 	}
 
 	if len(currentKubeconfig.Clusters) == 0 {
-		return fmt.Errorf("clusters field of kubeconfig %s is empty", path), true
+		return fmt.Errorf("%w: %s", ErrClustersFieldEmpty, path)
 	}
 
 	if len(tmpKubeconfig.Clusters) == 0 {
-		return fmt.Errorf("clusters field of kubeconfig %s is empty", tmpPath), true
+		return fmt.Errorf("%w: %s", ErrClustersFieldEmpty, tmpPath)
 	}
 
 	if len(currentKubeconfig.AuthInfos) == 0 {
-		return fmt.Errorf("users field of kubeconfig %s is empty", path), true
+		return fmt.Errorf("%w: %s", ErrUsersFieldEmpty, path)
 	}
 
 	certData := currentKubeconfig.AuthInfos[0].AuthInfo.ClientCertificateData
 	if len(certData) == 0 {
-		return fmt.Errorf("client-certificate-data field of kubeconfig %s is empty", path), true
+		return fmt.Errorf("%w: %s", ErrCertDataFieldEmpty, path)
 	}
 
 	block, _ := pem.Decode(certData)
 	if len(block.Bytes) == 0 {
-		return fmt.Errorf("cannot pem decode client-certificate-data field of kubeconfig %s", path), true
+		return fmt.Errorf("%w: %s", ErrCertDecodeFailed, path)
 	}
 
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return fmt.Errorf("cannot parse certificate from client-certificate-data field of kubeconfig %s: %v", path, err), true
+		return fmt.Errorf("%w: %s: %v", ErrCertParseFailed, path, err)
 	}
 
 	if currentKubeconfig.Clusters[0].Cluster.Server != tmpKubeconfig.Clusters[0].Cluster.Server {
-		return fmt.Errorf("kubeconfig %s address field changed", path), true
+		return fmt.Errorf("%w: %s", ErrServerAddressChanged, path)
 	}
 
 	if certificateExpiresSoon(cert, 30*24*time.Hour) {
-		return fmt.Errorf("client certificate in kubeconfig %s is expiring in less than 30 days", path), true
+		return fmt.Errorf("%w: %s", ErrCertExpiringSoon, path)
 	}
 
-	return nil, false
+	return nil
 }
 
 func prepareKubeconfig(componentName string, isTemp bool) error {
@@ -156,11 +187,15 @@ func loadKubeconfig(path string) (*configv1.Config, error) {
 	res := &configv1.Config{}
 	r, err := os.ReadFile(path)
 	if err != nil {
-		return res, err
+		return nil, fmt.Errorf("%w: %v", ErrCantReadOrUnmarshalConfig, err)
 	}
 
 	err = yaml.Unmarshal(r, res)
-	return res, err
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrCantReadOrUnmarshalConfig, err)
+	}
+
+	return res, nil
 }
 
 func updateRootKubeconfig() error {
