@@ -43,5 +43,11 @@ resource "decort_kvmvm" "master_vm" {
     net_type = local.net_type_vins
     net_id = local.vins_id
   }
+
+  lifecycle {
+    ignore_changes = [
+      cloud_init,
+    ]
+  }
 }
 
