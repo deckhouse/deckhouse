@@ -986,7 +986,8 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 Например на текущий момент в CSE редакции отсутствует модуль CertManager, поэтому перед его отключением необходимо перевести `Режим работы HTTPS` для связанных компонентов (например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/150-user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/300-prometheus/configuration.html#parameters-https-mode
 ) ) на альтернативаные варианты.
 
-    Отключить не поддерживаемые модули в CSE редакции можно следующими командами: 
+    Отключить не поддерживаемые модули в CSE редакции можно следующими командами:
+
    ```shell
    kubectl -n d8-system exec -it deploy/deckhouse bash 
 
@@ -1030,10 +1031,13 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
        EOF_TOML
    EOF
    ```
+
     Дождитесь появление файла на нодах и завершения синхронизации bashible:
+
    ```shell
    /etc/containerd/conf.d/cse-registry.toml
    ```
+
     В журнале systemd-сервиса bashible на master-узле должно появиться сообщение `Configuration is in sync, nothing to do`.
 
     Пример:
@@ -1051,6 +1055,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    ```console
    kubectl run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:v1.58.2 --command sleep -- infinity
    ```
+
    Как под станет в статусе `Running` выполните следующие команды:
 
    ```console
@@ -1089,6 +1094,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
         sed -i 's|crictl pull .*|crictl pull registry-cse.deckhouse.ru/deckhouse/cse@$CSE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
    EOF
    ```
+
     В журнале systemd-сервиса bashible на master-узле должно появиться сообщение `Configuration is in sync, nothing to do`.
 
     Пример:
@@ -1102,6 +1108,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
     ```
 
 1. Актуализируйте секрет доступа к registry deckhouse, выполнив следующие команды:
+
    ```console
    kubectl -n d8-system create secret generic deckhouse-registry \
      --from-literal=".dockerconfigjson"="{\"auths\": { \"registry-cse.deckhouse.ru\": { \"username\": \"license-token\", \"password\": \"$LICENSE_TOKEN\", \"auth\": \"$AUTH_STRING\" }}}" \
@@ -1112,10 +1119,13 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
      --dry-run='client' \
      -o yaml > /tmp/cse-deckhouse-registry.yaml
    ```
+
    ```console
    kubectl replace -f /tmp/cse-deckhouse-registry.yaml
    ```
+
 1. Примените CSE образ:
+
    ```console
    kubectl -n d8-system set image deployment/deckhouse deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:v1.58.2
    ```
@@ -1134,7 +1144,9 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
      | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
+
    Если в выводе присутствует поды модуля chrony, заново включите данный модуль(в CSE данный модуль по умолчанию выключен):
+
    ```console
    kubectl  -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
    ```
@@ -1170,6 +1182,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    ```
 
   После синхронизации bashible, (в журнале systemd-сервиса bashible на master-узле должно появиться сообщение `Configuration is in sync, nothing to do` ) удалите созданную ngc:
+
    ```shell
    kubectl  delete ngc del-temp-config.sh
    ```
