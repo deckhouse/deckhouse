@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// delete the migration after 1.64
+
 package hooks
 
 import (
