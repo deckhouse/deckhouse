@@ -1,5 +1,70 @@
 Subject: [PATCH] logs
 ---
+Index: staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go	(date 1724449854272)
+@@ -363,6 +363,18 @@
+ 	requestScope := crdInfo.requestScopes[requestInfo.APIVersion]
+ 	storage := crdInfo.storages[requestInfo.APIVersion].CustomResource
+
++	klog.V(2).Infof(
++		"serve resource: useragent %s/%s/%s; verb %s; url %s; api %s/%s/%s \n",
++		req.Header.Get("User-Agent"),
++		req.Header.Get("X-User-Agent"),
++		req.Header.Get("X-Device-User-Agent"),
++		requestInfo.Verb,
++		req.URL.String(),
++		requestInfo.APIVersion,
++		requestInfo.Resource,
++		requestInfo.APIGroup,
++	)
++
+ 	switch requestInfo.Verb {
+ 	case "get":
+ 		return handlers.GetResource(storage, requestScope)
+@@ -410,6 +422,18 @@
+ 	requestScope := crdInfo.statusRequestScopes[requestInfo.APIVersion]
+ 	storage := crdInfo.storages[requestInfo.APIVersion].Status
+
++	klog.V(2).Infof(
++		"serve status: useragent %s/%s/%s; verb %s; url %s; api %s/%s/%s \n",
++		req.Header.Get("User-Agent"),
++		req.Header.Get("X-User-Agent"),
++		req.Header.Get("X-Device-User-Agent"),
++		requestInfo.Verb,
++		req.URL.String(),
++		requestInfo.APIVersion,
++		requestInfo.Resource,
++		requestInfo.APIGroup,
++	)
++
+ 	switch requestInfo.Verb {
+ 	case "get":
+ 		return handlers.GetResource(storage, requestScope)
+@@ -430,6 +454,18 @@
+ 	requestScope := crdInfo.scaleRequestScopes[requestInfo.APIVersion]
+ 	storage := crdInfo.storages[requestInfo.APIVersion].Scale
+
++	klog.V(2).Infof(
++		"serve scale: useragent %s/%s/%s; verb %s; url %s; api %s/%s/%s \n",
++		req.Header.Get("User-Agent"),
++		req.Header.Get("X-User-Agent"),
++		req.Header.Get("X-Device-User-Agent"),
++		requestInfo.Verb,
++		req.URL.String(),
++		requestInfo.APIVersion,
++		requestInfo.Resource,
++		requestInfo.APIGroup,
++	)
++
+ 	switch requestInfo.Verb {
+ 	case "get":
+ 		return handlers.GetResource(storage, requestScope)
 Index: staging/src/k8s.io/apiserver/pkg/endpoints/installer.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
