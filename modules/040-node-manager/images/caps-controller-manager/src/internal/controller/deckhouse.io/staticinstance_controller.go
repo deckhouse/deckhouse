@@ -86,12 +86,6 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	instanceScope, err := scope.NewInstanceScope(newScope, staticInstance)
 	if err != nil {
-		conditions.MarkFalse(staticInstance, clusterv1.MachineHasFailureReason, err.Error(), clusterv1.ConditionSeverityError, "")
-		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseError)
-		err2 := instanceScope.Patch(ctx)
-		if err2 != nil {
-			return ctrl.Result{}, errors.Wrap(err2, "failed to set StaticInstance to Error phase")
-		}
 		return ctrl.Result{}, errors.Wrap(err, "failed to create instance scope")
 	}
 	defer func() {
@@ -101,7 +95,6 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}()
 
-	conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason)
 	err = instanceScope.LoadSSHCredentials(ctx, r.Recorder)
 	if err != nil {
 		conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason, err.Error(), clusterv1.ConditionSeverityError, "")
@@ -111,10 +104,13 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, errors.Wrap(err2, "failed to set StaticInstance to Error phase")
 		}
 		return ctrl.Result{}, errors.Wrap(err, "failed to load SSHCredentials")
-	}
-	err = instanceScope.Patch(ctx)
-	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to set StaticInstance to Error phase")
+	} else {
+		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseInit)
+		conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason)
+		err = instanceScope.Patch(ctx)
+		if err != nil {
+			return ctrl.Result{}, errors.Wrap(err, "failed to set StaticInstance to Error phase")
+		}
 	}
 
 	machineScope, err := r.getStaticMachine(ctx, staticInstance)
@@ -158,9 +154,7 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 		return r.adoptBootstrappedStaticInstance(ctx, instanceScope)
 	}
 
-	if instanceScope.Instance.Status.CurrentStatus == nil ||
-		instanceScope.Instance.Status.CurrentStatus.Phase == "" ||
-		instanceScope.Instance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseError {
+	if instanceScope.Instance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseInit {
 		conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceAddedToNodeGroupCondition)
 
 		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)

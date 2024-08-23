@@ -133,6 +133,7 @@ spec:
                           at the current point in time.
                       enum:
                         - Error
+                        - Init
                         - Pending
                         - Bootstrapping
                         - Running

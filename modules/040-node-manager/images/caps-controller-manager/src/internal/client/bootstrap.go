@@ -83,6 +83,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 	}
 
 	check := c.bootstrapTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
+		conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason)
 		var data string
 		data, err := ssh.ExecSSHCommandToString(instanceScope, "echo 0")
 		if err != nil {
@@ -93,7 +94,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 					c.recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceSshFailed", str)
 					err := errors.New(str)
 					instanceScope.Logger.Error(err, "StaticInstance: Failed to connect via ssh")
-					conditions.MarkFalse(instanceScope.Instance, clusterv1.MachineHasFailureReason, err.Error(), clusterv1.ConditionSeverityError, "")
+					conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason, err.Error(), clusterv1.ConditionSeverityError, "")
 					err2 := instanceScope.Patch(ctx)
 					if err2 != nil {
 						instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
@@ -101,6 +102,10 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 				}
 			}
 			return false
+		}
+		err = instanceScope.Patch(ctx)
+		if err != nil {
+			instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
 		}
 		return true
 	})

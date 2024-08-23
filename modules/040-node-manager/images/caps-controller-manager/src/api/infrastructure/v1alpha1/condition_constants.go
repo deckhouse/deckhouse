@@ -25,6 +25,7 @@ const (
 	// StaticInstanceWaitingForNodeGroupReason indicates when a StaticInstance is waiting for a NodeGroup to be assigned.
 	StaticInstanceWaitingForNodeGroupReason = "WaitingForNodeGroupToBeAssigned"
 
+	// Ssh access checks to StaticInstance
 	StaticInstanceWaitingForCredentialsRefReason = "WaitingForCredentialsRefToBeAssigned"
 
 	StaticInstanceBootstrapSucceededCondition clusterv1.ConditionType = "BootstrapSucceeded"
