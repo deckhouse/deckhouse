@@ -21,6 +21,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+func (m *Manager) updateVirtualProject(ctx context.Context, project *v1alpha2.Project, namespaces []string) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
+			return err
+		}
+		project.Status.Conditions = nil
+		project.Status.Namespaces = namespaces
+		project.Status.TemplateGeneration = 1
+		project.Status.ObservedGeneration = project.Generation
+		project.Status.State = v1alpha2.ProjectStateDeployed
+		return m.client.Status().Update(ctx, project)
+	})
+}
+
 func (m *Manager) ensureVirtualProjects(ctx context.Context) error {
 	deckhouseProject := &v1alpha2.Project{
 		TypeMeta: metav1.TypeMeta{

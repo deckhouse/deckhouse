@@ -51,7 +51,6 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 		m.log.Info("webhook server started")
 		return true, nil
 	}
-
 	if err := wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, true, check); err != nil {
 		m.log.Error(err, "webhook server failed to start")
 		return fmt.Errorf("webhook server failed to start: %w", err)

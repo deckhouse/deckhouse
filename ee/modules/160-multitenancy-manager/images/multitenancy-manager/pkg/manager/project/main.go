@@ -20,10 +20,7 @@ import (
 	"github.com/go-logr/logr"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/util/retry"
-
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -54,7 +51,6 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 		}
 		return true, nil
 	}
-
 	if err := wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, true, check); err != nil {
 		m.log.Error(err, "webhook server failed to start")
 		return fmt.Errorf("webhook server failed to start: %w", err)
@@ -72,10 +68,6 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 		return fmt.Errorf("failed to ensure virtual projects: %w", err)
 	}
 	m.log.Info("ensured virtual projects")
-
-	// start reconcile loop
-	go wait.UntilWithContext(ctx, m.reconcileVirtualProjects, 3*time.Minute)
-
 	return nil
 }
 
@@ -177,6 +169,36 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	return ctrl.Result{}, nil
 }
 
+// HandleVirtual handles virtual project
+func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error) {
+	namespaces := new(corev1.NamespaceList)
+	if err := m.client.List(ctx, namespaces); err != nil {
+		m.log.Error(err, "failed to list namespaces during reconciling the virtual project", "project", project.Name)
+		return ctrl.Result{Requeue: true}, nil
+	}
+	var involvedNamespaces []string
+	for _, namespace := range namespaces.Items {
+		if labels := namespace.GetLabels(); labels != nil {
+			if _, ok := labels[consts.ProjectTemplateLabel]; ok {
+				continue
+			}
+		}
+		isDeckhouseNamespace := strings.HasPrefix(namespace.Name, consts.DeckhouseNamespacePrefix) || strings.HasPrefix(namespace.Name, consts.KubernetesNamespacePrefix)
+		if project.Name == consts.DeckhouseProjectName && isDeckhouseNamespace {
+			involvedNamespaces = append(involvedNamespaces, namespace.Name)
+		}
+		if project.Name == consts.OthersProjectName && !isDeckhouseNamespace {
+			involvedNamespaces = append(involvedNamespaces, namespace.Name)
+		}
+	}
+	if err := m.updateVirtualProject(ctx, project, involvedNamespaces); err != nil {
+		m.log.Error(err, "failed to update the virtual project", "project", project.Name)
+		return ctrl.Result{Requeue: true}, nil
+	}
+	m.log.Info("the virtual project reconciled", "project", project.Name)
+	return ctrl.Result{}, nil
+}
+
 // Delete deletes project`s resources
 func (m *Manager) Delete(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error) {
 	// delete resources
@@ -193,66 +215,4 @@ func (m *Manager) Delete(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 
 	m.log.Info("successfully deleted project", "project", project.Name)
 	return ctrl.Result{}, nil
-}
-
-// reconcile virtual projects
-func (m *Manager) reconcileVirtualProjects(ctx context.Context) {
-	m.log.Info("reconciling virtual projects")
-
-	deckhouseProject := new(v1alpha2.Project)
-	if err := m.client.Get(ctx, types.NamespacedName{Name: consts.DeckhouseProjectName}, deckhouseProject); err != nil {
-		m.log.Error(err, "failed to get the deckhouse virtual project")
-		return
-	}
-
-	othersProject := new(v1alpha2.Project)
-	if err := m.client.Get(ctx, types.NamespacedName{Name: consts.OthersProjectName}, othersProject); err != nil {
-		m.log.Error(err, "failed to get the others virtual project")
-		return
-	}
-
-	namespaces := new(corev1.NamespaceList)
-	if err := m.client.List(ctx, namespaces); err != nil {
-		m.log.Error(err, "failed to list namespaces")
-	}
-	var deckhouseNamespaces, othersNamespaces []string
-	for _, namespace := range namespaces.Items {
-		if labels := namespace.GetLabels(); labels != nil {
-			if val, ok := labels[consts.HeritageLabel]; ok && val == consts.MultitenancyHeritage {
-				continue
-			}
-			if _, ok := labels[consts.ProjectTemplateLabel]; ok {
-				continue
-			}
-		}
-		if strings.HasPrefix(namespace.Name, consts.DeckhouseNamespacePrefix) || strings.HasPrefix(namespace.Name, consts.KubernetesNamespacePrefix) {
-			deckhouseNamespaces = append(deckhouseNamespaces, namespace.Name)
-		} else {
-			othersNamespaces = append(othersNamespaces, namespace.Name)
-		}
-	}
-	if err := m.updateVirtualProject(ctx, deckhouseProject, deckhouseNamespaces); err != nil {
-		m.log.Error(err, "failed to update the deckhouse virtual project")
-		return
-	}
-	if err := m.updateVirtualProject(ctx, othersProject, othersNamespaces); err != nil {
-		m.log.Error(err, "failed to update the other virtual project")
-		return
-	}
-
-	m.log.Info("virtual projects reconciled")
-}
-
-func (m *Manager) updateVirtualProject(ctx context.Context, project *v1alpha2.Project, namespaces []string) error {
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
-			return err
-		}
-		project.Status.Conditions = nil
-		project.Status.Namespaces = namespaces
-		project.Status.TemplateGeneration = 1
-		project.Status.ObservedGeneration = project.Generation
-		project.Status.State = v1alpha2.ProjectStateDeployed
-		return m.client.Status().Update(ctx, project)
-	})
 }
