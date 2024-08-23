@@ -384,7 +384,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		},
 		{
 			Name:  "ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS",
-			Value: "DeckhouseVersion,KubernetesVersion,Static,DynamicallyEnabled,KubeConfig,ScriptEnabled,Bootstrapped",
+			Value: "Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled",
 		},
 	}
 
