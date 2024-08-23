@@ -104,5 +104,4 @@ fi
 if zypper --version >/dev/null 2>/dev/null; then
   bundle="opensuse"
 fi
-
 try_bundle "${bundle}"

@@ -50,6 +50,12 @@ case "$ID" in
     esac
     name_is_not_supported
   ;;
+  opensuse-leap)
+    case "$VERSION" in 15.*)
+        echo "opensuse" && exit 0 ;;
+    esac
+    name_is_not_supported
+  ;;
   "")
     >&2 echo "ERROR: Can't determine OS! No ID in /etc/os-release."
     exit 1
@@ -73,5 +79,8 @@ done
 bundle="debian"
 if yum -q --version >/dev/null 2>/dev/null; then
   bundle="centos"
+fi
+if zypper --version >/dev/null 2>/dev/null; then
+  bundle="opensuse"
 fi
 try_bundle "${bundle}"
