@@ -72,6 +72,14 @@ spec:
       - name: descheduler
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $ "descheduler") }}
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10258
+            scheme: HTTPS
+          initialDelaySeconds: 3
+          periodSeconds: 10
         volumeMounts:
         - mountPath: /policy
           name: policy-volume
@@ -107,9 +115,11 @@ spec:
                 fieldPath: status.podIP
           - name: KUBE_RBAC_PROXY_CONFIG
             value: |
+              excludePaths:
+              - /healthz
               upstreams:
-              - upstream: http://127.0.0.1:10258/metrics
-                path: /metrics
+              - upstream: http://127.0.0.1:10258/
+                path: /
                 authorization:
                   resourceAttributes:
                     namespace: d8-{{ .Chart.Name }}
