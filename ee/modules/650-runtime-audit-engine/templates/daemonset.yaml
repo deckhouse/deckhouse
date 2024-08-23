@@ -134,6 +134,8 @@ spec:
       - name: falcosidekick
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "falcosidekick") }}
+        command:
+        - /falcosidekick
         env:
         - name: LISTENADDRESS
           value: "127.0.0.1"
