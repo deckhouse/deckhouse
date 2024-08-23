@@ -33,7 +33,7 @@ metadata:
 spec: {}
 `
 
-var _ = FDescribe("MetalLB hooks :: delete deprecated AddressPool CRD", func() {
+var _ = Describe("MetalLB hooks :: delete deprecated AddressPool CRD", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
