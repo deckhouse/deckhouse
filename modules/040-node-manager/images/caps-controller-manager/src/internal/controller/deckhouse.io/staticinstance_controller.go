@@ -101,15 +101,20 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}()
 
+	conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason)
 	err = instanceScope.LoadSSHCredentials(ctx, r.Recorder)
 	if err != nil {
-		conditions.MarkFalse(instanceScope.Instance, clusterv1.IncorrectExternalRefReason, err.Error(), clusterv1.ConditionSeverityError, "")
+		conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason, err.Error(), clusterv1.ConditionSeverityError, "")
 		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseError)
 		err2 := instanceScope.Patch(ctx)
 		if err2 != nil {
 			return ctrl.Result{}, errors.Wrap(err2, "failed to set StaticInstance to Error phase")
 		}
 		return ctrl.Result{}, errors.Wrap(err, "failed to load SSHCredentials")
+	}
+	err = instanceScope.Patch(ctx)
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to set StaticInstance to Error phase")
 	}
 
 	machineScope, err := r.getStaticMachine(ctx, staticInstance)
