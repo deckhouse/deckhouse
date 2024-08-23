@@ -120,7 +120,7 @@ func clusterIsBootstrapped(input *go_hook.HookInput) error {
 		// if we have cm here then set value and return
 		// configmap is source of truth
 		input.Values.Set(clusterBootstrapFlagPath, true)
-		return nil
+		return createBootstrappedFile()
 	}
 
 	// not have `is bootstrap` configmap
