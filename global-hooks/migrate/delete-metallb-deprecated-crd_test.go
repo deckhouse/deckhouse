@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// This hook should be deleted in DH version 1.65.
-
 package hooks
 
 import (
