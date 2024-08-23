@@ -482,17 +482,11 @@ spec:
 
 The log buffering configuration is essential for improving the reliability and performance of the log collection system. Buffering can be useful in the following cases:
 
-1. Temporary connectivity disruptions:
+1. Temporary connectivity disruptions. If there are temporary disruptions or instability in the connection to the log storage system (such as Elasticsearch), a buffer allows logs to be temporarily stored and sent when the connection is restored.
 
-    If there are temporary disruptions or instability in the connection to the log storage system (such as Elasticsearch), a buffer allows logs to be temporarily stored and sent when the connection is restored.
+1. Smoothing out load peaks. During sudden spikes in log volume, a buffer helps smooth out peak loads on the log storage system, preventing it from becoming overloaded and potentially losing data.
 
-1. Smoothing out load peaks:
-
-    During sudden spikes in log volume, a buffer helps smooth out peak loads on the log storage system, preventing it from becoming overloaded and potentially losing data.
-
-1. Performance optimization:
-  
-    Buffering helps optimize the performance of the log collection system by accumulating logs and sending them in batches, which reduces the number of network requests and improves overall throughput.
+1. Performance optimization. Buffering helps optimize the performance of the log collection system by accumulating logs and sending them in batches, which reduces the number of network requests and improves overall throughput.
 
 ### Example of enabling in-memory buffering
 
@@ -546,6 +540,6 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
-more detailed description of the parameters is available in the [ClusterLogDestination](cr.html#clusterlogdestination) resource
+More detailed description of the parameters is available in the [ClusterLogDestination](cr.html#clusterlogdestination) resource.
 
 {% endraw %}
