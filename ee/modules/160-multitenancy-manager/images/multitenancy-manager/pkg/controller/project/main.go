@@ -65,7 +65,7 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, log logr.
 			predicate.AnnotationChangedPredicate{},
 			predicate.GenerationChangedPredicate{},
 			customPredicate[client.Object]{log: log})).
-		WatchesMetadata(&v1.Namespace{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
+		Watches(&v1.Namespace{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
 			if _, ok := object.GetLabels()[consts.ProjectTemplateLabel]; ok {
 				return nil
 			}
