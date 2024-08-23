@@ -1,0 +1,150 @@
+Subject: [PATCH] logs
+---
+Index: staging/src/k8s.io/apiserver/pkg/endpoints/installer.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/installer.go b/staging/src/k8s.io/apiserver/pkg/endpoints/installer.go
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/installer.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/installer.go	(date 1724446093305)
+@@ -18,6 +18,7 @@
+
+ import (
+ 	"fmt"
++	"k8s.io/klog/v2"
+ 	"net/http"
+ 	"reflect"
+ 	"sort"
+@@ -1262,60 +1263,131 @@
+
+ func restfulListResource(r rest.Lister, rw rest.Watcher, scope handlers.RequestScope, forceWatch bool, minRequestTimeout time.Duration) restful.RouteFunction {
+ 	return func(req *restful.Request, res *restful.Response) {
++		klog.V(2).Infof(
++			"Call list resource: useragent %s/%s/%s; url %s;\n",
++			req.Request.Header.Get("User-Agent"),
++			req.Request.Header.Get("X-User-Agent"),
++			req.Request.Header.Get("X-Device-User-Agent"),
++			req.Request.URL.String(),
++		)
+ 		handlers.ListResource(r, rw, &scope, forceWatch, minRequestTimeout)(res.ResponseWriter, req.Request)
+ 	}
+ }
+
+ func restfulCreateNamedResource(r rest.NamedCreater, scope handlers.RequestScope, admit admission.Interface) restful.RouteFunction {
+ 	return func(req *restful.Request, res *restful.Response) {
++		klog.V(2).Infof(
++			"Call create named resource: useragent %s/%s/%s; url %s;\n",
++			req.Request.Header.Get("User-Agent"),
++			req.Request.Header.Get("X-User-Agent"),
++			req.Request.Header.Get("X-Device-User-Agent"),
++			req.Request.URL.String(),
++		)
+ 		handlers.CreateNamedResource(r, &scope, admit)(res.ResponseWriter, req.Request)
+ 	}
+ }
+
+ func restfulCreateResource(r rest.Creater, scope handlers.RequestScope, admit admission.Interface) restful.RouteFunction {
+ 	return func(req *restful.Request, res *restful.Response) {
++		klog.V(2).Infof(
++			"Call create resource: useragent %s/%s/%s; url %s;\n",
++			req.Request.Header.Get("User-Agent"),
++			req.Request.Header.Get("X-User-Agent"),
++			req.Request.Header.Get("X-Device-User-Agent"),
++			req.Request.URL.String(),
++		)
++
+ 		handlers.CreateResource(r, &scope, admit)(res.ResponseWriter, req.Request)
+ 	}
+ }
+
+ func restfulDeleteResource(r rest.GracefulDeleter, allowsOptions bool, scope handlers.RequestScope, admit admission.Interface) restful.RouteFunction {
+ 	return func(req *restful.Request, res *restful.Response) {
++		klog.V(2).Infof(
++			"Call delete resource: useragent %s/%s/%s; url %s;\n",
++			req.Request.Header.Get("User-Agent"),
++			req.Request.Header.Get("X-User-Agent"),
++			req.Request.Header.Get("X-Device-User-Agent"),
++			req.Request.URL.String(),
++		)
+ 		handlers.DeleteResource(r, allowsOptions, &scope, admit)(res.ResponseWriter, req.Request)
+ 	}
+ }
+
+ func restfulDeleteCollection(r rest.CollectionDeleter, checkBody bool, scope handlers.RequestScope, admit admission.Interface) restful.RouteFunction {
+ 	return func(req *restful.Request, res *restful.Response) {
++		klog.V(2).Infof(
++			"Call delete collection resource: useragent %s/%s/%s; url %s;\n",
++			req.Request.Header.Get("User-Agent"),
++			req.Request.Header.Get("X-User-Agent"),
++			req.Request.Header.Get("X-Device-User-Agent"),
++			req.Request.URL.String(),
++		)
+ 		handlers.DeleteCollection(r, checkBody, &scope, admit)(res.ResponseWriter, req.Request)
+ 	}
+ }
+
+ func restfulUpdateResource(r rest.Updater, scope handlers.RequestScope, admit admission.Interface) restful.RouteFunction {
+ 	return func(req *restful.Request, res *restful.Response) {
++		klog.V(2).Infof(
++			"Call update resource: useragent %s/%s/%s; url %s;\n",
++			req.Request.Header.Get("User-Agent"),
++			req.Request.Header.Get("X-User-Agent"),
++			req.Request.Header.Get("X-Device-User-Agent"),
++			req.Request.URL.String(),
++		)
+ 		handlers.UpdateResource(r, &scope, admit)(res.ResponseWriter, req.Request)
+ 	}
+ }
+
+ func restfulPatchResource(r rest.Patcher, scope handlers.RequestScope, admit admission.Interface, supportedTypes []string) restful.RouteFunction {
+ 	return func(req *restful.Request, res *restful.Response) {
++		klog.V(2).Infof(
++			"Call patch resource: useragent %s/%s/%s; url %s;\n",
++			req.Request.Header.Get("User-Agent"),
++			req.Request.Header.Get("X-User-Agent"),
++			req.Request.Header.Get("X-Device-User-Agent"),
++			req.Request.URL.String(),
++		)
+ 		handlers.PatchResource(r, &scope, admit, supportedTypes)(res.ResponseWriter, req.Request)
+ 	}
+ }
+
+ func restfulGetResource(r rest.Getter, scope handlers.RequestScope) restful.RouteFunction {
+ 	return func(req *restful.Request, res *restful.Response) {
++		klog.V(2).Infof(
++			"Call get resource: useragent %s/%s/%s; url %s;\n",
++			req.Request.Header.Get("User-Agent"),
++			req.Request.Header.Get("X-User-Agent"),
++			req.Request.Header.Get("X-Device-User-Agent"),
++			req.Request.URL.String(),
++		)
+ 		handlers.GetResource(r, &scope)(res.ResponseWriter, req.Request)
+ 	}
+ }
+
+ func restfulGetResourceWithOptions(r rest.GetterWithOptions, scope handlers.RequestScope, isSubresource bool) restful.RouteFunction {
+ 	return func(req *restful.Request, res *restful.Response) {
++		klog.V(2).Infof(
++			"Call get resource with option resource: useragent %s/%s/%s; url %s;\n",
++			req.Request.Header.Get("User-Agent"),
++			req.Request.Header.Get("X-User-Agent"),
++			req.Request.Header.Get("X-Device-User-Agent"),
++			req.Request.URL.String(),
++		)
+ 		handlers.GetResourceWithOptions(r, &scope, isSubresource)(res.ResponseWriter, req.Request)
+ 	}
+ }
+
+ func restfulConnectResource(connecter rest.Connecter, scope handlers.RequestScope, admit admission.Interface, restPath string, isSubresource bool) restful.RouteFunction {
+ 	return func(req *restful.Request, res *restful.Response) {
++		klog.V(2).Infof(
++			"Call connect resource: useragent %s/%s/%s; url %s;\n",
++			req.Request.Header.Get("User-Agent"),
++			req.Request.Header.Get("X-User-Agent"),
++			req.Request.Header.Get("X-Device-User-Agent"),
++			req.Request.URL.String(),
++		)
+ 		handlers.ConnectResource(connecter, &scope, admit, restPath, isSubresource)(res.ResponseWriter, req.Request)
+ 	}
+ }
