@@ -92,9 +92,6 @@ spec:
           timeoutSeconds: 5
           periodSeconds: 15
         ports:
-        - name: metrics
-          containerPort: 8080
-          protocol: "TCP"
         - name: health-probe
           containerPort: 8081
           protocol: "TCP"
