@@ -74,7 +74,7 @@ kind: Descheduler
 metadata:
   name: test3
 spec:
-  fitNodesLabelSelector:
+  nodeLabelSelector:
     matchExpressions:
     - key: node.deckhouse.io/group
       operator: In
@@ -94,7 +94,7 @@ kind: Descheduler
 metadata:
   name: test4
 spec:
-  fitNodesLabelSelector:
+  nodeLabelSelector:
     matchExpressions:
     - key: node.deckhouse.io/group
       operator: In
@@ -114,7 +114,7 @@ kind: Descheduler
 metadata:
   name: test5
 spec:
-  fitNodesLabelSelector:
+  nodeLabelSelector:
     matchExpressions:
     - key: node.deckhouse.io/group
       operator: In
@@ -126,7 +126,7 @@ spec:
     - key: dbType
       operator: In
       values: ["test1", "test2"]
-  podNamespaceLabelSelector:
+  namespaceLabelSelector:
     matchLabels:
       kubernetes.io/metadata.name: test
   priorityClassThreshold:
@@ -236,7 +236,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 		It("Should run without errors", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
-- fitNodesLabelSelector: node.deckhouse.io/group in (test1,test2)
+- nodeLabelSelector: node.deckhouse.io/group in (test1,test2)
   name: test3
   strategies:
     highNodeUtilization:
@@ -258,7 +258,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 		It("Should run without errors", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
-- fitNodesLabelSelector: node.deckhouse.io/group in (test1,test2)
+- nodeLabelSelector: node.deckhouse.io/group in (test1,test2)
   name: test4
   strategies:
     highNodeUtilization:
@@ -280,7 +280,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 		It("Should run without errors", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
-- fitNodesLabelSelector: node.deckhouse.io/group in (test1,test2)
+- nodeLabelSelector: node.deckhouse.io/group in (test1,test2)
   name: test5
   podLabelSelector:
     matchExpressions:
@@ -293,7 +293,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
       app: test1
   priorityClassThreshold:
     value: 1000
-  podNamespaceLabelSelector:
+  namespaceLabelSelector:
     matchLabels:
       kubernetes.io/metadata.name: test
   strategies:
