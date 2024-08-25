@@ -63,9 +63,9 @@ func applyDeschedulerFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 
 type InternalValuesDeschedulerSpec struct {
 	Name                   string                             `json:"name" yaml:"name"`
-	nodeLabelSelector      string                             `json:"nodeLabelSelector,omitempty" yaml:"nodeLabelSelector,omitempty"`
+	NodeLabelSelector      string                             `json:"nodeLabelSelector,omitempty" yaml:"nodeLabelSelector,omitempty"`
 	PodLabelSelector       *metav1.LabelSelector              `json:"podLabelSelector,omitempty" yaml:"podLabelSelector,omitempty"`
-	namespaceLabelSelector *metav1.LabelSelector              `json:"namespaceLabelSelector,omitempty" yaml:"namespaceLabelSelector,omitempty"`
+	NamespaceLabelSelector *metav1.LabelSelector              `json:"namespaceLabelSelector,omitempty" yaml:"namespaceLabelSelector,omitempty"`
 	PriorityClassThreshold *dsv1alpha1.PriorityClassThreshold `json:"priorityClassThreshold,omitempty" yaml:"priorityClassThreshold,omitempty"`
 	Strategies             dsv1alpha1.Strategies              `json:"strategies" yaml:"strategies"`
 }
@@ -78,14 +78,14 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			Name:       item.Name,
 			Strategies: item.Spec.Strategies,
 		}
-		if item.Spec.nodeLabelSelector != nil {
-			ds.nodeLabelSelector = metav1.FormatLabelSelector(item.Spec.nodeLabelSelector)
+		if item.Spec.NodeLabelSelector != nil {
+			ds.NodeLabelSelector = metav1.FormatLabelSelector(item.Spec.NodeLabelSelector)
 		}
 		if item.Spec.PodLabelSelector != nil {
 			ds.PodLabelSelector = item.Spec.PodLabelSelector
 		}
-		if item.Spec.namespaceLabelSelector != nil {
-			ds.namespaceLabelSelector = item.Spec.namespaceLabelSelector
+		if item.Spec.NamespaceLabelSelector != nil {
+			ds.NamespaceLabelSelector = item.Spec.NamespaceLabelSelector
 		}
 		if item.Spec.PriorityClassThreshold != nil {
 			ds.PriorityClassThreshold = item.Spec.PriorityClassThreshold
