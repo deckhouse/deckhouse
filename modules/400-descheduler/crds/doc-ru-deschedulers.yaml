@@ -19,7 +19,7 @@ spec:
               type: object
               description: Defines the behavior of a descheduler instance.
               properties:
-                fitNodesLabelSelector:
+                nodeLabelSelector:
                   description: Limiting the nodes which are allowed to fit evicted pods.
                   type: object
                   properties:
@@ -125,7 +125,7 @@ spec:
                       type: object
                       additionalProperties:
                         type: string
-                podNamespaceLabelSelector:
+                namespaceLabelSelector:
                   type: object
                   description: Limiting the pods which are processed by namespace labels.
                   properties:

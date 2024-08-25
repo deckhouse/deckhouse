@@ -16,8 +16,8 @@ data:
       pluginConfig:
       - name: "DefaultEvictor"
         args:
-          {{- if $d.fitNodesLabelSelector }}
-          nodeSelector: {{ $d.fitNodesLabelSelector }}
+          {{- if $d.nodeLabelSelector }}
+          nodeSelector: {{ $d.nodeLabelSelector }}
           {{- end }}
           evictLocalStoragePods: false
           evictSystemCriticalPods: false
@@ -28,9 +28,9 @@ data:
           labelSelector:
             {{- $d.podLabelSelector | toYaml | nindent 12 }}
           {{- end }}
-          {{- if $d.podNamespaceLabelSelector }}
+          {{- if $d.namespaceLabelSelector }}
           namespaceLabelSelector:
-            {{- $d.podNamespaceLabelSelector | toYaml | nindent 12 }}
+            {{- $d.namespaceLabelSelector | toYaml | nindent 12 }}
           {{- end }}
           {{- if $d.priorityClassThreshold }}
           priorityThreshold:

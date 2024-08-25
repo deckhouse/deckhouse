@@ -78,7 +78,7 @@ internal:
           memory: 23
           pods: 3
   - name: test3
-    fitNodesLabelSelector: node.deckhouse.io/group=test1,node.deckhouse.io/type in (test1,test2)
+    nodeLabelSelector: node.deckhouse.io/group=test1,node.deckhouse.io/type in (test1,test2)
     podLabelSelector:
       matchExpressions:
       - key: dbType
@@ -88,7 +88,7 @@ internal:
         - test2
       matchLabels:
         app: test1
-    podNamespaceLabelSelector:
+    namespaceLabelSelector:
       matchExpressions:
       - key: dbType
         operator: In

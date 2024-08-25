@@ -1,4 +1,4 @@
-{{- $version := "0.30.1" }}
+{{- $version := "4e4c5f79fb8580f6817ff378cdad27c410546e0c" }}
 ---
 artifact: {{ .ModuleName }}/build-artifact
 from: {{ .Images.BASE_GOLANG_22_ALPINE }}
@@ -17,7 +17,8 @@ shell:
   install:
     - mkdir /src
     - cd /src
-    - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/descheduler.git .
+    - git clone {{ $.SOURCE_REPO }}/kubernetes-sigs/descheduler.git .
+    - git checkout {{ $version }}
     - git apply /patches/*.patch --verbose
     - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version={{ $version }} -X main.gitCommit=9f7e7fd5bb64989f5188eb42152370602c1c9eda" -o descheduler sigs.k8s.io/descheduler/cmd/descheduler
     - chown 64535:64535 descheduler
