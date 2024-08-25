@@ -6,38 +6,8 @@ metadata:
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 data:
+  {{- $default := tpl .Values.loki.internal.config . | fromYaml }}
+  {{- $custom := tpl .Values.loki.configCustom . | fromYaml }}
+  {{- $merged := merge $default $custom }}
   config.yaml: |-
-    auth_enabled: false
-
-    server:
-      http_listen_address: 127.0.0.1
-      http_listen_port: 3101
-
-    limits_config:
-      retention_period: {{ .Values.loki.retentionPeriodHours | default 168 }}h
-
-    common:
-      path_prefix: /loki
-      storage:
-        filesystem:
-          chunks_directory: /loki/chunks
-          rules_directory: /loki/rules
-      replication_factor: 1
-      ring:
-        kvstore:
-          store: inmemory
-
-    schema_config:
-      configs:
-        - from: 2020-10-24
-          store: boltdb-shipper
-          object_store: filesystem
-          schema: v11
-          index:
-            prefix: index_
-            period: 24h
-    compactor:
-      shared_store: filesystem
-      retention_enabled: true
-      retention_delete_delay: 1h
-      retention_delete_worker_count: 150
+    {{- toYaml $merged | nindent 4 }}

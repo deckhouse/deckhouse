@@ -1,5 +1,14 @@
 type: object
 properties:
+  configCustom:
+    type: string
+    description: >
+      Custom loki config on yaml format. Will be merged with default config.
+    default: ""
+    x-examples:
+      - |
+        limits_config:
+          grpc_server_max_send_msg_size: 1048576
   storageClass:
     oneOf:
       - type: string

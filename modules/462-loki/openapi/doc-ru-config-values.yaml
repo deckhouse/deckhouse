@@ -1,4 +1,8 @@
 properties:
+  configCustom:
+    type: string
+    description: >
+      Пользовательская конфигурация loki в формате yaml. Будет проведено слияние с конфигурацией по умолчанию.
   storageClass:
     description: |
       Имя storageClass'а, который использовать.

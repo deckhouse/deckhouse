@@ -22,3 +22,43 @@ properties:
       logShipperToken:
         type: string
         default: ""
+      config:
+        type: string
+        default: |
+          auth_enabled: false
+          server:
+            http_listen_address: 127.0.0.1
+            http_listen_port: 3101
+          limits_config:
+            retention_period: {{ .Values.loki.retentionPeriodHours | default 168 }}h
+          common:
+            path_prefix: /loki
+            storage:
+              filesystem:
+                chunks_directory: /loki/chunks
+                rules_directory: /loki/rules
+            replication_factor: 1
+            ring:
+              kvstore:
+                store: inmemory
+          schema_config:
+            configs:
+              - from: 2020-10-24
+                store: boltdb-shipper
+                object_store: filesystem
+                schema: v11
+                index:
+                  prefix: index_
+                  period: 24h
+              - from: 2024-11-01
+                store: tsdb
+                object_store: filesystem
+                schema: v13
+                index:
+                  prefix: index_
+                  period: 24h
+          compactor:
+            shared_store: filesystem
+            retention_enabled: true
+            retention_delete_delay: 1h
+            retention_delete_worker_count: 150
