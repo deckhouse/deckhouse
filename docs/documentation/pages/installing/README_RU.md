@@ -320,6 +320,34 @@ dhctl bootstrap \
 - `<SSH_USER>` — пользователь на сервере для подключения по SSH;
 - `--ssh-agent-private-keys` — файл приватного SSH-ключа для подключения по SSH.
 
+### Проверки
+
+![Схема проверок перед установкой Deckhouse](../../images/common/preflight-checks.png)
+
+- dhctl
+	- global
+		- PublicDomainTemplate is correctly - PublicDomainTemplate не совпадает с clusterDomain
+		- registry credentials are correct - проверка возможности авторизоваться в режестри с указанными в конфигурации авторизационными данными
+	- static
+		- only one --ssh-host parameter used - при статической конфигурации кластера можно указать только один IP адрес для настройке первого мастера.
+		- ssh credential is correctly - проверка возможности подключения по ssh с использованием авторизационных данных указанных при запуске инсталятора
+		- ssh tunnel between installer and node is possible - проверка возможности поднятия ssh  тунеля с ноды до инсталера
+		- that node meets system requirements - проверка соответствия минимальным требованиям узла для установки
+		- python and required modules are installed - проверка доступности python и необходимых библиотек
+		- registry access through proxy - проверка доступности registry через прокси
+		- required ports availability - проверка незанятости необходимых для инсталяции портов
+		- resolve the localhost domain - проверка, что localhost резолвится в IP 127.0.0.1
+	- cloud
+		- cloud master node system requirements are met - проверка что в конфигурации заданы значения удовлетворяющие минимальным требованиям для установки
+- bashable
+	- global
+		- check server hostname - проверка, что hostname соответствует требованиям длина <= 63 символам, все символы в нижнем регистре.  Спец символы недопустимы кроме '-' и '.' которые не могут стоять в начале и конце hosthame
+		- exist embedded contanerd - проверка отсутствия предустановленного contanerd
+	- static
+		- check master hostname - проверка уникальности hostname внутри кластера
+	- cloud static
+		- check master hostname - проверка уникальности hostname внутри кластера
+
 ### Откат установки
 
 При установке в поддерживаемом облаке в случае прерывания установки или возникновения проблем во время установки в облаке могут остаться созданные ресурсы. Для их удаления используйте команду `dhctl bootstrap-phase abort`, выполнив ее в контейнере инсталлятора.
