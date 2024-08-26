@@ -23,8 +23,9 @@ spec:
     # limitations under the License.
 
     case $(bb-is-bundle) in
-      debian|ubuntu-lts|astra)    pkg_name="nfs-common" ;;
-      centos|altlinux|redos|rosa) pkg_name="nfs-utils" ;;
+      debian|ubuntu-lts|astra)  run_command="bb-apt-install nfs-common" ;;
+      altlinux)                 run_command="bb-apt-rpm-install nfs-utils"
+      centos|redos|rosa)        run_command="bb-yum-install nfs-utils" ;;
     esac
-
-    bb-yum-or-apt-install $pkg_name
+    
+    $run_command
