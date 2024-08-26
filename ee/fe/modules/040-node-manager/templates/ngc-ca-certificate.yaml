@@ -23,9 +23,7 @@ spec:
     # limitations under the License.
 
     case $(bb-is-bundle) in
-      debian|ubuntu-lts|astra)  run_command="bb-apt-install ca-certificates" ;;
-      altlinux)                 run_command="bb-apt-rpm-install ca-certificates"
-      centos|redos|rosa)        run_command="bb-yum-install ca-certificates" ;;
+      debian|ubuntu-lts|astra)  bb-apt-install ca-certificates ;;
+      altlinux)                 bb-apt-rpm-install ca-certificates ;;
+      centos|redos|rosa)        bb-yum-install ca-certificates ;;
     esac
-    
-    $run_command
