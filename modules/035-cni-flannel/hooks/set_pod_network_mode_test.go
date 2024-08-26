@@ -48,5 +48,5 @@ var _ = Describe("Modules :: cniFlannel :: hooks :: set_pod_network_mode ::", fu
 
 		})
 	})
-	
+
 })
