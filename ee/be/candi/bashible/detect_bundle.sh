@@ -42,7 +42,7 @@ case "$ID" in
     esac
     name_is_not_supported
   ;;
-  mosos-arbat)
+  mosos-arbat|opensuse-leap)
     case "$VERSION" in 15.*)
         echo "opensuse" && exit 0 ;;
     esac
