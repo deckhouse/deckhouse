@@ -91,10 +91,10 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        summary: ETCD database size in use is less than 50% of the actual allocated storage, indicating potential fragmentation, and the total storage size exceeds 75% of the configured quota.
+        summary: etcd database size in use is less than 50% of the actual allocated storage, indicating potential fragmentation, and the total storage size exceeds 75% of the configured quota.
         description: |
-          The ETCD database size in use on instance `{{ $labels.instance }}` is less than 50% of the actual allocated disk space, indicating potential fragmentation
+          The etcd database size in use on instance `{{ $labels.instance }}` is less than 50% of the actual allocated disk space, indicating potential fragmentation
 
           Possible solutions:
           - You can do defragmentation. Use next command:
-          `kubectl -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s`
+            `kubectl -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s`
