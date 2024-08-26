@@ -97,6 +97,7 @@
  - **[upmeter]** Fixed status page CSS in air-gapped environments. [#9287](https://github.com/deckhouse/deckhouse/pull/9287)
  - **[upmeter]** Fixed flapping status page API. [#9287](https://github.com/deckhouse/deckhouse/pull/9287)
  - **[user-authn]** Update `client-groups.patch` for Dex. [#9465](https://github.com/deckhouse/deckhouse/pull/9465)
+ - **[user-authn]** Show real ip addresses in dex and dex-authenticator logs. [#9221](https://github.com/deckhouse/deckhouse/pull/9221)
  - **[user-authn]** Allow to create users with invalid email. [#9171](https://github.com/deckhouse/deckhouse/pull/9171)
 
 ## Chore
