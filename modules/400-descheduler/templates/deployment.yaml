@@ -118,7 +118,7 @@ spec:
               excludePaths:
               - /healthz
               upstreams:
-              - upstream: http://127.0.0.1:10258/
+              - upstream: https://127.0.0.1:10258/
                 path: /
                 authorization:
                   resourceAttributes:
