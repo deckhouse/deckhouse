@@ -106,7 +106,6 @@ func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout i
 	}
 
 	cmd.Stdout = stdout
-
 	cmd.Stderr = stderr
 	if stderr == nil {
 		stderr = NewLogger(instanceScope.Logger.WithName("stderr"))
@@ -126,7 +125,6 @@ func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout i
 func ExecSSHCommandToString(instanceScope *scope.InstanceScope, command string) (string, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-
 	err := ExecSSHCommand(instanceScope, command, stdout, stderr)
 	if err != nil {
 		stderrBytes, err2 := io.ReadAll(stderr)
