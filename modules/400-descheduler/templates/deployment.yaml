@@ -119,6 +119,7 @@ spec:
               - /healthz
               upstreams:
               - upstream: https://127.0.0.1:10258/
+                upstreamInsecureSkipVerify: true
                 path: /
                 authorization:
                   resourceAttributes:
