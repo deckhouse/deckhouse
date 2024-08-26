@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: d8:manage:xxx:admin
+  name: d8:manage:kubernetes:admin
   labels:
     heritage: deckhouse
     module: user-authz
