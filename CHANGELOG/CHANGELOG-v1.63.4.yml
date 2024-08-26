@@ -20,4 +20,6 @@ user-authn:
   fixes:
     - summary: Update `client-groups.patch` for Dex.
       pull_request: https://github.com/deckhouse/deckhouse/pull/9465
+    - summary: Show real ip addresses in dex and dex-authenticator logs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9221
 
