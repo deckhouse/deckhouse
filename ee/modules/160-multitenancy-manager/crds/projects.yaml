@@ -41,14 +41,14 @@ spec:
                   type: string
                 projectTypeName:
                   description: |
-                    The name of the [ProjectType](../cr.html#projecttype) resource that defines which resources will be created in the project.
+                    The name of the [ProjectType](cr.html#projecttype) resource that defines which resources will be created in the project.
                   type: string
                 template:
                   additionalProperties:
                     x-kubernetes-preserve-unknown-fields: true
                   description: |
-                    Values passed to the [resources template](../cr.html#projecttype-v1alpha1-spec-resourcestemplate) when creating the project.
-                    Before creation, the values are validated against the [schema](../cr.html#projecttype-v1alpha1-spec-openapi) of the template's input parameters.
+                    Values passed to the [resources template](cr.html#projecttype-v1alpha1-spec-resourcestemplate) when creating the project.
+                    Before creation, the values are validated against the [schema](cr.html#projecttype-v1alpha1-spec-openapi) of the template's input parameters.
                   type: object
             status:
               type: object

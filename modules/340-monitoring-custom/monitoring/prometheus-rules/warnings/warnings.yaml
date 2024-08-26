@@ -17,7 +17,7 @@
 
         They must be moved from Deckhouse namespace to user-spec namespace (was not labeled as `heritage: deckhouse`).
 
-        The detailed description of the metric collecting process is available in the [documentation](https://deckhouse.io/documentation/v1/modules/300-prometheus/faq.html).
+        The detailed description of the metric collecting process is available in the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html).
       summary: There are ServiceMonitors in Deckhouse namespace that were not created by Deckhouse.
 
   - alert: CustomPodMonitorFoundInCluster
@@ -37,7 +37,7 @@
 
         They must be moved from Deckhouse namespace to user-spec namespace (was not labeled as `heritage: deckhouse`).
 
-        The detailed description of the metric collecting process is available in the [documentation](https://deckhouse.io/documentation/v1/modules/300-prometheus/faq.html).
+        The detailed description of the metric collecting process is available in the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html).
       summary: There are PodMonitors in Deckhouse namespace that were not created by Deckhouse.
 
   - alert: D8CustomPrometheusRuleFoundInCluster
@@ -57,7 +57,7 @@
 
         They must be abandoned and replaced with the `CustomPrometheusRules` object.
 
-        Please, refer to the [documentation](https://deckhouse.io/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules) for information about adding alerts and/or recording rules.
+        Please, refer to the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules) for information about adding alerts and/or recording rules.
       summary: There are PrometheusRules in the cluster that were not created by Deckhouse.
 
   - alert: D8OldPrometheusCustomTargetFormat
@@ -77,5 +77,5 @@
 
         Note that the label format has changed. You need to change the `prometheus-custom-target` label to `prometheus.deckhouse.io/custom-target`.
 
-        For more information, refer to the [documentation](https://deckhouse.io/documentation/v1/modules/300-prometheus/faq.html).
+        For more information, refer to the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html).
       summary: Services with the `prometheus-custom-target` label are used to collect metrics in the cluster.

@@ -37,7 +37,7 @@ properties:
             description: |
               Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the NGINX [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
-              > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) module is enabled.
+              > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) module is enabled.
             properties:
               authURL:
                 type: string
@@ -56,7 +56,7 @@ properties:
 
               This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
-              **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) one.
+              **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) one.
           whitelistSourceRanges:
             type: array
             items:
@@ -98,7 +98,7 @@ properties:
 
               This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
-              **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) one.
+              **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) one.
           whitelistSourceRanges:
             type: array
             items:
@@ -148,7 +148,7 @@ properties:
 
               This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
-              **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) one.
+              **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) one.
           whitelistSourceRanges:
             type: array
             items:
@@ -314,7 +314,7 @@ properties:
     description: |
       Node selector for Upmeter server. The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     items:
@@ -339,4 +339,4 @@ properties:
     description: |
       Node tolerations for Upmeter server. The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).

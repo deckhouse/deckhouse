@@ -13,11 +13,11 @@ spec:
                     Произвольное описание назначения проекта. Укажите пустую строку, если описание не требуется.
                 projectTypeName:
                   description: |
-                    Имя ресурса [ProjectType](../cr.html#projecttype), который определяет, какие ресурсы будут созданы в проекте.
+                    Имя ресурса [ProjectType](cr.html#projecttype), который определяет, какие ресурсы будут созданы в проекте.
                 template:
                   description: |
-                    Значения, передаваемые в [шаблон ресурсов](../cr.html#projecttype-v1alpha1-spec-resourcestemplate) при создании проекта.
-                    Перед созданием, значения согласовываются со [схемой](../cr.html#projecttype-v1alpha1-spec-openapi) входных параметров шаблона ресурсов.
+                    Значения, передаваемые в [шаблон ресурсов](cr.html#projecttype-v1alpha1-spec-resourcestemplate) при создании проекта.
+                    Перед созданием, значения согласовываются со [схемой](cr.html#projecttype-v1alpha1-spec-openapi) входных параметров шаблона ресурсов.
             status:
               description: ""
               properties:
