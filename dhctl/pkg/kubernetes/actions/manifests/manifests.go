@@ -54,9 +54,9 @@ type DeckhouseDeploymentParams struct {
 
 	DeployTime time.Time
 
-	IsSecureRegistry       bool
-	MasterNodeSelector     bool
-	KubeadmBootstrap       bool
+	IsSecureRegistry   bool
+	MasterNodeSelector bool
+	KubeadmBootstrap   bool
 }
 
 type imagesDigests map[string]map[string]interface{}
@@ -382,6 +382,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Name:  "DEBUG_HTTP_SERVER_ADDR",
 			Value: "127.0.0.1:9652",
 		},
+		{
+			Name:  "ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS",
+			Value: "Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled",
+		},
 	}
 
 	// Deployment composition
@@ -398,6 +402,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
 	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
 		Name:  "DOWNLOADED_MODULES_DIR",
+		Value: downloadedModulesDir,
+	})
+	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
+		Name:  "EXTERNAL_MODULES_DIR",
 		Value: downloadedModulesDir,
 	})
 
