@@ -1,4 +1,5 @@
 module: loki
 namespace: d8-monitoring
 scopes:
-  - others
+  - infrastructure
+

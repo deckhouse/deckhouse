@@ -13,20 +13,13 @@ rules:
     resources:
       - configmaps
       - endpoints
-      - persistentvolumeclaims
-      - persistentvolumeclaims/status
       - pods
       - pods/status
       - replicationcontrollers
       - replicationcontrollers/scale
-      - serviceaccounts
       - services
       - services/status
       - limitranges
-      - nodes
-      - persistentvolumes
-      - namespaces
-      - namespaces/status
       - replicationcontrollers/status
       - resourcequotas
       - resourcequotas/status
@@ -111,10 +104,9 @@ rules:
   - apiGroups:
       - networking.k8s.io
     resources:
+      - networkpolicies
       - ingresses
       - ingresses/status
-      - networkpolicies
-      - ingressclasses
     verbs:
       - get
       - list
@@ -123,51 +115,6 @@ rules:
       - coordination.k8s.io
     resources:
       - leases
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - storage.k8s.io
-    resources:
-      - csidrivers
-      - csinodes
-      - storageclasses
-      - csistoragecapacities
-      - volumeattachments
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - scheduling.k8s.io
-    resources:
-      - priorityclasses
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - flowcontrol.apiserver.k8s.io
-    resources:
-      - prioritylevelconfigurations
-      - flowschemas
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - apiextensions.k8s.io
-    resources:
-      - customresourcedefinitions
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - node.k8s.io
-    resources:
-      - runtimeclasses
     verbs:
       - get
       - list

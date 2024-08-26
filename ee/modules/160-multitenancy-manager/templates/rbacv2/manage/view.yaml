@@ -5,7 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: multitenancy-manager
-    rbac.deckhouse.io/aggregate-to-others-as: viewer
+    rbac.deckhouse.io/aggregate-to-deckhouse-as: viewer
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-multitenancy-manager

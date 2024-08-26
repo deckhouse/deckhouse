@@ -5,7 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: descheduler
-    rbac.deckhouse.io/aggregate-to-others-as: viewer
+    rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-descheduler

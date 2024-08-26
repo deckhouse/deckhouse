@@ -11,35 +11,18 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - pods
-    verbs:
-      - create
-      - update
-      - patch
-  - apiGroups:
-      - ""
-    resources:
       - configmaps
       - secrets
       - persistentvolumeclaims
-      - persistentvolumes
       - replicationcontrollers
-      - serviceaccounts
       - services
-      - limitranges
-      - namespaces
+      - pods
     verbs:
       - create
       - update
       - patch
       - delete
       - deletecollection
-  - apiGroups:
-      - ""
-    resources:
-      - bindings
-    verbs:
-      - create
   - apiGroups:
       - ""
       - events.k8s.io
@@ -111,29 +94,21 @@ rules:
       - networking.k8s.io
     resources:
       - ingresses
-      - ingressclasses
+      - networkpolicies
     verbs:
       - get
       - list
       - watch
   - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - localsubjectaccessreviews
+    verbs:
+      - create
+  - apiGroups:
       - coordination.k8s.io
     resources:
       - leases
-    verbs:
-      - create
-      - update
-      - patch
-      - delete
-      - deletecollection
-  - apiGroups:
-      - storage.k8s.io
-    resources:
-      - csidrivers
-      - csinodes
-      - storageclasses
-      - csistoragecapacities
-      - volumeattachments
     verbs:
       - create
       - update

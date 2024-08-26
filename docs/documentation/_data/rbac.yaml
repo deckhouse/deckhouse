@@ -227,7 +227,7 @@ modules:
       use: null
     namespace: d8-chrony
     scopes:
-    - others
+    - infrastructure
   cilium-hubble:
     capabilities:
       manage:
@@ -675,7 +675,7 @@ modules:
       use: null
     namespace: d8-dashboard
     scopes:
-    - others
+    - observability
   deckhouse:
     capabilities:
       manage:
@@ -768,7 +768,7 @@ modules:
       use: null
     namespace: d8-descheduler
     scopes:
-    - others
+    - infrastructure
   extended-monitoring:
     capabilities:
       manage:
@@ -1020,7 +1020,7 @@ modules:
       use: null
     namespace: d8-keepalived
     scopes:
-    - others
+    - infrastructure
   kube-dns:
     capabilities:
       manage:
@@ -1242,7 +1242,7 @@ modules:
       use: null
     namespace: d8-monitoring
     scopes:
-    - others
+    - infrastructure
   metallb:
     capabilities:
       manage:
@@ -1520,7 +1520,7 @@ modules:
       use: null
     namespace: d8-multitenancy-manager
     scopes:
-    - others
+    - deckhouse
   network-gateway:
     capabilities:
       manage:
@@ -2492,9 +2492,11 @@ scopes:
   deckhouse:
     modules:
     - flant-integration
+    - multitenancy-manager
     - deckhouse
     namespaces:
     - d8-flant-integration
+    - d8-multitenancy-manager
     - d8-system
   infrastructure:
     modules:
@@ -2502,6 +2504,7 @@ scopes:
     - cloud-provider-vcd
     - cloud-provider-vsphere
     - cloud-provider-zvirt
+    - keepalived
     - cloud-provider-aws
     - cloud-provider-azure
     - cloud-provider-gcp
@@ -2513,24 +2516,31 @@ scopes:
     - snapshot-controller
     - istio
     - vertical-pod-autoscaler
+    - descheduler
+    - loki
     - pod-reloader
+    - chrony
     namespaces:
-    - d8-ceph-csi
-    - d8-cloud-instance-manager
-    - d8-cloud-provider-aws
-    - d8-cloud-provider-azure
-    - d8-cloud-provider-gcp
     - d8-cloud-provider-openstack
     - d8-cloud-provider-vcd
-    - d8-cloud-provider-vsphere
-    - d8-cloud-provider-yandex
-    - d8-cloud-provider-zvirt
-    - d8-istio
-    - d8-local-path-provisioner
-    - d8-pod-reloader
-    - d8-snapshot-controller
     - d8-system
+    - d8-descheduler
+    - d8-cloud-provider-zvirt
+    - d8-local-path-provisioner
     - kube-system
+    - d8-chrony
+    - d8-cloud-provider-vsphere
+    - d8-keepalived
+    - d8-cloud-provider-aws
+    - d8-cloud-provider-azure
+    - d8-cloud-provider-yandex
+    - d8-snapshot-controller
+    - d8-cloud-provider-gcp
+    - d8-ceph-csi
+    - d8-cloud-instance-manager
+    - d8-istio
+    - d8-monitoring
+    - d8-pod-reloader
   kubernetes:
     modules:
     - priority-class
@@ -2558,17 +2568,17 @@ scopes:
     - cilium-hubble
     - openvpn
     namespaces:
+    - d8-network-gateway
+    - d8-metallb
+    - d8-openvpn
+    - kube-system
+    - d8-static-routing-manager
+    - d8-cni-simple-bridge
+    - d8-system
+    - d8-istio
+    - d8-ingress-nginx
     - d8-cni-cilium
     - d8-cni-flannel
-    - d8-cni-simple-bridge
-    - d8-ingress-nginx
-    - d8-istio
-    - d8-metallb
-    - d8-network-gateway
-    - d8-openvpn
-    - d8-static-routing-manager
-    - d8-system
-    - kube-system
   observability:
     modules:
     - monitoring-applications
@@ -2583,30 +2593,17 @@ scopes:
     - monitoring-kubernetes-control-plane
     - monitoring-ping
     - log-shipper
+    - dashboard
     - okmeter
     - upmeter
     namespaces:
     - d8-log-shipper
-    - d8-monitoring
-    - d8-okmeter
-    - d8-operator-prometheus
-    - d8-upmeter
-    - kube-prometheus-pushgateway
-  others:
-    modules:
-    - multitenancy-manager
-    - keepalived
-    - descheduler
-    - loki
-    - chrony
-    - dashboard
-    namespaces:
-    - d8-chrony
     - d8-dashboard
-    - d8-descheduler
-    - d8-keepalived
+    - d8-okmeter
+    - d8-upmeter
     - d8-monitoring
-    - d8-multitenancy-manager
+    - d8-operator-prometheus
+    - kube-prometheus-pushgateway
   security:
     modules:
     - operator-trivy
@@ -2617,10 +2614,10 @@ scopes:
     - user-authn
     - secret-copier
     namespaces:
-    - d8-admission-policy-engine
-    - d8-cert-manager
     - d8-operator-trivy
     - d8-runtime-audit-engine
+    - d8-admission-policy-engine
+    - d8-cert-manager
     - d8-user-authn
   storage:
     modules:

@@ -5,7 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: loki
-    rbac.deckhouse.io/aggregate-to-others-as: manager
+    rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-monitoring
