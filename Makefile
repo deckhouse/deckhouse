@@ -99,7 +99,7 @@ help:
 	  /^##@/                  { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 
-GOLANGCI_VERSION = 1.54.2
+GOLANGCI_VERSION = 1.60.1
 TRIVY_VERSION= 0.38.3
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
@@ -160,10 +160,10 @@ bin/golangci-lint:
 
 .PHONY: lint lint-fix
 lint: ## Run linter.
-	golangci-lint run
+	CGO_ENABLED=1 golangci-lint run
 
 lint-fix: ## Fix lint violations.
-	golangci-lint run --fix
+	CGO_ENABLED=1 golangci-lint run --fix
 
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
 --lint-markdown-header:
