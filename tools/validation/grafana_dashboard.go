@@ -116,7 +116,7 @@ func validateGrafanaDashboardFile(fileName string, fileContent []byte) *Messages
 				),
 			)
 		}
-		legacyDatasourceUIDs, hardcodedDatasourceUIDs, invalidPrometheusDatasourceUIDs := evaluateDeprecatedDatasourceUIDs(panel)
+		legacyDatasourceUIDs, hardcodedDatasourceUIDs, nonRecommendedPrometheusDatasourceUIDs := evaluateDeprecatedDatasourceUIDs(panel)
 		for _, datasourceUID := range legacyDatasourceUIDs {
 			msgs.Add(
 				NewError(
@@ -137,13 +137,13 @@ func validateGrafanaDashboardFile(fileName string, fileContent []byte) *Messages
 				),
 			)
 		}
-		for _, datasourceUID := range invalidPrometheusDatasourceUIDs {
+		for _, datasourceUID := range nonRecommendedPrometheusDatasourceUIDs {
 			msgs.Add(
 				NewError(
 					fileName,
-					"invalid prometheus datasource uid",
+					"non-recommended prometheus datasource uid",
 					fmt.Sprintf("Panel %s contains invalid datasource uid: '%s', required to be one of: %s",
-						panelTitle, datasourceUID, prometheusDatasourceValidUIDsMessageString),
+						panelTitle, datasourceUID, prometheusDatasourceRecommendedUIDsMessageString),
 				),
 			)
 		}
@@ -154,12 +154,12 @@ func validateGrafanaDashboardFile(fileName string, fileContent []byte) *Messages
 		if evaluatePrometheusDatasourceTemplateVariable(dashboardTemplate) {
 			hasPrometheusDatasourceVariable = true
 		}
-		if queryVariable, ok := evaluateInvalidPrometheusDatasourceQueryTemplateVariable(dashboardTemplate); ok {
+		if queryVariable, ok := evaluateNonRecommendedPrometheusDatasourceQueryTemplateVariable(dashboardTemplate); ok {
 			msgs.Add(
 				NewError(
 					fileName,
-					"invalid prometheus datasource query variable",
-					fmt.Sprintf("Dashboard variable '%s' must use one of: %s as it's datasource", queryVariable, prometheusDatasourceValidUIDsMessageString),
+					"non-recommended prometheus datasource query variable",
+					fmt.Sprintf("Dashboard variable '%s' must use one of: %s as it's datasource", queryVariable, prometheusDatasourceRecommendedUIDsMessageString),
 				),
 			)
 		}
@@ -170,7 +170,7 @@ func validateGrafanaDashboardFile(fileName string, fileContent []byte) *Messages
 				fileName,
 				"missing prometheus datasource variable",
 				fmt.Sprintf("Dashboard must contain prometheus variable with query type: '%s' and name: '%s'",
-					prometheusDatasourceQuery, prometheusDatasourceValidName),
+					prometheusDatasourceQuery, prometheusDatasourceRecommendedName),
 			),
 		)
 	}
@@ -211,40 +211,42 @@ func extractDashboardTemplates(dashboard gjson.Result) []gjson.Result {
 }
 
 const (
-	prometheusDatasourceType      = "prometheus"
-	prometheusDatasourceQuery     = "prometheus"
-	prometheusDatasourceValidName = "ds_prometheus"
+	prometheusDatasourceType            = "prometheus"
+	prometheusDatasourceQuery           = "prometheus"
+	prometheusDatasourceRecommendedName = "ds_prometheus"
 )
 
 var (
 	// both ${datasource_uid} and $datasource_uid will be parsed as $datasource_uid
-	prometheusDatasourceValidUIDs = []string{
-		"$" + prometheusDatasourceValidName,
-		"${" + prometheusDatasourceValidName + "}",
+	prometheusDatasourceRecommendedUIDs = []string{
+		"$" + prometheusDatasourceRecommendedName,
+		"${" + prometheusDatasourceRecommendedName + "}",
 	}
-	prometheusDatasourceValidUIDsMessageString = func() string {
-		res := make([]string, 0, len(prometheusDatasourceValidUIDs))
-		for _, prometheusDatasourceValidUID := range prometheusDatasourceValidUIDs {
-			res = append(res, fmt.Sprintf("'%s'", prometheusDatasourceValidUID))
+	prometheusDatasourceRecommendedUIDsMessageString = func() string {
+		res := make([]string, 0, len(prometheusDatasourceRecommendedUIDs))
+		for _, prometheusDatasourceRecommendedUID := range prometheusDatasourceRecommendedUIDs {
+			res = append(res, fmt.Sprintf("'%s'", prometheusDatasourceRecommendedUID))
 		}
 		return strings.Join(res, ", ")
 	}()
 )
 
-func isValidPrometheusDatasourceUID(prometheusDatasourceUID string) bool {
-	for _, prometheusDatasourceValidUID := range prometheusDatasourceValidUIDs {
-		if prometheusDatasourceValidUID == prometheusDatasourceUID {
+func isRecommendedPrometheusDatasourceUID(prometheusDatasourceUID string) bool {
+	for _, prometheusDatasourceRecommendedUID := range prometheusDatasourceRecommendedUIDs {
+		if prometheusDatasourceRecommendedUID == prometheusDatasourceUID {
 			return true
 		}
 	}
 	return false
 }
 
-func evaluateDeprecatedDatasourceUIDs(panel gjson.Result) (legacyUIDs, hardcodedUIDs, invalidPrometheusUIDs []string) {
+func evaluateDeprecatedDatasourceUIDs(panel gjson.Result) (
+	legacyUIDs, hardcodedUIDs, nonRecommendedPrometheusUIDs []string,
+) {
 	targets := panel.Get("targets").Array()
 	legacyUIDs = make([]string, 0)
 	hardcodedUIDs = make([]string, 0)
-	invalidPrometheusUIDs = make([]string, 0)
+	nonRecommendedPrometheusUIDs = make([]string, 0)
 	for _, target := range targets {
 		datasource := target.Get("datasource")
 		if datasource.Exists() {
@@ -263,13 +265,13 @@ func evaluateDeprecatedDatasourceUIDs(panel gjson.Result) (legacyUIDs, hardcoded
 			datasourceType := datasource.Get("type")
 			if datasourceType.Exists() {
 				datasourceTypeStr := datasourceType.String()
-				if datasourceTypeStr == prometheusDatasourceType && !isValidPrometheusDatasourceUID(uidStr) {
-					invalidPrometheusUIDs = append(invalidPrometheusUIDs, uidStr)
+				if datasourceTypeStr == prometheusDatasourceType && !isRecommendedPrometheusDatasourceUID(uidStr) {
+					nonRecommendedPrometheusUIDs = append(nonRecommendedPrometheusUIDs, uidStr)
 				}
 			}
 		}
 	}
-	return hardcodedUIDs, legacyUIDs, invalidPrometheusUIDs
+	return hardcodedUIDs, legacyUIDs, nonRecommendedPrometheusUIDs
 }
 
 var (
@@ -326,13 +328,13 @@ func evaluatePrometheusDatasourceTemplateVariable(dashboardTemplate gjson.Result
 		return false
 	}
 	templateName := dashboardTemplate.Get("name")
-	if templateName.String() != prometheusDatasourceValidName {
+	if templateName.String() != prometheusDatasourceRecommendedName {
 		return false
 	}
 	return true
 }
 
-func evaluateInvalidPrometheusDatasourceQueryTemplateVariable(dashboardTemplate gjson.Result) (string, bool) {
+func evaluateNonRecommendedPrometheusDatasourceQueryTemplateVariable(dashboardTemplate gjson.Result) (string, bool) {
 	templateType := dashboardTemplate.Get("type")
 	if !templateType.Exists() {
 		return "", false
@@ -349,7 +351,7 @@ func evaluateInvalidPrometheusDatasourceQueryTemplateVariable(dashboardTemplate 
 		return "", false
 	}
 	datasourceUID := datasource.Get("uid")
-	if isValidPrometheusDatasourceUID(datasourceUID.String()) {
+	if isRecommendedPrometheusDatasourceUID(datasourceUID.String()) {
 		return "", false
 	}
 	templateName := dashboardTemplate.Get("name")
