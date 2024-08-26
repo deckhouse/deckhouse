@@ -319,6 +319,34 @@ dhctl bootstrap \
 - `<SSH_USER>` — SSH user on the server;
 - `--ssh-agent-private-keys` — file with the private SSH key for connecting via SSH.
 
+### Preflight checks
+
+![Scheme of checks prior to Deckhouse installation](../../images/common/preflight-checks.png)
+
+- dhctl
+	- global
+		- PublicDomainTemplate is correctly - PublicDomainTemplate inconsistent with clusterDomain
+		- registry credentials are correct - checking whether it is possible to authorize in the registry with the authorization data specified in the configuration
+	- static
+		- only one --ssh-host parameter used - in a static cluster configuration, you can specify only one IP address to configure the first master
+		- ssh credential is correctly - check if it is possible to connect via ssh using the authorization data specified when launching the installer
+		- ssh tunnel between installer and node is possible - check if it is possible to raise ssh tunnel from node to instaler
+		- that node meets system requirements - verification of compliance with the minimum requirements of the installation unit
+		- python and required modules are installed - check if python and necessary libraries are available
+		- registry access through proxy - check availability of registry via proxy
+		- required ports availability - check if the ports required for installation are unoccupied
+		- resolve the localhost domain - check that localhost is resolving to IP 127.0.0.1
+	- cloud
+		- cloud master node system requirements are met - check that the configuration has been configured to meet the minimum requirements for the installation
+- bashable
+	- global
+		- check server hostname - check that hostname meets the requirements length <= 63 characters, all characters are lower case.  Special characters are not allowed except for '-' and '.' which cannot be at the beginning and end of hosthame
+		- exist embedded contanerd - check that contanerd is not pre-installed
+	- static
+		- check master hostname - check hostname uniqueness within a cluster
+	- cloud static
+		- check master hostname - check hostname uniqueness within a cluster
+
 ### Aborting the installation
 
 If the installation was carried out in a supported cloud and was interrupted for any reason, or if problems occurred during the installation, resources that were created during the installation may end up residing in the cloud. To purge them, run the `dhctl bootstrap-phase abort` command in the installer container.

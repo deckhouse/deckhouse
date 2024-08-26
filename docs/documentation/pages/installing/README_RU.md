@@ -320,7 +320,7 @@ dhctl bootstrap \
 - `<SSH_USER>` — пользователь на сервере для подключения по SSH;
 - `--ssh-agent-private-keys` — файл приватного SSH-ключа для подключения по SSH.
 
-### Проверки
+### Проверки перед началом установки
 
 ![Схема проверок перед установкой Deckhouse](../../images/common/preflight-checks.png)
 
