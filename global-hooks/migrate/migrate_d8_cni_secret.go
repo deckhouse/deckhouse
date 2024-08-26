@@ -156,11 +156,13 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 	case "cilium":
 		ciliumConfig := CiliumConfigStruct{}
 		ciliumJSON, ok := d8cniSecret.Data["cilium"]
-		if ok {
-			err := json.Unmarshal(ciliumJSON, &ciliumConfig)
-			if err != nil {
-				return fmt.Errorf("cannot unmarshal cilium config: %v", err)
-			}
+		if !ok {
+			return fmt.Errorf("cannot find `cilium` key in secret data: %v", d8cniSecret.Data)
+		}
+
+		err := json.Unmarshal(ciliumJSON, &ciliumConfig)
+		if err != nil {
+			return fmt.Errorf("cannot unmarshal cilium config: %v", err)
 		}
 
 		ciliumSettings := config.SettingsValues{}
@@ -176,7 +178,12 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 			return fmt.Errorf("unknown cilium mode %s", ciliumConfig.Mode)
 		}
 
-		ciliumSettings["masqueradeMode"] = ciliumConfig.MasqueradeMode
+		switch ciliumConfig.MasqueradeMode {
+		case "Netfilter", "BPF":
+			ciliumSettings["masqueradeMode"] = ciliumConfig.MasqueradeMode
+		default:
+			return fmt.Errorf("unknown cilium masquerade mode %s", ciliumConfig.MasqueradeMode)
+		}
 
 		cniModuleConfig.Spec = config.ModuleConfigSpec{
 			Enabled:  pointer.Bool(true),
@@ -188,7 +195,7 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 		return fmt.Errorf("unknown cni name: %s", cniName)
 	}
 
-	// create secret
+	// create ModuleConfig
 	err = createMC(kubeCl, cniModuleConfig)
 	if err != nil {
 		return err

@@ -300,20 +300,8 @@ var _ = Describe("Global hooks :: migrate_d8_cni_secret ::", func() {
 			f.RunHook()
 		})
 
-		It("Should run successfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
-		})
-
-		It("MC cni-cilium should be created, d8-cni-configuration secret should be removed", func() {
-			mc := f.KubernetesResource("ModuleConfig", "", "cni-cilium")
-			Expect(mc.Exists()).To(BeTrue())
-			Expect(mc.Field("spec.enabled").Bool()).To(BeTrue())
-			Expect(mc.Field("spec.settings.tunnelMode").String()).To(Equal("Disabled"))
-			Expect(mc.Field("spec.settings.masqueradeMode").String()).To(BeEmpty())
-			Expect(mc.Field("spec.settings.createNodeRoutes").Bool()).To(BeTrue())
-
-			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
-			Expect(secret.Exists()).To(BeFalse())
+		It("Should not run successfully", func() {
+			Expect(f).NotTo(ExecuteSuccessfully())
 		})
 	})
 
@@ -324,7 +312,7 @@ var _ = Describe("Global hooks :: migrate_d8_cni_secret ::", func() {
 			f.RunHook()
 		})
 
-		It("Should run successfully", func() {
+		It("Should not run successfully", func() {
 			Expect(f).NotTo(ExecuteSuccessfully())
 		})
 	})

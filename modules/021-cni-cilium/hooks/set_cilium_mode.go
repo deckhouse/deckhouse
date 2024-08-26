@@ -27,11 +27,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, setCiliumMode)
 
 func setCiliumMode(input *go_hook.HookInput) error {
-	value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode")
-	if ok {
-		input.Values.Set("cniCilium.internal.masqueradeMode", value.String())
-	}
-
 	if input.ConfigValues.Exists("cniCilium.tunnelMode") {
 		if input.ConfigValues.Get("cniCilium.tunnelMode").String() == "VXLAN" {
 			input.Values.Set("cniCilium.internal.mode", "VXLAN")
@@ -42,7 +37,7 @@ func setCiliumMode(input *go_hook.HookInput) error {
 		}
 	}
 
-	value, ok = input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
+	value, ok := input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
 	if ok && value.Bool() {
 		input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
 		return nil
