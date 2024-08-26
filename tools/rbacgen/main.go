@@ -93,16 +93,6 @@ func main() {
 		panic(err)
 	}
 
-	type scopeDoc struct {
-		Modules       []string `json:"modules"`
-		Namespaces    []string `json:"namespaces"`
-		namespacesSet sets.Set[string]
-	}
-
-	type docs struct {
-		Scopes  map[string]scopeDoc  `json:"scopes"`
-		Modules map[string]moduleDoc `json:"modules"`
-	}
 	var documentation = docs{
 		Scopes:  map[string]scopeDoc{},
 		Modules: map[string]moduleDoc{},
@@ -126,7 +116,7 @@ func main() {
 				}
 				documentation.Scopes[scope] = found
 			} else {
-				doc := scopeDoc{Modules: []string{module.Module}, namespacesSet: sets.New[string]()}
+				doc := scopeDoc{Modules: []string{module.Module}, namespacesSet: sets.NewString()}
 				if documentation.Modules[module.Module].Namespace != "none" {
 					doc.namespacesSet.Insert(documentation.Modules[module.Module].Namespace)
 				}
@@ -136,7 +126,7 @@ func main() {
 	}
 	for key, doc := range documentation.Scopes {
 		if val, ok := documentation.Scopes[key]; ok {
-			val.Namespaces = doc.namespacesSet.UnsortedList()
+			val.Namespaces = doc.namespacesSet.List()
 			documentation.Scopes[key] = val
 		}
 	}
