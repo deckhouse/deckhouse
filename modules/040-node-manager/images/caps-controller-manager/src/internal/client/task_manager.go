@@ -42,7 +42,7 @@ func (m *taskManager) spawn(taskID taskID, task func() bool) bool {
 	done, ok := m.tasks[taskID]
 	if ok {
 		if done == nil {
-			return false
+			return *done
 		}
 
 		delete(m.tasks, taskID)

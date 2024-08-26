@@ -82,44 +82,6 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 		return ctrl.Result{}, errors.Wrap(err, "failed to get bootstrap script")
 	}
 
-	check := c.checkTaskManager.spawn(taskID(instanceScope.Instance.Spec.Address), func() bool {
-		status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
-		var data string
-		data, err := ssh.ExecSSHCommandToString(instanceScope, "echo 0")
-		if err != nil {
-			scanner := bufio.NewScanner(strings.NewReader(data))
-			for scanner.Scan() {
-				str := scanner.Text()
-				if (strings.Contains(str, "Connection to ") && strings.Contains(str, " timed out")) || strings.Contains(str, "Permission denied (publickey).") {
-					err := errors.New(str)
-					if status == nil || status.Status != corev1.ConditionFalse || status.Reason != err.Error() {
-						c.recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceSshFailed", str)
-						instanceScope.Logger.Error(err, "StaticInstance: Failed to connect via ssh")
-						conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition, err.Error(), clusterv1.ConditionSeverityError, "")
-						err2 := instanceScope.Patch(ctx)
-						if err2 != nil {
-							instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
-						}
-					}
-				}
-			}
-			return false
-		}
-		if status == nil || status.Status != corev1.ConditionTrue {
-			conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
-		}
-		err = instanceScope.Patch(ctx)
-		if err != nil {
-			instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
-		}
-		return true
-	})
-	if !check {
-		err := errors.New("Failed to connect via ssh")
-		instanceScope.Logger.Error(err, "Failed to connect via ssh to StaticInstance address", "address", instanceScope.Instance.Spec.Address)
-		return ctrl.Result{}, err
-	}
-
 	if instanceScope.GetPhase() == deckhousev1.StaticInstanceStatusCurrentStatusPhasePending {
 		result, err := c.setStaticInstancePhaseToBootstrapping(ctx, instanceScope)
 		if err != nil {
@@ -180,6 +142,44 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 	}
 
 	c.tcpCheckRateLimiter.Forget(address)
+
+	check := c.checkTaskManager.spawn(taskID(address), func() bool {
+		status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
+		var data string
+		data, err := ssh.ExecSSHCommandToString(instanceScope, "echo 0")
+		if err != nil {
+			scanner := bufio.NewScanner(strings.NewReader(data))
+			for scanner.Scan() {
+				str := scanner.Text()
+				if (strings.Contains(str, "Connection to ") && strings.Contains(str, " timed out")) || strings.Contains(str, "Permission denied (publickey).") {
+					err := errors.New(str)
+					if status == nil || status.Status != corev1.ConditionFalse || status.Reason != err.Error() {
+						c.recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceSshFailed", str)
+						instanceScope.Logger.Error(err, "StaticInstance: Failed to connect via ssh")
+						conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition, err.Error(), clusterv1.ConditionSeverityError, "")
+						err2 := instanceScope.Patch(ctx)
+						if err2 != nil {
+							instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
+						}
+					}
+				}
+			}
+			return false
+		}
+		if status == nil || status.Status != corev1.ConditionTrue {
+			conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
+		}
+		err = instanceScope.Patch(ctx)
+		if err != nil {
+			instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
+		}
+		return true
+	})
+	if !check {
+		err := errors.New("Failed to connect via ssh")
+		instanceScope.Logger.Error(err, "Failed to connect via ssh to StaticInstance address", "address", address)
+		return ctrl.Result{}, err
+	}
 
 	providerID := providerid.GenerateProviderID(instanceScope.Instance.Name)
 
