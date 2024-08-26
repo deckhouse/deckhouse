@@ -63,6 +63,8 @@
  - **[deckhouse]** Allow admins to change objects with `kind=StorageClass`. [#9362](https://github.com/deckhouse/deckhouse/pull/9362)
  - **[deckhouse-controller]** Fix panic on invalid module image [#9231](https://github.com/deckhouse/deckhouse/pull/9231)
  - **[deckhouse-controller]** Deckhouse update metrics restored. [#9147](https://github.com/deckhouse/deckhouse/pull/9147)
+ - **[dhctl]** Fixed checking the length of the list of external IP addresses in the `YandexClusterConfiguration`. [#9449](https://github.com/deckhouse/deckhouse/pull/9449)
+ - **[dhctl]** Fix static installation consume 100% of CPU. [#9359](https://github.com/deckhouse/deckhouse/pull/9359)
  - **[dhctl]** Wait for resources required by manifest being created. [#9157](https://github.com/deckhouse/deckhouse/pull/9157)
  - **[dhctl]** Fix creation cloudPermanent nodes with valid length name (no longer 42 symbols). [#9075](https://github.com/deckhouse/deckhouse/pull/9075)
  - **[dhctl]** Automatically use `--ssh-user` as `--ssh-bastion-user` if not set by the user. [#9061](https://github.com/deckhouse/deckhouse/pull/9061)
@@ -94,6 +96,7 @@
  - **[registrypackages]** Downgrade iptables version from `1.8.10` to `1.8.9`. [#9315](https://github.com/deckhouse/deckhouse/pull/9315)
  - **[upmeter]** Fixed status page CSS in air-gapped environments. [#9287](https://github.com/deckhouse/deckhouse/pull/9287)
  - **[upmeter]** Fixed flapping status page API. [#9287](https://github.com/deckhouse/deckhouse/pull/9287)
+ - **[user-authn]** Update `client-groups.patch` for Dex. [#9465](https://github.com/deckhouse/deckhouse/pull/9465)
  - **[user-authn]** Allow to create users with invalid email. [#9171](https://github.com/deckhouse/deckhouse/pull/9171)
 
 ## Chore
