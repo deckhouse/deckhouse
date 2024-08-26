@@ -77,8 +77,10 @@ func (r *StaticInstance) ValidateUpdate(old runtime.Object) (admission.Warnings,
 func (r *StaticInstance) ValidateDelete() (admission.Warnings, error) {
 	staticinstancelog.Info("validate delete", "name", r.Name)
 
-	if r.Status.CurrentStatus == nil || (r.Status.CurrentStatus.Phase != StaticInstanceStatusCurrentStatusPhaseError &&
-		r.Status.CurrentStatus.Phase != StaticInstanceStatusCurrentStatusPhasePending) {
+	if r.Status.CurrentStatus == nil ||
+		(r.Status.CurrentStatus.Phase != StaticInstanceStatusCurrentStatusPhaseError &&
+			r.Status.CurrentStatus.Phase != StaticInstanceStatusCurrentStatusPhaseInit &&
+			r.Status.CurrentStatus.Phase != StaticInstanceStatusCurrentStatusPhasePending) {
 		return nil, apierrors.NewForbidden(schema.GroupResource{
 			Group:    r.GroupVersionKind().Group,
 			Resource: "staticinstances",
