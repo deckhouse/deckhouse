@@ -22,51 +22,53 @@
 set -Eeo pipefail
 
 CERT_SRC_DIR="/opt/deckhouse/share/ca-certificates/mozilla"
+REDHAT_CA_DIR=/etc/pki/ca-trust
+DEBIAN_CA_DIR=/usr/local/share/ca-certificates
 mkdir -p /etc/ssl/certs
 
-update_redhat_ca() {
-  local REDHAT_CA_DIR=/etc/pki/ca-trust
-
-  mkdir -p "$REDHAT_CA_DIR"/extracted/pem/ "$REDHAT_CA_DIR"/source/anchors/
-  ln -sf "$CERT_SRC_DIR"/*.crt "$REDHAT_CA_DIR"/source/anchors/
-
-  if command -v update-ca-trust >/dev/null 2>&1; then
-    update-ca-trust
-  else
-    # If update-ca-trust is not available, manually copy the CA bundle
-    cp -f "$CERT_SRC_DIR"/ca-bundle/ca-certificates.crt "$REDHAT_CA_DIR"/extracted/pem/tls-ca-bundle.pem
-    ln -sf /etc/ssl/certs/ca-bundle.crt "$REDHAT_CA_DIR"/extracted/pem/tls-ca-bundle.pem
-    ln -sf /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-bundle.crt
-  fi
+link_redhat_CAs() {
+  mkdir -p "$REDHAT_CA_DIR/extracted/pem/" "$REDHAT_CA_DIR/source/anchors/"
+  ln -sf "$CERT_SRC_DIR"/*.crt "$REDHAT_CA_DIR/source/anchors/"
 }
 
-update_debian_ca() {
-  local DEBIAN_CA_DIR=/usr/local/share/ca-certificates
-
+link_debian_CAs() {
   mkdir -p "$DEBIAN_CA_DIR"
   ln -sf "$CERT_SRC_DIR"/*.crt "$DEBIAN_CA_DIR"
-
-  if command -v update-ca-certificates >/dev/null 2>&1; then
-    update-ca-certificates -f
-  else
-    # If update-ca-certificates is not available, manually copy the CA bundle
-    cp -f "$CERT_SRC_DIR"/ca-bundle/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-  fi
 }
 
-if ! command -v openssl >/dev/null 2>&1; then
-  echo "ERROR: OpenSSL not found!" >&2
-  exit 1
+copy_redhat_ca_bundle() {
+  cp -f "$CERT_SRC_DIR/ca-bundle/ca-certificates.crt" "$REDHAT_CA_DIR/extracted/pem/tls-ca-bundle.pem"
+  ln -sf /etc/ssl/certs/ca-bundle.crt "$REDHAT_CA_DIR/extracted/pem/tls-ca-bundle.pem"
+  ln -sf /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-bundle.crt
+}
+
+copy_debian_ca_bundle() {
+  cp -f "$CERT_SRC_DIR/ca-bundle/ca-certificates.crt" /etc/ssl/certs/ca-certificates.crt
+}
+
+
+if command -v update-ca-trust >/dev/null 2>&1; then
+  link_redhat_CAs
+  update-ca-trust
+elif command -v update-ca-certificates >/dev/null 2>&1; then
+  link_debian_CAs
+  update-ca-certificates -f
+else 
+  if ! command -v openssl >/dev/null 2>&1; then
+    echo "ERROR: OpenSSL not found!" >&2
+    exit 1
+  fi
+
+  OPENSSLDIR=$(openssl version -d | awk '{print $2}' | tr -d '"')
+  case "$OPENSSLDIR" in
+    /etc/pki/tls)
+      link_redhat_CAs
+      copy_redhat_ca_bundle ;;
+    /usr/lib/ssl)
+      link_debian_CAs
+      copy_debian_ca_bundle ;;
+    *)
+      echo "ERROR: Can't determine OS! Unknown path for OPENSSLDIR: $OPENSSLDIR" >&2
+      exit 1 ;;
+  esac
 fi
-
-OPENSSLDIR=$(openssl version -d | awk '{print $2}' | tr -d '"')
-
-case "$OPENSSLDIR" in
-  /etc/pki/tls)
-    update_redhat_ca ;;
-  /usr/lib/ssl)
-    update_debian_ca ;;
-  *)
-    echo "ERROR: Unknown OPENSSLDIR path: $OPENSSLDIR" >&2
-    exit 1 ;;
-esac
