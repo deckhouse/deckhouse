@@ -65,6 +65,112 @@ diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customreso
  	switch requestInfo.Verb {
  	case "get":
  		return handlers.GetResource(storage, requestScope)
+Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/delete.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/delete.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/delete.go
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/delete.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/delete.go	(date 1724698236618)
+@@ -19,6 +19,7 @@
+ import (
+ 	"context"
+ 	"fmt"
++	"k8s.io/klog/v2"
+ 	"net/http"
+ 	"time"
+
+@@ -49,6 +50,15 @@
+ // TODO admission here becomes solely validating admission
+ func DeleteResource(r rest.GracefulDeleter, allowsOptions bool, scope *RequestScope, admit admission.Interface) http.HandlerFunc {
+ 	return func(w http.ResponseWriter, req *http.Request) {
++		klog.V(1).Infof(
++			"Call DeleteResource: useragent %s/%s/%s; url %s; scope: %s; subres: %s\n",
++			req.Header.Get("User-Agent"),
++			req.Header.Get("X-User-Agent"),
++			req.Header.Get("X-Device-User-Agent"),
++			req.URL.String(),
++			scope.Resource.String(),
++			scope.Subresource,
++		)
+ 		ctx := req.Context()
+ 		// For performance tracking purposes.
+ 		ctx, span := tracing.Start(ctx, "Delete", traceFields(req)...)
+Index: staging/src/k8s.io/kms/internal/plugins/_mock/go.sum
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/kms/internal/plugins/_mock/go.sum b/staging/src/k8s.io/kms/internal/plugins/_mock/go.sum
+--- a/staging/src/k8s.io/kms/internal/plugins/_mock/go.sum	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/kms/internal/plugins/_mock/go.sum	(date 1724445324192)
+@@ -8,6 +8,7 @@
+ github.com/golang/protobuf v1.5.0/go.mod h1:FsONVRAS9T7sI+LIUmWTfcYkHO4aIWwzhcaSAoJOfIk=
+ github.com/golang/protobuf v1.5.3 h1:KhyjKVUg7Usr/dYsdSqoFveMYd5ko72D+zANwlG1mmg=
+ github.com/golang/protobuf v1.5.3/go.mod h1:XVQd3VNwM+JqD3oG2Ue2ip4fOMUkwXdXDdiuN0vRsmY=
++github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6rSs7xps=
+ github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
+ github.com/google/go-cmp v0.5.9 h1:O2Tfq5qg4qc4AmwVlvv0oLiVAGB7enBSJ2x2DqQFi38=
+ github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
+@@ -37,6 +38,7 @@
+ golang.org/x/net v0.0.0-20201021035429-f5854403a974/go.mod h1:sp8m0HH+o8qH0wwXwYZr8TS3Oi6o0r6Gce1SSxlDquU=
+ golang.org/x/net v0.17.0 h1:pVaXccu2ozPjCXewfr1S7xza/zcXTity9cCdXQYSjIM=
+ golang.org/x/net v0.17.0/go.mod h1:NxSsAGuq816PNPmqtQdLE42eU2Fs7NoRIZrHJAlaCOE=
++golang.org/x/net v0.23.0/go.mod h1:JKghWKKOSdJwpW2GEx0Ja7fmaKnMsbu+MWVZTokSYmg=
+ golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+@@ -45,10 +47,12 @@
+ golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+ golang.org/x/sys v0.13.0 h1:Af8nKPmuFypiUBjVoU9V20FiaFXOcuZI21p0ycVYYGE=
+ golang.org/x/sys v0.13.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
++golang.org/x/sys v0.18.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
+ golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
+ golang.org/x/text v0.3.3/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
+ golang.org/x/text v0.13.0 h1:ablQoSUd0tRdKxZewP80B+BaqeKJuVhuRxj/dkrun3k=
+ golang.org/x/text v0.13.0/go.mod h1:TvPlkZtksWOMsz7fbANvkp4WM8x/WCo/om8BMLbz+aE=
++golang.org/x/text v0.14.0/go.mod h1:18ZOQIKpY8NJVqYksKHtTdi31H5itFRjB5/qKTNYzSU=
+ golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
+ golang.org/x/tools v0.0.0-20191119224855-298f0cb1881e/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
+ golang.org/x/tools v0.0.0-20200619180055-7c47624df98f/go.mod h1:EkVYQZoAsY45+roYkvgYkIh4xh/qjgUK9TdY2XT94GE=
+@@ -65,5 +69,6 @@
+ google.golang.org/protobuf v1.26.0/go.mod h1:9q0QmTI4eRPtz6boOQmLYwt+qCgq0jsYwAQnmE0givc=
+ google.golang.org/protobuf v1.31.0 h1:g0LDEJHgrBl9N9r17Ru3sqWhkIx2NB67okBHPwC7hs8=
+ google.golang.org/protobuf v1.31.0/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
++google.golang.org/protobuf v1.33.0/go.mod h1:c6P6GXX6sHbq/GpV6MGZEdwhWPcYBgnhAHhKbcUYpos=
+ k8s.io/klog/v2 v2.100.1 h1:7WCHKK6K8fNhTqfBhISHQ97KrnJNFZMcQvKp7gP/tmg=
+ k8s.io/utils v0.0.0-20230726121419-3b25d923346b h1:sgn3ZU783SCgtaSJjpcVVlRqd6GSnlTLKgpAAttJvpI=
+Index: staging/src/k8s.io/kms/internal/plugins/_mock/go.mod
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/kms/internal/plugins/_mock/go.mod b/staging/src/k8s.io/kms/internal/plugins/_mock/go.mod
+--- a/staging/src/k8s.io/kms/internal/plugins/_mock/go.mod	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/kms/internal/plugins/_mock/go.mod	(date 1724445324192)
+@@ -9,16 +9,16 @@
+
+ require (
+ 	github.com/gogo/protobuf v1.3.2 // indirect
+-	github.com/golang/protobuf v1.5.3 // indirect
++	github.com/golang/protobuf v1.5.4 // indirect
+ 	github.com/miekg/pkcs11 v1.0.3-0.20190429190417-a667d056470f // indirect
+ 	github.com/pkg/errors v0.9.1 // indirect
+ 	github.com/thales-e-security/pool v0.0.2 // indirect
+-	golang.org/x/net v0.17.0 // indirect
+-	golang.org/x/sys v0.13.0 // indirect
+-	golang.org/x/text v0.13.0 // indirect
++	golang.org/x/net v0.23.0 // indirect
++	golang.org/x/sys v0.18.0 // indirect
++	golang.org/x/text v0.14.0 // indirect
+ 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230525234030-28d5490b6b19 // indirect
+ 	google.golang.org/grpc v1.56.3 // indirect
+-	google.golang.org/protobuf v1.31.0 // indirect
++	google.golang.org/protobuf v1.33.0 // indirect
+ )
+
+ replace (
 Index: staging/src/k8s.io/apiserver/pkg/endpoints/installer.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -213,3 +319,219 @@ diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/installer.go b/staging/s
  		handlers.ConnectResource(connecter, &scope, admit, restPath, isSubresource)(res.ResponseWriter, req.Request)
  	}
  }
+Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go	(date 1724698236606)
+@@ -52,6 +52,15 @@
+
+ func createHandler(r rest.NamedCreater, scope *RequestScope, admit admission.Interface, includeName bool) http.HandlerFunc {
+ 	return func(w http.ResponseWriter, req *http.Request) {
++		klog.V(1).Infof(
++			"Call CreateeResource: useragent %s/%s/%s; url %s; scope: %s; subres: %s\n",
++			req.Header.Get("User-Agent"),
++			req.Header.Get("X-User-Agent"),
++			req.Header.Get("X-Device-User-Agent"),
++			req.URL.String(),
++			scope.Resource.String(),
++			scope.Subresource,
++		)
+ 		ctx := req.Context()
+ 		// For performance tracking purposes.
+ 		ctx, span := tracing.Start(ctx, "Create", traceFields(req)...)
+@@ -124,6 +133,13 @@
+ 		decoder := scope.Serializer.DecoderToVersion(decodeSerializer, scope.HubGroupVersion)
+ 		span.AddEvent("About to convert to expected version")
+ 		obj, gvk, err := decoder.Decode(body, &defaultGVK, original)
++		klog.V(2).Infof(
++			"Call createHandler resource: gvk %s/%s/%s; agent %s;\n",
++			gvk.Kind,
++			gvk.Group,
++			gvk.Version,
++			req.Header.Get("User-Agent"),
++		)
+ 		if err != nil {
+ 			strictError, isStrictError := runtime.AsStrictDecodingError(err)
+ 			switch {
+Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go	(date 1724698413801)
+@@ -19,6 +19,7 @@
+ import (
+ 	"context"
+ 	"fmt"
++	"k8s.io/klog/v2"
+ 	"net/http"
+ 	"strings"
+ 	"time"
+@@ -63,6 +64,15 @@
+ // PatchResource returns a function that will handle a resource patch.
+ func PatchResource(r rest.Patcher, scope *RequestScope, admit admission.Interface, patchTypes []string) http.HandlerFunc {
+ 	return func(w http.ResponseWriter, req *http.Request) {
++		klog.V(1).Infof(
++			"Call PatchResource: useragent %s/%s/%s; url %s; scope: %s; subres: %s\n",
++			req.Header.Get("User-Agent"),
++			req.Header.Get("X-User-Agent"),
++			req.Header.Get("X-Device-User-Agent"),
++			req.URL.String(),
++			scope.Resource.String(),
++			scope.Subresource,
++		)
+ 		ctx := req.Context()
+ 		// For performance tracking purposes.
+ 		ctx, span := tracing.Start(ctx, "Patch", traceFields(req)...)
+@@ -139,6 +149,14 @@
+ 		}
+ 		gv := scope.Kind.GroupVersion()
+
++		klog.V(1).Infof(
++			"Call patchResource: gv %s/%s/%s; url %s;\n",
++			gv.Group,
++			gv.Version,
++			scope.Kind,
++			req.Header.Get("User-Agent"),
++		)
++
+ 		validationDirective := fieldValidation(options.FieldValidation)
+ 		decodeSerializer := s.Serializer
+ 		if validationDirective == metav1.FieldValidationWarn || validationDirective == metav1.FieldValidationStrict {
+Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/watch.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/watch.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/watch.go
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/watch.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/watch.go	(date 1724698673926)
+@@ -20,6 +20,7 @@
+ 	"bytes"
+ 	"fmt"
+ 	"io"
++	"k8s.io/klog/v2"
+ 	"net/http"
+ 	"reflect"
+ 	"time"
+@@ -172,6 +173,16 @@
+ func (s *WatchServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+ 	kind := s.Scope.Kind
+
++	klog.V(1).Infof(
++		"Call WatchServer serve: useragent %s/%s/%s; url %s; scope: %s; subres: %s\n",
++		req.Header.Get("User-Agent"),
++		req.Header.Get("X-User-Agent"),
++		req.Header.Get("X-Device-User-Agent"),
++		req.URL.String(),
++		s.Scope.Resource.String(),
++		s.Scope.Subresource,
++	)
++
+ 	if wsstream.IsWebSocketRequest(req) {
+ 		w.Header().Set("Content-Type", s.MediaType)
+ 		websocket.Handler(s.HandleWS).ServeHTTP(w, req)
+Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/rest.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/rest.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/rest.go
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/rest.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/rest.go	(date 1724698413777)
+@@ -22,6 +22,7 @@
+ 	"fmt"
+ 	"io"
+ 	"io/ioutil"
++	"k8s.io/klog/v2"
+ 	"net/http"
+ 	"net/url"
+ 	"strings"
+@@ -182,6 +183,16 @@
+ 			return
+ 		}
+
++		klog.V(1).Infof(
++			"Call ConnectRsource: useragent %s/%s/%s; url %s; scope: %s; subres: %s\n",
++			req.Header.Get("User-Agent"),
++			req.Header.Get("X-User-Agent"),
++			req.Header.Get("X-Device-User-Agent"),
++			req.URL.String(),
++			scope.Resource.String(),
++			scope.Subresource,
++		)
++
+ 		namespace, name, err := scope.Namer.Name(req)
+ 		if err != nil {
+ 			scope.err(err, w, req)
+Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/update.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/update.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/update.go
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/update.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/update.go	(date 1724698413789)
+@@ -49,6 +49,15 @@
+ // UpdateResource returns a function that will handle a resource update
+ func UpdateResource(r rest.Updater, scope *RequestScope, admit admission.Interface) http.HandlerFunc {
+ 	return func(w http.ResponseWriter, req *http.Request) {
++		klog.V(1).Infof(
++			"Call UpdateResource: useragent %s/%s/%s; url %s; scope: %s; subres: %s\n",
++			req.Header.Get("User-Agent"),
++			req.Header.Get("X-User-Agent"),
++			req.Header.Get("X-Device-User-Agent"),
++			req.URL.String(),
++			scope.Resource.String(),
++			scope.Subresource,
++		)
+ 		ctx := req.Context()
+ 		// For performance tracking purposes.
+ 		ctx, span := tracing.Start(ctx, "Update", traceFields(req)...)
+Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/get.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/get.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/get.go
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/get.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/get.go	(date 1724698597289)
+@@ -54,6 +54,16 @@
+ // passed-in getterFunc to perform the actual get.
+ func getResourceHandler(scope *RequestScope, getter getterFunc) http.HandlerFunc {
+ 	return func(w http.ResponseWriter, req *http.Request) {
++		klog.V(1).Infof(
++			"Call GetResource: useragent %s/%s/%s; url %s; scope: %s; subres: %s\n",
++			req.Header.Get("User-Agent"),
++			req.Header.Get("X-User-Agent"),
++			req.Header.Get("X-Device-User-Agent"),
++			req.URL.String(),
++			scope.Resource.String(),
++			scope.Subresource,
++		)
++
+ 		ctx := req.Context()
+ 		ctx, span := tracing.Start(ctx, "Get", traceFields(req)...)
+ 		defer span.End(500 * time.Millisecond)
+@@ -167,6 +177,15 @@
+
+ func ListResource(r rest.Lister, rw rest.Watcher, scope *RequestScope, forceWatch bool, minRequestTimeout time.Duration) http.HandlerFunc {
+ 	return func(w http.ResponseWriter, req *http.Request) {
++		klog.V(1).Infof(
++			"Call ListResource: useragent %s/%s/%s; url %s; scope: %s; subres: %s\n",
++			req.Header.Get("User-Agent"),
++			req.Header.Get("X-User-Agent"),
++			req.Header.Get("X-Device-User-Agent"),
++			req.URL.String(),
++			scope.Resource.String(),
++			scope.Subresource,
++		)
+ 		ctx := req.Context()
+ 		// For performance tracking purposes.
+ 		ctx, span := tracing.Start(ctx, "List", traceFields(req)...)
