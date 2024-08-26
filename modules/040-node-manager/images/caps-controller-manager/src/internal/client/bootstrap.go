@@ -103,9 +103,8 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 
 		return true
 	})
-	if !done {
+	if done == nil || !*done {
 		instanceScope.Logger.Info("Bootstrapping is not finished yet, waiting...")
-
 		return ctrl.Result{}, nil
 	}
 
@@ -137,7 +136,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 
 		return true
 	})
-	if !done {
+	if done == nil || !*done {
 		return ctrl.Result{RequeueAfter: delay}, nil
 	}
 
@@ -146,7 +145,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 	check := c.checkTaskManager.spawn(taskID(address), func() bool {
 		status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
 		var data string
-		data, err := ssh.ExecSSHCommandToString(instanceScope, "echo 0")
+		data, err := ssh.ExecSSHCommandToString(instanceScope, "echo check_ssh")
 		if err != nil {
 			scanner := bufio.NewScanner(strings.NewReader(data))
 			for scanner.Scan() {
@@ -175,7 +174,10 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 		}
 		return true
 	})
-	if !check {
+	if check == nil {
+		return ctrl.Result{RequeueAfter: delay}, nil
+	}
+	if !*check {
 		err := errors.New("Failed to connect via ssh")
 		instanceScope.Logger.Error(err, "Failed to connect via ssh to StaticInstance address", "address", address)
 		return ctrl.Result{}, err
