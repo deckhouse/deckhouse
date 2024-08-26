@@ -81,7 +81,7 @@ func (i *InstanceScope) LoadSSHCredentials(ctx context.Context, recorder *event.
 			nodeGroup = i.MachineScope.StaticMachine.Labels["node-group"]
 		}
 		recorder.SendWarningEvent(i.Instance, nodeGroup, "StaticInstanceCredentialsUnavailable", err.Error())
-		return errors.Wrap(err, "Failed to get StaticInstance credentials")
+		return errors.Wrap(err, "failed to get StaticInstance credentials")
 	}
 
 	i.Credentials = credentials
