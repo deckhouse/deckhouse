@@ -42,7 +42,7 @@
     {%- endif %}
 
     {%- if moduleIsExternal %}
-      {%- assign modulePath = module[1].path | prepend: '/documentation/v1/' | prepend: site.urls[page.lang] %}
+      {%- assign modulePath = module[1].path | prepend: '/products/kubernetes-platform/documentation/v1/' | prepend: site.urls[page.lang] %}
     {%- endif %}
 
     <tr>
