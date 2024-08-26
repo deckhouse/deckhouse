@@ -3,7 +3,9 @@ properties:
   configCustom:
     type: string
     description: >
-      Custom loki config on yaml format. Will be merged with default config.
+      Custom loki config on YAML format.
+      
+      The configuration specified in the `configCustom` parameter will be merged with the default configuration.
     default: ""
     x-examples:
       - |
