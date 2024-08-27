@@ -96,6 +96,7 @@
  - **[registrypackages]** Downgrade iptables version from `1.8.10` to `1.8.9`. [#9315](https://github.com/deckhouse/deckhouse/pull/9315)
  - **[upmeter]** Fixed status page CSS in air-gapped environments. [#9287](https://github.com/deckhouse/deckhouse/pull/9287)
  - **[upmeter]** Fixed flapping status page API. [#9287](https://github.com/deckhouse/deckhouse/pull/9287)
+ - **[user-authn]** Fix the problem when the user is not allowed to access web interfaces if the allowed groups option is specified in Dex authenticator. [#9514](https://github.com/deckhouse/deckhouse/pull/9514)
  - **[user-authn]** Update `client-groups.patch` for Dex. [#9465](https://github.com/deckhouse/deckhouse/pull/9465)
  - **[user-authn]** Show real ip addresses in dex and dex-authenticator logs. [#9221](https://github.com/deckhouse/deckhouse/pull/9221)
  - **[user-authn]** Allow to create users with invalid email. [#9171](https://github.com/deckhouse/deckhouse/pull/9171)
@@ -103,6 +104,7 @@
 ## Chore
 
 
+ - **[admission-policy-engine]** Update the list of excluded sa. [#9505](https://github.com/deckhouse/deckhouse/pull/9505)
  - **[candi]** Bump patch versions of Kubernetes images: `v1.27.16`, `v1.28.12`, `v1.29.7`, `v1.30.3` [#9203](https://github.com/deckhouse/deckhouse/pull/9203)
     Kubernetes control-plane components will restart, kubelet will restart.
  - **[candi]** Remove references to static `BASE_SHELL_OPERATOR` image. [#9162](https://github.com/deckhouse/deckhouse/pull/9162)
