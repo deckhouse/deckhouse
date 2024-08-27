@@ -58,8 +58,11 @@ properties:
     type: object
     default: {}
     description: |
-      Loki configuration options available for tuning. Use with care, otherwise may lead to resource exhaustion.
-      See https://grafana.com/docs/loki/v2.9.x/configure/ for more information.
+      Loki configuration options available for tuning.
+      
+      See [Loki documentation](https://grafana.com/docs/loki/v2.9.x/configure/) for more information.
+      
+      > Caution! Incorrect settings may lead to the malfunction of Loki.
     properties:
       ingestion_rate_mb:
         type: number
@@ -75,7 +78,9 @@ properties:
         type: integer
         description: |
           The maximum total number of streams for the Loki instance.
-          Each stream has unique labels. The number of streams is the number of unique label sets, e.g. '{job="my-app", instance="kube-node-1", namespace="production", pod_name="backend-79dbf6fcb7-v5gs7", app="backend"}'
+
+          Each stream has unique labels. The number of streams is the number of unique label sets. E. g. '{job="my-app", instance="kube-node-1", namespace="production", pod_name="backend-79dbf6fcb7-v5gs7", app="backend"}'.
+
           0 means unlimited.
         default: 0
       max_entries_limit_per_query:
@@ -117,7 +122,7 @@ properties:
       grpc_server_max_concurrent_streams:
         type: integer
         description: |
-          Limit on the number of concurrent streams for gRPC calls
+          Limit on the number of concurrent streams for gRPC calls.
         default: 100
   nodeSelector:
     type: object

@@ -30,8 +30,11 @@ properties:
       Для работы необходим включенный модуль [log-shipper](../460-log-shipper).
   lokiConfig:
     description: |
-      Опции Loki, доступные для изменения. Использовать с осторожностью! Неверные настройки могут привести к неработоспособности Loki.
-      См. документацию https://grafana.com/docs/loki/v2.9.x/configure/
+      Опции Loki, доступные для изменения.
+
+      Подробнее о настройки Loki читайте в [документации Loki](https://grafana.com/docs/loki/v2.9.x/configure/).
+      
+      > Внимание! Ошибочные  настройки могут привести к неработоспособности Loki.
     properties:
       ingestion_rate_mb:
         description: |
@@ -42,7 +45,9 @@ properties:
       max_streams_per_user:
         description: |
           Максимальное общее количество потоков логов для экземпляра Loki.
-          Каждый поток логов имеет уникальный набор меток. Количество потоков равно количеству уникальных наборов меток, например: '{job="my-app", instance="kube-node-1", namespace="production", pod_name="backend-79dbf6fcb7-v5gs7", app="backend"}'
+
+          Каждый поток логов имеет уникальный набор меток. Количество потоков равно количеству уникальных наборов меток. Например: '{job="my-app", instance="kube-node-1", namespace="production", pod_name="backend-79dbf6fcb7-v5gs7", app="backend"}'.
+
           Значение 0 отключает ограничение.
       max_entries_limit_per_query:
         description: |
@@ -64,7 +69,7 @@ properties:
           Ограничение на размер сообщения gRPC, которое может получить сервер, в байтах.
       grpc_server_max_concurrent_streams:
         description: |
-          Ограничение на количество одновременных потоков для вызовов gRPC
+          Ограничение на количество одновременных потоков для вызовов gRPC.
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
