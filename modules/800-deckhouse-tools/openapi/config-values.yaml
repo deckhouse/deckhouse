@@ -11,7 +11,7 @@ properties:
     type: object
     default: {}
     description: |
-      Parameters to authenticate and authorize access to the module web interface.
+      Parameters to authenticate and authorize access to the module's web interface.
     properties:
       externalAuthentication:
         type: object
@@ -33,7 +33,7 @@ properties:
             type: string
             default: ""
             description: |
-              The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response.
+              The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response).
             x-examples:
               - https://$host/dex-authenticator/sign_in
       allowedUserGroups:
@@ -42,9 +42,9 @@ properties:
           type: string
         default: []
         description: |
-          An array of groups whose users can browse the module web interface.
+          An array of groups whose users can browse the module's web interface.
 
-          This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
+          This parameter is used if the `user-authn` module is enabled or if the `externalAuthentication` parameter is set.
 
           > **Caution!** Note that you must add those groups to the appropriate field in the `DexProvider` config if this module is used together with the `user-authn` one.
         x-examples:
@@ -73,8 +73,8 @@ properties:
           The HTTPS usage mode:
           - `CertManager` — the web UI is accessed over HTTPS using a certificate obtained from a clusterIssuer specified in the `certManager.clusterIssuerName` parameter.
           - `CustomCertificate` — the web UI is accessed over HTTPS using a certificate from the `d8-system` namespace.
-          - `Disabled` — in this mode, the module web interface can only be accessed over HTTP.
-          - `OnlyInURI` — the module web interface will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
+          - `Disabled` — in this mode, the module's web interface can only be accessed over HTTP.
+          - `OnlyInURI` — the module's web interface will work over HTTP (implies there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. The load balancer should provide redirection from HTTP to HTTPS.
         enum:
           - "Disabled"
           - "CertManager"
@@ -90,7 +90,7 @@ properties:
             default: "letsencrypt"
             x-examples: ["letsencrypt"]
             description: |
-              What ClusterIssuer to use for getting an SSL certificate (currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available; also, you can define your own).
+              What ClusterIssuer to use for getting an SSL certificate (currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are supported; you can also define your own).
       customCertificate:
         type: object
         default: {}
@@ -100,9 +100,9 @@ properties:
           secretName:
             type: string
             description: |
-              The name of the secret in the `d8-system` namespace to use with the module web interface.
+              The name of the secret in the `d8-system` namespace to use with the module's web interface.
 
-              This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+              Note that this secret must conform to the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
   nodeSelector:
     type: object
     additionalProperties:
