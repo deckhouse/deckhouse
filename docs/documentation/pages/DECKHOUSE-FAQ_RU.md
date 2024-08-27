@@ -979,6 +979,10 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 На текущий момент мигрировать на CSE редакцию можно только с релиза 1.58.
 {% endalert %}
 
+{% alert %}
+При переключения на CSE редакцию может наблюдаться недоступность компонентов кластера.
+{% endalert %}
+
 Для переключения кластера Deckhouse Enterprise Edition на Certified Security Edition выполните следующие действия:
 Все команды выполняются на мастер ноде действующего EE кластера с версией релиза 1.58.
 
