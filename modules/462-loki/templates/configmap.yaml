@@ -1,5 +1,5 @@
-{{- range (keys .Values.loki.lokiConfig) }}
 {{- $lokiConfigSnakeCase := dict }}
+{{- range (keys .Values.loki.lokiConfig) }}
 {{- $_ := set $lokiConfigSnakeCase (. | snakecase) (. | get .Values.loki.lokiConfig) }}
 {{- end }}
 ---
