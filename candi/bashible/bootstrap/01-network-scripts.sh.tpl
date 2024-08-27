@@ -15,6 +15,7 @@
 # limitations under the License.
 */}}
 {{- if .provider }}
+{{- if and (ne .nodeGroup.nodeType "Static") (.provider )}}
   {{- if $bootstrap_script_network := $.Files.Get (printf "/deckhouse/candi/cloud-providers/%s/bashible/bootstrap-networks.sh.tpl" .provider) | default ($.Files.Get (printf "candi/cloud-providers/%s/bashible/bootstrap-networks.sh.tpl" .provider) ) }}
     {{- tpl ($bootstrap_script_network) $ | nindent 0 }}
   {{- end }}
