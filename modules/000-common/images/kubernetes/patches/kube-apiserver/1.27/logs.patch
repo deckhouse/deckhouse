@@ -229,16 +229,18 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
 --- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
-+++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go	(date 1724785065940)
-@@ -19,6 +19,7 @@
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go	(date 1724793860954)
+@@ -19,7 +19,9 @@
  import (
  	"context"
  	"fmt"
 +	"k8s.io/klog/v2"
  	"net/http"
++	"reflect"
  	"strings"
  	"time"
-@@ -63,6 +64,15 @@
+
+@@ -63,6 +65,15 @@
  // PatchResource returns a function that will handle a resource patch.
  func PatchResource(r rest.Patcher, scope *RequestScope, admit admission.Interface, patchTypes []string) http.HandlerFunc {
  	return func(w http.ResponseWriter, req *http.Request) {
@@ -254,7 +256,7 @@ diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go b/stag
  		ctx := req.Context()
  		// For performance tracking purposes.
  		ctx, span := tracing.Start(ctx, "Patch", traceFields(req)...)
-@@ -139,6 +149,14 @@
+@@ -139,6 +150,14 @@
  		}
  		gv := scope.Kind.GroupVersion()
 
@@ -269,7 +271,7 @@ diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go b/stag
  		validationDirective := fieldValidation(options.FieldValidation)
  		decodeSerializer := s.Serializer
  		if validationDirective == metav1.FieldValidationWarn || validationDirective == metav1.FieldValidationStrict {
-@@ -224,7 +242,7 @@
+@@ -224,7 +243,7 @@
  			userAgent:   req.UserAgent(),
  		}
 
@@ -278,7 +280,7 @@ diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go b/stag
  		if err != nil {
  			scope.err(err, w, req)
  			return
-@@ -614,7 +632,7 @@
+@@ -614,7 +633,7 @@
  }
 
  // patchResource divides PatchResource for easier unit testing
@@ -287,7 +289,7 @@ diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go b/stag
  	p.namespace = request.NamespaceValue(ctx)
  	switch p.patchType {
  	case types.JSONPatchType, types.MergePatchType:
-@@ -623,6 +641,14 @@
+@@ -623,6 +642,14 @@
  			fieldManager: scope.FieldManager,
  		}
  	case types.StrategicMergePatchType:
@@ -302,16 +304,34 @@ diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go b/stag
  		schemaReferenceObj, err := p.unsafeConvertor.ConvertToVersion(p.restPatcher.New(), p.kind.GroupVersion())
  		if err != nil {
  			return nil, false, err
-@@ -653,7 +679,16 @@
+@@ -653,7 +680,34 @@
  		return obj, nil
  	}
 
 -	transformers := []rest.TransformFunc{p.applyPatch, p.applyAdmission, dedupOwnerReferencesTransformer}
 +	transformers := []rest.TransformFunc{func(ctx context.Context, newObj runtime.Object, oldObj runtime.Object) (transformedNewObj runtime.Object, err error) {
++		oldObjStr := "nil"
++		if oldObj != nil && !reflect.ValueOf(oldObj).IsNil() {
++			a := oldObj.GetObjectKind()
++			if a != nil && !reflect.ValueOf(a).IsNil() {
++				b := a.GroupVersionKind()
++				oldObjStr = b.String()
++			}
++		}
++
++		newObjStr := "nil"
++		if newObj != nil && !reflect.ValueOf(newObj).IsNil() {
++			a := newObj.GetObjectKind()
++			if a != nil && !reflect.ValueOf(a).IsNil() {
++				b := a.GroupVersionKind()
++				newObjStr = b.String()
++			}
++		}
++
 +		klog.V(1).Infof(
 +			"Call patchResource: apply patch transform old %s new %s; url %s; agent %s\n",
-+			oldObj.GetObjectKind().GroupVersionKind().String(),
-+			newObj.GetObjectKind().GroupVersionKind().String(),
++			oldObjStr,
++			newObjStr,
 +			req.URL.String(),
 +			req.Header.Get("User-Agent"),
 +		)
