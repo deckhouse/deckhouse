@@ -321,7 +321,9 @@ dhctl bootstrap \
 
 ### Preflight checks
 
-![Scheme of checks prior to Deckhouse installation](../../images/common/preflight-checks.png)
+{% offtopic title="Scheme of checks prior to Deckhouse installation..." %}
+![Scheme of checks prior to Deckhouse installation](../images/installing/preflight-checks.png)
+{% endofftopic %}
 
 - dhctl
 	- global
@@ -338,7 +340,7 @@ dhctl bootstrap \
 		- resolve the localhost domain - check that localhost is resolving to IP 127.0.0.1
 	- cloud
 		- cloud master node system requirements are met - check that the configuration has been configured to meet the minimum requirements for the installation
-- bashable
+- bashible
 	- global
 		- check server hostname - check that hostname meets the requirements length <= 63 characters, all characters are lower case.  Special characters are not allowed except for '-' and '.' which cannot be at the beginning and end of hosthame
 		- exist embedded contanerd - check that contanerd is not pre-installed
