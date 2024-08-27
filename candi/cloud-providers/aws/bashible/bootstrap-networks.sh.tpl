@@ -18,6 +18,8 @@
 {{- /*
 # We need include 'bb_package_install' in this file for dhctl bootstrap render.
 */}}
+set +e
+
 {{- if $bb_package_install := .Files.Get "/deckhouse/candi/bashible/bb_package_install.sh.tpl" -}}
   {{- tpl ( $bb_package_install ) . | nindent 0 }}
 {{- end }}
@@ -49,3 +51,5 @@ if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
   mkdir -p /var/lib/bashible
   touch /var/lib/bashible/hosname-set-as-in-aws
 fi
+
+set -e

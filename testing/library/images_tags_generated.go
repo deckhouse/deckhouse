@@ -303,6 +303,9 @@ var DefaultImagesDigests = map[string]interface{}{
 	"monitoringPing": map[string]interface{}{
 		"monitoringPing": "imageHash-monitoringPing-monitoringPing",
 	},
+	"multitenancyManager": map[string]interface{}{
+		"multitenancyManager": "imageHash-multitenancyManager-multitenancyManager",
+	},
 	"networkGateway": map[string]interface{}{
 		"dnsmasq": "imageHash-networkGateway-dnsmasq",
 		"snat":    "imageHash-networkGateway-snat",
@@ -380,6 +383,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"crictl130":                 "imageHash-registrypackages-crictl130",
 		"d8":                        "imageHash-registrypackages-d8",
 		"d8Curl821":                 "imageHash-registrypackages-d8Curl821",
+		"dockerRegistry283":         "imageHash-registrypackages-dockerRegistry283",
 		"drbd":                      "imageHash-registrypackages-drbd",
 		"e2fsprogs1470":             "imageHash-registrypackages-e2fsprogs1470",
 		"ec2DescribeTagsV001Flant2": "imageHash-registrypackages-ec2DescribeTagsV001Flant2",
@@ -414,9 +418,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"xfsprogs670":               "imageHash-registrypackages-xfsprogs670",
 	},
 	"runtimeAuditEngine": map[string]interface{}{
-		"falco":         "imageHash-runtimeAuditEngine-falco",
-		"falcosidekick": "imageHash-runtimeAuditEngine-falcosidekick",
-		"rulesLoader":   "imageHash-runtimeAuditEngine-rulesLoader",
+		"falco":            "imageHash-runtimeAuditEngine-falco",
+		"falcosidekick":    "imageHash-runtimeAuditEngine-falcosidekick",
+		"k8sMetacollector": "imageHash-runtimeAuditEngine-k8sMetacollector",
+		"rulesLoader":      "imageHash-runtimeAuditEngine-rulesLoader",
 	},
 	"snapshotController": map[string]interface{}{
 		"snapshotController":        "imageHash-snapshotController-snapshotController",

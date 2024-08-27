@@ -90,11 +90,11 @@ bb-package-fetch-blobs() {
     mkdir -p "${PACKAGE_DIR}"
 
     retries=0
-    while [ "$retries" -lt 3 ]
+    while [ "$retries" -lt 5 ]
     do
       retries=$(( retries+1 ))
       bb-package-fetch-blob "${PACKAGE_DIGEST}" "${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar.gz" && break
-			sleep 2
+			sleep 5
     done
   done
 }
@@ -123,6 +123,7 @@ for ep in endpoints:
     response = urlopen(request, timeout=300)
   except HTTPError as e:
     print("Access to {} return HTTP Error {}: {}".format(url, e.getcode(), e.read()[:255]))
+    print('You can check via curl -v -k -H "Authorization: Bearer ${PACKAGES_PROXY_TOKEN}" "{}" > /dev/null'.format(url))
     continue
   except Exception as e:
     print("Access to {} return Error: {}".format(url, e))

@@ -118,7 +118,7 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 
 	if u.cleanupAfterExec {
 		defer func() {
-			err := NewCommand(u.Session, "rm", "-f", scriptFullPath).Start()
+			err := NewCommand(u.Session, "rm", "-f", scriptFullPath).Run()
 			if err != nil {
 				log.DebugF("Failed to delete uploaded script %s: %v", scriptFullPath, err)
 			}

@@ -3,7 +3,6 @@ admissionPolicyEngineEnabled: true
 certManagerEnabled: true
 containerizedDataImporterEnabled: true
 dashboardEnabled: true
-externalModuleManagerEnabled: true
 deckhouseEnabled: true
 documentationEnabled: true
 deschedulerEnabled: true

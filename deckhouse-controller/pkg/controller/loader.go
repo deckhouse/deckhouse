@@ -33,6 +33,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
+	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 )
 
@@ -46,14 +47,14 @@ var (
 )
 
 // LoadModule reads single directory and returns BasicModule
-// modulePath is in the following format: /deckhouse-controller/external-modules/<module_name>/<module_version>
+// modulePath is in the following format: /deckhouse-controller/downloaded/<module_name>/<module_version>
 func (dml *DeckhouseController) LoadModule(moduleSource, modulePath string) (*modules.BasicModule, error) {
 	_, err := readDir(modulePath)
 	if err != nil {
 		return nil, err
 	}
 
-	// run parseModuleDir("<module_name>", "/deckhouse-controller/external-modules/<module_name>/<module_version>")
+	// run parseModuleDir("<module_name>", "/deckhouse-controller/downloaded/<module_name>/<module_version>")
 	def, err := dml.parseModuleDir(filepath.Base(filepath.Dir(modulePath)), modulePath)
 	if err != nil {
 		return nil, err
@@ -152,7 +153,7 @@ func (dml *DeckhouseController) searchAndLoadDeckhouseModules() error {
 				return fmt.Errorf("process module %s: %w", def.Name, err)
 			}
 
-			if !strings.HasPrefix(def.Path, os.Getenv("EXTERNAL_MODULES_DIR")) {
+			if !strings.HasPrefix(def.Path, d8env.GetDownloadedModulesDir()) {
 				dml.sourceModules[def.Name] = "Embedded"
 			}
 

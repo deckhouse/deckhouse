@@ -76,11 +76,11 @@ func (b *ClusterBootstrapper) CreateResources() error {
 			return err
 		}
 
-		checkers, err := resources.GetCheckers(kubeCl, resourcesToCreate)
+		checkers, err := resources.GetCheckers(kubeCl, resourcesToCreate, nil)
 		if err != nil {
 			return err
 		}
 
-		return resources.CreateResourcesLoop(kubeCl, nil, resourcesToCreate, checkers)
+		return resources.CreateResourcesLoop(kubeCl, resourcesToCreate, checkers)
 	})
 }
