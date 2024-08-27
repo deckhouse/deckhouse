@@ -79,6 +79,7 @@
         summary: etcd cluster database growing very fast.
         description: |
           Predicting that the etcd database will run out of disk space in the next 1 day on instance `{{ $labels.instance }}` based on 6h growth rate.
+
           Please check and take action as it might be disruptive.
     - alert: D8EtcdDatabaseHighFragmentationRatio
       expr: max by (node) (last_over_time(etcd_mvcc_db_total_size_in_use_in_bytes[5m]) / last_over_time(etcd_mvcc_db_total_size_in_bytes[5m])) < 0.5 and max by (node) (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"}) > scalar(max(d8_etcd_quota_backend_total) * 0.75)
@@ -96,5 +97,5 @@
           The etcd database size in use on instance `{{ $labels.instance }}` is less than 50% of the actual allocated disk space, indicating potential fragmentation
 
           Possible solutions:
-          - You can do defragmentation. Use next command:
+          - You can do defragmentation. Use the following command:
             `kubectl -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s`
