@@ -363,6 +363,19 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/modules/040-node-manager/capi/dynamix
+  to: /deckhouse/modules/040-node-manager/capi/dynamix
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/modules/040-node-manager/capi/vcd
   to: /deckhouse/modules/040-node-manager/capi/vcd
   excludePaths:

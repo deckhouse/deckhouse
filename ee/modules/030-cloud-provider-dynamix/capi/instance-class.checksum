@@ -1,0 +1,28 @@
+{{- $options := dict -}}
+
+{{- $imageName := .nil }}
+{{- if .nodeGroup.instanceClass.imageName }}
+  {{- $imageName = .nodeGroup.instanceClass.imageName }}
+{{- end }}
+
+{{- $numCPUs := .nil }}
+{{- if .nodeGroup.instanceClass.numCPUs }}
+  {{- $numCPUs = .nodeGroup.instanceClass.numCPUs }}
+{{- end }}
+
+{{- $memory := .nil }}
+{{- if .nodeGroup.instanceClass.memory }}
+  {{- $memory = .nodeGroup.instanceClass.memory }}
+{{- end }}
+
+{{- $rootDiskSize := .nil }}
+{{- if .nodeGroup.instanceClass.rootDiskSizeGb }}
+  {{- $rootDiskSize = .nodeGroup.instanceClass.rootDiskSizeGb }}
+{{- end }}
+
+{{- $_ := set $options "imageName" .nodeGroup.instanceClass.imageName -}}
+{{- $_ := set $options "numCPUs" .nodeGroup.instanceClass.numCPUs -}}
+{{- $_ := set $options "memory" .nodeGroup.instanceClass.memory -}}
+{{- $_ := set $options "rootDiskSizeGb" .nodeGroup.instanceClass.rootDiskSizeGb -}}
+
+{{- $options | toYaml | trimSuffix "\n" | printf "%s\n" | sha256sum -}}
