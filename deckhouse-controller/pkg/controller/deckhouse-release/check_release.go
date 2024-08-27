@@ -232,9 +232,12 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		}
 	}
 
-	err = r.createRelease(ctx, releaseChecker, cooldownUntil, notificationShiftTime)
-	if err != nil {
-		return fmt.Errorf("crate release %s: %w", releaseChecker.releaseMetadata.Version, err)
+	// if there are no releases in the cluster, we apply the latest release
+	if len(pointerReleases) == 0 {
+		err = r.createRelease(ctx, releaseChecker, cooldownUntil, notificationShiftTime)
+		if err != nil {
+			return fmt.Errorf("create release %s: %w", releaseChecker.releaseMetadata.Version, err)
+		}
 	}
 	return nil
 }
