@@ -1,102 +1,5 @@
 Subject: [PATCH] logs
 ---
-Index: staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
---- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
-+++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go	(date 1724449854272)
-@@ -363,6 +363,18 @@
- 	requestScope := crdInfo.requestScopes[requestInfo.APIVersion]
- 	storage := crdInfo.storages[requestInfo.APIVersion].CustomResource
-
-+	klog.V(2).Infof(
-+		"serve resource: useragent %s/%s/%s; verb %s; url %s; api %s/%s/%s \n",
-+		req.Header.Get("User-Agent"),
-+		req.Header.Get("X-User-Agent"),
-+		req.Header.Get("X-Device-User-Agent"),
-+		requestInfo.Verb,
-+		req.URL.String(),
-+		requestInfo.APIVersion,
-+		requestInfo.Resource,
-+		requestInfo.APIGroup,
-+	)
-+
- 	switch requestInfo.Verb {
- 	case "get":
- 		return handlers.GetResource(storage, requestScope)
-@@ -410,6 +422,18 @@
- 	requestScope := crdInfo.statusRequestScopes[requestInfo.APIVersion]
- 	storage := crdInfo.storages[requestInfo.APIVersion].Status
-
-+	klog.V(2).Infof(
-+		"serve status: useragent %s/%s/%s; verb %s; url %s; api %s/%s/%s \n",
-+		req.Header.Get("User-Agent"),
-+		req.Header.Get("X-User-Agent"),
-+		req.Header.Get("X-Device-User-Agent"),
-+		requestInfo.Verb,
-+		req.URL.String(),
-+		requestInfo.APIVersion,
-+		requestInfo.Resource,
-+		requestInfo.APIGroup,
-+	)
-+
- 	switch requestInfo.Verb {
- 	case "get":
- 		return handlers.GetResource(storage, requestScope)
-@@ -430,6 +454,18 @@
- 	requestScope := crdInfo.scaleRequestScopes[requestInfo.APIVersion]
- 	storage := crdInfo.storages[requestInfo.APIVersion].Scale
-
-+	klog.V(2).Infof(
-+		"serve scale: useragent %s/%s/%s; verb %s; url %s; api %s/%s/%s \n",
-+		req.Header.Get("User-Agent"),
-+		req.Header.Get("X-User-Agent"),
-+		req.Header.Get("X-Device-User-Agent"),
-+		requestInfo.Verb,
-+		req.URL.String(),
-+		requestInfo.APIVersion,
-+		requestInfo.Resource,
-+		requestInfo.APIGroup,
-+	)
-+
- 	switch requestInfo.Verb {
- 	case "get":
- 		return handlers.GetResource(storage, requestScope)
-Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/delete.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/delete.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/delete.go
---- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/delete.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
-+++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/delete.go	(date 1724698236618)
-@@ -19,6 +19,7 @@
- import (
- 	"context"
- 	"fmt"
-+	"k8s.io/klog/v2"
- 	"net/http"
- 	"time"
-
-@@ -49,6 +50,15 @@
- // TODO admission here becomes solely validating admission
- func DeleteResource(r rest.GracefulDeleter, allowsOptions bool, scope *RequestScope, admit admission.Interface) http.HandlerFunc {
- 	return func(w http.ResponseWriter, req *http.Request) {
-+		klog.V(1).Infof(
-+			"Call DeleteResource: useragent %s/%s/%s; url %s; scope: %s; subres: %s\n",
-+			req.Header.Get("User-Agent"),
-+			req.Header.Get("X-User-Agent"),
-+			req.Header.Get("X-Device-User-Agent"),
-+			req.URL.String(),
-+			scope.Resource.String(),
-+			scope.Subresource,
-+		)
- 		ctx := req.Context()
- 		// For performance tracking purposes.
- 		ctx, span := tracing.Start(ctx, "Delete", traceFields(req)...)
 Index: staging/src/k8s.io/kms/internal/plugins/_mock/go.sum
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -319,44 +222,6 @@ diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/installer.go b/staging/s
  		handlers.ConnectResource(connecter, &scope, admit, restPath, isSubresource)(res.ResponseWriter, req.Request)
  	}
  }
-Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go
---- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
-+++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go	(date 1724698236606)
-@@ -52,6 +52,15 @@
-
- func createHandler(r rest.NamedCreater, scope *RequestScope, admit admission.Interface, includeName bool) http.HandlerFunc {
- 	return func(w http.ResponseWriter, req *http.Request) {
-+		klog.V(1).Infof(
-+			"Call CreateeResource: useragent %s/%s/%s; url %s; scope: %s; subres: %s\n",
-+			req.Header.Get("User-Agent"),
-+			req.Header.Get("X-User-Agent"),
-+			req.Header.Get("X-Device-User-Agent"),
-+			req.URL.String(),
-+			scope.Resource.String(),
-+			scope.Subresource,
-+		)
- 		ctx := req.Context()
- 		// For performance tracking purposes.
- 		ctx, span := tracing.Start(ctx, "Create", traceFields(req)...)
-@@ -124,6 +133,13 @@
- 		decoder := scope.Serializer.DecoderToVersion(decodeSerializer, scope.HubGroupVersion)
- 		span.AddEvent("About to convert to expected version")
- 		obj, gvk, err := decoder.Decode(body, &defaultGVK, original)
-+		klog.V(2).Infof(
-+			"Call createHandler resource: gvk %s/%s/%s; agent %s;\n",
-+			gvk.Kind,
-+			gvk.Group,
-+			gvk.Version,
-+			req.Header.Get("User-Agent"),
-+		)
- 		if err != nil {
- 			strictError, isStrictError := runtime.AsStrictDecodingError(err)
- 			switch {
 Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -364,7 +229,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
 --- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
-+++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go	(date 1724698413801)
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go	(date 1724785065940)
 @@ -19,6 +19,7 @@
  import (
  	"context"
@@ -404,6 +269,88 @@ diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go b/stag
  		validationDirective := fieldValidation(options.FieldValidation)
  		decodeSerializer := s.Serializer
  		if validationDirective == metav1.FieldValidationWarn || validationDirective == metav1.FieldValidationStrict {
+@@ -224,7 +242,7 @@
+ 			userAgent:   req.UserAgent(),
+ 		}
+
+-		result, wasCreated, err := p.patchResource(ctx, scope)
++		result, wasCreated, err := p.patchResource(ctx, scope, req)
+ 		if err != nil {
+ 			scope.err(err, w, req)
+ 			return
+@@ -614,7 +632,7 @@
+ }
+
+ // patchResource divides PatchResource for easier unit testing
+-func (p *patcher) patchResource(ctx context.Context, scope *RequestScope) (runtime.Object, bool, error) {
++func (p *patcher) patchResource(ctx context.Context, scope *RequestScope, req *http.Request) (runtime.Object, bool, error) {
+ 	p.namespace = request.NamespaceValue(ctx)
+ 	switch p.patchType {
+ 	case types.JSONPatchType, types.MergePatchType:
+@@ -623,6 +641,14 @@
+ 			fieldManager: scope.FieldManager,
+ 		}
+ 	case types.StrategicMergePatchType:
++		klog.V(1).Infof(
++			"Call patchResource: apply strategic merge patch for resource %s; url %s; agent %s; gv %s; obj %s\n",
++			scope.Resource.String(),
++			req.URL.String(),
++			req.Header.Get("User-Agent"),
++			p.hubGroupVersion.String(),
++			p.restPatcher.New().GetObjectKind().GroupVersionKind().String(),
++		)
+ 		schemaReferenceObj, err := p.unsafeConvertor.ConvertToVersion(p.restPatcher.New(), p.kind.GroupVersion())
+ 		if err != nil {
+ 			return nil, false, err
+@@ -653,7 +679,16 @@
+ 		return obj, nil
+ 	}
+
+-	transformers := []rest.TransformFunc{p.applyPatch, p.applyAdmission, dedupOwnerReferencesTransformer}
++	transformers := []rest.TransformFunc{func(ctx context.Context, newObj runtime.Object, oldObj runtime.Object) (transformedNewObj runtime.Object, err error) {
++		klog.V(1).Infof(
++			"Call patchResource: apply patch transform old %s new %s; url %s; agent %s\n",
++			oldObj.GetObjectKind().GroupVersionKind().String(),
++			newObj.GetObjectKind().GroupVersionKind().String(),
++			req.URL.String(),
++			req.Header.Get("User-Agent"),
++		)
++		return p.applyPatch(ctx, newObj, oldObj)
++	}, p.applyAdmission, dedupOwnerReferencesTransformer}
+
+ 	wasCreated := false
+ 	p.updatedObjectInfo = rest.DefaultUpdatedObjectInfo(nil, transformers...)
+Index: staging/src/k8s.io/client-go/rest/request.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/client-go/rest/request.go b/staging/src/k8s.io/client-go/rest/request.go
+--- a/staging/src/k8s.io/client-go/rest/request.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/client-go/rest/request.go	(date 1724783065455)
+@@ -373,6 +373,14 @@
+ 	if r.err != nil {
+ 		return r
+ 	}
++	klog.V(1).Infof(
++		"Encode parametrs for request %s; useragent %s; obj %s/%s/%s",
++		r.URL().String(),
++		r.headers.Get("User-Agent"),
++		obj.GetObjectKind().GroupVersionKind().Kind,
++		obj.GetObjectKind().GroupVersionKind().Group,
++		obj.GetObjectKind().GroupVersionKind().Version,
++	)
+ 	params, err := codec.EncodeParameters(obj, version)
+ 	if err != nil {
+ 		r.err = err
+@@ -1111,6 +1119,7 @@
+ 		if err != nil {
+ 			return Result{err: errors.NewInternalError(err)}
+ 		}
++		klog.V(1).Infof("Negotiator.Decode: %s; user agent %s", req.URL.String(), req.Header.Get("User-Agent"))
+ 		decoder, err = r.c.content.Negotiator.Decoder(mediaType, params)
+ 		if err != nil {
+ 			// if we fail to negotiate a decoder, treat this as an unstructured error
 Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/watch.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -411,7 +358,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/watch.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/watch.go
 --- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/watch.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
-+++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/watch.go	(date 1724698673926)
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/watch.go	(date 1724783757784)
 @@ -20,6 +20,7 @@
  	"bytes"
  	"fmt"
@@ -437,6 +384,274 @@ diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/watch.go b/stag
  	if wsstream.IsWebSocketRequest(req) {
  		w.Header().Set("Content-Type", s.MediaType)
  		websocket.Handler(s.HandleWS).ServeHTTP(w, req)
+@@ -232,6 +243,15 @@
+ 			defer runtime.AllocatorPool.Put(memoryAllocator)
+ 		}
+ 		embeddedEncodeFn = func(obj runtime.Object, w io.Writer) error {
++			klog.V(1).Infof(
++				"Call WatchServer encode with allocator: useragent %s/%s/%s; url %s; scope: %s; subres: %s\n",
++				req.Header.Get("User-Agent"),
++				req.Header.Get("X-User-Agent"),
++				req.Header.Get("X-Device-User-Agent"),
++				req.URL.String(),
++				s.Scope.Resource.String(),
++				s.Scope.Subresource,
++			)
+ 			return encoder.EncodeWithAllocator(obj, w, memoryAllocator)
+ 		}
+ 	}
+Index: staging/src/k8s.io/apimachinery/pkg/runtime/serializer/versioning/versioning.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/apimachinery/pkg/runtime/serializer/versioning/versioning.go b/staging/src/k8s.io/apimachinery/pkg/runtime/serializer/versioning/versioning.go
+--- a/staging/src/k8s.io/apimachinery/pkg/runtime/serializer/versioning/versioning.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/apimachinery/pkg/runtime/serializer/versioning/versioning.go	(date 1724783758392)
+@@ -187,6 +187,11 @@
+ 		c.defaulter.Default(obj)
+ 	}
+
++	klog.V(2).Infof("codec.Decode decodet version identifier %s; gvk %s; data %s",
++		c.decodeVersion.Identifier(),
++		obj.GetObjectKind().GroupVersionKind().String(),
++		string(data),
++	)
+ 	out, err := c.convertor.ConvertToVersion(obj, c.decodeVersion)
+ 	if err != nil {
+ 		return nil, gvk, err
+@@ -269,6 +274,7 @@
+ 	}
+
+ 	// Perform a conversion if necessary
++
+ 	out, err := c.convertor.ConvertToVersion(obj, c.encodeVersion)
+ 	if err != nil {
+ 		return err
+Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/update.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/update.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/update.go
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/update.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/update.go	(date 1724783065447)
+@@ -49,6 +49,15 @@
+ // UpdateResource returns a function that will handle a resource update
+ func UpdateResource(r rest.Updater, scope *RequestScope, admit admission.Interface) http.HandlerFunc {
+ 	return func(w http.ResponseWriter, req *http.Request) {
++		klog.V(1).Infof(
++			"Call UpdateResource: useragent %s/%s/%s; url %s; scope: %s; subres: %s\n",
++			req.Header.Get("User-Agent"),
++			req.Header.Get("X-User-Agent"),
++			req.Header.Get("X-Device-User-Agent"),
++			req.URL.String(),
++			scope.Resource.String(),
++			scope.Subresource,
++		)
+ 		ctx := req.Context()
+ 		// For performance tracking purposes.
+ 		ctx, span := tracing.Start(ctx, "Update", traceFields(req)...)
+@@ -109,6 +118,15 @@
+ 		}
+
+ 		decoder := scope.Serializer.DecoderToVersion(decodeSerializer, scope.HubGroupVersion)
++		klog.V(1).Infof(
++			"Call UpdateResource decode to version from: useragent %s/%s/%s; url %s; default gvk: %s; original: %s \n",
++			req.Header.Get("User-Agent"),
++			req.Header.Get("X-User-Agent"),
++			req.Header.Get("X-Device-User-Agent"),
++			req.URL.String(),
++			defaultGVK.String(),
++			original.GetObjectKind().GroupVersionKind().String(),
++		)
+ 		span.AddEvent("About to convert to expected version")
+ 		obj, gvk, err := decoder.Decode(body, &defaultGVK, original)
+ 		if err != nil {
+Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/response.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/response.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/response.go
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/response.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/response.go	(date 1724783302470)
+@@ -19,6 +19,7 @@
+ import (
+ 	"context"
+ 	"fmt"
++	"k8s.io/klog/v2"
+ 	"net/http"
+
+ 	"k8s.io/apimachinery/pkg/api/errors"
+@@ -189,6 +190,7 @@
+ 		item := &table.Rows[i]
+ 		switch opts.IncludeObject {
+ 		case metav1.IncludeObject:
++			klog.V(1).Infof("as table %s/%s/%s", scope.Kind, scope.Resource.String(), scope.Subresource)
+ 			item.Object.Object, err = scope.Convertor.ConvertToVersion(item.Object.Object, scope.Kind.GroupVersion())
+ 			if err != nil {
+ 				return nil, err
+Index: staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go	(date 1724782069059)
+@@ -363,6 +363,18 @@
+ 	requestScope := crdInfo.requestScopes[requestInfo.APIVersion]
+ 	storage := crdInfo.storages[requestInfo.APIVersion].CustomResource
+
++	klog.V(2).Infof(
++		"serve resource: useragent %s/%s/%s; verb %s; url %s; api %s/%s/%s \n",
++		req.Header.Get("User-Agent"),
++		req.Header.Get("X-User-Agent"),
++		req.Header.Get("X-Device-User-Agent"),
++		requestInfo.Verb,
++		req.URL.String(),
++		requestInfo.APIVersion,
++		requestInfo.Resource,
++		requestInfo.APIGroup,
++	)
++
+ 	switch requestInfo.Verb {
+ 	case "get":
+ 		return handlers.GetResource(storage, requestScope)
+@@ -410,6 +422,18 @@
+ 	requestScope := crdInfo.statusRequestScopes[requestInfo.APIVersion]
+ 	storage := crdInfo.storages[requestInfo.APIVersion].Status
+
++	klog.V(2).Infof(
++		"serve status: useragent %s/%s/%s; verb %s; url %s; api %s/%s/%s \n",
++		req.Header.Get("User-Agent"),
++		req.Header.Get("X-User-Agent"),
++		req.Header.Get("X-Device-User-Agent"),
++		requestInfo.Verb,
++		req.URL.String(),
++		requestInfo.APIVersion,
++		requestInfo.Resource,
++		requestInfo.APIGroup,
++	)
++
+ 	switch requestInfo.Verb {
+ 	case "get":
+ 		return handlers.GetResource(storage, requestScope)
+@@ -430,6 +454,18 @@
+ 	requestScope := crdInfo.scaleRequestScopes[requestInfo.APIVersion]
+ 	storage := crdInfo.storages[requestInfo.APIVersion].Scale
+
++	klog.V(2).Infof(
++		"serve scale: useragent %s/%s/%s; verb %s; url %s; api %s/%s/%s \n",
++		req.Header.Get("User-Agent"),
++		req.Header.Get("X-User-Agent"),
++		req.Header.Get("X-Device-User-Agent"),
++		requestInfo.Verb,
++		req.URL.String(),
++		requestInfo.APIVersion,
++		requestInfo.Resource,
++		requestInfo.APIGroup,
++	)
++
+ 	switch requestInfo.Verb {
+ 	case "get":
+ 		return handlers.GetResource(storage, requestScope)
+@@ -689,6 +725,7 @@
+ 		}
+ 	}
+
++	klog.V(1).Infof("New converter for crd %s", crd.Name)
+ 	safeConverter, unsafeConverter, err := r.converterFactory.NewConverter(crd)
+ 	if err != nil {
+ 		return nil, err
+Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/delete.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/delete.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/delete.go
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/delete.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/delete.go	(date 1724698236618)
+@@ -19,6 +19,7 @@
+ import (
+ 	"context"
+ 	"fmt"
++	"k8s.io/klog/v2"
+ 	"net/http"
+ 	"time"
+
+@@ -49,6 +50,15 @@
+ // TODO admission here becomes solely validating admission
+ func DeleteResource(r rest.GracefulDeleter, allowsOptions bool, scope *RequestScope, admit admission.Interface) http.HandlerFunc {
+ 	return func(w http.ResponseWriter, req *http.Request) {
++		klog.V(1).Infof(
++			"Call DeleteResource: useragent %s/%s/%s; url %s; scope: %s; subres: %s\n",
++			req.Header.Get("User-Agent"),
++			req.Header.Get("X-User-Agent"),
++			req.Header.Get("X-Device-User-Agent"),
++			req.URL.String(),
++			scope.Resource.String(),
++			scope.Subresource,
++		)
+ 		ctx := req.Context()
+ 		// For performance tracking purposes.
+ 		ctx, span := tracing.Start(ctx, "Delete", traceFields(req)...)
+Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go	(date 1724698236606)
+@@ -52,6 +52,15 @@
+
+ func createHandler(r rest.NamedCreater, scope *RequestScope, admit admission.Interface, includeName bool) http.HandlerFunc {
+ 	return func(w http.ResponseWriter, req *http.Request) {
++		klog.V(1).Infof(
++			"Call CreateeResource: useragent %s/%s/%s; url %s; scope: %s; subres: %s\n",
++			req.Header.Get("User-Agent"),
++			req.Header.Get("X-User-Agent"),
++			req.Header.Get("X-Device-User-Agent"),
++			req.URL.String(),
++			scope.Resource.String(),
++			scope.Subresource,
++		)
+ 		ctx := req.Context()
+ 		// For performance tracking purposes.
+ 		ctx, span := tracing.Start(ctx, "Create", traceFields(req)...)
+@@ -124,6 +133,13 @@
+ 		decoder := scope.Serializer.DecoderToVersion(decodeSerializer, scope.HubGroupVersion)
+ 		span.AddEvent("About to convert to expected version")
+ 		obj, gvk, err := decoder.Decode(body, &defaultGVK, original)
++		klog.V(2).Infof(
++			"Call createHandler resource: gvk %s/%s/%s; agent %s;\n",
++			gvk.Kind,
++			gvk.Group,
++			gvk.Version,
++			req.Header.Get("User-Agent"),
++		)
+ 		if err != nil {
+ 			strictError, isStrictError := runtime.AsStrictDecodingError(err)
+ 			switch {
+Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/rest_test.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/rest_test.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/rest_test.go
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/rest_test.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/rest_test.go	(date 1724784799051)
+@@ -552,7 +552,7 @@
+ 		ctx, cancel := context.WithTimeout(ctx, time.Second)
+ 		resultObj, _, err := p.patchResource(ctx, &RequestScope{
+ 			FieldManager: fieldmanager,
+-		})
++		}, nil)
+ 		cancel()
+
+ 		if len(tc.expectedError) != 0 {
 Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/rest.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -470,30 +685,6 @@ diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/rest.go b/stagi
  		namespace, name, err := scope.Namer.Name(req)
  		if err != nil {
  			scope.err(err, w, req)
-Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/update.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/update.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/update.go
---- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/update.go	(revision cbb86e0d7f4a049666fac0551e8b02ef3d6c3d9a)
-+++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/update.go	(date 1724698413789)
-@@ -49,6 +49,15 @@
- // UpdateResource returns a function that will handle a resource update
- func UpdateResource(r rest.Updater, scope *RequestScope, admit admission.Interface) http.HandlerFunc {
- 	return func(w http.ResponseWriter, req *http.Request) {
-+		klog.V(1).Infof(
-+			"Call UpdateResource: useragent %s/%s/%s; url %s; scope: %s; subres: %s\n",
-+			req.Header.Get("User-Agent"),
-+			req.Header.Get("X-User-Agent"),
-+			req.Header.Get("X-Device-User-Agent"),
-+			req.URL.String(),
-+			scope.Resource.String(),
-+			scope.Subresource,
-+		)
- 		ctx := req.Context()
- 		// For performance tracking purposes.
- 		ctx, span := tracing.Start(ctx, "Update", traceFields(req)...)
 Index: staging/src/k8s.io/apiserver/pkg/endpoints/handlers/get.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
