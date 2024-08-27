@@ -982,18 +982,6 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 Для переключения кластера Deckhouse Enterprise Edition на Certified Security Edition выполните следующие действия:
 Все команды выполняются на мастер ноде действующего EE кластера с версией релиза 1.58.
 
-1. Убедитесь, что используемые в кластере модули поддерживаются в CSE редакции.  
-Например на текущий момент в CSE редакции отсутствует модуль CertManager, поэтому перед его отключением необходимо перевести `Режим работы HTTPS` для связанных компонентов (например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/150-user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/300-prometheus/configuration.html#parameters-https-mode
-) ) на альтернативаные варианты.
-
-    Отключить не поддерживаемые модули в CSE редакции можно следующими командами:
-
-   ```shell
-   kubectl -n d8-system exec -it deploy/deckhouse bash 
-
-   kubectl get modules.deckhouse.io | grep Enabled | grep -v -E "(admission-policy-engine|cni-flannel|common|control-plane-manager|chrony|deckhouse|ingress-nginx|kube-dns|kube-proxy|log-shipper|local-path-provisioner|loki|monitoring-kubernetes|node-manager|operator-prometheus|registrypackages|runtime-audit-engine|operator-trivy|prometheus|user-authn|user-authz|priority-class|cloud-data-crd|operator-prometheus-crd|prometheus-crd|user-authn-crd|vertical-pod-autoscaler-crd|flow-schema|prometheus-metrics-adapter|monitoring-deckhouse|monitoring-kubernetes-control-plane|gost-integrity-controller|snapshot-controller-crd)" | awk {'print "deckhouse-controller module disable ", $1'} | bash && exit
-   ```
-
 1. Подготовьте переменные с токеном лицензии и создайте NodeGroupConfiguration для переходной авторизации в cse-registry:
 
    ```console
@@ -1037,8 +1025,23 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    ```shell
    /etc/containerd/conf.d/cse-registry.toml
    ```
+   
+   Статус сихнронизации можно отследить по значению UPTODATE (отображаемое число нод в этом статусе должно совпадать с общим числом нод (NODES) в группе):
 
-    В журнале systemd-сервиса bashible на master-узле должно появиться сообщение `Configuration is in sync, nothing to do`.
+   ```shell
+   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   ```
+
+    Пример:
+
+   ```console
+   root@master-ee-to-cse-0:~# kubectl  get ng  -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   NAME     NODES   READY   UPTODATE
+   master   1       1       1
+   worker   2       2       2
+   ```
+
+    Также в журнале systemd-сервиса bashible должно появиться сообщение `Configuration is in sync, nothing to do`.
 
     Пример:
 
@@ -1050,7 +1053,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
-1. Выполните следующие команды для запуска временного пода CSE редакции для получении актуальных дайджестов:
+1. Выполните следующие команды для запуска временного пода CSE редакции для получении актуальных дайджестов и списка модулей:
 
    ```console
    kubectl run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:v1.58.2 --command sleep -- infinity
@@ -1062,7 +1065,36 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    CSE_SANDBOX_IMAGE=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | grep  pause | grep -oE 'sha256:\w*')
 
    CSE_K8S_API_PROXY=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | grep kubernetesApiProxy | grep -oE 'sha256:\w*')
+
+   CSE_MODULES=$(kubectl exec cse-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*"  | awk {'print $9'} | cut -c5-)
+
+   USED_MODULES=$(kubectl get modules | grep -v 'snapshot-controller-crd' | grep Enabled |awk {'print $1'})
+
+   MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CSE_MODULES | tr ' ' '\n'))
    ```
+
+1. Убедитесь, что используемые в кластере модули поддерживаются в CSE редакции.  
+Например на текущий момент в CSE редакции отсутствует модуль CertManager, поэтому перед его отключением необходимо перевести `Режим работы HTTPS` для связанных компонентов (например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/150-user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/300-prometheus/configuration.html#parameters-https-mode
+) ) на альтернативаные варианты.
+
+   Отобразить список модулей, которые не поддерживаются в CSE редакции и будут отключены:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE
+   ```
+
+   {% alert %}
+   Проверьте список и убедитесь, что функционал указанных модулей не задействован вами в кластере  и вы готовы к их отключению. 
+   {% endalert %}
+
+   Отключите не поддерживаемые в CSE редакции модули:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "kubectl -n d8-system exec  deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+   ```
+   
+   Дождитесь перехода пода Deckhouse в статус `Ready` и [выполнения всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse).
+
 
 1. Создайте следующую NodeGroupConfiguration:
 
@@ -1095,7 +1127,15 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    EOF
    ```
 
-    В журнале systemd-сервиса bashible на master-узле должно появиться сообщение `Configuration is in sync, nothing to do`.
+    Дождитесь завершения синхронизации bashible на всех узлах.
+    
+    Статус сихнронизации можно отследить по значению UPTODATE статуса (отображаемое число нод в этом статусе должно совпадать с общим числом нод (NODES) в группе):
+
+   ```shell
+   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   ```
+
+    Также в журнале systemd-сервиса bashible на узлах должно появиться сообщение `Configuration is in sync, nothing to do`.
 
     Пример:
 
@@ -1181,7 +1221,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    EOF
    ```
 
-  После синхронизации bashible, (в журнале systemd-сервиса bashible на master-узле должно появиться сообщение `Configuration is in sync, nothing to do` ) удалите созданную ngc:
+   После синхронизации bashible, (cтатус сихнронизации на узлах можно отследить по значению UPTODATE у nodegroup ) удалите созданную ngc:
 
    ```shell
    kubectl  delete ngc del-temp-config.sh
