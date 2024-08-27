@@ -528,22 +528,22 @@ alerts:
         Prometheus is unable to scrape Dex metrics.
       severity: "6"
       markupFormat: markdown
-    - name: D8EtcdDatabaseHighFragmentationRatio
+    - name: D8etcdDatabaseHighFragmentationRatio
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
       moduleUrl: 040-control-plane-manager
       module: control-plane-manager
       edition: ce
       description: |
-        The ETCD database size in use on instance `{{ $labels.instance }}` is less than 50% of the actual allocated disk space, indicating potential fragmentation
+        The etcd database size in use on instance `{{ $labels.instance }}` is less than 50% of the actual allocated disk space, indicating potential fragmentation
 
         Possible solutions:
         - You can do defragmentation. Use next command:
         `kubectl -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s`
       summary: |
-        ETCD database size in use is less than 50% of the actual allocated storage, indicating potential fragmentation, and the total storage size exceeds 75% of the configured quota.
+        etcd database size in use is less than 50% of the actual allocated storage, indicating potential fragmentation, and the total storage size exceeds 75% of the configured quota.
       severity: "7"
       markupFormat: markdown
-    - name: D8EtcdExcessiveDatabaseGrowth
+    - name: D8etcdExcessiveDatabaseGrowth
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
       moduleUrl: 040-control-plane-manager
       module: control-plane-manager
@@ -878,7 +878,7 @@ alerts:
         The installed istio version is incompatible with the k8s version
       severity: "3"
       markupFormat: markdown
-    - name: D8KubeEtcdDatabaseSizeCloseToTheLimit
+    - name: D8KubeetcdDatabaseSizeCloseToTheLimit
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
       moduleUrl: 040-control-plane-manager
       module: control-plane-manager
@@ -1112,7 +1112,7 @@ alerts:
         MetalLB running on a stale configuration, because the latest config failed to load.
       severity: "4"
       markupFormat: markdown
-    - name: D8NeedDecreaseEtcdQuotaBackendBytes
+    - name: D8NeedDecreaseetcdQuotaBackendBytes
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
       moduleUrl: 040-control-plane-manager
       module: control-plane-manager
@@ -2240,7 +2240,7 @@ alerts:
         Nodes amount is close to the maximum allowed amount.
       severity: "7"
       markupFormat: default
-    - name: KubeEtcdHighFsyncDurations
+    - name: KubeetcdHighFsyncDurations
       sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-etcd3.yaml
       moduleUrl: 340-monitoring-kubernetes-control-plane
       module: monitoring-kubernetes-control-plane
@@ -2255,7 +2255,7 @@ alerts:
         Synching (fsync) WAL files to disk is slow.
       severity: "7"
       markupFormat: markdown
-    - name: KubeEtcdHighNumberOfLeaderChanges
+    - name: KubeetcdHighNumberOfLeaderChanges
       sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-etcd3.yaml
       moduleUrl: 340-monitoring-kubernetes-control-plane
       module: monitoring-kubernetes-control-plane
@@ -2271,7 +2271,7 @@ alerts:
         The etcd cluster re-elects the leader too often.
       severity: "5"
       markupFormat: markdown
-    - name: KubeEtcdInsufficientMembers
+    - name: KubeetcdInsufficientMembers
       sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-etcd3.yaml
       moduleUrl: 340-monitoring-kubernetes-control-plane
       module: monitoring-kubernetes-control-plane
@@ -2282,7 +2282,7 @@ alerts:
         There are insufficient members in the etcd cluster; the cluster will fail if one of the remaining members will become unavailable.
       severity: "4"
       markupFormat: markdown
-    - name: KubeEtcdNoLeader
+    - name: KubeetcdNoLeader
       sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-etcd3.yaml
       moduleUrl: 340-monitoring-kubernetes-control-plane
       module: monitoring-kubernetes-control-plane
@@ -2293,7 +2293,7 @@ alerts:
         The etcd cluster member running on the {{ $labels.node }} Node has lost the leader.
       severity: "4"
       markupFormat: markdown
-    - name: KubeEtcdTargetAbsent
+    - name: KubeetcdTargetAbsent
       sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-etcd3.yaml
       moduleUrl: 340-monitoring-kubernetes-control-plane
       module: monitoring-kubernetes-control-plane
@@ -2304,7 +2304,7 @@ alerts:
         There is no etcd target in Prometheus.
       severity: "5"
       markupFormat: markdown
-    - name: KubeEtcdTargetDown
+    - name: KubeetcdTargetDown
       sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-etcd3.yaml
       moduleUrl: 340-monitoring-kubernetes-control-plane
       module: monitoring-kubernetes-control-plane
