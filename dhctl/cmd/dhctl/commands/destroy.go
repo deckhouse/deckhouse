@@ -27,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 const (
@@ -64,6 +65,10 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 
 		if err = cache.Init(sshClient.Check().String()); err != nil {
 			return fmt.Errorf(destroyCacheErrorMessage, err)
+		}
+
+		if !input.NewConfirmation().WithMessage("Do you really want to cleanup cluster resources?").Ask() {
+			return fmt.Errorf("Cleanup cluster resources disallow")
 		}
 
 		destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
