@@ -53,6 +53,9 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		if !app.SanityCheck {
 			log.WarnLn(destroyApprovalsMessage)
+			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to cleanup cluster resources?").Ask() {
+				return fmt.Errorf("Cleanup cluster resources disallow")
+			}
 		}
 
 		sshClient, err := ssh.NewClientFromFlags().Start()
@@ -65,10 +68,6 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 
 		if err = cache.Init(sshClient.Check().String()); err != nil {
 			return fmt.Errorf(destroyCacheErrorMessage, err)
-		}
-
-		if !input.NewConfirmation().WithMessage("Do you really want to cleanup cluster resources?").Ask() {
-			return fmt.Errorf("Cleanup cluster resources disallow")
 		}
 
 		destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
