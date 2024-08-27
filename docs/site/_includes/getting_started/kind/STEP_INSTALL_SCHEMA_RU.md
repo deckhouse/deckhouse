@@ -64,6 +64,6 @@ Good luck!
 Пароль пользователя `admin` для Grafana также можно узнать выполнив команду:
 {% snippetcut selector="kind-get-password" %}
 ```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'"
+kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.internal.auth.password'"
 ```
 {% endsnippetcut %}
