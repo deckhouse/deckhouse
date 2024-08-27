@@ -49,7 +49,7 @@ apiVersions:
             description: |
               Вместо этого параметра, используйте ресурсы ModuleConfig для настройки модулей.
 
-              Начальная [конфигурация Deckhouse](/documentation/v1/#конфигурация-deckhouse).
+              Начальная [конфигурация Deckhouse](/products/kubernetes-platform/documentation/v1/#конфигурация-deckhouse).
 
               Укажите здесь параметры конфигурации Deckhouse, с которыми он должен запуститься после установки.
 

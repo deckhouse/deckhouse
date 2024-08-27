@@ -64,7 +64,7 @@ func printMirrorDeprecationNotice() {
 	log.ErrorF(
 		"%sWARNING: dhctl mirror is deprecated and will be removed in Deckhouse Kubernetes Platform v1.64.\n"+
 			"All of it's functions are now moved into the Deckhouse CLI\n"+
-			"https://deckhouse.io/documentation/v1/deckhouse-cli/%s\n",
+			"https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-cli/%s\n",
 		strings.Repeat("=", 80)+strings.Repeat("\n", 6),
 		strings.Repeat("\n", 6)+strings.Repeat("=", 80),
 	)

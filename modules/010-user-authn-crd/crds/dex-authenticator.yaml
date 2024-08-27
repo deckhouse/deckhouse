@@ -110,7 +110,7 @@ spec:
                   description: |
                     If specified, the `dex-authenticator` pods `nodeSelector`.
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
                     **Pattern**: the same as in the pods' `spec.nodeSelector` parameter in Kubernetes;
                   type: object
@@ -120,7 +120,7 @@ spec:
 
                     The `dex-authenticator` pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator <operator>.
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
                     **Pattern**: Standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) object. Pods inherit this object AS IS.
                   items:

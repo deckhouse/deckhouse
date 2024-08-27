@@ -320,7 +320,7 @@ Follow these steps:
      namespace: d8-service-accounts
    ```
 
-2. Generate a `kubeconfig` file for the created `ServiceAccount` ([refer to the example on how to generate `kubeconfig` for `ServiceAccount`](https://deckhouse.io/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access)).
+2. Generate a `kubeconfig` file for the created `ServiceAccount` ([refer to the example on how to generate `kubeconfig` for `ServiceAccount`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access)).
 
 3. Copy the `kubeconfig` file to the *remote server*. You will also have to specify the `kubeconfig` path in the `kube-rbac-proxy` settings (our example uses `${PWD}/.kube/config`).
 

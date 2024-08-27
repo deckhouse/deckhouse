@@ -676,7 +676,7 @@ alerts:
         ```
         max by (namespace, dataplane_pod) (d8_istio_dataplane_metadata{full_version="{{$labels.full_version}}"})
         ```
-        Also consider using the automatic istio data-plane update described in the documentation: https://deckhouse.io/documentation/v1/modules/110-istio/examples.html#upgrading-istio
+        Also consider using the automatic istio data-plane update described in the documentation: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/110-istio/examples.html#upgrading-istio
       summary: |
         There are Pods with data-plane version different from control-plane one.
       severity: "8"
@@ -927,7 +927,7 @@ alerts:
       edition: ce
       description: |-
         Found ClusterLogDestination resource {{$labels.resource_name}} without authorization params.
-        You should [add](https://deckhouse.io/documentation/v1/modules/460-log-shipper/faq.html#how-to-add-authorization-params-to-the-cluster-log-destination-resource-which-is-used-to-send-logs-to-the-d8-loki) authorization params to the ClusterLogDestination resource.
+        You should [add](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource) authorization params to the ClusterLogDestination resource.
       summary: |
         Required authorization params for ClusterLogDestination.
       severity: "9"
@@ -2800,9 +2800,9 @@ alerts:
            * 'kubectl -n d8-chrony exec <POD_NAME> -- /opt/chrony-static/bin/chronyc sources'
         3. Correct the time synchronization problems:
            * correct network problems:
-             - provide availability to upstream time synchronization servers defined in the module [configuration](https://deckhouse.io/documentation/v1/modules/470-chrony/configuration.html);
+             - provide availability to upstream time synchronization servers defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/470-chrony/configuration.html);
              - eliminate large packet loss and excessive latency to upstream time synchronization servers.
-           * Modify NTP servers list defined in the module [configuration](https://deckhouse.io/documentation/v1/modules/470-chrony/configuration.html).
+           * Modify NTP servers list defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/470-chrony/configuration.html).
       summary: |
         NTP daemon on node {{$labels.node}} have not synchronized time for too long.
       severity: "5"
@@ -2845,7 +2845,7 @@ alerts:
         ```shell
         kubectl -n {{ $labels.namespace }} exec -ti {{ $labels.pod_name }} -c prometheus -- df -PBG /prometheus
         ```
-        Consider increasing it https://deckhouse.io/documentation/v1/modules/300-prometheus/faq.html#how-to-expand-disk-size
+        Consider increasing it https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-to-expand-disk-size
       summary: |
         Prometheus disk is over 95% used.
       severity: "4"
