@@ -59,6 +59,9 @@ subjects:
   - kind: ServiceAccount
     name: prometheus
     namespace: d8-monitoring
+  - kind: ServiceAccount
+    name: grafana
+    namespace: d8-monitoring
 {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
