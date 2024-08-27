@@ -36,38 +36,38 @@ properties:
       
       > Внимание! Ошибочные  настройки могут привести к неработоспособности Loki.
     properties:
-      ingestion_rate_mb:
+      ingestionRateMB:
         description: |
           Общий лимит скорости приема логов в мегабайтах в секунду.
-      ingestion_burst_size_mb:
+      ingestionBurstSizeMB:
         description: |
           Общий лимит всплеска объема принимаемых логов. Например, максимальный размер запроса на запись.
-      max_streams_per_user:
+      maxStreamsPerUser:
         description: |
           Максимальное общее количество потоков логов для экземпляра Loki.
 
           Каждый поток логов имеет уникальный набор меток. Количество потоков равно количеству уникальных наборов меток. Например: '{job="my-app", instance="kube-node-1", namespace="production", pod_name="backend-79dbf6fcb7-v5gs7", app="backend"}'.
 
           Значение 0 отключает ограничение.
-      max_entries_limit_per_query:
+      maxEntriesLimitPerQuery:
         description: |
           Максимальное количество записей, возвращаемых для одного запроса.
-      max_chunks_per_query:
+      maxChunksPerQuery:
         description: |
           Максимальное количество файлов, которые могут быть скачаны в рамках одного запроса.
-      per_stream_rate_limit:
+      perStreamRateLimit:
         description: |
           Максимальная скорость в байтах в секунду для одного потока. Может быть как числом, так и строкой с единицей измерения (KB, MB, GB).
-      per_stream_rate_limit_burst:
+      perStreamRateLimitBurst:
         description: |
           Максимальный размер всплеска объема логов для одного потока. Может быть как числом, так и строкой с единицей измерения (KB, MB, GB).
-      grpc_server_max_send_msg_size:
+      grpcServerMaxSendMsgSize:
         description: |
           Ограничение на размер сообщения gRPC, которое может отправить сервер, в байтах.
-      grpc_server_max_recv_msg_size:
+      grpcServerMaxRecvMsgSize:
         description: |
           Ограничение на размер сообщения gRPC, которое может получить сервер, в байтах.
-      grpc_server_max_concurrent_streams:
+      grpcServerMaxConcurrentStreams:
         description: |
           Ограничение на количество одновременных потоков для вызовов gRPC.
   nodeSelector:
