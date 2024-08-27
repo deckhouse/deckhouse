@@ -318,7 +318,6 @@ EOF
 "
 ```
 {% endsnippetcut %}
-</li></ul>
 </li>
 </ul>
 
