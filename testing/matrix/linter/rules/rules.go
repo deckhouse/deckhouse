@@ -98,24 +98,28 @@ func (l *ObjectLinter) ApplyContainerRules(object storage.StoreObject) {
 	if err != nil {
 		panic(err)
 	}
-	initContainers, err := object.GetInitContainers()
+	allContainers, err := object.GetInitContainers()
 	if err != nil {
 		panic(err)
 	}
-	containers = append(initContainers, containers...)
-	if len(containers) == 0 {
+	allContainers = append(allContainers, containers...)
+	if len(allContainers) == 0 {
 		return
 	}
 
-	l.ErrorsList.Add(containerNameDuplicates(object, containers))
-	l.ErrorsList.Add(containerEnvVariablesDuplicates(object, containers))
-	l.ErrorsList.Add(containerImageDigestCheck(object, containers))
-	l.ErrorsList.Add(containersImagePullPolicy(object, containers))
+	l.ErrorsList.Add(containerNameDuplicates(object, allContainers))
+	l.ErrorsList.Add(containerEnvVariablesDuplicates(object, allContainers))
+	l.ErrorsList.Add(containerImageDigestCheck(object, allContainers))
+	l.ErrorsList.Add(containersImagePullPolicy(object, allContainers))
 
 	if !skipObjectIfNeeded(&object) {
-		l.ErrorsList.Add(containerStorageEphemeral(object, containers))
-		l.ErrorsList.Add(containerSecurityContext(object, containers))
-		l.ErrorsList.Add(containerPorts(object, containers))
+		l.ErrorsList.Add(containerStorageEphemeral(object, allContainers))
+		l.ErrorsList.Add(containerSecurityContext(object, allContainers))
+		l.ErrorsList.Add(containerPorts(object, allContainers))
+	}
+
+	for _, e := range containerProbes(object, containers) {
+		l.ErrorsList.Add(e)
 	}
 }
 
@@ -780,4 +784,299 @@ func shouldSkipDNSPolicyResource(name string, kind string, namespace string, hos
 	default:
 		return false
 	}
+}
+
+func containerProbes(object storage.StoreObject, containers []v1.Container) []errors.LintRuleError {
+	errorList := make([]errors.LintRuleError, 0, len(containers))
+	for _, container := range containers {
+		if skipCheckProbeHandler(object.Unstructured.GetNamespace(), container.Name) {
+			continue
+		}
+
+		var errStrings []string
+		// check livenessProbe exist and correct
+		livenessProbe := container.LivenessProbe
+		if livenessProbe == nil || probeHandlerIsNotValid(livenessProbe.ProbeHandler) {
+			errStrings = append(errStrings, "LivenessProbe")
+		}
+
+		// check readinessProbe exist and correct
+		readinessProbe := container.ReadinessProbe
+		if readinessProbe == nil || probeHandlerIsNotValid(readinessProbe.ProbeHandler) {
+			errStrings = append(errStrings, "ReadinessProbe")
+		}
+
+		if len(errStrings) > 0 {
+			errorList = append(errorList, errors.NewLintRuleError(
+				"PROBES001",
+				object.Identity()+" ; container = "+container.Name,
+				nil,
+				"Container does not use correct "+strings.Join(errStrings, " and "),
+			))
+		}
+	}
+
+	return errorList
+}
+
+func probeHandlerIsNotValid(probe v1.ProbeHandler) bool {
+	var count int8
+	if probe.Exec != nil {
+		count++
+	}
+	if probe.GRPC != nil {
+		count++
+	}
+	if probe.HTTPGet != nil {
+		count++
+	}
+	if probe.TCPSocket != nil {
+		count++
+	}
+	if count != 1 {
+		return true
+	}
+
+	return false
+}
+
+func skipCheckProbeHandler(namespace, container string) bool {
+	// Namespace and name of containers to skip liveness and readiness probes
+	skippedContainers := map[string]map[string]struct{}{
+		"d8-system": {
+			"handler":         {},
+			"deckhouse":       {},
+			"kube-rbac-proxy": {},
+			"kube-router":     {},
+			"web":             {},
+		},
+		"d8-admission-policy-engine": {
+			"constraint-exporter": {},
+			"kube-rbac-proxy":     {},
+		},
+		"d8-cni-cilium": {
+			"kube-rbac-proxy":          {},
+			"operator":                 {},
+			"pause-cilium":             {},
+			"pause-check-linux-kernel": {},
+			"pause-kube-rbac-proxy":    {},
+			"frontend":                 {},
+			"backend":                  {},
+		},
+		"d8-cloud-provider-aws": {
+			"node-driver-registrar":    {},
+			"node":                     {},
+			"kube-rbac-proxy":          {},
+			"node-termination-handler": {},
+			"provisioner":              {},
+			"attacher":                 {},
+			"resizer":                  {},
+			"snapshotter":              {},
+			"livenessprobe":            {},
+			"controller":               {},
+		},
+		"d8-cloud-provider-azure": {
+			"node-driver-registrar":    {},
+			"node":                     {},
+			"kube-rbac-proxy":          {},
+			"node-termination-handler": {},
+			"provisioner":              {},
+			"attacher":                 {},
+			"resizer":                  {},
+			"snapshotter":              {},
+			"livenessprobe":            {},
+			"controller":               {},
+		},
+		"d8-cloud-provider-gcp": {
+			"node-driver-registrar":    {},
+			"node":                     {},
+			"kube-rbac-proxy":          {},
+			"node-termination-handler": {},
+			"provisioner":              {},
+			"attacher":                 {},
+			"resizer":                  {},
+			"snapshotter":              {},
+			"livenessprobe":            {},
+			"controller":               {},
+		},
+		"d8-cloud-provider-yandex": {
+			"node-driver-registrar":    {},
+			"node":                     {},
+			"kube-rbac-proxy":          {},
+			"node-termination-handler": {},
+			"provisioner":              {},
+			"attacher":                 {},
+			"resizer":                  {},
+			"snapshotter":              {},
+			"livenessprobe":            {},
+			"controller":               {},
+		},
+		"d8-local-path-provisioner": {
+			"local-path-provisioner": {},
+		},
+		"d8-cni-flannel": {
+			"kube-flannel": {},
+		},
+		"d8-cni-simple-bridge": {
+			"simple-bridge": {},
+		},
+		"kube-system": {
+			"kube-proxy":                              {},
+			"kube-rbac-proxy":                         {},
+			"image-holder-etcd":                       {},
+			"image-holder-kube-apiserver129":          {},
+			"image-holder-kube-apiserver-healthcheck": {},
+			"image-holder-kube-controller-manager129": {},
+			"image-holder-kube-scheduler129":          {},
+			"admission-controller":                    {},
+			"recommender":                             {},
+			"updater":                                 {},
+			"iptables-loop":                           {},
+		},
+		"d8-snapshot-controller": {
+			"snapshot-controller": {},
+			"kube-rbac-proxy":     {},
+			"snapshot-validation": {},
+		},
+		"d8-cert-manager": {
+			"cainjector":      {},
+			"kube-rbac-proxy": {},
+			"cert-manager":    {},
+		},
+		"d8-istio": {
+			"kube-rbac-proxy": {},
+			"operator":        {},
+		},
+		"test-namespace": {
+			"redis": {},
+		},
+		"dex-authenticator-namespace": {
+			"redis": {},
+		},
+		"d8-operator-prometheus": {
+			"prometheus-operator": {},
+			"kube-rbac-proxy":     {},
+		},
+		"d8-monitoring": {
+			"grafana":                              {},
+			"dashboard-provisioner":                {},
+			"kube-rbac-proxy":                      {},
+			"exporter":                             {},
+			"prometheus-metrics-adapter":           {},
+			"image-availability-exporter":          {},
+			"node-exporter":                        {},
+			"kubelet-eviction-thresholds-exporter": {},
+			"monitoring-ping":                      {},
+		},
+		"d8-ingress-nginx": {
+			"kruise": {},
+		},
+		"d8-log-shipper": {
+			"vector-reloader": {},
+		},
+		"d8-pod-reloader": {
+			"kube-rbac-proxy": {},
+		},
+		"d8-chrony": {
+			"chrony": {},
+		},
+		"d8-okmeter": {
+			"okagent": {},
+		},
+		"d8-openvpn": {
+			"openvpn-tcp":     {},
+			"ovpn-admin":      {},
+			"kube-rbac-proxy": {},
+		},
+		"d8-upmeter": {
+			"agent":           {},
+			"kube-rbac-proxy": {},
+		},
+		"d8-metallb": {
+			"controller":      {},
+			"kube-rbac-proxy": {},
+		},
+		"d8-delivery": {
+			"redis":                            {},
+			"werf-argocd-cmp-sidecar":          {},
+			"argocd-applicationset-controller": {},
+			"argocd-notifications-controller":  {},
+			"argocd-application-controller":    {},
+		},
+		"d8-static-routing-manager": {
+			"agent": {},
+		},
+		"d8-cloud-provider-openstack": {
+			"node-driver-registrar":    {},
+			"node":                     {},
+			"kube-rbac-proxy":          {},
+			"node-termination-handler": {},
+			"provisioner":              {},
+			"attacher":                 {},
+			"resizer":                  {},
+			"snapshotter":              {},
+			"livenessprobe":            {},
+			"controller":               {},
+		},
+		"d8-cloud-provider-vcd": {
+			"node-driver-registrar":    {},
+			"node":                     {},
+			"kube-rbac-proxy":          {},
+			"node-termination-handler": {},
+			"provisioner":              {},
+			"attacher":                 {},
+			"resizer":                  {},
+			"snapshotter":              {},
+			"livenessprobe":            {},
+			"controller":               {},
+		},
+		"d8-cloud-provider-vsphere": {
+			"node-driver-registrar":    {},
+			"node":                     {},
+			"kube-rbac-proxy":          {},
+			"node-termination-handler": {},
+			"provisioner":              {},
+			"attacher":                 {},
+			"resizer":                  {},
+			"snapshotter":              {},
+			"livenessprobe":            {},
+			"controller":               {},
+			"syncer":                   {},
+		},
+		"d8-cloud-provider-zvirt": {
+			"node-driver-registrar":    {},
+			"node":                     {},
+			"kube-rbac-proxy":          {},
+			"node-termination-handler": {},
+			"provisioner":              {},
+			"attacher":                 {},
+			"resizer":                  {},
+			"snapshotter":              {},
+			"livenessprobe":            {},
+			"controller":               {},
+		},
+		"d8-l2-load-balancer": {
+			"kube-rbac-proxy": {},
+			"controller":      {},
+		},
+		"d8-network-gateway": {
+			"dhcp": {},
+			"snat": {},
+		},
+		"d8-operator-trivy": {
+			"kube-rbac-proxy": {},
+			"report-updater":  {},
+		},
+		"d8-runtime-audit-engine": {
+			"rules-loader": {},
+		},
+	}
+
+	containers, ok := skippedContainers[namespace]
+	if ok {
+		_, ok = containers[container]
+		return ok
+	}
+
+	return false
 }

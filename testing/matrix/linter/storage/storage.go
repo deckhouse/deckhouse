@@ -179,6 +179,14 @@ func (s *StoreObject) GetContainers() ([]v1.Container, error) {
 		}
 
 		containers = cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers
+	case "ReplicaSet":
+		replicaSet := new(appsv1.ReplicaSet)
+		err := converter.FromUnstructured(s.Unstructured.UnstructuredContent(), replicaSet)
+		if err != nil {
+			return []v1.Container{}, fmt.Errorf("convert Unstructured to ReplicaSet failed: %v", err)
+		}
+
+		containers = replicaSet.Spec.Template.Spec.Containers
 	}
 	return containers, nil
 }
