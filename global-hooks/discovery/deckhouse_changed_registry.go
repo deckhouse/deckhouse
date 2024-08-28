@@ -75,6 +75,7 @@ func discoveryDeckhouseRegistryChanged(input *go_hook.HookInput) error {
 	registryConfSnap := input.Snapshots[imageModulesD8RegistryChangeConfSnap]
 
 	if len(registryConfSnap) == 0 {
+		input.Values.Remove("global.modulesImages.changedRegistry")
 		return nil
 	}
 
