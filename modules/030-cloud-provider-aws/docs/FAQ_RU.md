@@ -100,3 +100,35 @@ title: "Cloud provider — AWS: FAQ"
 За ходом процесса можно наблюдать в events через команду `kubectl describe pvc`.
 
 > После изменения volume нужно подождать не менее шести часов и убедиться, что volume находится в состоянии `in-use` или `available`, прежде чем станет возможно изменить его еще раз. Подробности можно найти [в официальной документации](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/modify-volume-requirements.html).
+
+## Как настроить доступ до Amazon ECR repository на нодах кластера
+
+1. Нужно в [Repository policies](https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html) задать права для четения образов
+
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "RepositoryRead",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::xxx:role/xxx-node"
+      },
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:DescribeImages",
+        "ecr:DescribeRepositories",
+        "ecr:GetAuthorizationToken",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:ListImages",
+        "ecr:ListTagsForResource"
+      ]
+    }
+  ]
+}
+```
+Эту политику нужно применять в `Amazon ECR > Private registry > Repositories > {{ name }} > Permissions`
+
+1. Добавить в [additionalRolePolicies](cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies) `ecr:GetAuthorizationToken`
