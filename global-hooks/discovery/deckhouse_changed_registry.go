@@ -75,7 +75,7 @@ func discoveryDeckhouseRegistryChanged(input *go_hook.HookInput) error {
 	registryConfSnap := input.Snapshots[imageModulesD8RegistryChangeConfSnap]
 
 	if len(registryConfSnap) == 0 {
-		return fmt.Errorf("not found 'deckhouse-registry-changed' secret")
+		return nil
 	}
 
 	registrySecretRaw := registryConfSnap[0].(*registrySecret)
