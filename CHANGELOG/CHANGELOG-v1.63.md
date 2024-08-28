@@ -75,6 +75,7 @@
  - **[global-hooks]** Fixed the Services with multiple ports broken by Helm. [#9392](https://github.com/deckhouse/deckhouse/pull/9392)
  - **[go_lib]** Fix work `registry-packages-proxy` with module sources. [#9112](https://github.com/deckhouse/deckhouse/pull/9112)
     `registry-packages-proxy` should be restarted.
+ - **[istio]** Fixed graph display issue in Kiali. [#9523](https://github.com/deckhouse/deckhouse/pull/9523)
  - **[istio]** Granted permissions for `istio-cni-node` to restart pods without properly configured iptables for traffic redirection. [#9444](https://github.com/deckhouse/deckhouse/pull/9444)
  - **[istio]** Fix istio module operability in managed K8s setups. [#9275](https://github.com/deckhouse/deckhouse/pull/9275)
  - **[istio]** Istio 1.19 version compatibility extended with K8s versions 1.29 and 1.30. [#9217](https://github.com/deckhouse/deckhouse/pull/9217)
