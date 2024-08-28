@@ -27,6 +27,7 @@ import (
 
 const (
 	imageModulesD8RegistryChangeConfSnap = "d8_registry_secret_changed"
+	changedRegistryValuesPath            = "global.modulesImages.changedRegistry"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -75,7 +76,10 @@ func discoveryDeckhouseRegistryChanged(input *go_hook.HookInput) error {
 	registryConfSnap := input.Snapshots[imageModulesD8RegistryChangeConfSnap]
 
 	if len(registryConfSnap) == 0 {
-		input.Values.Remove("global.modulesImages.changedRegistry")
+		_, ok := input.Values.GetOk(changedRegistryValuesPath)
+		if ok {
+			input.Values.Remove(changedRegistryValuesPath)
+		}
 		return nil
 	}
 
