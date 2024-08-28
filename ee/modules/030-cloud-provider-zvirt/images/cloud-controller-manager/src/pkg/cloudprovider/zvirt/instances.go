@@ -125,6 +125,10 @@ func (zc *Cloud) extractNodeAddressesFromVM(ctx context.Context, vm ovirtclient.
 		})
 	}
 
+	if len(localIP) < 1 {
+		localIP = externalIP
+	}
+
 	for _, ip := range localIP {
 		nodeAddress = append(nodeAddress, v1.NodeAddress{
 			Type:    v1.NodeInternalIP,
