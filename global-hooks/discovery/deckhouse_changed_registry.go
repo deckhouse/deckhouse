@@ -96,7 +96,7 @@ func discoveryDeckhouseRegistryChanged(input *go_hook.HookInput) error {
 	registryConfEncoded := base64.StdEncoding.EncodeToString(registrySecretRaw.RegistryDockercfg)
 
 	if !input.Values.Exists(changedRegistryValuesPath) {
-		input.ConfigValues.Set(changedRegistryValuesPath, map[string]interface{}{})
+		input.Values.Set(changedRegistryValuesPath, map[string]interface{}{})
 	}
 
 	input.Values.Set("global.modulesImages.changedRegistry.base", fmt.Sprintf("%s%s", registrySecretRaw.Address, registrySecretRaw.Path))
