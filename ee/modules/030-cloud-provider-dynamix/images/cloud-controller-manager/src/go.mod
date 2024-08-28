@@ -10,7 +10,7 @@ require (
 	k8s.io/cloud-provider v0.30.3
 	k8s.io/component-base v0.30.3
 	k8s.io/klog/v2 v2.130.1
-	repository.basistech.ru/BASIS/decort-golang-sdk v1.8.2
+	repository.basistech.ru/BASIS/decort-golang-sdk v1.8.3
 )
 
 require (
@@ -103,7 +103,6 @@ require (
 	k8s.io/apiserver v0.30.3 // indirect
 	k8s.io/component-helpers v0.30.3 // indirect
 	k8s.io/controller-manager v0.30.3 // indirect
-	k8s.io/klog v1.0.0 // indirect
 	k8s.io/kms v0.30.3 // indirect
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
