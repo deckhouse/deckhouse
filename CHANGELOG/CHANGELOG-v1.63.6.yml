@@ -1,0 +1,5 @@
+istio:
+  fixes:
+    - summary: Fixed graph display issue in Kiali.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9523
+
