@@ -65,6 +65,10 @@ func (m *ModuleManagerMock) IsModuleEnabled(name string) bool {
 	return m.enabledModules.Has(name)
 }
 
+func (m *ModuleManagerMock) GetUpdatedByExtender(_ string) (string, error) {
+	return "mockExtender", nil
+}
+
 func (m *ModuleManagerMock) GetModule(name string) *modules.BasicModule {
 	mod, has := m.modules[name]
 	if has {
