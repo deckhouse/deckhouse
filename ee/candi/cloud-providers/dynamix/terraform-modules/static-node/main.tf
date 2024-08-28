@@ -24,7 +24,7 @@ locals {
   extnet_id = data.decort_extnet_list.extnets.items[0].net_id
 }
 
-resource "decort_kvmvm" "master_vm" {
+resource "decort_kvmvm" "node_vm" {
   name = local.node_name
   driver = local.driver
   rg_id = local.rg_id
