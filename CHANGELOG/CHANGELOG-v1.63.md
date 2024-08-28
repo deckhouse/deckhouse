@@ -58,6 +58,8 @@
  - **[candi]** Fix index overflow when retrieving values from the list of external IP addresses. [#8877](https://github.com/deckhouse/deckhouse/pull/8877)
  - **[candi]** Fixed kubelet server certificate rotation. [#8603](https://github.com/deckhouse/deckhouse/pull/8603)
  - **[cloud-provider-vcd]** Create virtual machine NIC before the VM starts. [#9255](https://github.com/deckhouse/deckhouse/pull/9255)
+ - **[cni-cilium]** Fixing masquerading between DVP virtual machines. [#9529](https://github.com/deckhouse/deckhouse/pull/9529)
+    This fix disables masquerading between virtual machines.
  - **[cni-cilium]** Improved the `CiliumAgentUnreachableHealthEndpoints` metric expression to avoid false positives. [#9198](https://github.com/deckhouse/deckhouse/pull/9198)
  - **[deckhouse]** Allow admins to change objects with `kind=StorageClass`. [#9398](https://github.com/deckhouse/deckhouse/pull/9398)
  - **[deckhouse]** Allow admins to change objects with `kind=StorageClass`. [#9362](https://github.com/deckhouse/deckhouse/pull/9362)
