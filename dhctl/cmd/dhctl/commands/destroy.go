@@ -53,7 +53,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		if !app.SanityCheck {
 			log.WarnLn(destroyApprovalsMessage)
-			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to cleanup cluster resources?").Ask() {
+			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to DELETE all cluster resources?").Ask() {
 				return fmt.Errorf("Cleanup cluster resources disallow")
 			}
 		}
