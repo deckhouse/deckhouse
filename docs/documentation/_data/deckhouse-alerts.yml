@@ -1,4 +1,15 @@
 alerts:
+    - name: CapsInstanceUnavailable
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/caps-nodes.tpl
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        In MachineDeployment `{{ $labels.machine_deployment_name }}` number of unavailable instances is **{{ $value }}**. Take a look and check at the state of the instances in the cluster: `kubectl get instance -l node.deckhouse.io/group={{ $labels.machine_deployment_name }}`
+      summary: |
+        There are unavailable instances in the {{ $labels.machine_deployment_name }} MachineDeployment.
+      severity: "8"
+      markupFormat: markdown
     - name: CertmanagerCertificateExpired
       sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/certificate.yaml
       moduleUrl: 101-cert-manager
