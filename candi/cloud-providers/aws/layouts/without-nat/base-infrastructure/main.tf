@@ -84,6 +84,7 @@ module "base-infrastructure-iam" {
   source                       = "../../../terraform-modules/base-infrastructure-iam"
   prefix                       = local.prefix
   providerClusterConfiguration = var.providerClusterConfiguration
+  tags                         = local.tags
 }
 
 resource "aws_key_pair" "ssh" {
