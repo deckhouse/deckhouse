@@ -31,7 +31,7 @@ mkdir -p /etc/containerd/conf.d
 bb-sync-file /etc/containerd/conf.d/secondaryRegistry.toml - containerd-config-file-changed << "EOF_TOML"
 [plugins]
   [plugins."io.containerd.grpc.v1.cri"]
-    sandbox_image = {{ $sandbox_image }}
+    sandbox_image = "{{ $sandbox_image }}"
     [plugins."io.containerd.grpc.v1.cri".registry]
       [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .secondaryRegistry.address }}"]
