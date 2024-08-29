@@ -453,8 +453,8 @@ apiVersions:
         pattern: ^[a-zA-Z0-9+=,.@\-_']{1,64}$
         description: |
           The name of the role that will be used for all node.
-          You must add the contents of the role and policies that we create for the cluster to work properly.
-          The name of the role and policy we are creating is `[${local.prefix}](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-cloud-prefix)-node`.
+          You must add the contents of the role we are creating for the cluster to work properly.
+          The name of the role we are creating is `[${local.prefix}](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-cloud-prefix)-node`.
     allOf:
     - oneOf:
       - required: [layout]
