@@ -8,7 +8,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 	"time"
 
 	"controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -132,11 +131,11 @@ func setupRuntimeManager(log logr.Logger) (ctrl.Manager, error) {
 	}
 	if err = runtimeManager.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		log.Error(err, "unable to set up health check")
-		os.Exit(1)
+		return nil, err
 	}
 	if err = runtimeManager.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		log.Error(err, "unable to set up ready check")
-		os.Exit(1)
+		return nil, err
 	}
 	return runtimeManager, nil
 }

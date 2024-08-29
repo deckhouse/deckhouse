@@ -8,17 +8,19 @@ package project
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	"controller/pkg/apis/deckhouse.io/v1alpha2"
+	"controller/pkg/consts"
 	"controller/pkg/helm"
 	"controller/pkg/validate"
 
 	"github.com/go-logr/logr"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -49,19 +51,23 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 		}
 		return true, nil
 	}
-
 	if err := wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, true, check); err != nil {
 		m.log.Error(err, "webhook server failed to start")
 		return fmt.Errorf("webhook server failed to start: %w", err)
 	}
-
 	// to make sure that the server is started, without working server reconcile is failed
 	if err := wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, false, check); err != nil {
 		m.log.Error(err, "webhook server failed to start")
 		return fmt.Errorf("webhook server failed to start: %w", err)
 	}
-
 	m.log.Info("webhook server started")
+
+	m.log.Info("ensuring virtual projects")
+	if err := m.ensureVirtualProjects(ctx); err != nil {
+		m.log.Error(err, "failed to ensure virtual projects")
+		return fmt.Errorf("failed to ensure virtual projects: %w", err)
+	}
+	m.log.Info("ensured virtual projects")
 	return nil
 }
 
@@ -137,8 +143,9 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 			m.log.Error(statusErr, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
 			return ctrl.Result{Requeue: true}, nil
 		}
-		// requeue to avoid helm lucky errors
-		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+		// TODO: come up with a better solution to handle helm errors
+		// requeue to avoid helm fluky errors
+		return ctrl.Result{RequeueAfter: 1 * time.Minute}, nil
 	}
 
 	// update conditions
@@ -159,6 +166,36 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	}
 
 	m.log.Info("the project reconciled", "project", project.Name, "projectTemplate", projectTemplate.Name)
+	return ctrl.Result{}, nil
+}
+
+// HandleVirtual handles virtual project
+func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error) {
+	namespaces := new(corev1.NamespaceList)
+	if err := m.client.List(ctx, namespaces); err != nil {
+		m.log.Error(err, "failed to list namespaces during reconciling the virtual project", "project", project.Name)
+		return ctrl.Result{Requeue: true}, nil
+	}
+	var involvedNamespaces []string
+	for _, namespace := range namespaces.Items {
+		if labels := namespace.GetLabels(); labels != nil {
+			if _, ok := labels[consts.ProjectTemplateLabel]; ok {
+				continue
+			}
+		}
+		isDeckhouseNamespace := strings.HasPrefix(namespace.Name, consts.DeckhouseNamespacePrefix) || strings.HasPrefix(namespace.Name, consts.KubernetesNamespacePrefix)
+		if project.Name == consts.DeckhouseProjectName && isDeckhouseNamespace {
+			involvedNamespaces = append(involvedNamespaces, namespace.Name)
+		}
+		if project.Name == consts.DefaultProjectName && !isDeckhouseNamespace {
+			involvedNamespaces = append(involvedNamespaces, namespace.Name)
+		}
+	}
+	if err := m.updateVirtualProject(ctx, project, involvedNamespaces); err != nil {
+		m.log.Error(err, "failed to update the virtual project", "project", project.Name)
+		return ctrl.Result{Requeue: true}, nil
+	}
+	m.log.Info("the virtual project reconciled", "project", project.Name)
 	return ctrl.Result{}, nil
 }
 

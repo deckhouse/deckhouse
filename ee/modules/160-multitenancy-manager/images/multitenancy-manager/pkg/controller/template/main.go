@@ -83,7 +83,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return reconcile.Result{}, nil
 	}
 
-	// handle deletion
+	// handle the project template deletion
 	if !template.DeletionTimestamp.IsZero() {
 		r.log.Info("template was deleted", "template", template.Name)
 		return reconcile.Result{}, nil

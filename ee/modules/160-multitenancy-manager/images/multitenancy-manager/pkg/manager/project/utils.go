@@ -7,6 +7,7 @@ package project
 
 import (
 	"context"
+	"slices"
 
 	"controller/pkg/apis/deckhouse.io/v1alpha1"
 	"controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -19,6 +20,98 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
+
+func (m *Manager) updateVirtualProject(ctx context.Context, project *v1alpha2.Project, namespaces []string) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
+			return err
+		}
+		project.Status.Conditions = nil
+		project.Status.Namespaces = namespaces
+		project.Status.TemplateGeneration = 1
+		project.Status.ObservedGeneration = project.Generation
+		project.Status.State = v1alpha2.ProjectStateDeployed
+		return m.client.Status().Update(ctx, project)
+	})
+}
+
+func (m *Manager) ensureVirtualProjects(ctx context.Context) error {
+	deckhouseProject := &v1alpha2.Project{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha2.SchemeGroupVersion.String(),
+			Kind:       v1alpha2.ProjectKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: consts.DeckhouseProjectName,
+			Labels: map[string]string{
+				consts.HeritageLabel:       consts.DeckhouseHeritage,
+				consts.ProjectVirtualLabel: "true",
+			},
+		},
+		Spec: v1alpha2.ProjectSpec{
+			ProjectTemplateName: consts.VirtualTemplate,
+			Description:         "This is a virtual project",
+		},
+	}
+	if err := m.ensureProject(ctx, deckhouseProject); err != nil {
+		return err
+	}
+	defaultProject := &v1alpha2.Project{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha2.SchemeGroupVersion.String(),
+			Kind:       v1alpha2.ProjectKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: consts.DefaultProjectName,
+			Labels: map[string]string{
+				consts.HeritageLabel:       consts.DeckhouseHeritage,
+				consts.ProjectVirtualLabel: "true",
+			},
+		},
+		Spec: v1alpha2.ProjectSpec{
+			ProjectTemplateName: consts.VirtualTemplate,
+			Description:         "This is a virtual project",
+		},
+	}
+	if err := m.ensureProject(ctx, defaultProject); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *Manager) ensureProject(ctx context.Context, project *v1alpha2.Project) error {
+	m.log.Info("ensuring the project", "project", project.Name)
+	if err := m.client.Create(ctx, project); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				existingProject := new(v1alpha2.Project)
+				if err = m.client.Get(ctx, types.NamespacedName{Name: project.Name}, existingProject); err != nil {
+					m.log.Error(err, "failed to fetch the project")
+					return err
+				}
+
+				existingProject.Spec = project.Spec
+				existingProject.Labels = project.Labels
+				existingProject.Annotations = project.Annotations
+
+				m.log.Info("the project already exists, try to update it")
+				if err = m.client.Update(ctx, existingProject); err != nil {
+					return err
+				}
+				return nil
+			})
+			if err != nil {
+				m.log.Error(err, "failed to update the project")
+				return err
+			}
+		} else {
+			m.log.Error(err, "failed to create the project", "project", project.Name)
+			return err
+		}
+	}
+	m.log.Info("successfully ensured the project", "project", project.Name)
+	return nil
+}
 
 func (m *Manager) projectTemplateByName(ctx context.Context, name string) (*v1alpha1.ProjectTemplate, error) {
 	template := new(v1alpha1.ProjectTemplate)
@@ -43,6 +136,14 @@ func (m *Manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Pro
 				// clear conditions before reconcile
 				project.Status.Conditions = []v1alpha2.Condition{}
 			}
+		}
+
+		if project.Status.Namespaces == nil {
+			project.Status.Namespaces = []string{}
+		}
+
+		if !slices.Contains(project.Status.Namespaces, project.Name) {
+			project.Status.Namespaces = append(project.Status.Namespaces, project.Name)
 		}
 
 		if project.Status.ObservedGeneration != project.Generation {
