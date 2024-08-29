@@ -248,3 +248,8 @@ apiVersions:
           По умолчанию IAM-роли содержат следующие policy actions:
           - `ec2:DescribeTags`
           - `ec2:DescribeInstances`
+      iamNodeRole:
+        description: |
+          Имя роли, которая будет использоваться для всех узлов.
+          Вы должны добавить содержимое роли и политики, которые мы создаем, чтобы кластер работал правильно.
+          Имя роли и политики, которые мы создаем, `[${local.prefix}](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-cloud-prefix)-node`.
