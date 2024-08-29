@@ -36,13 +36,13 @@ func TestCPUCoresCountDetection(t *testing.T) {
 		wantErr assert.ErrorAssertionFunc
 	}{
 		{
-			name:    "1 socket, 6 cores",
+			name:    "1 socket, 6 cores, 2 threads each",
 			cpuinfo: bytes.NewBuffer(cpuinfo6cores1socket),
-			want:    6,
+			want:    12,
 			wantErr: assert.NoError,
 		},
 		{
-			name:    "4 sockets, 1 core",
+			name:    "4 sockets, 1 core, 1 thread each",
 			cpuinfo: bytes.NewBuffer(cpuinfo1core4sockets),
 			want:    4,
 			wantErr: assert.NoError,
@@ -50,7 +50,7 @@ func TestCPUCoresCountDetection(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := physicalCoresCountFromCPUInfo(tt.cpuinfo)
+			got, err := logicalCoresCountFromCPUInfo(tt.cpuinfo)
 			if !tt.wantErr(t, err) {
 				return
 			}

@@ -1,7 +1,10 @@
 .highlight,
 .highlight .w {
-  color: #f8f8f2;
-  background-color: #272822;
+  /*color: #f8f8f2;*/
+  /*background-color: #272822;*/
+  color: #00122C;
+  border-radius: 4px;
+  background: #F1F2F4;
 }
 
 .highlight .err {
@@ -27,12 +30,12 @@
 
 .highlight .o,
 .highlight .ow {
-  color: #f8f8f2;
+  color: #525252;
 }
 
 .highlight .p,
 .highlight .pi {
-  color: #f8f8f2;
+  color: #525252
 }
 
 .highlight .gi {
@@ -77,7 +80,8 @@
 .highlight .sh,
 .highlight .sx,
 .highlight .s1 {
-  color: #a6e22e;
+  /*color: #a6e22e;*/
+  color: #2ABB5B;
 }
 
 .highlight .sr {
@@ -105,7 +109,8 @@
 }
 
 .highlight .na {
-  color: #66d9ef;
+  /*color: #66d9ef;*/
+  color: #00122C;
 }
 
 .highlight .m,
@@ -116,7 +121,8 @@
 .highlight .mo,
 .highlight .mb,
 .highlight .mx {
-  color: #a6e22e;
+  /*color: #a6e22e;*/
+  color: #2ABB5B;
 }
 
 .highlight .ss {

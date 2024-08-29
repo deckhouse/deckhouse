@@ -16,7 +16,7 @@
 
           Reproducing (run from deckhouse pod):
           ```
-          TOKEN="$(deckhouse-controller module values istio -o json | jq -r --arg ah {{$labels.api_host}} '.istio.internal.multiclusters[] | select(.apiHost == $ah) | .apiJWT')"
+          TOKEN="$(deckhouse-controller module values istio -o json | jq -r --arg ah {{$labels.api_host}} '.internal.multiclusters[]| select(.apiHost == $ah)| .apiJWT ')"
           curl -H "Authorization: Bearer $TOKEN" https://{{$labels.api_host}}/version
           ```
         summary: Multicluster remote api host failed

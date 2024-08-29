@@ -78,6 +78,7 @@ try:
     response = urlopen(request, timeout=300)
 except HTTPError as e:
     print("HTTP Error {}: {}".format(e.getcode(), e.read()[:255]))
+    print('You can check via curl -v -k -H "Authorization: Bearer ${PACKAGES_PROXY_TOKEN}" "{}" > /dev/null'.format(url))
     raise SystemExit
 with open('$2', 'wb') as f:
     f.write(response.read())

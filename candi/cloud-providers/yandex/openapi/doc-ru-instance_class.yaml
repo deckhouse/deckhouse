@@ -4,7 +4,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Параметры группы Yandex Instance'ов (виртуальных машин), которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/documentation/v1/modules/040-node-manager/)).
+            Параметры группы Yandex Instance'ов (виртуальных машин), которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/)).
 
             На этот ресурс [ссылается](../040-node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) ресурс `NodeGroup` модуля `node-manager`.
           properties:
@@ -64,7 +64,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Параметры группы Yandex Instance'ов (виртуальных машин), которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/documentation/v1/modules/040-node-manager/)).
+            Параметры группы Yandex Instance'ов (виртуальных машин), которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/)).
 
             На этот ресурс [ссылается](../040-node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) ресурс `NodeGroup` модуля `node-manager`.
           properties:

@@ -11,6 +11,6 @@
         plk_markup_format: markdown
         description: |-
           Found ClusterLogDestination resource {{$labels.resource_name}} without authorization params.
-          You should [add](https://deckhouse.io/documentation/v1/modules/460-log-shipper/faq.html#how-to-add-authorization-params-to-the-cluster-log-destination-resource-which-is-used-to-send-logs-to-the-d8-loki) authorization params to the ClusterLogDestination resource.
+          You should [add](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource) authorization params to the ClusterLogDestination resource.
         summary: >
           Required authorization params for ClusterLogDestination.

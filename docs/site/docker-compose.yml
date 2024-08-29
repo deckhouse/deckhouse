@@ -15,6 +15,7 @@ services:
       VROUTER_PATH_STATIC: "/app/root"
       VROUTER_PATH_CHANNELS_FILE: "releasedata/channels.yaml"
       VROUTER_I18N_TYPE: "separate-domain"
+      VROUTER_LOCATION_VERSIONS: "/products/kubernetes-platform/documentation"
       VROUTER_DOMAIN_MAP: "eyJlbiIgOiAibG9jYWxob3N0IiwgInJ1IiA6ICJydS5sb2NhbGhvc3QifQo="
     networks:
       - deckhouse

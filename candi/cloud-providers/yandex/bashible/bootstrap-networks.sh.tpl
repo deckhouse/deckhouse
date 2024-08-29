@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 */}}
+set +e
 shopt -s extglob
 
 function ip_in_subnet(){
@@ -65,11 +66,12 @@ function netplan_configure(){
     ip="$(echo "$metadata" | python3 -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc);[print(iface["ip"]) for iface in parsed["networkInterfaces"] if iface["mac"]==sys.argv[1]]' "$mac")"
     route_settings=""
     if ip_in_subnet "$ip" "$network_cidr"; then
-      read -r -d '' route_settings <<ROUTE_EOF
-        routes:
-        - to: $network_cidr
-          scope: link
+      route_settings=$(cat <<ROUTE_EOF
+routes:
+      - to: $network_cidr
+        scope: link
 ROUTE_EOF
+    )
     fi
 
   {{- /* # Configure the internal interface to route all vpc to all vm */}}
@@ -97,5 +99,6 @@ if which netplan 2>/dev/null 1>&2; then
 fi
 
 shopt -u extglob
+set -e
 
 

@@ -6,7 +6,7 @@ spec:
           description: |
             Описывает параметры хранилища логов, к которому можно подключить бесконечное количество источников.
 
-            `metadata.name` задает имя upstream'а, который будет использоваться в custom resource [ClusterLoggingConfig](https://deckhouse.ru/documentation/v1/modules/460-log-shipper/cr.html#clusterloggingconfig).
+            `metadata.name` задает имя upstream'а, который будет использоваться в custom resource [ClusterLoggingConfig](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/cr.html#clusterloggingconfig).
           properties:
             spec:
               properties:
@@ -265,7 +265,7 @@ spec:
                         verifyCertificate:
                           description: |
                             Проверка действия TLS-сертификата удаленного хоста.
-                            
+
                             Если установлено значение `false`, сертификат не проверяется в списках отзыва сертификатов.
                 vector:
                   properties:

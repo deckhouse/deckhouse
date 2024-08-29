@@ -106,7 +106,9 @@ func PrepareBashibleBundle(bundleName, nodeIP, devicePath string, metaConfig *co
 }
 
 func ExecuteBashibleBundle(sshClient *ssh.Client, tmpDir string) error {
-	bundleCmd := sshClient.UploadScript("bashible.sh", "--local").Sudo()
+	bundleCmd := sshClient.UploadScript("bashible.sh", "--local").
+		WithCleanupAfterExec(false).
+		Sudo()
 	parentDir := tmpDir + "/var/lib"
 	bundleDir := "bashible"
 

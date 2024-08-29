@@ -12,7 +12,7 @@ apiVersions:
         Run the following command to change the configuration in a running cluster:
 
         ```shell
-        kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit provider-cluster-configuration
+        kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
         ```
       x-doc-search: |
         ProviderClusterConfiguration
@@ -76,7 +76,7 @@ apiVersions:
               additionalProperties: false
               required: [template, storageProfile, sizingPolicy]
               description: |
-                Partial contents of the fields of the [VCDInstanceClass](../cluster_configuration.html#vcdinstanceclass).
+                Partial contents of the fields of the [VCDInstanceClass](cr.html#vcdinstanceclass).
               properties:
                 rootDiskSizeGb:
                   description: |
@@ -190,7 +190,7 @@ apiVersions:
                 additionalProperties: false
                 required: [template, storageProfile, sizingPolicy]
                 description: |
-                  Partial contents of the fields of the [VCDInstanceClass](../cluster_configuration.html#vcdinstanceclass).
+                  Partial contents of the fields of the [VCDInstanceClass](cr.html#vcdinstanceclass).
                 properties:
                   rootDiskSizeGb:
                     description: |
@@ -271,7 +271,7 @@ apiVersions:
           description: |
             The way resources are located in the cloud.
 
-            Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vcd/layouts.html) about possible provider layouts.
+            Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vcd/layouts.html) about possible provider layouts.
         provider:
           type: object
           additionalProperties: false

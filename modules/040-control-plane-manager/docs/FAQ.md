@@ -333,6 +333,45 @@ The control-plane-manager saves backups to `/etc/kubernetes/deckhouse/backup`. T
 
 > **Caution!** This operation is unsafe and breaks the guarantees given by the consensus protocol. Note that it brings the cluster to the state that was saved on the node. Any pending entries will be lost.
 
+### What if etcd restarts with an error?
+
+This method may be necessary if the `--force-new-cluster` option doesn't restore etcd work. Such a scenario can occur during an unsuccessful converge of master nodes, where a new master node was created with an old etcd disk, changed its internal address, and other master nodes are absent. Symptoms indicating the need for this method include: the etcd container being stuck in an endless restart with the log showing the error: `panic: unexpected removal of unknown remote peer`.
+
+1. Install the [etcdutl](https://github.com/etcd-io/etcd/releases) utility.
+1. Create a new etcd database snapshot from the current local snapshot (`/var/lib/etcd/member/snap/db`):
+
+   ```shell
+   ./etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
+   --initial-cluster=HOSTNAME=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://ADDRESS:2380 \
+   --skip-hash-check=true --data-dir /var/lib/etcdtest
+   ```
+
+   where:
+   - `<HOSTNAME>` — the name of the master node,
+   - `<ADDRESS>` — the address of the master node.
+
+1. Execute the following commands to use the new snapshot:
+
+   ```shell
+   cp -r /var/lib/etcd /tmp/etcd-backup
+   rm -rf /var/lib/etcd
+   mv /var/lib/etcdtest /var/lib/etcd
+   ```
+
+1. Locate the `etcd` and `api-server` containers:
+
+   ```shell
+   crictl ps -a | egrep "etcd|apiserver"
+   ```
+
+1. Remove the `etcd` and `api-server` containers:
+
+   ```shell
+   crictl rm <CONTAINER-ID>
+   ```
+
+1. Restart the master node.
+
 ## How do I configure additional audit policies?
 
 1. Enable [the auditPolicyEnabled](configuration.html#parameters-apiserver-auditpolicyenabled) flag in the module configuration:
@@ -586,7 +625,7 @@ Follow these steps to restore a multi-master cluster:
 1. Wait for the deckhouse queue to complete:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue main
+   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
    ```
 
 1. Switch the cluster back to multi-master mode according to [instructions](#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master) for cloud clusters or [instructions](#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster) for static or hybrid clusters.
@@ -739,3 +778,19 @@ Finally, the scheduler assigns the Pod to the node with the highest ranking.
 - [Plugin system](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins)
 - [Node Filtering Details](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduler-perf-tuning/)
 - [Scheduler source code](https://github.com/kubernetes/kubernetes/tree/master/cmd/kube-scheduler)
+
+### How to change/extend the scheduler logic
+
+To change the logic of the scheduler it is possible to use the extension mechanism [Extenders](https://github.com/kubernetes/enhancements/blob/master/keps/sig-scheduling/624-scheduling-framework/README.md).
+
+Each plugin is a webhook that must satisfy the following requirements:
+* Use of TLS.
+* Accessibility through a service within the cluster.
+* Support for standard *Verbs* (filterVerb = filter, prioritizeVerb = prioritize).
+* It is also assumed that all plugins can cache node information (`nodeCacheCapable: true`).
+
+You can connect an extender using [KubeSchedulerWebhookConfiguration](cr.html#kubeschedulerwebhookconfiguration) resource.
+
+{% alert level="danger" %}
+When using the `failurePolicy: Fail` option, in case of an error in the webhook's operation, the scheduler will stop working and new pods will not be able to start.
+{% endalert %}

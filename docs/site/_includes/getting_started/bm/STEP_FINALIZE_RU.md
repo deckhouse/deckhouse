@@ -32,7 +32,7 @@ sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "
 {% endsnippetcut %}
   </li>
   <li>
-<p>Настройте StorageClass <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
+<p>Настройте StorageClass <a href="/products/kubernetes-platform/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
 sudo /opt/deckhouse/bin/kubectl create -f - << EOF
@@ -60,14 +60,14 @@ sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io
 </div>
 
 <div id="block_layout_worker" class="tabs__content_worker">
-<p>Добавьте узел в кластер (подробнее о добавлении статического узла в кластер читайте в <a href="/documentation/latest/modules/040-node-manager/examples.html#добавление-статического-узла-в-кластер">документации</a>):</p>
+<p>Добавьте узел в кластер (подробнее о добавлении статического узла в кластер читайте в <a href="/products/kubernetes-platform/documentation/latest/modules/040-node-manager/examples.html#добавление-статического-узла-в-кластер">документации</a>):</p>
 
 <ul>
   <li>
     Подготовьте <strong>чистую</strong> виртуальную машину, которая будет узлом кластера.
   </li>
   <li>
-<p>Настройте StorageClass <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
+<p>Настройте StorageClass <a href="/products/kubernetes-platform/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
 sudo /opt/deckhouse/bin/kubectl create -f - << EOF
@@ -91,7 +91,7 @@ sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
+    <p>Создайте <a href="/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```bash
 sudo /opt/deckhouse/bin/kubectl create -f - << EOF
@@ -119,7 +119,7 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Создайте в кластере ресурс <a href="/documentation/v1/modules/040-node-manager/cr.html#sshcredentials">SSHCredentials</a>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
+    <p>Создайте в кластере ресурс <a href="/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#sshcredentials">SSHCredentials</a>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```bash
 kubectl create -f - <<EOF
@@ -160,7 +160,15 @@ chmod 600 /home/caps/.ssh/authorized_keys
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Создайте <a href="/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> для добавляемого узла. Для этого выполните на <strong>master-узле</strong> следующую команду, указав IP-адрес добавляемого узла:</p>
+    <p><strong>В операционных системах семейства Astra Linux</strong>, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя <code>caps</code>:</p>
+{% snippetcut %}
+```bash
+pdpl-user -i 63 caps
+```
+{% endsnippetcut %}
+  </li>
+  <li>
+    <p>Создайте <a href="/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> для добавляемого узла. Для этого выполните на <strong>master-узле</strong> следующую команду, указав IP-адрес добавляемого узла:</p>
 {% snippetcut %}
 ```bash
 # Укажите IP-адрес узла, который необходимо подключить к кластеру.
@@ -204,7 +212,7 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
 <p>Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время.</p>
 
 <ul>
-<li><p>Убедитесь, что под Kruise controller manager модуля <a href="/documentation/v1/modules/402-ingress-nginx/">ingress-nginx</a> запустился и находится в статусе <code>Ready</code>.</p>
+<li><p>Убедитесь, что под Kruise controller manager модуля <a href="/products/kubernetes-platform/documentation/v1/modules/402-ingress-nginx/">ingress-nginx</a> запустился и находится в статусе <code>Ready</code>.</p>
 <p>Выполните на <strong>master-узле</strong> следующую команду:</p>
 
 {% snippetcut %}
@@ -297,10 +305,12 @@ upmeter.example.com</code>
 </pre>
         </div>
       </li>
+      <li><strong>Важно:</strong> Домен, используемый в шаблоне, не должен совпадать с доменом, указанным в параметре clusterDomain и внутренней сервисной зоне сети. Например, если используется <code>clusterDomain: cluster.local</code> (значение по умолчанию), а сервисная зона сети — ru-central1.internal, то publicDomainTemplate не может быть <code>%s.cluster.local</code> или <code>%s.ru-central1.internal</code>.
+      </li>
     </ul>
   </li>
 
-    <li><p>Если вы <strong>не</strong> имеете под управлением DNS-сервер: добавьте статические записи соответствия имен конкретных сервисов публичному IP-адресу узла, на котором работает Ingress-контроллер.</p><p>Например, на персональном Linux-компьютере, с которого необходим доступ к сервисам Deckhouse, выполните следующую команду (укажите ваш публичный IP-адрес в переменной <code>PUBLIC_IP</code>) для добавления записей в файл <code>/etc/hosts</code> (для Windows используйте файл <code>%SystemRoot%\system32\drivers\etc\hosts</code>):</p>
+  <li><p>Если вы <strong>не</strong> имеете под управлением DNS-сервер: добавьте статические записи соответствия имен конкретных сервисов публичному IP-адресу узла, на котором работает Ingress-контроллер.</p><p>Например, на персональном Linux-компьютере, с которого необходим доступ к сервисам Deckhouse, выполните следующую команду (укажите ваш публичный IP-адрес в переменной <code>PUBLIC_IP</code>) для добавления записей в файл <code>/etc/hosts</code> (для Windows используйте файл <code>%SystemRoot%\system32\drivers\etc\hosts</code>):</p>
 {% snippetcut selector="example-hosts" %}
 ```bash
 export PUBLIC_IP="<PUBLIC_IP>"
@@ -323,7 +333,6 @@ EOF
 "
 ```
 {% endsnippetcut %}
-</li></ul>
 </li>
 </ul>
 

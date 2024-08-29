@@ -3,6 +3,12 @@
 # Based on https://github.com/cilium/hubble-ui/blob/v0.12.1/Dockerfile
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
 from: {{ $.Images.BASE_NODE_18_ALPINE_DEV }}
+git:
+  - add: /{{ $.ModulePath }}/modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
 shell:
   install:
   - export "TARGETOS=linux"
@@ -10,6 +16,7 @@ shell:
   - mkdir -p /app
   - git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /app
   - cd /app
+  - find /patches -name '*.patch' -exec git apply {} \;
   - npm --target_arch=${TARGETARCH} install
   - export "NODE_ENV=production"
   - npm run build

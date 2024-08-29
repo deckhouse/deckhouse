@@ -407,7 +407,7 @@ The most efficient way is to have some extra nodes "ready". In this case, you ca
 Here is how you should configure the target `NodeGroup`:
 
 1. Specify the number of "ready" nodes (or a percentage of the maximum number of nodes in the group) using the `cloudInstances.standby` paramter.
-1. If there are additional service components (not maintained by Deckhouse, such as `filebeat` DaemonSet) for these nodes, you need to specify their combined resource consumption via the `standbyHolder.notHeldResources` parameter.
+1. If there are additional service components on nodes that are not handled by Deckhouse (e.g., the `filebeat` DaemonSet), you can specify the percentage of node resources they can consume via the `standbyHolder.overprovisioningRate` parameter.
 1. This feature requires that at least one group node is already running in the cluster. In other words, there must be either a single replica of the application, or the `cloudInstances.minPerZone` parameter must be set to `1`.
 
 An example:
@@ -418,9 +418,7 @@ cloudInstances:
   minPerZone: 1
   standby: 10%
   standbyHolder:
-    notHeldResources:
-      cpu: 300m
-      memory: 2Gi
+    overprovisioningRate: 30%
 ```
 
 ## How do I disable machine-controller-manager in the case of potentially cluster-damaging changes?

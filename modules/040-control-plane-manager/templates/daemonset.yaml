@@ -32,6 +32,7 @@ memory: 10Mi
 {{- $_ := set $tpl_context "clusterConfiguration" .Values.global.clusterConfiguration }}
 {{- $_ := set $tpl_context.clusterConfiguration "kubernetesVersion" .Values.controlPlaneManager.internal.effectiveKubernetesVersion }}
 {{- $_ := set $tpl_context "apiserver" dict }}
+{{- $_ := set $tpl_context "scheduler" dict }}
 {{- $_ := set $tpl_context "resourcesRequestsMilliCpuControlPlane" .Values.global.internal.modules.resourcesRequests.milliCpuControlPlane }}
 {{- $_ := set $tpl_context "resourcesRequestsMemoryControlPlane" .Values.global.internal.modules.resourcesRequests.memoryControlPlane }}
 
@@ -96,6 +97,9 @@ memory: 10Mi
 {{- end }}
 {{- if hasKey .Values.controlPlaneManager.internal "auditPolicy" }}
   {{- $_ := set $tpl_context.apiserver "auditPolicy" .Values.controlPlaneManager.internal.auditPolicy }}
+{{- end }}
+{{- if hasKey .Values.controlPlaneManager.internal "kubeSchedulerExtenders" }}
+{{ $_ := set $tpl_context.scheduler "extenders" .Values.controlPlaneManager.internal.kubeSchedulerExtenders }}
 {{- end }}
 {{- if hasKey .Values.controlPlaneManager.internal "arguments" }}
 {{- $_ := set $tpl_context "arguments" .Values.controlPlaneManager.internal.arguments }}
