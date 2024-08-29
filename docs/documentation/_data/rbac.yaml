@@ -1477,7 +1477,6 @@ modules:
           resources:
           - projects
           - projecttemplates
-          - projecttypes
           verbs:
           - get
           - list
@@ -1499,7 +1498,6 @@ modules:
           resources:
           - projects
           - projecttemplates
-          - projecttypes
           verbs:
           - create
           - update
