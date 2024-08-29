@@ -1,5 +1,5 @@
-{{- if eq .nodeGroup.name "master" }}
 {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+{{- if eq .nodeGroup.name "master" }}
 
 if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
   return 0
