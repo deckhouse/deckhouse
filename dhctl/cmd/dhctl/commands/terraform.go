@@ -25,7 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
@@ -59,7 +59,7 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
+		kubeCl, err := operations.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(sshClient))
 		if err != nil {
 			return err
 		}

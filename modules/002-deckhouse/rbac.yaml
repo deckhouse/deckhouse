@@ -1,0 +1,7 @@
+module: deckhouse
+namespace: d8-system
+scopes:
+  - deckhouse
+crds:
+  - deckhouse-controller/crds/*.yaml
+

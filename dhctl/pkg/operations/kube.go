@@ -21,23 +21,24 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func ConnectToKubernetesAPI(sshClient *ssh.Client) (*client.KubernetesClient, error) {
+func ConnectToKubernetesAPI(nodeInterface node.Interface) (*client.KubernetesClient, error) {
 	var kubeCl *client.KubernetesClient
 	err := log.Process("common", "Connect to Kubernetes API", func() error {
-		if sshClient != nil {
-			if err := sshClient.Check().WithDelaySeconds(1).AwaitAvailability(); err != nil {
+		if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+			if err := wrapper.Client().Check().WithDelaySeconds(1).AwaitAvailability(); err != nil {
 				return fmt.Errorf("await master available: %v", err)
 			}
 		}
 
 		err := retry.NewLoop("Get Kubernetes API client", 45, 5*time.Second).Run(func() error {
 			kubeCl = client.NewKubernetesClient()
-			if sshClient != nil {
-				kubeCl = kubeCl.WithSSHClient(sshClient)
+			if nodeInterface != nil {
+				kubeCl = kubeCl.WithNodeInterface(nodeInterface)
 			}
 			if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)

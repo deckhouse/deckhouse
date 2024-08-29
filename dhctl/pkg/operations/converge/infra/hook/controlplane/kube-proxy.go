@@ -24,7 +24,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 type KubeProxyChecker struct {
@@ -90,7 +90,7 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 		return false, err
 	}
 
-	kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
+	kubeCl := client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
 	err = kubeCl.Init(client.AppKubernetesInitParams())
 	if err != nil {
 		return false, fmt.Errorf("open kubernetes connection: %v", err)
@@ -105,8 +105,8 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 			kubeCl.KubeProxy.Stop(0)
 		}
 
-		if kubeCl.SSHClient != nil {
-			kubeCl.SSHClient.Stop()
+		if wrapper, ok := kubeCl.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+			wrapper.Client().Stop()
 		}
 	}()
 

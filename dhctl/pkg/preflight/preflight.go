@@ -15,20 +15,31 @@
 package preflight
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
+type State interface {
+	SetGlobalPreflightchecksWasRan() error
+	GlobalPreflightchecksWasRan() (bool, error)
+	SetCloudPreflightchecksWasRan() error
+	CloudPreflightchecksWasRan() (bool, error)
+	SetStaticPreflightchecksWasRan() error
+	StaticPreflightchecksWasRan() (bool, error)
+}
+
 type Checker struct {
-	sshClient               *ssh.Client
+	nodeInterface           node.Interface
 	metaConfig              *config.MetaConfig
 	installConfig           *config.DeckhouseInstaller
+	bootstrapState          State
 	imageDescriptorProvider imageDescriptorProvider
 	buildDigestProvider     buildDigestProvider
 }
@@ -40,14 +51,16 @@ type checkStep struct {
 }
 
 func NewChecker(
-	sshClient *ssh.Client,
+	nodeInterface node.Interface,
 	config *config.DeckhouseInstaller,
 	metaConfig *config.MetaConfig,
+	bootstrapState State,
 ) Checker {
 	return Checker{
-		sshClient:               sshClient,
+		nodeInterface:           nodeInterface,
 		metaConfig:              metaConfig,
 		installConfig:           config,
+		bootstrapState:          bootstrapState,
 		imageDescriptorProvider: remoteDescriptorProvider{},
 		buildDigestProvider: &dhctlBuildDigestProvider{
 			DigestFilePath: app.DeckhouseImageDigestFile,
@@ -56,7 +69,19 @@ func NewChecker(
 }
 
 func (pc *Checker) Static() error {
-	return pc.do("Preflight checks for static-cluster", []checkStep{
+
+	ready, err := pc.bootstrapState.StaticPreflightchecksWasRan()
+
+	if err != nil {
+		msg := fmt.Sprintf("Can not get state from cache: %v", err)
+		return errors.New(msg)
+	}
+
+	if ready {
+		return nil
+	}
+
+	err = pc.do("Preflight checks for static-cluster", []checkStep{
 		{
 			fun:            pc.CheckSingleSSHHostForStatic,
 			successMessage: "only one --ssh-host parameter used",
@@ -103,20 +128,56 @@ func (pc *Checker) Static() error {
 			skipFlag:       app.SudoAllowedCheckArgName,
 		},
 	})
+
+	if err != nil {
+		return err
+	}
+
+	return pc.bootstrapState.SetStaticPreflightchecksWasRan()
 }
 
 func (pc *Checker) Cloud() error {
-	return pc.do("Cloud deployment preflight checks", []checkStep{
+
+	ready, err := pc.bootstrapState.CloudPreflightchecksWasRan()
+
+	if err != nil {
+		msg := fmt.Sprintf("Can not get state from cache: %v", err)
+		return errors.New(msg)
+	}
+
+	if ready {
+		return nil
+	}
+
+	err = pc.do("Cloud deployment preflight checks", []checkStep{
 		{
 			fun:            pc.CheckCloudMasterNodeSystemRequirements,
 			successMessage: "cloud master node system requirements are met",
 			skipFlag:       app.SystemRequirementsArgName,
 		},
 	})
+
+	if err != nil {
+		return err
+	}
+
+	return pc.bootstrapState.SetCloudPreflightchecksWasRan()
+
 }
 
 func (pc *Checker) Global() error {
-	return pc.do("Global preflight checks", []checkStep{
+	ready, err := pc.bootstrapState.GlobalPreflightchecksWasRan()
+
+	if err != nil {
+		msg := fmt.Sprintf("Can not get state from cache: %v", err)
+		return errors.New(msg)
+	}
+
+	if ready {
+		return nil
+	}
+
+	err = pc.do("Global preflight checks", []checkStep{
 		{
 			fun:            pc.CheckPublicDomainTemplate,
 			successMessage: "PublicDomainTemplate is correctly",
@@ -128,6 +189,13 @@ func (pc *Checker) Global() error {
 			skipFlag:       app.RegistryCredentialsCheckArgName,
 		},
 	})
+
+	if err != nil {
+		return err
+	}
+
+	return pc.bootstrapState.SetGlobalPreflightchecksWasRan()
+
 }
 
 func (pc *Checker) do(title string, checks []checkStep) error {

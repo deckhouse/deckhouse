@@ -466,6 +466,10 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 
 	tasks = append(tasks, controllerDeploymentTask(kubeCl, cfg))
 
+	if err := config.CheckOrSetupArbitaryCNIModuleConfig(cfg); err != nil {
+		return err
+	}
+
 	if len(cfg.ModuleConfigs) > 0 {
 		createTask := func(mc *config.ModuleConfig, createMsg string) actions.ManifestTask {
 			mcUnstructMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(mc)
