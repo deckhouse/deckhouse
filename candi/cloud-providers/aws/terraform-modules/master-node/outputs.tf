@@ -25,5 +25,5 @@ output "kubernetes_data_device_path" {
 }
 
 output "system_registry_data_device_path" {
-  value = ""
+  value = var.systemRegistryEnable ? aws_volume_attachment.system_registry_data[0].device_name : ""
 }

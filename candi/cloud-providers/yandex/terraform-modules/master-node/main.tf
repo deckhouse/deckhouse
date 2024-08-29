@@ -86,7 +86,6 @@ resource "yandex_compute_disk" "kubernetes_data" {
 
 resource "yandex_compute_disk" "system_registry_data" {
   count       = var.systemRegistryEnable ? 1 : 0
-
   name        = join("-", [local.prefix, "system-registry-data", var.nodeIndex])
   description = "volume for system registry data"
   size        = local.system_registry_disk_size_gb
