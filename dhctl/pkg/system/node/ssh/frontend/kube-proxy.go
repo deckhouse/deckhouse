@@ -23,7 +23,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 )
 
 const DefaultLocalAPIPort = 22322
@@ -179,7 +179,8 @@ func (k *KubeProxy) proxyCMD(startID int) *Command {
 
 	log.DebugF("[%d] Proxy command for start: %s\n", startID, command)
 
-	cmd := NewCommand(k.Session, command).Sudo()
+	cmd := NewCommand(k.Session, command)
+	cmd.Sudo()
 	cmd.Executor = cmd.Executor.CaptureStderr(nil).CaptureStdout(nil)
 	return cmd
 }

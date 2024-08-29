@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/frontend"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 

@@ -22,7 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 func connectionFlags(parent *kingpin.CmdClause) {
@@ -42,7 +42,7 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 			return err
 		}
 
-		kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
+		kubeCl, err := operations.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(sshClient))
 		if err != nil {
 			return err
 		}

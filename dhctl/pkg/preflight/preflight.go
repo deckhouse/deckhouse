@@ -21,12 +21,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 type Checker struct {
-	sshClient               *ssh.Client
+	nodeInterface           node.Interface
 	metaConfig              *config.MetaConfig
 	installConfig           *config.DeckhouseInstaller
 	imageDescriptorProvider imageDescriptorProvider
@@ -40,12 +40,12 @@ type checkStep struct {
 }
 
 func NewChecker(
-	sshClient *ssh.Client,
+	nodeInterface node.Interface,
 	config *config.DeckhouseInstaller,
 	metaConfig *config.MetaConfig,
 ) Checker {
 	return Checker{
-		sshClient:               sshClient,
+		nodeInterface:           nodeInterface,
 		metaConfig:              metaConfig,
 		installConfig:           config,
 		imageDescriptorProvider: remoteDescriptorProvider{},

@@ -28,7 +28,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -58,31 +58,26 @@ func NewUploadScript(sess *session.Session, scriptPath string, args ...string) *
 	}
 }
 
-func (u *UploadScript) Sudo() *UploadScript {
+func (u *UploadScript) Sudo() {
 	u.sudo = true
-	return u
 }
 
-func (u *UploadScript) WithStdoutHandler(handler func(string)) *UploadScript {
+func (u *UploadScript) WithStdoutHandler(handler func(string)) {
 	u.stdoutHandler = handler
-	return u
 }
 
-func (u *UploadScript) WithTimeout(timeout time.Duration) *UploadScript {
+func (u *UploadScript) WithTimeout(timeout time.Duration) {
 	u.timeout = timeout
-	return u
 }
 
-func (u *UploadScript) WithEnvs(envs map[string]string) *UploadScript {
+func (u *UploadScript) WithEnvs(envs map[string]string) {
 	u.envs = envs
-	return u
 }
 
 // WithCleanupAfterExec option tells if ssh executor should delete uploaded script after execution was attempted or not.
 // It does not care if script was executed successfully of failed.
-func (u *UploadScript) WithCleanupAfterExec(doCleanup bool) *UploadScript {
+func (u *UploadScript) WithCleanupAfterExec(doCleanup bool) {
 	u.cleanupAfterExec = doCleanup
-	return u
 }
 
 func (u *UploadScript) Execute() (stdout []byte, err error) {
@@ -101,15 +96,17 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 	var scriptFullPath string
 	if u.sudo {
 		scriptFullPath = u.pathWithEnv(filepath.Join(app.DeckhouseNodeTmpPath, scriptName))
-		cmd = NewCommand(u.Session, scriptFullPath, u.Args...).Sudo()
+		cmd = NewCommand(u.Session, scriptFullPath, u.Args...)
+		cmd.Sudo()
 	} else {
 		scriptFullPath = u.pathWithEnv("./" + scriptName)
-		cmd = NewCommand(u.Session, scriptFullPath, u.Args...).Cmd()
+		cmd = NewCommand(u.Session, scriptFullPath, u.Args...)
+		cmd.Cmd()
 	}
 
 	scriptCmd := cmd.CaptureStdout(nil).CaptureStderr(nil)
 	if u.stdoutHandler != nil {
-		scriptCmd = scriptCmd.WithStdoutHandler(u.stdoutHandler)
+		scriptCmd.WithStdoutHandler(u.stdoutHandler)
 	}
 
 	if u.timeout > 0 {
@@ -192,7 +189,8 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 		u.ScriptPath,
 		strings.Join(u.Args, " "),
 	)
-	bundleCmd := NewCommand(u.Session, tarCmdline).Sudo()
+	bundleCmd := NewCommand(u.Session, tarCmdline)
+	bundleCmd.Sudo()
 
 	// Buffers to implement output handler logic
 	lastStep := ""
@@ -202,7 +200,10 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 	processLogger := log.GetProcessLogger()
 
 	handler := bundleOutputHandler(bundleCmd, processLogger, &lastStep, &failsCounter, &isBashibleTimeout)
-	err = bundleCmd.WithStdoutHandler(handler).CaptureStdout(nil).CaptureStderr(nil).Run()
+	bundleCmd.WithStdoutHandler(handler)
+	bundleCmd.CaptureStdout(nil)
+	bundleCmd.CaptureStderr(nil)
+	err = bundleCmd.Run()
 	if err != nil {
 		if lastStep != "" {
 			processLogger.LogProcessFail()

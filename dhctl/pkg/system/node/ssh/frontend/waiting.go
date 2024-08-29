@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -72,7 +72,8 @@ func (c *Check) CheckAvailability() error {
 }
 
 func (c *Check) ExpectAvailable() ([]byte, error) {
-	cmd := NewCommand(c.Session, "echo SUCCESS").Cmd()
+	cmd := NewCommand(c.Session, "echo SUCCESS")
+	cmd.Cmd()
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return output, err
