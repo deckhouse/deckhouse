@@ -75,17 +75,15 @@ type filteredUseBinding struct {
 }
 
 func filterUseBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var binding rbacv1.ClusterRoleBinding
+	var binding rbacv1.RoleBinding
 	if err := sdk.FromUnstructured(obj, &binding); err != nil {
 		return nil, err
 	}
-	var relatedWith string
-	for key, val := range binding.Labels {
-		if key == "rbac.deckhouse.io/related-with" {
-			relatedWith = val
-		}
+	if binding.Labels == nil || len(binding.Labels) == 0 {
+		return nil, nil
 	}
-	if relatedWith == "" {
+	relatedWith, ok := binding.Labels["rbac.deckhouse.io/related-with"]
+	if !ok {
 		return nil, nil
 	}
 	return &filteredUseBinding{
@@ -156,46 +154,35 @@ func filterManageRole(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 
 func syncRoles(input *go_hook.HookInput) error {
 	roles := parseRoles(input.Snapshots["manageRoles"])
-	var expected []*filteredUseBinding
+	expected := make(map[string]*filteredUseBinding)
 	for _, snapBinding := range input.Snapshots["manageBindings"] {
-		if snapBinding != nil {
-			binding := snapBinding.(*filteredManageBinding)
-			namespaces, ok := roles[binding.RoleName]
-			if !ok {
-				continue
-			}
-			splits := strings.Split(binding.RoleName, ":")
-			for _, namespace := range namespaces {
-				expected = append(expected, &filteredUseBinding{
-					Name:        fmt.Sprintf("d8:use:binding:%s", binding.Name),
-					Namespace:   namespace,
-					RelatedWith: binding.Name,
-					RoleName:    fmt.Sprintf("d8:use:role:%s", splits[len(splits)-1]),
-					Subjects:    binding.Subjects,
-				})
-			}
+		binding := snapBinding.(*filteredManageBinding)
+		namespaces, ok := roles[binding.RoleName]
+		if !ok {
+			continue
 		}
-	}
-
-	// ensure expected
-	for _, expectedBinding := range expected {
-		input.PatchCollector.Create(createBinding(expectedBinding), object_patch.UpdateIfExists())
+		splits := strings.Split(binding.RoleName, ":")
+		for _, namespace := range namespaces {
+			expectedBinding := &filteredUseBinding{
+				Name:        fmt.Sprintf("d8:use:binding:%s", binding.Name),
+				Namespace:   namespace,
+				RelatedWith: binding.Name,
+				RoleName:    fmt.Sprintf("d8:use:role:%s", splits[len(splits)-1]),
+				Subjects:    binding.Subjects,
+			}
+			input.PatchCollector.Create(createBinding(expectedBinding), object_patch.UpdateIfExists())
+			expected[expectedBinding.Name] = expectedBinding
+		}
 	}
 
 	// delete excess
 	for _, existingSnap := range input.Snapshots["useBindings"] {
 		if existingSnap != nil {
-			existing := existingSnap.(*filteredUseBinding)
-			var found bool
-			for _, expectedBinding := range expected {
-				if expectedBinding.Name == existing.Name {
-					found = true
-					break
-				}
-			}
-			if !found {
-				input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "RoleBinding", existing.Namespace, existing.Name)
-			}
+			continue
+		}
+		existing := existingSnap.(*filteredUseBinding)
+		if _, ok := expected[existing.RoleName]; !ok {
+			input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "RoleBinding", existing.Namespace, existing.Name)
 		}
 	}
 	return nil
