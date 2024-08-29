@@ -105,7 +105,7 @@ title: "Cloud provider — AWS: FAQ"
 
 1. Нужно в [Repository policies](https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html) задать права для четения образов
 
-```
+```json
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -134,7 +134,7 @@ title: "Cloud provider — AWS: FAQ"
 1. Добавить в [additionalRolePolicies](cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies) `ecr:GetAuthorizationToken`
 
 1. Добавляем ngc для авторизации в registry заменив значения для ECR_REGION и ECR_ID
-```
+```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
