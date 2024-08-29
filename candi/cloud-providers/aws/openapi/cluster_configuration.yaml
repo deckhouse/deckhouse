@@ -450,7 +450,7 @@ apiVersions:
           - `ec2:DescribeInstances`
       iamNodeRole:
         type: string
-        pattern: "^[a-zA-Z0-9+=,.@-_']{1,64}$"
+        pattern: ^[a-zA-Z0-9+=,.@\-_']{1,64}$
         description: |
           The name of the role that will be used for all node.
           You must add the contents of the role and policies that we create for the cluster to work properly.
