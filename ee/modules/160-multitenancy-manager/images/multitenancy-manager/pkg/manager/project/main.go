@@ -187,7 +187,7 @@ func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha2.Project) 
 		if project.Name == consts.DeckhouseProjectName && isDeckhouseNamespace {
 			involvedNamespaces = append(involvedNamespaces, namespace.Name)
 		}
-		if project.Name == consts.OthersProjectName && !isDeckhouseNamespace {
+		if project.Name == consts.DefaultProjectName && !isDeckhouseNamespace {
 			involvedNamespaces = append(involvedNamespaces, namespace.Name)
 		}
 	}

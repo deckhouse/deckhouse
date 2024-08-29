@@ -27,7 +27,7 @@ const ReleaseHashLabel = "hashsum"
 
 const (
 	DeckhouseProjectName = "deckhouse"
-	OthersProjectName    = "others"
+	DefaultProjectName   = "default"
 
 	VirtualTemplate = "virtual"
 )

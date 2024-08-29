@@ -72,7 +72,7 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, log logr.
 			if strings.HasPrefix(object.GetName(), consts.KubernetesNamespacePrefix) || strings.HasPrefix(object.GetName(), consts.DeckhouseNamespacePrefix) {
 				return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: consts.DeckhouseProjectName}}}
 			}
-			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: consts.OthersProjectName}}}
+			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: consts.DefaultProjectName}}}
 		})).
 		Complete(projectController)
 }
@@ -88,14 +88,14 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// wait for init
 	r.init.Wait()
 
-	r.log.Info("reconciling project", "project", req.Name)
+	r.log.Info("reconciling the project", "project", req.Name)
 	project := &v1alpha2.Project{}
 	if err := r.client.Get(ctx, req.NamespacedName, project); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.log.Info("project not found", "project", req.Name)
+			r.log.Info("the project not found", "project", req.Name)
 			return reconcile.Result{}, nil
 		}
-		r.log.Error(err, "error getting project", "project", req.Name)
+		r.log.Error(err, "error getting the project", "project", req.Name)
 		return reconcile.Result{}, nil
 	}
 

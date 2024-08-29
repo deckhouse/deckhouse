@@ -44,7 +44,7 @@ func (m *Manager) ensureVirtualProjects(ctx context.Context) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: consts.DeckhouseProjectName,
 			Labels: map[string]string{
-				consts.HeritageLabel:       consts.MultitenancyHeritage,
+				consts.HeritageLabel:       consts.DeckhouseHeritage,
 				consts.ProjectVirtualLabel: "true",
 			},
 		},
@@ -56,15 +56,15 @@ func (m *Manager) ensureVirtualProjects(ctx context.Context) error {
 	if err := m.ensureProject(ctx, deckhouseProject); err != nil {
 		return err
 	}
-	othersProject := &v1alpha2.Project{
+	defaultProject := &v1alpha2.Project{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1alpha2.SchemeGroupVersion.String(),
 			Kind:       v1alpha2.ProjectKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: consts.OthersProjectName,
+			Name: consts.DefaultProjectName,
 			Labels: map[string]string{
-				consts.HeritageLabel:       consts.MultitenancyHeritage,
+				consts.HeritageLabel:       consts.DeckhouseHeritage,
 				consts.ProjectVirtualLabel: "true",
 			},
 		},
@@ -73,20 +73,20 @@ func (m *Manager) ensureVirtualProjects(ctx context.Context) error {
 			Description:         "This is a virtual project",
 		},
 	}
-	if err := m.ensureProject(ctx, othersProject); err != nil {
+	if err := m.ensureProject(ctx, defaultProject); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (m *Manager) ensureProject(ctx context.Context, project *v1alpha2.Project) error {
-	m.log.Info("ensuring project", "project", project.Name)
+	m.log.Info("ensuring the project", "project", project.Name)
 	if err := m.client.Create(ctx, project); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				existingProject := new(v1alpha2.Project)
 				if err = m.client.Get(ctx, types.NamespacedName{Name: project.Name}, existingProject); err != nil {
-					m.log.Error(err, "failed to fetch project")
+					m.log.Error(err, "failed to fetch the project")
 					return err
 				}
 
@@ -94,22 +94,22 @@ func (m *Manager) ensureProject(ctx context.Context, project *v1alpha2.Project) 
 				existingProject.Labels = project.Labels
 				existingProject.Annotations = project.Annotations
 
-				m.log.Info("project already exists, try to update it")
+				m.log.Info("the project already exists, try to update it")
 				if err = m.client.Update(ctx, existingProject); err != nil {
 					return err
 				}
 				return nil
 			})
 			if err != nil {
-				m.log.Error(err, "failed to update project")
+				m.log.Error(err, "failed to update the project")
 				return err
 			}
 		} else {
-			m.log.Error(err, "failed to create project", "project", project.Name)
+			m.log.Error(err, "failed to create the project", "project", project.Name)
 			return err
 		}
 	}
-	m.log.Info("successfully ensured project", "project", project.Name)
+	m.log.Info("successfully ensured the project", "project", project.Name)
 	return nil
 }
 
