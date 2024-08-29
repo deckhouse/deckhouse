@@ -6,7 +6,7 @@ spec:
   enforcementAction: "deny"
   match:
     kinds:
-      - apiGroups: ["", "networking", "networking.k8s.io"]
+      - apiGroups: ["networking.k8s.io"]
         kinds: ["Ingress"]
   parameters:
     ingressClassNames:

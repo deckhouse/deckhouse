@@ -268,7 +268,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: ["", "networking", "networking.k8s.io"]
+      - apiGroups: ["networking.k8s.io"]
         kinds: ["Ingress"]
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -289,7 +289,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: ["", "storage", "storage.k8s.io"]
+      - apiGroups: [""]
         kinds: ["PersistentVolumeClaim"]
     {{- include "constraint_selector" (list $cr) }}
   parameters:

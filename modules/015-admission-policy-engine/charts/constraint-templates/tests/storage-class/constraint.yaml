@@ -6,7 +6,7 @@ spec:
   enforcementAction: "deny"
   match:
     kinds:
-      - apiGroups: ["", "storage", "storage.k8s.io"]
+      - apiGroups: [""]
         kinds: ["PersistentVolumeClaim"]
   parameters:
     storageClassNames:
