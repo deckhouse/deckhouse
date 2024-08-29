@@ -16,7 +16,6 @@ rules:
   resources:
   - projects
   - projecttemplates
-  - projecttypes
   verbs:
   - get
   - list
