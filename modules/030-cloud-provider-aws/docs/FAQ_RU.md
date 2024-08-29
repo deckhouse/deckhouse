@@ -129,6 +129,7 @@ title: "Cloud provider — AWS: FAQ"
   ]
 }
 ```
+
 Эту политику нужно применять в `Amazon ECR > Private registry > Repositories > {{ name }} > Permissions`
 
 1. Добавить в [additionalRolePolicies](cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies) `ecr:GetAuthorizationToken`
