@@ -134,6 +134,8 @@ type OperationPolicySpec struct {
 		MaxRevisionHistoryLimit   *int     `json:"maxRevisionHistoryLimit,omitempty"`
 		ImagePullPolicy           string   `json:"imagePullPolicy,omitempty"`
 		PriorityClassNames        []string `json:"priorityClassNames,omitempty"`
+		IngressClassNames         []string `json:"ingressClassNames,omitempty"`
+		StorageClassNames         []string `json:"storageClassNames,omitempty"`
 		CheckHostNetworkDNSPolicy bool     `json:"checkHostNetworkDNSPolicy,omitempty"`
 		CheckContainerDuplicates  bool     `json:"checkContainerDuplicates,omitempty"`
 		ReplicaLimits             struct {
