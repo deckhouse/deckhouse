@@ -133,7 +133,7 @@ This policy should be applied in `Amazon ECR > Private registry > Repositories >
 
 1. Add to [additionalRolePolicies](cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies) `ecr:GetAuthorizationToken`
 
-1. Add [NodeGroupConfiguration](../040-node-manager/cr.html#nodegroupconfiguration) for authorization to `Amazon ECR` by replacing the values for `ECR_REGION` и `ECR_ID`
+1. Add [NodeGroupConfiguration](../040-node-manager/cr.html#nodegroupconfiguration) for authorization to `Amazon ECR` by replacing the values for `ECR_REGION` and `ECR_ID`
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
