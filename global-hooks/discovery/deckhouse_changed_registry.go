@@ -27,7 +27,7 @@ import (
 
 const (
 	imageModulesD8RegistryChangeConfSnap = "d8_registry_secret_changed"
-	changedRegistryValuesPath            = "global.modulesImages.changedRegistry"
+	changedRegistryValuesPath            = "global.modulesImages.registry.changedRegistry"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -99,11 +99,11 @@ func discoveryDeckhouseRegistryChanged(input *go_hook.HookInput) error {
 		input.Values.Set(changedRegistryValuesPath, map[string]interface{}{})
 	}
 
-	input.Values.Set("global.modulesImages.changedRegistry.base", fmt.Sprintf("%s%s", registrySecretRaw.Address, registrySecretRaw.Path))
-	input.Values.Set("global.modulesImages.changedRegistry.dockercfg", registryConfEncoded)
-	input.Values.Set("global.modulesImages.changedRegistry.scheme", registrySecretRaw.Scheme)
-	input.Values.Set("global.modulesImages.changedRegistry.CA", registrySecretRaw.CA)
-	input.Values.Set("global.modulesImages.changedRegistry.address", registrySecretRaw.Address)
-	input.Values.Set("global.modulesImages.changedRegistry.path", registrySecretRaw.Path)
+	input.Values.Set("global.modulesImages.registry.changedRegistry.base", fmt.Sprintf("%s%s", registrySecretRaw.Address, registrySecretRaw.Path))
+	input.Values.Set("global.modulesImages.registry.changedRegistry.dockercfg", registryConfEncoded)
+	input.Values.Set("global.modulesImages.registry.changedRegistry.scheme", registrySecretRaw.Scheme)
+	input.Values.Set("global.modulesImages.registry.changedRegistry.CA", registrySecretRaw.CA)
+	input.Values.Set("global.modulesImages.registry.changedRegistry.address", registrySecretRaw.Address)
+	input.Values.Set("global.modulesImages.registry.changedRegistry.path", registrySecretRaw.Path)
 	return nil
 }
