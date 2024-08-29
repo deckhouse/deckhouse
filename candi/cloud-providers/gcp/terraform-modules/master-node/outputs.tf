@@ -29,5 +29,5 @@ output "kubernetes_data_device_path" {
 }
 
 output "system_registry_data_device_path" {
-  value = ""
+  value = var.systemRegistryEnable ? google_compute_instance.master.attached_disk.1.device_name : ""
 }
