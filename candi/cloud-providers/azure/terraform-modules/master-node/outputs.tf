@@ -29,5 +29,5 @@ output "kubernetes_data_device_path" {
 }
 
 output "system_registry_data_device_path" {
-  value = ""
+  value = var.systemRegistryEnable ? azurerm_virtual_machine_data_disk_attachment.system_registry_data.lun : ""
 }

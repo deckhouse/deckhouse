@@ -112,9 +112,29 @@ resource "azurerm_managed_disk" "kubernetes_data" {
   tags                 = local.additional_tags
 }
 
+resource "azurerm_managed_disk" "system_registry_data" {
+  count                = var.systemRegistryEnable ? 1 : 0
+  name                 = join("-", [local.prefix, "system-registry-data", var.nodeIndex])
+  resource_group_name  = data.azurerm_resource_group.kube.name
+  location             = data.azurerm_resource_group.kube.location
+  zones                = [local.zone]
+  storage_account_type = local.disk_type
+  create_option        = "Empty"
+  disk_size_gb         = local.system_registry_disk_size_gb
+  tags                 = local.additional_tags
+}
+
 resource "azurerm_virtual_machine_data_disk_attachment" "kubernetes_data" {
   managed_disk_id    = azurerm_managed_disk.kubernetes_data.id
   virtual_machine_id = azurerm_linux_virtual_machine.master.id
   lun                = "10" # this value used to determine the disk name in bashible (000_discover_kubernetes_data_device_path.sh.tpl)
+  caching            = "ReadWrite"
+}
+
+resource "azurerm_virtual_machine_data_disk_attachment" "system_registry_data" {
+  count              = var.systemRegistryEnable ? 1 : 0
+  managed_disk_id    = azurerm_managed_disk.system_registry_data[0].id
+  virtual_machine_id = azurerm_linux_virtual_machine.master.id
+  lun                = "11" # this value used to determine the disk name in bashible (000_discover_system_registry_data_device_path.sh.tpl)
   caching            = "ReadWrite"
 }
