@@ -20,6 +20,10 @@ variable "providerClusterConfiguration" {
   type = any
 }
 
+variable "tags" {
+  type = map(string)
+}
+
 locals {
   additional_role_policies = lookup(var.providerClusterConfiguration, "additionalRolePolicies", [])
 }

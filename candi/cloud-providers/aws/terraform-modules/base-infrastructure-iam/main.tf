@@ -31,7 +31,7 @@ resource "aws_iam_role" "node" {
   }
   EOF
 
-  tags = local.tags
+  tags = var.tags
 }
 
 resource "aws_iam_role_policy" "node" {
@@ -61,6 +61,6 @@ resource "aws_iam_role_policy" "node" {
 }
 
 resource "aws_iam_instance_profile" "node" {
-  name = "${local.prefix}-node"
+  name = "${var.prefix}-node"
   role = lookup(var.providerClusterConfiguration,"iamNodeRole", aws_iam_role.node.id)
 }
