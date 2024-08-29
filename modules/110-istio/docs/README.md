@@ -318,7 +318,7 @@ The consumption of data-plane resources (istio-sidecar) is affected by many fact
 * number of connections,
 * the intensity of requests,
 * size of requests and responses,
-* protocol (http/tcp),
+* protocol (HTTP/TCP),
 * number of CPU cores,
 * complexity of Service Mesh configuration.
 
