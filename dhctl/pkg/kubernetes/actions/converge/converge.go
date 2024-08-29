@@ -786,6 +786,8 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(nodeGroup *NodeGroupGroupOpt
 			return err
 		}
 
+		log.DebugF("NodeTemplate in cluster %v in state %v", templateInCluster, nodeTemplate)
+
 		diff := cmp.Diff(templateInCluster, nodeTemplate)
 		if diff == "" {
 			log.DebugF("Node template of the %s NodeGroup is not changed", c.name)
