@@ -134,6 +134,7 @@ title: "Cloud provider — AWS: FAQ"
 1. Добавить в [additionalRolePolicies](cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies) `ecr:GetAuthorizationToken`
 
 1. Добавляем ngc для авторизации в registry заменив значения для ECR_REGION и ECR_ID
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
