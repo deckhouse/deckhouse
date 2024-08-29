@@ -44,10 +44,11 @@ import (
 )
 
 const (
-	contextSecretName   = "bashible-apiserver-context"
-	registrySecretName  = "deckhouse-registry"
-	nodeUserCRDName     = "nodeusers"
-	moduleSourceCRDName = "modulesources"
+	contextSecretName           = "bashible-apiserver-context"
+	registrySecretName          = "deckhouse-registry"
+	secondaryRegistrySecretName = "deckhouse-change-registry"
+	nodeUserCRDName             = "nodeusers"
+	moduleSourceCRDName         = "modulesources"
 
 	imageDigestsFile = "/var/files/images_digests.json"
 	versionMapFile   = "/var/files/version_map.yml"
@@ -95,6 +96,9 @@ type BashibleContext struct {
 	moduleSourcesQueue                chan queueAction
 	moduleSourcesConfigurationChanged chan struct{}
 
+	secondaryRegistrySecretQueue   chan queueAction
+	secondaryRegistrySecretChanged chan struct{}
+
 	updateLocked bool
 }
 
@@ -121,6 +125,8 @@ func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient clie
 		nodeUsersConfigurationChanged:     make(chan struct{}, 1),
 		moduleSourcesQueue:                make(chan queueAction, 100),
 		moduleSourcesConfigurationChanged: make(chan struct{}, 1),
+		secondaryRegistrySecretQueue:      make(chan queueAction, 100),
+		secondaryRegistrySecretChanged:    make(chan struct{}, 1),
 	}
 
 	c.runFilesParser()
@@ -128,16 +134,18 @@ func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient clie
 	// Bashible context and its dynamic update
 	contextSecretFactory := newBashibleInformerFactory(kubeClient, resyncTimeout, "d8-cloud-instance-manager", "app=bashible-apiserver")
 	registrySecretFactory := newBashibleInformerFactory(kubeClient, resyncTimeout, "d8-system", "app=registry")
+	secondaryRegistrySecretFactory := newBashibleInformerFactory(kubeClient, resyncTimeout, "d8-system", "app=change-registry")
 	nodeUserCRDFactory := newNodeUserInformerFactory(kubeClient, resyncTimeout)
 	moduleSourcesFactory := newModuleSourcesInformerFactory(kubeClient, resyncTimeout, "app!=deckhouse,heritage!=deckhouse,module!=deckhouse")
 
 	contextSecretUpdates := c.subscribe(ctx, contextSecretFactory, contextSecretName)
 	registrySecretUpdates := c.subscribe(ctx, registrySecretFactory, registrySecretName)
+	secondaryRegistrySecretUpdates := c.subscribe(ctx, secondaryRegistrySecretFactory, secondaryRegistrySecretName)
 
 	c.subscribeOnNodeUserCRD(ctx, nodeUserCRDFactory)
 	c.subscribeOnModuleSource(ctx, moduleSourcesFactory)
 
-	go c.onSecretsUpdate(ctx, contextSecretUpdates, registrySecretUpdates)
+	go c.onSecretsUpdate(ctx, contextSecretUpdates, registrySecretUpdates, secondaryRegistrySecretUpdates)
 
 	return &c
 }
@@ -288,7 +296,7 @@ func (c *BashibleContext) runFilesWatcher() {
 	}
 }
 
-func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, registrySecretC chan map[string][]byte) {
+func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, registrySecretC, secondaryRegistrySecretC chan map[string][]byte) {
 	for {
 		select {
 		case data := <-contextSecretC:
@@ -330,6 +338,17 @@ func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, r
 			c.registrySynced = true
 			c.saveChecksum("registry", checksum)
 			c.update("secret: registry")
+
+		case data := <-secondaryRegistrySecretC:
+			var input registryInputData
+			arr := make([]string, 0, len(data))
+			sort.Strings(arr)
+			for k, v := range data {
+				arr = append(arr, k+"_"+string(v))
+			}
+			input.FromMap(data)
+			c.contextBuilder.SetSecondaryRegistryData(input.toRegistry())
+			c.update("secret: deckhouse-change-registry")
 
 		case <-c.stepsStorage.OnNodeGroupConfigurationsChanged():
 			c.update("NodeGroupConfiguration")

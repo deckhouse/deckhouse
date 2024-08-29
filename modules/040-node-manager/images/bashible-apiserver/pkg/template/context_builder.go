@@ -35,10 +35,11 @@ type ContextBuilder struct {
 
 	stepsStorage *StepsStorage
 
-	registryData     registry
-	clusterInputData inputData
-	versionMap       map[string]interface{}
-	imagesDigests    map[string]map[string]string // module: { image_name: tag }
+	registryData          registry
+	secondaryRegistryData registry
+	clusterInputData      inputData
+	versionMap            map[string]interface{}
+	imagesDigests         map[string]map[string]string // module: { image_name: tag }
 
 	// debug function injection
 	emitStepsOutput func(string, string, map[string]string)
@@ -63,10 +64,11 @@ type bashibleContexts map[string]interface{}
 type BashibleContextData struct {
 	bashibleContexts // rendered contexts
 
-	Images     map[string]map[string]string `json:"images" yaml:"images"`
-	VersionMap map[string]interface{}       `json:"versionMap" yaml:"versionMap"`
-	Registry   registry                     `json:"registry" yaml:"registry"`
-	Proxy      map[string]interface{}       `json:"proxy" yaml:"proxy"`
+	Images            map[string]map[string]string `json:"images" yaml:"images"`
+	VersionMap        map[string]interface{}       `json:"versionMap" yaml:"versionMap"`
+	Registry          registry                     `json:"registry" yaml:"registry"`
+	SecondaryRegistry registry                     `json:"secondaryRegistry" yaml:"secondaryRegistry"`
+	Proxy             map[string]interface{}       `json:"proxy" yaml:"proxy"`
 }
 
 // Map returns context data as map[string]interface{} for proper yaml marshalling
@@ -79,6 +81,7 @@ func (bd BashibleContextData) Map() map[string]interface{} {
 
 	result["images"] = bd.Images
 	result["registry"] = bd.Registry
+	result["secondaryRegistry"] = bd.SecondaryRegistry
 	result["versionMap"] = bd.VersionMap
 	result["proxy"] = bd.Proxy
 
@@ -87,6 +90,10 @@ func (bd BashibleContextData) Map() map[string]interface{} {
 
 func (cb *ContextBuilder) SetRegistryData(rd registry) {
 	cb.registryData = rd
+}
+
+func (cb *ContextBuilder) SetSecondaryRegistryData(rd registry) {
+	cb.secondaryRegistryData = rd
 }
 
 func (cb *ContextBuilder) SetImagesData(data map[string]map[string]string) {
@@ -132,11 +139,12 @@ func (cb *ContextBuilder) getCloudProvider() string {
 
 func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[string]error) {
 	bb := BashibleContextData{
-		bashibleContexts: make(map[string]interface{}),
-		VersionMap:       cb.versionMap,
-		Images:           cb.imagesDigests,
-		Registry:         cb.registryData,
-		Proxy:            cb.clusterInputData.Proxy,
+		bashibleContexts:  make(map[string]interface{}),
+		VersionMap:        cb.versionMap,
+		Images:            cb.imagesDigests,
+		Registry:          cb.registryData,
+		SecondaryRegistry: cb.secondaryRegistryData,
+		Proxy:             cb.clusterInputData.Proxy,
 	}
 
 	ngMap := make(map[string][]byte)
@@ -154,10 +162,11 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 			KubernetesCA:       cb.clusterInputData.KubernetesCA,
 			ModuleSourcesCA:    cb.moduleSourcesCA,
 		},
-		Registry:      cb.registryData,
-		Images:        cb.imagesDigests,
-		Proxy:         cb.clusterInputData.Proxy,
-		PackagesProxy: cb.clusterInputData.PackagesProxy,
+		Registry:          cb.registryData,
+		SecondaryRegistry: cb.secondaryRegistryData,
+		Images:            cb.imagesDigests,
+		Proxy:             cb.clusterInputData.Proxy,
+		PackagesProxy:     cb.clusterInputData.PackagesProxy,
 	}
 
 	cb.clusterInputData.AllowedBundles = append(cb.clusterInputData.AllowedBundles, "common") // temporary hack for using single bundle boostrap for all bundles
@@ -492,8 +501,9 @@ type tplContextCommon struct {
 	RunType string `json:"runType" yaml:"runType"`
 	Normal  normal `json:"normal" yaml:"normal"`
 
-	Images   map[string]map[string]string `json:"images" yaml:"images"`
-	Registry registry                     `json:"registry" yaml:"registry"`
+	Images            map[string]map[string]string `json:"images" yaml:"images"`
+	Registry          registry                     `json:"registry" yaml:"registry"`
+	SecondaryRegistry registry                     `json:"secondaryRegistry" yaml:"secondaryRegistry"`
 
 	Proxy         map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 	PackagesProxy map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
