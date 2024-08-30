@@ -1,0 +1,4 @@
+module: secret-copier
+namespace: none
+scopes:
+  - security

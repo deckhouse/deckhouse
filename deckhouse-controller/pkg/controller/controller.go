@@ -90,7 +90,7 @@ type DeckhouseController struct {
 	deckhouseModules map[string]*models.DeckhouseModule
 	// <module-name>: <module-source>
 	sourceModules           map[string]string
-	embeddedDeckhousePolicy *v1alpha1.ModuleUpdatePolicySpecContainer
+	embeddedDeckhousePolicy *helpers.ModuleUpdatePolicySpecContainer
 	deckhouseSettings       *helpers.DeckhouseSettingsContainer
 }
 
@@ -102,7 +102,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 
 	dc := dependency.NewDependencyContainer()
 	// create a default policy, it'll be filled in with relevant settings from the deckhouse moduleConfig, see runDeckhouseConfigObserver method
-	embeddedDeckhousePolicy := v1alpha1.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
+	embeddedDeckhousePolicy := helpers.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
 		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
 			Mode: "Auto",
 		},

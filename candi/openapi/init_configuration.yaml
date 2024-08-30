@@ -95,7 +95,7 @@ apiVersions:
             description: |
               Instead of this parameter, use ModuleConfig resources to configure modules.
 
-              Initial [Deckhouse configuration](/documentation/v1/#deckhouse-configuration).
+              Initial [Deckhouse configuration](/products/kubernetes-platform/documentation/v1/#deckhouse-configuration).
 
               Specify here Deckhouse configuration parameters with which it should start after installation.
 

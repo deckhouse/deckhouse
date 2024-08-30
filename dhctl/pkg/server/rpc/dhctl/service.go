@@ -32,8 +32,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 

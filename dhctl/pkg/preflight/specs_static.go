@@ -18,12 +18,13 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )
 
 func (pc *Checker) CheckStaticNodeSystemRequirements() error {
@@ -32,24 +33,22 @@ func (pc *Checker) CheckStaticNodeSystemRequirements() error {
 		return nil
 	}
 
-	buf := &bytes.Buffer{}
-	ramKb, err := extractRAMCapacityFromNode(pc.sshClient, buf)
+	ramKb, err := extractRAMCapacityFromNode(pc.nodeInterface)
 	if err != nil {
 		return err
 	}
 
-	buf.Reset()
-	physicalCoresCount, err := extractCPUPhysicalCoresCountFromNode(pc.sshClient, buf)
+	coresCount, err := extractCPULogicalCoresCountFromNode(pc.nodeInterface)
 	if err != nil {
 		return err
 	}
 
 	failures := make([]string, 0)
-	if physicalCoresCount < minimumRequiredCPUCores {
+	if coresCount < minimumRequiredCPUCores {
 		failures = append(failures, fmt.Sprintf(
 			" - System requirements mandate at least %d CPU(s) on the node, but it has %d",
 			minimumRequiredCPUCores,
-			physicalCoresCount,
+			coresCount,
 		))
 	}
 
@@ -68,38 +67,38 @@ func (pc *Checker) CheckStaticNodeSystemRequirements() error {
 	return nil
 }
 
-func extractRAMCapacityFromNode(sshCl *ssh.Client, buf *bytes.Buffer) (int, error) {
-	err := sshCl.Command(`cat /proc/meminfo | grep MemTotal | awk '{print $2}' | tr -d "\n"`).
-		CaptureStdout(buf).
-		Run()
+func extractRAMCapacityFromNode(sshCl node.Interface) (int, error) {
+	cmd := sshCl.Command("cat", "/proc/meminfo")
+	memInfo, _, err := cmd.Output()
 	if err != nil {
 		return 0, fmt.Errorf("Failed to read MemTotal from /proc/meminfo: %w", err)
 	}
 
-	ramKb, err := strconv.Atoi(buf.String())
+	submatch := regexp.MustCompile(`^MemTotal:\s*(\d+)\s.B`).FindSubmatch(memInfo)
+	ramKb, err := strconv.Atoi(string(submatch[1]))
 	if err != nil {
 		return 0, fmt.Errorf("Failed to parse MemTotal from /proc/meminfo: %w", err)
 	}
 	return ramKb, nil
 }
 
-func extractCPUPhysicalCoresCountFromNode(sshCl *ssh.Client, buf *bytes.Buffer) (int, error) {
-	err := sshCl.Command("cat", "/proc/cpuinfo").CaptureStdout(buf).Run()
+func extractCPULogicalCoresCountFromNode(nodeInterface node.Interface) (int, error) {
+	cmd := nodeInterface.Command("cat", "/proc/cpuinfo")
+	stdout, _, err := cmd.Output()
 	if err != nil {
 		return 0, fmt.Errorf("Failed to read CPU info from /proc/cpuinfo: %w", err)
 	}
 
-	count, err := physicalCoresCountFromCPUInfo(buf)
+	count, err := logicalCoresCountFromCPUInfo(stdout)
 	if err != nil {
 		return 0, fmt.Errorf("Failed to parse CPU info from /proc/cpuinfo: %w", err)
 	}
 	return count, nil
 }
 
-func physicalCoresCountFromCPUInfo(info *bytes.Buffer) (int, error) {
-	scanner := bufio.NewScanner(info)
-	physicalCPUsToCores := make(map[string]int)
-	lastPhysicalId := ""
+func logicalCoresCountFromCPUInfo(cpuinfo []byte) (int, error) {
+	scanner := bufio.NewScanner(bytes.NewReader(cpuinfo))
+	processors := make(map[string]struct{})
 	for scanner.Scan() {
 		line := scanner.Text()
 		if !strings.Contains(line, ":") {
@@ -107,25 +106,13 @@ func physicalCoresCountFromCPUInfo(info *bytes.Buffer) (int, error) {
 		}
 
 		field := strings.SplitN(line, ": ", 2)
-		switch strings.TrimSpace(field[0]) {
-		case "physical id":
-			lastPhysicalId = field[1]
-		case "cpu cores":
-			v, err := strconv.ParseInt(field[1], 10, 32)
-			if err != nil {
-				return 0, fmt.Errorf("Parse cpu cores entry for physical id %q: %w", lastPhysicalId, err)
-			}
-			physicalCPUsToCores[lastPhysicalId] = int(v)
+		if strings.TrimSpace(field[0]) == "processor" {
+			processors[strings.TrimSpace(field[1])] = struct{}{}
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return 0, fmt.Errorf("Failed to parse cpu info from /proc/cpuinfo: %w", err)
 	}
 
-	totalPhysicalCores := 0
-	for _, coreCount := range physicalCPUsToCores {
-		totalPhysicalCores += coreCount
-	}
-
-	return totalPhysicalCores, nil
+	return len(processors), nil
 }

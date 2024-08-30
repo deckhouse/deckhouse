@@ -16,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Parameters of a group of OpenStack servers used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/) module).
+            Parameters of a group of OpenStack servers used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/) module).
 
             The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
           required:
@@ -71,7 +71,7 @@ spec:
 
                     Use this command to get a list of available images: `openstack image list`.
 
-                    The list of OS and their versions supported by Deckhouse can be found in the [documentation](https://deckhouse.ru/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
+                    The list of OS and their versions supported by Deckhouse can be found in the [documentation](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
 
                     **By default:** either `OpenStackCloudDiscoveryData` value or `instances.imageName` is used.
                   x-doc-required: false
@@ -80,7 +80,7 @@ spec:
                 rootDiskSize:
                   description: |
                     The size of a root disk (in gigabytes).
-                    This parameter also has influence on type of volume that will be used for root disk; the ["How to use rootDiskSize and when it is preferred"](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-use-rootdisksize-and-when-it-is-preferred) section describes how to use it.
+                    This parameter also has influence on type of volume that will be used for root disk; the ["How to use rootDiskSize and when it is preferred"](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-use-rootdisksize-and-when-it-is-preferred) section describes how to use it.
                   x-doc-examples: [20]
                   type: integer
                   x-doc-required: false
@@ -97,7 +97,7 @@ spec:
                     Paths to networks that VirtualMachines' secondary NICs will connect to.
 
                     **By default:** the value from `OpenStackCloudDiscoveryData` is used.
-                  x-doc-examples: 
+                  x-doc-examples:
                   - ['BGP-network-VLAN-3894', 'External-VLAN-3699']
                   type: array
                   items:
@@ -109,7 +109,7 @@ spec:
                     They allow you to set firewall rules for provisioned instances.
 
                     The `SecurityGroups` may not be supported by the cloud provider.
-                  x-doc-examples: 
+                  x-doc-examples:
                     - ["security-group-1", "security-group-2"]
                   type: array
                   items:

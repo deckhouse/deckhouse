@@ -118,14 +118,14 @@
       "type": "filter"
     },
     "transform/source/test-source/05_label_filter": {
-      "condition": "if is_boolean(.test) || is_float(.test) {\n    data, err = to_string(.test);\n    if err != null {\n        false;\n    } else {\n        includes([111], data);\n    };\n} else if .test == null {\n    \"null\";\n} else {\n    includes([111], .test);\n}",
+      "condition": "if is_boolean(.test) || is_float(.test) {\n    data, err = to_string(.test);\n    if err != null {\n        false;\n    } else {\n        includes([111], data);\n    };\n} else if .test == null {\n    false;\n} else {\n    includes([111], .test);\n}",
       "inputs": [
         "transform/source/test-source/04_label_filter"
       ],
       "type": "filter"
     },
     "transform/source/test-source/06_label_filter": {
-      "condition": "if is_boolean(.test) || is_float(.test) {\n    data, err = to_string(.test);\n    if err != null {\n        true;\n    } else {\n        !includes([\"test-test\"], data);\n    };\n} else if .test == null {\n    \"null\";\n} else {\n    !includes([\"test-test\"], .test);\n}",
+      "condition": "if is_boolean(.test) || is_float(.test) {\n    data, err = to_string(.test);\n    if err != null {\n        true;\n    } else {\n        !includes([\"test-test\"], data);\n    };\n} else if .test == null {\n    false;\n} else {\n    !includes([\"test-test\"], .test);\n}",
       "inputs": [
         "transform/source/test-source/05_label_filter"
       ],
@@ -168,14 +168,14 @@
       "type": "filter"
     },
     "transform/source/test-source/12_log_filter": {
-      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        false;\n    } else {\n        includes([\"wvrr\"], data);\n    };\n} else if .parsed_data.foo == null {\n    \"null\";\n} else {\n    includes([\"wvrr\"], .parsed_data.foo);\n}",
+      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        false;\n    } else {\n        includes([\"wvrr\"], data);\n    };\n} else if .parsed_data.foo == null {\n    false;\n} else {\n    includes([\"wvrr\"], .parsed_data.foo);\n}",
       "inputs": [
         "transform/source/test-source/11_log_filter"
       ],
       "type": "filter"
     },
     "transform/source/test-source/13_log_filter": {
-      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        true;\n    } else {\n        !includes([\"wvrr\"], data);\n    };\n} else if .parsed_data.foo == null {\n    \"null\";\n} else {\n    !includes([\"wvrr\"], .parsed_data.foo);\n}",
+      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        true;\n    } else {\n        !includes([\"wvrr\"], data);\n    };\n} else if .parsed_data.foo == null {\n    false;\n} else {\n    !includes([\"wvrr\"], .parsed_data.foo);\n}",
       "inputs": [
         "transform/source/test-source/12_log_filter"
       ],
@@ -210,6 +210,7 @@
         "type": "disk",
         "when_full": "block"
       },
+      "api_version": "v8",
       "endpoint": "http://192.168.1.1:9200",
       "encoding": {
         "timestamp_format": "rfc3339"

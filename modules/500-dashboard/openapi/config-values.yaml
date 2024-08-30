@@ -19,7 +19,7 @@ properties:
         description: |
           Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
-          > **Note!** External authentication is enabled automatically if the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) module is enabled.
+          > **Note!** External authentication is enabled automatically if the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) module is enabled.
         properties:
           authURL:
             type: string
@@ -75,7 +75,7 @@ properties:
           * `CertManager` — the dashboard will use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter.
           * `CustomCertificate` — the dashboard will use the certificate from the `d8-system` namespace for HTTPS.
           * `Disabled` — in this mode, the dashboard works over HTTP only.
-          * `OnlyInURI` — the dashboard will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
+          * `OnlyInURI` — the dashboard will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
       certManager:
         type: object
         properties:
@@ -106,7 +106,7 @@ properties:
     description: |
       The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
     additionalProperties:
       type: string
   tolerations:
@@ -114,7 +114,7 @@ properties:
     description: |
       The same as in the Pods' `spec.tolerations` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
     items:
       type: object
       properties:

@@ -1,4 +1,3 @@
-{{- $version := "0.3.2" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_SCRATCH }}
@@ -15,7 +14,7 @@ docker:
   LABEL:
     distro: all
     version: all
-    d8: {{ $version }}
+    d8: {{ .CandiVersionMap.d8.d8CliVersion }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_22_BULLSEYE_DEV }}
@@ -28,8 +27,8 @@ git:
 shell:
   setup:
   - export GOPROXY={{ $.GOPROXY }}
-  - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
+  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
   - cd /deckhouse-cli
   - task build:dist:linux:amd64
-  - mv ./dist/v{{ $version }}/linux-amd64/d8 /d8
+  - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/d8 /d8
   - chmod +x /d8 /install /uninstall

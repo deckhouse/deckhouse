@@ -112,7 +112,7 @@ spec:
                   description: |
                     The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
                     **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
                 tolerations:
@@ -120,7 +120,7 @@ spec:
                   description: |
                     [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods' `spec.tolerations` parameter in Kubernetes;
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
                     **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
                   items:
@@ -151,9 +151,9 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        > **Caution!** The cloud provider may not support this option or ignore it.  
-                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.  
-                        > Providers ignoring the option: _YandexCloud_.  
+                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
+                        > Providers ignoring the option: _YandexCloud_.
                         > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
                       items:
                         type: string
@@ -193,9 +193,9 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        > **Caution!** The cloud provider may not support this option or ignore it.  
-                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.  
-                        > Providers ignoring the option: _YandexCloud_.  
+                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
+                        > Providers ignoring the option: _YandexCloud_.
                         > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
                       items:
                         type: string
@@ -615,7 +615,7 @@ spec:
                       SSL Passthrough leverages SNI and reads the virtual domain from the TLS negotiation, which requires compatible clients. After a connection has been accepted by the TLS listener, it is handled by the controller itself and piped back and forth between the backend and the client.
 
                       If there is no hostname matching the requested host name, the request is handed over to NGINX on the configured SSL Passthrough proxy port (default: 442), which proxies the request to the default backend.
-                    
+
                       > **Caution!** SSL Passthrough feature is implemented by intercepting all traffic on the configured HTTPS port (default: 443) and handing it over to a local TCP proxy. This bypasses NGINX completely and introduces a non-negligible performance penalty.
                       >
                       > **Caution!** Unlike HTTP backends, traffic to SSL Passthrough backends is sent to the ClusterIP of the backing Service instead of individual Endpoints.
@@ -631,7 +631,7 @@ spec:
 
                       SSL Passthrough leverages SNI and reads the virtual domain from the TLS negotiation, which requires compatible clients. After a connection has been accepted by the TLS listener, it is handled by the controller itself and piped back and forth between the backend and the client.
 
-                      If there is no hostname matching the requested host name, the request is handed over to NGINX on the configured passthrough proxy port (default: 442), 
+                      If there is no hostname matching the requested host name, the request is handed over to NGINX on the configured passthrough proxy port (default: 442),
                       which proxies the request to the default backend.
 
                       > **Caution!** SSL Passthrough feature is implemented by intercepting all traffic on the configured HTTPS port (default: 443) and handing it over to a local TCP proxy. This bypasses NGINX completely and introduces a non-negligible performance penalty.
@@ -696,7 +696,7 @@ spec:
                   description: |
                     The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
                     **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
                 tolerations:
@@ -704,7 +704,7 @@ spec:
                   description: |
                     [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods' `spec.tolerations` parameter in Kubernetes;
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
                     **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
                   items:
@@ -735,9 +735,9 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        > **Caution!** The cloud provider may not support this option or ignore it.  
-                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.  
-                        > Providers ignoring the option: _YandexCloud_.  
+                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
+                        > Providers ignoring the option: _YandexCloud_.
                         > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
                       items:
                         type: string
@@ -777,9 +777,9 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        > **Caution!** The cloud provider may not support this option or ignore it.  
-                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.  
-                        > Providers ignoring the option: _YandexCloud_.  
+                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
+                        > Providers ignoring the option: _YandexCloud_.
                         > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
                       items:
                         type: string
@@ -805,9 +805,9 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        > **Caution!** The cloud provider may not support this option or ignore it.  
-                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.  
-                        > Providers ignoring the option: _Yandex Cloud_.  
+                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
+                        > Providers ignoring the option: _Yandex Cloud_.
                         > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
                       items:
                         type: string

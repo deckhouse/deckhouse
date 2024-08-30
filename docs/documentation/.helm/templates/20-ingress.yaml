@@ -40,6 +40,13 @@ spec:
             name: {{ $.Chart.Name }}-{{ $.VersionDNSNormalized }}
             port:
               name: http
+      - path: /products/kubernetes-platform/documentation/{{ $.VersionURLNormalized }}
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ $.Chart.Name }}-{{ $.VersionDNSNormalized }}
+            port:
+              name: http
 {{- end }}
 {{- else }}
 {{- range $hosts }}
@@ -73,7 +80,13 @@ spec:
             name: {{ $.Chart.Name }}-{{ $.VersionDNSNormalized }}
             port:
               name: http
+      - path: /products/kubernetes-platform/documentation/{{ $.VersionURLNormalized }}
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ $.Chart.Name }}-{{ $.VersionDNSNormalized }}
+            port:
+              name: http
 ---
 {{- end }}
 {{- end }}
-

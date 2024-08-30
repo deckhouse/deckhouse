@@ -46,8 +46,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -63,7 +64,7 @@ const (
 	DHCTLEndBootstrapBashiblePipeline = app.NodeDeckhouseDirectoryPath + "/first-control-plane-bashible-ran"
 )
 
-func BootstrapMaster(sshClient *ssh.Client, controller *template.Controller) error {
+func BootstrapMaster(nodeInterface node.Interface, controller *template.Controller) error {
 	return log.Process("bootstrap", "Initial bootstrap", func() error {
 		for _, bootstrapScript := range []string{"01-network-scripts.sh", "02-base-pkgs.sh"} {
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
@@ -78,11 +79,12 @@ func BootstrapMaster(sshClient *ssh.Client, controller *template.Controller) err
 						return fmt.Errorf("script path: %v", err)
 					}
 					logs := make([]string, 0)
-					cmd := sshClient.UploadScript(scriptPath).
-						WithStdoutHandler(func(l string) {
-							logs = append(logs, l)
-							log.DebugLn(l)
-						}).Sudo()
+					cmd := nodeInterface.UploadScript(scriptPath)
+					cmd.WithStdoutHandler(func(l string) {
+						logs = append(logs, l)
+						log.DebugLn(l)
+					})
+					cmd.Sudo()
 
 					_, err := cmd.Execute()
 					if err != nil {
@@ -105,10 +107,10 @@ func PrepareBashibleBundle(bundleName, nodeIP, devicePath string, metaConfig *co
 	})
 }
 
-func ExecuteBashibleBundle(sshClient *ssh.Client, tmpDir string) error {
-	bundleCmd := sshClient.UploadScript("bashible.sh", "--local").
-		WithCleanupAfterExec(false).
-		Sudo()
+func ExecuteBashibleBundle(nodeInterface node.Interface, tmpDir string) error {
+	bundleCmd := nodeInterface.UploadScript("bashible.sh", "--local")
+	bundleCmd.WithCleanupAfterExec(false)
+	bundleCmd.Sudo()
 	parentDir := tmpDir + "/var/lib"
 	bundleDir := "bashible"
 
@@ -128,13 +130,12 @@ func ExecuteBashibleBundle(sshClient *ssh.Client, tmpDir string) error {
 	return nil
 }
 
-func checkBashibleAlreadyRun(sshClient *ssh.Client) (bool, error) {
+func checkBashibleAlreadyRun(nodeInterface node.Interface) (bool, error) {
 	isReady := false
 	err := log.Process("bootstrap", "Checking bashible is ready", func() error {
-		cmd := sshClient.Command("cat", DHCTLEndBootstrapBashiblePipeline).
-			Sudo().
-			WithTimeout(10 * time.Second)
-
+		cmd := nodeInterface.Command("cat", DHCTLEndBootstrapBashiblePipeline)
+		cmd.Sudo()
+		cmd.WithTimeout(10 * time.Second)
 		if err := cmd.Run(); err != nil {
 			isReady = false
 			return err
@@ -151,21 +152,20 @@ func checkBashibleAlreadyRun(sshClient *ssh.Client) (bool, error) {
 	return isReady, err
 }
 
-func getBashiblePIDs(sshClient *ssh.Client) ([]string, error) {
+func getBashiblePIDs(nodeInterface node.Interface) ([]string, error) {
 	var psStrings []string
 	h := func(l string) {
 		psStrings = append(psStrings, l)
 	}
-	cmd := sshClient.Command("ps", "a", "--no-headers", "-o", "args:64", "-o", "\"|%p\"").
-		Sudo().
-		WithTimeout(10 * time.Second).
-		WithStdoutHandler(h)
-
+	cmd := nodeInterface.Command("bash", "-c", `ps a --no-headers -o args:64 -o "|%p"`)
+	cmd.Sudo()
+	cmd.WithTimeout(10 * time.Second)
+	cmd.WithStdoutHandler(h)
 	if err := cmd.Run(); err != nil {
 		var ee *exec.ExitError
 		// ssh exits with the exit status of the remote command or with 255 if an error occurred.
 		if errors.As(err, &ee) {
-			log.DebugF("'ps a --no-headers -o args:64 -o \"|%p\"' got exit code: %d and stderr %s", ee.ExitCode(), string(ee.Stderr))
+			log.DebugF("'ps a --no-headers -o args:64 -o \"|%%p\"' got exit code: %d and stderr %s", ee.ExitCode(), string(ee.Stderr))
 			if ee.ExitCode() == 255 {
 				return nil, err
 			}
@@ -197,11 +197,10 @@ func getBashiblePIDs(sshClient *ssh.Client) ([]string, error) {
 	return res, nil
 }
 
-func killBashible(sshClient *ssh.Client, pids []string) error {
-	cmd := sshClient.Command("kill", pids...).
-		Sudo().
-		WithTimeout(10 * time.Second)
-
+func killBashible(nodeInterface node.Interface, pids []string) error {
+	cmd := nodeInterface.Command("kill", pids...)
+	cmd.Sudo()
+	cmd.WithTimeout(10 * time.Second)
 	if err := cmd.Run(); err != nil {
 		var ee *exec.ExitError
 		// ssh exits with the exit status of the remote command or with 255 if an error occurred.
@@ -218,11 +217,10 @@ func killBashible(sshClient *ssh.Client, pids []string) error {
 	return nil
 }
 
-func unlockBashible(sshClient *ssh.Client) error {
-	cmd := sshClient.Command("rm", "-f", "/var/lock/bashible").
-		Sudo().
-		WithTimeout(10 * time.Second)
-
+func unlockBashible(NodeInterface node.Interface) error {
+	cmd := NodeInterface.Command("rm", "-f", "/var/lock/bashible")
+	cmd.Sudo()
+	cmd.WithTimeout(10 * time.Second)
 	if err := cmd.Run(); err != nil {
 		return err
 	}
@@ -230,10 +228,10 @@ func unlockBashible(sshClient *ssh.Client) error {
 	return nil
 }
 
-func cleanupPreviousBashibleRunIfNeed(sshClient *ssh.Client) error {
+func cleanupPreviousBashibleRunIfNeed(nodeInterface node.Interface) error {
 	return log.Process("bootstrap", "Cleanup previous bashible run if need", func() error {
 		log.DebugF("Gettting bashible pids")
-		pids, err := getBashiblePIDs(sshClient)
+		pids, err := getBashiblePIDs(nodeInterface)
 		if err != nil {
 			return err
 		}
@@ -244,11 +242,11 @@ func cleanupPreviousBashibleRunIfNeed(sshClient *ssh.Client) error {
 			return nil
 		}
 
-		if err := killBashible(sshClient, pids); err != nil {
+		if err := killBashible(nodeInterface, pids); err != nil {
 			return err
 		}
 
-		return unlockBashible(sshClient)
+		return unlockBashible(nodeInterface)
 	})
 }
 
@@ -403,7 +401,7 @@ func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
 	return tlsCert, nil
 }
 
-func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, devicePath string) error {
+func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string) error {
 	var clusterDomain string
 	err := json.Unmarshal(cfg.ClusterConfig["clusterDomain"], &clusterDomain)
 	if err != nil {
@@ -419,11 +417,11 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 		return fmt.Errorf("failed to start registry packages proxy: %v", err)
 	}
 
-	if err := CheckDHCTLDependencies(sshClient); err != nil {
+	if err := CheckDHCTLDependencies(nodeInterface); err != nil {
 		return err
 	}
 
-	bundleName, err := DetermineBundleName(sshClient)
+	bundleName, err := DetermineBundleName(nodeInterface)
 	if err != nil {
 		return err
 	}
@@ -437,7 +435,9 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 		}
 
 		err := retry.NewLoop(fmt.Sprintf("Prepare %s", app.NodeDeckhouseDirectoryPath), 30, 10*time.Second).Run(func() error {
-			if err := sshClient.Command("mkdir", "-p", "-m", "0755", app.DeckhouseNodeBinPath).Sudo().Run(); err != nil {
+			cmd := nodeInterface.Command("mkdir", "-p", "-m", "0755", app.DeckhouseNodeBinPath)
+			cmd.Sudo()
+			if err = cmd.Run(); err != nil {
 				return fmt.Errorf("ssh: mkdir -p %s -m 0755: %w", app.DeckhouseNodeBinPath, err)
 			}
 
@@ -449,7 +449,9 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 		}
 
 		err = retry.NewLoop(fmt.Sprintf("Prepare %s", app.DeckhouseNodeTmpPath), 30, 10*time.Second).Run(func() error {
-			if err := sshClient.Command("mkdir", "-p", "-m", "1777", app.DeckhouseNodeTmpPath).Sudo().Run(); err != nil {
+			cmd := nodeInterface.Command("mkdir", "-p", "-m", "1777", app.DeckhouseNodeTmpPath)
+			cmd.Sudo()
+			if err := cmd.Run(); err != nil {
 				return fmt.Errorf("ssh: mkdir -p -m 1777 %s: %w", app.DeckhouseNodeTmpPath, err)
 			}
 
@@ -459,7 +461,9 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 		// in end of pipeline steps bashible write "OK" to this file
 		// we need creating it before because we do not want handle errors from cat
 		return retry.NewLoop(fmt.Sprintf("Prepare %s", DHCTLEndBootstrapBashiblePipeline), 30, 10*time.Second).Run(func() error {
-			if err := sshClient.Command("touch", DHCTLEndBootstrapBashiblePipeline).Sudo().Run(); err != nil {
+			cmd := nodeInterface.Command("touch", DHCTLEndBootstrapBashiblePipeline)
+			cmd.Sudo()
+			if err := cmd.Run(); err != nil {
 				return fmt.Errorf("touch error %s: %w", DHCTLEndBootstrapBashiblePipeline, err)
 			}
 
@@ -467,11 +471,60 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 		})
 	})
 
+	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+		cleanUpTunnel, err := setupRPPTunnel(wrapper.Client())
+		if err != nil {
+			return err
+		}
+
+		defer cleanUpTunnel()
+	}
+
+	if err = PrepareBashibleBundle(bundleName, nodeIP, devicePath, cfg, templateController); err != nil {
+		return err
+	}
+	tomb.RegisterOnShutdown("Delete templates temporary directory", func() {
+		if !app.IsDebug {
+			_ = os.RemoveAll(templateController.TmpDir)
+		}
+	})
+
+	if err := BootstrapMaster(nodeInterface, templateController); err != nil {
+		return err
+	}
+
+	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
+		BreakIf(func(err error) bool { return errors.Is(err, frontend.ErrBashibleTimeout) }).
+		Run(func() error {
+			// we do not need to restart tunnel because we have HealthMonitor
+
+			log.DebugLn("Check bundle routine start")
+			ready, err := checkBashibleAlreadyRun(nodeInterface)
+			if err != nil {
+				return err
+			}
+
+			if ready {
+				log.Success("Bashible already run!\n")
+				return nil
+			}
+
+			if err := cleanupPreviousBashibleRunIfNeed(nodeInterface); err != nil {
+				return err
+			}
+
+			log.DebugLn("Start execute bashible bundle routine")
+
+			return ExecuteBashibleBundle(nodeInterface, templateController.TmpDir)
+		})
+}
+
+func setupRPPTunnel(sshClient *ssh.Client) (func(), error) {
 	var tun *frontend.ReverseTunnel
 	log.DebugLn("Starting reverse tunnel routine")
-	tun, err = SetupSSHTunnelToRegistryPackagesProxy(sshClient)
+	tun, err := SetupSSHTunnelToRegistryPackagesProxy(sshClient)
 	if err != nil {
-		return fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
+		return nil, fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
 	}
 
 	cleanUpTunnel := func() {
@@ -483,49 +536,10 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 		tun.Stop()
 		tun = nil
 	}
-
-	defer cleanUpTunnel()
-
-	if err = PrepareBashibleBundle(bundleName, nodeIP, devicePath, cfg, templateController); err != nil {
-		return err
-	}
-	tomb.RegisterOnShutdown("Delete templates temporary directory", func() {
-		if !app.IsDebug {
-			_ = os.RemoveAll(templateController.TmpDir)
-		}
-	})
-
-	if err := BootstrapMaster(sshClient, templateController); err != nil {
-		return err
-	}
-
-	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
-		BreakIf(func(err error) bool { return errors.Is(err, frontend.ErrBashibleTimeout) }).
-		Run(func() error {
-			// we do not need to restart tunnel because we have HealthMonitor
-
-			log.DebugLn("Check bundle routine start")
-			ready, err := checkBashibleAlreadyRun(sshClient)
-			if err != nil {
-				return err
-			}
-
-			if ready {
-				log.Success("Bashible already run!\n")
-				return nil
-			}
-
-			if err := cleanupPreviousBashibleRunIfNeed(sshClient); err != nil {
-				return err
-			}
-
-			log.DebugLn("Start execute bashible bundle routine")
-
-			return ExecuteBashibleBundle(sshClient, templateController.TmpDir)
-		})
+	return cleanUpTunnel, nil
 }
 
-func CheckDHCTLDependencies(sshClient *ssh.Client) error {
+func CheckDHCTLDependencies(nodeInteface node.Interface) error {
 	type checkResult struct {
 		name string
 		err  error
@@ -533,9 +547,10 @@ func CheckDHCTLDependencies(sshClient *ssh.Client) error {
 
 	checkDependency := func(dep string) error {
 		return retry.NewSilentLoop(fmt.Sprintf("Check dependency %s", dep), 30, 5*time.Second).Run(func() error {
-			output, err := sshClient.Command("type", dep).CombinedOutput()
+			output, err := nodeInteface.Command("command", "-v", dep).CombinedOutput()
 			if err != nil {
-				e := fmt.Errorf("bashible dependency error: %s",
+				e := fmt.Errorf("bashible dependency error: %v - %s",
+					err,
 					string(output),
 				)
 
@@ -577,7 +592,7 @@ func CheckDHCTLDependencies(sshClient *ssh.Client) error {
 
 		for res := range resultsChan {
 			if res.err != nil {
-				return fmt.Errorf("Dependency '%d' check failed. Last error %v", res.name, res.err)
+				return fmt.Errorf("Dependency '%s' check failed. Last error %v", res.name, res.err)
 			}
 
 			log.Success(fmt.Sprintf("Dependency '%s' check success\n", res.name))
@@ -587,7 +602,7 @@ func CheckDHCTLDependencies(sshClient *ssh.Client) error {
 	})
 }
 
-func DetermineBundleName(sshClient *ssh.Client) (string, error) {
+func DetermineBundleName(nodeInterface node.Interface) (string, error) {
 	var bundleName string
 	err := log.Process("bootstrap", "Detect Bashible Bundle", func() error {
 		file, err := template.RenderAndSaveDetectBundle(make(map[string]interface{}))
@@ -597,7 +612,7 @@ func DetermineBundleName(sshClient *ssh.Client) (string, error) {
 
 		return retry.NewSilentLoop("Get bundle", 30, 10*time.Second).Run(func() error {
 			// run detect bundle type
-			detectCmd := sshClient.UploadScript(file)
+			detectCmd := nodeInterface.UploadScript(file)
 			stdout, err := detectCmd.Execute()
 			if err != nil {
 				var ee *exec.ExitError
@@ -655,31 +670,6 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *config.DeckhouseI
 			return fmt.Errorf("deckhouse install: %v", err)
 		}
 
-		return nil
-	})
-}
-
-const rebootExitCode = 255
-
-func RebootMaster(sshClient *ssh.Client) error {
-	return log.Process("bootstrap", "Reboot Master️", func() error {
-		rebootCmd := sshClient.Command("reboot").Sudo().
-			WithSSHArgs("-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=2")
-		if err := rebootCmd.Run(); err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
-				if ee.ExitCode() == rebootExitCode {
-					return nil
-				}
-			}
-			return fmt.Errorf("shutdown error: exit_code: %v stdout: %s stderr: %s %v",
-				ee.ExitCode(),
-				rebootCmd.StdoutBuffer.String(),
-				rebootCmd.StderrBuffer.String(),
-				err,
-			)
-		}
-		log.InfoLn("OK!")
 		return nil
 	})
 }

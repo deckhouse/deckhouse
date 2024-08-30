@@ -28,6 +28,8 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
@@ -44,9 +46,9 @@ func TestGetReleasePolicy(t *testing.T) {
 
 	c := &moduleSourceReconciler{
 		client:                  cl,
-		externalModulesDir:      os.Getenv("EXTERNAL_MODULES_DIR"),
+		downloadedModulesDir:    d8env.GetDownloadedModulesDir(),
 		dc:                      dependency.NewDependencyContainer(),
-		deckhouseEmbeddedPolicy: v1alpha1.NewModuleUpdatePolicySpecContainer(embeddedDeckhousePolicy),
+		deckhouseEmbeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedDeckhousePolicy),
 		logger:                  log.New(),
 
 		moduleSourcesChecksum: make(sourceChecksum),

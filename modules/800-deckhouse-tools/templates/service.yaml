@@ -1,0 +1,17 @@
+{{- if and .Values.global.modules.publicDomainTemplate  .Values.global.clusterIsBootstrapped }}
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: deckhouse-tools
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse-tools")) | nindent 2 }}
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: deckhouse-tools
+{{- end }}

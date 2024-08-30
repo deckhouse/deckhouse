@@ -205,15 +205,15 @@ func checkKubeletConfig() error {
 
 func installKubeadmConfig() error {
 	log.Info("phase: install kubeadm configuration")
-	if err := os.MkdirAll(filepath.Join(deckhousePath, "kubeadm", "patches"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(deckhousePath, "kubeadm", "patches"), 0700); err != nil {
 		return err
 	}
 
-	if err := installFileIfChanged(filepath.Join(configPath, "kubeadm-config.yaml"), filepath.Join(deckhousePath, "kubeadm", "config.yaml"), 0644); err != nil {
+	if err := installFileIfChanged(filepath.Join(configPath, "kubeadm-config.yaml"), filepath.Join(deckhousePath, "kubeadm", "config.yaml"), 0600); err != nil {
 		return err
 	}
 	for _, component := range []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"} {
-		if err := installFileIfChanged(filepath.Join(configPath, component+".yaml.tpl"), filepath.Join(deckhousePath, "kubeadm", "patches", component+".yaml"), 0644); err != nil {
+		if err := installFileIfChanged(filepath.Join(configPath, component+".yaml.tpl"), filepath.Join(deckhousePath, "kubeadm", "patches", component+".yaml"), 0600); err != nil {
 			return err
 		}
 	}

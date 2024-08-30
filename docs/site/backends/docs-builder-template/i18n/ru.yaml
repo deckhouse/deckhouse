@@ -30,6 +30,7 @@ deprecated_parameter: Параметр устарел
 deprecated_parameter_hint: Поддержка параметра может быть исключена в следующих версиях.
 element_of_array: элемент массива
 x-kubernetes-int-or-string: строка или число
+of_x-kubernetes-int-or-string: строк или чисел
 array: массив
 of_array: массивов
 object: объект

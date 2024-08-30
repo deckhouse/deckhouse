@@ -3,6 +3,7 @@
 # Copyright 2024 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */}}
+set +e
 shopt -s extglob
 
 function render_and_deploy_netplan_config() {
@@ -55,3 +56,4 @@ if which netplan 2>/dev/null 1>&2; then
 fi
 
 shopt -u extglob
+set -e

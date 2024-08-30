@@ -37,7 +37,7 @@ import (
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -274,7 +274,7 @@ func (s *Service) abort(
 		ConfigPaths:      []string{configPath},
 		ResourcesPath:    resourcesPath,
 		InitialState:     initialState,
-		SSHClient:        sshClient,
+		NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
 		UseTfCache:       pointer.Bool(true),
 		AutoApprove:      pointer.Bool(true),
 		ResourcesTimeout: request.Options.ResourcesTimeout.AsDuration(),

@@ -422,7 +422,7 @@ spec:
     - rule:
         name: Container tag is not @sha256
         condition: |
-          kactivity and kcreate and pod and response_successful and system_namespace and not (ka.req.pod.containers.image contains @sha256:)
+          kactivity and kcreate and pod and response_successful and system_namespace and not (ka.req.container.image contains @sha256:)
         desc: Not all pods are under integrity control in a system namespace
         output: |
           Not all containers are running with the sha256 sum as a tag in a system namespace, which is a potential integrity control mechanism misconfiguration (user=%ka.user.name binding=%ka.target.name resource=%ka.target.resource resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason image=%ka.req.pod.containers.image)
