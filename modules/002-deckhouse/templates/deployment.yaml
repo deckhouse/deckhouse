@@ -169,6 +169,8 @@ spec:
               value: "127.0.0.1:44434"
             - name: ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS
               value: "DeckhouseVersion,KubernetesVersion,Static,DynamicallyEnabled,KubeConfig,ScriptEnabled"
+            - name: ADDON_OPERATOR_EXTRA_LABELS
+              value: "heritage=deckhouse"
             - name: ADDON_OPERATOR_LISTEN_PORT
               value: "4222"
             - name: ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT
