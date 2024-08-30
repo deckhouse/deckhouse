@@ -418,7 +418,7 @@ spec:
                   description: |
                     Включить валидацию аннотаций Ingress-правил.
 
-                    Требуется версия контроллера 1.9.
+                    Требуется версия контроллера 1.9 или выше.
                 nodeSelector:
                   description: |
                     Как в `spec.nodeSelector` у подов.
