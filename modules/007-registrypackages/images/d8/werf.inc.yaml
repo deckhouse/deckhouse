@@ -1,6 +1,6 @@
 # Delete the next line after merge dev_branch in upstream
 {{- $dev_branch := "feature/add-cilium" }}
-{{- $dev_commit := "1cc2068cc8be9506ed29ed9df52aeaee87f6ba31" }}
+{{- $dev_commit := "428de13f166cdd8279d40ffcc8aea66a9c12d6bb" }}
 {{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
