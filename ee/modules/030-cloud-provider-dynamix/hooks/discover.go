@@ -161,7 +161,7 @@ func handleDiscoveryDataVolumeTypes(
 		}
 	}
 
-	excludes, ok := input.Values.GetOk("cloudProviderZvirt.storageClass.exclude")
+	excludes, ok := input.Values.GetOk("cloudProviderDynamix.storageClass.exclude")
 	if ok {
 		for _, esc := range excludes.Array() {
 			rg := regexp.MustCompile("^(" + esc.String() + ")$")
