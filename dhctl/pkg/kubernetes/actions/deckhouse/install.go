@@ -287,8 +287,11 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name:     `Impersonate "deckhouse"`,
 			Manifest: func() interface{} { return nil },
 			CreateFunc: func(manifest interface{}) error {
-				kubeCl.KubeClient.RestConfig().Impersonate = rest.ImpersonationConfig{
-					UserName: "system:serviceaccount:d8-system:deckhouse",
+				config := kubeCl.KubeClient.RestConfig()
+				if config != nil {
+					config.Impersonate = rest.ImpersonationConfig{
+						UserName: "system:serviceaccount:d8-system:deckhouse",
+					}
 				}
 				return nil
 			},
