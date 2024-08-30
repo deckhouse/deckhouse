@@ -74,5 +74,11 @@ resource "decort_kvmvm" "master_vm" {
       cloud_init,
     ]
   }
+
+  lifecycle {
+    ignore_changes = [
+      cloud_init,
+    ]
+  }
 }
 

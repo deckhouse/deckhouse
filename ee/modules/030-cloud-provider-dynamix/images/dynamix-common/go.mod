@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	k8s.io/klog/v2 v2.130.1
-	repository.basistech.ru/BASIS/decort-golang-sdk v1.8.2
+	repository.basistech.ru/BASIS/decort-golang-sdk v1.8.3
 )
 
 require (

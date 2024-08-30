@@ -51,5 +51,11 @@ resource "decort_kvmvm" "node_vm" {
       cloud_init,
     ]
   }
+
+  lifecycle {
+    ignore_changes = [
+      cloud_init,
+    ]
+  }
 }
 
