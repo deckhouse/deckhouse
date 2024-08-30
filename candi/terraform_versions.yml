@@ -73,7 +73,7 @@ yandex:
 decort:
   namespace: terraform-provider-decort
   type: decort
-  version: 4.6.0
+  version: 4.6.1
   artifact: terraform-provider-decort
   artifactBinary: terraform-provider-decort
   destinationBinary: terraform-provider-decort

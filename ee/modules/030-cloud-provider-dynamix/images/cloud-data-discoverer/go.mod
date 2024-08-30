@@ -68,14 +68,12 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed // indirect
-	repository.basistech.ru/BASIS/decort-golang-sdk v1.8.2 // indirect
+	repository.basistech.ru/BASIS/decort-golang-sdk v1.8.3 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
 replace github.com/deckhouse/deckhouse/go_lib/cloud-data => ../../../../../go_lib/cloud-data/
-
-replace github.com/ovirt/go-ovirt-client/v3 v3.2.0 => github.com/flant/go-ovirt-client/v3 v3.2.0-flant
 
 replace dynamix-common => ../dynamix-common
