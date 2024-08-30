@@ -26,6 +26,8 @@ vNetCIDR: 10.50.0.0/16
 nameservers:
   addresses:
     - 1.1.1.1
+standard:
+  natGatewayPublicIpCount: 1
 subnetCIDR: 10.50.0.0/24
 masterNodeGroup:
   replicas: 1
