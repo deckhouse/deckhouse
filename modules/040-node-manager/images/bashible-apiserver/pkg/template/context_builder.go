@@ -67,7 +67,7 @@ type BashibleContextData struct {
 	Images            map[string]map[string]string `json:"images" yaml:"images"`
 	VersionMap        map[string]interface{}       `json:"versionMap" yaml:"versionMap"`
 	Registry          registry                     `json:"registry" yaml:"registry"`
-	SecondaryRegistry registry                     `json:"secondaryRegistry" yaml:"secondaryRegistry"`
+	SecondaryRegistry registryChange               `json:"secondaryRegistry" yaml:"secondaryRegistry"`
 	Proxy             map[string]interface{}       `json:"proxy" yaml:"proxy"`
 }
 
@@ -539,6 +539,19 @@ type normal struct {
 	ApiserverEndpoints []string          `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
 	KubernetesCA       string            `json:"kubernetesCA" yaml:"kubernetesCA"`
 	ModuleSourcesCA    map[string]string `json:"moduleSourcesCA" yaml:"moduleSourcesCA"`
+}
+
+type registryChange struct {
+	Address   string `json:"address" yaml:"address"`
+	Path      string `json:"path" yaml:"path"`
+	Scheme    string `json:"scheme" yaml:"scheme"`
+	CA        string `json:"ca,omitempty" yaml:"ca,omitempty"`
+	DockerCFG []byte `json:"dockerCfg" yaml:"dockerCfg"`
+	Auth      string `json:"auth" yaml:"auth"`
+	Digests   map[string]struct {
+		Pause              string `json:"pause" yaml:"pause"`
+		KubernetesApiProxy string `json:"kubernetesApiProxy" yaml:"kubernetesApiProxy"`
+	} `json:"Digests"`
 }
 
 type registry struct {
