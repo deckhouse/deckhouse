@@ -155,6 +155,12 @@ apiVersions:
                 example: 10
                 default: 10
                 type: integer
+              systemRegistryDiskSizeGb:
+                description: |
+                  System registry disk size in gigabytes.
+                example: 40
+                default: 40
+                type: integer
               additionalSecurityGroups: &instanceClassAdditionalSecurityGroups
                 type: array
                 description: |
