@@ -340,7 +340,7 @@ func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, r
 			c.update("secret: registry")
 
 		case data := <-secondaryRegistrySecretC:
-			var input registryInputData
+			var input registryChangeInputData
 			arr := make([]string, 0, len(data))
 			sort.Strings(arr)
 			for k, v := range data {
