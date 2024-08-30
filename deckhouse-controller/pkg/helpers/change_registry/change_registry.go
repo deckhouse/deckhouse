@@ -65,7 +65,7 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 	}
 
 	nameOpts := newNameOptions(scheme)
-	newRepo, err := name.NewRepository(newRegistry, nameOpts...)
+	newRepo, err := name.NewRepository(strings.TrimRight(newRegistry, "/"), nameOpts...)
 	if err != nil {
 		return err
 	}
