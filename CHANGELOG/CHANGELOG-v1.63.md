@@ -44,6 +44,7 @@
 ## Fixes
 
 
+ - **[candi]** Fix for bootstrap or upgrade an existing cluster installed in AWS using the "Standard" layout. [#9545](https://github.com/deckhouse/deckhouse/pull/9545)
  - **[candi]** Fix catch exit codes in cloud-providers bootstrap-network scripts. [#9448](https://github.com/deckhouse/deckhouse/pull/9448)
  - **[candi]** Before running `kubectl` check if it exists. [#9438](https://github.com/deckhouse/deckhouse/pull/9438)
  - **[candi]** Fix bootstrap network script for nodes with many interfaces for cloud-provider Yandex Cloud. [#9408](https://github.com/deckhouse/deckhouse/pull/9408)
@@ -87,6 +88,7 @@
  - **[multitenancy-manager]** Fix templates. [#9358](https://github.com/deckhouse/deckhouse/pull/9358)
  - **[multitenancy-manager]** Fix templates bugs. [#9205](https://github.com/deckhouse/deckhouse/pull/9205)
  - **[network-policy-engine]** Downgrade iptables version from `1.8.10` to `1.8.9` due to iptables chains overflow. You need to clear unwanted iptables rules manually or reboot the affected nodes. [#9315](https://github.com/deckhouse/deckhouse/pull/9315)
+ - **[node-local-dns]** Use `prefer_udp `to connect with kube-dns. [#9548](https://github.com/deckhouse/deckhouse/pull/9548)
  - **[node-manager]** Fix role rights for cluster-autoscaler `1.29`, `1.30`. [#9294](https://github.com/deckhouse/deckhouse/pull/9294)
  - **[node-manager]** Reducing unnecessary kube-apiserver logsl. [#9134](https://github.com/deckhouse/deckhouse/pull/9134)
     Reducing unnecessary kube-apiserver logs.
