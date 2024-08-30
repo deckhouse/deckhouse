@@ -443,6 +443,9 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 					UpdatePolicyLabel: policy.Name,
 				},
 			},
+			"status": map[string]any{
+				"message": "",
+			},
 		})
 		p := client.RawPatch(types.MergePatchType, patch)
 
