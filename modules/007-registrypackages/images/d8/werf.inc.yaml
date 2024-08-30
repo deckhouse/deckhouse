@@ -40,7 +40,7 @@ shell:
   - cd /deckhouse-cli
   # Delete the next line after merge dev_branch in upstream
   - git checkout {{ $dev_commit }}
-  - git tag {{ .CandiVersionMap.d8.d8CliVersion }}
+  #- git tag {{ .CandiVersionMap.d8.d8CliVersion }}
   # Replace the next line after merge dev_branch in upstream
   #- task build:dist:linux:amd64
   - task build-d8-w-cilium
