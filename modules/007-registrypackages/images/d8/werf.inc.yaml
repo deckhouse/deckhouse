@@ -1,5 +1,6 @@
 # Delete the next line after merge dev_branch in upstream
 {{- $dev_branch := "feature/add-cilium" }}
+{{- $dev_commit := "1cc2068cc8be9506ed29ed9df52aeaee87f6ba31" }}
 {{- $_ := set . "SOURCE_REPO" "https://github.com" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
@@ -34,9 +35,11 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   # Replace the next line after merge dev_branch in upstream
   #- git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
-  - git clone --depth 1 --branch {{ $dev_branch }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
+  #- git clone --depth 1 --branch {{ $dev_branch }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
+  - git clone --branch {{ $dev_branch }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
   - cd /deckhouse-cli
   # Delete the next line after merge dev_branch in upstream
+  - git checkout {{ $dev_commit }}
   - git tag {{ .CandiVersionMap.d8.d8CliVersion }}
   # Replace the next line after merge dev_branch in upstream
   #- task build:dist:linux:amd64
