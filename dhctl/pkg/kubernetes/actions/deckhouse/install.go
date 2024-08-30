@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -222,48 +223,77 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name:     `Namespace "d8-system"`,
 			Manifest: func() interface{} { return manifests.DeckhouseNamespace("d8-system") },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Namespaces().Create(context.TODO(), manifest.(*apiv1.Namespace), metav1.CreateOptions{})
+				_, err := kubeCl.CoreV1().Namespaces().Get(context.TODO(), manifest.(*apiv1.Namespace).GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.CoreV1().Namespaces().Create(context.TODO(), manifest.(*apiv1.Namespace), metav1.CreateOptions{})
+					}
+				}
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Namespaces().Update(context.TODO(), manifest.(*apiv1.Namespace), metav1.UpdateOptions{})
-				return err
+				return nil
 			},
 		},
 		{
 			Name:     `Admin ClusterRole "cluster-admin"`,
 			Manifest: func() interface{} { return manifests.DeckhouseAdminClusterRole() },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.RbacV1().ClusterRoles().Create(context.TODO(), manifest.(*rbacv1.ClusterRole), metav1.CreateOptions{})
+				_, err := kubeCl.RbacV1().ClusterRoles().Get(context.TODO(), manifest.(*rbacv1.ClusterRole).GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.RbacV1().ClusterRoles().Create(context.TODO(), manifest.(*rbacv1.ClusterRole), metav1.CreateOptions{})
+					}
+				}
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.RbacV1().ClusterRoles().Update(context.TODO(), manifest.(*rbacv1.ClusterRole), metav1.UpdateOptions{})
-				return err
+				return nil
 			},
 		},
 		{
 			Name:     `ClusterRoleBinding "deckhouse"`,
 			Manifest: func() interface{} { return manifests.DeckhouseAdminClusterRoleBinding() },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.RbacV1().ClusterRoleBindings().Create(context.TODO(), manifest.(*rbacv1.ClusterRoleBinding), metav1.CreateOptions{})
+				_, err := kubeCl.RbacV1().ClusterRoleBindings().Get(context.TODO(), manifest.(*rbacv1.ClusterRoleBinding).GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.RbacV1().ClusterRoleBindings().Create(context.TODO(), manifest.(*rbacv1.ClusterRoleBinding), metav1.CreateOptions{})
+					}
+				}
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.RbacV1().ClusterRoleBindings().Update(context.TODO(), manifest.(*rbacv1.ClusterRoleBinding), metav1.UpdateOptions{})
-				return err
+				return nil
 			},
 		},
 		{
 			Name:     `ServiceAccount "deckhouse"`,
 			Manifest: func() interface{} { return manifests.DeckhouseServiceAccount() },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().ServiceAccounts("d8-system").Create(context.TODO(), manifest.(*apiv1.ServiceAccount), metav1.CreateOptions{})
+				_, err := kubeCl.CoreV1().ServiceAccounts("d8-system").Get(context.TODO(), manifest.(*apiv1.ServiceAccount).GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.CoreV1().ServiceAccounts("d8-system").Create(context.TODO(), manifest.(*apiv1.ServiceAccount), metav1.CreateOptions{})
+					}
+				}
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().ServiceAccounts("d8-system").Update(context.TODO(), manifest.(*apiv1.ServiceAccount), metav1.UpdateOptions{})
-				return err
+				return nil
+			},
+		},
+		{
+			Name:     `Impersonate "deckhouse"`,
+			Manifest: func() interface{} { return nil },
+			CreateFunc: func(manifest interface{}) error {
+				kubeCl.KubeClient.RestConfig().Impersonate = rest.ImpersonationConfig{
+					UserName: "system:serviceaccount:d8-system:deckhouse",
+				}
+				return nil
+			},
+			UpdateFunc: func(manifest interface{}) error {
+				return nil
 			},
 		},
 		{
@@ -303,6 +333,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name:     `Secret "deckhouse-registry"`,
 			Manifest: func() interface{} { return manifests.DeckhouseRegistrySecret(cfg.Registry) },
 			CreateFunc: func(manifest interface{}) error {
+				//
 				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
@@ -318,6 +349,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name:     `Secret "d8-cluster-terraform-state"`,
 			Manifest: func() interface{} { return manifests.SecretWithTerraformState(cfg.TerraformState) },
 			CreateFunc: func(manifest interface{}) error {
+				//
 				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
@@ -334,6 +366,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			Manifest: getManifest,
 			CreateFunc: func(manifest interface{}) error {
+				//
 				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
@@ -349,6 +382,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name:     `Secret "d8-cluster-configuration"`,
 			Manifest: func() interface{} { return manifests.SecretWithClusterConfig(cfg.ClusterConfig) },
 			CreateFunc: func(manifest interface{}) error {
+				//
 				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
@@ -368,6 +402,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 				)
 			},
 			CreateFunc: func(manifest interface{}) error {
+				//
 				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
@@ -394,6 +429,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 				return manifests.SecretWithStaticClusterConfig(cfg.StaticClusterConfig)
 			},
 			CreateFunc: func(manifest interface{}) error {
+				//
 				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
