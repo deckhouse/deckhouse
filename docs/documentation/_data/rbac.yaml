@@ -5,18 +5,18 @@ modules:
       - name: d8:manage:capability:module:admission-policy-engine:view
         rules:
         - apiGroups:
-          - templates.gatekeeper.sh
+          - deckhouse.io
           resources:
-          - constrainttemplates
+          - operationpolicies
+          - securitypolicies
           verbs:
           - get
           - list
           - watch
         - apiGroups:
-          - deckhouse.io
+          - templates.gatekeeper.sh
           resources:
-          - operationpolicies
-          - securitypolicies
+          - constrainttemplates
           verbs:
           - get
           - list
@@ -34,9 +34,10 @@ modules:
       - name: d8:manage:capability:module:admission-policy-engine:edit
         rules:
         - apiGroups:
-          - templates.gatekeeper.sh
+          - deckhouse.io
           resources:
-          - constrainttemplates
+          - operationpolicies
+          - securitypolicies
           verbs:
           - create
           - update
@@ -44,10 +45,9 @@ modules:
           - delete
           - deletecollection
         - apiGroups:
-          - deckhouse.io
+          - templates.gatekeeper.sh
           resources:
-          - operationpolicies
-          - securitypolicies
+          - constrainttemplates
           verbs:
           - create
           - update

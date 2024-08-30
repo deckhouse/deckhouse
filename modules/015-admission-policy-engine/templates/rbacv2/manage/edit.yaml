@@ -12,9 +12,10 @@ metadata:
   name: d8:manage:capability:module:admission-policy-engine:edit
 rules:
 - apiGroups:
-  - templates.gatekeeper.sh
+  - deckhouse.io
   resources:
-  - constrainttemplates
+  - operationpolicies
+  - securitypolicies
   verbs:
   - create
   - update
@@ -22,10 +23,9 @@ rules:
   - delete
   - deletecollection
 - apiGroups:
-  - deckhouse.io
+  - templates.gatekeeper.sh
   resources:
-  - operationpolicies
-  - securitypolicies
+  - constrainttemplates
   verbs:
   - create
   - update

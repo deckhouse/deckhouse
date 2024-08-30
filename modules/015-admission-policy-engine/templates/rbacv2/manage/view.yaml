@@ -12,18 +12,18 @@ metadata:
   name: d8:manage:capability:module:admission-policy-engine:view
 rules:
 - apiGroups:
-  - templates.gatekeeper.sh
+  - deckhouse.io
   resources:
-  - constrainttemplates
+  - operationpolicies
+  - securitypolicies
   verbs:
   - get
   - list
   - watch
 - apiGroups:
-  - deckhouse.io
+  - templates.gatekeeper.sh
   resources:
-  - operationpolicies
-  - securitypolicies
+  - constrainttemplates
   verbs:
   - get
   - list
