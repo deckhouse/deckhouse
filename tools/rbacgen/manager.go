@@ -291,6 +291,20 @@ func (m *moduleGenerator) writeRoles(manageRoles, useRoles []*rbacv1.ClusterRole
 			return err
 		}
 		marshaled, err := yaml.Marshal(role)
+		if err != nil {
+			return err
+		}
+
+		var tmp interface{}
+		if err = yaml.Unmarshal(marshaled, &tmp); err != nil {
+			return err
+		}
+
+		marshaled, err = yaml.Marshal(tmp)
+		if err != nil {
+			return err
+		}
+
 		managePath := filepath.Join(m.path, "templates", "rbacv2", "manage", fmt.Sprintf("%s.yaml", name))
 		if err = os.WriteFile(managePath, marshaled, 0644); err != nil {
 			return err
@@ -308,6 +322,17 @@ func (m *moduleGenerator) writeRoles(manageRoles, useRoles []*rbacv1.ClusterRole
 		if err != nil {
 			return err
 		}
+
+		var tmp interface{}
+		if err = yaml.Unmarshal(marshaled, &tmp); err != nil {
+			return err
+		}
+
+		marshaled, err = yaml.Marshal(tmp)
+		if err != nil {
+			return err
+		}
+
 		usePath := filepath.Join(m.path, "templates", "rbacv2", "use", fmt.Sprintf("%s.yaml", name))
 		if err = os.WriteFile(usePath, marshaled, 0644); err != nil {
 			return err

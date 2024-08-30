@@ -136,6 +136,16 @@ func main() {
 		panic(err)
 	}
 
+	var tmp interface{}
+	if err = yaml.Unmarshal(marshaled, &tmp); err != nil {
+		panic(err)
+	}
+
+	marshaled, err = yaml.Marshal(tmp)
+	if err != nil {
+		panic(err)
+	}
+
 	if err = os.WriteFile(filepath.Join(workDir, "docs", "documentation", "_data", "rbac.yaml"), marshaled, 0666); err != nil {
 		panic(err)
 	}
