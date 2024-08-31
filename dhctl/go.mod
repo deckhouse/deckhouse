@@ -9,7 +9,7 @@ require (
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/alessio/shellescape v1.4.1
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7
-	github.com/flant/addon-operator v1.4.3-0.20240830135422-46ca0cb39f5b
+	github.com/flant/addon-operator v1.4.3-0.20240831155141-47f4b981ee78
 	github.com/flant/kube-client v1.1.0
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/go-openapi/spec v0.19.8
@@ -30,7 +30,6 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
 	github.com/werf/logboek v0.5.5
-	go.cypherpunks.ru/gogost/v5 v5.13.0
 	golang.org/x/crypto v0.22.0
 	golang.org/x/term v0.19.0
 	google.golang.org/grpc v1.63.0
