@@ -26,5 +26,5 @@ spec:
     node-role.kubernetes.io/control-plane: ""
   tolerations:
   - effect: NoSchedule
-    key: dedicated.deckhouse.io
-    value: control-plane
+    key: node-role.kubernetes.io/control-plane
+    operator: Exists
