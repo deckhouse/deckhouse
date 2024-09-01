@@ -24,7 +24,7 @@ title: "Модуль user-authz"
   Например, чтобы дать возможность пользователю, выполняющему функции сетевого администратора, настраивать *сетевые* модули (например, `cni-cilium`, `ingress-nginx`, `istio` и т. д.), можно использовать в `ClusterRoleBinding` роль `d8:manage:networking:manager`.
 - Управлять доступом к *пользовательским* ресурсам модулей в рамках namespace.
 
-  Например, использование роли `d8:use:role:manager` в `RoleBinding`, позволит удалять/создавать/редактировать ресурс [PodLoggingConfig](../460-log-shipper/cr.html#podloggingconfig) в namespace, но не даст доступа к clusterwide-ресурсами [ClusterLoggingConfig](../460-log-shipper/cr.html#clusterloggingconfig) и [ClusterLogDestination](../460-log-shipper/cr.html#clusterlogdestination) модуля `log-shipper`, а также не даст возможность настраивать сам модуль `log-shipper`.
+  Например, использование роли `d8:use:role:manager` в `RoleBinding`, позволит удалять/создавать/редактировать ресурс [PodLoggingConfig](../460-log-shipper/cr.html#podloggingconfig) в namespace, но не даст доступа к cluster-wide-ресурсами [ClusterLoggingConfig](../460-log-shipper/cr.html#clusterloggingconfig) и [ClusterLogDestination](../460-log-shipper/cr.html#clusterlogdestination) модуля `log-shipper`, а также не даст возможность настраивать сам модуль `log-shipper`.
 
 Роли, создаваемые модулем, делятся на два класса:
 - [Use-роли](#use-роли) — для назначения прав пользователям (например, разработчикам приложений) **в конкретном namespace**.
@@ -57,9 +57,9 @@ Manage-роль определяет доступ только к системн
 Manage-роли предназначены для назначения прав на управление всей платформой или ее частью ([областью](#области-ролевой-модели)), но не самими приложениями пользователей. С помощью manage-роли можно, например, дать возможность администратору безопасности управлять модулями, ответственными за функции безопасности кластера. Тогда администратор безопасности сможет настраивать аутентификацию, авторизацию, политики безопасности и т. п., но не сможет управлять остальными функциями кластера (например, настройками сети и мониторинга) и изменять настройки в namespace приложений пользователей.
 
 Manage-роль определяет права на доступ:
-- к clusterwide-ресурсам Kubernetes;
+- к cluster-wide-ресурсам Kubernetes;
 - к управлению модулями DKP (ресурсы `moduleConfig`) в рамках [области](#области-ролевой-модели) роли, или всеми модулями DKP для роли `d8:manage:all:*`;
-- к управлению clusterwide-ресурсами модулей DKP в рамках [области](#области-ролевой-модели) роли, или всеми ресурсами модулей DKP для роли `d8:manage:all:*`;
+- к управлению cluster-wide-ресурсами модулей DKP в рамках [области](#области-ролевой-модели) роли, или всеми ресурсами модулей DKP для роли `d8:manage:all:*`;
 - к системным namespace (начинающихся с `d8-` или `kube-`), в которых работают модули [области](#области-ролевой-модели) роли, или ко всем системным namespace для роли `d8:manage:all:*`.
   
 Формат названия manage-роли — `d8:manage:<SCOPE>:<ACCESS_LEVEL>`, где:
@@ -67,16 +67,16 @@ Manage-роль определяет права на доступ:
 - `ACCESS_LEVEL` — [уровень доступа](#уровни-доступа-ролевой-модели).
 
   Примеры manage-ролей:
-  - `d8:manage:all:viewer` — доступ на просмотр конфигурации всех модулей DKP (ресурсы `moduleConfig`), их clusterwide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes (кроме секретов и ресурсов RBAC) во всех системных namespace (начинающихся с `d8-` или `kube-`);
-  - `d8:manage:all:admin` — аналогично роли `d8:manage:all:user`, только доступ на уровне `admin`, т. е. просмотр/создание/изменение/удаление конфигурации всех модулей DKP (ресурсы `moduleConfig`), их clusterwide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes во всех системных namespace (начинающихся с `d8-` или `kube-`);
-  - `d8:manage:observability:viewer` — доступ на просмотр конфигурации модулей DKP (ресурсы `moduleConfig`) из области `observability`, их clusterwide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes (кроме секретов и ресурсов RBAC) в системных namespace `d8-log-shipper`, `d8-monitoring`, `d8-okmeter`, `d8-operator-prometheus`, `d8-upmeter`, `kube-prometheus-pushgateway`.
+  - `d8:manage:all:viewer` — доступ на просмотр конфигурации всех модулей DKP (ресурсы `moduleConfig`), их cluster-wide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes (кроме секретов и ресурсов RBAC) во всех системных namespace (начинающихся с `d8-` или `kube-`);
+  - `d8:manage:all:admin` — аналогично роли `d8:manage:all:user`, только доступ на уровне `admin`, т. е. просмотр/создание/изменение/удаление конфигурации всех модулей DKP (ресурсы `moduleConfig`), их cluster-wide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes во всех системных namespace (начинающихся с `d8-` или `kube-`);
+  - `d8:manage:observability:viewer` — доступ на просмотр конфигурации модулей DKP (ресурсы `moduleConfig`) из области `observability`, их cluster-wide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes (кроме секретов и ресурсов RBAC) в системных namespace `d8-log-shipper`, `d8-monitoring`, `d8-okmeter`, `d8-operator-prometheus`, `d8-upmeter`, `kube-prometheus-pushgateway`.
 
 ### Уровни доступа ролевой модели
 
 В ролевой модели предусмотрены следующие уровни доступа (в порядке увеличения количества прав):
-- `viewer` — позволяет просматривать стандартные ресурсы Kubernetes (кроме секретов и ресурсов RBAC). В manage-ролях позволяет просматривать конфигурацию модулей (ресурсы `moduleConfig`), clusterwide-ресурсы модулей и namespaced-ресурсы модулей;
+- `viewer` — позволяет просматривать стандартные ресурсы Kubernetes (кроме секретов и ресурсов RBAC). В manage-ролях позволяет просматривать конфигурацию модулей (ресурсы `moduleConfig`), cluster-wide-ресурсы модулей и namespaced-ресурсы модулей;
 - `user` — дополнительно к роли `viewer` позволяет просматривать секреты, подключаться к подам, удалять поды, выполнять `kubectl port-forward` и `kubectl proxy`, изменять количество реплик контроллеров;
-- `manager` — дополнительно к роли `user` позволяет управлять ресурсами модулей (например, `Certificate`, `PodLoggingConfig` и т. п.). В manage-ролях позволяет управлять конфигурацией модулей (ресурсы `moduleConfig`), clusterwide-ресурсами модулей и namespaced-ресурсами модулей;
+- `manager` — дополнительно к роли `user` позволяет управлять ресурсами модулей (например, `Certificate`, `PodLoggingConfig` и т. п.). В manage-ролях позволяет управлять конфигурацией модулей (ресурсы `moduleConfig`), cluster-wide-ресурсами модулей и namespaced-ресурсами модулей;
 - `admin` — дополнительно к роли `manager` позволяет в зависимости от области роли управлять такими ресурсами, как `CustomResourceDefinition`, `Namespace`, `Node`, `ClusterRole`, `ClusterRoleBinding`, `PersistentVolume`, `MutatingWebhookConfiguration`, `ValidatingAdmissionPolicy` и т. п.
 
 ### Области ролевой модели
