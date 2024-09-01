@@ -220,7 +220,7 @@ common:
     ru: пространства имен
   namespaces_used_by_modules:
     en: Namespaces in which modules of a scope operate
-    ru: Пространства имен, в которых работают модули области
+    ru: Пространства имен используемых модулями области
   all_namespaces:
     en: All namespaces
     ru: Все пространства имен
