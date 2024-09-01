@@ -8,6 +8,14 @@ title: "Модуль user-authz: FAQ"
 
 ## Как ограничить права пользователю конкретными namespace?
 
+Чтобы ограничить права пользователя конкретными namespace, используйте в `RoleBinding` [use-роль](./#use-роли) с соответствующим уровнем доступа. [Пример...](usage.html#пример-назначения-административных-прав-пользователю-в-рамках-namespace).
+
+### Как ограничить права пользователю конкретными namespace (устаревшая ролевая модель)
+
+{% alert level="warning" %}
+Используется [устаревшая ролевая модель](./#устаревшая-ролевая-модель).
+{% endalert %}
+
 Использовать параметры `namespaceSelector` или `limitNamespaces` (устарел) в custom resource [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule).
 
 ## Что, если два ClusterAuthorizationRules подходят для одного пользователя?
