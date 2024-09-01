@@ -319,35 +319,34 @@ dhctl bootstrap \
 - `<SSH_USER>` — SSH user on the server;
 - `--ssh-agent-private-keys` — file with the private SSH key for connecting via SSH.
 
-### Preflight checks
+### Pre-installation checks
 
 {% offtopic title="Scheme of checks prior to Deckhouse installation..." %}
 ![Scheme of checks prior to Deckhouse installation](../images/installing/preflight-checks.png)
 {% endofftopic %}
 
-- dhctl
-	- global
-		- PublicDomainTemplate is correctly - PublicDomainTemplate inconsistent with clusterDomain
-		- registry credentials are correct - checking whether it is possible to authorize in the registry with the authorization data specified in the configuration
-	- static
-		- only one --ssh-host parameter used - in a static cluster configuration, you can specify only one IP address to configure the first master
-		- ssh credential is correctly - check if it is possible to connect via ssh using the authorization data specified when launching the installer
-		- ssh tunnel between installer and node is possible - check if it is possible to raise ssh tunnel from node to instaler
-		- that node meets system requirements - verification of compliance with the minimum requirements of the installation unit
-		- python and required modules are installed - check if python and necessary libraries are available
-		- registry access through proxy - check availability of registry via proxy
-		- required ports availability - check if the ports required for installation are unoccupied
-		- resolve the localhost domain - check that localhost is resolving to IP 127.0.0.1
-	- cloud
-		- cloud master node system requirements are met - check that the configuration has been configured to meet the minimum requirements for the installation
-- bashible
-	- global
-		- check server hostname - check that hostname meets the requirements length <= 63 characters, all characters are lower case.  Special characters are not allowed except for '-' and '.' which cannot be at the beginning and end of hosthame
-		- exist embedded contanerd - check that contanerd is not pre-installed
-	- static
-		- check master hostname - check hostname uniqueness within a cluster
-	- cloud static
-		- check master hostname - check hostname uniqueness within a cluster
+List of checks performed by the installer before starting the installation of Deckhouse:
+- General checks:
+  - The values of the [PublicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) and [clusterDomain](configuration.html#clusterconfiguration-clusterdomain) parameters don't match.
+  - The authentication data for the container registry specified in the installation configuration is correct.
+  - The hostname meets the following requirements:
+    - length <= 63 characters;
+    - in lowercase;
+    - does not contain special characters (only `-` and `.`, which cannot be at the beginning or end of the name, are allowed).
+  - There is no installed CRI (containerd) on the server (VM).
+- Checks for static and hybrid cluster installation:
+  - Only one `--ssh-host` parameter is specified. For static cluster configuration, only one IP address can be specified to configure the first master node.
+  - It is possible to connect via SSH using the specified authentication data.
+  - It is possible to establish an SSH tunnel to the master node server (VM).
+  - The server (VM) meets the minimum requirements for configuring the master node.
+  - Python and the necessary libraries are installed on the server (VM) for the master node.
+  - The container registry is accessible through a proxy (if proxy settings are specified in the installation configuration).
+  - The server (VM) for the master node and the installer host have free ports required for the installation process.
+  - The hostname is unique relative to other hostnames in the cluster.
+  - localhost resolves in DNS to IP 127.0.0.1.
+- Checks for cloud cluster installation:
+  - The server (VM) meets the minimum requirements for configuring the master node.
+  - The master node configuration specified in the installation configuration meets the minimum requirements.
 
 ### Aborting the installation
 
