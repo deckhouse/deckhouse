@@ -587,7 +587,7 @@ The `allowed: false` message means that the webhook doesn't block access. In cas
 The example uses the [obsolete role-based model](./#the-obsolete-role-based-model).
 {% endalert %}
 
-If you want to grant more privileges to a specific [high-level role](./#role-model), you only need to create a ClusterRole with the `user-authz.deckhouse.io/access-level: <AccessLevel>` annotation.
+If you want to grant more privileges to a specific [high-level role](./#the-obsolete-role-based-model), you only need to create a ClusterRole with the `user-authz.deckhouse.io/access-level: <AccessLevel>` annotation.
 
 An example:
 

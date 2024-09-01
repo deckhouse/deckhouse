@@ -8,7 +8,7 @@ title: "The user-authz module: FAQ"
 
 ## How do I limit user rights to specific namespaces?
 
-To limit a user's rights to specific namespaces, use `RoleBinding` with the [use role](./#use-roles) that has the appropriate level of access. [Example...](usage.html# example-of-assigning-administrative-rights-to-a-user-within-a-namespace).
+To limit a user's rights to specific namespaces, use `RoleBinding` with the [use role](./#use-roles) that has the appropriate level of access. [Example...](usage.html#example-of-assigning-administrative-rights-to-a-user-within-a-namespace).
 
 ### How do I limit user rights to specific namespaces (obsolete role-based model)?
 
