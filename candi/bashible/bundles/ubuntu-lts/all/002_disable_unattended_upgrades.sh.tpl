@@ -12,4 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+if systemctl is-enabled --quiet unattended-upgrades ; then
+  systemctl disable --now unattended-upgrades
+fi
+
 bb-apt-remove unattended-upgrades
