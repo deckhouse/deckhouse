@@ -20,6 +20,7 @@ mkdir -p /etc/kubernetes/manifests
     {{- if .kubernetesApiProxy }}
         {{- $api_proxy_image = printf "%s%s@%s" .secondaryRegistry.address .secondaryRegistry.path .kubernetesApiProxy }}
     {{- end }}
+  {{- end }}
 {{- end }}
 
 bb-sync-file /etc/kubernetes/manifests/kubernetes-api-proxy.yaml - << EOF
