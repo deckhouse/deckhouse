@@ -44,4 +44,3 @@ linters:
   - unconvert
   - unparam
   - whitespace
-  - copyloopvar
