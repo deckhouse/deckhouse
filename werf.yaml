@@ -148,29 +148,28 @@ shell:
 {{- end }}
 
 {{- define "base components" }}
-# Install kubectl wrapper
-- cat <<"EOD" > /usr/local/bin/kubectl
+- |
+  cat <<"EOD" > /usr/local/bin/kubectl
   {{- .Files.Get "deckhouse-controller/files/kubectl_wrapper.sh" | nindent 2 }}
   EOD
-- chmod +x /usr/local/bin/kubectl
-# Shell comfort: inputrc
-- cat <<"EOD" > /etc/inputrc
+  chmod +x /usr/local/bin/kubectl
+
+  cat <<"EOD" > /etc/inputrc
   {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 2 }}
   EOD
-# Shell comfort: bashrc
-- cat <<"EOD" > /etc/bashrc
+
+  cat <<"EOD" > /etc/bashrc
   {{- .Files.Get "deckhouse-controller/files/bashrc" | nindent 2 }}
   EOD
-# Shell comfort: add bashrc for root
-- rm -f /root/.bashrc
-- ln -s /etc/bashrc /root/.bashrc
-# Shell comfort: add bashrc for nobody
-- rm -f /.bashrc
-- ln -s /etc/bashrc /.bashrc
-# Shell comfort: create /etc/vim
-- mkdir -p /etc/vim/
-# Shell comfort: vimrc.local
-- cat <<"EOD" > /etc/vim/vimrc.local
+
+  rm -f /root/.bashrc
+  ln -s /etc/bashrc /root/.bashrc
+
+  rm -f /.bashrc
+  ln -s /etc/bashrc /.bashrc
+
+  mkdir -p /etc/vim/
+  cat <<"EOD" > /etc/vim/vimrc.local
   {{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 2 }}
   EOD
 {{- end }}
@@ -314,10 +313,10 @@ mount:
   to: /go/pkg
 shell:
   setup:
-  # Add bundle $key
+  - |
 {{- range $key := list "default" "managed" "minimal" }}
       {{- range $_, $edition := $.Editions }}
-  - cat <<"EOD" > /deckhouse/modules/values-{{ $key }}.yaml
+    cat <<"EOD" > /deckhouse/modules/values-{{ $key }}.yaml
     {{- $.Files.Get (printf "%s/values-%s.yaml" $edition.modulesDir $key ) | nindent 4 }}
     EOD
         {{- if eq $.Env $edition.name }}
@@ -325,31 +324,28 @@ shell:
         {{- end }}
      {{- end }}
 {{- end }}
-  # Add version info
-  - cat <<"EOD" > /deckhouse/version
+
+    cat <<"EOD" > /deckhouse/version
     {{- env "CI_COMMIT_TAG" | default "dev" | nindent 4 }}
     EOD
-  # Add edition info
-  - cat <<"EOD" > /deckhouse/edition
+
+    cat <<"EOD" > /deckhouse/edition
     {{- .Env | default "unknown" | nindent 4 }}
     EOD
-  # Override deckhouse entrypoint to use tini as supervisor
-  - cat <<"EOD" > /deckhouse/deckhouse
+
+    cat <<"EOD" > /deckhouse/deckhouse
     #!/bin/bash
     exec tini -- /deckhouse/deckhouse-controller/entrypoint.sh
     EOD
-  - chmod +x /deckhouse/deckhouse
-  # Create symlink to grant entrypoint.sh write permission
-  - ln -fs /tmp/values.yaml /deckhouse/modules/values.yaml
-  # Create deckhouse group
-  - groupadd -g 64535 deckhouse
-  # Create deckhouse user
-  - useradd -d / -u 64535 -g deckhouse -s /sbin/nologin deckhouse
-  # Run deckhouse from dedicated user
-  - chown deckhouse:deckhouse -R /deckhouse
-  # Create symlink to vim-console"
-  - ln -fs /usr/bin/vim-console /usr/bin/vim
-  - ln -fs /usr/bin/vim-console /usr/bin/vi
+    chmod +x /deckhouse/deckhouse
+
+    ln -fs /tmp/values.yaml /deckhouse/modules/values.yaml
+    groupadd -g 64535 deckhouse
+    useradd -d / -u 64535 -g deckhouse -s /sbin/nologin deckhouse
+    chown deckhouse:deckhouse -R /deckhouse
+
+    ln -fs /usr/bin/vim-console /usr/bin/vim
+    ln -fs /usr/bin/vim-console /usr/bin/vi
 docker:
   ENV:
     MODULES_DIR: /deckhouse/modules
