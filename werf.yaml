@@ -306,7 +306,7 @@ mount:
   to: /go/pkg
 shell:
   setup:
-  # Add bundle {{ $key }}
+  # Add bundle $key
 {{- range $key := list "default" "managed" "minimal" }}
       {{- range $_, $edition := $.Editions }}
   - echo "{{- $.Files.Get (printf "%s/values-%s.yaml" $edition.modulesDir $key ) }}" > /deckhouse/modules/values-{{ $key }}.yaml
