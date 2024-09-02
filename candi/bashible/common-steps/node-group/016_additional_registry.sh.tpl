@@ -18,7 +18,8 @@ _on_containerd_config_changed() {
 bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
 
 {{- if .secondaryRegistry }}
-{{- $sandbox_image := printf "%s%s@%s" .secondaryRegistry.address .secondaryRegistry.path .secondaryRegistry.digests.pause }}
+  {{- if .secondaryRegistry.address }}
+  {{- $sandbox_image := printf "%s%s@%s" .secondaryRegistry.address .secondaryRegistry.path .secondaryRegistry.digests.pause }}
 
 mkdir -p /etc/containerd/conf.d
 
@@ -33,14 +34,15 @@ bb-sync-file /etc/containerd/conf.d/secondaryRegistry.toml - containerd-config-f
       [plugins."io.containerd.grpc.v1.cri".registry.configs]
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .secondaryRegistry.address }}".auth]
           auth = "{{ .secondaryRegistry.auth | default "" }}"
-  {{- if .secondaryRegistry.ca }}
+    {{- if .secondaryRegistry.ca }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .secondaryRegistry.address }}".tls]
           ca_file = "/opt/deckhouse/share/ca-certificates/second-registry-ca.crt"
-  {{- end }}
-  {{- if eq .secondaryRegistry.scheme "http" }}
+    {{- end }}
+    {{- if eq .secondaryRegistry.scheme "http" }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .secondaryRegistry.address }}".tls]
           insecure_skip_verify = true
-  {{- end }}
+    {{- end }}
+  {{- en d}}
 EOF_TOML
 {{- else }}
 if [ -f /etc/containerd/conf.d/secondaryRegistry.toml ]; then

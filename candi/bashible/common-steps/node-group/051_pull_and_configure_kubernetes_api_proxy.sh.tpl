@@ -15,11 +15,10 @@
 mkdir -p /etc/kubernetes/manifests
 
 {{- $api_proxy_img := printf "%s%s@%s" .registry.address .registry.path (index .images.controlPlaneManager "kubernetesApiProxy") }}
-{{- if .secondaryRegistry }}
-  {{- with .secondaryRegistry.digests }}
-    {{- if .kubernetesApiProxy }}
-        {{- $api_proxy_img = printf "%s%s@%s" $.secondaryRegistry.address $.secondaryRegistry.path .kubernetesApiProxy }}
-    {{- end }}
+
+{{- with .secondaryRegistry.digests }}
+  {{- if .kubernetesApiProxy }}
+      {{- $api_proxy_img = printf "%s%s@%s" $.secondaryRegistry.address $.secondaryRegistry.path .kubernetesApiProxy }}
   {{- end }}
 {{- end }}
 
