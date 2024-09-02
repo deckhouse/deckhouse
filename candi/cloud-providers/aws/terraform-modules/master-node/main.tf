@@ -64,6 +64,8 @@ resource "aws_volume_attachment" "system_registry_data" {
   skip_destroy = true
   volume_id    = aws_ebs_volume.system_registry_data[0].id
   instance_id  = aws_instance.master.id
+
+  depends_on = [ aws_volume_attachment.kubernetes_data ]
 }
 
 data "aws_security_group" "ssh-accessible" {
