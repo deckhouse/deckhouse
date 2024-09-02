@@ -8,16 +8,14 @@ package hooks
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-
 	rbacv1 "k8s.io/api/rbac/v1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{Order: 10},
-	Queue:     "/modules/multitenancy-manager/delete-adopted-roles",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Queue:        "/modules/multitenancy-manager/delete-adopted-roles",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "roles",
