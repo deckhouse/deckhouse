@@ -344,11 +344,12 @@ spec:
 {% alert level="warning" %}
 Example is given for Ubuntu OS.  
 The method of adding certificates to the store may differ depending on the OS.  
-When adapting the script to another OS, do not forget to change the [bundles](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles) parameter
+
+Change the [bundles](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles) parameter to adapt the script to a different OS.
 {% endalert %}
 
-{% alert level="info" %}
-The example relies on the functionality embedded in the [032_configure_containerd.sh](./#features-of-writing-scripts) script.
+{% alert level="warning" %}
+To use the certificate in `containerd` (including pulling containers from a private repository), a restart of the service is required after adding the certificate.
 {% endalert %}
 
 ```yaml
@@ -417,14 +418,14 @@ spec:
 ### Adding a certificate to the OS and containerd
 
 {% alert level="warning" %}
-This example is given for Ubuntu OS.  
+Example is given for Ubuntu OS.  
 The method of adding certificates to the store may differ depending on the OS.  
 
-When adapting the script to another OS, do not forget to change the [bundles](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles) parameter.
+Change the [bundles](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles) parameter to adapt the script to a different OS.
 {% endalert %}
 
 {% alert level="info" %}
-The example uses the functionality embedded in the [032_configure_containerd.sh](./#features-of-writing-scripts) script.
+The example of `NodeGroupConfiguration` uses functions of the script [032_configure_containerd.sh](./#features-of-writing-scripts).
 {% endalert %}
 
 ```yaml

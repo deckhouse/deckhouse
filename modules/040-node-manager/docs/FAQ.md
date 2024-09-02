@@ -782,7 +782,7 @@ Adding custom settings causes a restart of the `containerd` service.
 {% endalert %}
 {% raw %}
 
-Bashible on nodes merges main deckhouse containerd config with configs from `/etc/containerd/conf.d/*.toml`.
+Bashible on nodes merges main Deckhouse containerd config with configs from `/etc/containerd/conf.d/*.toml`.
 
 ### How to add additional registry auth?
 
@@ -841,7 +841,7 @@ In addition to containerd, the certificate can be [simultaneously added](example
 {% endalert %}
 {% raw %}
 
-Example of the `NodeGroupConfiguration` resource to configure a certificate for an additional registry:
+Example of the `NodeGroupConfiguration` resource for configuring a certificate for an additional registry:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

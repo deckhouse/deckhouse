@@ -192,19 +192,25 @@ Using the data in the [staticInstances](cr.html#nodegroup-v1-spec-staticinstance
 ## Custom node settings
 
 The [NodeGroupConfiguration](cr.html#nodegroupconfiguration) resource allows you to automate actions on group nodes. It supports running bash scripts on nodes (you can use the [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) command set) as well as the [Go Template](https://pkg.go.dev/text/template) templating engine, and is a great way to automate operations such as:
-- installing and configuring additional OS packages,  
-  examples:  
-    - [installing the plugin for kubectl](examples.html#installing-the-cert-manager-plugin-for-kubectl-on-master-nodes);  
-    - [installing containerd with Nvidia GPU support](faq.html#how-to-use-containerd-with-nvidia-gpu-support).
-- updating the OS kernel to a specific version,  
-  examples:
-    - [Debian kernel update](faq.html#debian-based-distros);
-    - [CentOS kernel update](faq.html#centos-based-distros).
-- modifying OS parameters,  
-  examples:  
-    - [customizing the sysctl parameter](examples.html#tuning-sysctl-parameters);
-    - [adding a root certificate](examples.html#adding-a-root-certificate).
-- collecting information on a node and carrying out other similar tasks.
+- Installing and configuring additional OS packages.  
+
+  Examples:  
+  - [installing the plugin for kubectl](examples.html#installing-the-cert-manager-plugin-for-kubectl-on-master-nodes);  
+  - [installing containerd with Nvidia GPU support](faq.html#how-to-use-containerd-with-nvidia-gpu-support).
+
+- Updating the OS kernel to a specific version.
+  
+  Examples:
+  - [Debian kernel update](faq.html#debian-based-distros);
+  - [CentOS kernel update](faq.html#centos-based-distros).
+
+- Modifying OS parameters.
+
+  Examples:
+  - [customizing the sysctl parameter](examples.html#tuning-sysctl-parameters);
+  - [adding a root certificate](examples.html#adding-a-root-certificate).
+
+- Collecting information on a node and carrying out other similar tasks.
 
 The `NodeGroupConfiguration` resource allows you to assign [priority](cr.html#nodegroupconfiguration-v1alpha1-spec-weight) to scripts being run or limit them to running on specific [node groups](cr.html#nodegroupconfiguration-v1alpha1-spec-nodegroups) and [OS types](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
 

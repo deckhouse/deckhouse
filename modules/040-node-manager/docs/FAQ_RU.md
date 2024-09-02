@@ -789,7 +789,7 @@ Done
 {% endalert %}
 {% raw %}
 
-Bashible на узлах мержит основной конфиг containerd для Deckhouse с  конфигами из `/etc/containerd/conf.d/*.toml`.
+Bashible на узлах мержит основной конфиг containerd для Deckhouse с конфигами из `/etc/containerd/conf.d/*.toml`.
 
 ### Как добавить авторизацию в дополнительный registry?
 
