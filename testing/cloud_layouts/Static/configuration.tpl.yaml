@@ -16,6 +16,7 @@ proxy:
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
+  registryMode: Proxy
   imagesRepo: dev-registry.deckhouse.io/sys/deckhouse-oss
   registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
   devBranch: '${DEV_BRANCH}'
