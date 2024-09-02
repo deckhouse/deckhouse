@@ -334,6 +334,7 @@ List of checks performed by the installer before starting the installation of De
     - in lowercase;
     - does not contain special characters (only `-` and `.`, which cannot be at the beginning or end of the name, are allowed).
   - There is no installed CRI (containerd) on the server (VM).
+  - The hostname is unique relative to other hostnames in the cluster.
 - Checks for static and hybrid cluster installation:
   - Only one `--ssh-host` parameter is specified. For static cluster configuration, only one IP address can be specified to configure the first master node.
   - It is possible to connect via SSH using the specified authentication data.
@@ -342,10 +343,10 @@ List of checks performed by the installer before starting the installation of De
   - Python and the necessary libraries are installed on the server (VM) for the master node.
   - The container registry is accessible through a proxy (if proxy settings are specified in the installation configuration).
   - The server (VM) for the master node and the installer host have free ports required for the installation process.
-  - The hostname is unique relative to other hostnames in the cluster.
   - localhost resolves in DNS to IP 127.0.0.1.
+  - The `sudo` command is available to the user on the server (VM). 
 - Checks for cloud cluster installation:
-  - The server (VM) meets the minimum requirements for configuring the master node.
+  - The master node virtual machine configuration meets the minimum requirements.
   - The master node configuration specified in the installation configuration meets the minimum requirements.
 
 ### Aborting the installation
