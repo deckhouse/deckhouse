@@ -103,7 +103,7 @@ title: "Cloud provider — AWS: FAQ"
 
 ## Как настроить доступ до Amazon ECR repository на Nodes кластера
 
-1. Нужно в [Repository policies](https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html) задать права для чтения образов
+1. Нужно в [Repository policies](https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html) задать права для чтения образов. В `Principal` должен быть существующий объект `Roles`.
 
 ```json
 {

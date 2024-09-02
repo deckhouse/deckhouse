@@ -102,7 +102,7 @@ The progress of the process can be observed in events using the command `kubectl
 
 ## How to configure access to Amazon ECR repository on cluster Nodes
 
-1. Need to set permissions to read images in [Repository policies](https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html).
+1. Need to set permissions to read images in [Repository policies](https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html). There must be an existing `Roles` object in `Principal`.
 
 ```json
 {
