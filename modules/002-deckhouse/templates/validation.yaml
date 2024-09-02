@@ -28,7 +28,9 @@ spec:
       messageExpression: '''Creation of system namespaces is forbidden'''
 {{- end }}
 ---
-{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
+{{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
+apiVersion: admissionregistration.k8s.io/v1
+{{- else if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1beta1
 {{- else }}
 apiVersion: admissionregistration.k8s.io/v1alpha1
@@ -82,7 +84,9 @@ spec:
       reason: Forbidden
 {{- end }}
 ---
-{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
+{{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
+apiVersion: admissionregistration.k8s.io/v1
+{{- else if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1beta1
 {{- else }}
 apiVersion: admissionregistration.k8s.io/v1alpha1
@@ -129,7 +133,9 @@ spec:
       messageExpression: '''Invalid update windows. Start time (windows.to) should be less than the end time of the update window (windows.from)'''         
 {{- end }}
 ---
-{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
+{{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
+apiVersion: admissionregistration.k8s.io/v1
+{{- else if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1beta1
 {{- else }}
 apiVersion: admissionregistration.k8s.io/v1alpha1
