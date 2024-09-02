@@ -239,7 +239,8 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 		return result, fmt.Errorf("validation failed: %w", err)
 	}
 
-	if err = os.RemoveAll(c.downloadedModulesDir); err != nil {
+	moduleStorePath := path.Join(c.downloadedModulesDir, moduleDef.Name, downloader.DefaultDevVersion)
+	if err = os.RemoveAll(moduleStorePath); err != nil {
 		return ctrl.Result{}, fmt.Errorf("cannot remove old module dir %q: %w", c.downloadedModulesDir, err)
 	}
 	if err = cp.Copy(tmpDir, c.downloadedModulesDir); err != nil {
