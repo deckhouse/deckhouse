@@ -150,16 +150,16 @@ shell:
 {{- define "base components" }}
 # Install kubectl wrapper
 - cat <<"EOD" > /usr/local/bin/kubectl
-  {{- .Files.Get "deckhouse-controller/files/kubectl_wrapper.sh" | nindent 4 }}
+  {{- .Files.Get "deckhouse-controller/files/kubectl_wrapper.sh" | nindent 2 }}
   EOD
 - chmod +x /usr/local/bin/kubectl
 # Shell comfort: inputrc
 - cat <<"EOD" > /etc/inputrc
-  {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 4 }}
+  {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 2 }}
   EOD
 # Shell comfort: bashrc
 - cat <<"EOD" > /etc/bashrc
-  {{- .Files.Get "deckhouse-controller/files/bashrc" | nindent 4 }}
+  {{- .Files.Get "deckhouse-controller/files/bashrc" | nindent 2 }}
   EOD
 # Shell comfort: add bashrc for root
 - rm -f /root/.bashrc
@@ -171,7 +171,7 @@ shell:
 - mkdir -p /etc/vim/
 # Shell comfort: vimrc.local
 - cat <<"EOD" > /etc/vim/vimrc.local
-  {{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 4 }}
+  {{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 2 }}
   EOD
 {{- end }}
 
