@@ -42,7 +42,7 @@ bb-sync-file /etc/containerd/conf.d/secondaryRegistry.toml - containerd-config-f
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .secondaryRegistry.address }}".tls]
           insecure_skip_verify = true
     {{- end }}
-  {{- en d}}
+  {{- end}}
 EOF_TOML
 {{- else }}
 if [ -f /etc/containerd/conf.d/secondaryRegistry.toml ]; then
