@@ -8,6 +8,7 @@ package hooks
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -15,7 +16,7 @@ import (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:        "/modules/multitenancy-manager/delete-adopted-roles",
+	Queue:        "/modules/multitenancy-manager/delete-adopted",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "roles",
@@ -31,8 +32,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: filterRoles,
 		},
+		{
+			Name:       "bindings",
+			ApiVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "ClusterRoleBinding",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"d8:multitenancy-manager:multitenancy-manager"},
+			},
+			FilterFunc: filterClusterBindings,
+		},
 	},
-}, deleteAdoptedRoles)
+}, deleteAdopted)
 
 type filteredRole struct {
 	Name string `json:"name"`
@@ -52,12 +62,36 @@ func filterRoles(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return nil, nil
 }
 
-func deleteAdoptedRoles(input *go_hook.HookInput) error {
+type filteredBinding struct {
+	Name string `json:"name"`
+}
+
+func filterClusterBindings(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	binding := new(rbacv1.ClusterRoleBinding)
+	if err := sdk.FromUnstructured(obj, binding); err != nil {
+		return nil, err
+	}
+	if binding.Annotations == nil || len(binding.Annotations) == 0 {
+		return nil, nil
+	}
+	if val, ok := binding.Annotations["meta.helm.sh/release-namespace"]; ok && val == "d8-multitenancy-manager" {
+		return &filteredRole{Name: binding.Name}, nil
+	}
+	return nil, nil
+}
+
+func deleteAdopted(input *go_hook.HookInput) error {
 	for _, snap := range input.Snapshots["roles"] {
 		if snap == nil {
 			continue
 		}
 		input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "ClusterRole", "", snap.(*filteredRole).Name)
+	}
+	for _, snap := range input.Snapshots["bindings"] {
+		if snap == nil {
+			continue
+		}
+		input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "ClusterRoleBinding", "", snap.(*filteredBinding).Name)
 	}
 	return nil
 }
