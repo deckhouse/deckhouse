@@ -159,7 +159,7 @@ shell:
   EOD
 # Shell comfort: bashrc
 - cat <<"EOD" > /etc/bashrc
-  {{- .Files.Get "deckhouse-controller/files/bashrc"  | nindent 4 }}
+  {{- .Files.Get "deckhouse-controller/files/bashrc" | nindent 4 }}
   EOD
 # Shell comfort: add bashrc for root
 - rm -f /root/.bashrc
@@ -318,7 +318,7 @@ shell:
 {{- range $key := list "default" "managed" "minimal" }}
       {{- range $_, $edition := $.Editions }}
   - cat <<"EOD" > /deckhouse/modules/values-{{ $key }}.yaml
-    {{- .Files.Get (printf "%s/values-%s.yaml" $edition.modulesDir $key ) | nindent 4 }}
+    {{- $.Files.Get (printf "%s/values-%s.yaml" $edition.modulesDir $key ) | nindent 4 }}
     EOD
         {{- if eq $.Env $edition.name }}
            {{- break -}}
