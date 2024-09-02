@@ -70,19 +70,18 @@ git:
   stageDependencies:
     install:
     - "**/*"
-ansible:
+shell:
   install:
-  - shell: |
-      cd /src
-      autoreconf -fi
+  - cd /src
+  - autoreconf -fi
       ./configure \
         --prefix=/usr \
         --sysconfdir=/etc \
         --mandir=/usr/share/man \
         --localstatedir=/var \
         --disable-docs
-      make LDFLAGS=-all-static
-      make prefix=/usr install
+  - make LDFLAGS=-all-static
+  - make prefix=/usr install
 
 ---
 artifact: yq4-artifact
@@ -149,44 +148,23 @@ shell:
 {{- end }}
 
 {{- define "base components" }}
-- name: "Install kubectl wrapper"
-  copy:
-    content: |
-      {{- .Files.Get "deckhouse-controller/files/kubectl_wrapper.sh" | nindent 8 }}
-    dest: /usr/local/bin/kubectl
-    mode: +x
-
-- name: "Shell comfort: inputrc"
-  copy:
-    content: |
-      {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 8 }}
-    dest: /etc/inputrc
-
-- name: "Shell comfort: bashrc"
-  copy:
-    content: |
-      {{- .Files.Get "deckhouse-controller/files/bashrc" | nindent 8 }}
-    dest: /etc/bashrc
-
-- name: "Shell comfort: add bashrc for root"
-  shell: |
-    rm -f /root/.bashrc
-    ln -s /etc/bashrc /root/.bashrc
-
-- name: "Shell comfort: add bashrc for nobody"
-  shell: |
-    rm -f /.bashrc
-    ln -s /etc/bashrc /.bashrc
-
-
-- name: "Shell comfort: create /etc/vim"
-  shell: mkdir -p /etc/vim/
-
-- name: "Shell comfort: vimrc.local"
-  copy:
-    content: |
-      {{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 8 }}
-    dest: /etc/vim/vimrc.local
+# Install kubectl wrapper
+- echo "{{- .Files.Get "deckhouse-controller/files/kubectl_wrapper.sh" }}" > /usr/local/bin/kubectl
+- chmod +x /usr/local/bin/kubectl
+# Shell comfort: inputrc
+- echo "{{- .Files.Get "deckhouse-controller/files/inputrc" }}" > /etc/inputrc
+# Shell comfort: bashrc
+- echo "{{- .Files.Get "deckhouse-controller/files/bashrc" }}" > /etc/bashrc
+# Shell comfort: add bashrc for root
+- rm -f /root/.bashrc
+- ln -s /etc/bashrc /root/.bashrc
+# Shell comfort: add bashrc for nobody
+- rm -f /.bashrc
+- ln -s /etc/bashrc /.bashrc
+# Shell comfort: create /etc/vim
+- mkdir -p /etc/vim/
+# Shell comfort: vimrc.local
+- echo "{{- .Files.Get "deckhouse-controller/files/vimrc.local" }}" > /etc/vim/vimrc.local
 {{- end }}
 
 image: common-base
@@ -228,7 +206,7 @@ import:
   to: /usr/bin/curl
   before: setup
 
-ansible:
+shell:
   beforeInstall:
   {{- include "base components" . | nindent 2 }}
 
@@ -237,13 +215,11 @@ image: base-for-go
 from: {{ .Images.BASE_ALT_DEV }}
 import:
   {{- include "base components imports" . }}
-ansible:
+shell:
   beforeInstall:
 {{/*  TODO: Move it to the dev image */}}
-  - name: "Install golang for deckhouse-controller,dhctl and testing image build"
-    shell: |
-      rm -rf /usr/local/go
-      curl -sSfL https://go.dev/dl/go1.22.2.linux-amd64.tar.gz -o - | tar -C /usr/local -zxvf -
+  - rm -rf /usr/local/go
+  - curl -sSfL https://go.dev/dl/go1.22.2.linux-amd64.tar.gz -o - | tar -C /usr/local -zxvf -
   {{- include "base components" . | nindent 2 }}
 
 ---
@@ -328,70 +304,35 @@ import:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
-ansible:
+shell:
   setup:
+  # Add bundle {{ $key }}
 {{- range $key := list "default" "managed" "minimal" }}
-  - name: "Add bundle {{ $key }}"
-    copy:
-      content: |
       {{- range $_, $edition := $.Editions }}
-        {{- $.Files.Get (printf "%s/values-%s.yaml" $edition.modulesDir $key ) | nindent 8 }}
+  - echo "{{- $.Files.Get (printf "%s/values-%s.yaml" $edition.modulesDir $key ) }}" > /deckhouse/modules/values-{{ $key }}.yaml
         {{- if eq $.Env $edition.name }}
            {{- break -}}
         {{- end }}
      {{- end }}
-      dest: /deckhouse/modules/values-{{ $key }}.yaml
 {{- end }}
-
-  - name: "Add version info"
-    copy:
-      content: |
-        {{- env "CI_COMMIT_TAG" | default "dev" | nindent 8 }}
-      dest: /deckhouse/version
-
-  - name: "Add edition info"
-    copy:
-      content: |
-        {{- .Env | default "unknown" | nindent 8 }}
-      dest: /deckhouse/edition
-
-  - name: "Override deckhouse entrypoint to use tini as supervisor"
-    shell: |
-      echo -e "#!/bin/bash\nexec tini -- /deckhouse/deckhouse-controller/entrypoint.sh" > /deckhouse/deckhouse
-      chmod +x /deckhouse/deckhouse
-
-  - name: "Create symlink to grant entrypoint.sh write permission"
-    shell: |
-      ln -fs /tmp/values.yaml /deckhouse/modules/values.yaml
-
-  - name: "Create deckhouse group"
-    group:
-      name: deckhouse
-      gid: 64535
-
-  - name: "Create deckhouse user"
-    user:
-      name: deckhouse
-      password: "!"
-      uid: 64535
-      group: deckhouse
-      comment: deckhouse
-      home: /
-      shell: /sbin/nologin
-
-  - name: "Run deckhouse from dedicated user"
-    file:
-      path: /deckhouse/
-      state: directory
-      recurse: yes
-      owner: 64535
-      group: 64535
-
-  - name: "Create symlink to vim-console"
-    shell: |
-      ln -fs /usr/bin/vim-console /usr/bin/vim
-      ln -fs /usr/bin/vim-console /usr/bin/vi
-
+  # Add version info
+  - echo "{{- env "CI_COMMIT_TAG" | default "dev" }}" > /deckhouse/version
+  # Add edition info
+  - echo "{{- .Env | default "unknown" }}" > /deckhouse/edition
+  # Override deckhouse entrypoint to use tini as supervisor
+  - echo -e "#!/bin/bash\nexec tini -- /deckhouse/deckhouse-controller/entrypoint.sh" > /deckhouse/deckhouse
+  - chmod +x /deckhouse/deckhouse
+  # Create symlink to grant entrypoint.sh write permission
+  - ln -fs /tmp/values.yaml /deckhouse/modules/values.yaml
+  # Create deckhouse group
+  - groupadd -g 64535 deckhouse
+  # Create deckhouse user
+  - useradd -d / -u 64535 -g deckhouse -s /sbin/nologin deckhouse
+  # Run deckhouse from dedicated user
+  - chown deckhouse:deckhouse -R /deckhouse
+  # Create symlink to vim-console"
+  - ln -fs /usr/bin/vim-console /usr/bin/vim
+  - ln -fs /usr/bin/vim-console /usr/bin/vi
 docker:
   ENV:
     MODULES_DIR: /deckhouse/modules
@@ -461,20 +402,14 @@ import:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
-ansible:
+shell:
   install:
-  - name: "Install ginkgo"
-    command: go install github.com/onsi/ginkgo/ginkgo@latest
-
-  - name: "Install dlv"
-    command: go install github.com/go-delve/delve/cmd/dlv@latest
-
+  - go install github.com/onsi/ginkgo/ginkgo@latest
+  - go install github.com/go-delve/delve/cmd/dlv@latest
   setup:
-  - name: "Migrate internal packages imports"
-    shell: |
       {{- range $_, $edition := $.Editions }}
         {{- if not $edition.skipFixingImports }}
-      find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/{{ $edition.modulesDir }}|github.com/deckhouse/deckhouse/modules|g' {} +
+  - find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/{{ $edition.modulesDir }}|github.com/deckhouse/deckhouse/modules|g' {} +
         {{- end }}
       {{- end }}
 
