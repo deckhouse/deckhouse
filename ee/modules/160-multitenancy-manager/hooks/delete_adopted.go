@@ -9,8 +9,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -22,12 +22,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "roles",
 			ApiVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "ClusterRole",
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"heritage":                "deckhouse",
-					"rbac.deckhouse.io/kind":  "manage",
-					"rbac.deckhouse.io/level": "module",
-					"module":                  "multitenancy-manager",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{
+					"d8:manage:capability:module:multitenancy-manager:edit",
+					"d8:manage:capability:module:multitenancy-manager:view",
 				},
 			},
 			FilterFunc: filterRoles,
@@ -41,10 +39,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: filterClusterBindings,
 		},
+		{
+			Name:       "webhooks",
+			ApiVersion: "admissionregistration.k8s.io/v1",
+			Kind:       "ValidatingWebhookConfiguration",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"multitenancy-webhook"},
+			},
+			FilterFunc: filterWebhooks,
+		},
 	},
 }, deleteAdopted)
 
-type filteredRole struct {
+type filtered struct {
 	Name string `json:"name"`
 }
 
@@ -57,13 +64,9 @@ func filterRoles(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 		return nil, nil
 	}
 	if val, ok := role.Annotations["meta.helm.sh/release-namespace"]; ok && val == "d8-multitenancy-manager" {
-		return &filteredRole{Name: role.Name}, nil
+		return &filtered{Name: role.Name}, nil
 	}
 	return nil, nil
-}
-
-type filteredBinding struct {
-	Name string `json:"name"`
 }
 
 func filterClusterBindings(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -75,7 +78,21 @@ func filterClusterBindings(obj *unstructured.Unstructured) (go_hook.FilterResult
 		return nil, nil
 	}
 	if val, ok := binding.Annotations["meta.helm.sh/release-namespace"]; ok && val == "d8-multitenancy-manager" {
-		return &filteredRole{Name: binding.Name}, nil
+		return &filtered{Name: binding.Name}, nil
+	}
+	return nil, nil
+}
+
+func filterWebhooks(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	webhook := new(admissionregistrationv1.ValidatingWebhookConfiguration)
+	if err := sdk.FromUnstructured(obj, webhook); err != nil {
+		return nil, err
+	}
+	if webhook.Annotations == nil || len(webhook.Annotations) == 0 {
+		return nil, nil
+	}
+	if val, ok := webhook.Annotations["meta.helm.sh/release-namespace"]; ok && val == "d8-multitenancy-manager" {
+		return &filtered{Name: webhook.Name}, nil
 	}
 	return nil, nil
 }
@@ -85,13 +102,19 @@ func deleteAdopted(input *go_hook.HookInput) error {
 		if snap == nil {
 			continue
 		}
-		input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "ClusterRole", "", snap.(*filteredRole).Name)
+		input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "ClusterRole", "", snap.(*filtered).Name)
 	}
 	for _, snap := range input.Snapshots["bindings"] {
 		if snap == nil {
 			continue
 		}
-		input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "ClusterRoleBinding", "", snap.(*filteredBinding).Name)
+		input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "ClusterRoleBinding", "", snap.(*filtered).Name)
+	}
+	for _, snap := range input.Snapshots["webhooks"] {
+		if snap == nil {
+			continue
+		}
+		input.PatchCollector.Delete("admissionregistration.k8s.io/v1", "ValidatingWebhookConfiguration", "", snap.(*filtered).Name)
 	}
 	return nil
 }
