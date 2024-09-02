@@ -781,11 +781,11 @@ Done
 
 {% endraw %}
 {% alert level="info" %}
-Приведенные `NodeGroupConfiguration` основаны на функционале, заложенном в скрипте [032_configure_containerd.sh](./#особенности-написания-скриптов).
+Пример `NodeGroupConfiguration` основан на функциях, заложенных в скрипте [032_configure_containerd.sh](./#особенности-написания-скриптов).
 {% endalert %}
 
 {% alert level="danger" %}
-Добавление кастомных настроек вызывает перезапуск сервиса `containerd`
+Добавление кастомных настроек вызывает перезапуск сервиса `containerd`.
 {% endalert %}
 {% raw %}
 
@@ -847,7 +847,7 @@ spec:
 {% endalert %}
 {% raw %}
 
-Разверните скрипт `NodeGroupConfiguration`:
+Пример `NodeGroupConfiguration` для настройки сертификата для дополнительного registry:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

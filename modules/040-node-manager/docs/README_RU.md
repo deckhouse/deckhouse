@@ -194,7 +194,8 @@ CAPS включается автоматически, если в NodeGroup за
 
 Для автоматизации действий на узлах группы предусмотрен ресурс [NodeGroupConfiguration](cr.html#nodegroupconfiguration). Ресурс позволяет выполнять на узлах bash-скрипты, в которых можно пользоваться набором команд [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster), а также позволяет использовать шаблонизатор [Go Template](https://pkg.go.dev/text/template). Это удобно для автоматизации таких операций, как:
 - установка и настройки дополнительных пакетов ОС.  
-  примеры:  
+
+  Примеры:  
   - [установка kubectl-плагина](examples.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах);
   - [настройка containerd с поддержкой Nvidia GPU](faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu).
 - обновления ядра ОС на конкретную версию,  

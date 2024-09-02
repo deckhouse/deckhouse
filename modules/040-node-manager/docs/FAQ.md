@@ -774,11 +774,11 @@ Done
 
 {% endraw %}
 {% alert level="info" %}
-The above `NodeGroupConfiguration` uses the functionality embedded in the script [032_configure_containerd.sh](./#features-of-writing-scripts).
+The example of `NodeGroupConfiguration` uses functions of the script [032_configure_containerd.sh](./#features-of-writing-scripts).
 {% endalert %}
 
 {% alert level="danger" %}
-Adding custom settings causes a restart of the `containerd` service
+Adding custom settings causes a restart of the `containerd` service.
 {% endalert %}
 {% raw %}
 
@@ -841,7 +841,7 @@ In addition to containerd, the certificate can be [simultaneously added](example
 {% endalert %}
 {% raw %}
 
-Deploy the `NodeGroupConfiguration` script:
+Example of the `NodeGroupConfiguration` resource to configure a certificate for an additional registry:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
