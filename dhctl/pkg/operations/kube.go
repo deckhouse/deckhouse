@@ -29,11 +29,9 @@ import (
 func ConnectToKubernetesAPI(nodeInterface node.Interface) (*client.KubernetesClient, error) {
 	var kubeCl *client.KubernetesClient
 	err := log.Process("common", "Connect to Kubernetes API", func() error {
-		if nodeInterface != nil {
-			if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-				if err := wrapper.Client().Check().WithDelaySeconds(1).AwaitAvailability(); err != nil {
-					return fmt.Errorf("await master available: %v", err)
-				}
+		if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok && wrapper != nil {
+			if err := wrapper.Client().Check().WithDelaySeconds(1).AwaitAvailability(); err != nil {
+				return fmt.Errorf("await master available: %v", err)
 			}
 		}
 
