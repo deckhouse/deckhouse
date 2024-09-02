@@ -149,12 +149,18 @@ shell:
 
 {{- define "base components" }}
 # Install kubectl wrapper
-- echo "{{- .Files.Get "deckhouse-controller/files/kubectl_wrapper.sh" }}" > /usr/local/bin/kubectl
+- cat <<"EOD" > /usr/local/bin/kubectl
+  {{- .Files.Get "deckhouse-controller/files/kubectl_wrapper.sh" | nindent 4 }}
+  EOD
 - chmod +x /usr/local/bin/kubectl
 # Shell comfort: inputrc
-- echo "{{- .Files.Get "deckhouse-controller/files/inputrc" }}" > /etc/inputrc
+- cat <<"EOD" > /etc/inputrc
+  {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 4 }}
+  EOD
 # Shell comfort: bashrc
-- echo "{{- .Files.Get "deckhouse-controller/files/bashrc" }}" > /etc/bashrc
+- cat <<"EOD" > /etc/bashrc
+  {{- .Files.Get "deckhouse-controller/files/bashrc"  | nindent 4 }}
+  EOD
 # Shell comfort: add bashrc for root
 - rm -f /root/.bashrc
 - ln -s /etc/bashrc /root/.bashrc
@@ -164,7 +170,9 @@ shell:
 # Shell comfort: create /etc/vim
 - mkdir -p /etc/vim/
 # Shell comfort: vimrc.local
-- echo "{{- .Files.Get "deckhouse-controller/files/vimrc.local" }}" > /etc/vim/vimrc.local
+- cat <<"EOD" > /etc/vim/vimrc.local
+  {{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 4 }}
+  EOD
 {{- end }}
 
 image: common-base
@@ -309,18 +317,27 @@ shell:
   # Add bundle $key
 {{- range $key := list "default" "managed" "minimal" }}
       {{- range $_, $edition := $.Editions }}
-  - echo "{{- $.Files.Get (printf "%s/values-%s.yaml" $edition.modulesDir $key ) }}" > /deckhouse/modules/values-{{ $key }}.yaml
+  - cat <<"EOD" > /deckhouse/modules/values-{{ $key }}.yaml
+    {{- .Files.Get (printf "%s/values-%s.yaml" $edition.modulesDir $key ) | nindent 4 }}
+    EOD
         {{- if eq $.Env $edition.name }}
            {{- break -}}
         {{- end }}
      {{- end }}
 {{- end }}
   # Add version info
-  - echo "{{- env "CI_COMMIT_TAG" | default "dev" }}" > /deckhouse/version
+  - cat <<"EOD" > /deckhouse/version
+    {{- env "CI_COMMIT_TAG" | default "dev" | nindent 4 }}
+    EOD
   # Add edition info
-  - echo "{{- .Env | default "unknown" }}" > /deckhouse/edition
+  - cat <<"EOD" > /deckhouse/edition
+    {{- .Env | default "unknown" | nindent 4 }}
+    EOD
   # Override deckhouse entrypoint to use tini as supervisor
-  - echo -e "#!/bin/bash\nexec tini -- /deckhouse/deckhouse-controller/entrypoint.sh" > /deckhouse/deckhouse
+  - cat <<"EOD" > /deckhouse/deckhouse
+    #!/bin/bash
+    exec tini -- /deckhouse/deckhouse-controller/entrypoint.sh
+    EOD
   - chmod +x /deckhouse/deckhouse
   # Create symlink to grant entrypoint.sh write permission
   - ln -fs /tmp/values.yaml /deckhouse/modules/values.yaml
