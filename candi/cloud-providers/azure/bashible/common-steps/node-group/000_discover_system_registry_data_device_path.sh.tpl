@@ -22,7 +22,7 @@ else
   return 0
 fi
 
-echo "kubernetes_data_device: $system_registry_data_device_path"
+echo "system_registry_data_device: $system_registry_data_device_path"
 blkid
 echo "$system_registry_data_device_path" > /var/lib/bashible/system_registry_data_device_path
 

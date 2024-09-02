@@ -137,4 +137,6 @@ resource "azurerm_virtual_machine_data_disk_attachment" "system_registry_data" {
   virtual_machine_id = azurerm_linux_virtual_machine.master.id
   lun                = "11" # this value used to determine the disk name in bashible (000_discover_system_registry_data_device_path.sh.tpl)
   caching            = "ReadWrite"
+
+  depends_on = [ azurerm_virtual_machine_data_disk_attachment.kubernetes_data ]
 }
