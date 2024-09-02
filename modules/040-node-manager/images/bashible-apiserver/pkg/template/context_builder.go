@@ -400,6 +400,7 @@ func (rid *registryChangeInputData) FromMap(m map[string][]byte) {
 
 func (rid registryChangeInputData) toRegistry() registryChange {
 	var auth string
+	var digests map[string]string
 
 	if len(rid.DockerConfig) > 0 {
 		var dcfg dockerCfg
@@ -419,6 +420,13 @@ func (rid registryChangeInputData) toRegistry() registryChange {
 		}
 	}
 
+	if len(rid.Digests) > 0 {
+		err := json.Unmarshal(rid.Digests, &digests)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	return registryChange{
 		Address:   rid.Address,
 		Path:      rid.Path,
@@ -426,7 +434,7 @@ func (rid registryChangeInputData) toRegistry() registryChange {
 		CA:        rid.CA,
 		DockerCFG: rid.DockerConfig,
 		Auth:      auth,
-		Digests:   rid.Digests,
+		Digests:   digests,
 	}
 }
 
@@ -599,13 +607,13 @@ type normal struct {
 }
 
 type registryChange struct {
-	Address   string `json:"address" yaml:"address"`
-	Path      string `json:"path" yaml:"path"`
-	Scheme    string `json:"scheme" yaml:"scheme"`
-	CA        string `json:"ca,omitempty" yaml:"ca,omitempty"`
-	DockerCFG []byte `json:"dockerCfg" yaml:"dockerCfg"`
-	Auth      string `json:"auth" yaml:"auth"`
-	Digests   []byte `json:"digests" yaml:"digests"`
+	Address   string            `json:"address" yaml:"address"`
+	Path      string            `json:"path" yaml:"path"`
+	Scheme    string            `json:"scheme" yaml:"scheme"`
+	CA        string            `json:"ca,omitempty" yaml:"ca,omitempty"`
+	DockerCFG []byte            `json:"dockerCfg" yaml:"dockerCfg"`
+	Auth      string            `json:"auth" yaml:"auth"`
+	Digests   map[string]string `json:"digests" yaml:"digests"`
 }
 
 type registry struct {
