@@ -102,10 +102,6 @@ The progress of the process can be observed in events using the command `kubectl
 
 ## How to configure access to Amazon ECR repository on cluster Nodes
 
-{% alert level="warning" %}
-The token issued by the `aws ecr get-login-password` command is new every time and valid for 12 hours. Bashible does a full run every 4 hours because of this containerd-deckhouse.service will reload at these times.
-{% endalert %}
-
 1. Need to set permissions to read images in [Repository policies](https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html).
 
 ```json

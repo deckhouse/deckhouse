@@ -103,10 +103,6 @@ title: "Cloud provider — AWS: FAQ"
 
 ## Как настроить доступ до Amazon ECR repository на Nodes кластера
 
-{% alert level="warning" %}
-Токен выдаваемый командой `aws ecr get-login-password` каждый раз новый и действителен 12 часов. Bashible делает полный прогон раз в 4 часа из-за этого containerd-deckhouse.service будет делать reload в эти моменты. 
-{% endalert %}
-
 1. Нужно в [Repository policies](https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html) задать права для чтения образов
 
 ```json
