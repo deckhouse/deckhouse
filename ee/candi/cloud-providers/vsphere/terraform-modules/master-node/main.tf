@@ -129,6 +129,16 @@ resource "vsphere_virtual_disk" "kubernetes_data" {
   create_directories = true
 }
 
+resource "vsphere_virtual_disk" "system_registry_data" {
+  count              = var.systemRegistryEnable ? 1 : 0
+  size               = 40
+  datastore          = local.master_instance_class.datastore
+  datacenter         = data.vsphere_dynamic.datacenter_id.inventory_path
+  type               = "eagerZeroedThick"
+  vmdk_path          = "deckhouse/${join("-", [var.clusterUUID, "system-registry-data", var.nodeIndex])}.vmdk"
+  create_directories = true
+}
+
 resource "vsphere_virtual_machine" "master" {
   name             = join("-", [local.prefix, "master", var.nodeIndex])
   resource_pool_id = data.vsphere_resource_pool.resource_pool[0].id
@@ -171,6 +181,17 @@ resource "vsphere_virtual_machine" "master" {
     datastore_id = data.vsphere_datastore.datastore.id
   }
 
+  dynamic "disk" {
+    for_each = var.systemRegistryEnable ? [1] : []
+    content {
+      label        = "disk2"
+      unit_number  = 2
+      attach       = true
+      path         = vsphere_virtual_disk.system_registry_data.vmdk_path
+      datastore_id = data.vsphere_datastore.datastore.id
+    }
+  }
+
   enable_disk_uuid = true
 
   nested_hv_enabled  = lookup(local.runtime_options, "nestedHardwareVirtualization", null)
@@ -191,7 +212,7 @@ resource "vsphere_virtual_machine" "master" {
     client_device = true
   }
 
-  depends_on = [vsphere_virtual_disk.kubernetes_data]
+  depends_on = [vsphere_virtual_disk.kubernetes_data, vsphere_virtual_disk.system_registry_data]
 
   lifecycle {
     ignore_changes = [
