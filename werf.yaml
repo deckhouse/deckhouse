@@ -678,6 +678,14 @@ import:
 docker:
   ENV:
     EDITOR: vim
+  LABEL:
+    org.opencontainers.image.documentation: 'https://deckhouse.io/products/kubernetes-platform/documentation/'
+    org.opencontainers.image.created: {{ dateInZone "2006-01-02T15:04:05Z" (now) "UTC" | squote }}
+    org.opencontainers.image.source: 'https://github.com/deckhouse/deckhouse'
+    org.opencontainers.image.title: 'Deckhouse'
+    org.opencontainers.image.vendor: 'Flant\ JSC'
+    org.opencontainers.image.version: {{ env "CI_COMMIT_TAG" | default "dev" | nospace | squote }}
+    org.opencontainers.image.url: 'https://deckhouse.io'
 shell:
   setup:
   - |
@@ -782,6 +790,15 @@ import:
     add: /dhctl-{{- env "CI_COMMIT_TAG" | default "dev" }}.x86_64.tar.gz
     to: /
     before: setup
+docker:
+  LABEL:
+    org.opencontainers.image.documentation: 'https://deckhouse.io/products/kubernetes-platform/documentation/'
+    org.opencontainers.image.created: {{ dateInZone "2006-01-02T15:04:05Z" (now) "UTC" | squote }}
+    org.opencontainers.image.source: 'https://github.com/deckhouse/deckhouse'
+    org.opencontainers.image.title: 'Deckhouse'
+    org.opencontainers.image.vendor: 'Flant\ JSC'
+    org.opencontainers.image.version: {{ env "CI_COMMIT_TAG" | default "dev" | nospace | squote }}
+    org.opencontainers.image.url: 'https://deckhouse.io'
 
 ---
 image: release-channel-version-prebuild
@@ -1023,6 +1040,15 @@ import:
   add: /images_digests.json
   to: /deckhouse/modules/040-node-manager/images_digests.json
   after: setup
+docker:
+  LABEL:
+    org.opencontainers.image.documentation: 'https://deckhouse.io/products/kubernetes-platform/documentation/'
+    org.opencontainers.image.created: {{ dateInZone "2006-01-02T15:04:05Z" (now) "UTC" | squote }}
+    org.opencontainers.image.source: 'https://github.com/deckhouse/deckhouse'
+    org.opencontainers.image.title: 'Deckhouse'
+    org.opencontainers.image.vendor: 'Flant\ JSC'
+    org.opencontainers.image.version: {{ env "CI_COMMIT_TAG" | default "dev" | nospace | squote }}
+    org.opencontainers.image.url: 'https://deckhouse.io'
 ---
 image: tests
 fromImage: tests-prebuild
