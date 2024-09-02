@@ -311,43 +311,45 @@ func setupSSHTunnelToSystemRegistryAuth(sshCl *ssh.Client) (*frontend.Tunnel, er
 	return tun, nil
 }
 
-func pushDockerImagesToSystemRegistry(ctx context.Context, sshCl *ssh.Client, cfg *config.MetaConfig) error {
+func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig) error {
 	ctx, ctxCancel := context.WithCancel(ctx)
 	defer ctxCancel()
 
 	recreateTunFuncs := [](func() error){}
+	distributionAddress := "127.0.0.1:5001"
 
-	// Create auth tunnel
-	authTun, err := setupSSHTunnelToSystemRegistryAuth(sshCl)
-	if err != nil {
-		return err
-	}
-	recreateTunFuncs = append(recreateTunFuncs, func() error {
-		err := frontend.RecreateSshTun(ctx, authTun, func() (*frontend.Tunnel, error) {
-			return setupSSHTunnelToSystemRegistryAuth(sshCl)
-		})
-		ctxCancel()
-		return err
-	})
+	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+		sshClient := wrapper.Client()
 
-	distributionAddress := fmt.Sprintf("%s:5001", sshCl.Settings.Host())
-
-	// Create distribution tunnel, if BastionHost != ""
-	if sshCl.Settings.BastionHost != "" {
-		distributionAddress = "127.0.0.1:5001"
-
-		distributionTun, err := setupSSHTunnelToSystemRegistryDistribution(sshCl)
+		// Create auth tunnel
+		authTun, err := setupSSHTunnelToSystemRegistryAuth(sshClient)
 		if err != nil {
-			authTun.Stop()
 			return err
 		}
 		recreateTunFuncs = append(recreateTunFuncs, func() error {
-			err := frontend.RecreateSshTun(ctx, distributionTun, func() (*frontend.Tunnel, error) {
-				return setupSSHTunnelToSystemRegistryDistribution(sshCl)
+			err := frontend.RecreateSshTun(ctx, authTun, func() (*frontend.Tunnel, error) {
+				return setupSSHTunnelToSystemRegistryAuth(sshClient)
 			})
 			ctxCancel()
 			return err
 		})
+
+		if sshClient.Settings.BastionHost == "" {
+			distributionAddress = fmt.Sprintf("%s:5001", sshClient.Settings.Host())
+		} else {
+			// Create distribution tunnel, if BastionHost != ""
+			distributionTun, err := setupSSHTunnelToSystemRegistryDistribution(sshClient)
+			if err != nil {
+				return err
+			}
+			recreateTunFuncs = append(recreateTunFuncs, func() error {
+				err := frontend.RecreateSshTun(ctx, distributionTun, func() (*frontend.Tunnel, error) {
+					return setupSSHTunnelToSystemRegistryDistribution(sshClient)
+				})
+				ctxCancel()
+				return err
+			})
+		}
 	}
 
 	// Prepare mirror push function
@@ -367,8 +369,9 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, sshCl *ssh.Client, cf
 			WithInsecure(false).
 			WithTlsSkipVerify(true).
 			WithRegistryAuth(registryUser.Name, registryUser.Password).
-			MirrorPush(imagesBundlePath, distributionAddress).
-			WithStdoutHandler(stdOutHandler).WithStderrHandler(stdErrHandler)
+			MirrorPush(imagesBundlePath, distributionAddress)
+		d8Push.WithStdoutHandler(stdOutHandler)
+		d8Push.WithStderrHandler(stdErrHandler)
 		go func() {
 			mirrorPushErrorCh <- d8Push.Run()
 		}()
@@ -392,16 +395,16 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, sshCl *ssh.Client, cf
 	return g.Wait()
 }
 
-func waitAndPushDockerImages(ctx context.Context, sshCl *ssh.Client, cfg *config.MetaConfig) error {
+func waitAndPushDockerImages(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig) error {
 	lockFileName := "/var/lib/bashible/wait_for_docker_img_push"
 
 	isLockFileExist := func() (bool, error) {
 		checkLockFileStdout := ""
 		checkLockFileStdoutHandler := func(l string) { checkLockFileStdout += l }
-		err := sshCl.Command("test", "-e", lockFileName, "&&", "echo", "true", "||", "echo", "false").
-			Sudo().
-			WithStdoutHandler(checkLockFileStdoutHandler).
-			Run()
+		cmd := nodeInterface.Command("test", "-e", lockFileName, "&&", "echo", "true", "||", "echo", "false")
+		cmd.Sudo()
+		cmd.WithStdoutHandler(checkLockFileStdoutHandler)
+		err := cmd.Run()
 
 		if err != nil {
 			return false, err
@@ -414,9 +417,9 @@ func waitAndPushDockerImages(ctx context.Context, sshCl *ssh.Client, cfg *config
 	}
 
 	removeLockFile := func() error {
-		return sshCl.Command("rm", "-f", lockFileName).
-			Sudo().
-			Run()
+		cmd := nodeInterface.Command("rm", "-f", lockFileName)
+		cmd.Sudo()
+		return cmd.Run()
 	}
 
 	for {
@@ -429,7 +432,7 @@ func waitAndPushDockerImages(ctx context.Context, sshCl *ssh.Client, cfg *config
 				continue
 			}
 			if isExist {
-				err := pushDockerImagesToSystemRegistry(ctx, sshCl, cfg)
+				err := pushDockerImagesToSystemRegistry(ctx, nodeInterface, cfg)
 				if err != nil {
 					return err
 				}
@@ -663,11 +666,11 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 	defer ctxCancel()
 
 	if cfg.Registry.RegistryMode == "Detached" {
-		go func(ctx context.Context, sshCl *ssh.Client, cfg *config.MetaConfig) {
-			if err := waitAndPushDockerImages(ctx, sshCl, cfg); err != nil {
+		go func(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig) {
+			if err := waitAndPushDockerImages(ctx, nodeInterface, cfg); err != nil {
 				panic(err)
 			}
-		}(ctx, sshClient, cfg)
+		}(ctx, nodeInterface, cfg)
 	}
 
 	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
