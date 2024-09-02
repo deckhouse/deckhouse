@@ -1,0 +1,49 @@
+{{- $kubernetesVersion := .Values.global.discovery.kubernetesVersion }}
+{{- if semverCompare ">= 1.26" $kubernetesVersion }}
+---
+{{- $policyName := "ingressnginxcontroller-settings.deckhouse.io" }}
+{{- $inlets := list "LoadBalancer"  "LoadBalancerWithProxyProtocol" "HostPort" "HostPortWithProxyProtocol" "HostWithFailover" }}
+{{- if semverCompare ">= 1.30" $kubernetesVersion }}
+apiVersion: admissionregistration.k8s.io/v1
+{{- else if semverCompare ">= 1.28" $kubernetesVersion }}
+apiVersion: admissionregistration.k8s.io/v1beta1
+{{- else }}
+apiVersion: admissionregistration.k8s.io/v1alpha1
+{{- end }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["ingressnginxcontrollers"]    
+  validations:
+{{- range $inlet := $inlets }}
+{{- $spec :=  printf "%s%s" (lower $inlet | trunc 1)  (substr 1 -1 $inlet) }}
+    - expression: '!(has(object.spec.{{ $spec }} ) && object.spec.inlet != "{{ $inlet }}" )'
+      reason: Forbidden
+{{- if semverCompare ">= 1.27" $kubernetesVersion }}
+      messageExpression: '''parameters "spec.{{ $spec }}" avalible only for inlet "{{ $inlet }}"'''        
+{{- end }}      
+{{- end }}  
+---
+{{- if semverCompare ">= 1.28" $kubernetesVersion }}
+apiVersion: admissionregistration.k8s.io/v1beta1
+{{- else }}
+apiVersion: admissionregistration.k8s.io/v1alpha1
+{{- end }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list .  ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+{{- if semverCompare ">= 1.27" $kubernetesVersion }}
+  validationActions: [Deny]
+{{- end }}
+{{- end }}
