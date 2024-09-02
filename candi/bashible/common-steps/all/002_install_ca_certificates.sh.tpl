@@ -15,6 +15,8 @@
 REGISTRY_CACERT_PATH="/opt/deckhouse/share/ca-certificates/registry-ca.crt"
 SECOND_REGISTRY_CACERT_PATH="/opt/deckhouse/share/ca-certificates/second-registry-ca.crt"
 
+mkdir -p /opt/deckhouse/share/ca-certificates
+
 {{- if .registry.ca }}
 bb-sync-file $REGISTRY_CACERT_PATH - << "EOF"
 {{ .registry.ca }}
