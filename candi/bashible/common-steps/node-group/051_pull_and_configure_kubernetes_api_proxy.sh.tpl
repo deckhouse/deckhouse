@@ -14,6 +14,14 @@
 
 mkdir -p /etc/kubernetes/manifests
 
+{{- $api_proxy_image := printf "%s%s@%s" .registry.address .registry.path (index .images.controlPlaneManager "kubernetesApiProxy") }}
+{{- if .secondaryRegistry }}
+  {{- with .secondaryRegistry.digests }}
+    {{- if .kubernetesApiProxy }}
+        {{- $api_proxy_image = printf "%s%s@%s" .secondaryRegistry.address .secondaryRegistry.path .kubernetesApiProxy }}
+    {{- end }}
+{{- end }}
+
 bb-sync-file /etc/kubernetes/manifests/kubernetes-api-proxy.yaml - << EOF
 apiVersion: v1
 kind: Pod
@@ -29,7 +37,7 @@ spec:
   shareProcessNamespace: true
   containers:
   - name: kubernetes-api-proxy
-    image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+    image: {{ $api_proxy_image }}
     imagePullPolicy: IfNotPresent
     command: ["/opt/nginx-static/sbin/nginx", "-c", "/etc/nginx/config/nginx.conf", "-g", "daemon off;"]
     env:
@@ -41,7 +49,7 @@ spec:
     - mountPath: /tmp
       name: tmp
   - name: kubernetes-api-proxy-reloader
-    image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+    image: {{ $api_proxy_image }}
     imagePullPolicy: IfNotPresent
     command: ["/kubernetes-api-proxy-reloader"]
     env:
@@ -63,5 +71,5 @@ spec:
 EOF
 
 if crictl version >/dev/null 2>/dev/null; then
-  crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+  crictl pull {{ $api_proxy_image }}
 fi
