@@ -347,7 +347,6 @@ List of checks performed by the installer before starting the installation of De
   - The `sudo` command is available to the user on the server (VM). 
 - Checks for cloud cluster installation:
   - The master node virtual machine configuration meets the minimum requirements.
-  - The master node configuration specified in the installation configuration meets the minimum requirements.
 
 ### Aborting the installation
 
