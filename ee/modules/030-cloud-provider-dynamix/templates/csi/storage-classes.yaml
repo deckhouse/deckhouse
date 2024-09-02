@@ -9,7 +9,7 @@ metadata:
   name: {{ $storageClass.name | quote }}
 provisioner: dynamix.deckhouse.io
 reclaimPolicy: Delete
-allowVolumeExpansion: false
+allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
 parameters:
   account: {{ $providerClusterConfiguration.account | quote }}
