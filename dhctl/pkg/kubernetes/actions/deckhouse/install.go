@@ -336,7 +336,6 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name:     `Secret "deckhouse-registry"`,
 			Manifest: func() interface{} { return manifests.DeckhouseRegistrySecret(cfg.Registry) },
 			CreateFunc: func(manifest interface{}) error {
-				//
 				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
@@ -352,7 +351,6 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name:     `Secret "d8-cluster-terraform-state"`,
 			Manifest: func() interface{} { return manifests.SecretWithTerraformState(cfg.TerraformState) },
 			CreateFunc: func(manifest interface{}) error {
-				//
 				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
@@ -369,7 +367,6 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			Manifest: getManifest,
 			CreateFunc: func(manifest interface{}) error {
-				//
 				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
@@ -385,7 +382,6 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name:     `Secret "d8-cluster-configuration"`,
 			Manifest: func() interface{} { return manifests.SecretWithClusterConfig(cfg.ClusterConfig) },
 			CreateFunc: func(manifest interface{}) error {
-				//
 				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
@@ -405,7 +401,6 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 				)
 			},
 			CreateFunc: func(manifest interface{}) error {
-				//
 				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
@@ -432,7 +427,6 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 				return manifests.SecretWithStaticClusterConfig(cfg.StaticClusterConfig)
 			},
 			CreateFunc: func(manifest interface{}) error {
-				//
 				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
