@@ -341,11 +341,6 @@ func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, r
 
 		case data := <-secondaryRegistrySecretC:
 			var input registryChangeInputData
-			arr := make([]string, 0, len(data))
-			sort.Strings(arr)
-			for k, v := range data {
-				arr = append(arr, k+"_"+string(v))
-			}
 			input.FromMap(data)
 			c.contextBuilder.SetSecondaryRegistryData(input.toRegistry())
 			c.update("secret: deckhouse-change-registry")

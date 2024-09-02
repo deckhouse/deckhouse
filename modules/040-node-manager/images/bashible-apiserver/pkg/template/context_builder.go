@@ -392,6 +392,10 @@ func (rid *registryChangeInputData) FromMap(m map[string][]byte) {
 	if v, ok := m[".dockerconfigjson"]; ok {
 		rid.DockerConfig = v
 	}
+
+	if v, ok := m["digests"]; ok {
+		rid.Digests = v
+	}
 }
 
 func (rid registryChangeInputData) toRegistry() registryChange {
@@ -601,10 +605,7 @@ type registryChange struct {
 	CA        string `json:"ca,omitempty" yaml:"ca,omitempty"`
 	DockerCFG []byte `json:"dockerCfg" yaml:"dockerCfg"`
 	Auth      string `json:"auth" yaml:"auth"`
-	Digests   map[string]struct {
-		Pause              string `json:"pause" yaml:"pause"`
-		KubernetesApiProxy string `json:"kubernetesApiProxy" yaml:"kubernetesApiProxy"`
-	} `json:"Digests"`
+	Digests   []byte `json:"digests" yaml:"digests"`
 }
 
 type registry struct {
@@ -632,7 +633,11 @@ type registryChangeInputData struct {
 	Scheme       string `json:"scheme" yaml:"scheme"`
 	CA           string `json:"ca,omitempty" yaml:"ca,omitempty"`
 	DockerConfig []byte `json:".dockerconfigjson" yaml:".dockerconfigjson"`
-	Digests      map[string]struct {
+	Digests      []byte `json:"digests" yaml:"digests"`
+}
+
+type digests struct {
+	Digests map[string]struct {
 		Pause              string `json:"pause" yaml:"pause"`
 		KubernetesApiProxy string `json:"kubernetesApiProxy" yaml:"kubernetesApiProxy"`
 	} `json:"Digests"`
