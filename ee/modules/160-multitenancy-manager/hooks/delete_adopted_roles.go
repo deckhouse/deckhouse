@@ -46,7 +46,7 @@ func filterRoles(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	if role.Annotations == nil || len(role.Annotations) == 0 {
 		return nil, nil
 	}
-	if val, ok := role.Annotations["meta.helm.sh/release-namespace"]; ok || val == "d8-multitenancy-manager" {
+	if val, ok := role.Annotations["meta.helm.sh/release-namespace"]; ok && val == "d8-multitenancy-manager" {
 		return &filteredRole{Name: role.Name}, nil
 	}
 	if val, ok := role.Annotations["meta.helm.sh/release-name"]; ok && val == "d8:manage:capability:module:multitenancy-manager:edit" {
