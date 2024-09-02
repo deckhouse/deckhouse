@@ -155,10 +155,10 @@ An example:
 ```console
 $ kubectl get deckhouserelease
 NAME       PHASE        TRANSITIONTIME   MESSAGE
-v1.46.8    Superseded   13d              
-v1.46.9    Superseded   11d              
-v1.47.0    Superseded   4h12m            
-v1.47.1    Deployed     4h12m            
+v1.46.8    Superseded   13d
+v1.46.9    Superseded   11d
+v1.47.0    Superseded   4h12m
+v1.47.1    Deployed     4h12m
 ```
 
 The `Deployed` status of the corresponding version indicates that the switch to the corresponding version was performed (but this does not mean that it ended successfully).
@@ -282,7 +282,7 @@ Queue 'main': length 0, status: 'waiting for task 0s'
 * Make sure that the DNS name of the Deckhouse container registry is resolved correctly.
 
   Retrieve and compare the IP addresses of the Deckhouse container registry (`registry.deckhouse.io`) on one of the nodes and in the Deckhouse pod. They should match.
-  
+
   Here is how you can retrieve the IP address of the Deckhouse container registry on a node:
 
   ```shell
@@ -293,15 +293,15 @@ Queue 'main': length 0, status: 'waiting for task 0s'
   ```
 
   Here is how you can retrieve the IP address of the Deckhouse container registry in a pod:
-  
+
   ```shell
   $ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- getent ahosts registry.deckhouse.io
   46.4.145.194    STREAM registry.deckhouse.io
   46.4.145.194    DGRAM  registry.deckhouse.io
   ```
-  
+
   If the retrieved IP addresses do not match, inspect the DNS settings on the host. Specifically, check the list of domains in the `search` parameter of the `/etc/resolv.conf` file (it affects name resolution in the Deckhouse pod). If the `search` parameter of the `/etc/resolv.conf` file includes a domain where wildcard record resolution is configured, it may result in incorrect resolution of the IP address of the Deckhouse container registry (see example).
-  
+
 {% offtopic title="Example of DNS settings that may cause errors in resolving the IP address of the Deckhouse container registry..." %}
 
 In the example below, DNS settings produce different results when resolving names on the host and in the Kubernetes pod:
@@ -379,7 +379,7 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 ### Tips for configuring Nexus
 
 {% alert level="warning" %}
-When interacting with a `docker` repository located in Nexus (e. g. executing `docker pull`, `docker push` commands), you must specify the address in the `<NEXUS_URL>:<REPOSITORY_PORT>/<PATH>` format.  
+When interacting with a `docker` repository located in Nexus (e. g. executing `docker pull`, `docker push` commands), you must specify the address in the `<NEXUS_URL>:<REPOSITORY_PORT>/<PATH>` format.
 
 Using the `URL` value from the Nexus repository options is **not acceptable**
 {% endalert %}
@@ -962,6 +962,268 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
    ```
 
    The output of the command should be empty.
+
+### Как переключить Deckhouse EE на CSE?
+
+{% alert %}
+Инструкция подразумевает использование публичного адреса container registry: `registry-cse.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+{% endalert %}
+
+{% alert %}
+В Deckhouse CSE не поддерживается работа облачных кластеров и ряда модулей.
+{% endalert %}
+
+{% alert %}
+На текущий момент мигрировать на CSE-редакцию можно только с релиза 1.58.
+{% endalert %}
+
+{% alert %}
+При переключения на CSE-редакцию может наблюдаться недоступность компонентов кластера.
+{% endalert %}
+
+Для переключения кластера Deckhouse Enterprise Edition на Certified Security Edition выполните следующие действия (все команды выполняются на master-узле действующего кластера):
+
+1. Подготовьте переменные с токеном лицензии и создайте NodeGroupConfiguration для переходной авторизации в `registry-cse.deckhouse.ru`:
+
+   ```shell
+   LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
+   AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
+   kubectl apply -f - <<EOF
+   ---
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: containerd-cse-config.sh
+   spec:
+     nodeGroups:
+     - '*'
+     bundles:
+     - '*'
+     weight: 30
+     content: |
+       _on_containerd_config_changed() {
+         bb-flag-set containerd-need-restart
+       }
+       bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
+
+       mkdir -p /etc/containerd/conf.d
+       bb-sync-file /etc/containerd/conf.d/cse-registry.toml - containerd-config-file-changed << "EOF_TOML"
+       [plugins]
+         [plugins."io.containerd.grpc.v1.cri"]
+           [plugins."io.containerd.grpc.v1.cri".registry]
+             [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+           [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry-cse.deckhouse.ru"]
+             endpoint = ["https://registry-cse.deckhouse.ru"]
+           [plugins."io.containerd.grpc.v1.cri".registry.configs]
+             [plugins."io.containerd.grpc.v1.cri".registry.configs."registry-cse.deckhouse.ru".auth]
+               auth = "$AUTH_STRING"
+       EOF_TOML
+   EOF
+   ```
+
+    Дождитесь появление файла на узлах и завершения синхронизации bashible:
+
+   ```shell
+   /etc/containerd/conf.d/cse-registry.toml
+   ```
+
+   Статус сихнронизации можно отследить по значению `UPTODATE` (отображаемое число узлов в этом статусе должно совпадать с общим числом узлов (`NODES`) в группе):
+
+   ```shell
+   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   ```
+
+    Пример:
+
+   ```console
+   root@master-ee-to-cse-0:~# kubectl  get ng  -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   NAME     NODES   READY   UPTODATE
+   master   1       1       1
+   worker   2       2       2
+   ```
+
+    Также в журнале systemd-сервиса bashible должно появиться сообщение `Configuration is in sync, nothing to do`.
+
+    Пример:
+
+   ```console
+   # journalctl -u bashible -n 5
+   Aug 21 11:04:28 master-ee-to-cse-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
+   Aug 21 11:04:28 master-ee-to-cse-0 bashible.sh[53407]: Annotate node master-ee-to-cse-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ee-to-cse-0 bashible.sh[53407]: Succesful annotate node master-ee-to-cse-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
+   ```
+
+2. Выполните следующие команды для запуска временного пода CSE-редакции для получении актуальных дайджестов и списка модулей:
+
+   ```console
+   kubectl run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:v1.58.2 --command sleep -- infinity
+   ```
+
+   Как только под перейдёт в статус `Running`, выполните следующие команды:
+
+   ```console
+   CSE_SANDBOX_IMAGE=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | grep  pause | grep -oE 'sha256:\w*')
+
+   CSE_K8S_API_PROXY=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | grep kubernetesApiProxy | grep -oE 'sha256:\w*')
+
+   CSE_MODULES=$(kubectl exec cse-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*"  | awk {'print $9'} | cut -c5-)
+
+   USED_MODULES=$(kubectl get modules | grep -v 'snapshot-controller-crd' | grep Enabled |awk {'print $1'})
+
+   MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CSE_MODULES | tr ' ' '\n'))
+   ```
+
+3. Убедитесь, что используемые в кластере модули поддерживаются в CSE-редакции.
+   Например, на текущий момент в CSE-редакции отсутствует модуль cert-manager, поэтому перед его отключением необходимо перевести `https.mode` для связанных компонентов (например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/150-user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/300-prometheus/configuration.html#parameters-https-mode)) на альтернативаные варианты.
+
+   Отобразить список модулей, которые не поддерживаются в CSE-редакции и будут отключены, можно следующей командой:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE
+   ```
+
+   > Проверьте список и убедитесь, что функциональность указанных модулей не задействована вами в кластере, и вы готовы к их отключению.
+
+   Отключите неподдерживаемые в CSE-редакции модули:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "kubectl -n d8-system exec  deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+   ```
+
+   Дождитесь перехода пода Deckhouse в статус `Ready` и [выполнения всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse).
+
+
+4. Создайте NodeGroupConfiguration:
+
+   ```shell
+   kubectl apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: cse-set-sha-images.sh
+   spec:
+     nodeGroups:
+     - '*'
+     bundles:
+     - '*'
+     weight: 50
+     content: |
+        _on_containerd_config_changed() {
+          bb-flag-set containerd-need-restart
+        }
+        bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
+
+        bb-sync-file /etc/containerd/conf.d/cse-sandbox.toml - containerd-config-file-changed << "EOF_TOML"
+        [plugins]
+          [plugins."io.containerd.grpc.v1.cri"]
+            sandbox_image = "registry-cse.deckhouse.ru/deckhouse/cse@$CSE_SANDBOX_IMAGE"
+        EOF_TOML
+
+        sed -i 's|image: .*|image: registry-cse.deckhouse.ru/deckhouse/cse@$CSE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
+        sed -i 's|crictl pull .*|crictl pull registry-cse.deckhouse.ru/deckhouse/cse@$CSE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
+   EOF
+   ```
+
+    Дождитесь завершения синхронизации bashible на всех узлах.
+
+    Состояние синхронизации можно отследить по значению `UPTODATE` статуса (отображаемое число нод в этом статусе должно совпадать с общим числом нод (`NODES`) в группе):
+
+   ```shell
+   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   ```
+
+    Также в журнале systemd-сервиса bashible на узлах должно появиться сообщение `Configuration is in sync, nothing to do`.
+
+    Пример:
+
+    ```console
+    # journalctl -u bashible -n 5
+    Aug 21 11:04:28 master-ee-to-cse-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
+    Aug 21 11:04:28 master-ee-to-cse-0 bashible.sh[53407]: Annotate node master-ee-to-cse-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+    Aug 21 11:04:29 master-ee-to-cse-0 bashible.sh[53407]: Succesful annotate node master-ee-to-cse-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+    Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
+    ```
+
+5. Актуализируйте секрет доступа к registry deckhouse, выполнив следующие команды:
+
+   ```console
+   kubectl -n d8-system create secret generic deckhouse-registry \
+     --from-literal=".dockerconfigjson"="{\"auths\": { \"registry-cse.deckhouse.ru\": { \"username\": \"license-token\", \"password\": \"$LICENSE_TOKEN\", \"auth\": \"$AUTH_STRING\" }}}" \
+     --from-literal="address"=registry-cse.deckhouse.ru \
+     --from-literal="path"=/deckhouse/cse \
+     --from-literal="scheme"=https \
+     --type=kubernetes.io/dockerconfigjson \
+     --dry-run='client' \
+     -o yaml > /tmp/cse-deckhouse-registry.yaml
+   ```
+
+   ```console
+   kubectl replace -f /tmp/cse-deckhouse-registry.yaml
+   ```
+
+6. Примените CSE-образ:
+
+   ```console
+   kubectl -n d8-system set image deployment/deckhouse deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:v1.58.2
+   ```
+
+7. Дождитесь перехода пода Deckhouse в статус `Ready` и [выполнения всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
+
+   ```console
+   kubectl -n d8-system get po -l app=deckhouse
+
+   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
+   ```
+
+8. Проверьте, не осталось ли в кластере подов с адресом registry для Deckhouse EE:
+
+   ```console
+   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+     | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   ```
+
+   Если в выводе присутствует поды модуля chrony, заново включите данный модуль (в CSE этот модуль по умолчанию выключен):
+
+   ```console
+   kubectl  -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
+   ```
+
+9. Очистите временные файлы, ngc и переменные:
+
+   ```console
+   rm /tmp/cse-deckhouse-registry.yaml
+
+   kubectl delete ngc containerd-cse-config.sh cse-set-sha-images.sh
+
+   kubectl delete pod cse-image
+
+   kubectl apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: del-temp-config.sh
+   spec:
+     nodeGroups:
+     - '*'
+     bundles:
+     - '*'
+     weight: 90
+     content: |
+       if [ -f /etc/containerd/conf.d/cse-registry.toml ]; then
+         rm -f /etc/containerd/conf.d/cse-registry.toml
+       fi
+       if [ -f /etc/containerd/conf.d/cse-sandbox.toml ]; then
+         rm -f /etc/containerd/conf.d/cse-sandbox.toml
+       fi
+   EOF
+   ```
+
+   После синхронизации bashible (cтатус сихнронизации на узлах можно отследить по значению `UPTODATE` у nodegroup) удалите созданную ngc:
+
+   ```shell
+   kubectl  delete ngc del-temp-config.sh
+   ```
 
 ### How do I get access to Deckhouse controller in multimaster cluster?
 
