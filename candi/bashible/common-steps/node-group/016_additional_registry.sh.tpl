@@ -21,7 +21,6 @@ bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
   {{- if .digests.pause }}
       {{- $sandbox_image = printf "%s%s@%s" .secondaryRegistry.address .secondaryRegistry.path .images.common.pause }}
   {{- end }}
-{{- end }}
 
 mkdir -p /etc/containerd/conf.d
 
