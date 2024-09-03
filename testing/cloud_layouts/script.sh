@@ -378,7 +378,7 @@ function prepare_environment() {
     ssh_user="astra"
     ssh_user_system="altlinux"
     ssh_user_worker_0="redos"
-    ssh_user_worker_1="cloud-user"
+    ssh_user_worker_1="opensuse"
     ;;
   esac
 
