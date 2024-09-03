@@ -125,7 +125,8 @@ func (zc *Cloud) extractNodeAddressesFromVM(ctx context.Context, vm ovirtclient.
 		})
 	}
 
-	if len(localIP) < 1 {
+    // If there are no local IP addresses, replace them with external ones
+	if len(localIP) == 0 {
 		localIP = externalIP
 	}
 
