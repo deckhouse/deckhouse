@@ -32,7 +32,7 @@ metadata:
   name: deckhouse
   namespace: d8-system
   labels:
-    service-helm-fix: true
+    migration.deckhouse.io/fix-services-broken-by-helm: done
 spec:
   ports:
     - name: self

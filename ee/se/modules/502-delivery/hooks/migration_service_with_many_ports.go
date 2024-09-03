@@ -6,13 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	"fmt"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	v1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
@@ -34,26 +32,25 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"argocd-repo-server", "argocd-server"},
 			},
+			LabelSelector: &v1.LabelSelector{
+				MatchExpressions: []v1.LabelSelectorRequirement{
+					{
+						Key:      "migration.deckhouse.io/fix-services-broken-by-helm",
+						Operator: v1.LabelSelectorOpNotIn,
+						Values:   []string{"done"},
+					},
+				},
+			},
 			NamespaceSelector: lib.NsSelector(),
 		},
 	},
 }, patchServiceWithManyPorts)
 
 func applyServiceFilterHelmFix(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	service := &v1.Service{}
-	err := sdk.FromUnstructured(obj, service)
-	if err != nil {
-		return nil, err
-	}
-
-	if _, ok := service.Labels["service-helm-fix"]; !ok {
-		return serviceInfo{
-			name:      service.Name,
-			namespace: service.Namespace,
-		}, nil
-	}
-
-	return "", fmt.Errorf("no desired label found")
+	return serviceInfo{
+		name:      obj.GetName(),
+		namespace: obj.GetNamespace(),
+	}, nil
 }
 
 func patchServiceWithManyPorts(input *go_hook.HookInput) error {

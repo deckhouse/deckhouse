@@ -21,7 +21,7 @@ metadata:
   name: argocd-repo-server
   namespace: d8-delivery
   labels:
-    service-helm-fix: true
+    migration.deckhouse.io/fix-services-broken-by-helm: done
 spec:
   ports:
     - name: server
