@@ -415,7 +415,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 			if e := c.updateModuleReleaseStatusMessage(ctx, mr, disabledByIgnorePolicy); e != nil {
 				return ctrl.Result{Requeue: true}, e
 			}
-			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+			return ctrl.Result{RequeueAfter: defaultCheckInterval * 4}, nil
 		}
 	} else {
 		// get all policies regardless of their labels
