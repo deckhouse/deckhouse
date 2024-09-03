@@ -558,18 +558,22 @@ func (dcr *DeckhouseReleaseChecker) nextVersion(actual, target *semver.Version) 
 		return nil, fmt.Errorf("major version updated") // TODO step by step update for major version
 	}
 
-	if actual.Minor() == target.Minor() || actual.IncMinor().Minor() == target.Minor() {
-		return target, nil
+	if actual.Minor() == target.Minor() {
+		return dcr.getMaxPatch(1, actual.Minor())
 	}
 
+	// Here we get the following minor with the maximum patch version.
+	// <major.minor+1.max>
+	return dcr.getMaxPatch(1, actual.IncMinor().Minor())
+}
+
+func (dcr *DeckhouseReleaseChecker) getMaxPatch(major, minor uint64) (*semver.Version, error) {
 	tags, err := dcr.listTags()
 	if err != nil {
 		return nil, fmt.Errorf("list tags: %w", err)
 	}
 
-	// Here we get the following minor with the maximum patch version.
-	// <major.minor+1.max>
-	expr := fmt.Sprintf("^v1.%d.([0-9]+)$", actual.IncMinor().Minor())
+	expr := fmt.Sprintf("^v%d.%d.([0-9]+)$", major, minor)
 	r, err := regexp.Compile(expr)
 	if err != nil {
 		return nil, err
