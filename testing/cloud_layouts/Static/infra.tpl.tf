@@ -255,7 +255,7 @@ resource "openstack_compute_instance_v2" "worker_0" {
   user_data = file("redos-instance-bootstrap.sh")
 
   network {
-    port = openstack_networking_port_v2.worker_internal_without_security.id
+    port = openstack_networking_port_v2.worker_0_internal_without_security.id
   }
 
   block_device {
@@ -295,7 +295,7 @@ resource "openstack_compute_instance_v2" "worker_1" {
   user_data = file("opensuse-instance-bootstrap.sh")
 
   network {
-    port = openstack_networking_port_v2.worker_internal_without_security.id
+    port = openstack_networking_port_v2.worker_1_internal_without_security.id
   }
 
   block_device {
