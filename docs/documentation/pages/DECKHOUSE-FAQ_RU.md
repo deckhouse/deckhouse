@@ -968,19 +968,10 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ### Как переключить Deckhouse EE на CSE?
 
 {% alert %}
-Инструкция подразумевает использование публичного адреса container registry: `registry-cse.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
-{% endalert %}
-
-{% alert %}
-В Deckhouse CSE не поддерживается работа облачных кластеров и ряда модулей.
-{% endalert %}
-
-{% alert %}
-На текущий момент мигрировать на CSE-редакцию можно только с релиза 1.58.
-{% endalert %}
-
-{% alert %}
-При переключении на CSE-редакцию может наблюдаться недоступность компонентов кластера.
+- Инструкция подразумевает использование публичного адреса container registry: `registry-cse.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+- В Deckhouse CSE не поддерживается работа облачных кластеров и ряда модулей.
+- На текущий момент мигрировать на CSE-редакцию можно только с релиза 1.58.
+- При переключении на CSE-редакцию может наблюдаться недоступность компонентов кластера.
 {% endalert %}
 
 Для переключения кластера Deckhouse Enterprise Edition на Certified Security Edition выполните следующие действия (все команды выполняются на master-узле действующего кластера):
@@ -1023,7 +1014,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    EOF
    ```
 
-    Дождитесь появления файла на узлах и завершения синхронизации bashible:
+   Дождитесь появления файла на узлах и завершения синхронизации bashible:
 
    ```shell
    /etc/containerd/conf.d/cse-registry.toml
@@ -1035,7 +1026,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    ```
 
-    Пример:
+   Пример:
 
    ```console
    root@master-ee-to-cse-0:~# kubectl  get ng  -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
@@ -1044,9 +1035,9 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    worker   2       2       2
    ```
 
-    Также в журнале systemd-сервиса bashible должно появиться сообщение `Configuration is in sync, nothing to do`.
+   Также в журнале systemd-сервиса bashible должно появиться сообщение `Configuration is in sync, nothing to do`.
 
-    Пример:
+   Пример:
 
    ```console
    # journalctl -u bashible -n 5
@@ -1056,7 +1047,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
-2. Выполните следующие команды для запуска временного пода CSE-редакции для получения актуальных дайджестов и списка модулей:
+1. Выполните следующие команды для запуска временного пода CSE-редакции для получения актуальных дайджестов и списка модулей:
 
    ```console
    kubectl run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:v1.58.2 --command sleep -- infinity
@@ -1076,7 +1067,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CSE_MODULES | tr ' ' '\n'))
    ```
 
-3. Убедитесь, что используемые в кластере модули поддерживаются в CSE-редакции.
+1. Убедитесь, что используемые в кластере модули поддерживаются в CSE-редакции.
    Например, на текущий момент в CSE-редакции отсутствует модуль cert-manager, поэтому перед его отключением необходимо перевести `https.mode` для связанных компонентов (например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/150-user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/300-prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты.
 
    Отобразить список модулей, которые не поддерживаются в CSE-редакции и будут отключены, можно следующей командой:
@@ -1095,8 +1086,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
    Дождитесь перехода пода Deckhouse в статус `Ready` и [выполнения всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse).
 
-
-4. Создайте NodeGroupConfiguration:
+1. Создайте NodeGroupConfiguration:
 
    ```shell
    kubectl apply -f - <<EOF
@@ -1127,27 +1117,27 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    EOF
    ```
 
-    Дождитесь завершения синхронизации bashible на всех узлах.
+   Дождитесь завершения синхронизации bashible на всех узлах.
 
-    Состояние синхронизации можно отследить по значению `UPTODATE` статуса (отображаемое число узлов в этом статусе должно совпадать с общим числом узлов (`NODES`) в группе):
+   Состояние синхронизации можно отследить по значению `UPTODATE` статуса (отображаемое число узлов в этом статусе должно совпадать с общим числом узлов (`NODES`) в группе):
 
    ```shell
    kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    ```
 
-    Также в журнале systemd-сервиса bashible на узлах должно появиться сообщение `Configuration is in sync, nothing to do`.
+   Также в журнале systemd-сервиса bashible на узлах должно появиться сообщение `Configuration is in sync, nothing to do`.
 
-    Пример:
+   Пример:
 
-    ```console
-    # journalctl -u bashible -n 5
-    Aug 21 11:04:28 master-ee-to-cse-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
-    Aug 21 11:04:28 master-ee-to-cse-0 bashible.sh[53407]: Annotate node master-ee-to-cse-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-    Aug 21 11:04:29 master-ee-to-cse-0 bashible.sh[53407]: Succesful annotate node master-ee-to-cse-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-    Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
-    ```
+   ```console
+   # journalctl -u bashible -n 5
+   Aug 21 11:04:28 master-ee-to-cse-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
+   Aug 21 11:04:28 master-ee-to-cse-0 bashible.sh[53407]: Annotate node master-ee-to-cse-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ee-to-cse-0 bashible.sh[53407]: Succesful annotate node master-ee-to-cse-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
+   ```
 
-5. Актуализируйте секрет доступа к registry Deckhouse, выполнив следующие команды:
+1. Актуализируйте секрет доступа к registry Deckhouse, выполнив следующие команды:
 
    ```console
    kubectl -n d8-system create secret generic deckhouse-registry \
@@ -1164,13 +1154,13 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    kubectl replace -f /tmp/cse-deckhouse-registry.yaml
    ```
 
-6. Примените CSE-образ:
+1. Примените CSE-образ:
 
    ```console
    kubectl -n d8-system set image deployment/deckhouse deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:v1.58.2
    ```
 
-7. Дождитесь перехода пода Deckhouse в статус `Ready` и [выполнения всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
+1. Дождитесь перехода пода Deckhouse в статус `Ready` и [выполнения всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
 
    ```console
    kubectl -n d8-system get po -l app=deckhouse
@@ -1178,7 +1168,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
    ```
 
-8. Проверьте, не осталось ли в кластере подов с адресом registry для Deckhouse EE:
+1. Проверьте, не осталось ли в кластере подов с адресом registry для Deckhouse EE:
 
    ```console
    kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
@@ -1191,7 +1181,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    kubectl  -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
    ```
 
-9. Очистите временные файлы, ngc и переменные:
+1. Очистите временные файлы, ngc и переменные:
 
    ```console
    rm /tmp/cse-deckhouse-registry.yaml
