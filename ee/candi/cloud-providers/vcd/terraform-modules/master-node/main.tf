@@ -49,7 +49,7 @@ resource "vcd_vm_internal_disk" "kubernetes_data"{
   iops            = data.vcd_storage_profile.sp.iops_settings[0].disk_iops_per_gb_max > 0 ? data.vcd_storage_profile.sp.iops_settings[0].disk_iops_per_gb_max * local.master_instance_class.etcdDiskSizeGb : null
   storage_profile = data.vcd_storage_profile.sp.name
   bus_number      = 0
-  unit_number     = 1 # "/dev/sdb"
+  unit_number     = 1
   bus_type        = "paravirtual"
 }
 
@@ -61,8 +61,10 @@ resource "vcd_vm_internal_disk" "system_registry_data"{
   iops            = data.vcd_storage_profile.sp.iops_settings[0].disk_iops_per_gb_max > 0 ? data.vcd_storage_profile.sp.iops_settings[0].disk_iops_per_gb_max * local.master_instance_class.systemRegistryDiskSizeGb : null
   storage_profile = data.vcd_storage_profile.sp.name
   bus_number      = 0
-  unit_number     = 2 # "/dev/sdc"
+  unit_number     = 2
   bus_type        = "paravirtual"
+
+  depends_on = [ vcd_vm_internal_disk.kubernetes_data ]
 }
 
 resource "vcd_vapp_vm" "master" {
