@@ -168,6 +168,10 @@ spec:
                         Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
                       additionalProperties:
                         type: string
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        Allows you to modify the `.spec.loadBalancerClass` setting of a standard Service object.
                     behindL7Proxy:
                       type: boolean
                       description: |
@@ -210,6 +214,10 @@ spec:
                       additionalProperties:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        Allows you to modify the `.spec.loadBalancerClass` setting of a standard Service object.
                 hostPort:
                   type: object
                   description: |
@@ -752,6 +760,10 @@ spec:
                         Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
                       additionalProperties:
                         type: string
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        Allows you to modify the `.spec.loadBalancerClass` setting of a standard Service object.
                     behindL7Proxy:
                       type: boolean
                       description: |
@@ -794,6 +806,10 @@ spec:
                       additionalProperties:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        Allows you to modify the `.spec.loadBalancerClass` setting of a standard Service object.
                 loadBalancerWithSSLPassthrough:
                   type: object
                   x-doc-required: false
@@ -822,6 +838,10 @@ spec:
                       additionalProperties:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        Allows you to modify the `.spec.loadBalancerClass` setting of a standard Service object.
                 hostPort:
                   type: object
                   description: |
