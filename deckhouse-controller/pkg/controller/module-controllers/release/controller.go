@@ -437,14 +437,12 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 			}
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
+		mr.Status.Message = ""
 		patch, _ := json.Marshal(map[string]any{
 			"metadata": map[string]any{
 				"labels": map[string]any{
 					UpdatePolicyLabel: policy.Name,
 				},
-			},
-			"status": map[string]any{
-				"message": "",
 			},
 		})
 		p := client.RawPatch(types.MergePatchType, patch)
@@ -526,7 +524,6 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		//TODO: create custom error type with additional fields like reason end requeueAfter
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
-
 	if err != nil {
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, fmt.Errorf("apply predicted release: %w", err)
 	}
