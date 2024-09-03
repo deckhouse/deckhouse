@@ -360,12 +360,6 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	otherReleases := new(v1alpha1.ModuleReleaseList)
-	err := c.client.List(ctx, otherReleases, client.MatchingLabels{"module": moduleName})
-	if err != nil {
-		return ctrl.Result{Requeue: true}, err
-	}
-
 	// search symlink for module by regexp
 	// module weight for a new version of the module may be different from the old one,
 	// we need to find a symlink that contains the module name without looking at the weight prefix.
@@ -437,7 +431,6 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 			}
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
-		mr.Status.Message = ""
 		patch, _ := json.Marshal(map[string]any{
 			"metadata": map[string]any{
 				"labels": map[string]any{
@@ -456,6 +449,11 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	k8 := newKubeAPI(ctx, c.logger, c.client, c.downloadedModulesDir, c.symlinksDir, c.moduleManager, c.dc)
 	releaseUpdater := newModuleUpdater(c.logger, nConfig, policy.Spec.Update.Mode, k8, c.moduleManager.GetEnabledModuleNames())
 
+	otherReleases := new(v1alpha1.ModuleReleaseList)
+	err = c.client.List(ctx, otherReleases, client.MatchingLabels{"module": moduleName})
+	if err != nil {
+		return ctrl.Result{Requeue: true}, err
+	}
 	pointerReleases := make([]*v1alpha1.ModuleRelease, 0, len(otherReleases.Items))
 	for _, r := range otherReleases.Items {
 		pointerReleases = append(pointerReleases, &r)
