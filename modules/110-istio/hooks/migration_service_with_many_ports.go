@@ -28,8 +28,8 @@ import (
 )
 
 type serviceInfo struct {
-	name      string
-	namespace string
+	Name      string
+	Namespace string
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -59,8 +59,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func applyServiceFilterHelmFix(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return serviceInfo{
-		name:      obj.GetName(),
-		namespace: obj.GetNamespace(),
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
 	}, nil
 }
 
@@ -71,8 +71,8 @@ func patchServiceWithManyPorts(input *go_hook.HookInput) error {
 		input.PatchCollector.Delete(
 			"v1",
 			"Service",
-			serviceInfoObj.name,
-			serviceInfoObj.namespace,
+			serviceInfoObj.Name,
+			serviceInfoObj.Namespace,
 			object_patch.InForeground(),
 		)
 	}
