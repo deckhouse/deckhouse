@@ -515,7 +515,7 @@ function bootstrap_static() {
   >&2 echo "Run terraform to create nodes for Static cluster ..."
   pushd "$cwd"
   terraform init -input=false -plugin-dir=/plugins || return $?
-  terraform apply -state="${terraform_state_file}" -auto-approve -no-color -parallelism=1 | tee "$cwd/terraform.log" || return $?
+  terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
   popd
 
   if ! master_ip="$(grep -m1 "master_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
