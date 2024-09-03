@@ -5,8 +5,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package hooks
 
-//import (
-//	"github.com/deckhouse/deckhouse/go_lib/hooks/nodes"
-//)
-//
-//var _ = nodes.RegisterWaitToBecomeReadyHook()
+import (
+	"github.com/deckhouse/deckhouse/go_lib/hooks/nodes"
+)
+
+var _ = nodes.RegisterWaitToBecomeReadyHook()
