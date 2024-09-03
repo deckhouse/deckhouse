@@ -1077,7 +1077,8 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    Отключите неподдерживаемые в CSE-редакции модули:
 
    ```shell
-   echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "kubectl -n d8-system exec  deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+   echo $MODULES_WILL_DISABLE | 
+     tr ' ' '\n' | awk {'print "kubectl -n d8-system exec  deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
    ```
 
    Дождитесь перехода пода Deckhouse в статус `Ready` и [выполнения всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse).
@@ -1133,7 +1134,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
-1. Актуализируйте секрет доступа к registry Deckhouse, выполнив следующие команды:
+1. Актуализируйте секрет доступа к registry Deckhouse, выполнив следующую команду:
 
    ```console
    kubectl -n d8-system create secret generic deckhouse-registry \
@@ -1143,11 +1144,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
      --from-literal="scheme"=https \
      --type=kubernetes.io/dockerconfigjson \
      --dry-run='client' \
-     -o yaml > /tmp/cse-deckhouse-registry.yaml
-   ```
-
-   ```console
-   kubectl replace -f /tmp/cse-deckhouse-registry.yaml
+     -o yaml | kubectl replace -f -
    ```
 
 1. Примените CSE-образ:
@@ -1179,7 +1176,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    Если в выводе присутствуют поды модуля chrony, заново включите данный модуль (в CSE этот модуль по умолчанию выключен):
 
    ```console
-   kubectl  -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
+   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
    ```
 
 1. Очистите временные файлы, ngc и переменные:
@@ -1232,7 +1229,8 @@ kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Выполните команду:
 
    ```shell
-   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+   kubectl -n d8-system exec -ti svc/deckhouse-leader \
+     -c deckhouse -- deckhouse-controller edit cluster-configuration
    ```
 
 1. Измените параметр `kubernetesVersion`.
