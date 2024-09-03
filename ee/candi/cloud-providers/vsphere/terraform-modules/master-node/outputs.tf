@@ -13,6 +13,6 @@ output "kubernetes_data_device_path" {
   value = "/dev/sdb"
 }
 
-output "kubernetes_data_device_path" {
+output "system_registry_data_device_path" {
   value = var.systemRegistryEnable ? "/dev/sdc" : ""
 }
