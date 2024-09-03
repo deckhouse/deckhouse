@@ -712,7 +712,7 @@ ENDSSH
   # Prepare resources.yaml for starting working node with CAPS
   # shellcheck disable=SC2016
   env b64_SSH_KEY="$(base64 -w0 "$ssh_private_key_path")" WORKER_0_USER="$ssh_user_worker_0" WORKER_0_IP="$worker_0_ip" \
-      WORKER_1_USER="$ssh_user_worker_1" WORKER_1_IP="$worker_0_ip" \
+      WORKER_1_USER="$ssh_user_worker_1" WORKER_1_IP="$worker_1_ip" \
       envsubst '${b64_SSH_KEY} ${WORKER_0_USER} ${WORKER_0_IP} ${WORKER_1_USER} ${WORKER_1_IP}' \
       <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
 
