@@ -1156,10 +1156,11 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Дождитесь перехода пода Deckhouse в статус `Ready` и [выполнения всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
 
    Посмотреть статус пода Deckhouse:
+
    ```console
    kubectl -n d8-system get po -l app=deckhouse
    ```
-   
+
    Проверить состояние очереди Deckhouse:
 
    ```console
