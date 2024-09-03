@@ -84,6 +84,22 @@ resource "openstack_networking_port_v2" "system_internal_without_security" {
   }
 }
 
+resource "openstack_networking_port_v2" "worker_0_internal_without_security" {
+  network_id = openstack_networking_network_v2.internal.id
+  admin_state_up = "true"
+  fixed_ip {
+    subnet_id = openstack_networking_subnet_v2.internal.id
+  }
+}
+
+resource "openstack_networking_port_v2" "worker_1_internal_without_security" {
+  network_id = openstack_networking_network_v2.internal.id
+  admin_state_up = "true"
+  fixed_ip {
+    subnet_id = openstack_networking_subnet_v2.internal.id
+  }
+}
+
 resource "openstack_networking_router_v2" "router" {
   name = "candi-${PREFIX}"
   admin_state_up = "true"
@@ -214,7 +230,7 @@ resource "openstack_compute_instance_v2" "system" {
   availability_zone = var.az_zone
   user_data = file("alt-instance-bootstrap.sh")
 
-  network {
+network {
     port = openstack_networking_port_v2.system_internal_without_security.id
   }
 
@@ -224,14 +240,6 @@ resource "openstack_compute_instance_v2" "system" {
     destination_type = "volume"
     boot_index       = 0
     delete_on_termination = true
-  }
-}
-
-resource "openstack_networking_port_v2" "worker_0_internal_without_security" {
-  network_id = openstack_networking_network_v2.internal.id
-  admin_state_up = "true"
-  fixed_ip {
-    subnet_id = openstack_networking_subnet_v2.internal.id
   }
 }
 
@@ -264,14 +272,6 @@ resource "openstack_compute_instance_v2" "worker_0" {
     destination_type = "volume"
     boot_index       = 0
     delete_on_termination = true
-  }
-}
-
-resource "openstack_networking_port_v2" "worker_1_internal_without_security" {
-  network_id = openstack_networking_network_v2.internal.id
-  admin_state_up = "true"
-  fixed_ip {
-    subnet_id = openstack_networking_subnet_v2.internal.id
   }
 }
 
