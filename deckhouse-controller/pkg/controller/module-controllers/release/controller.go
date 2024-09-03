@@ -437,10 +437,18 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 					UpdatePolicyLabel: policy.Name,
 				},
 			},
+			"status": map[string]string{
+				"message": "",
+			},
 		})
 		p := client.RawPatch(types.MergePatchType, patch)
 
 		err = c.client.Patch(ctx, mr, p)
+		if err != nil {
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		}
+		// also patch status field
+		err = c.client.Status().Patch(ctx, mr, p)
 		if err != nil {
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
