@@ -215,7 +215,7 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 		return instanceTypes[i].Name < instanceTypes[j].Name
 	})
 
-	err = retryFunc(3, 3, c.logger, func() error {
+	err = retryFunc(15, 3, c.logger, func() error {
 		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		data, errGetting := c.k8sDynamicClient.Resource(v1alpha1.GVR).Get(cctx, v1alpha1.CloudDiscoveryDataResourceName, metav1.GetOptions{})
 		cancel()
@@ -262,7 +262,7 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 
 	if err != nil {
 		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
-		c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+		c.logger.Fatalln("Cannot update cloud data resource. Timed out. See error messages below.")
 	}
 }
 
@@ -334,7 +334,7 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 		return
 	}
 
-	err = retryFunc(3, 3, c.logger, func() error {
+	err = retryFunc(15, 3, c.logger, func() error {
 		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		secret, errGetting := c.k8sClient.CoreV1().Secrets("kube-system").Get(cctx, "d8-cloud-provider-discovery-data", metav1.GetOptions{})
 		cancel()
@@ -348,7 +348,8 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 				return fmt.Errorf("Cannot create cloud data resource: %v", err)
 			}
 
-			errGetting = nil
+		} else if errGetting != nil {
+			return fmt.Errorf("Cannot check d8-cloud-provider-discovery-data secret before creating it: %v", errGetting)
 		} else {
 			secret.Data = map[string][]byte{
 				"discovery-data.json": discoveryData,
@@ -373,7 +374,7 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 
 	if err != nil {
 		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
-		c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+		c.logger.Fatalln("Cannot update cloud data resource. Timed out. See error messages below.")
 	}
 }
 
@@ -414,7 +415,7 @@ func (c *Reconciler) orphanedDisksReconcile(ctx context.Context) {
 	c.logger.Infoln("Start orphaned disks discovery step")
 	defer c.logger.Infoln("Finish orphaned disks discovery step")
 
-	err := retryFunc(3, 3, c.logger, func() error {
+	err := retryFunc(15, 3, c.logger, func() error {
 		cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 
@@ -457,7 +458,7 @@ func (c *Reconciler) orphanedDisksReconcile(ctx context.Context) {
 
 	if err != nil {
 		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
-		c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+		c.logger.Fatalln("Cannot update cloud data resource. Timed out. See error messages below.")
 	}
 }
 
