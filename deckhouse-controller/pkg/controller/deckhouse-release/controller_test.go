@@ -453,8 +453,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 
-		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.26 is available. Release will be applied at: Friday, 01-Jan-21 14:30:00 UTC")
-		require.Contains(suite.T(), httpBody, `"version":"1.26"`)
+		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.26.0 is available. Release will be applied at: Friday, 01-Jan-21 14:30:00 UTC")
+		require.Contains(suite.T(), httpBody, `"version":"1.26.0"`)
 		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
 	})
 
@@ -493,8 +493,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 
-		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.36 is available. Release will be applied at: Monday, 11-Nov-22 23:23:23 UTC")
-		require.Contains(suite.T(), httpBody, `"version":"1.36"`)
+		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.36.0 is available. Release will be applied at: Monday, 11-Nov-22 23:23:23 UTC")
+		require.Contains(suite.T(), httpBody, `"version":"1.36.0"`)
 		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
 	})
 
@@ -566,6 +566,33 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Patch release notification", func() {
+		var httpBody string
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			data, _ := io.ReadAll(r.Body)
+			httpBody = string(data)
+		}))
+		defer svr.Close()
+
+		ds := &helpers.DeckhouseSettings{
+			ReleaseChannel: embeddedMUP.ReleaseChannel,
+		}
+		ds.Update.Mode = embeddedMUP.Update.Mode
+		ds.Update.Windows = embeddedMUP.Update.Windows
+		ds.Update.NotificationConfig.WebhookURL = svr.URL
+		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: 2 * time.Hour}
+		ds.Update.NotificationConfig.ReleaseType = updater.ReleaseTypeAll
+
+		suite.setupControllerSettings("patch-release-notification.yaml", initValues, ds)
+		dr := suite.getDeckhouseRelease("v1.26.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+
+		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.25.1 is available. Release will be applied at: Friday, 01-Jan-21 15:30:00 UTC")
+		require.Contains(suite.T(), httpBody, `"version":"1.25.1"`)
+		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
 	})
 
 	suite.Run("Release with apply-now annotation out of window", func() {
