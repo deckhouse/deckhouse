@@ -773,7 +773,7 @@ ENDSSH
       break
     else
       registration_failed="true"
-      >&2 echo "Node registration is still in progress (attempt #$i of 10). Sleeping 60 seconds ..."
+      >&2 echo "Node registration is still in progress (attempt #$i of 20). Sleeping 60 seconds ..."
       sleep 60
     fi
   done
