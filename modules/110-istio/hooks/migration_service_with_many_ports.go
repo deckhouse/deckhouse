@@ -42,6 +42,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "v1",
 			Kind:       "Service",
 			FilterFunc: applyServiceFilterHelmFix,
+                         LabelSelector: &v1.LabelSelector{
+                                MatchExpressions: []v1.LabelSelectorRequirement{
+                                        {
+                                                Key:      "migration.deckhouse.io/fix-services-broken-by-helm",
+                                                Operator: v1.LabelSelectorOpNotIn,
+                                                Values:   []string{"done"},
+                                        },
+                                },
+                        },
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"kiali"},
 			},
