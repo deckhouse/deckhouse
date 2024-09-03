@@ -16,7 +16,7 @@ spec:
   scope: Cluster
   versions:
     - name: v1alpha1
-      served: true
+      served: false
       storage: false
       deprecated: true
       subresources:
@@ -41,14 +41,14 @@ spec:
                   type: string
                 projectTypeName:
                   description: |
-                    The name of the [ProjectType](../cr.html#projecttype) resource that defines which resources will be created in the project.
+                    The name of the [ProjectType](cr.html#projecttype) resource that defines which resources will be created in the project.
                   type: string
                 template:
                   additionalProperties:
                     x-kubernetes-preserve-unknown-fields: true
                   description: |
-                    Values passed to the [resources template](../cr.html#projecttype-v1alpha1-spec-resourcestemplate) when creating the project.
-                    Before creation, the values are validated against the [schema](../cr.html#projecttype-v1alpha1-spec-openapi) of the template's input parameters.
+                    Values passed to the [resources template](cr.html#projecttype-v1alpha1-spec-resourcestemplate) when creating the project.
+                    Before creation, the values are validated against the [schema](cr.html#projecttype-v1alpha1-spec-openapi) of the template's input parameters.
                   type: object
             status:
               type: object
@@ -108,13 +108,19 @@ spec:
             status:
               type: object
               properties:
+                namespaces:
+                  description: Used namespaces.
+                  type: array
+                  items:
+                    type: string
                 observedGeneration:
+                  description: The last observed project`s generation
                   type: integer
                 templateGeneration:
+                  description: The last observed template`s generation
                   type: integer
                 conditions:
                   type: array
-                  x-kubernetes-patch-strategy: "retainKeys"
                   items:
                     type: object
                     properties:

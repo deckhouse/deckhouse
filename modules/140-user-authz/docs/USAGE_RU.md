@@ -2,7 +2,231 @@
 title: "Модуль user-authz: примеры конфигурации"
 ---
 
+## Пример назначения прав администратору кластера
+
+{% alert level="info" %}
+Пример использует [новую ролевую модель](./#новая-ролевая-модель).
+{% endalert %}
+
+Для назначения прав администратору кластера используйте роль `d8:manage:all:admin` в `ClusterRoleBinding`.
+
+Пример назначения прав администратору кластера (User `joe`):
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-admin-joe
+subjects:
+- kind: User
+  name: joe
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:manage:all:admin
+  apiGroup: rbac.authorization.k8s.io
+```
+
+{% offtopic title="Права, которые получит пользователь" %}
+Права, которые получит пользователь будут ограничены рамками namespace, начинающихся с `d8-` или `kube-`.
+
+Пользователь сможет:
+- Просматривать, изменять, удалять и создавать ресурсы Kubernetes и модулей DKP;
+- Изменять конфигурацию модулей (просматривать, изменять, удалять и создавать ресурсы `moduleConfig`);
+- Выполнять следующие команды к подам и сервисам:
+  - `kubectl attach`
+  - `kubectl exec`
+  - `kubectl port-forward`
+  - `kubectl proxy`
+{% endofftopic %}
+
+## Пример назначения прав сетевому администратору
+
+{% alert level="info" %}
+Пример использует [новую ролевую модель](./#новая-ролевая-модель).
+{% endalert %}
+
+Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте роль `d8:manage:networking:admin` в `ClusterRoleBinding`.
+
+Пример назначения прав сетевому администратору (User `joe`):
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: network-admin-joe
+subjects:
+- kind: User
+  name: joe
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:manage:networking:admin
+  apiGroup: rbac.authorization.k8s.io
+```
+
+{% offtopic title="Список прав, которые получит пользователь" %}
+Права, которые получит пользователь, будут ограничены следующим списком namespace модулей DKP из области `networking` (фактический список зависит от списка включенных в кластере модулей):
+- `d8-cni-cilium`
+- `d8-cni-flannel`
+- `d8-cni-simple-bridge`
+- `d8-ingress-nginx`
+- `d8-istio`
+- `d8-metallb`
+- `d8-network-gateway`
+- `d8-openvpn`
+- `d8-static-routing-manager`
+- `d8-system`
+- `kube-system`
+
+Пользователь сможет:
+- Просматривать, изменять, удалять и создавать *стандартные* ресурсы Kubernetes в namespace модулей из области `networking`.
+
+  Пример ресурсов, которыми сможет управлять пользователь (список не полный):
+  - `Certificate`
+  - `CertificateRequest`
+  - `ConfigMap`
+  - `ControllerRevision`
+  - `CronJob`
+  - `DaemonSet`
+  - `Deployment`
+  - `Event`
+  - `HorizontalPodAutoscaler`
+  - `Ingress`
+  - `Issuer`
+  - `Job`
+  - `Lease`
+  - `LimitRange`
+  - `NetworkPolicy`
+  - `PersistentVolumeClaim`
+  - `Pod`
+  - `PodDisruptionBudget`
+  - `ReplicaSet`
+  - `ReplicationController`
+  - `ResourceQuota`
+  - `Role`
+  - `RoleBinding`
+  - `Secret`
+  - `Service`
+  - `ServiceAccount`
+  - `StatefulSet`
+  - `VerticalPodAutoscaler`
+  - `VolumeSnapshot`
+
+- Просматривать, изменять, удалять и создавать следующие ресурсы в namespace модулей из области `networking`:
+
+  Список ресурсов, которыми сможет управлять пользователь:
+  - `EgressGateway`
+  - `EgressGatewayPolicy`
+  - `FlowSchema`
+  - `IngressClass`
+  - `IngressIstioController`
+  - `IngressNginxController`
+  - `IPRuleSet`
+  - `IstioFederation`
+  - `IstioMulticluster`
+  - `RoutingTable`
+
+- Изменять конфигурацию модулей (просматривать, изменять, удалять и создавать ресурсы moduleConfig) из области `networking`.
+
+  Список модулей, которыми сможет управлять пользователь:
+  - `cilium-hubble`
+  - `cni-cilium`
+  - `cni-flannel`
+  - `cni-simple-bridge`
+  - `flow-schema`
+  - `ingress-nginx`
+  - `istio`
+  - `kube-dns`
+  - `kube-proxy`
+  - `metallb`
+  - `network-gateway`
+  - `network-policy-engine`
+  - `node-local-dns`
+  - `openvpn`
+  - `static-routing-manager`
+
+- Выполнять следующие команды к подам и сервисам в namespace модулей из области `networking`:
+  - `kubectl attach`
+  - `kubectl exec`
+  - `kubectl port-forward`
+  - `kubectl proxy`
+{% endofftopic %}
+
+## Пример назначения административных прав пользователю в рамках namespace
+
+{% alert level="info" %}
+Пример использует [новую ролевую модель](./#новая-ролевая-модель).
+{% endalert %}
+
+Для назначения прав на управление ресурсами приложений в рамках namespace, но без возможности настройки модулей DKP, используйте роль `d8:use:role:admin` в `RoleBinding` в соответствующем namespace.
+
+Пример назначения прав разработчику приложений (User `app-developer`) в namespace `myapp`:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: myapp-developer
+  namespace: myapp
+subjects:
+- kind: User
+  name: app-developer
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:use:role:admin
+  apiGroup: rbac.authorization.k8s.io
+```
+
+{% offtopic title="Список прав, которые получит пользователь" %}
+В рамках namespace `myapp` пользователь сможет:
+- Просматривать, изменять, удалять и создавать ресурсы Kubernetes. Например, следующие ресурсы (список не полный):
+  - `Certificate`
+  - `CertificateRequest`
+  - `ConfigMap`
+  - `ControllerRevision`
+  - `CronJob`
+  - `DaemonSet`
+  - `Deployment`
+  - `Event`
+  - `HorizontalPodAutoscaler`
+  - `Ingress`
+  - `Issuer`
+  - `Job`
+  - `Lease`
+  - `LimitRange`
+  - `NetworkPolicy`
+  - `PersistentVolumeClaim`
+  - `Pod`
+  - `PodDisruptionBudget`
+  - `ReplicaSet`
+  - `ReplicationController`
+  - `ResourceQuota`
+  - `Role`
+  - `RoleBinding`
+  - `Secret`
+  - `Service`
+  - `ServiceAccount`
+  - `StatefulSet`
+  - `VerticalPodAutoscaler`
+  - `VolumeSnapshot`
+- Просматривать, изменять, удалять и создавать следующие ресурсы модулей DKP:
+  - `DexAuthenticator`
+  - `DexClient`
+  - `PodLogginConfig`
+- Выполнять следующие команды к подам и сервисам:
+  - `kubectl attach`
+  - `kubectl exec`
+  - `kubectl port-forward`
+  - `kubectl proxy`
+{% endofftopic %}
+
 ## Пример `ClusterAuthorizationRule`
+
+{% alert level="warning" %}
+Пример использует [устаревшую ролевую модель](./#устаревшая-ролевая-модель).
+{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -36,6 +260,10 @@ spec:
 ```
 
 ## Создание пользователя
+
+{% alert level="warning" %}
+Это пример для [устаревшей ролевой модели](./#устаревшая-ролевая-модель).
+{% endalert %}
 
 В Kubernetes есть две категории пользователей:
 
@@ -176,6 +404,10 @@ spec:
    ```
 
 ### Создание пользователя с помощью клиентского сертификата
+
+{% alert level="warning" %}
+Это пример для [устаревшей ролевой модели](./#устаревшая-ролевая-модель).
+{% endalert %}
 
 #### Создание пользователя
 
@@ -351,7 +583,11 @@ EOF
 
 ## Настройка прав высокоуровневых ролей
 
-Если требуется добавить прав для определенной [высокоуровневой роли](./#ролевая-модель), достаточно создать ClusterRole с аннотацией `user-authz.deckhouse.io/access-level: <AccessLevel>`.
+{% alert level="warning" %}
+Это пример для [устаревшей ролевой модели](./#устаревшая-ролевая-модель).
+{% endalert %}
+
+Если требуется добавить прав для определенной [высокоуровневой роли](./#устаревшая-ролевая-модель), достаточно создать ClusterRole с аннотацией `user-authz.deckhouse.io/access-level: <AccessLevel>`.
 
 Пример:
 

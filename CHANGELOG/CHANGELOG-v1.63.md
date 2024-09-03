@@ -44,6 +44,7 @@
 ## Fixes
 
 
+ - **[candi]** Fix for bootstrap or upgrade an existing cluster installed in AWS using the "Standard" layout. [#9545](https://github.com/deckhouse/deckhouse/pull/9545)
  - **[candi]** Fix catch exit codes in cloud-providers bootstrap-network scripts. [#9448](https://github.com/deckhouse/deckhouse/pull/9448)
  - **[candi]** Before running `kubectl` check if it exists. [#9438](https://github.com/deckhouse/deckhouse/pull/9438)
  - **[candi]** Fix bootstrap network script for nodes with many interfaces for cloud-provider Yandex Cloud. [#9408](https://github.com/deckhouse/deckhouse/pull/9408)
@@ -58,11 +59,15 @@
  - **[candi]** Fix index overflow when retrieving values from the list of external IP addresses. [#8877](https://github.com/deckhouse/deckhouse/pull/8877)
  - **[candi]** Fixed kubelet server certificate rotation. [#8603](https://github.com/deckhouse/deckhouse/pull/8603)
  - **[cloud-provider-vcd]** Create virtual machine NIC before the VM starts. [#9255](https://github.com/deckhouse/deckhouse/pull/9255)
+ - **[cni-cilium]** Fixing masquerading between DVP virtual machines. [#9529](https://github.com/deckhouse/deckhouse/pull/9529)
+    This fix disables masquerading between virtual machines.
  - **[cni-cilium]** Improved the `CiliumAgentUnreachableHealthEndpoints` metric expression to avoid false positives. [#9198](https://github.com/deckhouse/deckhouse/pull/9198)
  - **[deckhouse]** Allow admins to change objects with `kind=StorageClass`. [#9398](https://github.com/deckhouse/deckhouse/pull/9398)
  - **[deckhouse]** Allow admins to change objects with `kind=StorageClass`. [#9362](https://github.com/deckhouse/deckhouse/pull/9362)
  - **[deckhouse-controller]** Fix panic on invalid module image [#9231](https://github.com/deckhouse/deckhouse/pull/9231)
  - **[deckhouse-controller]** Deckhouse update metrics restored. [#9147](https://github.com/deckhouse/deckhouse/pull/9147)
+ - **[dhctl]** Fixed checking the length of the list of external IP addresses in the `YandexClusterConfiguration`. [#9449](https://github.com/deckhouse/deckhouse/pull/9449)
+ - **[dhctl]** Fix static installation consume 100% of CPU. [#9359](https://github.com/deckhouse/deckhouse/pull/9359)
  - **[dhctl]** Wait for resources required by manifest being created. [#9157](https://github.com/deckhouse/deckhouse/pull/9157)
  - **[dhctl]** Fix creation cloudPermanent nodes with valid length name (no longer 42 symbols). [#9075](https://github.com/deckhouse/deckhouse/pull/9075)
  - **[dhctl]** Automatically use `--ssh-user` as `--ssh-bastion-user` if not set by the user. [#9061](https://github.com/deckhouse/deckhouse/pull/9061)
@@ -73,6 +78,7 @@
  - **[global-hooks]** Fixed the Services with multiple ports broken by Helm. [#9392](https://github.com/deckhouse/deckhouse/pull/9392)
  - **[go_lib]** Fix work `registry-packages-proxy` with module sources. [#9112](https://github.com/deckhouse/deckhouse/pull/9112)
     `registry-packages-proxy` should be restarted.
+ - **[istio]** Fixed graph display issue in Kiali. [#9523](https://github.com/deckhouse/deckhouse/pull/9523)
  - **[istio]** Granted permissions for `istio-cni-node` to restart pods without properly configured iptables for traffic redirection. [#9444](https://github.com/deckhouse/deckhouse/pull/9444)
  - **[istio]** Fix istio module operability in managed K8s setups. [#9275](https://github.com/deckhouse/deckhouse/pull/9275)
  - **[istio]** Istio 1.19 version compatibility extended with K8s versions 1.29 and 1.30. [#9217](https://github.com/deckhouse/deckhouse/pull/9217)
@@ -82,6 +88,7 @@
  - **[multitenancy-manager]** Fix templates. [#9358](https://github.com/deckhouse/deckhouse/pull/9358)
  - **[multitenancy-manager]** Fix templates bugs. [#9205](https://github.com/deckhouse/deckhouse/pull/9205)
  - **[network-policy-engine]** Downgrade iptables version from `1.8.10` to `1.8.9` due to iptables chains overflow. You need to clear unwanted iptables rules manually or reboot the affected nodes. [#9315](https://github.com/deckhouse/deckhouse/pull/9315)
+ - **[node-local-dns]** Use `prefer_udp `to connect with kube-dns. [#9548](https://github.com/deckhouse/deckhouse/pull/9548)
  - **[node-manager]** Fix role rights for cluster-autoscaler `1.29`, `1.30`. [#9294](https://github.com/deckhouse/deckhouse/pull/9294)
  - **[node-manager]** Reducing unnecessary kube-apiserver logsl. [#9134](https://github.com/deckhouse/deckhouse/pull/9134)
     Reducing unnecessary kube-apiserver logs.
@@ -94,11 +101,15 @@
  - **[registrypackages]** Downgrade iptables version from `1.8.10` to `1.8.9`. [#9315](https://github.com/deckhouse/deckhouse/pull/9315)
  - **[upmeter]** Fixed status page CSS in air-gapped environments. [#9287](https://github.com/deckhouse/deckhouse/pull/9287)
  - **[upmeter]** Fixed flapping status page API. [#9287](https://github.com/deckhouse/deckhouse/pull/9287)
+ - **[user-authn]** Fix the problem when the user is not allowed to access web interfaces if the allowed groups option is specified in Dex authenticator. [#9514](https://github.com/deckhouse/deckhouse/pull/9514)
+ - **[user-authn]** Update `client-groups.patch` for Dex. [#9465](https://github.com/deckhouse/deckhouse/pull/9465)
+ - **[user-authn]** Show real ip addresses in dex and dex-authenticator logs. [#9221](https://github.com/deckhouse/deckhouse/pull/9221)
  - **[user-authn]** Allow to create users with invalid email. [#9171](https://github.com/deckhouse/deckhouse/pull/9171)
 
 ## Chore
 
 
+ - **[admission-policy-engine]** Update the list of excluded sa. [#9505](https://github.com/deckhouse/deckhouse/pull/9505)
  - **[candi]** Bump patch versions of Kubernetes images: `v1.27.16`, `v1.28.12`, `v1.29.7`, `v1.30.3` [#9203](https://github.com/deckhouse/deckhouse/pull/9203)
     Kubernetes control-plane components will restart, kubelet will restart.
  - **[candi]** Remove references to static `BASE_SHELL_OPERATOR` image. [#9162](https://github.com/deckhouse/deckhouse/pull/9162)

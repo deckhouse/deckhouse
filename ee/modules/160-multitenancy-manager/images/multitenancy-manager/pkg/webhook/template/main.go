@@ -41,11 +41,6 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 			return admission.Errored(http.StatusBadRequest, err)
 		}
 
-		// cannot create/update template with deckhouse heritage
-		if msg := v.validateHeritage(req, template); msg != "" {
-			return admission.Denied(msg)
-		}
-
 		// cannot create/update invalid template
 		if err := validate.ProjectTemplate(template); err != nil {
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("project template validation failed: %v", err))
@@ -54,11 +49,6 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 	if req.Operation == admissionv1.Delete {
 		if err := yaml.Unmarshal(req.OldObject.Raw, template); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
-		}
-
-		// cannot delete template with deckhouse heritage
-		if msg := v.validateHeritage(req, template); msg != "" {
-			return admission.Denied(msg)
 		}
 
 		// cannot delete template if it is used
@@ -72,14 +62,4 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 		}
 	}
 	return admission.Allowed("")
-}
-
-func (v *validator) validateHeritage(req admission.Request, template *v1alpha1.ProjectTemplate) string {
-	if template.Labels != nil {
-		heritage, ok := template.Labels[consts.HeritageLabel]
-		if ok && heritage == consts.DeckhouseHeritage && req.UserInfo.Username != v.serviceAccount {
-			return fmt.Sprintf("The '%s' project template has the 'heritage' label with forbidden value: 'deckhouse'", template.Name)
-		}
-	}
-	return ""
 }

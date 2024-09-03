@@ -24,8 +24,34 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
+
+type testState struct{}
+
+func (s *testState) SetGlobalPreflightchecksWasRan() error {
+	return nil
+}
+
+func (s *testState) GlobalPreflightchecksWasRan() (bool, error) {
+	return false, nil
+}
+
+func (s *testState) SetCloudPreflightchecksWasRan() error {
+	return nil
+}
+
+func (s *testState) CloudPreflightchecksWasRan() (bool, error) {
+	return false, nil
+}
+
+func (s *testState) SetStaticPreflightchecksWasRan() error {
+	return nil
+}
+
+func (s *testState) StaticPreflightchecksWasRan() (bool, error) {
+	return false, nil
+}
 
 func TestCheckRegistryAccessThroughProxy(t *testing.T) {
 	tests := map[string]func(*testing.T){
@@ -169,7 +195,9 @@ deckhouse:
 		installer, err := config.PrepareDeckhouseInstallConfig(metaConfig)
 		s.NoError(err)
 
-		preflightChecker := NewChecker(&ssh.Client{}, installer, metaConfig)
+		bootstrapState := &testState{}
+
+		preflightChecker := NewChecker(ssh.NewNodeInterfaceWrapper(&ssh.Client{}), installer, metaConfig, bootstrapState)
 
 		err = preflightChecker.CheckRegistryAccessThroughProxy()
 		if test.skipped {

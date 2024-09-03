@@ -1,0 +1,19 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8storageclass
+tests:
+  - name: d8storageclass
+    template: ../../templates/operation/storage-class.yaml
+    constraint: constraint.yaml
+    cases:
+      - name: example-allowed
+        object: allowed.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed
+        object: disallowed.yaml
+        assertions:
+          - violations: yes
+            message: >-
+              PersistentVolumeClaim <disallowed> has invalid storage class: bar

@@ -1,0 +1,3 @@
+module: flant-integration
+scopes:
+  - deckhouse

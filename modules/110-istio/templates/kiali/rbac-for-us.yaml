@@ -159,6 +159,14 @@ rules:
   - subjectaccessreviews
   verbs:
   - create
+- apiGroups:
+  - apps
+  resourceNames:
+  - trickster
+  resources:
+  - deployments/http
+  verbs:
+  - create
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

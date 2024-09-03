@@ -8,6 +8,7 @@ package project
 import (
 	"context"
 	"reflect"
+	"strings"
 	"sync"
 
 	"controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/go-logr/logr"
 
+	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -24,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -62,6 +65,15 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, log logr.
 			predicate.AnnotationChangedPredicate{},
 			predicate.GenerationChangedPredicate{},
 			customPredicate[client.Object]{log: log})).
+		Watches(&v1.Namespace{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
+			if _, ok := object.GetLabels()[consts.ProjectTemplateLabel]; ok {
+				return nil
+			}
+			if strings.HasPrefix(object.GetName(), consts.KubernetesNamespacePrefix) || strings.HasPrefix(object.GetName(), consts.DeckhouseNamespacePrefix) {
+				return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: consts.DeckhouseProjectName}}}
+			}
+			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: consts.DefaultProjectName}}}
+		})).
 		Complete(projectController)
 }
 
@@ -76,25 +88,31 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// wait for init
 	r.init.Wait()
 
-	r.log.Info("reconciling project", "project", req.Name)
+	r.log.Info("reconciling the project", "project", req.Name)
 	project := &v1alpha2.Project{}
 	if err := r.client.Get(ctx, req.NamespacedName, project); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.log.Info("project not found", "project", req.Name)
+			r.log.Info("the project not found", "project", req.Name)
 			return reconcile.Result{}, nil
 		}
-		r.log.Error(err, "error getting project", "project", req.Name)
+		r.log.Error(err, "error getting the project", "project", req.Name)
 		return reconcile.Result{}, nil
 	}
 
-	// handle deletion
+	// handle virtual projects
+	if project.Spec.ProjectTemplateName == consts.VirtualTemplate {
+		r.log.Info("reconcile the virtual project", "project", req.Name)
+		return r.projectManager.HandleVirtual(ctx, project)
+	}
+
+	// handle the project deletion
 	if !project.DeletionTimestamp.IsZero() {
-		r.log.Info("deleting project", "project", project.Name)
+		r.log.Info("deleting the project", "project", project.Name)
 		return r.projectManager.Delete(ctx, project)
 	}
 
 	// ensure the project
-	r.log.Info("ensuring project", "project", project.Name)
+	r.log.Info("ensuring the project", "project", project.Name)
 	return r.projectManager.Handle(ctx, project)
 }
 
@@ -113,8 +131,9 @@ func (p customPredicate[T]) Update(e event.TypedUpdateEvent[T]) bool {
 		return false
 	}
 
-	if e.ObjectNew.GetAnnotations() != nil {
-		if val, ok := e.ObjectNew.GetAnnotations()[consts.ProjectRequireSyncAnnotation]; ok && val == consts.ProjectRequireSyncKeyTrue {
+	// skip projects that do not require sync
+	if annotations := e.ObjectNew.GetAnnotations(); annotations != nil {
+		if val, ok := annotations[consts.ProjectRequireSyncAnnotation]; ok && val == "true" {
 			return true
 		}
 	}

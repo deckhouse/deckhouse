@@ -319,6 +319,35 @@ dhctl bootstrap \
 - `<SSH_USER>` — SSH user on the server;
 - `--ssh-agent-private-keys` — file with the private SSH key for connecting via SSH.
 
+### Pre-installation checks
+
+{% offtopic title="Scheme of checks prior to Deckhouse installation..." %}
+![Scheme of checks prior to Deckhouse installation](../images/installing/preflight-checks.png)
+{% endofftopic %}
+
+List of checks performed by the installer before starting the installation of Deckhouse:
+- General checks:
+  - The values of the [PublicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) and [clusterDomain](configuration.html#clusterconfiguration-clusterdomain) parameters don't match.
+  - The authentication data for the container registry specified in the installation configuration is correct.
+  - The hostname meets the following requirements:
+    - length <= 63 characters;
+    - in lowercase;
+    - does not contain special characters (only `-` and `.`, which cannot be at the beginning or end of the name, are allowed).
+  - There is no installed CRI (containerd) on the server (VM).
+  - The hostname is unique relative to other hostnames in the cluster.
+- Checks for static and hybrid cluster installation:
+  - Only one `--ssh-host` parameter is specified. For static cluster configuration, only one IP address can be specified to configure the first master node.
+  - It is possible to connect via SSH using the specified authentication data.
+  - It is possible to establish an SSH tunnel to the master node server (VM).
+  - The server (VM) meets the minimum requirements for configuring the master node.
+  - Python and the necessary libraries are installed on the server (VM) for the master node.
+  - The container registry is accessible through a proxy (if proxy settings are specified in the installation configuration).
+  - The server (VM) for the master node and the installer host have free ports required for the installation process.
+  - localhost resolves in DNS to IP 127.0.0.1.
+  - The `sudo` command is available to the user on the server (VM). 
+- Checks for cloud cluster installation:
+  - The master node virtual machine configuration meets the minimum requirements.
+
 ### Aborting the installation
 
 If the installation was carried out in a supported cloud and was interrupted for any reason, or if problems occurred during the installation, resources that were created during the installation may end up residing in the cloud. To purge them, run the `dhctl bootstrap-phase abort` command in the installer container.

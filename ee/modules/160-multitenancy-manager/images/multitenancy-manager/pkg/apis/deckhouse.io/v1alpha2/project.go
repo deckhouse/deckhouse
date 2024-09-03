@@ -122,6 +122,9 @@ func (p *ProjectSpec) DeepCopyInto(newObj *ProjectSpec) {
 }
 
 type ProjectStatus struct {
+	// Used namespaces
+	Namespaces []string `json:"namespaces,omitempty"`
+
 	// Observed generation
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
@@ -151,6 +154,11 @@ func (p *ProjectStatus) DeepCopyInto(newObj *ProjectStatus) {
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
+	}
+	if p.Namespaces != nil {
+		in, out := &p.Namespaces, &newObj.Namespaces
+		*out = make([]string, len(*in))
+		copy(*out, *in)
 	}
 	newObj.ObservedGeneration = p.ObservedGeneration
 	newObj.TemplateGeneration = p.TemplateGeneration

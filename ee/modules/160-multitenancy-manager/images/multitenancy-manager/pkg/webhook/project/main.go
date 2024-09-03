@@ -7,6 +7,7 @@ package project
 
 import (
 	"context"
+	"controller/pkg/consts"
 	"fmt"
 	"net/http"
 	"strings"
@@ -38,6 +39,11 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 	}
 	if strings.HasPrefix(project.Name, "d8-") || strings.HasPrefix(project.Name, "kube-") {
 		return admission.Denied("Projects cannot start with 'd8-' or 'kube-'")
+	}
+
+	// allow virtual projects
+	if project.Name == consts.DefaultProjectName || project.Name == consts.DeckhouseProjectName {
+		return admission.Allowed("")
 	}
 
 	namespaces := new(v1.NamespaceList)
