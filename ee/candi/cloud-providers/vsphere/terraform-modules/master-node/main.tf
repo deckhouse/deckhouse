@@ -187,7 +187,7 @@ resource "vsphere_virtual_machine" "master" {
       label        = "disk2"
       unit_number  = 2
       attach       = true
-      path         = vsphere_virtual_disk.system_registry_data.vmdk_path
+      path         = vsphere_virtual_disk.system_registry_data[0].vmdk_path
       datastore_id = data.vsphere_datastore.datastore.id
     }
   }
