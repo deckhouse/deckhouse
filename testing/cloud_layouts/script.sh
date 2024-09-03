@@ -766,7 +766,7 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 kubectl get nodes -o wide
-kubectl get nodes -o json | jq -re '.items | length == 3' >/dev/null
+kubectl get nodes -o json | jq -re '.items | length == 4' >/dev/null
 kubectl get nodes -o json | jq -re '[ .items[].status.conditions[] | select(.type == "Ready") ] | map(.status == "True") | all' >/dev/null
 ENDSSH
       registration_failed=""
