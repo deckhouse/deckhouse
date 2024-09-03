@@ -96,7 +96,7 @@ type BashibleContext struct {
 	moduleSourcesQueue                chan queueAction
 	moduleSourcesConfigurationChanged chan struct{}
 
-	secondaryRegistrySecretQueue   chan queueAction
+	secondaryRegistrySecretQueue   chan queueChangeRegistrySecretAction
 	secondaryRegistrySecretChanged chan struct{}
 
 	updateLocked bool
@@ -106,6 +106,12 @@ type queueAction struct {
 	action    string
 	newObject *unstructured.Unstructured
 	oldObject *unstructured.Unstructured
+}
+
+type queueChangeRegistrySecretAction struct {
+	action    string
+	newObject *corev1.Secret
+	oldObject *corev1.Secret
 }
 
 type UserConfiguration struct {
@@ -125,7 +131,7 @@ func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient clie
 		nodeUsersConfigurationChanged:     make(chan struct{}, 1),
 		moduleSourcesQueue:                make(chan queueAction, 100),
 		moduleSourcesConfigurationChanged: make(chan struct{}, 1),
-		secondaryRegistrySecretQueue:      make(chan queueAction, 100),
+		secondaryRegistrySecretQueue:      make(chan queueChangeRegistrySecretAction, 100),
 		secondaryRegistrySecretChanged:    make(chan struct{}, 1),
 	}
 
@@ -601,22 +607,22 @@ func (c *BashibleContext) subscribeOnChangeRegistrySecret(ctx context.Context, c
 		FilterFunc: secretMapFilter("deckhouse-change-registry"),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				c.secondaryRegistrySecretQueue <- queueAction{
+				c.secondaryRegistrySecretQueue <- queueChangeRegistrySecretAction{
 					action:    "add",
-					newObject: obj.(*unstructured.Unstructured),
+					newObject: obj.(*corev1.Secret),
 				}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				c.secondaryRegistrySecretQueue <- queueAction{
+				c.secondaryRegistrySecretQueue <- queueChangeRegistrySecretAction{
 					action:    "update",
-					newObject: newObj.(*unstructured.Unstructured),
-					oldObject: oldObj.(*unstructured.Unstructured),
+					newObject: newObj.(*corev1.Secret),
+					oldObject: oldObj.(*corev1.Secret),
 				}
 			},
 			DeleteFunc: func(obj interface{}) {
-				c.secondaryRegistrySecretQueue <- queueAction{
+				c.secondaryRegistrySecretQueue <- queueChangeRegistrySecretAction{
 					action:    "delete",
-					oldObject: obj.(*unstructured.Unstructured),
+					oldObject: obj.(*corev1.Secret),
 				}
 			},
 		},
@@ -920,21 +926,13 @@ func (c *BashibleContext) runChangeRegistrySecretQueue(ctx context.Context) {
 			switch event.action {
 			case "add":
 				var changeRegistrySecretData registryChangeInputData
-				err := fromUnstructured(event.newObject, &changeRegistrySecretData)
-				if err != nil {
-					klog.Errorf("Action: add, changeRegistrySecret: %s - convert from unstructured failed: %v", event.newObject.GetName(), err)
-					continue
-				}
+				changeRegistrySecretData.FromMap(event.newObject.Data)
 				c.AddChangeRegistrySecret(&changeRegistrySecretData)
 			case "update":
 				continue
 			case "delete":
 				var changeRegistrySecretData registryChangeInputData
-				err := fromUnstructured(event.oldObject, &changeRegistrySecretData)
-				if err != nil {
-					klog.Errorf("Action: delete, changeRegistrySecret: %s - convert from unstructured failed: %v", event.newObject.GetName(), err)
-					continue
-				}
+				changeRegistrySecretData.FromMap(event.oldObject.Data)
 				c.RemoveChangeRegistrySecret(&changeRegistrySecretData)
 			}
 
