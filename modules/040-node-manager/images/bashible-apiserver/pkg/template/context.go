@@ -146,7 +146,6 @@ func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient clie
 
 	contextSecretUpdates := c.subscribe(ctx, contextSecretFactory, contextSecretName)
 	registrySecretUpdates := c.subscribe(ctx, registrySecretFactory, registrySecretName)
-	// secondaryRegistrySecretUpdates := c.subscribe(ctx, secondaryRegistrySecretFactory, secondaryRegistrySecretName)
 
 	c.subscribeOnChangeRegistrySecret(ctx, secondaryRegistrySecretFactory)
 	c.subscribeOnNodeUserCRD(ctx, nodeUserCRDFactory)
@@ -345,12 +344,6 @@ func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, r
 			c.registrySynced = true
 			c.saveChecksum("registry", checksum)
 			c.update("secret: registry")
-
-		// case data := <-secondaryRegistrySecretC:
-		// 	var input registryChangeInputData
-		// 	input.FromMap(data)
-		// 	c.contextBuilder.SetSecondaryRegistryData(input.toRegistry())
-		// 	c.update("secret: deckhouse-change-registry")
 
 		case <-c.stepsStorage.OnNodeGroupConfigurationsChanged():
 			c.update("NodeGroupConfiguration")

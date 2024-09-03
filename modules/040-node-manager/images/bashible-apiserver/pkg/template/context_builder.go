@@ -568,7 +568,7 @@ type tplContextCommon struct {
 
 	Images            map[string]map[string]string `json:"images" yaml:"images"`
 	Registry          registry                     `json:"registry" yaml:"registry"`
-	SecondaryRegistry registryChange               `json:"secondaryRegistry" yaml:"secondaryRegistry"`
+	SecondaryRegistry registryChange               `json:"secondaryRegistry,omitempty" yaml:"secondaryRegistry,omitempty"`
 
 	Proxy         map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 	PackagesProxy map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
@@ -607,13 +607,13 @@ type normal struct {
 }
 
 type registryChange struct {
-	Address   string            `json:"address" yaml:"address"`
-	Path      string            `json:"path" yaml:"path"`
-	Scheme    string            `json:"scheme" yaml:"scheme"`
+	Address   string            `json:"address,omitempty" yaml:"address,omitempty"`
+	Path      string            `json:"path,omitempty" yaml:"path,omitempty"`
+	Scheme    string            `json:"scheme,omitempty" yaml:"scheme,omitempty"`
 	CA        string            `json:"ca,omitempty" yaml:"ca,omitempty"`
-	DockerCFG []byte            `json:"dockerCfg" yaml:"dockerCfg"`
-	Auth      string            `json:"auth" yaml:"auth"`
-	Digests   map[string]string `json:"digests" yaml:"digests"`
+	DockerCFG []byte            `json:"dockerCfg,omitempty" yaml:"dockerCfg,omitempty"`
+	Auth      string            `json:"auth,omitempty" yaml:"auth,omitempty"`
+	Digests   map[string]string `json:"digests,omitempty" yaml:"digests,omitempty"`
 }
 
 type registry struct {
@@ -636,12 +636,12 @@ type registryInputData struct {
 
 // input from secret
 type registryChangeInputData struct {
-	Address      string `json:"address" yaml:"address"`
-	Path         string `json:"path" yaml:"path"`
-	Scheme       string `json:"scheme" yaml:"scheme"`
+	Address      string `json:"address,omitempty" yaml:"address,omitempty"`
+	Path         string `json:"path,omitempty" yaml:"path,omitempty"`
+	Scheme       string `json:"scheme,omitempty" yaml:"scheme,omitempty"`
 	CA           string `json:"ca,omitempty" yaml:"ca,omitempty"`
-	DockerConfig []byte `json:".dockerconfigjson" yaml:".dockerconfigjson"`
-	Digests      []byte `json:"digests" yaml:"digests"`
+	DockerConfig []byte `json:".dockerconfigjson,omitempty" yaml:".dockerconfigjson,omitempty"`
+	Digests      []byte `json:"digests,omitempty" yaml:"digests,omitempty"`
 }
 
 type digests struct {
