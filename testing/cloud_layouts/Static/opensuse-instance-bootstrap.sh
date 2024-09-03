@@ -17,6 +17,6 @@
 cat > /usr/local/bin/is-instance-bootstrapped << EOF
 #!/bin/bash
 set -Eeo pipefail
-cat /etc/os-release | grep -q "MOS Server 12"
+cat /etc/os-release | grep -q "openSUSE Leap 15"
 EOF
 chmod +x /usr/local/bin/is-instance-bootstrapped

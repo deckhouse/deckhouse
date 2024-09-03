@@ -126,10 +126,10 @@ data "openstack_images_image_v2" "redos_image" {
   name        = "redos-STD-MINIMAL-8.0.0"
 }
 
-data "openstack_images_image_v2" "mosos_image" {
+data "openstack_images_image_v2" "opensuse_image" {
   most_recent = true
   visibility  = "shared"
-  name        = "Mos-OS-12"
+  name        = "openSUSE-Leap-15.6"
 }
 
 resource "openstack_blockstorage_volume_v3" "master" {
@@ -266,7 +266,7 @@ resource "openstack_compute_instance_v2" "worker_0" {
 resource "openstack_blockstorage_volume_v3" "worker_1" {
   name                 = "candi-${PREFIX}-worker-1"
   size                 = "30"
-  image_id             = data.openstack_images_image_v2.mosos_image.id
+  image_id             = data.openstack_images_image_v2.opensuse_image.id
   volume_type          = var.volume_type
   availability_zone    = var.az_zone
   enable_online_resize = true
@@ -280,7 +280,7 @@ resource "openstack_compute_instance_v2" "worker_1" {
   flavor_name = var.flavor_name_large
   key_pair = "candi-${PREFIX}-key"
   availability_zone = var.az_zone
-  user_data            = "${file("mosos-instance-bootstrap.sh")}"
+  user_data            = "${file("opensuse-instance-bootstrap.sh")}"
 
   network {
     port = openstack_networking_port_v2.worker_internal_without_security.id
