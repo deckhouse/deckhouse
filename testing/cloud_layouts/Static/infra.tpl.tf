@@ -140,36 +140,6 @@ data "openstack_images_image_v2" "opensuse_image" {
   name        = "openSUSE-Leap-15.6"
 }
 
-resource "openstack_blockstorage_volume_v3" "bastion" {
-  name                 = "candi-${PREFIX}-bastion-0"
-  size                 = "30"
-  image_id             = data.openstack_images_image_v2.astra_image.id
-  volume_type          = var.volume_type
-  availability_zone    = var.az_zone
-  enable_online_resize = true
-  lifecycle {
-    ignore_changes = [image_id]
-  }
-}
-
-resource "openstack_compute_instance_v2" "bastion" {
-  name = "candi-${PREFIX}-bastion"
-  flavor_name = var.flavor_name_medium
-  key_pair = "candi-${PREFIX}-key"
-  availability_zone = var.az_zone
-
-  network {
-    port = openstack_networking_port_v2.bastion_internal_without_security.id
-  }
-  block_device {
-    uuid             = openstack_blockstorage_volume_v3.bastion.id
-    source_type      = "volume"
-    destination_type = "volume"
-    boot_index       = 0
-    delete_on_termination = true
-  }
-}
-
 resource "openstack_blockstorage_volume_v3" "master" {
   name                 = "candi-${PREFIX}-master-0"
   size                 = "30"
@@ -195,6 +165,36 @@ resource "openstack_compute_instance_v2" "master" {
 
   block_device {
     uuid             = openstack_blockstorage_volume_v3.master.id
+    source_type      = "volume"
+    destination_type = "volume"
+    boot_index       = 0
+    delete_on_termination = true
+  }
+}
+
+resource "openstack_blockstorage_volume_v3" "bastion" {
+  name                 = "candi-${PREFIX}-bastion-0"
+  size                 = "30"
+  image_id             = data.openstack_images_image_v2.astra_image.id
+  volume_type          = var.volume_type
+  availability_zone    = var.az_zone
+  enable_online_resize = true
+  lifecycle {
+    ignore_changes = [image_id]
+  }
+}
+
+resource "openstack_compute_instance_v2" "bastion" {
+  name = "candi-${PREFIX}-bastion"
+  flavor_name = var.flavor_name_medium
+  key_pair = "candi-${PREFIX}-key"
+  availability_zone = var.az_zone
+
+  network {
+    port = openstack_networking_port_v2.bastion_internal_without_security.id
+  }
+  block_device {
+    uuid             = openstack_blockstorage_volume_v3.bastion.id
     source_type      = "volume"
     destination_type = "volume"
     boot_index       = 0
