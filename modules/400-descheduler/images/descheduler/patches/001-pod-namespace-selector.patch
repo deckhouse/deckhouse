@@ -1,7 +1,7 @@
 From 1b6910e74b6dbc678c2d3e2a6da18b9719fc5ba7 Mon Sep 17 00:00:00 2001
 From: Denis Romanenko <denis.romanenko@flant.com>
 Date: Thu, 22 Aug 2024 14:48:40 +0300
-Subject: [PATCH 1/2] Support of the namespaceLabelSelector in DefaultEvictor
+Subject: [PATCH 1/4] Support of the namespaceLabelSelector in DefaultEvictor
  plugin
 
 ---
@@ -313,7 +313,7 @@ index 9d1746e853..1cc9891d07 100644
 From 19c8c3ddc35382853d7eadc6b4de14f2eba79f26 Mon Sep 17 00:00:00 2001
 From: Denis Romanenko <denis.romanenko@flant.com>
 Date: Wed, 4 Sep 2024 15:25:36 +0300
-Subject: [PATCH 2/2] Support of the namespaceLabelSelector in DefaultEvictor
+Subject: [PATCH 2/4] Support of the namespaceLabelSelector in DefaultEvictor
  plugin
 
 ---
@@ -418,3 +418,151 @@ index c43a942ff7..6bf2752a0a 100644
  // BuildTestPod creates a test pod with given parameters.
  func BuildTestPod(name string, cpu, memory int64, nodeName string, apply func(*v1.Pod)) *v1.Pod {
  	pod := &v1.Pod{
+
+From e18ba479d57d1aa748e74fa2663b4e9de9a71f55 Mon Sep 17 00:00:00 2001
+From: Denis Romanenko <denis.romanenko@flant.com>
+Date: Wed, 4 Sep 2024 21:05:36 +0300
+Subject: [PATCH 3/4] Support of the namespaceLabelSelector in DefaultEvictor
+ plugin
+
+---
+ .../plugins/defaultevictor/defaultevictor.go  | 72 +++++++++----------
+ 1 file changed, 35 insertions(+), 37 deletions(-)
+
+diff --git a/pkg/framework/plugins/defaultevictor/defaultevictor.go b/pkg/framework/plugins/defaultevictor/defaultevictor.go
+index 7e56fa79d0..6fb3b70723 100644
+--- a/pkg/framework/plugins/defaultevictor/defaultevictor.go
++++ b/pkg/framework/plugins/defaultevictor/defaultevictor.go
+@@ -25,6 +25,8 @@ import (
+ 	"k8s.io/apimachinery/pkg/labels"
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
++	clientset "k8s.io/client-go/kubernetes"
++	listersv1 "k8s.io/client-go/listers/core/v1"
+ 
+ 	"k8s.io/client-go/tools/cache"
+ 	"k8s.io/klog/v2"
+@@ -220,18 +222,12 @@ func (d *DefaultEvictor) PreEvictionFilter(pod *v1.Pod) bool {
+ 
+ 	// check pod by namespace label filter
+ 	if d.args.NamespaceLabelSelector != nil {
+-		indexName := "namespaceWithLabelSelector"
+-		indexer, err := getNamespacesListByLabelSelector(indexName, d.args.NamespaceLabelSelector, d.handle)
++		ns, err := getNamespaces(context.TODO(), d.handle.ClientSet(), d.handle.SharedInformerFactory().Core().V1().Namespaces().Lister(), metav1.FormatLabelSelector(d.args.NamespaceLabelSelector))
+ 		if err != nil {
+ 			klog.ErrorS(err, "unable to list namespaces", "pod", klog.KObj(pod))
+-			return false
+-		}
+-		objs, err := indexer.ByIndex(indexName, pod.Namespace)
+-		if err != nil {
+-			klog.ErrorS(err, "unable to list namespaces for namespaceLabelSelector filter in the policy parameter", "pod", klog.KObj(pod))
+-			return false
+ 		}
+-		if len(objs) == 0 {
++
++		if _, ok := ns[pod.Namespace]; !ok {
+ 			klog.InfoS("pod namespace do not match the namespaceLabelSelector filter in the policy parameter", "pod", klog.KObj(pod))
+ 			return false
+ 		}
+@@ -300,38 +296,40 @@ func getPodIndexerByOwnerRefs(indexName string, handle frameworktypes.Handle) (c
+ 	return indexer, nil
+ }
+ 
+-func getNamespacesListByLabelSelector(indexName string, labelSelector *metav1.LabelSelector, handle frameworktypes.Handle) (cache.Indexer, error) {
+-	nsInformer := handle.SharedInformerFactory().Core().V1().Namespaces().Informer()
+-	indexer := nsInformer.GetIndexer()
++func getNamespaces(ctx context.Context, client clientset.Interface, nsLister listersv1.NamespaceLister, labelSelector string) (map[string]struct{}, error) {
++	ret := make(map[string]struct{})
++	namespaceSelector, err := labels.Parse(labelSelector)
++	if err != nil {
++		return ret, err
++	}
+ 
+-	// do not reinitialize the indexer, if it's been defined already
+-	for name := range indexer.GetIndexers() {
+-		if name == indexName {
+-			return indexer, nil
+-		}
++	var ns []*v1.Namespace
++	// err is defined above
++	if ns, err = nsLister.List(namespaceSelector); err != nil {
++		return ret, err
+ 	}
+ 
+-	if err := nsInformer.AddIndexers(cache.Indexers{
+-		indexName: func(obj interface{}) ([]string, error) {
+-			ns, ok := obj.(*v1.Namespace)
+-			if !ok {
+-				return []string{}, errors.New("unexpected object")
+-			}
++	if len(ns) == 0 {
++		klog.V(2).InfoS("Namespace lister returned empty list, now fetch directly")
+ 
+-			selector, err := metav1.LabelSelectorAsSelector(labelSelector)
+-			if err != nil {
+-				return []string{}, errors.New("could not get selector from label selector")
+-			}
+-			if labelSelector != nil && !selector.Empty() {
+-				if !selector.Matches(labels.Set(ns.Labels)) {
+-					return []string{}, nil
+-				}
+-			}
+-			return []string{ns.GetName()}, nil
+-		},
+-	}); err != nil {
+-		return nil, err
++		nItems, err := client.CoreV1().Namespaces().List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
++		if err != nil {
++			return ret, err
++		}
++
++		if nItems == nil || len(nItems.Items) == 0 {
++			return ret, nil
++		}
++
++		for i := range nItems.Items {
++			namespace := nItems.Items[i]
++			ns = append(ns, &namespace)
++		}
+ 	}
+ 
+-	return indexer, nil
++	for _, n := range ns {
++		ret[n.Name] = struct{}{}
++	}
++
++	return ret, nil
+ }
+
+From 3d0cee395f9bb490c9921d242afec6c4ee7b3e74 Mon Sep 17 00:00:00 2001
+From: Denis Romanenko <denis.romanenko@flant.com>
+Date: Wed, 4 Sep 2024 21:06:53 +0300
+Subject: [PATCH 4/4] Support of the namespaceLabelSelector in DefaultEvictor
+ plugin
+
+---
+ pkg/framework/plugins/defaultevictor/defaultevictor.go | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/pkg/framework/plugins/defaultevictor/defaultevictor.go b/pkg/framework/plugins/defaultevictor/defaultevictor.go
+index 6fb3b70723..092e6f5482 100644
+--- a/pkg/framework/plugins/defaultevictor/defaultevictor.go
++++ b/pkg/framework/plugins/defaultevictor/defaultevictor.go
+@@ -222,7 +222,7 @@ func (d *DefaultEvictor) PreEvictionFilter(pod *v1.Pod) bool {
+ 
+ 	// check pod by namespace label filter
+ 	if d.args.NamespaceLabelSelector != nil {
+-		ns, err := getNamespaces(context.TODO(), d.handle.ClientSet(), d.handle.SharedInformerFactory().Core().V1().Namespaces().Lister(), metav1.FormatLabelSelector(d.args.NamespaceLabelSelector))
++		ns, err := getNamespacesListByLabelSelector(context.TODO(), d.handle.ClientSet(), d.handle.SharedInformerFactory().Core().V1().Namespaces().Lister(), metav1.FormatLabelSelector(d.args.NamespaceLabelSelector))
+ 		if err != nil {
+ 			klog.ErrorS(err, "unable to list namespaces", "pod", klog.KObj(pod))
+ 		}
+@@ -296,7 +296,7 @@ func getPodIndexerByOwnerRefs(indexName string, handle frameworktypes.Handle) (c
+ 	return indexer, nil
+ }
+ 
+-func getNamespaces(ctx context.Context, client clientset.Interface, nsLister listersv1.NamespaceLister, labelSelector string) (map[string]struct{}, error) {
++func getNamespacesListByLabelSelector(ctx context.Context, client clientset.Interface, nsLister listersv1.NamespaceLister, labelSelector string) (map[string]struct{}, error) {
+ 	ret := make(map[string]struct{})
+ 	namespaceSelector, err := labels.Parse(labelSelector)
+ 	if err != nil {
