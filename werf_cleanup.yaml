@@ -9,8 +9,8 @@ cleanup:
   - references:
       branch: /release-.*/
       limit:
-        in: 360h
+        in: 180h
   - references:
       tag: /.*/
       limit:
-        in: 360h
+        in: 180h
