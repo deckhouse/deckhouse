@@ -101,35 +101,35 @@ title: "Cloud provider — AWS: FAQ"
 
 > После изменения volume нужно подождать не менее шести часов и убедиться, что volume находится в состоянии `in-use` или `available`, прежде чем станет возможно изменить его еще раз. Подробности можно найти [в официальной документации](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/modify-volume-requirements.html).
 
-## Как настроить доступ до Amazon ECR repository на Nodes кластера
+## Как настроить доступ до Amazon ECR repository на узлах кластера
 
-1. Нужно в [Repository policies](https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html) задать права для чтения образов. В `Principal` должен быть существующий объект `Roles`.
+1. Задайте права для чтения образов [в Repository policies](https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html). В `Principal` должен быть существующий объект `Roles`.
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "RepositoryRead",
-      "Effect": "Allow",
-      "Principal": {
-        "AWS": "arn:aws:iam::xxx:role/xxx-node"
-      },
-      "Action": [
-        "ecr:BatchCheckLayerAvailability",
-        "ecr:BatchGetImage",
-        "ecr:DescribeImages",
-        "ecr:DescribeRepositories",
-        "ecr:GetAuthorizationToken",
-        "ecr:GetDownloadUrlForLayer",
-        "ecr:ListImages",
-        "ecr:ListTagsForResource"
-      ]
-    }
-  ]
-}
-```
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Sid": "RepositoryRead",
+         "Effect": "Allow",
+         "Principal": {
+           "AWS": "arn:aws:iam::xxx:role/xxx-node"
+         },
+         "Action": [
+           "ecr:BatchCheckLayerAvailability",
+           "ecr:BatchGetImage",
+           "ecr:DescribeImages",
+           "ecr:DescribeRepositories",
+           "ecr:GetAuthorizationToken",
+           "ecr:GetDownloadUrlForLayer",
+           "ecr:ListImages",
+           "ecr:ListTagsForResource"
+         ]
+       }
+     ]
+   }
+   ```
 
-Эту политику нужно применять в `Amazon ECR > Private registry > Repositories > {{ name }} > Permissions`
+   Примените эту политику в `Amazon ECR` > `Private registry` > `Repositories` > `{{ name }}` > `Permissions`.
 
-1. Добавить в [additionalRolePolicies](cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies) `ecr:GetAuthorizationToken`
+2. Добавьте [в additionalRolePolicies](cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies) `ecr:GetAuthorizationToken`.
