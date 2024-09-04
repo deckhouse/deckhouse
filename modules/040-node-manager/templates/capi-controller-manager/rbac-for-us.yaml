@@ -7,13 +7,6 @@ metadata:
   name: capi-controller-manager
   namespace: d8-cloud-instance-manager
 ---
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
-  name: capi-cloud-cluster-controller-manager
-  namespace: d8-cloud-instance-manager
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -68,7 +61,8 @@ rules:
   - apiGroups:
       - addons.cluster.x-k8s.io
     resources:
-      - '*'
+    - clusterresourcesets
+    - clusterresourcesetbindings
     verbs:
       - create
       - delete
@@ -82,6 +76,7 @@ rules:
     resources:
       - clusterresourcesets/finalizers
       - clusterresourcesets/status
+      - clusterresourcesetbindings/status
     verbs:
       - get
       - patch
@@ -99,7 +94,18 @@ rules:
       - controlplane.cluster.x-k8s.io
       - infrastructure.cluster.x-k8s.io
     resources:
-      - '*'
+      - kubeadmconfigs
+      - kubeadmconfigtemplates
+      - deckhousecontrolplanes
+      - staticclusters
+      - staticmachines
+      - staticmachinetemplates
+      - vcdclusters
+      - vcdclustertemplates
+      - vcdmachines
+      - vcdmachinetemplates
+      - kubeadmcontrolplanes
+      - kubeadmcontrolplanetemplates
     verbs:
       - create
       - delete
@@ -112,7 +118,16 @@ rules:
       - bootstrap.cluster.x-k8s.io
       - infrastructure.cluster.x-k8s.io
     resources:
-      - '*'
+      - kubeadmconfigs
+      - kubeadmconfigtemplates
+      - deckhousecontrolplanes
+      - staticclusters
+      - staticmachines
+      - staticmachinetemplates
+      - vcdclusters
+      - vcdclustertemplates
+      - vcdmachines
+      - vcdmachinetemplates
     verbs:
       - create
       - delete
@@ -427,9 +442,6 @@ subjects:
   - kind: ServiceAccount
     name: capi-controller-manager
     namespace: d8-cloud-instance-manager
-  - kind: ServiceAccount
-    name: capi-cloud-cluster-controller-manager
-    namespace: d8-cloud-instance-manager
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -443,9 +455,6 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: capi-controller-manager
-    namespace: d8-cloud-instance-manager
-  - kind: ServiceAccount
-    name: capi-cloud-cluster-controller-manager
     namespace: d8-cloud-instance-manager
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -463,9 +472,6 @@ subjects:
     namespace: d8-cloud-instance-manager
   - kind: User
     name: capi-controller-manager
-  - kind: ServiceAccount
-    name: capi-cloud-cluster-controller-manager
-    namespace: d8-cloud-instance-manager
   - kind: User
     name: capi-cloud-cluster-controller-manager
 {{- end }}
