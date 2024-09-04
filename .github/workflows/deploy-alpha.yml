@@ -334,8 +334,22 @@ jobs:
             echo "enable=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Check cooldown for release
+        if: ${{ github.event.inputs.cooldown }}
+        env:
+          COOLDOWN: ${{ github.event.inputs.cooldown }}
+        run: |
+          CURRENT_TIMESTAMP=$(date +%s)
+          COOLDOWN_TIMESTAMP=$(date -u +%s -d "${COOLDOWN}")
+          if [ "$CURRENT_TIMESTAMP" -gt "$COOLDOWN_TIMESTAMP" ]; then
+            echo "The cooldown has expired"
+            exit 1
+          fi
+
 
       - name: Set cooldown for release (CE)
+        needs:
+          - Check cooldown for release
         if: ${{ github.event.inputs.cooldown }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
@@ -357,6 +371,8 @@ jobs:
           echo "⚓️ 📤 [$(date -u)] Push '${SOURCE_RELEASE_VERSION_IMAGE}' image with cooldown."
           docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
       - name: Set cooldown for release (EE)
+        needs:
+          - Check cooldown for release
         if: ${{ github.event.inputs.cooldown }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
@@ -378,6 +394,8 @@ jobs:
           echo "⚓️ 📤 [$(date -u)] Push '${SOURCE_RELEASE_VERSION_IMAGE}' image with cooldown."
           docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
       - name: Set cooldown for release (FE)
+        needs:
+          - Check cooldown for release
         if: ${{ github.event.inputs.cooldown }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
@@ -399,6 +417,8 @@ jobs:
           echo "⚓️ 📤 [$(date -u)] Push '${SOURCE_RELEASE_VERSION_IMAGE}' image with cooldown."
           docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
       - name: Set cooldown for release (BE)
+        needs:
+          - Check cooldown for release
         if: ${{ github.event.inputs.cooldown }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
@@ -420,6 +440,8 @@ jobs:
           echo "⚓️ 📤 [$(date -u)] Push '${SOURCE_RELEASE_VERSION_IMAGE}' image with cooldown."
           docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
       - name: Set cooldown for release (SE)
+        needs:
+          - Check cooldown for release
         if: ${{ github.event.inputs.cooldown }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}

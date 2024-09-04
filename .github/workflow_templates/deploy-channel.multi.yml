@@ -152,8 +152,22 @@ Jobs for visual control allowed editions when approving deploy to environments.
             echo "enable=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Check cooldown for release
+        if: ${{ github.event.inputs.cooldown }}
+        env:
+          COOLDOWN: ${{ github.event.inputs.cooldown }}
+        run: |
+          CURRENT_TIMESTAMP=$(date +%s)
+          COOLDOWN_TIMESTAMP=$(date -u +%s -d "${COOLDOWN}")
+          if [ "$CURRENT_TIMESTAMP" -gt "$COOLDOWN_TIMESTAMP" ]; then
+            echo "The cooldown has expired"
+            exit 1
+          fi
+
       {!{ range $werfEnv := slice "CE" "EE" "FE" "BE" "SE" }!}
       - name: Set cooldown for release ({!{ $werfEnv }!})
+        needs:
+          - Check cooldown for release
         if: ${{ github.event.inputs.cooldown }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
