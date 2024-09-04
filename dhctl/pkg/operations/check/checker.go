@@ -22,9 +22,9 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
@@ -198,7 +198,7 @@ func (c *Checker) GetKubeClient() (*client.KubernetesClient, error) {
 		return c.KubeClient, nil
 	}
 
-	kubeCl, err := operations.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(c.SSHClient))
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(c.SSHClient))
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 	}

@@ -30,7 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -43,20 +43,25 @@ type HookForUpdatePipeline struct {
 }
 
 func NewHookForUpdatePipeline(kubeCl *client.KubernetesClient, nodeToHostForChecks map[string]string, clusterUUID string) *HookForUpdatePipeline {
+	cl := kubeCl.NodeInterfaceAsSSHClient()
+	if cl == nil {
+		panic("Node interface is not ssh")
+	}
+
 	checkers := []hook.NodeChecker{
 		hook.NewKubeNodeReadinessChecker(kubeCl),
 		NewKubeProxyChecker().
 			WithExternalIPs(nodeToHostForChecks).
 			WithClusterUUID(clusterUUID).
 			WithSSHCredentials(session.Input{
-				User:        kubeCl.SSHClient.Settings.User,
-				Port:        kubeCl.SSHClient.Settings.Port,
-				BastionHost: kubeCl.SSHClient.Settings.BastionHost,
-				BastionPort: kubeCl.SSHClient.Settings.BastionPort,
-				BastionUser: kubeCl.SSHClient.Settings.BastionUser,
-				ExtraArgs:   kubeCl.SSHClient.Settings.ExtraArgs,
-				BecomePass:  kubeCl.SSHClient.Settings.BecomePass,
-			}, kubeCl.SSHClient.PrivateKeys...),
+				User:        cl.Settings.User,
+				Port:        cl.Settings.Port,
+				BastionHost: cl.Settings.BastionHost,
+				BastionPort: cl.Settings.BastionPort,
+				BastionUser: cl.Settings.BastionUser,
+				ExtraArgs:   cl.Settings.ExtraArgs,
+				BecomePass:  cl.Settings.BecomePass,
+			}, cl.PrivateKeys...),
 		NewManagerReadinessChecker(kubeCl),
 	}
 
@@ -117,14 +122,19 @@ func (h *HookForUpdatePipeline) AfterAction(runner terraform.RunnerInterface) er
 		return nil
 	}
 
-	h.kubeCl.SSHClient.Settings.RemoveAvailableHosts(h.oldMasterIPForSSH)
+	cl := h.kubeCl.NodeInterfaceAsSSHClient()
+	if cl == nil {
+		panic("Node interface is not ssh")
+	}
+
+	cl.Settings.RemoveAvailableHosts(h.oldMasterIPForSSH)
 
 	outputs, err := terraform.GetMasterNodeResult(runner)
 	if err != nil {
 		return fmt.Errorf("failed to get master node pipeline outputs: %v", err)
 	}
 
-	h.kubeCl.SSHClient.Settings.AddAvailableHosts(outputs.MasterIPForSSH)
+	cl.Settings.AddAvailableHosts(outputs.MasterIPForSSH)
 
 	// Before waiting for the master node to be listed as a member of the etcd cluster,
 	// we need to store the path to the Kubernetes data device to avoid deadlock.

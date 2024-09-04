@@ -26,8 +26,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
@@ -63,8 +63,9 @@ func (c *MasterNodeGroupController) populateNodeToHost() error {
 	}
 
 	var userPassedHosts []string
-	if c.client.SSHClient != nil {
-		userPassedHosts = c.client.SSHClient.Settings.AvailableHosts()
+	sshCl := c.client.NodeInterfaceAsSSHClient()
+	if sshCl != nil {
+		userPassedHosts = append(make([]string, 0), sshCl.Settings.AvailableHosts()...)
 	}
 
 	nodesNames := make([]string, 0, len(c.state.State))
@@ -177,7 +178,12 @@ func (c *MasterNodeGroupController) replaceKubeClient(state map[string][]byte) (
 		return fmt.Errorf("failed to write private key for NodeUser: %w", err)
 	}
 
-	settings := c.client.SSHClient.Settings
+	sshCl := c.client.NodeInterfaceAsSSHClient()
+	if sshCl == nil {
+		panic("Node interface is not ssh")
+	}
+
+	settings := sshCl.Settings
 
 	for nodeName, stateBytes := range state {
 		statePath := filepath.Join(tmpDir, fmt.Sprintf("%s.tfstate", nodeName))
@@ -200,9 +206,12 @@ func (c *MasterNodeGroupController) replaceKubeClient(state map[string][]byte) (
 	}
 
 	c.client.KubeProxy.StopAll()
-	c.client.SSHClient.Stop()
+	if sshCl != nil {
+		sshCl.Stop()
 
-	sshClient, err := ssh.NewClient(session.NewSession(session.Input{
+	}
+
+	newSSHClient, err := ssh.NewClient(session.NewSession(session.Input{
 		User:           c.convergeState.NodeUserCredentials.Name,
 		Port:           settings.Port,
 		BastionHost:    settings.BastionHost,
@@ -221,7 +230,7 @@ func (c *MasterNodeGroupController) replaceKubeClient(state map[string][]byte) (
 		return fmt.Errorf("failed to start SSH client: %w", err)
 	}
 
-	kubeClient, err := kubernetes.ConnectToKubernetesAPI(sshClient)
+	kubeClient, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(newSSHClient))
 	if err != nil {
 		return fmt.Errorf("failed to connect to Kubernetes API: %w", err)
 	}
@@ -282,7 +291,12 @@ func (c *MasterNodeGroupController) addNodes() error {
 	}
 
 	if len(masterIPForSSHList) > 0 {
-		c.client.SSHClient.Settings.AddAvailableHosts(masterIPForSSHList...)
+		sshCl := c.client.NodeInterfaceAsSSHClient()
+		if sshCl == nil {
+			panic("NodeInterface is not ssh")
+		}
+
+		sshCl.Settings.AddAvailableHosts(masterIPForSSHList...)
 
 		// we hide deckhouse logs because we always have config
 		nodeCloudConfig, err := GetCloudConfig(c.client, c.name, HideDeckhouseLogs, nodeInternalIPList...)

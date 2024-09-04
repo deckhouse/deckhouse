@@ -61,8 +61,13 @@ func (h *HookForDestroyPipeline) BeforeAction(runner terraform.RunnerInterface) 
 }
 
 func (h *HookForDestroyPipeline) AfterAction(runner terraform.RunnerInterface) error {
-	h.kubeCl.SSHClient.Settings.RemoveAvailableHosts(h.oldMasterIPForSSH)
+	cl := h.kubeCl.NodeInterfaceAsSSHClient()
+	if cl == nil {
+		log.DebugLn("Node interface is not ssh")
+		return nil
+	}
 
+	cl.Settings.RemoveAvailableHosts(h.oldMasterIPForSSH)
 	return nil
 }
 
