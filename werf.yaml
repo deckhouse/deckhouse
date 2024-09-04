@@ -610,7 +610,7 @@ git:
 import:
 - artifact: dhctl
   add: /dhctl/bin/dhctl
-  to: /usr/bin/dhctl
+  to: /dhctl
   after: setup
 - image: dev-prebuild
   add: /deckhouse
@@ -681,6 +681,7 @@ docker:
 shell:
   setup:
   - |
+    ln -fs /dhctl /usr/bin/dhctl
     cat <<"EOD" > /etc/inputrc
     {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 4 }}
     EOD
