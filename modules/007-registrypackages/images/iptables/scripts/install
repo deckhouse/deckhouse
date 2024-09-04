@@ -88,9 +88,7 @@ function isLegacyKernel() {
 }
 
 function isNftSupport() {
-  if checkNFTSupportInKernelBuildConfiguration; then
-    return 0
-  elif checkNFTSupportByAddingNFTRules; then
+  if ( checkNFTSupportInKernelBuildConfiguration ) && ( checkNFTSupportByAddingNFTRules ) ; then
     return 0
   else
     return 1
