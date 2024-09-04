@@ -1,0 +1,62 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Ресурс для подключения дополнительных datasource к Grafana.
+
+            Параметры ресурса подробно описаны [в документации к Grafana](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file).
+          properties:
+            spec:
+              properties:
+                type:
+                  description: Тип datasource.
+                access:
+                  description: Режим доступа.
+                url:
+                  description: URL-адрес datasource.
+                user:
+                  description: Имя пользователя БД.
+                database:
+                  description: Имя БД (если используется).
+                withCredentials:
+                  description: Включение/отключение флага [withCredentials](https://developer.mozilla.org/ru/docs/Web/API/XMLHttpRequest/withCredentials) (влияет на формирование заголовков).
+                basicAuth:
+                  description: Включить/выключить использование базовой авторизации.
+                basicAuthUser:
+                  description: Имя пользователя для базовой авторизации.
+                jsonData:
+                  description: Поля, которые будут конвертированы в JSON и сохранены в jsonData.
+                secureJsonData:
+                  description: JSON-объект данных, который будет сохранен зашифрованным.
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Ресурс для подключения дополнительных datasource к Grafana.
+
+            Параметры ресурса подробно описаны [в документации к Grafana](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file).
+          properties:
+            spec:
+              properties:
+                type:
+                  description: Тип datasource.
+                access:
+                  description: Режим доступа.
+                url:
+                  description: URL-адрес datasource.
+                user:
+                  description: Имя пользователя БД.
+                database:
+                  description: Имя БД (если используется).
+                withCredentials:
+                  description: Включение/отключение флага [withCredentials](https://developer.mozilla.org/ru/docs/Web/API/XMLHttpRequest/withCredentials) (влияет на формирование заголовков).
+                basicAuth:
+                  description: Включить/выключить использование базовой авторизации.
+                basicAuthUser:
+                  description: Имя пользователя для базовой авторизации.
+                jsonData:
+                  description: Поля, которые будут конвертированы в JSON и сохранены в jsonData.
+                secureJsonData:
+                  description: JSON-объект данных, который будет сохранен зашифрованным.

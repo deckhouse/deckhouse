@@ -1,0 +1,5 @@
+name: deckhouse-tools
+weight: 800
+
+requirements:
+  bootstrapped: true

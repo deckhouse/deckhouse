@@ -1,0 +1,5 @@
+name: upmeter
+weight: 500
+
+requirements:
+  bootstrapped: true

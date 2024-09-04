@@ -1,0 +1,30 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: Ресурс для добавления каналов оповещения в Grafana.
+          properties:
+            spec:
+              properties:
+                description:
+                  description: Небольшое необязательное описание для этого канала предупреждений.
+                disableResolveMessage:
+                  description: Отключение отправки сообщения о переходе алерта в неактивное состояние.
+                isDefault:
+                  description: Использование этого канала для всех алертов.
+                alertManager:
+                  description: Настройка канала внешнего Prometheus Alert Manager.
+                  properties:
+                    address:
+                      description: URL-адрес внешнего Alertmanager.
+                    auth:
+                      description: Параметры авторизации.
+                      properties:
+                        basic:
+                          description: Параметры базовой авторизации.
+                          properties:
+                            username:
+                              description: Имя пользователя.
+                            password:
+                              description: Пароль.

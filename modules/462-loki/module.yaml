@@ -1,0 +1,5 @@
+name: loki
+weight: 462
+
+requirements:
+  bootstrapped: true

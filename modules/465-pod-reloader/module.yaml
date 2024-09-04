@@ -1,0 +1,5 @@
+name: pod-reloader
+weight: 465
+
+requirements:
+  bootstrapped: true

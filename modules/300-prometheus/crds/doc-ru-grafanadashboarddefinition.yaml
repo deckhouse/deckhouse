@@ -1,0 +1,25 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema: &schema
+        openAPIV3Schema:
+          description: |
+            Ресурс хранения и управления dashboard в Grafana.
+          properties:
+            spec:
+              properties:
+                folder:
+                  description: |
+                    Папка, в которую попадет данный dashboard. Если такой папки нет, она будет создана.
+                definition:
+                  description: |
+                    JSON-манифест dashboard.
+
+                    > **Важно!** Следите, чтобы, помимо `uid`, в манифесте не было «местного» `id` по адресу `.id`.
+      additionalPrinterColumns: &additionalPrinterColumns
+        - jsonPath: .spec.folder
+          name: Folder
+          description: 'Папка в Grafana.'
+    - name: v1
+      schema: *schema
+      additionalPrinterColumns: *additionalPrinterColumns

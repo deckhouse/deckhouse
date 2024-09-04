@@ -1,0 +1,5 @@
+name: delivery
+weight: 502
+
+requirements:
+  bootstrapped: true

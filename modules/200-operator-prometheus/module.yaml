@@ -1,0 +1,7 @@
+name: operator-prometheus
+weight: 200
+description: |
+  This module installs the prometheus operator for creating Prometheus installations
+
+requirements:
+  bootstrapped: true
