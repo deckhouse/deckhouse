@@ -32,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -223,11 +222,10 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name:     `Namespace "d8-system"`,
 			Manifest: func() interface{} { return manifests.DeckhouseNamespace("d8-system") },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Namespaces().Get(context.TODO(), manifest.(*apiv1.Namespace).GetName(), metav1.GetOptions{})
-				if err != nil {
-					if apierrors.IsNotFound(err) {
-						_, err = kubeCl.CoreV1().Namespaces().Create(context.TODO(), manifest.(*apiv1.Namespace), metav1.CreateOptions{})
-					}
+				_, err := kubeCl.CoreV1().Namespaces().Create(context.TODO(), manifest.(*apiv1.Namespace), metav1.CreateOptions{})
+				if err != nil && apierrors.IsAlreadyExists(err) {
+					log.InfoLn("Already exists. Skip!")
+					return nil
 				}
 				return err
 			},
@@ -278,22 +276,6 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 					}
 				}
 				return err
-			},
-			UpdateFunc: func(manifest interface{}) error {
-				return nil
-			},
-		},
-		{
-			Name:     `Impersonate "deckhouse"`,
-			Manifest: func() interface{} { return nil },
-			CreateFunc: func(manifest interface{}) error {
-				config := kubeCl.KubeClient.RestConfig()
-				if config != nil {
-					config.Impersonate = rest.ImpersonationConfig{
-						UserName: "system:serviceaccount:d8-system:deckhouse",
-					}
-				}
-				return nil
 			},
 			UpdateFunc: func(manifest interface{}) error {
 				return nil
@@ -636,12 +618,12 @@ func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *config.Deck
 
 func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.DeckhouseDeploymentParams {
 	return manifests.DeckhouseDeploymentParams{
-		Registry:               cfg.GetImage(true),
-		LogLevel:               cfg.LogLevel,
-		Bundle:                 cfg.Bundle,
-		IsSecureRegistry:       cfg.IsRegistryAccessRequired(),
-		KubeadmBootstrap:       cfg.KubeadmBootstrap,
-		MasterNodeSelector:     cfg.MasterNodeSelector,
+		Registry:           cfg.GetImage(true),
+		LogLevel:           cfg.LogLevel,
+		Bundle:             cfg.Bundle,
+		IsSecureRegistry:   cfg.IsRegistryAccessRequired(),
+		KubeadmBootstrap:   cfg.KubeadmBootstrap,
+		MasterNodeSelector: cfg.MasterNodeSelector,
 	}
 }
 
