@@ -200,7 +200,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
-  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" $context | nindent 12 }}
   {{- end }}
       hostNetwork: true

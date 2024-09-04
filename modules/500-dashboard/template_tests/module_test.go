@@ -31,7 +31,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
-enabledModules: ["vertical-pod-autoscaler-crd"]
+enabledModules: ["vertical-pod-autoscaler"]
 modules:
   publicDomainTemplate: "%s.example.com"
   placement: {}
@@ -44,7 +44,7 @@ discovery:
 `
 
 const globalValuesHa = `
-enabledModules: ["vertical-pod-autoscaler-crd"]
+enabledModules: ["vertical-pod-autoscaler"]
 modules:
   publicDomainTemplate: "%s.example.com"
   placement: {}
@@ -58,7 +58,7 @@ discovery:
 `
 
 const globalValuesManaged = `
-enabledModules: ["vertical-pod-autoscaler-crd"]
+enabledModules: ["vertical-pod-autoscaler"]
 modules:
   publicDomainTemplate: "%s.example.com"
   placement: {}
@@ -71,7 +71,7 @@ discovery:
 
 const globalValuesManagedHa = `
 highAvailability: true
-enabledModules: ["vertical-pod-autoscaler-crd"]
+enabledModules: ["vertical-pod-autoscaler"]
 modules:
   publicDomainTemplate: "%s.example.com"
   placement: {}

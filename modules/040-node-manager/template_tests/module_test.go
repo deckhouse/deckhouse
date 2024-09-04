@@ -37,7 +37,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
-enabledModules: ["vertical-pod-autoscaler-crd"]
+enabledModules: ["vertical-pod-autoscaler"]
 modules:
   placement: {}
 discovery:
@@ -724,7 +724,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerValues)
 			setBashibleAPIServerTLSValues(f)
-			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd", "operator-prometheus-crd"]`)
+			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "operator-prometheus"]`)
 		})
 
 		assertSpecDotGroupsArray := func(rule object_store.KubeObject, shouldEmpty bool) {

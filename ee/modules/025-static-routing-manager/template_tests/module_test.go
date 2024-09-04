@@ -22,7 +22,7 @@ func Test(t *testing.T) {
 const (
 	globalValues = `
 clusterIsBootstrapped: false
-enabledModules: ["vertical-pod-autoscaler-crd", "static-routing-manager"]
+enabledModules: ["vertical-pod-autoscaler", "static-routing-manager"]
 `
 	goodModuleValuesA = `
 internal:

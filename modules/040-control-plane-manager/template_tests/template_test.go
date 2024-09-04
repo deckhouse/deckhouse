@@ -87,7 +87,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 
 		Context("For etcd main", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus-crd"]`)
+				f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus"]`)
 				f.HelmRender()
 			})
 

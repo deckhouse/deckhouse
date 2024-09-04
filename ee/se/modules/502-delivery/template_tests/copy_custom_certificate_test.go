@@ -14,7 +14,7 @@ import (
 
 var _ = Describe("Module :: delivery :: helm template :: custom-certificate", func() {
 	const globalValues = `
-enabledModules: ["vertical-pod-autoscaler-crd", "delivery"]
+enabledModules: ["vertical-pod-autoscaler", "delivery"]
 modules:
   https:
     mode: CustomCertificate

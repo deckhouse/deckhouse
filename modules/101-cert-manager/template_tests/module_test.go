@@ -31,7 +31,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
-enabledModules: ["vertical-pod-autoscaler-crd"]
+enabledModules: ["vertical-pod-autoscaler"]
 modules:
   placement: {}
 discovery:
@@ -46,7 +46,7 @@ discovery:
 `
 
 const globalValuesHa = `
-enabledModules: ["vertical-pod-autoscaler-crd"]
+enabledModules: ["vertical-pod-autoscaler"]
 modules:
   placement: {}
 discovery:
@@ -62,7 +62,7 @@ discovery:
 `
 
 const globalValuesManaged = `
-enabledModules: ["vertical-pod-autoscaler-crd"]
+enabledModules: ["vertical-pod-autoscaler"]
 modules:
   placement: {}
 discovery:
@@ -79,7 +79,7 @@ const globalValuesManagedHa = `
 highAvailability: true
 modules:
   placement: {}
-enabledModules: ["vertical-pod-autoscaler-crd"]
+enabledModules: ["vertical-pod-autoscaler"]
 discovery:
   kubernetesVersion: "1.19.5"
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab

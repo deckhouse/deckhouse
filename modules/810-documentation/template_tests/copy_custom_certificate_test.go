@@ -32,7 +32,7 @@ func Test(t *testing.T) {
 
 const globalValues = `
 clusterIsBootstrapped: false
-enabledModules: ["vertical-pod-autoscaler-crd", "documentation"]
+enabledModules: ["vertical-pod-autoscaler", "documentation"]
 modules:
   https:
     mode: CustomCertificate

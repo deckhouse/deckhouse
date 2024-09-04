@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("Module :: userAuthn :: helm template :: custom-certificate", func() {
 	const globalValues = `
-enabledModules: ["vertical-pod-autoscaler-crd", "user-authn", "cert-manager"]
+enabledModules: ["vertical-pod-autoscaler", "user-authn", "cert-manager"]
 modules:
   https:
     mode: CustomCertificate

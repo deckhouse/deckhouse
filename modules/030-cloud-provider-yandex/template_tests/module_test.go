@@ -40,7 +40,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
-  enabledModules: ["vertical-pod-autoscaler-crd", "cloud-provider-yandex", "operator-prometheus-crd"]
+  enabledModules: ["vertical-pod-autoscaler", "cloud-provider-yandex", "operator-prometheus"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:

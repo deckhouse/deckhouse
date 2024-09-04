@@ -17,7 +17,6 @@
 source /deckhouse/shell_lib.sh
 
 function __main__() {
-  enabled::disable_module_in_kubernetes_versions_less_than 1.15.0
   enabled::disable_module_if_cluster_is_not_bootstraped
   if kubectl -n kube-system get secret d8-provider-cluster-configuration >/dev/null 2>&1 ; then
     if kubectl -n d8-system get secret d8-cluster-terraform-state >/dev/null 2>&1 ; then

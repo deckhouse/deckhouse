@@ -77,7 +77,7 @@ spec:
 {{- define "helm_lib_prometheus_rules" -}}
   {{- $context := index . 0 }}    {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $namespace := index . 1 }}  {{- /* Namespace for creating rules */ -}}
-  {{- if ( $context.Values.global.enabledModules | has "operator-prometheus-crd" ) }}
+  {{- if ( $context.Values.global.enabledModules | has "operator-prometheus" ) }}
 {{- include "helm_lib_prometheus_rules_recursion" (list $context $namespace "monitoring/prometheus-rules") }}
   {{- end }}
 {{- end }}

@@ -3,7 +3,7 @@ cpu: 500m
 memory: 1000Mi
 {{- end }}
 
-{{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
+{{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -193,6 +193,8 @@ spec:
               value: "true"
             - name: ADDON_OPERATOR_ADMISSION_SERVER_CERTS_DIR
               value: "/certs"
+            - name: ADDON_OPERATOR_CRD_EXTRA_LABELS
+              value: "heritage=deckhouse,foo=bar"
             - name: HELM3LIB
               value: "yes"
             - name: HELM_HISTORY_MAX
@@ -227,7 +229,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "deckhouse_resources" . | nindent 14 }}
 {{- end }}
           workingDir: /deckhouse
@@ -284,7 +286,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
 {{- end }}
       hostNetwork: true

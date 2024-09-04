@@ -1,11 +1,6 @@
 000-common
-003-deckhouse-config
 010-cloud-data-crd
-010-operator-prometheus-crd
-010-prometheus-crd
-010-snapshot-controller-crd
-010-user-authn-crd
-010-vertical-pod-autoscaler-crd
+010-vertical-pod-autoscaler
 340-monitoring-applications
 340-prometheus-madison-integration
 500-basic-auth

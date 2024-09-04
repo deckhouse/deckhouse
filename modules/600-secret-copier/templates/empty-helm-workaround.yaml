@@ -1,4 +1,4 @@
-{{- if not (.Values.global.enabledModules | has "operator-prometheus-crd") }}
+{{- if not (.Values.global.enabledModules | has "operator-prometheus") }}
 ---
 apiVersion: v1
 kind: ConfigMap

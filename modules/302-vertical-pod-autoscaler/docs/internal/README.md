@@ -78,13 +78,13 @@ spec:
       - name: speaker
         resources:
           requests:
-          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "speaker_resources" . | nindent 14 }}
           {{- end }}
       - name: kube-rbac-proxy
         resources:
           requests:
-          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
           {{- end }}
 ```

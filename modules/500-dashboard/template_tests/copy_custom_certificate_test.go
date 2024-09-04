@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("Module :: dashboard :: helm template :: custom-certificate", func() {
 	const globalValues = `
-enabledModules: ["vertical-pod-autoscaler-crd", "dashboard"]
+enabledModules: ["vertical-pod-autoscaler", "dashboard"]
 modules:
   https:
     mode: CustomCertificate

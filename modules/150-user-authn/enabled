@@ -18,10 +18,6 @@ source /deckhouse/shell_lib.sh
 
 function __main__() {
   enabled::disable_module_if_cluster_is_not_bootstraped
-  if ! values::array_has global.enabledModules "user-authn-crd" ; then
-    echo "You must enable the user-authn-crd module for the module to work."
-    exit 1
-  fi
 
   if values::has global.modules.publicDomainTemplate ; then
     https_mode=$(values::get_first_defined userAuthn.https.mode global.modules.https.mode)
