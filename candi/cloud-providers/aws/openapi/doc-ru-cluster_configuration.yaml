@@ -250,6 +250,8 @@ apiVersions:
           - `ec2:DescribeInstances`
       iamNodeRole:
         description: |
-          Имя роли, которая будет использоваться для всех узлов.
-          Вы должны добавить содержимое роли которую мы создаем, чтобы кластер работал правильно.
-          Имя роли которую мы создаем, `[${local.prefix}](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-cloud-prefix)-node`.
+          Имя IAM-роли, которая будет привязана ко всем AWS-инстансам узлов кластера.
+
+          DKP всегда создает и привязывает к каждому AWS-инстансу узла кластера специальную IAM-роль с именем `<PREFIX>-node`, где `<PREFIX>` — значение параметра [cloud.prefix](../../installing/configuration.html#clusterconfiguration-cloud-prefix) общих параметров кластера. Вы можете указать в параметре `iamNodeRole` свою IAM-роль с бОльшими правами, но, важно чтобы она включала в себя политики IAM-роли, создаваемой DKP (роль `<PREFIX>-node`).
+
+          Подробнее о IAM-ролях для AWS EC2 можно прочитать в [документации AWS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html).

@@ -100,7 +100,7 @@ The progress of the process can be observed in events using the command `kubectl
 
 > After modifying a volume, you must wait at least six hours and ensure that the volume is in the `in-use` or `available` state before you can modify the same volume. This is sometimes referred to as a cooldown period. You can find details in the [official documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/modify-volume-requirements.html).
 
-## How to configure access to Amazon ECR repository on cluster nodes
+## How do I configure access to Amazon ECR repository on cluster nodes?
 
 1. Set permissions to read images in [Repository policies](https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html). There must be an existing `Roles` object in `Principal`.
 

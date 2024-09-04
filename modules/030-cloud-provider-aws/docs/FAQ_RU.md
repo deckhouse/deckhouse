@@ -101,7 +101,11 @@ title: "Cloud provider — AWS: FAQ"
 
 > После изменения volume нужно подождать не менее шести часов и убедиться, что volume находится в состоянии `in-use` или `available`, прежде чем станет возможно изменить его еще раз. Подробности можно найти [в официальной документации](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/modify-volume-requirements.html).
 
-## Как настроить доступ до Amazon ECR repository на узлах кластера
+## Как настроить доступ к репозиторию Amazon ECR на узлах кластера
+
+{% alert level="info" %}
+Под репозиторием Amazon ECR подразумевается [Amazon ECR repository](https://docs.aws.amazon.com/AmazonECR/latest/userguide/Repositories.html).
+{% endalert %}
 
 1. Задайте права для чтения образов [в Repository policies](https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html). В `Principal` должен быть существующий объект `Roles`.
 
