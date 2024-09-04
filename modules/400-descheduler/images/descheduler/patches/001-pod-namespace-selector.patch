@@ -18,9 +18,9 @@ index f8479b7a73..b853eda104 100644
 --- a/README.md
 +++ b/README.md
 @@ -132,18 +132,19 @@ These are top level keys in the Descheduler Policy that you can use to configure
-
+ 
  The Default Evictor Plugin is used by default for filtering pods before processing them in an strategy plugin, or for applying a PreEvictionFilter of pods before eviction. You can also create your own Evictor Plugin or use the Default one provided by Descheduler.  Other uses for the Evictor plugin can be to sort, filter, validate or group pods by different criteria, and that's why this is handled by a plugin and not configured in the top level config.
-
+ 
 -| Name |type| Default Value | Description |
 -|------|----|---------------|-------------|
 -| `nodeSelector` |`string`| `nil` | limiting the nodes which are processed |
@@ -45,9 +45,9 @@ index f8479b7a73..b853eda104 100644
 +| `nodeFit`                 |`bool`|`false`|(see [node fit filtering](#node-fit-filtering))|
 +| `minReplicas`             |`uint`|`0`| ignore eviction of pods where owner (e.g. `ReplicaSet`) replicas is below this threshold |
 +| `minPodAge`               |`metav1.Duration`|`0`| ignore eviction of pods with a creation time within this threshold |
-
+ 
  ### Example policy
-
+ 
 diff --git a/pkg/framework/plugins/defaultevictor/defaultevictor.go b/pkg/framework/plugins/defaultevictor/defaultevictor.go
 index 7b20517dbc..04a27a196e 100644
 --- a/pkg/framework/plugins/defaultevictor/defaultevictor.go
@@ -90,9 +90,9 @@ index 7b20517dbc..04a27a196e 100644
 +
  	return true
  }
-
+ 
 @@ -278,3 +301,39 @@ func getPodIndexerByOwnerRefs(indexName string, handle frameworktypes.Handle) (c
-
+ 
  	return indexer, nil
  }
 +
@@ -152,7 +152,7 @@ index ab3f3c6469..c2b1661cac 100644
  	minPodAge               *metav1.Duration
  	result                  bool
  }
-
+ 
 +var namespace = "test"
 +var namespaceSelector = &metav1.LabelSelector{
 +	MatchLabels: map[string]string{
@@ -162,7 +162,7 @@ index ab3f3c6469..c2b1661cac 100644
 +
  func TestDefaultEvictorPreEvictionFilter(t *testing.T) {
  	n1 := test.BuildTestNode("node1", 1000, 2000, 13, nil)
-
+ 
 @@ -305,6 +314,63 @@ func TestDefaultEvictorPreEvictionFilter(t *testing.T) {
  			nodeFit:                 false,
  			result:                  true,
@@ -225,12 +225,12 @@ index ab3f3c6469..c2b1661cac 100644
 +			result:                  false,
 +		},
  	}
-
+ 
  	for _, test := range testCases {
 @@ -838,6 +904,10 @@ func initializePlugin(ctx context.Context, test testCase) (frameworktypes.Plugin
  		MinPodAge:   test.minPodAge,
  	}
-
+ 
 +	if test.useNamespaceSelector {
 +		defaultEvictorArgs.NamespaceLabelSelector = namespaceSelector
 +	}
@@ -257,17 +257,17 @@ index 6e4d84f55d..c509d92e59 100644
 --- a/pkg/framework/plugins/defaultevictor/types.go
 +++ b/pkg/framework/plugins/defaultevictor/types.go
 @@ -15,6 +15,7 @@ package defaultevictor
-
+ 
  import (
  	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 +
  	"sigs.k8s.io/descheduler/pkg/api"
  )
-
+ 
 @@ -25,15 +26,16 @@ import (
  type DefaultEvictorArgs struct {
  	metav1.TypeMeta `json:",inline"`
-
+ 
 -	NodeSelector            string                 `json:"nodeSelector,omitempty"`
 -	EvictLocalStoragePods   bool                   `json:"evictLocalStoragePods,omitempty"`
 -	EvictDaemonSetPods      bool                   `json:"evictDaemonSetPods,omitempty"`
@@ -308,3 +308,4 @@ index 9d1746e853..1cc9891d07 100644
 +	}
  	return
  }
+ 
