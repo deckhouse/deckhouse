@@ -1,4 +1,4 @@
-{{- $version := "4e4c5f79fb8580f6817ff378cdad27c410546e0c" }}
+{{- $version := "0f1890e5cd2782c580951b20b04f40a5ed0f6642" }}
 ---
 artifact: {{ .ModuleName }}/build-artifact
 from: {{ .Images.BASE_GOLANG_22_ALPINE }}
