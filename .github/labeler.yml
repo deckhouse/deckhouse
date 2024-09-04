@@ -96,7 +96,6 @@ area/network:
   - ee/modules/450-network-gateway/**
 
 area/scaling:
-  - modules/010-vertical-pod-autoscaler/**
   - modules/302-vertical-pod-autoscaler/**
   - modules/400-descheduler/**
 

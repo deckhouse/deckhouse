@@ -1,6 +1,5 @@
 000-common
 010-cloud-data-crd
-010-vertical-pod-autoscaler
 340-monitoring-applications
 340-prometheus-madison-integration
 500-basic-auth

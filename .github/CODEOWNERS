@@ -3,7 +3,6 @@
 005-external-module-manager/    @yalosev @miklezzzz
 007-registrypackages/           @RomanenkoDenys @name212
 010-cloud-data-crd/             @nabokihms
-010-vertical-pod-autoscaler/ @nabokihms
 011-flow-schema/                @RomanenkoDenys @name212
 015-admission-policy-engine/    @yalosev @miklezzzz
 021-cni-cilium/                 @apolovov
