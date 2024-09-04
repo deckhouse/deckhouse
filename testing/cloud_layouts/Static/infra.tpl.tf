@@ -221,7 +221,7 @@ resource "openstack_compute_instance_v2" "system" {
   availability_zone = var.az_zone
   user_data = file("alt-instance-bootstrap.sh")
 
-network {
+  network {
     port = openstack_networking_port_v2.system_internal_without_security.id
   }
 
