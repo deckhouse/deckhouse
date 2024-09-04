@@ -602,7 +602,7 @@ jobs:
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vcd_containerd_1_26
           path: |
@@ -612,7 +612,7 @@ jobs:
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4.4.0
         with:
           name: test_output_vcd_containerd_1_26
           path: |
@@ -1085,7 +1085,7 @@ jobs:
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vcd_containerd_1_27
           path: |
@@ -1095,7 +1095,7 @@ jobs:
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4.4.0
         with:
           name: test_output_vcd_containerd_1_27
           path: |
@@ -1568,7 +1568,7 @@ jobs:
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vcd_containerd_1_28
           path: |
@@ -1578,7 +1578,7 @@ jobs:
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4.4.0
         with:
           name: test_output_vcd_containerd_1_28
           path: |
@@ -2051,7 +2051,7 @@ jobs:
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vcd_containerd_1_29
           path: |
@@ -2061,7 +2061,7 @@ jobs:
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4.4.0
         with:
           name: test_output_vcd_containerd_1_29
           path: |
@@ -2534,7 +2534,7 @@ jobs:
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vcd_containerd_1_30
           path: |
@@ -2544,7 +2544,7 @@ jobs:
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4.4.0
         with:
           name: test_output_vcd_containerd_1_30
           path: |
@@ -3017,7 +3017,7 @@ jobs:
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4.4.0
         with:
           name: failed_cluster_state_vcd_containerd_Automatic
           path: |
@@ -3027,7 +3027,7 @@ jobs:
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4.4.0
         with:
           name: test_output_vcd_containerd_Automatic
           path: |
