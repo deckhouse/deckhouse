@@ -45,7 +45,50 @@ spec:
   validationActions: [Deny]
 {{- end }}
 ---
-{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
+{{- $policyName := "label-objects.deckhouse.io" }}
+{{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
+apiVersion: admissionregistration.k8s.io/v1
+{{- else if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
+apiVersion: admissionregistration.k8s.io/v1beta1
+{{- else }}
+apiVersion: admissionregistration.k8s.io/v1alpha1
+{{- end }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["*"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["*"]
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+  matchConditions:
+    - name: 'exclude-groups'
+      expression: '!(["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups)))'
+    - name: 'exclude-users'
+      expression: '!(["kubernetes-admin", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler"].exists(e, (e == request.userInfo.username)))'
+    - name: 'exclude-kinds'
+      expression: '!(has(request.kind) && ["StorageClass"].exists(e, (e == request.kind.kind)))'
+  validations:
+    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-")'
+      reason: Forbidden
+      messageExpression: '''Creating, updating and deleting an objects with the `heritage: deckhouse` label is forbidden'''
+  auditAnnotations:
+    - key: 'source-user'
+      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change object with the heritage label'"
+{{- else }}
+  validations:
+    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || ["kubernetes-admin", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler"].exists(e, (e == request.userInfo.username)) || ["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups)) || (has(request.kind) && ["StorageClass"].exists(e, (e == request.kind.kind)))'
+      reason: Forbidden
+{{- end }}
+---
+{{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
+apiVersion: admissionregistration.k8s.io/v1
+{{- else if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1beta1
 {{- else }}
 apiVersion: admissionregistration.k8s.io/v1alpha1
