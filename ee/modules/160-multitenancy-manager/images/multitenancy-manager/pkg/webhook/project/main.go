@@ -63,7 +63,7 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 		}
 	}
 
-	template, err := v.projectTemplateByName(context.Background(), project.Name)
+	template, err := v.projectTemplateByName(context.Background(), project.Spec.ProjectTemplateName)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}

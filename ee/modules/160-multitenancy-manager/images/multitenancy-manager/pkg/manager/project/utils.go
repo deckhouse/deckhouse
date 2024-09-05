@@ -73,16 +73,14 @@ func (m *Manager) ensureVirtualProjects(ctx context.Context) error {
 			Description:         "This is a virtual project",
 		},
 	}
-	if err := m.ensureProject(ctx, defaultProject); err != nil {
-		return err
-	}
-	return nil
+	return m.ensureProject(ctx, defaultProject)
 }
 
 func (m *Manager) ensureProject(ctx context.Context, project *v1alpha2.Project) error {
 	m.log.Info("ensuring the project", "project", project.Name)
 	if err := m.client.Create(ctx, project); err != nil {
 		if apierrors.IsAlreadyExists(err) {
+			m.log.Info("the project already exists, try to update it")
 			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				existingProject := new(v1alpha2.Project)
 				if err = m.client.Get(ctx, types.NamespacedName{Name: project.Name}, existingProject); err != nil {
@@ -94,11 +92,7 @@ func (m *Manager) ensureProject(ctx context.Context, project *v1alpha2.Project) 
 				existingProject.Labels = project.Labels
 				existingProject.Annotations = project.Annotations
 
-				m.log.Info("the project already exists, try to update it")
-				if err = m.client.Update(ctx, existingProject); err != nil {
-					return err
-				}
-				return nil
+				return m.client.Update(ctx, existingProject)
 			})
 			if err != nil {
 				m.log.Error(err, "failed to update the project")

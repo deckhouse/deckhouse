@@ -13,6 +13,7 @@ spec:
         - administrators
         - resourceQuota
       properties:
+        description: Includes all the capabilities of the default template and additional features.
         resourceQuota:
           type: object
           description: |

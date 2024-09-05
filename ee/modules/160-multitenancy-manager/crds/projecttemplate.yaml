@@ -23,6 +23,9 @@ spec:
         - jsonPath: .metadata.creationTimestamp
           name: Age
           type: date
+        - jsonPath: .spec.description
+          name: Description
+          type: string
       schema:
         openAPIV3Schema:
           description: |
@@ -33,6 +36,10 @@ spec:
             spec:
               required: ["parametersSchema", "resourcesTemplate"]
               properties:
+                description:
+                  description: |
+                    Arbitrary description of the template's purpose. Specify an empty string if no description is required.
+                  type: string
                 parametersSchema:
                   type: object
                   required: ["openAPIV3Schema"]

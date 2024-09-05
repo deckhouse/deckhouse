@@ -13,6 +13,7 @@ spec:
         - administrators
         - resourceQuota
       properties:
+        description: A template that covers basic project use cases.
         resourceQuota:
           type: object
           description: |
