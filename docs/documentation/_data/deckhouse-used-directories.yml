@@ -8,7 +8,7 @@ directories:
   - path: /mnt/kubernetes-data
     node: master
     description:
-      en: exists only in cloud installations, when a separate disk is used for etcd database.
+      en: only exists in clusters deployed in the cloud when a separate disk is used for the etcd database.
       ru: существует только в кластерах, развернутых в облаке, когда используется отдельный диск для базы данных etcd.
   - path: /var/lib/etcd
     node: master
