@@ -129,7 +129,7 @@ func (c completedConfig) New() (*BashibleServer, error) {
 	// Config hardcode, could be put to `ExtraConfig`
 	const (
 		templatesRootDir = "/deckhouse/candi"
-		resyncTimeout    = 30 * time.Minute
+		resyncTimeout    = 3 * time.Minute
 	)
 
 	kubeClient, err := initializeClientset()

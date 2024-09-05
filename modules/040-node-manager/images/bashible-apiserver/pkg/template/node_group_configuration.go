@@ -64,7 +64,7 @@ func (ngc NodeGroupConfigurationSpec) IsEqual(newSpec NodeGroupConfigurationSpec
 	}
 
 	if slicesIsEqual(ngc.NodeGroups, newSpec.NodeGroups) {
-		klog.Info("nodegroups")
+		klog.Infof("nodegroups: %v %v", ngc.NodeGroups, newSpec.NodeGroups)
 		return false
 	}
 
