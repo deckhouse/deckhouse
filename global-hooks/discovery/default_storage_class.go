@@ -65,7 +65,6 @@ func discoveryDefaultStorageClass(input *go_hook.HookInput) error {
 
 	defaultStorageClass := ""
 	for _, scRaw := range storageClassesSnap {
-		// TODO: если их несколько, то выбирать наиболее ПОЗДНИЙ по дате создания
 		sc := scRaw.(storageClass)
 		if sc.IsDefault {
 			defaultStorageClass = sc.Name
