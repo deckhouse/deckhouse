@@ -7,19 +7,20 @@ package project
 
 import (
 	"context"
-	"controller/pkg/apis/deckhouse.io/v1alpha1"
-	"controller/pkg/consts"
-	"controller/pkg/helm"
-	"controller/pkg/validate"
 	"fmt"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"strings"
 
+	"controller/pkg/apis/deckhouse.io/v1alpha1"
 	"controller/pkg/apis/deckhouse.io/v1alpha2"
+	"controller/pkg/consts"
+	"controller/pkg/helm"
+	"controller/pkg/validate"
 
+	admissionv1 "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -60,17 +61,6 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 		}
 	}
 
-	namespaces := new(v1.NamespaceList)
-	if err := v.client.List(context.Background(), namespaces); err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
-	}
-	for _, namespace := range namespaces.Items {
-		if namespace.Name == project.Name {
-			msg := fmt.Sprintf("The '%s' project cannot be created, a namespace with its name exists", project.Name)
-			return admission.Denied(msg)
-		}
-	}
-
 	template, err := v.projectTemplateByName(context.Background(), project.Spec.ProjectTemplateName)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
@@ -87,6 +77,19 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 	// validate helm render
 	if err = v.helmClient.ValidateRender(project, template); err != nil {
 		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %s", project.Name, err.Error()))
+	}
+
+	if req.Operation == admissionv1.Create {
+		namespaces := new(v1.NamespaceList)
+		if err = v.client.List(context.Background(), namespaces); err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+		for _, namespace := range namespaces.Items {
+			if namespace.Name == project.Name {
+				msg := fmt.Sprintf("The '%s' project cannot be created, a namespace with its name exists", project.Name)
+				return admission.Denied(msg)
+			}
+		}
 	}
 
 	return admission.Allowed("")
