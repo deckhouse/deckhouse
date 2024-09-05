@@ -35,8 +35,6 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - export VERSION="0.1.0"
-  - mkdir -p /dynamix/dynamix-csi-driver/src
-  - mkdir -p /dynamix/dynamix-common
   - git clone --depth 1 --branch main {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /dynamix/dynamix-common
   - git clone --depth 1 --branch main {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-csi-driver.git /dynamix/dynamix-csi-driver/src
   - cd /dynamix/dynamix-csi-driver/src
