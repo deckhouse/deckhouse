@@ -37,9 +37,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -186,6 +188,9 @@ func (s *Service) converge(
 ) *pb.ConvergeResult {
 	var err error
 
+	cleanuper := callback.NewCallback()
+	defer cleanuper.Call()
+
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
 		Width:     int(request.Options.LogWidth),
@@ -240,30 +245,6 @@ func (s *Service) converge(
 		return &pb.ConvergeResult{Err: err.Error()}
 	}
 
-	var sshClient *ssh.Client
-	err = log.Process("default", "Preparing SSH client", func() error {
-		connectionConfig, err := config.ParseConnectionConfig(
-			request.ConnectionConfig,
-			config.NewSchemaStore(),
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
-		)
-		if err != nil {
-			return fmt.Errorf("parsing connection config: %w", err)
-		}
-
-		sshClient, err = prepareSSHClient(connectionConfig)
-		if err != nil {
-			return fmt.Errorf("preparing ssh client: %w", err)
-		}
-		return nil
-	})
-	if err != nil {
-		return &pb.ConvergeResult{Err: err.Error()}
-	}
-	defer sshClient.Stop()
-
 	terraformContext := terraform.NewTerraformContext()
 
 	var commanderUUID uuid.UUID
@@ -274,8 +255,7 @@ func (s *Service) converge(
 		}
 	}
 
-	checker := check.NewChecker(&check.Params{
-		SSHClient:     sshClient,
+	checkParams := &check.Params{
 		StateCache:    cache.Global(),
 		CommanderMode: request.Options.CommanderMode,
 		CommanderUUID: commanderUUID,
@@ -284,10 +264,9 @@ func (s *Service) converge(
 			[]byte(request.ProviderSpecificClusterConfig),
 		),
 		TerraformContext: terraform.NewTerraformContext(),
-	})
+	}
 
-	converger := converge.NewConverger(&converge.Params{
-		SSHClient:              sshClient,
+	convergeParams := &converge.Params{
 		OnPhaseFunc:            phaseSwitcher.switchPhase,
 		AutoApprove:            true,
 		AutoDismissDestructive: false,
@@ -298,10 +277,34 @@ func (s *Service) converge(
 			[]byte(request.ProviderSpecificClusterConfig),
 		),
 		TerraformContext:           terraformContext,
-		Checker:                    checker,
 		ApproveDestructiveChangeID: request.ApproveDestructionChangeId,
 		OnCheckResult:              onCheckResult,
+	}
+
+	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(helper.ClusterConnectionsOptions{
+		CommanderMode: request.Options.CommanderMode,
+		ApiServerUrl:  request.Options.ApiServerUrl,
+		ApiServerOptions: helper.ApiServerOptions{
+			Token:                    request.Options.ApiServerToken,
+			InsecureSkipTLSVerify:    request.Options.ApiServerInsecureSkipTlsVerify,
+			CertificateAuthorityData: util.StringToBytes(request.Options.ApiServerCertificateAuthorityData),
+		},
+		SchemaStore:         config.NewSchemaStore(),
+		SSHConnectionConfig: request.ConnectionConfig,
 	})
+	cleanuper.Add(cleanup)
+	if err != nil {
+		return &pb.ConvergeResult{Err: err.Error()}
+	}
+
+	checkParams.KubeClient = kubeClient
+	checkParams.SSHClient = sshClient
+	convergeParams.KubeClient = kubeClient
+	convergeParams.SSHClient = sshClient
+
+	checker := check.NewChecker(checkParams)
+	convergeParams.Checker = checker
+	converger := converge.NewConverger(convergeParams)
 
 	result, convergeErr := converger.Converge(ctx)
 	state := converger.GetLastState()
@@ -309,7 +312,7 @@ func (s *Service) converge(
 	resultString, marshalResultErr := json.Marshal(result)
 	err = errors.Join(convergeErr, marshalStateErr, marshalResultErr)
 
-	return &pb.ConvergeResult{State: string(stateData), Result: string(resultString), Err: errToString(err)}
+	return &pb.ConvergeResult{State: string(stateData), Result: string(resultString), Err: util.ErrToString(err)}
 }
 
 func (s *Service) convergeServerTransitions() []fsm.Transition {
