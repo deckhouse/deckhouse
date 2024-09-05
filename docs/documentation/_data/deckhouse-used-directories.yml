@@ -39,7 +39,7 @@ directories:
   - path: /var/lib/containerd
     node: any
     description:
-      en: files of container images and containers running on the node.
+      en: used to store data related to CRI operation (e.g., containerd); contains container image layers, container file system snapshots, meta information, logs, and other container information.
       ru: используется для хранения данных, связанных с работой CRI (например, containerd). Содержит слои образов контейнеров, снапшоты файловых систем контейнеров, метаинформацию, логи и другую информацию контейнеров.
   - path: /mnt/vector-data
     node: any
