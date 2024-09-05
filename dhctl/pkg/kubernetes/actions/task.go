@@ -40,6 +40,11 @@ func (task *ManifestTask) CreateOrUpdate() error {
 
 	err := task.CreateFunc(manifest)
 	if err != nil {
+		log.ErrorLn(err)
+		if errors.IsForbidden(err) {
+			log.InfoF("%s is Forbidden. Trying to Skip! ", task.Name)
+			return nil
+		}
 		if !errors.IsAlreadyExists(err) {
 			return fmt.Errorf("create resource: %v", err)
 		}
