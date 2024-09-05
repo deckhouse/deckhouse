@@ -1,6 +1,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
+fromCacheVersion: "2024-09-05"
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /dynamix-csi-driver
