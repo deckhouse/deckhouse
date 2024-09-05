@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -218,6 +219,22 @@ func ConfigureReleaseChannel(kubeCl *client.KubernetesClient, cfg *config.Deckho
 
 func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
 	tasks := []actions.ManifestTask{
+		{
+			Name:     `Impersonate "deckhouse"`,
+			Manifest: func() interface{} { return nil },
+			CreateFunc: func(manifest interface{}) error {
+				config := kubeCl.KubeClient.RestConfig()
+				if config != nil {
+					config.Impersonate = rest.ImpersonationConfig{
+						UserName: "system:serviceaccount:d8-system:deckhouse",
+					}
+				}
+				return nil
+			},
+			UpdateFunc: func(manifest interface{}) error {
+				return nil
+			},
+		},
 		{
 			Name:     `Namespace "d8-system"`,
 			Manifest: func() interface{} { return manifests.DeckhouseNamespace("d8-system") },
