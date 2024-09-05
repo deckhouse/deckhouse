@@ -6,9 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package helm
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"helm.sh/helm/v3/pkg/engine"
 	"os"
 	"path/filepath"
 	"strings"
@@ -283,4 +285,31 @@ func (c *Client) Delete(_ context.Context, releaseName string) error {
 	}
 	c.log.Info("release deleted", "release", releaseName)
 	return nil
+}
+
+// ValidateRender tests project render
+func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
+	ch, err := makeChart(c.templates, project.Name)
+	if err != nil {
+		c.log.Error(err, "failed to make chart", "release", project.Name, "namespace", project.Name)
+		return err
+	}
+
+	values, err := chartutil.ToRenderValues(ch, valuesFromProjectAndTemplate(project, template), chartutil.ReleaseOptions{
+		Name:      project.Name,
+		Namespace: project.Name,
+	}, nil)
+	if err != nil {
+		return err
+	}
+	rendered, err := engine.Render(ch, values)
+	if err != nil {
+		return err
+	}
+	buf := bytes.NewBuffer(nil)
+	for _, file := range rendered {
+		buf.WriteString(file)
+	}
+	_, err = newPostRenderer(project.Name, template.Name, c.log).Run(buf)
+	return err
 }

@@ -7,8 +7,13 @@ package project
 
 import (
 	"context"
+	"controller/pkg/apis/deckhouse.io/v1alpha1"
 	"controller/pkg/consts"
+	"controller/pkg/helm"
+	"controller/pkg/validate"
 	"fmt"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"strings"
 
@@ -23,13 +28,14 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func Register(runtimeManager manager.Manager) {
-	hook := &webhook.Admission{Handler: &validator{client: runtimeManager.GetClient()}}
+func Register(runtimeManager manager.Manager, helmClient *helm.Client) {
+	hook := &webhook.Admission{Handler: &validator{client: runtimeManager.GetClient(), helmClient: helmClient}}
 	runtimeManager.GetWebhookServer().Register("/validate/v1alpha2/projects", hook)
 }
 
 type validator struct {
-	client client.Client
+	client     client.Client
+	helmClient *helm.Client
 }
 
 func (v *validator) Handle(_ context.Context, req admission.Request) admission.Response {
@@ -57,5 +63,34 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 		}
 	}
 
+	template, err := v.projectTemplateByName(context.Background(), project.Name)
+	if err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+	if template == nil {
+		return admission.Allowed("").WithWarnings("The project template not found")
+	}
+
+	// validate the project against the template
+	if err = validate.Project(project, template); err != nil {
+		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %s", template.Name, err.Error()))
+	}
+
+	// validate helm render
+	if err = v.helmClient.ValidateRender(project, template); err != nil {
+		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %s", project.Name, err.Error()))
+	}
+
 	return admission.Allowed("")
+}
+
+func (v *validator) projectTemplateByName(ctx context.Context, name string) (*v1alpha1.ProjectTemplate, error) {
+	template := new(v1alpha1.ProjectTemplate)
+	if err := v.client.Get(ctx, types.NamespacedName{Name: name}, template); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return template, nil
 }
