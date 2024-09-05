@@ -76,7 +76,6 @@ rules:
     resources:
       - clusterresourcesets/finalizers
       - clusterresourcesets/status
-      - clusterresourcesetbindings/status
     verbs:
       - get
       - patch
@@ -96,30 +95,8 @@ rules:
     resources:
       - kubeadmconfigs
       - kubeadmconfigtemplates
-      - deckhousecontrolplanes
-      - staticclusters
-      - staticmachines
-      - staticmachinetemplates
-      - vcdclusters
-      - vcdclustertemplates
-      - vcdmachines
-      - vcdmachinetemplates
       - kubeadmcontrolplanes
       - kubeadmcontrolplanetemplates
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - bootstrap.cluster.x-k8s.io
-      - infrastructure.cluster.x-k8s.io
-    resources:
-      - kubeadmconfigs
-      - kubeadmconfigtemplates
       - deckhousecontrolplanes
       - staticclusters
       - staticmachines
