@@ -133,11 +133,9 @@ func (c *Creator) createAll() error {
 }
 
 func (c *Creator) ensureRequiredNamespacesExist() error {
+	knownNamespaces := make(map[string]struct{})
 
 	return retry.NewLoop(fmt.Sprintln("Ensure that required namespaces exist"), 10, 10*time.Second).Run(func() error {
-
-		knownNamespaces := make(map[string]struct{})
-
 		for _, res := range c.resources {
 			nsName := res.Object.GetNamespace()
 			if _, nsWasSeenBefore := knownNamespaces[nsName]; nsName == "" || nsWasSeenBefore {
