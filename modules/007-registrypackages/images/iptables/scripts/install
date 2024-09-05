@@ -44,7 +44,7 @@ function checkNFTSupportInKernelBuildConfiguration() {
       
       if [[ $matchCount -ge 4 ]]; then
         # CONFIG_NF_TABLES, CONFIG_NF_TABLES_IPV4, 
-        # CONFIG_NFT_TUNNEL, CONFIG_NFT_SOCKET, CONFIG_NFT_TPROXY, CONFIG_NFT_SYNPROXY
+        # CONFIG_NFT_SOCKET, CONFIG_NFT_TPROXY
         # are present for nft support
         return 0
       else
