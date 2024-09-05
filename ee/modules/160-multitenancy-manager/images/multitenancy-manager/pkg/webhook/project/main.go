@@ -7,26 +7,23 @@ package project
 
 import (
 	"context"
-	"fmt"
-	"net/http"
-	"strings"
-
 	"controller/pkg/apis/deckhouse.io/v1alpha1"
 	"controller/pkg/apis/deckhouse.io/v1alpha2"
 	"controller/pkg/consts"
 	"controller/pkg/helm"
 	"controller/pkg/validate"
-
+	"fmt"
 	admissionv1 "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-
+	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"sigs.k8s.io/yaml"
+	"strings"
 )
 
 func Register(runtimeManager manager.Manager, helmClient *helm.Client) {
@@ -44,20 +41,41 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 	if err := yaml.Unmarshal(req.Object.Raw, project); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
-	if strings.HasPrefix(project.Name, "d8-") || strings.HasPrefix(project.Name, "kube-") {
-		return admission.Denied("Projects cannot start with 'd8-' or 'kube-'")
-	}
 
-	// allow virtual projects
-	if project.Name == consts.DefaultProjectName || project.Name == consts.DeckhouseProjectName {
-		return admission.Allowed("")
-	}
-
-	// allow triggered projects
-	if annotations := project.Annotations; annotations != nil {
-		require, ok := annotations[consts.ProjectRequireSyncAnnotation]
-		if ok && require == "true" {
+	if req.Operation == admissionv1.Create {
+		// pass virtual projects
+		if project.Name == consts.DefaultProjectName || project.Name == consts.DeckhouseProjectName {
 			return admission.Allowed("")
+		}
+
+		if strings.HasPrefix(project.Name, "d8-") || strings.HasPrefix(project.Name, "kube-") {
+			return admission.Denied("Projects cannot start with 'd8-' or 'kube-'")
+		}
+
+		namespaces := new(v1.NamespaceList)
+		if err := v.client.List(context.Background(), namespaces); err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+		for _, namespace := range namespaces.Items {
+			if namespace.Name == project.Name {
+				msg := fmt.Sprintf("The '%s' project cannot be created, a namespace with its name exists", project.Name)
+				return admission.Denied(msg)
+			}
+		}
+	}
+
+	if req.Operation == admissionv1.Update {
+		// pass triggered projects
+		if annotations := project.Annotations; annotations != nil {
+			require, ok := annotations[consts.ProjectRequireSyncAnnotation]
+			if ok && require == "true" {
+				return admission.Allowed("")
+			}
+		}
+
+		// pass deploying or error projects
+		if project.Status.State == v1alpha2.ProjectStateDeploying || project.Status.State == v1alpha2.ProjectStateError {
+			return admission.Allowed("").WithWarnings("The project skip validation due to the status")
 		}
 	}
 
@@ -77,19 +95,6 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 	// validate helm render
 	if err = v.helmClient.ValidateRender(project, template); err != nil {
 		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %s", project.Name, err.Error()))
-	}
-
-	if req.Operation == admissionv1.Create {
-		namespaces := new(v1.NamespaceList)
-		if err = v.client.List(context.Background(), namespaces); err != nil {
-			return admission.Errored(http.StatusInternalServerError, err)
-		}
-		for _, namespace := range namespaces.Items {
-			if namespace.Name == project.Name {
-				msg := fmt.Sprintf("The '%s' project cannot be created, a namespace with its name exists", project.Name)
-				return admission.Denied(msg)
-			}
-		}
 	}
 
 	return admission.Allowed("")
