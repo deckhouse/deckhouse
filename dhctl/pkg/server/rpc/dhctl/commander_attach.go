@@ -35,7 +35,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -183,6 +186,9 @@ func (s *Service) CommanderAttachCluster(
 ) *pb.CommanderAttachResult {
 	var err error
 
+	cleanuper := callback.NewCallback()
+	defer cleanuper.Call()
+
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
 		Width:     int(request.Options.LogWidth),
@@ -211,7 +217,9 @@ func (s *Service) CommanderAttachCluster(
 			return fmt.Errorf("parsing connection config: %w", err)
 		}
 
-		sshClient, err = prepareSSHClient(connectionConfig)
+		var cleanup func() error
+		sshClient, cleanup, err = helper.CreateSSHClient(connectionConfig)
+		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
@@ -220,7 +228,6 @@ func (s *Service) CommanderAttachCluster(
 	if err != nil {
 		return &pb.CommanderAttachResult{Err: err.Error()}
 	}
-	defer sshClient.Stop()
 
 	var commanderUUID uuid.UUID
 	if request.Options.CommanderUuid != "" {
@@ -250,7 +257,7 @@ func (s *Service) CommanderAttachCluster(
 	resultString, marshalResultErr := json.Marshal(result)
 	err = errors.Join(attacherr, marshalStateErr, marshalResultErr)
 
-	return &pb.CommanderAttachResult{State: string(stateData), Result: string(resultString), Err: errToString(err)}
+	return &pb.CommanderAttachResult{State: string(stateData), Result: string(resultString), Err: util.ErrToString(err)}
 }
 
 func (s *Service) CommanderAttachServerTransitions() []fsm.Transition {

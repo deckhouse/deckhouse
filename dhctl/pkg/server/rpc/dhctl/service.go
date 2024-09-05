@@ -19,21 +19,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"os"
 	"strconv"
-	"strings"
 
 	"google.golang.org/grpc"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -90,81 +83,6 @@ func operationCtx(server grpc.ServerStream) context.Context {
 		ctx,
 		logger.L(ctx).With(slog.String("operation", operation)),
 	)
-}
-
-func prepareSSHClient(config *config.ConnectionConfig) (*ssh.Client, error) {
-	keysPaths := make([]string, 0, len(config.SSHConfig.SSHAgentPrivateKeys))
-	for _, key := range config.SSHConfig.SSHAgentPrivateKeys {
-		keyPath, err := writeTempFile([]byte(strings.TrimSpace(key.Key) + "\n"))
-		if err != nil {
-			return nil, fmt.Errorf("failed to write ssh private key: %w", err)
-		}
-		keysPaths = append(keysPaths, keyPath)
-	}
-	normalizedKeysPaths, err := app.ParseSSHPrivateKeyPaths(keysPaths)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing ssh agent private keys %v: %w", normalizedKeysPaths, err)
-	}
-	keys := make([]session.AgentPrivateKey, 0, len(normalizedKeysPaths))
-	for i, key := range normalizedKeysPaths {
-		keys = append(keys, session.AgentPrivateKey{
-			Key:        key,
-			Passphrase: config.SSHConfig.SSHAgentPrivateKeys[i].Passphrase,
-		})
-	}
-
-	var sshHosts []string
-	if len(config.SSHHosts) > 0 {
-		for _, h := range config.SSHHosts {
-			sshHosts = append(sshHosts, h.Host)
-		}
-	} else {
-		mastersIPs, err := bootstrap.GetMasterHostsIPs()
-		if err != nil {
-			return nil, err
-		}
-		sshHosts = mastersIPs
-	}
-
-	sess := session.NewSession(session.Input{
-		User:           config.SSHConfig.SSHUser,
-		Port:           portToString(config.SSHConfig.SSHPort),
-		BastionHost:    config.SSHConfig.SSHBastionHost,
-		BastionPort:    portToString(config.SSHConfig.SSHBastionPort),
-		BastionUser:    config.SSHConfig.SSHBastionUser,
-		ExtraArgs:      config.SSHConfig.SSHExtraArgs,
-		AvailableHosts: sshHosts,
-	})
-
-	app.SSHPrivateKeys = keysPaths
-	app.SSHBastionHost = config.SSHConfig.SSHBastionHost
-	app.SSHBastionPort = portToString(config.SSHConfig.SSHBastionPort)
-	app.SSHBastionUser = config.SSHConfig.SSHBastionUser
-	app.SSHUser = config.SSHConfig.SSHUser
-	app.SSHHosts = sshHosts
-	app.SSHPort = portToString(config.SSHConfig.SSHPort)
-	app.SSHExtraArgs = config.SSHConfig.SSHExtraArgs
-
-	sshClient, err := ssh.NewClient(sess, keys).Start()
-	if err != nil {
-		return nil, err
-	}
-
-	return sshClient, nil
-}
-
-func writeTempFile(data []byte) (string, error) {
-	f, err := os.CreateTemp("", "*")
-	if err != nil {
-		return "", fmt.Errorf("creating temp file: %w", err)
-	}
-
-	_, err = f.Write(data)
-	if err != nil {
-		return "", fmt.Errorf("writing temp file: %w", err)
-	}
-
-	return f.Name(), nil
 }
 
 func onCheckResult(checkRes *check.CheckResult) error {
