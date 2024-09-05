@@ -18,4 +18,5 @@ cleanup:
         last: 2
   - references:
       branch: main
-      limit: 336h
+      limit:
+        in: 336h
