@@ -353,6 +353,9 @@ func (s *StepsStorage) runNodeConfigurationQueue(ctx context.Context) {
 					continue
 				}
 
+				klog.Infof("%v", oldConf.Spec)
+				klog.Infof("%v", newConf.Spec)
+
 				if newConf.Spec.IsEqual(oldConf.Spec) {
 					continue
 				}

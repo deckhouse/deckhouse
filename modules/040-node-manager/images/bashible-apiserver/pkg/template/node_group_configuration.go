@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
 )
 
 // NodeGroupConfiguration is an user scripts for node configuration.
@@ -53,18 +54,22 @@ type NodeGroupConfigurationSpec struct {
 
 func (ngc NodeGroupConfigurationSpec) IsEqual(newSpec NodeGroupConfigurationSpec) bool {
 	if ngc.Weight != newSpec.Weight {
+		klog.Info("weight")
 		return false
 	}
 
 	if ngc.Content != newSpec.Content {
+		klog.Info("content")
 		return false
 	}
 
 	if slicesIsEqual(ngc.NodeGroups, newSpec.NodeGroups) {
+		klog.Info("nodegroups")
 		return false
 	}
 
 	if slicesIsEqual(ngc.Bundles, newSpec.Bundles) {
+		klog.Info("bundles")
 		return false
 	}
 
