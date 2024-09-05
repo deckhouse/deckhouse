@@ -240,12 +240,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name:     `Admin ClusterRole "cluster-admin"`,
 			Manifest: func() interface{} { return manifests.DeckhouseAdminClusterRole() },
 			CreateFunc: func(manifest interface{}) error {
-				// _, err := kubeCl.RbacV1().ClusterRoles().Get(context.TODO(), manifest.(*rbacv1.ClusterRole).GetName(), metav1.GetOptions{})
-				// if err != nil {
-				// 	if apierrors.IsNotFound(err) {
 				_, err := kubeCl.RbacV1().ClusterRoles().Create(context.TODO(), manifest.(*rbacv1.ClusterRole), metav1.CreateOptions{})
-				// 	}
-				// }
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
@@ -256,12 +251,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name:     `ClusterRoleBinding "deckhouse"`,
 			Manifest: func() interface{} { return manifests.DeckhouseAdminClusterRoleBinding() },
 			CreateFunc: func(manifest interface{}) error {
-				// _, err := kubeCl.RbacV1().ClusterRoleBindings().Get(context.TODO(), manifest.(*rbacv1.ClusterRoleBinding).GetName(), metav1.GetOptions{})
-				// if err != nil {
-				// 	if apierrors.IsNotFound(err) {
 				_, err := kubeCl.RbacV1().ClusterRoleBindings().Create(context.TODO(), manifest.(*rbacv1.ClusterRoleBinding), metav1.CreateOptions{})
-				// 	}
-				// }
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
@@ -272,12 +262,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name:     `ServiceAccount "deckhouse"`,
 			Manifest: func() interface{} { return manifests.DeckhouseServiceAccount() },
 			CreateFunc: func(manifest interface{}) error {
-				// _, err := kubeCl.CoreV1().ServiceAccounts("d8-system").Get(context.TODO(), manifest.(*apiv1.ServiceAccount).GetName(), metav1.GetOptions{})
-				// if err != nil {
-				// 	if apierrors.IsNotFound(err) {
 				_, err := kubeCl.CoreV1().ServiceAccounts("d8-system").Create(context.TODO(), manifest.(*apiv1.ServiceAccount), metav1.CreateOptions{})
-				// 	}
-				// }
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
