@@ -223,9 +223,12 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Manifest: func() interface{} { return manifests.DeckhouseNamespace("d8-system") },
 			CreateFunc: func(manifest interface{}) error {
 				_, err := kubeCl.CoreV1().Namespaces().Create(context.TODO(), manifest.(*apiv1.Namespace), metav1.CreateOptions{})
-				if err != nil && apierrors.IsAlreadyExists(err) {
-					log.InfoLn("Already exists. Skip!")
-					return nil
+				if err != nil {
+					if apierrors.IsAlreadyExists(err) {
+						log.InfoLn("Already exists. Skip!")
+						return nil
+					}
+					log.InfoLn(err)
 				}
 				return err
 			},
