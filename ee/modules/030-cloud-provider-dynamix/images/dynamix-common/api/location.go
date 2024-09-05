@@ -8,21 +8,15 @@ package api
 import (
 	"context"
 
-	"dynamix-common/retry"
-	decort "repository.basistech.ru/BASIS/decort-golang-sdk"
 	"repository.basistech.ru/BASIS/decort-golang-sdk/pkg/cloudapi/locations"
 )
 
 type LocationService struct {
-	client  *decort.DecortClient
-	retryer retry.Retryer
+	*Service
 }
 
-func NewLocationService(client *decort.DecortClient) *LocationService {
-	return &LocationService{
-		client:  client,
-		retryer: retry.NewRetryer(),
-	}
+func NewLocationService(service *Service) *LocationService {
+	return &LocationService{service}
 }
 func (c *LocationService) GetLocationByName(ctx context.Context, name string) (*locations.ItemLocation, error) {
 	var result *locations.ItemLocation

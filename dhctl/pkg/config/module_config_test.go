@@ -262,6 +262,19 @@ func TestCheckOrSetupArbitaryCNIModuleConfig(t *testing.T) {
 				},
 			},
 		},
+		{
+			cloudProvider:  "Dynamix",
+			podNetworkMode: "",
+			result: result{
+				cniName: "cni-cilium",
+				enabled: true,
+				version: 1,
+				settings: map[string]interface{}{
+					"tunnelMode":     "VXLAN",
+					"masqueradeMode": "BPF",
+				},
+			},
+		},
 		// static cluster
 		{
 			cloudProvider:  "",
