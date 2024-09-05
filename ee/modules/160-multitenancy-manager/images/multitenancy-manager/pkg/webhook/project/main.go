@@ -52,6 +52,14 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 		return admission.Allowed("")
 	}
 
+	// allow triggered projects
+	if annotations := project.Annotations; annotations != nil {
+		require, ok := annotations[consts.ProjectRequireSyncAnnotation]
+		if ok && require == "true" {
+			return admission.Allowed("")
+		}
+	}
+
 	namespaces := new(v1.NamespaceList)
 	if err := v.client.List(context.Background(), namespaces); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
