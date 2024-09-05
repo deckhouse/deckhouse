@@ -111,7 +111,9 @@ apiVersions:
                   example: ssd
                 template:
                   description: |
-                    Path of the template OVA that is to be used. Consists of organization (optional), catalog, template path. Note: organization may not match with provider.organization (in case of shared templates).
+                    Path of the template OVA that is to be used.
+                    
+                    Consists of organization (optional), catalog, template path. Organization may not match with provider.organization (in case of shared templates).
                   type: string
                   example: Linux/ubuntu2204-cloud-ova
                 mainNetworkIPAddresses:
@@ -219,7 +221,9 @@ apiVersions:
                     example: ssd
                   template:
                     description: |
-                      Path of the template OVA that is to be used. Consists of organization (optional), catalog, template path. Note: organization may not match with provider.organization (in case of shared templates).
+                      Path of the template OVA that is to be used.
+                      
+                      Consists of organization (optional), catalog, template path. Organization may not match with provider.organization (in case of shared templates).
                     type: string
                     example: Linux/ubuntu2204-cloud-ova
                   mainNetworkIPAddresses:
