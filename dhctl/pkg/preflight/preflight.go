@@ -205,7 +205,13 @@ func (pc *Checker) do(title string, checks []checkStep) error {
 			return nil
 		}
 
+		knownSkipFlags := make(map[string]struct{})
 		for _, check := range checks {
+			if _, skipFlagDuplicated := knownSkipFlags[check.skipFlag]; skipFlagDuplicated {
+				panic("duplicated skip flag " + check.skipFlag)
+			}
+			knownSkipFlags[check.skipFlag] = struct{}{}
+
 			loop := retry.NewLoop(
 				fmt.Sprintf("Checking %s", check.successMessage),
 				1,
