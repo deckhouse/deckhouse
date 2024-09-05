@@ -59,7 +59,7 @@ function __on_conversion::v1alpha2_to_v1alpha1() {
 EOF
   else
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
-{"failedMessage":"Conversion of nodegroups.deckhouse.io failed"}
+{"failedMessage":"Conversion of deckhouse.io.io failed"}
 EOF
   fi
 }
