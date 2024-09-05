@@ -120,7 +120,7 @@ func (pc *Checker) Static() error {
 		{
 			fun:            pc.CheckLocalhostDomain,
 			successMessage: "resolve the localhost domain",
-			skipFlag:       app.RegistryCredentialsCheckArgName,
+			skipFlag:       app.ResolvingLocalhostArgName,
 		},
 		{
 			fun:            pc.CheckSudoIsAllowedForUser,
