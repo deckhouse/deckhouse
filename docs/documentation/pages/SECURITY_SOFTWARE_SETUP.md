@@ -15,12 +15,14 @@ To ensure that KESL does not affect Deckhouse's performance, you need to follow 
 
 ### General Setup
 
-Modify KESL settings related to network packet marking bits as there are overlaps with the network packet marking by Deckhouse:
+Modify KESL settings related to network packet marking bits as there are overlaps with the network packet marking by Deckhouse.
 
-* Change the `BypassFwMark` parameter value from 0x400 to 0x700
-* Change the `NtpFwMark` parameter value from 0x200 to 0x600
+First, stop KESL if it is running, and change the settings:
 
-First, stop KESL if it is running, change the settings, and then restart KESL.
+* Change the `BypassFwMark` parameter value from `0x400` to `0x700`;
+* Change the `NtpFwMark` parameter value from `0x200` to `0x600`.
+
+Restart KESL.
 
 Example commands:
 

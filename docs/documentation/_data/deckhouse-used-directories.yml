@@ -9,7 +9,7 @@ directories:
     node: master
     description:
       en: exists only in cloud installations, when a separate disk is used for etcd database.
-      ru: существует только в кластерах развернутых в облаке, когда используется отдельный диск для базы данных etcd.
+      ru: существует только в кластерах, развернутых в облаке, когда используется отдельный диск для базы данных etcd.
   - path: /var/lib/etcd
     node: master
     description:
@@ -40,7 +40,7 @@ directories:
     node: any
     description:
       en: files of container images and containers running on the node.
-      ru: файлы образов контейнеров и контейнеров, запущенных на узле.
+      ru: используется для хранения данных, связанных с работой CRI (например, containerd). Содержит слои образов контейнеров, снэпшоты файловых систем контейнеров, метаинформацию, логи и другую информацию контейнеров.
   - path: /mnt/vector-data
     node: any
     module: log-shipper
