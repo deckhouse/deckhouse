@@ -8,21 +8,15 @@ package api
 import (
 	"context"
 
-	"dynamix-common/retry"
-	decort "repository.basistech.ru/BASIS/decort-golang-sdk"
 	"repository.basistech.ru/BASIS/decort-golang-sdk/pkg/cloudapi/disks"
 )
 
 type DiskService struct {
-	client  *decort.DecortClient
-	retryer retry.Retryer
+	*Service
 }
 
-func NewDiskService(client *decort.DecortClient) *DiskService {
-	return &DiskService{
-		client:  client,
-		retryer: retry.NewRetryer(),
-	}
+func NewDiskService(service *Service) *DiskService {
+	return &DiskService{service}
 }
 
 func (d *DiskService) ListDisksByName(

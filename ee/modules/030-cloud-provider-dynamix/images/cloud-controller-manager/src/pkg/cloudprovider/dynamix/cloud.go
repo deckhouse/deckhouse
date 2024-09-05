@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package dynamix
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -24,15 +25,17 @@ import (
 const (
 	providerName = "dynamix"
 
-	envDynamixAppID         = "DYNAMIX_APP_ID"
-	envDynamixAppSecret     = "DYNAMIX_APP_SECRET"
-	envDynamixOAuth2URL     = "DYNAMIX_OAUTH2_URL"
-	envDynamixControllerURL = "DYNAMIX_CONTROLLER_URL"
-	envDynamixInsecure      = "DYNAMIX_INSECURE"
+	envDynamixAppID             = "DYNAMIX_APP_ID"
+	envDynamixAppSecret         = "DYNAMIX_APP_SECRET"
+	envDynamixOAuth2URL         = "DYNAMIX_OAUTH2_URL"
+	envDynamixControllerURL     = "DYNAMIX_CONTROLLER_URL"
+	envDynamixInsecure          = "DYNAMIX_INSECURE"
+	envDynamixResourceGroupName = "DYNAMIX_RESOURCE_GROUP_NAME"
 )
 
 type CloudConfig struct {
 	config.Credentials
+	ResourceGroupName string
 }
 
 type Cloud struct {
@@ -54,16 +57,25 @@ func init() {
 				return nil, err
 			}
 
-			return NewCloud(*cloudConfig, cloudAPI), nil
+			return NewCloud(*cloudConfig, cloudAPI)
 		},
 	)
 }
 
-func NewCloud(config CloudConfig, api *api.DynamixCloudAPI) *Cloud {
-	return &Cloud{
+func NewCloud(config CloudConfig, api *api.DynamixCloudAPI) (*Cloud, error) {
+	cloud := &Cloud{
 		dynamixService: api,
 		config:         config,
 	}
+
+	resourceGroup, err := cloud.dynamixService.ResourceGroupService.GetResourceGroup(context.TODO(), config.ResourceGroupName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get resource group ID by name '%s': %v", config.ResourceGroupName, err)
+	}
+
+	cloud.dynamixService.Service.SetResourceGroupID(resourceGroup.ID)
+
+	return cloud, nil
 }
 
 func NewCloudConfig() (*CloudConfig, error) {
@@ -95,6 +107,12 @@ func NewCloudConfig() (*CloudConfig, error) {
 
 	cloudConfig.Insecure = strings.ToLower(os.Getenv(envDynamixInsecure)) == "true"
 
+	resourceGroupName := os.Getenv(envDynamixResourceGroupName)
+	if resourceGroupName == "" {
+		return nil, fmt.Errorf("environment variable %q is required", envDynamixResourceGroupName)
+	}
+	cloudConfig.ResourceGroupName = resourceGroupName
+
 	return cloudConfig, nil
 }
 
@@ -121,7 +139,7 @@ func (c *Cloud) Initialize(
 
 // LoadBalancer returns a balancer interface if supported.
 func (c *Cloud) LoadBalancer() (cloudprovider.LoadBalancer, bool) {
-	return nil, false
+	return c, true
 }
 
 // Instances returns an instances interface if supported.

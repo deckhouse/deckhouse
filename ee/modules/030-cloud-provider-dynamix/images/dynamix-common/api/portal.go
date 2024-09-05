@@ -7,21 +7,14 @@ package api
 
 import (
 	"context"
-
-	"dynamix-common/retry"
-	decort "repository.basistech.ru/BASIS/decort-golang-sdk"
 )
 
 type PortalService struct {
-	client  *decort.DecortClient
-	retryer retry.Retryer
+	*Service
 }
 
-func NewPortalService(client *decort.DecortClient) *PortalService {
-	return &PortalService{
-		client:  client,
-		retryer: retry.NewRetryer(),
-	}
+func NewPortalService(service *Service) *PortalService {
+	return &PortalService{service}
 }
 
 func (p *PortalService) Test(ctx context.Context) error {

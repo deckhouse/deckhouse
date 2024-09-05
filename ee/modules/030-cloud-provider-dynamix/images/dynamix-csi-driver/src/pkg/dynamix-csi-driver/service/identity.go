@@ -76,7 +76,7 @@ func (i *IdentityService) Probe(
 	ctx context.Context,
 	_ *csi.ProbeRequest,
 ) (*csi.ProbeResponse, error) {
-	err := i.dynamixCloudAPI.PortalSvc.Test(ctx)
+	err := i.dynamixCloudAPI.PortalService.Test(ctx)
 	if err != nil {
 		klog.Errorf("Could not get connection %v", err)
 		return nil, status.Error(

@@ -201,7 +201,7 @@ func (c *ControllerService) ControllerPublishVolume(
 		return nil, fmt.Errorf("error required paramater VolumeId can't parse: %w", err)
 	}
 
-	vm, err := c.dynamixCloudAPI.ComputeSvc.GetVMByName(ctx, req.NodeId)
+	vm, err := c.dynamixCloudAPI.ComputeService.GetVMByName(ctx, req.NodeId)
 	if err != nil {
 		return nil, fmt.Errorf("failed finding VM: %v, error: %w", req.NodeId, err)
 	}
@@ -219,7 +219,7 @@ func (c *ControllerService) ControllerPublishVolume(
 		return &csi.ControllerPublishVolumeResponse{}, nil
 	}
 
-	err = c.dynamixCloudAPI.ComputeSvc.AttachDiskToVM(ctx, diskID, computeID)
+	err = c.dynamixCloudAPI.ComputeService.AttachDiskToVM(ctx, diskID, computeID)
 	if err != nil {
 		msg := fmt.Errorf("failed creating disk attachment, error: %w", err)
 		klog.Errorf(msg.Error())
@@ -234,7 +234,7 @@ func (c *ControllerService) hasDiskAttachedToVM(
 	diskID uint64,
 	computeID uint64,
 ) (bool, error) {
-	vm, err := c.dynamixCloudAPI.ComputeSvc.GetVMByID(ctx, computeID)
+	vm, err := c.dynamixCloudAPI.ComputeService.GetVMByID(ctx, computeID)
 	if err != nil {
 		return false, fmt.Errorf("failed finding VM: %v, error: %w", computeID, err)
 	}
@@ -264,7 +264,7 @@ func (c *ControllerService) ControllerUnpublishVolume(
 		return nil, fmt.Errorf("error required paramater VolumeId can't parse: %w", err)
 	}
 
-	vm, err := c.dynamixCloudAPI.ComputeSvc.GetVMByName(ctx, req.NodeId)
+	vm, err := c.dynamixCloudAPI.ComputeService.GetVMByName(ctx, req.NodeId)
 	if err != nil {
 		return nil, fmt.Errorf("failed finding VM: %v, error: %w", req.NodeId, err)
 	}
@@ -282,7 +282,7 @@ func (c *ControllerService) ControllerUnpublishVolume(
 		return &csi.ControllerUnpublishVolumeResponse{}, nil
 	}
 
-	err = c.dynamixCloudAPI.ComputeSvc.DetachDiskFromVM(ctx, diskID, computeID)
+	err = c.dynamixCloudAPI.ComputeService.DetachDiskFromVM(ctx, diskID, computeID)
 	if err != nil {
 		msg := fmt.Errorf("failed removing disk %v from VM %v, error: %w", diskID, computeID, err)
 		klog.Errorf(msg.Error())

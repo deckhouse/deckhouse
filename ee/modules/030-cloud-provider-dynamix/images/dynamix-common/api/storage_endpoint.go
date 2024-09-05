@@ -11,21 +11,15 @@ import (
 	"sort"
 
 	"dynamix-common/entity"
-	"dynamix-common/retry"
-	decort "repository.basistech.ru/BASIS/decort-golang-sdk"
 	"repository.basistech.ru/BASIS/decort-golang-sdk/pkg/cloudbroker/sep"
 )
 
 type StorageEndpointService struct {
-	client  *decort.DecortClient
-	retryer retry.Retryer
+	*Service
 }
 
-func NewStorageEndpointService(client *decort.DecortClient) *StorageEndpointService {
-	return &StorageEndpointService{
-		client:  client,
-		retryer: retry.NewRetryer(),
-	}
+func NewStorageEndpointService(service *Service) *StorageEndpointService {
+	return &StorageEndpointService{service}
 }
 
 func (c *StorageEndpointService) GetStorageEndpointByName(ctx context.Context, name string) (*sep.RecordSEP, error) {
