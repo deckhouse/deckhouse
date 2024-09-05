@@ -244,7 +244,8 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				return nil
+				_, err := kubeCl.RbacV1().ClusterRoles().Update(context.TODO(), manifest.(*rbacv1.ClusterRole), metav1.UpdateOptions{})
+				return err
 			},
 		},
 		{
@@ -255,7 +256,8 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				return nil
+				_, err := kubeCl.RbacV1().ClusterRoleBindings().Update(context.TODO(), manifest.(*rbacv1.ClusterRoleBinding), metav1.UpdateOptions{})
+				return err
 			},
 		},
 		{
@@ -266,7 +268,8 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				return nil
+				_, err := kubeCl.CoreV1().ServiceAccounts("d8-system").Update(context.TODO(), manifest.(*apiv1.ServiceAccount), metav1.UpdateOptions{})
+				return err
 			},
 		},
 		{
@@ -606,12 +609,12 @@ func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *config.Deck
 
 func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.DeckhouseDeploymentParams {
 	return manifests.DeckhouseDeploymentParams{
-		Registry:           cfg.GetImage(true),
-		LogLevel:           cfg.LogLevel,
-		Bundle:             cfg.Bundle,
-		IsSecureRegistry:   cfg.IsRegistryAccessRequired(),
-		KubeadmBootstrap:   cfg.KubeadmBootstrap,
-		MasterNodeSelector: cfg.MasterNodeSelector,
+		Registry:               cfg.GetImage(true),
+		LogLevel:               cfg.LogLevel,
+		Bundle:                 cfg.Bundle,
+		IsSecureRegistry:       cfg.IsRegistryAccessRequired(),
+		KubeadmBootstrap:       cfg.KubeadmBootstrap,
+		MasterNodeSelector:     cfg.MasterNodeSelector,
 	}
 }
 
