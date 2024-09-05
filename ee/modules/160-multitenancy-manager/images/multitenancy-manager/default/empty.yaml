@@ -6,8 +6,8 @@ metadata:
   labels:
     heritage: deckhouse
 spec:
+  description: This is an empty template, create a new one based on this.
   parametersSchema:
-    description: This is an empty template, create a new one based on this.
     openAPIV3Schema:
       type: object
   # make sure that this is not empty string
