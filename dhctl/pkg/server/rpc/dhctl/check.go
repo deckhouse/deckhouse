@@ -19,6 +19,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/dhctl/util"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"io"
 	"log/slog"
 	"sync"
@@ -38,7 +41,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -214,30 +216,6 @@ func (s *Service) check(
 		return &pb.CheckResult{Err: err.Error()}
 	}
 
-	var sshClient *ssh.Client
-	err = log.Process("default", "Preparing SSH client", func() error {
-		connectionConfig, err := config.ParseConnectionConfig(
-			request.ConnectionConfig,
-			config.NewSchemaStore(),
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
-		)
-		if err != nil {
-			return fmt.Errorf("parsing connection config: %w", err)
-		}
-
-		sshClient, err = prepareSSHClient(connectionConfig)
-		if err != nil {
-			return fmt.Errorf("preparing ssh client: %w", err)
-		}
-		return nil
-	})
-	if err != nil {
-		return &pb.CheckResult{Err: err.Error()}
-	}
-	defer sshClient.Stop()
-
 	var commanderUUID uuid.UUID
 	if request.Options.CommanderUuid != "" {
 		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
@@ -246,8 +224,7 @@ func (s *Service) check(
 		}
 	}
 
-	checker := check.NewChecker(&check.Params{
-		SSHClient:     sshClient,
+	checkParams := &check.Params{
 		StateCache:    cache.Global(),
 		CommanderMode: request.Options.CommanderMode,
 		CommanderUUID: commanderUUID,
@@ -256,7 +233,51 @@ func (s *Service) check(
 			[]byte(request.ProviderSpecificClusterConfig),
 		),
 		TerraformContext: terraform.NewTerraformContext(),
-	})
+	}
+
+	if request.Options.CommanderMode && request.Options.ApiServerUrl != "" {
+		kubeConfig, cleanup, err := util.GenerateTempKubeConfig(request.Options.ApiServerUrl, request.Options.ApiServerToken)
+		if err != nil {
+			return &pb.CheckResult{Err: fmt.Errorf("generating kube config: %w", err).Error()}
+		}
+		defer cleanup()
+
+		kubeCl := client.NewKubernetesClient()
+		if err := kubeCl.Init(&client.KubernetesInitParams{
+			KubeConfig: kubeConfig,
+		}); err != nil {
+			return &pb.CheckResult{Err: fmt.Errorf("open kubernetes connection: %w", err).Error()}
+		}
+		checkParams.KubeClient = kubeCl
+	} else {
+		var sshClient *ssh.Client
+		err = log.Process("default", "Preparing SSH client", func() error {
+			connectionConfig, err := config.ParseConnectionConfig(
+				request.ConnectionConfig,
+				config.NewSchemaStore(),
+				config.ValidateOptionCommanderMode(request.Options.CommanderMode),
+				config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
+				config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+			)
+			if err != nil {
+				return fmt.Errorf("parsing connection config: %w", err)
+			}
+
+			sshClient, err = prepareSSHClient(connectionConfig)
+			if err != nil {
+				return fmt.Errorf("preparing ssh client: %w", err)
+			}
+			return nil
+		})
+		if err != nil {
+			return &pb.CheckResult{Err: err.Error()}
+		}
+		defer sshClient.Stop()
+
+		checkParams.SSHClient = sshClient
+	}
+
+	checker := check.NewChecker(checkParams)
 
 	result, checkErr := checker.Check(ctx)
 	resultData, marshalErr := json.Marshal(result)

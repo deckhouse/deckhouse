@@ -35,7 +35,9 @@ import (
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
-	SSHClient              *ssh.Client
+	SSHClient  *ssh.Client
+	KubeClient *client.KubernetesClient // optional
+
 	OnPhaseFunc            phases.DefaultOnPhaseFunc
 	AutoDismissDestructive bool
 	AutoApprove            bool
@@ -102,9 +104,16 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		return nil, err
 	}
 
-	kubeCl, err := operations.ConnectToKubernetesAPI(c.SSHClient)
-	if err != nil {
-		return nil, err
+	var err error
+	var kubeCl *client.KubernetesClient
+
+	if c.KubeClient != nil {
+		kubeCl = c.KubeClient
+	} else {
+		kubeCl, err = operations.ConnectToKubernetesAPI(c.SSHClient)
+		if err != nil {
+			return nil, fmt.Errorf("unable to connect to Kubernetes over ssh tunnel: %w", err)
+		}
 	}
 
 	if !c.CommanderMode {
@@ -213,14 +222,22 @@ func (c *Converger) AutoConverge() error {
 		return fmt.Errorf("Need to pass running node name. It is may taints terraform state while converge")
 	}
 
-	sshClient, err := ssh.NewInitClientFromFlags(false)
-	if err != nil {
-		return err
-	}
+	var err error
+	var kubeCl *client.KubernetesClient
 
-	kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
-	if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
-		return err
+	if c.KubeClient != nil {
+		kubeCl = c.KubeClient
+	} else {
+		var sshClient *ssh.Client
+		sshClient, err = ssh.NewInitClientFromFlags(false)
+		if err != nil {
+			return err
+		}
+
+		kubeCl = client.NewKubernetesClient().WithSSHClient(sshClient)
+		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
+			return err
+		}
 	}
 
 	inLockRunner := converge.NewInLockRunner(kubeCl, converge.AutoConvergerIdentity).

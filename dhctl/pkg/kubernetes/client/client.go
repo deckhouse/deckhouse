@@ -53,6 +53,9 @@ type KubernetesInitParams struct {
 	KubeConfig        string
 	KubeConfigContext string
 
+	ApiServerURL   string
+	ApiServerToken string
+
 	KubeConfigInCluster bool
 }
 
@@ -83,6 +86,7 @@ func (k *KubernetesClient) Init(params *KubernetesInitParams) error {
 	case params.KubeConfig != "":
 		kubeClient.WithContextName(params.KubeConfigContext)
 		kubeClient.WithConfigPath(params.KubeConfig)
+
 	default:
 		port, err := k.StartKubernetesProxy()
 		if err != nil {

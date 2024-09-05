@@ -19,6 +19,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/dhctl/util"
 	"io"
 	"log/slog"
 	"sync"
@@ -240,30 +242,6 @@ func (s *Service) converge(
 		return &pb.ConvergeResult{Err: err.Error()}
 	}
 
-	var sshClient *ssh.Client
-	err = log.Process("default", "Preparing SSH client", func() error {
-		connectionConfig, err := config.ParseConnectionConfig(
-			request.ConnectionConfig,
-			config.NewSchemaStore(),
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
-		)
-		if err != nil {
-			return fmt.Errorf("parsing connection config: %w", err)
-		}
-
-		sshClient, err = prepareSSHClient(connectionConfig)
-		if err != nil {
-			return fmt.Errorf("preparing ssh client: %w", err)
-		}
-		return nil
-	})
-	if err != nil {
-		return &pb.ConvergeResult{Err: err.Error()}
-	}
-	defer sshClient.Stop()
-
 	terraformContext := terraform.NewTerraformContext()
 
 	var commanderUUID uuid.UUID
@@ -274,8 +252,7 @@ func (s *Service) converge(
 		}
 	}
 
-	checker := check.NewChecker(&check.Params{
-		SSHClient:     sshClient,
+	checkParams := &check.Params{
 		StateCache:    cache.Global(),
 		CommanderMode: request.Options.CommanderMode,
 		CommanderUUID: commanderUUID,
@@ -284,10 +261,9 @@ func (s *Service) converge(
 			[]byte(request.ProviderSpecificClusterConfig),
 		),
 		TerraformContext: terraform.NewTerraformContext(),
-	})
+	}
 
-	converger := converge.NewConverger(&converge.Params{
-		SSHClient:              sshClient,
+	convergeParams := &converge.Params{
 		OnPhaseFunc:            phaseSwitcher.switchPhase,
 		AutoApprove:            true,
 		AutoDismissDestructive: false,
@@ -298,10 +274,56 @@ func (s *Service) converge(
 			[]byte(request.ProviderSpecificClusterConfig),
 		),
 		TerraformContext:           terraformContext,
-		Checker:                    checker,
 		ApproveDestructiveChangeID: request.ApproveDestructionChangeId,
 		OnCheckResult:              onCheckResult,
-	})
+	}
+
+	if request.Options.CommanderMode && request.Options.ApiServerUrl != "" {
+		kubeConfig, cleanup, err := util.GenerateTempKubeConfig(request.Options.ApiServerUrl, request.Options.ApiServerToken)
+		if err != nil {
+			return &pb.ConvergeResult{Err: fmt.Errorf("generating kube config: %w", err).Error()}
+		}
+		defer cleanup()
+
+		kubeCl := client.NewKubernetesClient()
+		if err := kubeCl.Init(&client.KubernetesInitParams{
+			KubeConfig: kubeConfig,
+		}); err != nil {
+			return &pb.ConvergeResult{Err: fmt.Errorf("open kubernetes connection: %w", err).Error()}
+		}
+		checkParams.KubeClient = kubeCl
+	} else {
+		var sshClient *ssh.Client
+		err = log.Process("default", "Preparing SSH client", func() error {
+			connectionConfig, err := config.ParseConnectionConfig(
+				request.ConnectionConfig,
+				config.NewSchemaStore(),
+				config.ValidateOptionCommanderMode(request.Options.CommanderMode),
+				config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
+				config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+			)
+			if err != nil {
+				return fmt.Errorf("parsing connection config: %w", err)
+			}
+
+			sshClient, err = prepareSSHClient(connectionConfig)
+			if err != nil {
+				return fmt.Errorf("preparing ssh client: %w", err)
+			}
+			return nil
+		})
+		if err != nil {
+			return &pb.ConvergeResult{Err: err.Error()}
+		}
+		defer sshClient.Stop()
+
+		checkParams.SSHClient = sshClient
+		convergeParams.SSHClient = sshClient
+	}
+
+	checker := check.NewChecker(checkParams)
+	convergeParams.Checker = checker
+	converger := converge.NewConverger(convergeParams)
 
 	result, convergeErr := converger.Converge(ctx)
 	state := converger.GetLastState()
