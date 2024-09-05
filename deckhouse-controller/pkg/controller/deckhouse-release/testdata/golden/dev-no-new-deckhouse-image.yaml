@@ -49,7 +49,7 @@ status:
     image: ""
     imageID: dev-registry.deckhouse.io/sys/deckhouse-oss/dev@sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1
     lastState: {}
-    name: ""
+    name: deckhouse
     ready: true
     restartCount: 0
     state: {}

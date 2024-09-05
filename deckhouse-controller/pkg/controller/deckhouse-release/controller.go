@@ -417,22 +417,6 @@ func (r *deckhouseReleaseReconciler) getDeckhousePods(ctx context.Context) ([]co
 		filtered = append(filtered, pod)
 	}
 
-	var image, imageID string
-
-	for _, pod := range filtered {
-		// init image and imageID for comparison images/imageIDs across all pods if there are more than one pod in the snapshot
-		if len(image)+len(imageID) == 0 &&
-			len(pod.Spec.Containers[0].Image) != 0 &&
-			len(pod.Status.ContainerStatuses[0].ImageID) != 0 {
-			image, imageID = pod.Spec.Containers[0].Image, pod.Status.ContainerStatuses[0].ImageID
-			continue
-		}
-
-		if image != pod.Spec.Containers[0].Image || imageID != pod.Status.ContainerStatuses[0].ImageID {
-			return nil, fmt.Errorf("deckhouse pods run different images")
-		}
-	}
-
 	return filtered, nil
 }
 
@@ -454,25 +438,47 @@ func (r *deckhouseReleaseReconciler) getClusterUUID(ctx context.Context) string 
 
 func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, pods []corev1.Pod) error {
 	for _, pod := range pods {
-		if pod.Spec.Containers[0].Image == "" && pod.Status.ContainerStatuses[0].ImageID == "" {
+		if len(pod.Spec.Containers) == 0 || len(pod.Status.ContainerStatuses) == 0 {
+			r.logger.Debug("Deckhouse pod has no containers")
+			return nil
+		}
+
+		deckhouseContainerIndex := getDeckhouseContainerIndex(pod.Spec.Containers)
+
+		if deckhouseContainerIndex == -1 {
+			r.logger.Warnf("Pod %s does not contain a deckhouse container", pod.Name)
+			return nil
+		}
+
+		if pod.Spec.Containers[deckhouseContainerIndex].Image == "" &&
+			pod.Status.ContainerStatuses[deckhouseContainerIndex].ImageID == "" {
 			// pod is restarting or something like that, try more in 15 seconds
 			return nil
 		}
 
-		if pod.Spec.Containers[0].Image == "" || pod.Status.ContainerStatuses[0].ImageID == "" {
+		if pod.Spec.Containers[deckhouseContainerIndex].Image == "" ||
+			pod.Status.ContainerStatuses[deckhouseContainerIndex].ImageID == "" {
 			r.logger.Debug("Deckhouse pod is not ready. Try to update later")
 			return nil
 		}
 	}
 
-	imageID := pods[0].Status.ContainerStatuses[0].ImageID
+	newestPod := getNewestPod(pods)
+	deckhouseContainerIndex := getDeckhouseContainerIndex(newestPod.Spec.Containers)
+	deckhouseContainerStatusIndex := getDeckhouseContainerStatusIndex(newestPod.Status.ContainerStatuses)
+	if deckhouseContainerStatusIndex == -1 {
+		r.logger.Warnf("Pod %s does not contain a deckhouse container status", newestPod.Name)
+		return nil
+	}
+
+	imageID := newestPod.Status.ContainerStatuses[deckhouseContainerStatusIndex].ImageID
 	idSplitIndex := strings.LastIndex(imageID, "@")
 	if idSplitIndex == -1 {
 		return fmt.Errorf("image hash not found: %s", imageID)
 	}
 	imageHash := imageID[idSplitIndex+1:]
 
-	image := pods[0].Spec.Containers[0].Image
+	image := newestPod.Spec.Containers[deckhouseContainerIndex].Image
 	imageRepoTag, err := gcr.NewTag(image)
 	if err != nil {
 		return fmt.Errorf("incorrect image: %s", image)
@@ -538,7 +544,7 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, pods []corev
 		ctx,
 		&appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: pods[0].Namespace,
+				Namespace: newestPod.Namespace,
 				Name:      "deckhouse",
 			},
 		},
@@ -549,6 +555,18 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, pods []corev
 	}
 
 	return nil
+}
+
+func getNewestPod(pods []corev1.Pod) corev1.Pod {
+	result := pods[0]
+
+	for _, pod := range pods[1:] {
+		if pod.Status.StartTime.Before(result.Status.StartTime) {
+			result = pod
+		}
+	}
+
+	return result
 }
 
 func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*corev1.Secret, error) {
@@ -641,6 +659,26 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 
 func (r *deckhouseReleaseReconciler) newUpdaterKubeAPI() *d8updater.KubeAPI {
 	return d8updater.NewKubeAPI(r.client, r.dc, "")
+}
+
+func getDeckhouseContainerIndex(containers []corev1.Container) int {
+	for i := range containers {
+		if containers[i].Name == "deckhouse" {
+			return i
+		}
+	}
+
+	return -1
+}
+
+func getDeckhouseContainerStatusIndex(statuses []corev1.ContainerStatus) int {
+	for i := range statuses {
+		if statuses[i].Name == "deckhouse" {
+			return i
+		}
+	}
+
+	return -1
 }
 
 func getReleaseData(dr *v1alpha1.DeckhouseRelease) updater.DeckhouseReleaseData {
