@@ -87,7 +87,7 @@ func (c *Cloud) InstanceShutdownByProviderID(ctx context.Context, providerID str
 func (c *Cloud) getVMByNodeName(ctx context.Context, nodeName types.NodeName) (*compute.ItemCompute, error) {
 	vmName := MapNodeNameToVMName(nodeName)
 
-	vm, err := c.dynamixService.ComputeSvc.GetVMByName(ctx, vmName)
+	vm, err := c.dynamixService.ComputeService.GetVMByName(ctx, vmName)
 	if err != nil && errors.Is(err, api.ErrNotFound) {
 		return nil, cloudprovider.InstanceNotFound
 	} else if err != nil {
@@ -107,7 +107,7 @@ func (c *Cloud) getVMByProviderID(ctx context.Context, providerID string) (*comp
 		return nil, fmt.Errorf("failed to parse compute id [%s]: %v", vmID, err)
 	}
 
-	vm, err := c.dynamixService.ComputeSvc.GetVMByID(ctx, computeID)
+	vm, err := c.dynamixService.ComputeService.GetVMByID(ctx, computeID)
 	if err != nil && errors.Is(err, api.ErrNotFound) {
 		return nil, cloudprovider.InstanceNotFound
 	} else if err != nil {
@@ -120,7 +120,7 @@ func (c *Cloud) getVMByProviderID(ctx context.Context, providerID string) (*comp
 func (c *Cloud) extractNodeAddressesFromVM(vm *compute.ItemCompute) ([]v1.NodeAddress, error) {
 	var nodeAddress []v1.NodeAddress
 
-	externalIP, localIP, err := c.dynamixService.ComputeSvc.GetVMIPAddresses(vm)
+	externalIP, localIP, err := c.dynamixService.ComputeService.GetVMIPAddresses(vm)
 	if err != nil {
 		return nil, err
 	}
