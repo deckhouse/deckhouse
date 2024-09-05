@@ -27,21 +27,6 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
-git:
-- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
-  to:  /dynamix/dynamix-csi-driver/src
-  stageDependencies:
-    install:
-    - go.mod
-    - go.sum
-    - "**/*.go"
-- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/dynamix-common
-  to:  /dynamix/dynamix-common
-  stageDependencies:
-    install:
-    - go.mod
-    - go.sum
-    - "**/*.go"
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -50,6 +35,10 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - export VERSION="0.1.0"
+  - mkdir -p /dynamix/dynamix-csi-driver/src
+  - mkdir -p /dynamix/dynamix-common
+  - git clone https://fox.flant.com/deckhouse/cloud-providers/dynamix/dynamix-common.git /dynamix/dynamix-common
+  - git clone https://fox.flant.com/deckhouse/cloud-providers/dynamix/dynamix-csi-driver.git /dynamix/dynamix-csi-driver/src
   - cd /dynamix/dynamix-csi-driver/src
   - go mod tidy
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version=${VERSION}" -o /dynamix-csi-driver cmd/dynamix-csi-driver/main.go
