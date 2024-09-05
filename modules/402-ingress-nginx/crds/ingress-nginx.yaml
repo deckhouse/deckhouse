@@ -171,7 +171,7 @@ spec:
                     loadBalancerClass:
                       type: string
                       description: |
-                        Allows you to modify the `.spec.loadBalancerClass` setting of a standard Service object.
+                        Allows you to modify the `.spec.loadBalancerClass` setting of a ingress-managed load balancer.
                     behindL7Proxy:
                       type: boolean
                       description: |
