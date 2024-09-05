@@ -1,7 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
-fromCacheVersion: "2024-09-05"
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /dynamix-csi-driver
@@ -28,7 +27,6 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
-fromCacheVersion: "2024-09-05"
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
