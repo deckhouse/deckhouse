@@ -121,15 +121,9 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 				}
 
 				input.PatchCollector.MergePatch(patch, "storage.k8s.io/v1", "StorageClass", "", sc.GetName())
-			} else {
-				// TODO: remove this on prod
-				input.LogEntry.Warnf("Skip storage class %q because its non-default", sc.GetName())
 			}
 		}
 	}
-
-	// input.LogEntry.Infof("Set %s to `%s`", valuePath, )
-	// input.Values.Set(valuePath, defaultStorageClassNameSnap[0])
 
 	return nil
 }
