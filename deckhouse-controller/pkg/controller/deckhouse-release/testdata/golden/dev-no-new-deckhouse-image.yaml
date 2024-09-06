@@ -35,6 +35,7 @@ metadata:
   creationTimestamp: null
   labels:
     app: deckhouse
+    leader: "true"
   name: deckhouse-6f46df5bd7-nk4j7
   namespace: d8-system
   resourceVersion: "999"
@@ -53,6 +54,7 @@ status:
     ready: true
     restartCount: 0
     state: {}
+  phase: Running
 ---
 apiVersion: apps/v1
 kind: Deployment

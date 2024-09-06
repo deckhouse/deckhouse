@@ -6,6 +6,7 @@ metadata:
   namespace: d8-system
   labels:
     app: deckhouse
+    leader: "true"
 spec:
   containers:
     - name: deckhouse
@@ -16,6 +17,7 @@ status:
       imageID: dev-registry.deckhouse.io/sys/deckhouse-oss/dev@sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1
       ready: true
       name: deckhouse
+  phase: Running
 ---
 apiVersion: apps/v1
 kind: Deployment

@@ -395,29 +395,37 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 }
 
-func (r *deckhouseReleaseReconciler) getDeckhousePods(ctx context.Context) ([]corev1.Pod, error) {
+func (r *deckhouseReleaseReconciler) getDeckhouseLatestPod(ctx context.Context) (*corev1.Pod, error) {
 	var pods corev1.PodList
 	err := r.client.List(
 		ctx,
 		&pods,
 		client.InNamespace("d8-system"),
-		client.MatchingLabels{"app": "deckhouse"},
+		client.MatchingLabels{"app": "deckhouse", "leader": "true"},
 	)
 
 	if err != nil {
 		return nil, fmt.Errorf("list deckhouse pods: %w", err)
 	}
 
-	filtered := make([]corev1.Pod, 0)
+	var latestPod *corev1.Pod
+
 	for _, pod := range pods.Items {
-		if pod.Status.Phase == corev1.PodFailed {
+		if pod.Status.Phase != corev1.PodRunning {
 			continue
 		}
 
-		filtered = append(filtered, pod)
+		if latestPod == nil {
+			latestPod = &pod
+			continue
+		}
+
+		if pod.Status.StartTime != nil && latestPod.Status.StartTime != nil && pod.Status.StartTime.After(latestPod.Status.StartTime.Time) {
+			latestPod = &pod
+		}
 	}
 
-	return filtered, nil
+	return latestPod, nil
 }
 
 func (r *deckhouseReleaseReconciler) getClusterUUID(ctx context.Context) string {
@@ -436,49 +444,39 @@ func (r *deckhouseReleaseReconciler) getClusterUUID(ctx context.Context) string 
 	return uuid.Must(uuid.NewV4()).String()
 }
 
-func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, pods []corev1.Pod) error {
-	for _, pod := range pods {
-		if len(pod.Spec.Containers) == 0 || len(pod.Status.ContainerStatuses) == 0 {
-			r.logger.Debug("Deckhouse pod has no containers")
-			return nil
-		}
-
-		deckhouseContainerIndex := getDeckhouseContainerIndex(pod.Spec.Containers)
-
-		if deckhouseContainerIndex == -1 {
-			r.logger.Warnf("Pod %s does not contain a deckhouse container", pod.Name)
-			return nil
-		}
-
-		if pod.Spec.Containers[deckhouseContainerIndex].Image == "" &&
-			pod.Status.ContainerStatuses[deckhouseContainerIndex].ImageID == "" {
-			// pod is restarting or something like that, try more in 15 seconds
-			return nil
-		}
-
-		if pod.Spec.Containers[deckhouseContainerIndex].Image == "" ||
-			pod.Status.ContainerStatuses[deckhouseContainerIndex].ImageID == "" {
-			r.logger.Debug("Deckhouse pod is not ready. Try to update later")
-			return nil
-		}
-	}
-
-	newestPod := getNewestPod(pods)
-	deckhouseContainerIndex := getDeckhouseContainerIndex(newestPod.Spec.Containers)
-	deckhouseContainerStatusIndex := getDeckhouseContainerStatusIndex(newestPod.Status.ContainerStatuses)
-	if deckhouseContainerStatusIndex == -1 {
-		r.logger.Warnf("Pod %s does not contain a deckhouse container status", newestPod.Name)
+func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *corev1.Pod) error {
+	if len(leaderPod.Spec.Containers) == 0 || len(leaderPod.Status.ContainerStatuses) == 0 {
+		r.logger.Debug("Deckhouse pod has no containers")
 		return nil
 	}
 
-	imageID := newestPod.Status.ContainerStatuses[deckhouseContainerStatusIndex].ImageID
+	deckhouseContainerIndex := getDeckhouseContainerIndex(leaderPod.Spec.Containers)
+	deckhouseContainerStatusIndex := getDeckhouseContainerStatusIndex(leaderPod.Status.ContainerStatuses)
+
+	if deckhouseContainerIndex == -1 {
+		r.logger.Warnf("Pod %s does not contain a deckhouse container", leaderPod.Name)
+		return nil
+	}
+
+	image := leaderPod.Spec.Containers[deckhouseContainerIndex].Image
+	imageID := leaderPod.Status.ContainerStatuses[deckhouseContainerStatusIndex].ImageID
+
+	if image == "" || imageID == "" {
+		// pod is restarting or something like that, try more in 15 seconds
+		return nil
+	}
+
+	if deckhouseContainerStatusIndex == -1 {
+		r.logger.Warnf("Pod %s does not contain a deckhouse container status", leaderPod.Name)
+		return nil
+	}
+
 	idSplitIndex := strings.LastIndex(imageID, "@")
 	if idSplitIndex == -1 {
 		return fmt.Errorf("image hash not found: %s", imageID)
 	}
 	imageHash := imageID[idSplitIndex+1:]
 
-	image := newestPod.Spec.Containers[deckhouseContainerIndex].Image
 	imageRepoTag, err := gcr.NewTag(image)
 	if err != nil {
 		return fmt.Errorf("incorrect image: %s", image)
@@ -544,7 +542,7 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, pods []corev
 		ctx,
 		&appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: newestPod.Namespace,
+				Namespace: leaderPod.Namespace,
 				Name:      "deckhouse",
 			},
 		},
@@ -555,18 +553,6 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, pods []corev
 	}
 
 	return nil
-}
-
-func getNewestPod(pods []corev1.Pod) corev1.Pod {
-	result := pods[0]
-
-	for _, pod := range pods[1:] {
-		if pod.Status.StartTime.Before(result.Status.StartTime) {
-			result = pod
-		}
-	}
-
-	return result
 }
 
 func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*corev1.Secret, error) {
@@ -604,18 +590,18 @@ func (r *deckhouseReleaseReconciler) updateByImageHashLoop(ctx context.Context) 
 			return
 		}
 
-		deckhousePods, err := r.getDeckhousePods(ctx)
+		deckhouseLeaderPod, err := r.getDeckhouseLatestPod(ctx)
 		if err != nil {
 			r.logger.Warnf("Error getting deckhouse pods: %s", err)
 			return
 		}
 
-		if len(deckhousePods) == 0 {
-			r.logger.Warn("Deckhouse pods not found. Skipping update")
+		if deckhouseLeaderPod == nil {
+			r.logger.Debug("Deckhouse pods not found. Skipping update")
 			return
 		}
 
-		err = r.tagUpdate(ctx, deckhousePods)
+		err = r.tagUpdate(ctx, deckhouseLeaderPod)
 		if err != nil {
 			r.logger.Errorf("deckhouse image tag update failed: %s", err)
 		}
