@@ -5,7 +5,7 @@
 # Build LLVM binaries (based on base-cilium-dev)
 # Original IMAGE_TAG of LLVM is a8c542efc076b62ba683e7699c0013adb6955f0f
 # Corresponding commit bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28 (https://github.com/cilium/image-tools/tree/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28)
-# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile#L8
+# Based on https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/Dockerfile#L8
 # and https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/Dockerfile
 # and https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/checkout-llvm.sh
 # and https://github.com/cilium/image-tools/blob/bbb3754bd090484cc1da8ea88a3b6e3cf67a7a28/images/llvm/build-llvm-native.sh
@@ -13,7 +13,7 @@
 # #####################################################################
 ---
 artifact: {{ $.ModuleName }}/llvm-artifact
-from: {{ $.Images.BASE_ALT_DEV_CILIUM }}
+fromImage: {{ $.ModuleName }}/base-cilium-dev
 shell:
   beforeInstall:
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm

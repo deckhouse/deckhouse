@@ -1,8 +1,8 @@
 # #####################################################################
 # Final image of cilium-agent (used in helm-templates)
-# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
-# and https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/install-runtime-deps.sh
-# and https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile (release stage)
+# Based on https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/install-runtime-deps.sh
+# and https://github.com/cilium/cilium/blob/v1.14.14/images/cilium/Dockerfile (release stage)
 ---
 # #####################################################################
 # List of binary files used by agent
@@ -29,6 +29,8 @@
 {{ $binariesFromALT := cat $binariesFromALT "/usr/bin/groups" }}
 # for prepull
 {{ $binariesFromALT := cat $binariesFromALT "/bin/true" }}
+# for cilium-cli sysdump
+{{ $binariesFromALT := cat $binariesFromALT "/bin/tar /usr/bin/timeout /usr/bin/stat /bin/tail" }}
 # for debug
 {{ $binariesFromALT := cat $binariesFromALT "/bin/sleep /bin/ls /usr/bin/curl /usr/bin/ldd /usr/bin/strace /usr/bin/env" }}
 #####################################################################
@@ -64,7 +66,7 @@
 # Binaries artifact for distroless agent (based on Ubuntu)
 ---
 artifact: {{ $.ModuleName }}/agent-binaries-artifact
-from: {{ $.Images.BASE_ALT_DEV_CILIUM }}
+fromImage: {{ $.ModuleName }}/base-cilium-dev
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
   to: /
@@ -120,6 +122,7 @@ import:
   before: install
   includePaths:
   - bin/cilium-envoy
+  - bin/cilium-envoy-starter
   - lib/libcilium.so
 - artifact: {{ $.ModuleName }}/hubble-artifact
   add: /hubble

@@ -2,12 +2,12 @@
 ---
 # #####################################################################
 # Build gops binaries
-# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile (gops-cni-builder stage)
-# and https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/build-gops.sh
+# Based on https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/Dockerfile (gops-cni-builder stage)
+# and https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/build-gops.sh
 # #####################################################################
 ---
 artifact: {{ $.ModuleName }}/gops-artifact
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
