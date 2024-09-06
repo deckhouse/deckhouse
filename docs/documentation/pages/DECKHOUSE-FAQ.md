@@ -555,7 +555,8 @@ Follow these steps for manual loading images of modules, connected from the modu
 1. Create an authentication string for `registry.deckhouse.io` using the following command (provide the license key):
 
    ```shell
-   LICENSE_KEY="LICENSE_KEY" base64 -w0 <<EOF
+   LICENSE_KEY='<LICENSE_KEY>'
+   base64 -w0 <<EOF
      {
        "auths": {
          "registry.deckhouse.io": {
