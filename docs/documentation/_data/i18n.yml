@@ -164,6 +164,12 @@ common:
   linux_distro:
     en: Linux Distribution
     ru: Дистрибутив Linux
+  redactions:
+    en: Supported in redactions
+    ru: Поддерживается в редакциях
+  notes:
+    en: Notes
+    ru: Примечания
   for_domain_template:
     en: for the domain template
     ru: для шаблона доменов
