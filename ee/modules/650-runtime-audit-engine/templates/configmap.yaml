@@ -399,5 +399,24 @@ data:
       chunk_wait_us: 1000
       # @ Watch frequency (in seconds) when fetching metadata from Kubernetes.
       watch_freq_sec: 1
-
-{{ (.Files.Glob "rules/*" ).AsConfig | indent 2 }}
+    # [Experimental] `rule_matching`
+    #
+    # The `rule_matching` configuration key's values are:
+    #  - `first`: Falco stops checking conditions of rules against upcoming event
+    #    at the first matching rule
+    #  - `all`: Falco will continue checking conditions of rules even if a matching
+    #    one was already found
+    #
+    # Rules conditions are evaluated in the order they are defined in the rules files.
+    # For this reason, when using `first` as value, only the first defined rule will
+    # trigger, possibly shadowing other rules.
+    # In case `all` is used as value, rules still trigger in the order they were
+    # defined.
+    #
+    # Effectively, with this setting, it is now possible to apply multiple rules that match
+    # the same event type. This eliminates concerns about rule prioritization based on the
+    # "first match wins" principle. However, enabling the `all` matching option may result in
+    # a performance penalty. We recommend carefully testing this alternative setting before
+    # deploying it in production.
+    rule_matching: all
+  {{ (.Files.Glob "rules/*" ).AsConfig | indent 2 }}
