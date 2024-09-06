@@ -13,7 +13,7 @@ Deckhouse uses the following directories when working ([download their list in c
 
 To ensure that KESL does not affect Deckhouse's performance, follow these configuration recommendations by running them in the command line directly on the host or through the centralized remote management system of Kaspersky Security Center.
 
-Configuration of KESL is carried out [using tasks](https://support.kaspersky.com/KES4Linux/11.2.0/en-US/199339.htm) that have specific numbers. Below is an overview of the general setup and the configuration of the tasks used when setting up KESL in Deckhouse.
+Configuration of KESL is carried out [using tasks](https://support.kaspersky.com/KES4Linux/11.2.0/en-US/199339.htm) that have specific numbers. Below is an overview of the general setup and the configuration of the tasks used when setting up KESL with Deckhouse.
 
 ### General Setup
 
