@@ -173,7 +173,7 @@ spec:
         resources:   ["storageclasses"]
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   validations:
-    - expression: "request.userInfo.username != 'system:serviceaccount:d8-system:deckhouse' && !(has(object.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in object.metadata.annotations)"
+    - expression: "request.userInfo.username == 'system:serviceaccount:d8-system:deckhouse' || !(has(object.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in object.metadata.annotations)"
       reason: Forbidden
       messageExpression: '''Creating and updating an StorageClass with the `is-default-class` annotation is forbidden. Use DefaultStorageClassName in ModuleConfig `global`'''
   auditAnnotations:
@@ -181,7 +181,7 @@ spec:
       valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to add StorageClass with the `is-default-class` annotation'"
 {{- else }}
   validations:
-    - expression: "request.userInfo.username != 'system:serviceaccount:d8-system:deckhouse' && !(has(object.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in object.metadata.annotations)"
+    - expression: "request.userInfo.username == 'system:serviceaccount:d8-system:deckhouse' || !(has(object.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in object.metadata.annotations)"
       reason: Forbidden
 {{- end }}
 ---
