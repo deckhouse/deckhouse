@@ -36,10 +36,11 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - export VERSION="0.1.0"
   - mkdir -p /dynamix/dynamix-csi-driver/src
-  - mkdir -p /dynamix/dynamix-common
   - ls -la /dynamix/dynamix-csi-driver/src
   - cd /dynamix/dynamix-csi-driver/src
   - git clone {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-csi-driver.git ./
+  - mkdir -p /dynamix/dynamix-common
+  - ls -la /dynamix/dynamix-common
   - cd /dynamix/dynamix-common
   - git clone {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git ./
   - cd /dynamix/dynamix-csi-driver/src
