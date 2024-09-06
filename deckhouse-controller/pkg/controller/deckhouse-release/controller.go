@@ -607,45 +607,6 @@ func (r *deckhouseReleaseReconciler) updateByImageHashLoop(ctx context.Context) 
 	}, 15*time.Second)
 }
 
-func (r *deckhouseReleaseReconciler) isKubernetesVersionAutomatic(ctx context.Context) bool {
-	secret := new(corev1.Secret)
-	if err := r.client.Get(ctx, types.NamespacedName{Name: "d8-cluster-configuration", Namespace: "kube-system"}, secret); err != nil {
-		r.logger.Warnf("check kubernetes version: failed to get secret: %s", err.Error())
-		return false
-	}
-	var clusterConf struct {
-		KubernetesVersion string `json:"kubernetesVersion"`
-	}
-	clusterConfigurationRaw, ok := secret.Data["cluster-configuration.yaml"]
-	if !ok {
-		r.logger.Warnf("check kubernetes version: expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
-		return false
-	}
-	if err := yaml.Unmarshal(clusterConfigurationRaw, &clusterConf); err != nil {
-		r.logger.Warnf("check kubernetes version: failed to unmarshal cluster configuration: %s", err)
-		return false
-	}
-	return clusterConf.KubernetesVersion == "Automatic"
-}
-
-func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (ctrl.Result, error) {
-	if r.isDeckhousePodReady() {
-		data := getReleaseData(dr)
-		data.IsUpdating = false
-		err := r.newUpdaterKubeAPI().SaveReleaseData(ctx, dr, data)
-		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("change updating flag: %w", err)
-		}
-		return ctrl.Result{}, nil
-	}
-
-	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-}
-
-func (r *deckhouseReleaseReconciler) newUpdaterKubeAPI() *d8updater.KubeAPI {
-	return d8updater.NewKubeAPI(r.client, r.dc, "")
-}
-
 func getDeckhouseContainerIndex(containers []corev1.Container) int {
 	for i := range containers {
 		if containers[i].Name == "deckhouse" {
@@ -664,11 +625,4 @@ func getDeckhouseContainerStatusIndex(statuses []corev1.ContainerStatus) int {
 	}
 
 	return -1
-}
-
-func getReleaseData(dr *v1alpha1.DeckhouseRelease) updater.DeckhouseReleaseData {
-	return updater.DeckhouseReleaseData{
-		IsUpdating: dr.Annotations[d8updater.IsUpdatingAnnotation] == "true",
-		Notified:   dr.Annotations[d8updater.NotifiedAnnotation] == "true",
-	}
 }
