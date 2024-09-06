@@ -403,7 +403,6 @@ func (r *deckhouseReleaseReconciler) getDeckhouseLatestPod(ctx context.Context) 
 		client.InNamespace("d8-system"),
 		client.MatchingLabels{"app": "deckhouse", "leader": "true"},
 	)
-
 	if err != nil {
 		return nil, fmt.Errorf("list deckhouse pods: %w", err)
 	}
