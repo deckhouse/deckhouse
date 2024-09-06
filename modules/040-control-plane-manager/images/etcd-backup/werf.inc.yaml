@@ -1,0 +1,29 @@
+{{- $binaries := "/bin/sh /bin/cp /bin/df /bin/du /bin/tail /bin/awk" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/etcd-artifact
+  add: /etcdctl
+  to: /bin/etcdctl
+  before: setup
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /relocate
+  to: /
+  before: setup
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromArtifact: {{ .Images.BASE_ALT_P11 }}
+git:
+- add: /tools/dev_images/additional_tools/alt/binary_replace.sh
+  to: /binary_replace.sh
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  beforeInstall:
+  - apt-get update
+  - apt-get install -y netcat glibc-utils
+  - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
+  install:
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
