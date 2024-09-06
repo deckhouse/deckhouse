@@ -285,7 +285,7 @@ func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string
 							var err error
 							ready, err = checker.IsReady(node.Name)
 							if err != nil {
-								log.WarnF("While doing check '%s' node %s has error: %v\n", checker.Name(), node.Name, err)
+								log.InfoF("While doing check '%s' node %s has error: %v\n", checker.Name(), node.Name, err)
 							} else if !ready {
 								log.InfoF("Node %s is ready but %s is not ready\n", node.Name, checker.Name())
 							}
