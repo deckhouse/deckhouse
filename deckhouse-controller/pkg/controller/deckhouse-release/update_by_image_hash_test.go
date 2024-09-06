@@ -34,10 +34,10 @@ func (suite *ControllerTestSuite) TestUpdateByImageHash() {
 		})
 
 		suite.setupController("dev-no-new-deckhouse-image.yaml", initValues, embeddedMUP)
-		pods, err := suite.ctr.getDeckhousePods(ctx)
+		leaderPod, err := suite.ctr.getDeckhouseLatestPod(ctx)
 		require.NoError(suite.T(), err)
 
-		err = suite.ctr.tagUpdate(ctx, pods)
+		err = suite.ctr.tagUpdate(ctx, leaderPod)
 		require.NoError(suite.T(), err)
 	})
 
@@ -52,10 +52,10 @@ func (suite *ControllerTestSuite) TestUpdateByImageHash() {
 		ds.Update.DisruptionApprovalMode = "Auto"
 
 		suite.setupControllerSettings("dev-have-new-deckhouse-image.yaml", initValues, ds)
-		pods, err := suite.ctr.getDeckhousePods(ctx)
+		leaderPod, err := suite.ctr.getDeckhouseLatestPod(ctx)
 		require.NoError(suite.T(), err)
 
-		err = suite.ctr.tagUpdate(ctx, pods)
+		err = suite.ctr.tagUpdate(ctx, leaderPod)
 		require.NoError(suite.T(), err)
 	})
 }
