@@ -35,6 +35,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - export VERSION="0.1.0"
+  - mkdir -p /dynamix
   - mkdir -p /dynamix/dynamix-csi-driver/src
   - ls -la /dynamix/dynamix-csi-driver/src
   - cd /dynamix/dynamix-csi-driver/src
