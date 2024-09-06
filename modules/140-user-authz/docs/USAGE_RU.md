@@ -30,14 +30,14 @@ roleRef:
 {% offtopic title="Права, которые получит пользователь" %}
 Права, которые получит пользователь, будут ограничены рамками пространств имён, начинающихся с `d8-` или `kube-`.
 
-Пользователь сможет:
-- просматривать, изменять, удалять и создавать ресурсы Kubernetes и модулей DKP;
-- изменять конфигурацию модулей (просматривать, изменять, удалять и создавать ресурсы `moduleConfig`);
-- выполнять следующие команды к подам и сервисам:
-  - `kubectl attach`
-  - `kubectl exec`
-  - `kubectl port-forward`
-  - `kubectl proxy`
+Пользователю доступно следующее:
+- Просматривать, изменять, удалять и создавать ресурсы Kubernetes и модулей DKP.
+- Изменять конфигурацию модулей (просматривать, изменять, удалять и создавать ресурсы `moduleConfig`).
+- Выполнять следующие команды к подам и сервисам:
+  - `kubectl attach`;
+  - `kubectl exec`;
+  - `kubectl port-forward`;
+  - `kubectl proxy`.
 {% endofftopic %}
 
 ## Пример назначения прав сетевому администратору
@@ -67,90 +67,90 @@ roleRef:
 
 {% offtopic title="Список прав, которые получит пользователь" %}
 Права, которые получит пользователь, будут ограничены следующим списком пространств имён модулей DKP из области `networking` (фактический список зависит от списка включённых в кластере модулей):
-- `d8-cni-cilium`
-- `d8-cni-flannel`
-- `d8-cni-simple-bridge`
-- `d8-ingress-nginx`
-- `d8-istio`
-- `d8-metallb`
-- `d8-network-gateway`
-- `d8-openvpn`
-- `d8-static-routing-manager`
-- `d8-system`
-- `kube-system`
+- `d8-cni-cilium`;
+- `d8-cni-flannel`;
+- `d8-cni-simple-bridge`;
+- `d8-ingress-nginx`;
+- `d8-istio`;
+- `d8-metallb`;
+- `d8-network-gateway`;
+- `d8-openvpn`;
+- `d8-static-routing-manager`;
+- `d8-system`;
+- `kube-system`.
 
-Пользователь сможет:
-- просматривать, изменять, удалять и создавать *стандартные* ресурсы Kubernetes в пространстве имён модулей из области `networking`.
+Пользователю доступно следующее:
+- Просматривать, изменять, удалять и создавать *стандартные* ресурсы Kubernetes в пространстве имён модулей из области `networking`.
 
   Пример ресурсов, которыми сможет управлять пользователь (список не полный):
-  - `Certificate`
-  - `CertificateRequest`
-  - `ConfigMap`
-  - `ControllerRevision`
-  - `CronJob`
-  - `DaemonSet`
-  - `Deployment`
-  - `Event`
-  - `HorizontalPodAutoscaler`
-  - `Ingress`
-  - `Issuer`
-  - `Job`
-  - `Lease`
-  - `LimitRange`
-  - `NetworkPolicy`
-  - `PersistentVolumeClaim`
-  - `Pod`
-  - `PodDisruptionBudget`
-  - `ReplicaSet`
-  - `ReplicationController`
-  - `ResourceQuota`
-  - `Role`
-  - `RoleBinding`
-  - `Secret`
-  - `Service`
-  - `ServiceAccount`
-  - `StatefulSet`
-  - `VerticalPodAutoscaler`
-  - `VolumeSnapshot`
+  - `Certificate`;
+  - `CertificateRequest`;
+  - `ConfigMap`;
+  - `ControllerRevision`;
+  - `CronJob`;
+  - `DaemonSet`;
+  - `Deployment`;
+  - `Event`;
+  - `HorizontalPodAutoscaler`;
+  - `Ingress`;
+  - `Issuer`;
+  - `Job`;
+  - `Lease`;
+  - `LimitRange`;
+  - `NetworkPolicy`;
+  - `PersistentVolumeClaim`;
+  - `Pod`;
+  - `PodDisruptionBudget`;
+  - `ReplicaSet`;
+  - `ReplicationController`;
+  - `ResourceQuota`;
+  - `Role`;
+  - `RoleBinding`;
+  - `Secret`;
+  - `Service`;
+  - `ServiceAccount`;
+  - `StatefulSet`;
+  - `VerticalPodAutoscaler`;
+  - `VolumeSnapshot`.
 
-- просматривать, изменять, удалять и создавать следующие ресурсы в пространстве имён модулей из области `networking`:
+- Просматривать, изменять, удалять и создавать ресурсы в пространстве имён модулей из области `networking`.
 
   Список ресурсов, которыми сможет управлять пользователь:
-  - `EgressGateway`
-  - `EgressGatewayPolicy`
-  - `FlowSchema`
-  - `IngressClass`
-  - `IngressIstioController`
-  - `IngressNginxController`
-  - `IPRuleSet`
-  - `IstioFederation`
-  - `IstioMulticluster`
-  - `RoutingTable`
+  - `EgressGateway`;
+  - `EgressGatewayPolicy`;
+  - `FlowSchema`;
+  - `IngressClass`;
+  - `IngressIstioController`;
+  - `IngressNginxController`;
+  - `IPRuleSet`;
+  - `IstioFederation`;
+  - `IstioMulticluster`;
+  - `RoutingTable`.
 
-- изменять конфигурацию модулей (просматривать, изменять, удалять и создавать ресурсы moduleConfig) из области `networking`.
+- Изменять конфигурацию модулей (просматривать, изменять, удалять и создавать ресурсы moduleConfig) из области `networking`.
 
   Список модулей, которыми сможет управлять пользователь:
-  - `cilium-hubble`
-  - `cni-cilium`
-  - `cni-flannel`
-  - `cni-simple-bridge`
-  - `flow-schema`
-  - `ingress-nginx`
-  - `istio`
-  - `kube-dns`
-  - `kube-proxy`
-  - `metallb`
-  - `network-gateway`
-  - `network-policy-engine`
-  - `node-local-dns`
-  - `openvpn`
-  - `static-routing-manager`
+  - `cilium-hubble`;
+  - `cni-cilium`;
+  - `cni-flannel`;
+  - `cni-simple-bridge`;
+  - `flow-schema`;
+  - `ingress-nginx`;
+  - `istio`;
+  - `kube-dns`;
+  - `kube-proxy`;
+  - `metallb`;
+  - `network-gateway`;
+  - `network-policy-engine`;
+  - `node-local-dns`;
+  - `openvpn`;
+  - `static-routing-manager`.
 
-- выполнять следующие команды к подам и сервисам в пространстве имён модулей из области `networking`:
-  - `kubectl attach`
-  - `kubectl exec`
-  - `kubectl port-forward`
-  - `kubectl proxy`
+- Выполнять следующие команды к подам и сервисам в пространстве имён модулей из области `networking`:
+  - `kubectl attach`;
+  - `kubectl exec`;
+  - `kubectl port-forward`;
+  - `kubectl proxy`.
 {% endofftopic %}
 
 ## Пример назначения административных прав пользователю в рамках пространства имён
@@ -180,46 +180,46 @@ roleRef:
 ```
 
 {% offtopic title="Список прав, которые получит пользователь" %}
-В рамках пространства имён `myapp` пользователь сможет:
-- просматривать, изменять, удалять и создавать ресурсы Kubernetes. Например, следующие ресурсы (список не полный):
-  - `Certificate`
-  - `CertificateRequest`
-  - `ConfigMap`
-  - `ControllerRevision`
-  - `CronJob`
-  - `DaemonSet`
-  - `Deployment`
-  - `Event`
-  - `HorizontalPodAutoscaler`
-  - `Ingress`
-  - `Issuer`
-  - `Job`
-  - `Lease`
-  - `LimitRange`
-  - `NetworkPolicy`
-  - `PersistentVolumeClaim`
-  - `Pod`
-  - `PodDisruptionBudget`
-  - `ReplicaSet`
-  - `ReplicationController`
-  - `ResourceQuota`
-  - `Role`
-  - `RoleBinding`
-  - `Secret`
-  - `Service`
-  - `ServiceAccount`
-  - `StatefulSet`
-  - `VerticalPodAutoscaler`
-  - `VolumeSnapshot`
-- просматривать, изменять, удалять и создавать следующие ресурсы модулей DKP:
-  - `DexAuthenticator`
-  - `DexClient`
-  - `PodLogginConfig`
-- выполнять следующие команды к подам и сервисам:
-  - `kubectl attach`
-  - `kubectl exec`
-  - `kubectl port-forward`
-  - `kubectl proxy`
+В рамках пространства имён `myapp` пользователю доступно следующее:
+- Просматривать, изменять, удалять и создавать ресурсы Kubernetes. Например, следующие ресурсы (список не полный):
+  - `Certificate`;
+  - `CertificateRequest`;
+  - `ConfigMap`;
+  - `ControllerRevision`;
+  - `CronJob`;
+  - `DaemonSet`;
+  - `Deployment`;
+  - `Event`;
+  - `HorizontalPodAutoscaler`;
+  - `Ingress`;
+  - `Issuer`;
+  - `Job`;
+  - `Lease`;
+  - `LimitRange`;
+  - `NetworkPolicy`;
+  - `PersistentVolumeClaim`;
+  - `Pod`;
+  - `PodDisruptionBudget`;
+  - `ReplicaSet`;
+  - `ReplicationController`;
+  - `ResourceQuota`;
+  - `Role`;
+  - `RoleBinding`;
+  - `Secret`;
+  - `Service`;
+  - `ServiceAccount`;
+  - `StatefulSet`;
+  - `VerticalPodAutoscaler`;
+  - `VolumeSnapshot`.
+- Просматривать, изменять, удалять и создавать следующие ресурсы модулей DKP:
+  - `DexAuthenticator`;
+  - `DexClient`;
+  - `PodLogginConfig`.
+- Выполнять следующие команды к подам и сервисам:
+  - `kubectl attach`;
+  - `kubectl exec`;
+  - `kubectl port-forward`;
+  - `kubectl proxy`.
 {% endofftopic %}
 
 ## Пример `ClusterAuthorizationRule`
