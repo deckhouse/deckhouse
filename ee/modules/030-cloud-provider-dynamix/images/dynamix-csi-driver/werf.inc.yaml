@@ -41,7 +41,7 @@ shell:
   - cd /dynamix/dynamix-csi-driver/src
   - git clone {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-csi-driver.git ./
   - mkdir -p /dynamix/dynamix-common
-  - ls -la /dynamix/dynamix-common
+  - ls -la /dynamix/
   - cd /dynamix/dynamix-common
   - git clone {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git ./
   - cd /dynamix/dynamix-csi-driver/src
