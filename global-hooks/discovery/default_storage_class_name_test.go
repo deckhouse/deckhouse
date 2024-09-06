@@ -53,6 +53,16 @@ metadata:
 data:
   default-storage-class-name: ""
 `
+
+		stateNoConfigMapKeyDefined = `
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-default-storage-class
+  namespace: d8-system
+data: {}
+`
+
 	)
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
@@ -90,6 +100,18 @@ data:
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.ValuesGet("global.discovery.defaultStorageClassName").Exists()).To(BeFalse())
 			})
+		})
+	})
+
+	Context("cluster has configmap without key `default-storage-class-name`", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNoConfigMapKeyDefined))
+			f.RunHook()
+		})
+
+		It("`global.discovery.defaultStorageClassName` must not be set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.defaultStorageClassName").Exists()).To(BeFalse())
 		})
 	})
 })

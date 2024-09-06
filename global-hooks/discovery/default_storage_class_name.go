@@ -17,9 +17,10 @@ package hooks
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	v1core "k8s.io/api/core/v1"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 
-	"github.com/deckhouse/deckhouse/go_lib/filter"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -36,10 +37,30 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{"d8-system"},
 				},
 			},
-			FilterFunc: filter.KeyFromConfigMap("default-storage-class-name"),
+			FilterFunc: applyDefaultStorageClassNameFilter,
 		},
 	},
 }, discoveryDefaultStorageClassName)
+
+func applyDefaultStorageClassNameFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	// slightly modified code from go_lib/filter/extract.go/KeyFromConfigMap
+	const key = "default-storage-class-name"
+
+	var cm v1core.ConfigMap
+	err := sdk.FromUnstructured(obj, &cm)
+	if err != nil {
+		// if no configmap - no problem
+		return "", err
+	}
+
+	val, ok := cm.Data[key]
+	if !ok {
+		// if no key in configmap - no problem
+		return "", nil
+	}
+
+	return val, nil
+}
 
 func discoveryDefaultStorageClassName(input *go_hook.HookInput) error {
 	defaultStorageClassNameSnap :=	input.Snapshots["default_sc_name"]

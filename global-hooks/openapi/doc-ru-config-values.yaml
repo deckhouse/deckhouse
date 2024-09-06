@@ -6,6 +6,15 @@ properties:
         * Если значение не указано, используется автоматически определяемый `global.discovery.defaultStorageClass`. Если `global.discovery.defaultStorageClass` не определен, используется `emptyDir`.
         * Этот параметр имеет смысл использовать только в исключительных ситуациях.
         * Этот параметр применяется в процессе включения модуля.
+  defaultStorageClassName:
+    type: string
+    default: null
+    description: |
+      Имя storage class, который будет использоваться для всего кластера.
+      The storage class to use as default for entire cluster.
+        * Если значение не указано, то все PVC будут использовать `global.discovery.defaultStorageClass`. Если `global.discovery.defaultStorageClass` не определен, используется `emptyDir`.
+        * Если значение указано, то все вновь создаваемые PVC будут использовать указанный storage class. Также учтите, что это значение ПЕРЕКРЫВАЕТ значения параметров `cloud-provider-*.storageClass`.
+        * Этот параметр применяется в процессе включения модуля.
   highAvailability:
     description: |
       Параметр глобального включения *режима отказоустойчивости* для модулей, которые его поддерживают.
