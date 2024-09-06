@@ -57,7 +57,7 @@ func Serve(network, address string, parallelTasksLimit int) error {
 	defer close(done)
 	sem := make(chan struct{}, parallelTasksLimit)
 
-	director := NewStreamDirector(log, singlethreadedMethodsPrefix)
+	dhctlProxy := NewStreamDirector(log, singlethreadedMethodsPrefix)
 
 	requestsCounter := rc.New(requestsCounterMaxDuration)
 	requestsCounter.Run(ctx)
@@ -95,7 +95,7 @@ func Serve(network, address string, parallelTasksLimit int) error {
 			interceptors.StreamParallelTasksLimiter(sem, singlethreadedMethodsPrefix),
 			interceptors.StreamRequestsCounter(requestsCounter),
 		),
-		grpc.UnknownServiceHandler(proxy.TransparentHandler(director.Director())),
+		grpc.UnknownServiceHandler(proxy.TransparentHandler(dhctlProxy.Director())),
 	)
 
 	// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-grpc-liveness-probe
@@ -123,5 +123,9 @@ func Serve(network, address string, parallelTasksLimit int) error {
 		log.Error("failed to serve", logger.Err(err))
 		return err
 	}
+
+	// wait for all dhctl instances to complete
+	dhctlProxy.Wait()
+
 	return nil
 }
