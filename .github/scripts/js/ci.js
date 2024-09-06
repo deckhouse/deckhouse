@@ -778,9 +778,17 @@ const detectSlashCommand = ({ comment , context, core}) => {
     }
   }
 
-  const isBuild = command === '/build';
+  // Detect /build/* commands.
+  const isBuild = command.startsWith('/build');
   if (isBuild) {
     workflow_id = 'build-and-test_release.yml';
+    // Extract editions if command consists of 2 parts: /build/ce,ee release-1.64
+    const cmdParts = command.split('/');
+    if (cmdParts[2]) {
+      inputs = {
+        editions: cmdParts[2],
+      }
+    }
   }
 
   if (workflow_id === '') {
