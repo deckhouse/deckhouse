@@ -166,7 +166,6 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 				consts.ReleaseHashLabel: hash,
 			}
 			install.PostRenderer = post
-			install.Wait = true
 			if _, err = install.RunWithContext(ctx, ch, values); err != nil {
 				c.log.Error(err, "failed to install release", "release", projectName, "namespace", projectName)
 				return fmt.Errorf("failed to install release: %w", err)
@@ -196,7 +195,6 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 	upgrade := action.NewUpgrade(c.conf)
 	upgrade.Namespace = projectName
 	upgrade.Install = true
-	upgrade.Wait = true
 	upgrade.MaxHistory = int(c.opts.HistoryMax)
 	upgrade.Timeout = c.opts.Timeout
 	upgrade.Labels = map[string]string{
