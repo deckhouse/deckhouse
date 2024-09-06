@@ -419,4 +419,4 @@ data:
     # a performance penalty. We recommend carefully testing this alternative setting before
     # deploying it in production.
     rule_matching: all
-  {{ (.Files.Glob "rules/*" ).AsConfig | indent 2 }}
+{{ (.Files.Glob "rules/*" ).AsConfig | indent 2 }}
