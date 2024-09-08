@@ -20,6 +20,7 @@ set -Eeuo pipefail
 BOOTSTRAP_DIR="/var/lib/bashible"
 TMPDIR="/opt/deckhouse/tmp"
 mkdir -p "${BOOTSTRAP_DIR}" "${TMPDIR}"
+touch "${TMPDIR}/bootstrap.$(date +'%y-%m-%d_%H-%M-%S.%N')"
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 exec >"${TMPDIR}/bootstrap.log" 2>&1
   {{- end }}
