@@ -333,7 +333,7 @@ func k8sVersions(input *go_hook.HookInput) error {
 		if minVer == nil || ver.LessThan(minVer) {
 			minVer = ver
 		}
-		versions = append(versions, ver.String())
+		versions = append(versions, fmt.Sprintf("v%d.%d.%d", ver.Major(), ver.Minor(), ver.Patch()))
 	}
 
 	if len(versions) == 0 {
@@ -341,7 +341,7 @@ func k8sVersions(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	minVerStr := minVer.String()
+	minVerStr := fmt.Sprintf("v%d.%d.%d", minVer.Major(), minVer.Minor(), minVer.Patch())
 
 	err = os.WriteFile(kubeVersionFileName, []byte(minVerStr), os.FileMode(0644))
 	if err != nil {
