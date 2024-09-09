@@ -351,7 +351,7 @@ data:
 			s, err = f.KubeClient().CoreV1().Secrets("ns2").Get(context.TODO(), "s6", metav1.GetOptions{})
 			Expect(err).To(BeNil())
 			Expect(string(s.Data["supersecret"])).To(Equal("s6data"))
-			_, found = s.ObjectMeta.Labels["argocd.argoproj.io/instance"]
+			_, found := s.ObjectMeta.Labels["argocd.argoproj.io/instance"]
 			Expect(found).To(BeFalse())
 
 			s, err = f.KubeClient().CoreV1().Secrets("ns2").Get(context.TODO(), "s2", metav1.GetOptions{})
