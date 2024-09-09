@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: shell-operator-dev:pr651
+fromImage: shell-operator-dev:pr651
 import:
   - artifact: yq4-artifact
     add: /usr/local/bin/yq
