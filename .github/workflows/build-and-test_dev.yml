@@ -643,6 +643,7 @@ jobs:
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
         run: |
+          echo " Cloud provider soure repo $CLOUD_PROVIDERS_SOURCE_REPO"
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
           if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
