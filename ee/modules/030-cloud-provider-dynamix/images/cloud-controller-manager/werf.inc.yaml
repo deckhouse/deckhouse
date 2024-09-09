@@ -23,6 +23,7 @@ shell:
     - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/cloud-controller-manager.git /cloud-controller-manager/src
     - git clone --depth 1 --branch ${VERSION_COMMON} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /dynamix-common
     - cd /cloud-controller-manager/src
+    - go mod tidy
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w " -o /dynamix-cloud-controller-manager cmd/dynamix-cloud-controller-manager/main.go
     - chown 64535:64535 /dynamix-cloud-controller-manager
     - chmod 0755 /dynamix-cloud-controller-manager
