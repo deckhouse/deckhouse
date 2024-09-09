@@ -26,4 +26,5 @@ EOF
   /var/lib/bashible/bootstrap.sh
 else
   echo "The node already exists in the cluster and under bashible."
+fi
 {{ end }}
