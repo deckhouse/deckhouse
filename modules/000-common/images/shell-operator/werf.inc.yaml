@@ -53,7 +53,7 @@ shell:
     - make -j4
     - make install-libLTLIBRARIES install-includeHEADERS
     - cp -f modules/oniguruma/src/.libs/libonig.* /libjq/lib
-    - echo a
+    - echo ab
     - cd /
     - git clone --branch {{ $shellOperatorVersion }} --depth 1 https://github.com/flant/shell-operator.git
     - cd /shell-operator
