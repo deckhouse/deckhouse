@@ -127,6 +127,8 @@ properties:
                     annotations:
                       type: object
                       additionalProperties: true
+                    loadBalancerClass:
+                      type: string
                     behindL7Proxy:
                       type: boolean
                     realIPHeader:
@@ -142,6 +144,8 @@ properties:
                     annotations:
                       type: object
                       additionalProperties: true
+                    loadBalancerClass:
+                      type: string
                 loadBalancerWithSSLPassthrough:
                   type: object
                   default: {}
@@ -153,6 +157,8 @@ properties:
                     annotations:
                       type: object
                       additionalProperties: true
+                    loadBalancerClass:
+                      type: string
                 hostPort:
                   type: object
                   default: {}
