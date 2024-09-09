@@ -20,11 +20,13 @@ When a leader node fails for some reason, failover occurs automatically: the fai
 
 ### Limitations
 
-Layer 2 mode has two main limitations you should be aware of: 
+Layer 2 mode has two main limitations you should be aware of:
+
 - **Single-node bottlenecking.**
 
   In layer 2 mode, a single leader-elected node receives all traffic for the service IP. This means that your service’s Ingress bandwidth is limited to the bandwidth of a single node. This is a fundamental limitation of using ARP and NDP to direct traffic.
-- **Potentially slow failover.** 
+
+- **Potentially slow failover.**
 
   In the current implementation, failover between nodes depends on client cooperation. When failover occurs, MetalLB sends some gratuitous layer 2 packets (a bit of a misnomer — it should really be called “unsolicited layer 2 packets”) to notify clients that the MAC address associated with the service IP has changed. Most operating systems correctly handle “gratuitous” packets and promptly update their neighbor caches. In that case, failover occurs within seconds. However, some systems either don’t implement gratuitous handling or have buggy implementations that delay cache updates.
 
@@ -53,6 +55,7 @@ Once packets arrive at a node, kube-proxy does the final hop of traffic routing,
 The exact load balancing behavior depends on your specific router model and configuration, but the general behavior is to balance per-connection based on the packet hash.
 
 Per-connection means that all packets for a single TCP or UDP session will be routed to a single machine in your cluster. The traffic spreading happens only between different connections and not for packets within a single connection. This is good because spreading packets across multiple cluster nodes would result in poor behavior on several levels:
+
 - Spreading the same connection over multiple paths would result in packet reordering on the wire, drastically impacting the end host's performance.
 - On-node traffic routing in Kubernetes is not guaranteed to be consistent across nodes. This means that two different nodes may decide to route packets for the same connection to different Pods, resulting in connection failures.
 
@@ -71,6 +74,7 @@ The problem is that the hashes used in routers are usually not stable, so whenev
 The consequence is that whenever the IP→Node mapping gets changed for your service, you should expect to see a one-time hit with the active connections to the service being dropped. There’s no ongoing packet loss or blackholing, just a one-time clean break.
 
 Depending on what your services do, there are several mitigation strategies you can employ:
+
 - Your BGP routers might provide the option to use a more stable ECMP hashing algorithm. This is sometimes called “resilient ECMP” or “resilient LAG”. This algorithm massively reduces the number of affected connections when the backend set gets changed.
 - Pin your service deployments to specific nodes to minimize the pool of nodes you must be “careful” about.
 - Schedule changes to your service deployments during “trough” times when most users sleep, and traffic is low.
@@ -78,3 +82,32 @@ Depending on what your services do, there are several mitigation strategies you 
 - Add transparent retry logic on the client side to gracefully recover from sudden disconnections. This works especially well if your clients are things like mobile apps or rich single-page web apps.
 - Place your services behind an Ingress controller. The Ingress controller itself can use MetalLB to receive traffic, but having a stateful layer between BGP and your services means you can change your services without concern. You only have to be careful when modifying the deployment of the Ingress controller itself (e.g., when adding more NGINX Pods to scale up).
 - Accept that there will be occasional bursts of reset connections. For low-availability internal services, this may be acceptable as-is.
+
+The module implements an improved (relative to the standard [L2 mode in MetalLB](../380-metallb/#layer-2-mode)) balancing mechanism for services in bare metal clusters when there is no option to use cloud load balancers or [MetalLB](../380-metallb/#bgp-mode) in BGP mode with Equal-cost multi-path (ECMP) configured.
+
+## Principle of operation compared to L2 mode in MetalLB module
+
+[MetalLB in L2 mode](../380-metallb/#layer-2-mode) allows to order _Service_ with `LoadBalancer` type, the operation of which is based on the fact that balancing nodes simulate ARP-responses from the "public" IP in a peering network. This mode has a significant limitation — only one balancing node handles all the incoming traffic of this service at a time. Therefore:
+
+- The node selected as the leader for the "public" IP becomes a "bottleneck" with no possibility of horizontal scaling.
+- If the balancer node fails, all current connections will be dropped for switching to a new balancing node that will be selected as the leader.
+
+<div data-presentation="../../presentations/381-l2-load-balancer/basics_metallb_en.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/18vcVJ1cY2yn19vBM_dTNW3hF0w9SE4S81VZc2P6fVFM/ --->
+
+This module helps bypass these limitations. It provides a new _L2LoadBalancer_ interface that:
+
+- Allows linking a group of nodes and an IP address pool using `nodeSelector`.
+
+After that, we can create a standard _Service_ resource with the type `LoadBalancer` and specify the following using annotations:
+
+- Which _L2LoadBalancer_ to use, thereby defining the set of nodes and addresses.
+- Specify the required number of IP addresses for L2 advertisement.
+
+<div data-presentation="../../presentations/381-l2-load-balancer/basics_l2loadbalancer_new_en.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1FYbc7jUhvJFy8x592ihm644i0qpeQSJFUc4Ly2coWFQ/ --->
+
+Thus:
+
+- The application will receive not a single, but several (according to the number of balancer nodes) "public" IPs. These IPs will need to be configured as A-records for the application's public domain. For further horizontal scaling, additional balancer nodes will need to be added, the corresponding _Service_ will be created automatically, you just need to add them to the list of A-records for the application domain.
+- If one of the balancer nodes fails, only a part of the connections will be prone to failover to the healthy node.

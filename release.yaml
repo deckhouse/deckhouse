@@ -35,6 +35,8 @@ requirements:
   "istioMinimalVersion": "1.16" # modules/110-istio/requirements/check.go
   "yandexHasDeprecatedZoneInConfig": "false" # modules/030-cloud-provider-yandex/requirements/check.go
   "yandexHasDeprecatedZoneInNodes": "false" # modules/030-cloud-provider-yandex/requirements/check.go
+  "l2LoadBalancerModuleEnabled": "false" # ee/modules/381-l2-load-balancer/requirements/check.go
+  "metallbHasStandardConfiguration": "false" # ee/se/modules/380-metallb/requirements/check.go
 
 # map of disruptions, associated with a specific release. You have to register check functions before specified release
 disruptions:

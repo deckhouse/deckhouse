@@ -1,0 +1,252 @@
+/*
+Copyright 2024 Flant JSC
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license.
+See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+*/
+
+package hooks
+
+import (
+	"fmt"
+
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+)
+
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	// Depends on 'migration-adopt-old-fashioned-l2-lbs.go' hook
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
+	Queue:        "/modules/metallb/generate-mlbc",
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:       "module_config",
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "ModuleConfig",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"metallb"},
+			},
+			FilterFunc: applyModuleConfigFilter,
+		},
+		{
+			Name:       "l2_advertisements",
+			ApiVersion: "metallb.io/v1beta1",
+			Kind:       "L2Advertisement",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-metallb"},
+				},
+			},
+			FilterFunc: applyL2AdvertisementFilter,
+		},
+		{
+			Name:       "ip_address_pools",
+			ApiVersion: "metallb.io/v1beta1",
+			Kind:       "IPAddressPool",
+			FilterFunc: applyIPAddressPoolFilter,
+		},
+		{
+			Name:       "mlbc_with_label",
+			ApiVersion: "network.deckhouse.io/v1alpha1",
+			Kind:       "MetalLoadBalancerClass",
+			FilterFunc: applyMLBCFilter,
+		},
+	},
+}, migrateMCtoMLBC)
+
+func applyModuleConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	mc := &ModuleConfig{}
+	err := sdk.FromUnstructured(obj, mc)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert Metallb ModuleConfig: %v", err)
+	}
+
+	return mc, nil
+}
+
+func applyL2AdvertisementFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	l2Advertisement := &L2Advertisement{}
+	err := sdk.FromUnstructured(obj, l2Advertisement)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(l2Advertisement.Spec.IPAddressPools) == 0 {
+		return nil, nil
+	}
+	if l2Advertisement.Labels != nil {
+		if v, ok := l2Advertisement.Labels["heritage"]; ok && v == "deckhouse" {
+			return nil, nil
+		}
+	}
+
+	return L2AdvertisementInfo{
+		Name:           l2Advertisement.Name,
+		IPAddressPools: l2Advertisement.Spec.IPAddressPools,
+		NodeSelectors:  l2Advertisement.Spec.NodeSelectors,
+		Namespace:      l2Advertisement.Namespace,
+		Interfaces:     l2Advertisement.Spec.Interfaces,
+	}, nil
+}
+
+func applyIPAddressPoolFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	ipAddressPool := &IPAddressPool{}
+	err := sdk.FromUnstructured(obj, ipAddressPool)
+	if err != nil {
+		return nil, err
+	}
+
+	if ipAddressPool.Labels != nil {
+		if v, ok := ipAddressPool.Labels["heritage"]; ok && v == "deckhouse" {
+			return nil, nil
+		}
+	}
+
+	return IPAddressPoolInfo{
+		Name:      ipAddressPool.Name,
+		Addresses: ipAddressPool.Spec.Addresses,
+	}, err
+}
+
+func applyMLBCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var mlbc MetalLoadBalancerClass
+
+	err := sdk.FromUnstructured(obj, &mlbc)
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range mlbc.Labels {
+		if k == "auto-generated-by" && v == "d8-migration-hook" {
+			if mlbc.Name != "l2-default" {
+				return mlbc.Name, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
+func createMetalLoadBalancerClass(input *go_hook.HookInput, mlbcInfo *MetalLoadBalancerClassInfo) {
+	mlbc := map[string]any{
+		"apiVersion": "network.deckhouse.io/v1alpha1",
+		"kind":       "MetalLoadBalancerClass",
+		"metadata": map[string]any{
+			"name":   mlbcInfo.Name,
+			"labels": mlbcInfo.Labels,
+		},
+		"spec": map[string]any{
+			"isDefault":    mlbcInfo.IsDefault,
+			"type":         "L2",
+			"addressPool":  mlbcInfo.AddressPool,
+			"nodeSelector": mlbcInfo.NodeSelector,
+		},
+	}
+	if len(mlbcInfo.Interfaces) > 0 {
+		mlbc["spec"].(map[string]any)["l2"] = map[string]any{
+			"interfaces": mlbcInfo.Interfaces,
+		}
+	}
+	mlbcUnstructured, err := sdk.ToUnstructured(&mlbc)
+	if err != nil {
+		return
+	}
+	input.PatchCollector.Create(mlbcUnstructured, object_patch.UpdateIfExists())
+}
+
+func migrateMCtoMLBC(input *go_hook.HookInput) error {
+	snapsMC := input.Snapshots["module_config"]
+	if len(snapsMC) != 1 || snapsMC[0] == nil {
+		return nil
+	}
+	mc, ok := snapsMC[0].(*ModuleConfig)
+	if !ok || mc.Spec.Version >= 2 {
+		return nil
+	}
+
+	// Create default MLBC
+	var mlbcDefault MetalLoadBalancerClassInfo
+	mlbcDefault.Name = "l2-default"
+	mlbcDefault.IsDefault = true
+	mlbcDefault.Labels = map[string]string{
+		"auto-generated-by": "d8-migration-hook",
+	}
+
+	// Getting addressPools and nodeSelector from MC
+	if len(mc.Spec.Settings.AddressPools) > 0 {
+		for _, addressPool := range mc.Spec.Settings.AddressPools {
+			if addressPool.Protocol == "bgp" {
+				return nil
+			}
+			mlbcDefault.AddressPool = append(mlbcDefault.AddressPool, addressPool.Addresses...)
+		}
+	}
+	if mc.Spec.Settings.Speaker.NodeSelector != nil {
+		mlbcDefault.NodeSelector = mc.Spec.Settings.Speaker.NodeSelector
+	}
+
+	createMetalLoadBalancerClass(input, &mlbcDefault)
+
+	// Collect addresses from IPAddressPools
+	ipAddressPools := make(map[string][]string, 4)
+	snapsIAP := input.Snapshots["ip_address_pools"]
+	for _, snapIAP := range snapsIAP {
+		if ipAddressPool, ok := snapIAP.(IPAddressPoolInfo); ok {
+			ipAddressPools[ipAddressPool.Name] = ipAddressPool.Addresses
+		}
+	}
+
+	// Create other MLBCs
+	var mlbc MetalLoadBalancerClassInfo
+	mlbc.IsDefault = false
+	mlbc.Labels = map[string]string{
+		"auto-generated-by": "d8-migration-hook",
+	}
+
+	ipAddressPoolToMLBCMap := make(map[string]string, 4)
+	desiredAutogeneratedMLBCs := make(map[string]bool, 4)
+	snapsL2A := input.Snapshots["l2_advertisements"]
+	for _, snapL2A := range snapsL2A {
+		if l2Advertisement, ok := snapL2A.(L2AdvertisementInfo); ok {
+			mlbc.Name = "autogenerated-" + l2Advertisement.Name
+
+			if len(l2Advertisement.Interfaces) > 0 {
+				mlbc.Interfaces = l2Advertisement.Interfaces
+			}
+			if len(l2Advertisement.NodeSelectors) > 0 {
+				if l2Advertisement.NodeSelectors[0].MatchLabels != nil {
+					mlbc.NodeSelector = l2Advertisement.NodeSelectors[0].MatchLabels
+				}
+			}
+			// Collecting addresses from IPAddressPools
+			for _, pool := range l2Advertisement.IPAddressPools {
+				if addresses, ok := ipAddressPools[pool]; ok {
+					mlbc.AddressPool = append(mlbc.AddressPool, addresses...)
+				}
+				ipAddressPoolToMLBCMap[pool] = mlbc.Name // Needed for use in another hook
+			}
+			desiredAutogeneratedMLBCs[mlbc.Name] = true // Needed to remove orphan MLBCs
+
+			createMetalLoadBalancerClass(input, &mlbc)
+		}
+	}
+	input.Values.Set("metallb.internal.ipAddressPoolToMLBCMap", ipAddressPoolToMLBCMap)
+
+	// Delete orphan MLBC with the label
+	snapsMLBC := input.Snapshots["mlbc_with_label"]
+	for _, snapMLBC := range snapsMLBC {
+		if mlbcName, ok := snapMLBC.(string); ok {
+			if _, ok := desiredAutogeneratedMLBCs[mlbcName]; !ok {
+				input.PatchCollector.Delete(
+					"network.deckhouse.io/v1alpha1",
+					"MetalLoadBalancerClass",
+					"",
+					mlbcName,
+					object_patch.InBackground(),
+				)
+			}
+		}
+	}
+	return nil
+}

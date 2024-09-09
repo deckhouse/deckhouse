@@ -43,6 +43,7 @@ git:
   includePaths:
   - 'modules/*/webhooks/'
   - 'ee/modules/*/webhooks/'
+  - 'ee/se/modules/*/webhooks'
 # - 'ee/fe/modules/*/webhooks/'
 - add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/entrypoint.sh
   to: /entrypoint.sh

@@ -135,12 +135,6 @@ defaults:
     values:
       featureStatus: deprecated
   - scope:
-      path: "*/381-l2-load-balancer"
-      type: "pages"
-    values:
-      d8Revision: ee
-      featureStatus: deprecated
-  - scope:
       path: "*/500-operator-trivy"
       type: "pages"
     values:

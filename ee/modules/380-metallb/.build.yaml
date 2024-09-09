@@ -1,0 +1,6 @@
+images/metallb/*
+templates/controller/*
+templates/speaker/*
+template_tests/*
+monitoring/grafana-dashboards/*
+monitoring/prometheus-rules/*
