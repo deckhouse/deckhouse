@@ -1,11 +1,15 @@
 type: object
 properties:
   storageClass:
+    deprecated: true
     description: |
+      Устаревшее свойство. Теперь его значение задается в `global.modules.storageClass`.
+
       Имя storage class, который будет использоваться для всех компонентов Deckhouse (Prometheus, Grafana, OpenVPN и т. д.).
         * Если значение не указано, используется автоматически определяемый `global.discovery.defaultStorageClass`. Если `global.discovery.defaultStorageClass` не определен, используется `emptyDir`.
         * Этот параметр имеет смысл использовать только в исключительных ситуациях.
         * Этот параметр применяется в процессе включения модуля.
+    x-doc-deprecated: true
   defaultClusterStorageClass:
     type: string
     default: null
@@ -115,6 +119,12 @@ properties:
                   Объем памяти, выделяемой на каждом master-узле, **дополнительно** к указанному в параметре `everyNode.memory`:
                     * Для кластера, управляемого Deckhouse, значение по умолчанию определяется автоматически по формуле: `.status.allocatable.memory` минимального master-узла (но не более `8Gi`) минус значение, указанное в параметре `everyNode.memory`.
                     * Для managed-кластера значение по умолчанию: `1Gi` минус значение, указанное в параметре `everyNode.memory`.
+      storageClass:
+        description: |
+          Имя storage class, который будет использоваться для всех компонентов Deckhouse (Prometheus, Grafana, OpenVPN и т. д.).
+            * Если значение не указано, используется автоматически определяемый `global.discovery.defaultStorageClass`. Если `global.discovery.defaultStorageClass` не определен, используется `emptyDir`.
+            * Этот параметр имеет смысл использовать только в исключительных ситуациях.
+            * Этот параметр применяется в процессе включения модуля.
       proxy:
         description: |
           Глобальная настройка proxy для модулей.

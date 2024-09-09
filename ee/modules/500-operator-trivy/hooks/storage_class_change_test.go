@@ -29,7 +29,7 @@ var _ = Describe("Modules :: operator-trivy :: hooks :: storage_class_change ::"
 	Context("Global storage class is set", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(""))
-			f.ConfigValuesSet("global.storageClass", "test")
+			f.ConfigValuesSet("global.modules.storageClass", "test")
 			f.RunHook()
 		})
 		It("Should set effectiveClass to test", func() {

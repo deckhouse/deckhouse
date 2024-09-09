@@ -28,7 +28,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-// TODO: add tests with global.storageClass variants
+// TODO: add tests with global.modules.storageClass variants
 
 const (
 	cmWithDefinedDefaultStorageClassName = `
