@@ -144,6 +144,19 @@ metadata:
 data:
   supersecret: czVkYXRh
 `
+stateSecretOriginalYAML6 = `
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: s6
+  namespace: default
+  labels:
+    secret-copier.deckhouse.io/enabled: ""
+	argocd.argoproj.io/instance: "argoapp"
+data:
+  supersecret: czZkYXRhCg==
+`
 		stateSecretExtraYAML1 = `
 apiVersion: v1
 kind: Secret
@@ -205,6 +218,7 @@ data:
 		secretOriginal3 *corev1.Secret
 		secretOriginal4 *corev1.Secret
 		secretOriginal5 *corev1.Secret
+		secretOriginal6 *corev1.Secret
 		secretExtra1    *corev1.Secret
 		secretExtra2    *corev1.Secret
 		secretUpToDate  *corev1.Secret
@@ -225,6 +239,7 @@ data:
 		_ = yaml.Unmarshal([]byte(stateSecretOriginalYAML3), &secretOriginal3)
 		_ = yaml.Unmarshal([]byte(stateSecretOriginalYAML4), &secretOriginal4)
 		_ = yaml.Unmarshal([]byte(stateSecretOriginalYAML5), &secretOriginal5)
+		_ = yaml.Unmarshal([]byte(stateSecretOriginalYAML6), &secretOriginal6)
 		_ = yaml.Unmarshal([]byte(stateSecretExtraYAML1), &secretExtra1)
 		_ = yaml.Unmarshal([]byte(stateSecretExtraYAML2), &secretExtra2)
 		_ = yaml.Unmarshal([]byte(stateSecretUpToDateYAML), &secretUpToDate)
@@ -240,6 +255,7 @@ data:
 		secretOriginalYAML3, _ := yaml.Marshal(&secretOriginal3)
 		secretOriginalYAML4, _ := yaml.Marshal(&secretOriginal4)
 		secretOriginalYAML5, _ := yaml.Marshal(&secretOriginal5)
+		secretOriginalYAML6, _ := yaml.Marshal(&secretOriginal6)
 		secretNeutralYAML, _ := yaml.Marshal(&secretNeutral)
 		secretExtraYAML1, _ := yaml.Marshal(&secretExtra1)
 		secretExtraYAML2, _ := yaml.Marshal(&secretExtra2)
@@ -257,6 +273,7 @@ data:
 			string(secretOriginalYAML3),
 			string(secretOriginalYAML4),
 			string(secretOriginalYAML5),
+			string(secretOriginalYAML6)
 			string(secretNeutralYAML),
 			string(secretExtraYAML1),
 			string(secretExtraYAML2),
@@ -293,6 +310,7 @@ data:
 			_, _ = f.KubeClient().CoreV1().Secrets(secretOriginal1.Namespace).Create(context.TODO(), secretOriginal1, metav1.CreateOptions{})
 			_, _ = f.KubeClient().CoreV1().Secrets(secretOriginal2.Namespace).Create(context.TODO(), secretOriginal2, metav1.CreateOptions{})
 			_, _ = f.KubeClient().CoreV1().Secrets(secretOriginal3.Namespace).Create(context.TODO(), secretOriginal3, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Secrets(secretOriginal6.Namespace).Create(context.TODO(), secretOriginal6, metav1.CreateOptions{})
 			_, _ = f.KubeClient().CoreV1().Secrets(secretExtra1.Namespace).Create(context.TODO(), secretExtra1, metav1.CreateOptions{})
 			_, _ = f.KubeClient().CoreV1().Secrets(secretExtra2.Namespace).Create(context.TODO(), secretExtra2, metav1.CreateOptions{})
 			_, _ = f.KubeClient().CoreV1().Secrets(secretUpToDate.Namespace).Create(context.TODO(), secretUpToDate, metav1.CreateOptions{})
@@ -328,6 +346,12 @@ data:
 			Expect(err).To(BeNil())
 			Expect(string(s.Data["supersecret"])).To(Equal("s1data"))
 			_, found = s.ObjectMeta.Labels["certmanager.k8s.io/certificate-name"]
+			Expect(found).To(BeFalse())
+
+			s, err = f.KubeClient().CoreV1().Secrets("ns2").Get(context.TODO(), "s6", metav1.GetOptions{})
+			Expect(err).To(BeNil())
+			Expect(string(s.Data["supersecret"])).To(Equal("s6data"))
+			_, found = s.ObjectMeta.Labels["argocd.argoproj.io/instance"]
 			Expect(found).To(BeFalse())
 
 			s, err = f.KubeClient().CoreV1().Secrets("ns2").Get(context.TODO(), "s2", metav1.GetOptions{})
