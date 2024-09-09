@@ -348,12 +348,6 @@ data:
 			_, found = s.ObjectMeta.Labels["certmanager.k8s.io/certificate-name"]
 			Expect(found).To(BeFalse())
 
-			s, err = f.KubeClient().CoreV1().Secrets("ns1").Get(context.TODO(), "s6", metav1.GetOptions{})
-			Expect(err).To(BeNil())
-			Expect(string(s.Data["supersecret"])).To(Equal("s6data"))
-			_, found = s.ObjectMeta.Labels["argocd.argoproj.io/instance"]
-			Expect(found).To(BeFalse())
-
 			s, err = f.KubeClient().CoreV1().Secrets("ns2").Get(context.TODO(), "s2", metav1.GetOptions{})
 			Expect(err).To(BeNil())
 			Expect(string(s.Data["supersecret"])).To(Equal("s2data"))
@@ -413,6 +407,16 @@ data:
 
 			_, err = f.KubeClient().CoreV1().Secrets("ns4u").Get(context.TODO(), "s5", metav1.GetOptions{})
 			Expect(err).ToNot(BeNil())
+		})
+
+		It("Custom Secret #6 must not to have a ArgoCD labels", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			s, err := f.KubeClient().CoreV1().Secrets("ns1").Get(context.TODO(), "s6", metav1.GetOptions{})
+			Expect(err).To(BeNil())
+			Expect(string(s.Data["supersecret"])).To(Equal("s6data"))
+			_, found := s.ObjectMeta.Labels["argocd.argoproj.io/instance"]
+			Expect(found).To(BeFalse())
 		})
 	})
 })
