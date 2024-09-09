@@ -144,7 +144,7 @@ metadata:
 data:
   supersecret: czVkYXRh
 `
-stateSecretOriginalYAML6 = `
+		stateSecretOriginalYAML6 = `
 apiVersion: v1
 kind: Secret
 type: Opaque
