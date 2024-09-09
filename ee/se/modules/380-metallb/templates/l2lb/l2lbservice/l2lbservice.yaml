@@ -1,0 +1,32 @@
+{{- range $l2lbservice := .Values.metallb.internal.l2lbservices }}
+---
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalL2LBService
+metadata:
+  name: {{ $l2lbservice.name }}
+  namespace: {{ $l2lbservice.namespace }}
+  {{- include "helm_lib_module_labels" (list $ (dict "parent-service" $l2lbservice.serviceName)) | nindent 2 }}
+  annotations:
+    metallb.universe.tf/preferredL2SpeakerNode: {{ $l2lbservice.preferredNode }}
+    metallb.universe.tf/address-pool: {{ $l2lbservice.mlbcName }}
+    {{- if $l2lbservice.desiredIP }}
+    metallb.universe.tf/loadBalancerIPs: {{ $l2lbservice.desiredIP }}
+    {{- end }}
+    {{- if $l2lbservice.lbAllowSharedIP }}
+    metallb.universe.tf/allow-shared-ip: {{ $l2lbservice.lbAllowSharedIP }}
+    {{- end }}
+spec:
+  clusterIP: {{ $l2lbservice.clusterIP }}
+  serviceRef:
+    name: {{ $l2lbservice.serviceName }}
+    namespace: {{ $l2lbservice.serviceNamespace }}
+  ports:
+    {{ $l2lbservice.ports | toYaml | nindent 4 }}
+  externalTrafficPolicy: {{ $l2lbservice.externalTrafficPolicy }}
+  internalTrafficPolicy: {{ $l2lbservice.internalTrafficPolicy }}
+  publishNotReadyAddresses: {{ $l2lbservice.publishNotReadyAddresses }}
+  selector:
+    {{ $l2lbservice.selector | toYaml | nindent 4 }}
+  type: LoadBalancer
+  loadBalancerClass: "l2-load-balancer-class.network.deckhouse.io"
+{{- end }}

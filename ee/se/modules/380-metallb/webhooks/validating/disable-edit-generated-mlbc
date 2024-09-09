@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+# Copyright 2024 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license.
+# See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+source /shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+configVersion: v1
+kubernetesValidating:
+- name: disableeditdefaultmlbc-policy.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["network.deckhouse.io"]
+    apiVersions: ["v1alpha1"]
+    operations:  ["UPDATE", "DELETE"]
+    resources:   ["metalloadbalancerclasses"]
+    scope:       "Cluster"
+kubernetes:
+- name: metallb_mc
+  group: main
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  nameSelector:
+    matchNames:
+    - metallb
+  jqFilter: |
+    {
+      "version": .spec.version,
+    }
+EOF
+}
+
+function forbid() {
+  jq -nc --arg message "$1" '
+    {
+      "allowed": false,
+      "message": $message
+    }
+    ' >"$VALIDATING_RESPONSE_PATH"
+}
+
+function __main__() {
+  mc_version=$(context::jq -r '.snapshots.metallb_mc[]?.filterResult.version')
+  mlbc_label=$(context::jq -r '.review.request.oldObject.metadata.labels["auto-generated-by"]')
+  user=$(context::jq -r '.review.request.userInfo.username')
+  if [ "$mc_version" == "1" ] && [ "$mlbc_label" == "d8-migration-hook" ] && [ "$user" != "system:serviceaccount:d8-system:deckhouse" ]; then
+    forbid "deleting or editing of the resource MetalLoadBalancerClass with label 'auto-generated-by=d8-migration-hook' is prohibited until the Metallb module version is 1."
+    exit 0
+  fi
+
+  # Allowed response
+  jq -nc '{"allowed": true}' >"$VALIDATING_RESPONSE_PATH"
+}
+
+hook::run "$@"

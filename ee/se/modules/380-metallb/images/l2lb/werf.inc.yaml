@@ -1,0 +1,53 @@
+---
+artifact: {{ .ModuleName }}/l2lb-metallb-artifact
+from: {{ .Images.BASE_GOLANG_22_ALPINE }}
+git:
+  - add: /{{ $.ModulePath }}modules/380-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+    - apk add --no-cache openssh-client git
+  install:
+    - mkdir -p /src
+    - cd /src
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+    - git clone -b v0.14.8 {{ $.SOURCE_REPO }}/metallb/metallb.git .
+    - git config --global user.email "builder@deckhouse.io"
+    - mkdir ./api/v1alpha1
+    - git apply /patches/*.patch --verbose
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - cd controller
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /controller
+    - chown 64535:64535 /controller
+    - chmod 0700 /controller
+    - cd ../speaker
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /speaker
+    - chown 64535:64535 /speaker
+    - chmod 0755 /speaker
+---
+image: {{ .ModuleName }}/l2lb-controller
+fromImage: common/distroless
+import:
+  - artifact: {{ .ModuleName }}/l2lb-metallb-artifact
+    add: /controller
+    to: /controller
+    before: setup
+docker:
+  ENTRYPOINT: ["/controller"]
+---
+image: {{ .ModuleName }}/l2lb-speaker
+fromImage: common/distroless
+import:
+  - artifact: {{ .ModuleName }}/l2lb-metallb-artifact
+    add: /speaker
+    to: /speaker
+    before: setup
+docker:
+  ENTRYPOINT: ["/speaker"]

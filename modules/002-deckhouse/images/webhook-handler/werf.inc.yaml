@@ -43,6 +43,7 @@ git:
   includePaths:
   - 'modules/*/webhooks/'
   - 'ee/modules/*/webhooks/'
+  - 'ee/se/modules/*/webhooks'
 # - 'ee/fe/modules/*/webhooks/'
   excludePaths:
     - '**/*_test.py'
