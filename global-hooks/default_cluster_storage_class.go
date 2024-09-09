@@ -32,25 +32,25 @@ import (
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "default_sc_name",
+			Name:       "default_cluster_sc",
 			ApiVersion: "v1",
 			Kind:       "ConfigMap",
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{"d8-default-storage-class"},
+				MatchNames: []string{"d8-default-cluster-storage-class"},
 			},
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{d8Namespace},
 				},
 			},
-			FilterFunc: applyDefaultStorageClassNameCmFilter,
+			FilterFunc: applyDefaultClusterStorageClassCmFilter,
 		},
 	},
 }, dependency.WithExternalDependencies(setupDefaultStorageClass))
 
-func applyDefaultStorageClassNameCmFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyDefaultClusterStorageClassCmFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	// slightly modified code from go_lib/filter/extract.go/KeyFromConfigMap
-	const key = "default-storage-class-name"
+	const key = "default-cluster-storage-class"
 
 	var cm v1core.ConfigMap
 	err := sdk.FromUnstructured(obj, &cm)
@@ -69,14 +69,14 @@ func applyDefaultStorageClassNameCmFilter(obj *unstructured.Unstructured) (go_ho
 }
 
 func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container) error {
-	defaultStorageClassNameSnap := input.Snapshots["default_sc_name"]
+	defaultClusterStorageClassSnap := input.Snapshots["default_cluster_sc"]
 
-	if len(defaultStorageClassNameSnap) == 0 || defaultStorageClassNameSnap[0] == "" {
-		input.LogEntry.Infoln("Default storage class name not found or empty. Skipping")
+	if len(defaultClusterStorageClassSnap) == 0 || defaultClusterStorageClassSnap[0] == "" {
+		input.LogEntry.Infoln("Default cluster storage class configmap not found or empty. Skipping")
 		return nil
 	}
 
-	defaultStorageClassName := defaultStorageClassNameSnap[0]
+	defaultClusterStorageClass := defaultClusterStorageClassSnap[0]
 
 	client, err := dc.GetK8sClient()
 	if err != nil {
@@ -90,11 +90,11 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 	}
 
 	for _, sc := range storage_classes.Items {
-		if sc.GetName() == defaultStorageClassName {
+		if sc.GetName() == defaultClusterStorageClass {
 			// it's that storage class which we want
 			if !isMarkedDefault(&sc) {
 				// we must add default-annotation to this StorageClass because it's not annotated as default
-				input.LogEntry.Warnf("Add default annotation to storage class %q (it specified in `global.defaultStorageClassName`)", sc.GetName())
+				input.LogEntry.Warnf("Add default annotation to storage class %q (it specified in `global.defaultClusterStorageClass`)", sc.GetName())
 
 				patch := map[string]any{
 					"metadata": map[string]any{
@@ -108,7 +108,7 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 			}
 		} else {
 			if isMarkedDefault(&sc) {
-				// we must remove default-annotation from this StorageClass because only one StorageClass (which name in defaultStorageClassName) can be default
+				// we must remove default-annotation from this StorageClass because only one StorageClass (which name in defaultClusterStorageClass) can be default
 				input.LogEntry.Warnf("Remove default annotations from storage class %q", sc.GetName())
 
 				patch := map[string]any{

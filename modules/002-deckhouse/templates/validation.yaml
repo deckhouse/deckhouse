@@ -151,7 +151,7 @@ spec:
   validationActions: [Deny, Audit]
 {{- end }}
 ---
-{{- $policyName := "default-storage-class.deckhouse.io" }}
+{{- $policyName := "default-cluster-storage-class.deckhouse.io" }}
 {{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1
 {{- else if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
@@ -194,7 +194,7 @@ apiVersion: admissionregistration.k8s.io/v1alpha1
 {{- end }}
 kind: ValidatingAdmissionPolicyBinding
 metadata:
-  name: "default-storage-class-objects.deckhouse.io"
+  name: "default-cluster-storage-class-objects.deckhouse.io"
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
 spec:
   policyName: {{ $policyName }}

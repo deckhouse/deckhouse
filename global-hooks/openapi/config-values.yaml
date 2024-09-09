@@ -10,7 +10,7 @@ properties:
         * If not defined, components use `global.discovery.defaultStorageClass` (which is determined automatically) or `emptyDir` (if `global.discovery.defaultStorageClass` isn't defined).
         * Use this parameter only in exceptional circumstances.
         * This parameter is applied during module activation.
-  defaultStorageClassName:
+  defaultClusterStorageClass:
     type: string
     default: null
     description: |
