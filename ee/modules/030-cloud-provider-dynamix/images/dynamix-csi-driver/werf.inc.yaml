@@ -36,12 +36,9 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - export VERSION="0.1.0"
-  - mkdir -p /dynamix/dynamix-csi-driver/src
-  - cd /dynamix/dynamix-csi-driver/src
   - git clone {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-csi-driver.git /dynamix/dynamix-csi-driver/src
-  - ls -la /dynamix/dynamix-csi-driver/src
   - git clone {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /dynamix/dynamix-common
-  - ls -la /dynamix/dynamix-common
+  - cd /dynamix/dynamix-csi-driver/src
   - go mod tidy
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version=${VERSION}" -o /dynamix-csi-driver cmd/dynamix-csi-driver/main.go
   - chown 64535:64535 /dynamix-csi-driver
