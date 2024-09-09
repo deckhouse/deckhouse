@@ -273,7 +273,7 @@ data:
 			string(secretOriginalYAML3),
 			string(secretOriginalYAML4),
 			string(secretOriginalYAML5),
-			string(secretOriginalYAML6)
+			string(secretOriginalYAML6),
 			string(secretNeutralYAML),
 			string(secretExtraYAML1),
 			string(secretExtraYAML2),
