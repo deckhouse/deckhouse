@@ -16,5 +16,6 @@ cleanup:
         last: 2
   - references:
       branch: main
-      limit:
-        in: 336h
+    imagesPerReference:
+      last: -1
+      in: 336h
