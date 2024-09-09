@@ -2,54 +2,56 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /ovirt-csi-driver
-  to: /ovirt-csi-driver
-  before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /relocate
-  to: /
-  before: install
-  includePaths:
-  - '**/*'
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /lib64
-  to: /lib64
-  before: install
-  includePaths:
-  - 'libresolv*'
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /lib/udev/scsi_id
-  to: /lib/udev/scsi_id
-  before: setup
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /dynamix-csi-driver
+    to: /dynamix-csi-driver
+    before: setup
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /relocate
+    to: /
+    before: install
+    includePaths:
+      - '**/*'
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /lib64
+    to: /lib64
+    before: install
+    includePaths:
+      - 'libresolv*'
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /lib/udev/scsi_id
+    to: /lib/udev/scsi_id
+    before: setup
 docker:
-  ENTRYPOINT: ["/ovirt-csi-driver"]
+  ENTRYPOINT: ["/dynamix-csi-driver"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_19_BULLSEYE_DEV }}
-git:
-- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  includePaths:
-  - '**/*.patch'
-  stageDependencies:
-    install:
-    - '**/*.patch'
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+fromCacheVersion: "2024-09-09.1"
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
   install:
-  - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }}
-  - export VERSION="release-4.17"
-  - mkdir -p /src
-  - git clone --depth 1 --branch ${VERSION} {{ $.SOURCE_REPO }}/openshift/ovirt-csi-driver.git /src
-  - cd /src
-  - rm -rf vendor
-  - find /patches -name '*.patch' | xargs git apply --verbose
-  - go mod tidy
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X version.Version=${VERSION}" -o /ovirt-csi-driver ./cmd/ovirt-csi-driver/ovirt-csi-driver.go
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - export VERSION="0.1.0"
+    - mkdir -p /dynamix /dynamix/dynamix-csi-driver
+    - git clone -v {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-csi-driver.git /dynamix/dynamix-csi-driver/src
+    - echo "ExitCode git $?"
+    - ls -lRa /dynamix/dynamix-csi-driver/src
+    - git clone {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /dynamix/dynamix-common
+    - echo "ExitCode git $?"
+    - ls -lRa /dynamix/dynamix-common
+    - cd /dynamix/dynamix-csi-driver/src
+    - ls -lh
+    - go mod tidy
+    - echo "Go mod tidy $?"
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version=${VERSION}" -o /dynamix-csi-driver cmd/dynamix-csi-driver/main.go
+    - echo "Go build $?"
+    - ls -lh /
+    - chown 64535:64535 /dynamix-csi-driver
+    - chmod 0755 /dynamix-csi-driver
 ---
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /sbin/xfs_repair /usr/sbin/nvme /usr/sbin/parted /usr/sbin/xfs*" }}
 ---
