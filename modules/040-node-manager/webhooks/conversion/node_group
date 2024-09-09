@@ -148,6 +148,7 @@ function __on_conversion::v1_to_alpha2() {
      else . end
   )')
   then
+    echo "Writing to $CONVERSION_RESPONSE_PATH"
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
 {"convertedObjects": $converted}
 EOF
