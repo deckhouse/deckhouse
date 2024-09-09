@@ -27,7 +27,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"golang.org/x/sync/errgroup"
 	"math/big"
 	"net/http"
 	"os"
@@ -40,15 +39,16 @@ import (
 	"sync"
 	"time"
 
+	libmirrorCtx "github.com/deckhouse/deckhouse-cli/pkg/libmirror/contexts"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/imgbundle"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/d8"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
@@ -58,6 +58,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
+	"github.com/google/go-containerregistry/pkg/authn"
 )
 
 const (
@@ -315,8 +316,7 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 	ctx, ctxCancel := context.WithCancel(ctx)
 	defer ctxCancel()
 
-	recreateTunFuncs := [](func() error){}
-	distributionAddress := "127.0.0.1:5001"
+	distributionHost := "127.0.0.1:5001"
 
 	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
 		sshClient := wrapper.Client()
@@ -326,73 +326,61 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 		if err != nil {
 			return err
 		}
-		recreateTunFuncs = append(recreateTunFuncs, func() error {
+		go func() {
 			err := frontend.RecreateSshTun(ctx, authTun, func() (*frontend.Tunnel, error) {
 				return setupSSHTunnelToSystemRegistryAuth(sshClient)
 			})
 			ctxCancel()
-			return err
-		})
+
+			if err != nil {
+				panic(fmt.Sprintf("error re-creating ssh tunnel for remote docker auth service: %s", err.Error()))
+			}
+		}()
 
 		if sshClient.Settings.BastionHost == "" {
-			distributionAddress = fmt.Sprintf("%s:5001", sshClient.Settings.Host())
+			distributionHost = fmt.Sprintf("%s:5001", sshClient.Settings.Host())
 		} else {
 			// Create distribution tunnel, if BastionHost != ""
 			distributionTun, err := setupSSHTunnelToSystemRegistryDistribution(sshClient)
 			if err != nil {
 				return err
 			}
-			recreateTunFuncs = append(recreateTunFuncs, func() error {
+			go func() {
 				err := frontend.RecreateSshTun(ctx, distributionTun, func() (*frontend.Tunnel, error) {
 					return setupSSHTunnelToSystemRegistryDistribution(sshClient)
 				})
 				ctxCancel()
-				return err
-			})
+
+				if err != nil {
+					panic(fmt.Sprintf("error re-creating ssh tunnel for remote docker distribution service: %s", err.Error()))
+				}
+			}()
 		}
 	}
 
-	// Prepare mirror push function
-	mirrorPush := func() error {
-		registryUser := cfg.InternalRegistryAccess.UserRw
-		imagesBundlePath := "/deckhouse/candi/bundle/untar/"
-
-		stdOutHandler := func(l string) {
-			log.InfoLn(l)
-		}
-		stdErrHandler := func(l string) {
-			log.ErrorLn(l)
-		}
-		mirrorPushErrorCh := make(chan error, 1)
-
-		d8Push := d8.NewMirrorPush().
-			WithInsecure(false).
-			WithTlsSkipVerify(true).
-			WithRegistryAuth(registryUser.Name, registryUser.Password).
-			MirrorPush(imagesBundlePath, distributionAddress)
-		d8Push.WithStdoutHandler(stdOutHandler)
-		d8Push.WithStderrHandler(stdErrHandler)
-		go func() {
-			mirrorPushErrorCh <- d8Push.Run()
-		}()
-		for {
-			select {
-			case <-ctx.Done():
-				d8Push.Stop()
-				return fmt.Errorf("mirror push stoped by context: %s", ctx.Err())
-			case err := <-mirrorPushErrorCh:
-				d8Push.Stop()
-				ctxCancel()
-				return err
-			}
-		}
+	bundlePath := "/deckhouse/candi/bundle/test.tar"
+	unpackedBundlePath, err := imgbundle.UnpackAndValidate(bundlePath)
+	if err != nil {
+		return err
 	}
 
-	g, ctx := errgroup.WithContext(ctx)
-	for _, f := range append(recreateTunFuncs, mirrorPush) {
-		g.Go(f)
+	pushCtx := libmirrorCtx.PushContext{
+		BaseContext: libmirrorCtx.BaseContext{
+			RegistryAuth: authn.FromConfig(authn.AuthConfig{
+				Username: cfg.InternalRegistryAccess.UserRw.Name,
+				Password: cfg.InternalRegistryAccess.UserRw.Password,
+			}),
+			DeckhouseRegistryRepo: "registry.deckhouse.io/deckhouse/ee",
+			RegistryHost:          distributionHost,
+			RegistryPath:          "/sys/deckhouse",
+			BundlePath:            bundlePath,
+			UnpackedImagesPath:    unpackedBundlePath,
+			Insecure:              false,
+			SkipTLSVerification:   true,
+			Logger:                &imgbundle.Logger{},
+		},
 	}
-	return g.Wait()
+	return imgbundle.Push(&pushCtx)
 }
 
 func waitAndPushDockerImages(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig) error {

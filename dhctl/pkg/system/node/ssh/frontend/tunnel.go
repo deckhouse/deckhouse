@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/cmd"
@@ -172,23 +173,24 @@ func RecreateSshTun(ctx context.Context, tun *Tunnel, recreateTun func() (*Tunne
 		case <-healthMonitorErrorCh:
 			var lastError error
 			log.DebugF("Detected error in tunnel %s\n", tunAddress)
-			for retryCount := 0; retryCount < 10; retryCount++ {
+			for retryCount := 0; retryCount < 1024; retryCount++ {
 				select {
 				case <-ctx.Done():
 					return nil
 				default:
 				}
-				log.DebugF("[%d/10] Trying to recreate the tunnel %s\n", retryCount+1, tunAddress)
+				log.DebugF("[%d/1024] Trying to recreate the tunnel %s\n", retryCount+1, tunAddress)
 				tun.Stop()
 				tun, lastError = recreateTun()
 				if lastError != nil {
 					lastError = fmt.Errorf("error recreating the tunnel %s: %v", tunAddress, lastError.Error())
-					log.DebugF("[%d/10] %s\n", retryCount+1, lastError.Error())
+					log.DebugF("[%d/1024] %s\n", retryCount+1, lastError.Error())
+					time.Sleep(1 * time.Second)
 					continue
 				}
 				go tun.HealthMonitor(healthMonitorErrorCh)
 				lastError = nil
-				log.DebugF("[%d/10] Successfully recreated the tunnel %s\n", retryCount+1, tunAddress)
+				log.DebugF("[%d/1024] Successfully recreated the tunnel %s\n", retryCount+1, tunAddress)
 				break
 			}
 			if lastError != nil {
