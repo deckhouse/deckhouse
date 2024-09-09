@@ -18,13 +18,13 @@ import (
 	"context"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	v1core "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	storage "k8s.io/api/storage/v1"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	v1core "k8s.io/api/core/v1"
+	storage "k8s.io/api/storage/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -69,7 +69,7 @@ func applyDefaultStorageClassNameCmFilter(obj *unstructured.Unstructured) (go_ho
 }
 
 func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container) error {
-	defaultStorageClassNameSnap :=	input.Snapshots["default_sc_name"]
+	defaultStorageClassNameSnap := input.Snapshots["default_sc_name"]
 
 	if len(defaultStorageClassNameSnap) == 0 || defaultStorageClassNameSnap[0] == "" {
 		input.LogEntry.Infoln("Default storage class name not found or empty. Skipping")
@@ -115,7 +115,7 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 					"metadata": map[string]any{
 						"annotations": map[string]any{
 							"storageclass.beta.kubernetes.io/is-default-class": nil,
-							"storageclass.kubernetes.io/is-default-class": nil,
+							"storageclass.kubernetes.io/is-default-class":      nil,
 						},
 					},
 				}
@@ -128,7 +128,7 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 	return nil
 }
 
-func isMarkedDefault(sc *storage.StorageClass) (bool) {
+func isMarkedDefault(sc *storage.StorageClass) bool {
 	annotations := sc.GetAnnotations()
 
 	annotToCheck := []string{
