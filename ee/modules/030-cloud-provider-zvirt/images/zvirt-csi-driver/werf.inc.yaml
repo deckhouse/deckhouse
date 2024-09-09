@@ -39,19 +39,10 @@ shell:
     - mkdir -p /dynamix /dynamix/dynamix-csi-driver
     - git clone -v {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-csi-driver.git /dynamix/dynamix-csi-driver/src
     - echo "ExitCode git $?"
-    - ls -lRa /dynamix/dynamix-csi-driver/src
+    - ls -lRa /dynamix/
     - git clone {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /dynamix/dynamix-common
     - echo "ExitCode git $?"
     - ls -lRa /dynamix/dynamix-common
-    - cd /dynamix/dynamix-csi-driver/src
-    - ls -lh
-    - go mod tidy
-    - echo "Go mod tidy $?"
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version=${VERSION}" -o /dynamix-csi-driver cmd/dynamix-csi-driver/main.go
-    - echo "Go build $?"
-    - ls -lh /
-    - chown 64535:64535 /dynamix-csi-driver
-    - chmod 0755 /dynamix-csi-driver
 ---
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /sbin/xfs_repair /usr/sbin/nvme /usr/sbin/parted /usr/sbin/xfs*" }}
 ---
