@@ -39,6 +39,7 @@ shell:
   - mkdir -p /dynamix/dynamix-common
   - ls -la /dynamix/
   - cd /dynamix/dynamix-csi-driver/src
+  - ls -la
   - git clone {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-csi-driver.git ./
   - ls -la
   - cd /dynamix/dynamix-common
