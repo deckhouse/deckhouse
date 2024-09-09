@@ -39,7 +39,7 @@ shell:
     - export VERSION="0.1.0"
     - mkdir -p /dynamix /dynamix/dynamix-csi-driver/src
     - echo "Hello, world!"
-    - git clone {{ $.CLOUD_PROVIDERS_SOURCE_REPO }} /dynamix/dynamix-csi-driver/src
+    - git clone --depth 1 --branch main {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common /dynamix/dynamix-csi-driver/src
     - echo "Git clone $?"
     - ls -lhR /dynamix
     - exit 1
