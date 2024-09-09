@@ -953,6 +953,7 @@ dependencies:
   {{- $_ := set $ctx "CandiVersionMap" $Root.CandiVersionMap }}
   {{- $_ := set $ctx "TF" $Root.TF }}
   {{- $_ := set $ctx "SOURCE_REPO" $Root.SOURCE_REPO }}
+  {{- $_ := set $ctx "CLOUD_PROVIDERS_SOURCE_REPO" $Root.CLOUD_PROVIDERS_SOURCE_REPO }}
   {{- $_ := set $ctx "GOPROXY" $Root.GOPROXY }}
 ---
 {{ include "module_image_template" $ctx }}
