@@ -170,17 +170,17 @@ groups:
   - ports: "4218, 4225"
     protocol: TCP
     description:
-      en: "*metallb* and *l2-load-balancer* speakers memberlist ports"
+      en: "*metallb* speakers memberlist ports"
       ru: "Синхронизация через протокол memberlist для компонентов *speaker* модулей *metallb*"
   - ports: "4218, 4225"
     protocol: UDP
     description:
-      en: "*metallb* and *l2-load-balancer* speakers memberlist ports"
+      en: "*metallb* speakers memberlist ports"
       ru: "Синхронизация через протокол memberlist для компонентов *speaker* модулей *metallb*"
   - ports: "4220, 4226"
     protocol: TCP
     description:
-      en: "*metallb* and *l2-load-balancer* speakers metrics"
+      en: "*metallb* and speakers metrics"
       ru: "Метрики компонентов *speaker* модулей *metallb*"
   - ports: "4224"
     protocol: TCP

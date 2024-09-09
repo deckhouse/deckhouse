@@ -99,7 +99,7 @@ spec:
 
 {% endraw %}
 
-## Пример для bare metal (балансировщик MetalLB в режиме BGP)
+## Пример для bare metal (балансировщик MetalLB в режиме BGP LoadBalancer)
 
 {% alert level="warning" %}Доступно только в Enterprise Edition.{% endalert %}
 
@@ -136,35 +136,37 @@ metallb:
       value: frontend
 ```
 
-## Пример для bare metal (балансировщик L2LoadBalancer)
+## Пример для bare metal (балансировщик MetalLB в режиме L2 LoadBalancer)
 
 {% alert level="warning" %}Доступно только в Enterprise Edition.{% endalert %}
 
-1. Включите модуль `l2-load-balancer`:
+1. Включите модуль `metallb`:
 
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: l2-load-balancer
-   spec:
-     enabled: true
-     version: 1
-   ```
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: metallb
+  spec:
+    enabled: true
+    version: 2
+  ```
 
-1. Создайте ресурс _L2LoadBalancer_:
+1. Создайте ресурс _MetalLoadBalancerClass_:
 
-   ```yaml
-   apiVersion: network.deckhouse.io/v1alpha1
-   kind: L2LoadBalancer
-   metadata:
-     name: ingress
-   spec:
-     addressPool:
-     - 192.168.2.100-192.168.2.150
-     nodeSelector:
-       node-role.kubernetes.io/loadbalancer: "" # селектор узлов-балансировщиков
-   ```
+  ```yaml
+  apiVersion: network.deckhouse.io/v1alpha1
+  kind: MetalLoadBalancerClass
+  metadata:
+    name: ingress
+  spec:
+    addressPool:
+      - 192.168.2.100-192.168.2.150
+    isDefault: false
+    nodeSelector:
+      node-role.kubernetes.io/loadbalancer: "" # селектор узлов-балансировщиков
+    type: L2
+  ```
 
 1. Создайте ресурс _IngressNginxController_:
 
@@ -177,10 +179,9 @@ metallb:
      ingressClass: nginx
      inlet: LoadBalancer
      loadBalancer:
+       loadBalancerClass: ingress
        annotations:
-         # Имя _L2LoadBalancer_.
-         network.deckhouse.io/l2-load-balancer-name: ingress
-         # Количество адресов, которые будут выделены из пула, описанного в _L2LoadBalancer_.
+         # Количество адресов, которые будут выделены из пула, описанного в _MetalLoadBalancerClass_.
          network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
    ```
 
