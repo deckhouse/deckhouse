@@ -197,15 +197,18 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		default:
 			// inherit cooldown from previous patch release
 			// we need this to automatically set cooldown for next patch releases
-			if cooldownUntil == nil && release.GetCooldownUntil() != nil {
-				if release.GetVersion().Major() == newSemver.Major() && release.GetVersion().Minor() == newSemver.Minor() {
-					cooldownUntil = &metav1.Time{Time: *release.GetCooldownUntil()}
-				}
+			if cooldownUntil == nil &&
+				release.GetCooldownUntil() != nil &&
+				release.GetVersion().Major() == newSemver.Major() &&
+				release.GetVersion().Minor() == newSemver.Minor() {
+				cooldownUntil = &metav1.Time{Time: *release.GetCooldownUntil()}
 			}
-			if release.GetNotificationShift() {
-				if release.GetVersion().Major() == newSemver.Major() && release.GetVersion().Minor() == newSemver.Minor() {
-					notificationShiftTime = &metav1.Time{Time: *release.GetApplyAfter()}
-				}
+
+			if release.GetNotificationShift() &&
+				release.GetApplyAfter() != nil &&
+				release.GetVersion().Major() == newSemver.Major() &&
+				release.GetVersion().Minor() == newSemver.Minor() {
+				notificationShiftTime = &metav1.Time{Time: *release.GetApplyAfter()}
 			}
 
 			actual := release.GetVersion()
@@ -243,7 +246,8 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 }
 
 func (r *deckhouseReleaseReconciler) createRelease(ctx context.Context, releaseChecker *DeckhouseReleaseChecker,
-	cooldownUntil, notificationShiftTime *metav1.Time) error {
+	cooldownUntil, notificationShiftTime *metav1.Time,
+) error {
 	var applyAfter *metav1.Time
 
 	ts := metav1.Time{Time: r.dc.GetClock().Now()}
