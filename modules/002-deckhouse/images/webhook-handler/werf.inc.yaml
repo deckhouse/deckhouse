@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/shell-operator
+fromImage: ghcr.io/flant/shell-operator-dev:pr651
 import:
   - artifact: yq4-artifact
     add: /usr/local/bin/yq
