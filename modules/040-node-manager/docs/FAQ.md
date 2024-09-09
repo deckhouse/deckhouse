@@ -642,6 +642,7 @@ spec:
       curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
     fi
     bb-apt-install nvidia-container-toolkit nvidia-driver-535-server
+    nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place 
   nodeGroups:
   - gpu
   weight: 30
@@ -677,6 +678,7 @@ spec:
       curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
     fi
     bb-yum-install nvidia-container-toolkit nvidia-driver
+    nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
   nodeGroups:
   - gpu
   weight: 30
