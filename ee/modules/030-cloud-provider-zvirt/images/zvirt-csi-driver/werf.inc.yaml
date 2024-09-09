@@ -33,6 +33,7 @@ mount:
     to: /go/pkg
 shell:
   install:
+    - set -x
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - export VERSION="0.1.0"
