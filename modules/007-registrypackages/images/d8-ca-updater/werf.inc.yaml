@@ -36,9 +36,8 @@ git:
 shell:
   setup:
     - mkdir /certs
-    - cd ca-certificates/mozilla 
-    - ls -lah /
-    - mv /mk-ca-bundle.pl ca-certificates/mozilla
+    - mv /mk-ca-bundle.pl /ca-certificates/mozilla
+    - cd ca-certificates/mozilla
     - perl mk-ca-bundle.pl -n 
     - mv ca-bundle.crt /ca-bundle.crt
     - python3 certdata2pem.py
