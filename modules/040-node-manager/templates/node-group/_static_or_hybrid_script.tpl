@@ -10,7 +10,7 @@ if [[ -f /var/lib/bashible/bootstrap-token ]]; then
 fi
 
 checkBashible=$(systemctl is-active bashible.timer)
-if [[ "$checkBashible" != "active" ]]; then
+if [[ "$checkBashible" == "active" ]]; then
   echo "The node already exists in the cluster and under bashible."
   exit 1
 fi
