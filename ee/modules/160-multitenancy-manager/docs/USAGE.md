@@ -6,7 +6,7 @@ title: "The multitenancy-manager module: usage examples"
 ## Default project templates
 
 The following project templates are included in the Deckhouse Kubernetes Platform:
-- `empty` - an empty template without predefined resources
+- `empty` — an empty template without predefined resources;
 
 - `default` — a template that covers basic project use cases:
   * resource limitation;
