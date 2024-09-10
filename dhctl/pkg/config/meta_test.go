@@ -283,7 +283,7 @@ func TestPrepareRegistry(t *testing.T) {
 			for _, cred := range creds {
 				dockerCfg := base64.StdEncoding.EncodeToString([]byte(cred))
 
-				err := validateRegistryDockerCfg(dockerCfg)
+				err := validateRegistryDockerCfg(dockerCfg,"registry.deckhouse.io/deckhouse/ce")
 				require.NoError(t, err)
 			}
 		})
@@ -306,7 +306,7 @@ func TestPrepareRegistry(t *testing.T) {
 				creds := fmt.Sprintf("{\"auths\": { \"%s\": {}}}", host)
 				dockerCfg := base64.StdEncoding.EncodeToString([]byte(creds))
 
-				err := validateRegistryDockerCfg(dockerCfg)
+				err := validateRegistryDockerCfg(dockerCfg,"some-bad-host:1434/deckhouse")
 				require.EqualErrorf(t,
 					err,
 					fmt.Sprintf("invalid registryDockerCfg. Your auths host \"%s\" should be similar to \"your.private.registry.example.com\"", host),
