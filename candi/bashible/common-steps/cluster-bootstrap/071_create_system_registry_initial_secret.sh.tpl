@@ -35,16 +35,16 @@ bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret ge
   --from-file=distribution.key=$registry_pki_path/distribution.key \
   --from-file=distribution.crt=$registry_pki_path/distribution.crt \
   --from-literal=registryMode='{{- .registry.registryMode }}' \
-  --from-literal=registryUserRwName='{{- .internalRegistryAccess.userRw.name }}' \
-  --from-literal=registryUserRwPassword='{{- .internalRegistryAccess.userRw.password }}' \
-  --from-literal=registryUserRwPasswordHash='{{- .internalRegistryAccess.userRw.passwordHash }}' \
-  --from-literal=registryUserRoName='{{- .internalRegistryAccess.userRo.name }}' \
-  --from-literal=registryUserRoPassword='{{- .internalRegistryAccess.userRo.password }}' \
-  --from-literal=registryUserRoPasswordHash='{{- .internalRegistryAccess.userRo.passwordHash }}' \
-  --from-literal=upstreamRegistryAddress='{{- .upstreamRegistry.address }}' \
-  --from-literal=upstreamRegistryPath='{{- .upstreamRegistry.path }}' \
-  --from-literal=upstreamRegistryScheme='{{- .upstreamRegistry.scheme }}' \
+  --from-literal=registryUserRwName='{{- .registry.internalRegistryAccess.userRw.name }}' \
+  --from-literal=registryUserRwPassword='{{- .registry.internalRegistryAccess.userRw.password }}' \
+  --from-literal=registryUserRwPasswordHash='{{- .registry.internalRegistryAccess.userRw.passwordHash }}' \
+  --from-literal=registryUserRoName='{{- .registry.internalRegistryAccess.userRo.name }}' \
+  --from-literal=registryUserRoPassword='{{- .registry.internalRegistryAccess.userRo.password }}' \
+  --from-literal=registryUserRoPasswordHash='{{- .registry.internalRegistryAccess.userRo.passwordHash }}' \
+  --from-literal=upstreamRegistryAddress='{{- .registry.upstreamRegistry.address }}' \
+  --from-literal=upstreamRegistryPath='{{- .registry.upstreamRegistry.path }}' \
+  --from-literal=upstreamRegistryScheme='{{- .registry.upstreamRegistry.scheme }}' \
   --from-file=upstreamRegistryCA=$registry_pki_path/upstream-registry-ca.crt \
-  --from-literal=upstreamRegistryAuth='{{- .upstreamRegistry.auth }}'
+  --from-literal=upstreamRegistryAuth='{{- .registry.upstreamRegistry.auth }}'
 
 {{- end }}

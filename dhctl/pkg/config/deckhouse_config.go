@@ -83,8 +83,7 @@ spec:
 )
 
 type DeckhouseInstaller struct {
-	Registry              RegistryData
-	UpstreamRegistry      RegistryData
+	Registry              Registry
 	LogLevel              string
 	Bundle                string
 	DevBranch             string
@@ -123,11 +122,11 @@ func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
 		panic("You are probably using a development image. please use devBranch")
 	}
 
-	return fmt.Sprintf(registryNameTemplate, c.Registry.Address, c.Registry.Path, tag)
+	return fmt.Sprintf(registryNameTemplate, c.Registry.Data.Address, c.Registry.Data.Path, tag)
 }
 
 func (c *DeckhouseInstaller) IsRegistryAccessRequired() bool {
-	return c.Registry.DockerCfg != ""
+	return c.Registry.Data.DockerCfg != ""
 }
 
 func ReadVersionTagFromInstallerContainer() (string, bool) {
@@ -259,7 +258,6 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	installConfig := DeckhouseInstaller{
 		UUID:                  metaConfig.UUID,
 		Registry:              metaConfig.Registry,
-		UpstreamRegistry:      metaConfig.UpstreamRegistry,
 		SystemRegistryConfig:  systemRegistryConfig,
 		DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
 		Bundle:                bundle,

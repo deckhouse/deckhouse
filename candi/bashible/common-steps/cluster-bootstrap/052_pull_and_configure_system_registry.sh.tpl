@@ -13,7 +13,7 @@
 # limitations under the License.
 
 {{- if eq .registry.registryMode "Proxy" }}
-UPSTREAM_REGISTRY_AUTH="$(base64 -d <<< "{{ .upstreamRegistry.auth | default "" }}")"
+UPSTREAM_REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.upstreamRegistry.auth | default "" }}")"
 if [[ "$UPSTREAM_REGISTRY_AUTH" == *":"* ]]; then
     export UPSTREAM_REGISTRY_LOGIN="$(echo "$UPSTREAM_REGISTRY_AUTH" | cut -d':' -f1)"
     export UPSTREAM_REGISTRY_PASSWORD="$(echo "$UPSTREAM_REGISTRY_AUTH" | cut -d':' -f2)"
@@ -40,15 +40,15 @@ fi
 
 # Prepare certs
 bb-sync-file "$registry_pki_path/ca.key" - << EOF
-{{ .internalRegistryAccess.ca.key }}
+{{ .registry.internalRegistryAccess.ca.key }}
 EOF
 
 bb-sync-file "$registry_pki_path/ca.crt" - << EOF
-{{ .internalRegistryAccess.ca.cert }}
+{{ .registry.internalRegistryAccess.ca.cert }}
 EOF
 
 bb-sync-file "$registry_pki_path/upstream-registry-ca.crt" - << EOF
-{{ .upstreamRegistry.ca }}
+{{ .registry.upstreamRegistry.ca }}
 EOF
 
 # Auth certs
@@ -112,16 +112,16 @@ token:
 
 users:
   # Password is specified as a BCrypt hash. Use htpasswd -nB USERNAME to generate.
-  {{ .internalRegistryAccess.userRw.name | quote }}:
-    password: "{{ .internalRegistryAccess.userRw.passwordHash | replace "$" "\\$" }}"
-  {{ .internalRegistryAccess.userRo.name | quote }}:
-    password: "{{ .internalRegistryAccess.userRo.passwordHash | replace "$" "\\$" }}"
+  {{ .registry.internalRegistryAccess.userRw.name | quote }}:
+    password: "{{ .registry.internalRegistryAccess.userRw.passwordHash | replace "$" "\\$" }}"
+  {{ .registry.internalRegistryAccess.userRo.name | quote }}:
+    password: "{{ .registry.internalRegistryAccess.userRo.passwordHash | replace "$" "\\$" }}"
 
 acl:
-  - match: { account: {{ .internalRegistryAccess.userRw.name | quote }} }
+  - match: { account: {{ .registry.internalRegistryAccess.userRw.name | quote }} }
     actions: [ "*" ]
     comment: "has full access"
-  - match: { account: {{ .internalRegistryAccess.userRo.name | quote }} }
+  - match: { account: {{ .registry.internalRegistryAccess.userRo.name | quote }} }
     actions: ["pull"]
     comment: "has readonly access"
   # Access is denied by default.
@@ -197,8 +197,8 @@ http:
 #      - /system_registry_pki/ca.crt
 
 {{- if eq .registry.registryMode "Proxy" -}}
-{{- $scheme := .upstreamRegistry.scheme | trimSuffix "/" | trimPrefix "/" -}}
-{{- $address := .upstreamRegistry.address | trimSuffix "/" | trimPrefix "/" }}
+{{- $scheme := .registry.upstreamRegistry.scheme | trimSuffix "/" | trimPrefix "/" -}}
+{{- $address := .registry.upstreamRegistry.address | trimSuffix "/" | trimPrefix "/" }}
 proxy:
   remoteurl: "{{ $scheme }}://{{ $address }}"
   username: "$UPSTREAM_REGISTRY_LOGIN"

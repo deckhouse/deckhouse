@@ -35,10 +35,12 @@ func (s *PreflightChecksTestSuite) SetupSuite() {
 func (s *PreflightChecksTestSuite) SetupTest() {
 	app.AppVersion = "v1.50.6"
 	s.checker.installConfig = &config.DeckhouseInstaller{
-		Registry: config.RegistryData{
-			Address:   "registry.deckhouse.io",
-			Path:      "/deckhouse/ce",
-			DockerCfg: "ewogICJhdXRocyI6IHsKICAgICJyZWdpc3RyeS5kZWNraG91c2UuaW8iOiB7CiAgICAgICJhdXRoIjogIiIKICAgIH0KICB9Cn0=",
+		Registry: config.Registry{
+			Data: config.RegistryData{
+				Address:   "registry.deckhouse.io",
+				Path:      "/deckhouse/ce",
+				DockerCfg: "ewogICJhdXRocyI6IHsKICAgICJyZWdpc3RyeS5kZWNraG91c2UuaW8iOiB7CiAgICAgICJhdXRoIjogIiIKICAgIH0KICB9Cn0=",
+			},
 		},
 		DevBranch: "pr1111",
 	}

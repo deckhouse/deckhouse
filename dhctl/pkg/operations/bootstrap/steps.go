@@ -312,7 +312,7 @@ func setupSSHTunnelToSystemRegistryAuth(sshCl *ssh.Client) (*frontend.Tunnel, er
 	return tun, nil
 }
 
-func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig) error {
+func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) error {
 	ctx, ctxCancel := context.WithCancel(ctx)
 	defer ctxCancel()
 
@@ -358,8 +358,7 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 		}
 	}
 
-	bundlePath := "/deckhouse/candi/bundle/test.tar"
-	unpackedBundlePath, err := imgbundle.UnpackAndValidate(bundlePath)
+	unpackedBundlePath, err := imgbundle.UnpackAndValidate(registryData.ImagesBundlePath)
 	if err != nil {
 		return err
 	}
@@ -367,13 +366,13 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 	pushCtx := libmirrorCtx.PushContext{
 		BaseContext: libmirrorCtx.BaseContext{
 			RegistryAuth: authn.FromConfig(authn.AuthConfig{
-				Username: cfg.InternalRegistryAccess.UserRw.Name,
-				Password: cfg.InternalRegistryAccess.UserRw.Password,
+				Username: registryData.InternalRegistryAccess.UserRw.Name,
+				Password: registryData.InternalRegistryAccess.UserRw.Password,
 			}),
 			DeckhouseRegistryRepo: "registry.deckhouse.io/deckhouse/ee",
 			RegistryHost:          distributionHost,
 			RegistryPath:          "/sys/deckhouse",
-			BundlePath:            bundlePath,
+			BundlePath:            registryData.ImagesBundlePath,
 			UnpackedImagesPath:    unpackedBundlePath,
 			Insecure:              false,
 			SkipTLSVerification:   true,
@@ -383,7 +382,7 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 	return imgbundle.Push(&pushCtx)
 }
 
-func waitAndPushDockerImages(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig) error {
+func waitAndPushDockerImages(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) error {
 	lockFileName := "/var/lib/bashible/wait_for_docker_img_push"
 
 	isLockFileExist := func() (bool, error) {
@@ -420,7 +419,7 @@ func waitAndPushDockerImages(ctx context.Context, nodeInterface node.Interface, 
 				continue
 			}
 			if isExist {
-				err := pushDockerImagesToSystemRegistry(ctx, nodeInterface, cfg)
+				err := pushDockerImagesToSystemRegistry(ctx, nodeInterface, registryData)
 				if err != nil {
 					return err
 				}
@@ -561,9 +560,12 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 	log.DebugF("Got cluster domain: %s", clusterDomain)
 	log.DebugLn("Starting registry packages proxy")
 
-	registryPackagesProxyData := cfg.Registry
-	if cfg.Registry.RegistryMode != "" && cfg.Registry.RegistryMode != "Direct" {
-		registryPackagesProxyData = cfg.UpstreamRegistry
+	registryPackagesProxyData := cfg.Registry.Data
+	switch cfg.Registry.ExtraData.(type) {
+	case config.ProxyModeRegistryData:
+		registryPackagesProxyData = cfg.Registry.ExtraData.(config.ProxyModeRegistryData).UpstreamRegistryData
+	case config.DetachedModeRegistryData:
+		// TODO
 	}
 
 	// we need clusterDomain to generate proper certificate for packages proxy
@@ -653,12 +655,17 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	defer ctxCancel()
 
-	if cfg.Registry.RegistryMode == "Detached" {
-		go func(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig) {
-			if err := waitAndPushDockerImages(ctx, nodeInterface, cfg); err != nil {
+	if cfg.Registry.Mode == "Detached" {
+		registryData, ok := cfg.Registry.ExtraData.(config.DetachedModeRegistryData)
+		if !ok {
+			return fmt.Errorf("error, incorrect registry extra data, expected detached data type")
+		}
+
+		go func(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) {
+			if err := waitAndPushDockerImages(ctx, nodeInterface, registryData); err != nil {
 				panic(err)
 			}
-		}(ctx, nodeInterface, cfg)
+		}(ctx, nodeInterface, &registryData)
 	}
 
 	return retry.NewLoop("Execute bundle", 30, 10*time.Second).

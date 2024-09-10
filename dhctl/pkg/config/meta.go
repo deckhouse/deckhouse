@@ -50,25 +50,38 @@ type MetaConfig struct {
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
-	VersionMap             map[string]interface{} `json:"-"`
-	Images                 imagesDigests          `json:"-"`
-	Registry               RegistryData           `json:"-"`
-	UpstreamRegistry       RegistryData           `json:"-"`
-	InternalRegistryAccess RegistryAccessData     `json:"-"`
-	UUID                   string                 `json:"clusterUUID,omitempty"`
-	InstallerVersion       string                 `json:"-"`
-	ResourcesYAML          string                 `json:"-"`
+	VersionMap       map[string]interface{} `json:"-"`
+	Images           imagesDigests          `json:"-"`
+	Registry         Registry               `json:"-"`
+	UUID             string                 `json:"clusterUUID,omitempty"`
+	InstallerVersion string                 `json:"-"`
+	ResourcesYAML    string                 `json:"-"`
 }
 
 type imagesDigests map[string]map[string]interface{}
 
+type Registry struct {
+	Mode      string       `json:"-"`
+	Data      RegistryData `json:"-"`
+	ExtraData interface{}  `json:"-"`
+}
+
 type RegistryData struct {
-	Address      string `json:"address"`
-	Path         string `json:"path"`
-	Scheme       string `json:"scheme"`
-	CA           string `json:"ca"`
-	DockerCfg    string `json:"dockerCfg"`
-	RegistryMode string `json:"registryMode"`
+	Address   string `json:"address"`
+	Path      string `json:"path"`
+	Scheme    string `json:"scheme"`
+	CA        string `json:"ca"`
+	DockerCfg string `json:"dockerCfg"`
+}
+
+type ProxyModeRegistryData struct {
+	UpstreamRegistryData   RegistryData       `json:"-"`
+	InternalRegistryAccess RegistryAccessData `json:"-"`
+}
+
+type DetachedModeRegistryData struct {
+	ImagesBundlePath       string             `json:"-"`
+	InternalRegistryAccess RegistryAccessData `json:"-"`
 }
 
 // Prepare extracts all necessary information from raw json messages to the root structure
@@ -86,52 +99,66 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 	}
 
 	if len(m.InitClusterConfig) > 0 {
+		var clusterDomain string
+
 		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
 		}
 
-		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
-		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
+		if err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &clusterDomain); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal clusterDomain from cluster configuration: %v", err)
+		}
+
+		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(
+			strings.TrimSpace(m.DeckhouseConfig.ImagesRepo),
+			"/",
+		)
 
 		if err := validateRegistryDockerCfg(m.DeckhouseConfig.RegistryDockerCfg); err != nil {
 			return nil, err
 		}
-		m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
-		m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
-		m.Registry.CA = m.DeckhouseConfig.RegistryCA
+
+		m.Registry.Data.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
+		m.Registry.Mode = m.DeckhouseConfig.RegistryMode
+		m.Registry.Data.CA = m.DeckhouseConfig.RegistryCA
+		m.Registry.Data.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
 
 		parts := strings.SplitN(m.DeckhouseConfig.ImagesRepo, "/", 2)
-		m.Registry.Address = parts[0]
+		m.Registry.Data.Address = parts[0]
 		if len(parts) == 2 {
-			m.Registry.Path = fmt.Sprintf("/%s", parts[1])
+			m.Registry.Data.Path = fmt.Sprintf("/%s", parts[1])
 		}
 
-		m.Registry.RegistryMode = m.DeckhouseConfig.RegistryMode
-
-		if m.DeckhouseConfig.RegistryMode != "" && m.DeckhouseConfig.RegistryMode != "Direct" {
+		switch m.Registry.Mode {
+		case "Proxy":
 			m.SystemRegistryConfig.Enable = true
-
-			var clusterDomain string
-			err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &clusterDomain)
-			if err != nil {
-				return nil, fmt.Errorf("unable to unmarshal clusterDomain from cluster configuration: %v", err)
+			m.Registry.ExtraData = ProxyModeRegistryData{
+				UpstreamRegistryData: m.Registry.Data,
 			}
 
-			internalRegistryData := RegistryData{
-				// The domain must be used in the address parameter (used when rendering templates when generating certificates)
+			m.Registry.Data = RegistryData{
 				Address: fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
-				Path:    m.Registry.Path,
+				Path:    m.Registry.Data.Path,
 				// These parameters are filled in in the method `PrepareAfterGlobalCacheInit`:
 				// Scheme:       "",
 				// DockerCfg:    "",
 				// CA:           "",
-				// The parameters are not filled with default values. It is necessary to check e2e tests.
-				// Method `PrepareAfterGlobalCacheInit` should always be run.
-				// An error in the e2e tests will show that method `PrepareAfterGlobalCacheInit` was forgotten to run.
-				RegistryMode: m.DeckhouseConfig.RegistryMode,
 			}
-			m.UpstreamRegistry = m.Registry
-			m.Registry = internalRegistryData
+		case "Detached":
+			m.SystemRegistryConfig.Enable = true
+			m.Registry.ExtraData = DetachedModeRegistryData{
+				ImagesBundlePath:     m.DeckhouseConfig.ImagesBundlePath,
+				// UpstreamRegistryData: m.Registry.Data,
+			}
+
+			m.Registry.Data = RegistryData{
+				Address: fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
+				Path:    m.Registry.Data.Path,
+				// These parameters are filled in in the method `PrepareAfterGlobalCacheInit`:
+				// Scheme:       "",
+				// DockerCfg:    "",
+				// CA:           "",
+			}
 		}
 	}
 
@@ -205,43 +232,51 @@ func (m *MetaConfig) PrepareAfterGlobalCacheInit() error {
 		} `json:"auths"`
 	}
 
-	if len(m.InitClusterConfig) > 0 {
-		if m.DeckhouseConfig.RegistryMode != "" && m.DeckhouseConfig.RegistryMode != "Direct" {
-			internalRegistryAccessData, err := getRegistryAccessData()
-			if err != nil {
-				return fmt.Errorf("unable to get internal registry access data: %v", err)
-			}
+	if m.DeckhouseConfig.RegistryMode != "" && m.DeckhouseConfig.RegistryMode != "Direct" {
+		internalRegistryAccessData, err := getRegistryAccessData()
+		if err != nil {
+			return fmt.Errorf("unable to get internal registry access data: %v", err)
+		}
 
-			dockerAuth := base64.StdEncoding.EncodeToString(
-				[]byte(fmt.Sprintf(
-					"%s:%s",
-					internalRegistryAccessData.UserRo.Name,
-					internalRegistryAccessData.UserRo.Password,
-				)),
-			)
+		dockerAuth := base64.StdEncoding.EncodeToString(
+			[]byte(fmt.Sprintf(
+				"%s:%s",
+				internalRegistryAccessData.UserRo.Name,
+				internalRegistryAccessData.UserRo.Password,
+			)),
+		)
 
-			dockerCfg, err := json.Marshal(
-				DockerCfg{
-					Auths: map[string]struct {
+		dockerCfg, err := json.Marshal(
+			DockerCfg{
+				Auths: map[string]struct {
+					Auth string `json:"auth"`
+				}{
+					m.Registry.Data.Address: struct {
 						Auth string `json:"auth"`
 					}{
-						m.Registry.Address: struct {
-							Auth string `json:"auth"`
-						}{
-							Auth: dockerAuth,
-						},
+						Auth: dockerAuth,
 					},
 				},
-			)
-			if err != nil {
-				return fmt.Errorf("cannot marshal docker cfg: %v", err)
-			}
-
-			m.Registry.DockerCfg = string(base64.StdEncoding.EncodeToString(dockerCfg))
-			m.Registry.Scheme = "https"
-			m.Registry.CA = (*internalRegistryAccessData).CA.Cert
-			m.InternalRegistryAccess = *internalRegistryAccessData
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("cannot marshal docker cfg: %v", err)
 		}
+
+		switch m.Registry.ExtraData.(type) {
+		case ProxyModeRegistryData:
+			extraData := m.Registry.ExtraData.(ProxyModeRegistryData)
+			extraData.InternalRegistryAccess = *internalRegistryAccessData
+			m.Registry.ExtraData = extraData
+		case DetachedModeRegistryData:
+			extraData := m.Registry.ExtraData.(DetachedModeRegistryData)
+			extraData.InternalRegistryAccess = *internalRegistryAccessData
+			m.Registry.ExtraData = extraData
+		}
+
+		m.Registry.Data.DockerCfg = string(base64.StdEncoding.EncodeToString(dockerCfg))
+		m.Registry.Data.Scheme = "https"
+		m.Registry.Data.CA = (*internalRegistryAccessData).CA.Cert
 	}
 	return nil
 }
@@ -414,18 +449,9 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	registryData, err := ParseRegistryData(m.Registry)
+	registryData, err := m.Registry.ConvertToMap()
 	if err != nil {
 		return nil, err
-	}
-
-	if m.Registry.RegistryMode != "" && m.Registry.RegistryMode != "Direct" {
-		upstreamRegistryData, err := ParseRegistryData(m.UpstreamRegistry)
-		if err != nil {
-			return nil, err
-		}
-		result["upstreamRegistry"] = upstreamRegistryData
-		result["internalRegistryAccess"] = m.InternalRegistryAccess.ConvertToMap()
 	}
 
 	result["registry"] = registryData
@@ -476,7 +502,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	registryData, err := ParseRegistryData(m.Registry)
+	registryData, err := m.Registry.ConvertToMap()
 	if err != nil {
 		return nil, err
 	}
@@ -506,15 +532,6 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 		if proxyData != nil {
 			configForBashibleBundleTemplate["proxy"] = proxyData
 		}
-	}
-
-	if m.Registry.RegistryMode != "" && m.Registry.RegistryMode != "Direct" {
-		upstreamRegistryData, err := ParseRegistryData(m.UpstreamRegistry)
-		if err != nil {
-			return nil, err
-		}
-		configForBashibleBundleTemplate["upstreamRegistry"] = upstreamRegistryData
-		configForBashibleBundleTemplate["internalRegistryAccess"] = m.InternalRegistryAccess.ConvertToMap()
 	}
 
 	configForBashibleBundleTemplate["registry"] = registryData
@@ -588,9 +605,7 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 		out.StaticClusterConfig = config
 	}
 
-	out.Registry = m.Registry
-	out.UpstreamRegistry = m.UpstreamRegistry
-	out.InternalRegistryAccess = m.InternalRegistryAccess
+	out.Registry = m.Registry.DeepCopy()
 	out.SystemRegistryConfig = m.SystemRegistryConfig
 
 	if m.ClusterType != "" {
@@ -717,15 +732,38 @@ func (m *MetaConfig) LoadInstallerVersion() error {
 	return nil
 }
 
-func (r *RegistryData) ConvertToMap() map[string]interface{} {
-	return map[string]interface{}{
-		"address":      r.Address,
-		"path":         r.Path,
-		"scheme":       r.Scheme,
-		"ca":           r.CA,
-		"dockerCfg":    r.DockerCfg,
-		"registryMode": r.RegistryMode,
+func (rData *ProxyModeRegistryData) DeepCopy() ProxyModeRegistryData {
+	return ProxyModeRegistryData{
+		UpstreamRegistryData: rData.UpstreamRegistryData,
+		InternalRegistryAccess: rData.InternalRegistryAccess,
 	}
+}
+
+func (rData *DetachedModeRegistryData) DeepCopy() DetachedModeRegistryData {
+	return DetachedModeRegistryData{
+		ImagesBundlePath: rData.ImagesBundlePath,
+		InternalRegistryAccess: rData.InternalRegistryAccess,
+	}
+}
+
+func (rData *RegistryData) ConvertToMap() (map[string]interface{}, error) {
+	data := map[string]interface{}{
+		"address":   rData.Address,
+		"path":      rData.Path,
+		"scheme":    rData.Scheme,
+		"ca":        rData.CA,
+		"dockerCfg": rData.DockerCfg,
+	}
+
+	if rData.DockerCfg != "" {
+		auth, err := rData.Auth()
+		if err != nil {
+			return nil, err
+		}
+
+		data["auth"] = auth
+	}
+	return data, nil
 }
 
 func (r *RegistryData) Auth() (string, error) {
@@ -768,21 +806,45 @@ func (r *RegistryData) Auth() (string, error) {
 	return registryAuth, nil
 }
 
-func ParseRegistryData(data RegistryData) (map[string]interface{}, error) {
-	log.DebugF("registry data: %v\n", data)
+func (r Registry) DeepCopy() Registry {
+	var extraDataCopy interface{}
+	switch r.ExtraData.(type) {
+	case ProxyModeRegistryData:
+		extData := r.ExtraData.(ProxyModeRegistryData)
+		extraDataCopy = extData.DeepCopy()
+	case DetachedModeRegistryData:
+		extData := r.ExtraData.(DetachedModeRegistryData)
+		extraDataCopy = extData.DeepCopy()
+	}
+	return Registry{
+		Mode: r.Mode,
+		Data: r.Data,
+		ExtraData: extraDataCopy,
+	}
+}
 
-	ret := data.ConvertToMap()
+func (r Registry) ConvertToMap() (map[string]interface{}, error) {
+	log.DebugF("registry: %v\n", r)
 
-	if data.DockerCfg != "" {
-		auth, err := data.Auth()
+	mapData, err := r.Data.ConvertToMap()
+	if err != nil {
+		return nil, err
+	}
+	mapData["registryMode"] = r.Mode
+
+	switch r.ExtraData.(type) {
+	case ProxyModeRegistryData:
+		extraData := r.ExtraData.(ProxyModeRegistryData)
+		mapData["internalRegistryAccess"] = extraData.InternalRegistryAccess.ConvertToMap()
+		mapData["upstreamRegistry"], err = extraData.UpstreamRegistryData.ConvertToMap()
 		if err != nil {
 			return nil, err
 		}
-
-		ret["auth"] = auth
+	case DetachedModeRegistryData:
+		extraData := r.ExtraData.(DetachedModeRegistryData)
+		mapData["internalRegistryAccess"] = extraData.InternalRegistryAccess.ConvertToMap()
 	}
-
-	return ret, nil
+	return mapData, nil
 }
 
 func getDNSAddress(serviceCIDR string) string {

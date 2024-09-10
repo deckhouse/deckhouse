@@ -72,7 +72,7 @@ func (pc *Checker) CheckRegistryAccessThroughProxy() error {
 		return nil
 	}
 
-	if tryToSkippingCheck(pc.metaConfig.Registry.Address, noProxyAddresses) {
+	if tryToSkippingCheck(pc.metaConfig.Registry.Data.Address, noProxyAddresses) {
 		log.DebugLn("Registry address found in proxy.noProxy list, skipping check")
 		return nil
 	}
@@ -85,8 +85,8 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	defer tun.Stop()
 
 	registryURL := &url.URL{
-		Scheme: pc.metaConfig.Registry.Scheme,
-		Host:   pc.metaConfig.Registry.Address,
+		Scheme: pc.metaConfig.Registry.Data.Scheme,
+		Host:   pc.metaConfig.Registry.Data.Address,
 		Path:   "/v2/",
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -248,38 +248,32 @@ func (pc *Checker) CheckRegistryCredentials() error {
 	var authData string
 	var err error
 
-	if pc.metaConfig.Registry.RegistryMode != "" && pc.metaConfig.Registry.RegistryMode != "Direct" {
-		authData, err = pc.metaConfig.UpstreamRegistry.Auth()
-	} else {
-		authData, err = pc.metaConfig.Registry.Auth()
+	switch pc.metaConfig.Registry.ExtraData.(type) {
+	case config.DetachedModeRegistryData:
+		return nil
+	case config.ProxyModeRegistryData:
+		extraData := pc.metaConfig.Registry.ExtraData.(config.ProxyModeRegistryData)
+		authData, err = extraData.UpstreamRegistryData.Auth()
+	default:
+		authData, err = pc.metaConfig.Registry.Data.Auth()
 	}
 
 	if err != nil {
 		return err
 	}
 
-	return checkRegistryAuth(ctx, pc.metaConfig, authData)
+	return checkRegistryAuth(ctx, &pc.metaConfig.Registry.Data, authData)
 }
 
 func prepareRegistryRequest(
 	ctx context.Context,
-	metaConfig *config.MetaConfig,
+	registryData *config.RegistryData,
 	authData string,
 ) (*http.Request, error) {
-	var registryURL *url.URL
-
-	if metaConfig.Registry.RegistryMode != "" && metaConfig.Registry.RegistryMode != "Direct" {
-		registryURL = &url.URL{
-			Scheme: metaConfig.UpstreamRegistry.Scheme,
-			Host:   metaConfig.UpstreamRegistry.Address,
-			Path:   registryPath,
-		}
-	} else {
-		registryURL = &url.URL{
-			Scheme: metaConfig.Registry.Scheme,
-			Host:   metaConfig.Registry.Address,
-			Path:   registryPath,
-		}
+	registryURL := &url.URL{
+		Scheme: registryData.Scheme,
+		Host:   registryData.Address,
+		Path:   registryPath,
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, registryURL.String(), nil)
@@ -298,13 +292,13 @@ func prepareAuthRequest(
 	authURL string,
 	registryService string,
 	authData string,
-	metaConfig *config.MetaConfig,
+	registryData *config.RegistryData,
 ) (*http.Request, error) {
 	authURLValues := url.Values{}
 	authURLValues.Add("service", registryService)
 	authURLValues.Add(
 		"scope",
-		fmt.Sprintf("repository:%s:pull", strings.TrimLeft(metaConfig.Registry.Path, "/")),
+		fmt.Sprintf("repository:%s:pull", strings.TrimLeft(registryData.Path, "/")),
 	)
 
 	authURL = fmt.Sprintf("%s?%s", authURL, authURLValues.Encode())
@@ -318,21 +312,17 @@ func prepareAuthRequest(
 	return req, nil
 }
 
-func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) {
+func prepareAuthHTTPClient(registryData *config.RegistryData) (*http.Client, error) {
 	client := &http.Client{}
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 
-	if strings.ToLower(metaConfig.Registry.Scheme) == "http" {
+	if strings.ToLower(registryData.Scheme) == "http" {
 		httpTransport.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true,
 		}
 	}
 
-	ca := metaConfig.Registry.CA
-	if metaConfig.Registry.RegistryMode != "" && metaConfig.Registry.RegistryMode != "Direct" {
-		ca = metaConfig.UpstreamRegistry.CA
-	}
-
+	ca := registryData.CA
 	if len(ca) == 0 {
 		client.Transport = httpTransport
 		return client, nil
@@ -354,13 +344,13 @@ func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) 
 
 func getAuthRealmAndService(
 	ctx context.Context,
-	metaConfig *config.MetaConfig,
+	registryData *config.RegistryData,
 	client *http.Client,
 ) (string, string, error) {
 	authURL := ""
 	registryService := ""
 
-	req, err := prepareRegistryRequest(ctx, metaConfig, "")
+	req, err := prepareRegistryRequest(ctx, registryData, "")
 	if err != nil {
 		return authURL, registryService, err
 	}
@@ -427,11 +417,11 @@ func checkResponseError(resp *http.Response) error {
 
 func checkBasicRegistryAuth(
 	ctx context.Context,
-	metaConfig *config.MetaConfig,
+	registryData *config.RegistryData,
 	authData string,
 	client *http.Client,
 ) error {
-	req, err := prepareRegistryRequest(ctx, metaConfig, authData)
+	req, err := prepareRegistryRequest(ctx, registryData, authData)
 	if err != nil {
 		return err
 	}
@@ -454,16 +444,16 @@ func checkBasicRegistryAuth(
 
 func checkTokenRegistryAuth(
 	ctx context.Context,
-	metaConfig *config.MetaConfig,
+	registryData *config.RegistryData,
 	authData string,
 	client *http.Client,
 ) error {
-	authURL, registryService, err := getAuthRealmAndService(ctx, metaConfig, client)
+	authURL, registryService, err := getAuthRealmAndService(ctx, registryData, client)
 	if err != nil {
 		return err
 	}
 
-	req, err := prepareAuthRequest(ctx, authURL, registryService, authData, metaConfig)
+	req, err := prepareAuthRequest(ctx, authURL, registryService, authData, registryData)
 	if err != nil {
 		return err
 	}
@@ -479,13 +469,13 @@ func checkTokenRegistryAuth(
 	return checkResponseError(resp)
 }
 
-func checkRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, authData string) error {
-	client, err := prepareAuthHTTPClient(metaConfig)
+func checkRegistryAuth(ctx context.Context, registryData *config.RegistryData, authData string) error {
+	client, err := prepareAuthHTTPClient(registryData)
 	if err != nil {
 		return err
 	}
 
-	err = checkBasicRegistryAuth(ctx, metaConfig, authData, client)
+	err = checkBasicRegistryAuth(ctx, registryData, authData, client)
 	if err == nil {
 		return nil
 	}
@@ -494,5 +484,5 @@ func checkRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, authD
 		return err
 	}
 
-	return checkTokenRegistryAuth(ctx, metaConfig, authData, client)
+	return checkTokenRegistryAuth(ctx, registryData, authData, client)
 }
