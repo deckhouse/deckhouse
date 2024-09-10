@@ -89,6 +89,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/340-monitoring-kubernetes/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/340-monitoring-ping/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/400-descheduler/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/400-descheduler/hooks/migrate"
 	_ "github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/402-ingress-nginx/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks"
