@@ -142,8 +142,8 @@ func validateGrafanaDashboardFile(fileName string, fileContent []byte) *Messages
 				NewError(
 					fileName,
 					"non-recommended prometheus datasource uid",
-					fmt.Sprintf("Panel %s contains invalid datasource uid: '%s', required to be one of: %s",
-						panelTitle, datasourceUID, prometheusDatasourceRecommendedUIDsMessageString),
+					fmt.Sprintf("Panel %s datasource must be one of: %s instead of '%s'",
+						panelTitle, prometheusDatasourceRecommendedUIDsMessageString, datasourceUID),
 				),
 			)
 		}
