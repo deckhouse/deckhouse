@@ -44,7 +44,7 @@ func Serve(network, address string, parallelTasksLimit int) error {
 	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{})
 	lvl := &slog.LevelVar{}
 	lvl.Set(slog.LevelDebug)
-	log := logger.NewLogger(lvl).With(slog.String("component", "server"))
+	log := logger.NewLogger(lvl).With(slog.String("component", "DEV-server"))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
