@@ -52,7 +52,9 @@ function __main__() {
   IMAGE_REPORT_NAME="deckhouse::$(echo "$IMAGE:$TAG" | sed 's/^.*\/\(.*\)/\1/')"
   mkdir -p out/
   htmlReportHeader > out/d8-images.html
+  echo > out/d8-images.md
   trivyGetHTMLReportPartForImage -l "$IMAGE_REPORT_NAME" -i "$IMAGE" -t "$TAG" -s "$SEVERITY" --ignore out/.trivyignore >> out/d8-images.html
+  trivyGetMDReportPartForImage -l "$IMAGE_REPORT_NAME" -i "$IMAGE" -t "$TAG" -s "$SEVERITY" --ignore out/.trivyignore >> out/d8-images.md
 
   for module in $(jq -rc 'to_entries[]' <<< "$digests"); do
     MODULE_NAME=$(jq -rc '.key' <<< "$module")
@@ -61,8 +63,8 @@ function __main__() {
 
     for module_image in $(jq -rc '.value | to_entries[]' <<<"$module"); do
       IMAGE_NAME=$(jq -rc '.key' <<< "$module_image")
-      if [[ "$IMAGE_NAME" == "trivy" ]]; then 
-        continue 
+      if [[ "$IMAGE_NAME" == "trivy" ]]; then
+        continue
       fi
       echo "----------------------------------------------"
       echo "👾 Image: $IMAGE_NAME"
@@ -71,6 +73,7 @@ function __main__() {
       IMAGE_HASH="$(jq -rc '.value' <<< "$module_image")"
       IMAGE_REPORT_NAME="$MODULE_NAME::$IMAGE_NAME"
       trivyGetHTMLReportPartForImage  -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore out/.trivyignore >> out/d8-images.html
+      trivyGetMDReportPartForImage  -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore out/.trivyignore >> out/d8-images.md
     done
   done
 

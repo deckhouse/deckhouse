@@ -68,6 +68,7 @@ function __main__() {
   BASE_IMAGES=$(echo "$BASE_IMAGES_RAW" | tail -n +2)
   mkdir -p out/
   htmlReportHeader > out/base-images.html
+  echo > out/base-images.md
 
   for image in $BASE_IMAGES; do
     # Some of our base images contain no layers.
@@ -83,6 +84,7 @@ function __main__() {
 
     trivyGetCVEListForImage -r "$REGISTRY" -i "$image" > "$WORKDIR/$(echo "$image" | tr "/" "_").cve"
     trivyGetHTMLReportPartForImage -r "$REGISTRY" -i "$image" -l "$(echo "$image" | cut -d@ -f1)" >> out/base-images.html
+    trivyGetMDReportPartForImage -r "$REGISTRY" -i "$image" -l "$(echo "$image" | cut -d@ -f1)" >> out/base-images.md
   done
 
   find "$WORKDIR" -type f -exec cat {} + | uniq | sort > out/.trivyignore
