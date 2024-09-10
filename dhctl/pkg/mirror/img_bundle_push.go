@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package imgbundle
+package mirror
 
 import (
 	libmirrorCtx "github.com/deckhouse/deckhouse-cli/pkg/libmirror/contexts"
 	libmirrorOperations "github.com/deckhouse/deckhouse-cli/pkg/libmirror/operations"
 )
 
-func Push(mirrorCtx *libmirrorCtx.PushContext) error{
+func Push(mirrorCtx *libmirrorCtx.PushContext) error {
 	logger := Logger{}
 
 	return logger.Process("Push Deckhouse images to registry", func() error {

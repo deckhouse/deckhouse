@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package imgbundle
+package mirror
 
 import (
 	"fmt"
@@ -46,7 +46,7 @@ type imageBundleUnpackInfo struct {
 	err  error
 }
 
-func UnpackAndValidate(imgBundlePath string) (string, error) {
+func UnpackAndValidateImgBundle(imgBundlePath string) (string, error) {
 	logger := Logger{}
 
 	imgBundleUnpackMu.Lock()
@@ -57,7 +57,7 @@ func UnpackAndValidate(imgBundlePath string) (string, error) {
 		return unpackInfo.path, unpackInfo.err
 	}
 
-	unpackPath, unpackErr := unpackAndValidate(imgBundlePath)
+	unpackPath, unpackErr := unpackAndValidateImgBundle(imgBundlePath)
 	imgBundleUnpackInfo[imgBundlePath] = imageBundleUnpackInfo{
 		path: unpackPath,
 		err:  unpackErr,
@@ -66,10 +66,10 @@ func UnpackAndValidate(imgBundlePath string) (string, error) {
 	return unpackPath, unpackErr
 }
 
-func unpackAndValidate(imgBundlePath string) (string, error) {
+func unpackAndValidateImgBundle(imgBundlePath string) (string, error) {
 	logger := Logger{}
 
-	unpackPath, err := unpack(imgBundlePath)
+	unpackPath, err := unpackImgBundle(imgBundlePath)
 	if err != nil {
 		return unpackPath, err
 	}
@@ -87,7 +87,7 @@ func unpackAndValidate(imgBundlePath string) (string, error) {
 	return unpackPath, nil
 }
 
-func unpack(imgBundlePath string) (string, error) {
+func unpackImgBundle(imgBundlePath string) (string, error) {
 	logger := Logger{}
 
 	if filepath.Ext(imgBundlePath) != imgBundleExt {

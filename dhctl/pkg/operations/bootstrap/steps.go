@@ -42,7 +42,7 @@ import (
 	libmirrorCtx "github.com/deckhouse/deckhouse-cli/pkg/libmirror/contexts"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/imgbundle"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/mirror"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -358,7 +358,7 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 		}
 	}
 
-	unpackedBundlePath, err := imgbundle.UnpackAndValidate(registryData.ImagesBundlePath)
+	unpackedBundlePath, err := mirror.UnpackAndValidateImgBundle(registryData.ImagesBundlePath)
 	if err != nil {
 		return err
 	}
@@ -376,10 +376,10 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 			UnpackedImagesPath:    unpackedBundlePath,
 			Insecure:              false,
 			SkipTLSVerification:   true,
-			Logger:                &imgbundle.Logger{},
+			Logger:                &mirror.Logger{},
 		},
 	}
-	return imgbundle.Push(&pushCtx)
+	return mirror.Push(&pushCtx)
 }
 
 func waitAndPushDockerImages(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) error {
