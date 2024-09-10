@@ -24,9 +24,10 @@ docker:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_ALT_P11 }}
 shell:
-  install:
+  beforeInstall:
   - apt-get update
   - apt-get install -y git openssl-devel wget clang cmake libelf-devel libbpf-devel bpftool perl-IPC-Cmd gcc12 gcc12-c++ build-essential golang
+  - rm -rf /var/lib/apt/lists/*
   - git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
   - git clone --branch {{ $falcoVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falco.git
   - rm -f /usr/bin/clang
@@ -34,15 +35,17 @@ shell:
   - rm -f /usr/bin/x86_64-alt-linux-gcc /usr/bin/x86_64-alt-linux-g++
   - ln -s x86_64-alt-linux-gcc-12 /usr/bin/x86_64-alt-linux-gcc
   - ln -s x86_64-alt-linux-g++-12 /usr/bin/x86_64-alt-linux-g++
+  - git clone --branch {{ $pluginsVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/plugins.git
+  install:
   - mkdir -p /falco/build
   - cd /falco/build
   - cmake -DCMAKE_BUILD_TYPE=release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_DRIVER=OFF -DCPACK_GENERATOR=TGZ -DBUILD_BPF=OFF -DBUILD_FALCO_MODERN_BPF=ON -DBUILD_WARNINGS_AS_ERRORS=OFF -DFALCO_VERSION=0.38.1 -DUSE_BUNDLED_DEPS=ON /falco
   - make package -j4
   - mkdir -p /falco-package
   - tar -zxvf falco-{{ $falcoVersion }}-x86_64.tar.gz --strip-components 1 -C /falco-package
+  # cleanup to reduce artifact size
+  - make clean
   # build plugins
-  - cd /
-  - git clone --branch {{ $pluginsVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/plugins.git
   - cd /plugins/plugins/json
   - make
   - cd /plugins/plugins/k8saudit
@@ -50,3 +53,6 @@ shell:
   - cd /plugins/plugins/k8smeta
   - make
   - cp /plugins/plugins/json/libjson.so /plugins/plugins/k8saudit/libk8saudit.so /plugins/plugins/k8smeta/libk8smeta.so /falco-package/usr/share/falco/plugins
+  - cd /plugins
+  # cleanup to reduce artifact size
+  - make clean
