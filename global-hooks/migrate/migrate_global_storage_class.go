@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -48,8 +48,8 @@ func globalStorageClassMigrate(input *go_hook.HookInput, dc dependency.Container
 		return fmt.Errorf("cannot init Kubernetes client: %v", err)
 	}
 
-	globalModuleConfigs, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{FieldSelector: "metadata.name=" + globalModuleName})
-	if errors.IsNotFound(err) || len(globalModuleConfigs.Items) == 0 {
+	globalModuleConfig, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Get(context.TODO(), globalModuleName, metav1.GetOptions{})
+	if errors.IsNotFound(err) {
 		input.LogEntry.Info("`global` ModuleConfig does not exist, skipping migration")
 		return nil
 	}
@@ -58,24 +58,22 @@ func globalStorageClassMigrate(input *go_hook.HookInput, dc dependency.Container
 		return err
 	}
 
-	globalModuleConfig := globalModuleConfigs.Items[0]
-
-	globalStorageClass, globalConfigExists, err := unstructured.NestedString(globalModuleConfig.UnstructuredContent(), "spec", "settings", "storageClass")
+	globalStorageClass, globalStorageClassKeyExists, err := unstructured.NestedString(globalModuleConfig.UnstructuredContent(), "spec", "settings", "storageClass")
 	if err != nil {
 		return err
 	}
 
-	if !globalConfigExists {
+	if !globalStorageClassKeyExists {
 		input.LogEntry.Info("Property `global.storageClass` does not exist, skipping migration")
 		return nil
 	}
 
-	_, modulesConfigExists, err := unstructured.NestedString(globalModuleConfig.UnstructuredContent(), "spec", "settings", "modules", "storageClass")
+	_, globalModulesStorageClassKeyExists, err := unstructured.NestedString(globalModuleConfig.UnstructuredContent(), "spec", "settings", "modules", "storageClass")
 	if err != nil {
 		return err
 	}
 
-	if modulesConfigExists {
+	if globalModulesStorageClassKeyExists {
 		input.LogEntry.Info("Property `global.modules.storageClass` already exists. Just remove `global.storageClass` and skipping migration")
 
 		patch := map[string]any{

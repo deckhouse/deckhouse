@@ -20,7 +20,6 @@ properties:
     default: null
     description: |
       The storage class to use as default for entire cluster.
-        * If not defined, all PVCs will use `global.discovery.defaultStorageClass` (which is determined automatically) or `emptyDir` (if `global.discovery.defaultStorageClass` isn't defined).
         * If defined, all newly created PVCs will use this storage class. Also note, that this value will override any value in `cloud-provider-*.storageClass` parameter.
         * This parameter is applied during module activation.
   highAvailability:
