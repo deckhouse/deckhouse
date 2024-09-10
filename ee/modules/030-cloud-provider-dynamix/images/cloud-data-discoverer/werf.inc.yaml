@@ -16,7 +16,7 @@ shell:
   install:
     - export GOPROXY={{ $.GOPROXY }}
     - export VERSION="v0.1.0"
-    - export VERSION_COMMON="v0.1.0"
+    - export VERSION_COMMON="v0.2.0"
     - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/cloud-data-discoverer.git /deckhouse/ee/modules/030-cloud-provider-dynamix/images/cloud-data-discoverer
     - git clone --depth 1 --branch ${VERSION_COMMON} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /deckhouse/ee/modules/030-cloud-provider-dynamix/images/dynamix-common
     - cd /deckhouse/ee/modules/030-cloud-provider-dynamix/images/cloud-data-discoverer
