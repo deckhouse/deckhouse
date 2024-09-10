@@ -41,7 +41,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(globalStorageClassMigrate))
 
 func globalStorageClassMigrate(input *go_hook.HookInput, dc dependency.Container) error {
-	const global_module_name = "global"
+	const globalModuleName = "global"
 
 	kubeCl, err := dc.GetK8sClient()
 	if err != nil {
@@ -86,7 +86,7 @@ func globalStorageClassMigrate(input *go_hook.HookInput, dc dependency.Container
 			},
 		}
 
-		input.PatchCollector.MergePatch(patch, config.ModuleConfigGroup + "/" + config.ModuleConfigVersion, config.ModuleConfigKind, "", global_module_name)
+		input.PatchCollector.MergePatch(patch, config.ModuleConfigGroup+"/"+config.ModuleConfigVersion, config.ModuleConfigKind, "", globalModuleName)
 
 		return nil
 	}
@@ -105,7 +105,7 @@ func globalStorageClassMigrate(input *go_hook.HookInput, dc dependency.Container
 
 	input.LogEntry.Warn("Move `global.storageClass` to `global.modules.storageClass`")
 
-	input.PatchCollector.MergePatch(patch, config.ModuleConfigGroup + "/" + config.ModuleConfigVersion, config.ModuleConfigKind, "", global_module_name)
+	input.PatchCollector.MergePatch(patch, config.ModuleConfigGroup+"/"+config.ModuleConfigVersion, config.ModuleConfigKind, "", globalModuleName)
 
 	return nil
 }

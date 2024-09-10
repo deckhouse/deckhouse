@@ -67,7 +67,6 @@ global:
 			currentVersion:  1,
 			expectedVersion: 2,
 		},
-
 	}
 
 	for _, c := range cases {

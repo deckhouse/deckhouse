@@ -83,13 +83,13 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 		return err
 	}
 
-	storage_classes, err := client.StorageV1().StorageClasses().List(context.Background(), metav1.ListOptions{})
+	storageClasses, err := client.StorageV1().StorageClasses().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		input.LogEntry.Warnf("Error getting storage classes: %s", err)
 		return nil
 	}
 
-	for _, sc := range storage_classes.Items {
+	for _, sc := range storageClasses.Items {
 		if sc.GetName() == defaultClusterStorageClass {
 			// it's that storage class which we want
 			if !isMarkedDefault(&sc) {

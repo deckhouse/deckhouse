@@ -15,9 +15,9 @@
 package hooks
 
 import (
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 const (
@@ -35,7 +35,7 @@ spec:
   version: 1
 `
 
-moduleConfigGlobalStorageClass = `
+	moduleConfigGlobalStorageClass = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -50,7 +50,7 @@ spec:
   version: 1
 `
 
-moduleConfigGlobalAndModulesStorageClass = `
+	moduleConfigGlobalAndModulesStorageClass = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

@@ -21,11 +21,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	storage "k8s.io/api/storage/v1"
-	"sigs.k8s.io/yaml"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
+	storage "k8s.io/api/storage/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 )
 
 // TODO: add tests with global.modules.storageClass variants
@@ -76,7 +76,7 @@ allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
 `
 
-scNonDefault = `
+	scNonDefault = `
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -98,7 +98,6 @@ reclaimPolicy: Delete
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
 `
-
 )
 
 var _ = Describe("Global hooks :: default_storage_class_name_test ::", func() {
@@ -155,15 +154,15 @@ var _ = Describe("Global hooks :: default_storage_class_name_test ::", func() {
 			b.BindingContexts.Set(b.KubeStateSet(fmt.Sprintf(cmWithDefinedDefaultStorageClassName, `non-default`) + scDefault + scNonDefault))
 
 			// create required storage classes in fake k8s cluster
-			for _, sc_yaml := range []string{scDefault, scNonDefault} {
+			for _, scYaml := range []string{scDefault, scNonDefault} {
 				var sc storage.StorageClass
-				_ = yaml.Unmarshal([]byte(sc_yaml), &sc)
+				_ = yaml.Unmarshal([]byte(scYaml), &sc)
 				_, err := dependency.TestDC.MustGetK8sClient().
 					StorageV1().
 					StorageClasses().
 					Create(context.TODO(), &sc, metav1.CreateOptions{})
 
-					Expect(err).To(BeNil())
+				Expect(err).To(BeNil())
 			}
 
 			b.RunHook()
