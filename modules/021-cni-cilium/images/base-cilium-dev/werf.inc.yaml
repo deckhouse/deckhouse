@@ -55,6 +55,7 @@ shell:
   # download-only
   - |
     apt-get update && apt-get install -y -d \
+    sudo \
     libcap-devel libpcap-devel \
     clang17.0 clang17.0-tools lldb17.0 lld17.0 llvm17.0-devel \
     libstdc++-devel libstdc++-devel-static libstdc++10-devel-static \
