@@ -49,7 +49,7 @@ import (
 )
 
 const (
-	DefaultStaticInstanceBootstrapTimeout = 20 * time.Minute
+	DefaultStaticInstanceBootstrapTimeout = 30 * time.Minute
 	DefaultStaticInstanceCleanupTimeout   = 10 * time.Minute
 	RequeueForStaticInstancePending       = 10 * time.Second
 	RequeueForStaticInstanceCleaning      = 30 * time.Second
