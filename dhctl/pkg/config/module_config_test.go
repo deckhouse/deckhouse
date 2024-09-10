@@ -97,7 +97,7 @@ configOverrides:
 			case "istioEnabled":
 				assertModuleConfig(t, mc, false, 1, nil)
 			case "global":
-				assertModuleConfig(t, mc, true, 1, map[string]interface{}{
+				assertModuleConfig(t, mc, true, 2, map[string]interface{}{
 					"modules": map[string]interface{}{
 						"publicDomainTemplate": "%s.example.com",
 					},
