@@ -460,7 +460,7 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 
-if [[ ! -z "\$(which wget)" ]]; then
+if which wget >/dev/null; then
   wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_386 -O /usr/bin/yq
 else
   curl -sLfo /usr/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_386
