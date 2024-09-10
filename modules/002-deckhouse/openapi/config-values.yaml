@@ -115,7 +115,7 @@ properties:
         description: |
           Settings for notifications of scheduled Deckhouse updates.
 
-          Has the effect **only** when the [automatic update mode](#parameters-update-mode) is set and **only** for Deckhouse minor version changes (for patch version changes the `notifications` parameter settings are ignored).
+          Has the effect **only** when the [automatic update mode](#parameters-update-mode) is set.
         x-examples:
         - webhook: https://release-webhook.mydomain.com
           minimalNotificationTime: 8h
