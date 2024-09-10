@@ -48,7 +48,7 @@ func globalStorageClassMigrate(input *go_hook.HookInput, dc dependency.Container
 		return fmt.Errorf("cannot init Kubernetes client: %v", err)
 	}
 
-	globalModuleConfigs, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{FieldSelector: "metadata.name=" + global_module_name})
+	globalModuleConfigs, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{FieldSelector: "metadata.name=" + globalModuleName})
 	if errors.IsNotFound(err) || len(globalModuleConfigs.Items) == 0 {
 		input.LogEntry.Info("`global` ModuleConfig does not exist, skipping migration")
 		return nil
