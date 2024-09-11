@@ -6,25 +6,30 @@
 
 - Install werf
 
-- Open console and start documentation container with the following method:
-  - Using makefile:
+- Open console and running documentation and site containers with the following method:
+
+  - using makefile:
 
     ```shell
     cd docs/documentation
     make up 
     ```
-
-    > For development mode use `make dev` instead.
-
-- Open a separate console and start site container with the following method:
   - using makefile:
 
     ```shell
     cd docs/site
     make up 
     ```
-
     > For development mode use `make dev` instead.
+
+- To start the containers in a single iteration, use the following method:
+
+  - using makefile in the root of the repo:
+  
+    ```shell
+    cd docs/site
+    make docs-dev 
+    ```
 
 - Open <http://localhost>.
 
