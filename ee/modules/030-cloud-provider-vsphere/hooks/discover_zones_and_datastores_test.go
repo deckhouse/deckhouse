@@ -53,6 +53,52 @@ cloudProviderVsphere:
     - bar
     default: other-bar
 `
+
+		initValuesStringC = `
+global:
+  defaultClusterStorageClass: default-cluster-sc
+cloudProviderVsphere:
+  internal:
+    providerClusterConfiguration:
+      provider:
+        server: test.test.com
+        username: test
+        password: test
+        insecure: true
+      region: Test
+      regionTagCategory: test-region
+      zoneTagCategory: test-zone
+      sshPublicKey: test
+      vmFolderPath: test
+  storageClass:
+    exclude:
+    - .*lun.*
+    - bar
+    default: other-bar
+`
+
+		initValuesStringD = `
+global:
+  defaultClusterStorageClass: ""
+cloudProviderVsphere:
+  internal:
+    providerClusterConfiguration:
+      provider:
+        server: test.test.com
+        username: test
+        password: test
+        insecure: true
+      region: Test
+      regionTagCategory: test-region
+      zoneTagCategory: test-zone
+      sshPublicKey: test
+      vmFolderPath: test
+  storageClass:
+    exclude:
+    - .*lun.*
+    - bar
+    default: other-bar
+`
 	)
 
 	f := HookExecutionConfigInit(initValuesStringA, `{}`)
@@ -132,6 +178,34 @@ cloudProviderVsphere:
 ]
 `))
 			Expect(b.ValuesGet("cloudProviderVsphere.internal.defaultStorageClass").String()).To(Equal(`other-bar`))
+		})
+	})
+
+	c := HookExecutionConfigInit(initValuesStringC, `{}`)
+
+	Context("Cluster has minimal cloudProviderVsphere configuration with `global.defaultClusterStorageClass` specified", func() {
+		BeforeEach(func() {
+			c.BindingContexts.Set(c.GenerateBeforeHelmContext())
+			c.RunHook()
+		})
+
+		It("Default storage class should be overrided by `global.defaultClusterStorageClass`", func() {
+			Expect(c).To(ExecuteSuccessfully())
+			Expect(c.ValuesGet("cloudProviderVsphere.internal.defaultStorageClass").String()).To(Equal(`default-cluster-sc`))
+		})
+	})
+
+	d := HookExecutionConfigInit(initValuesStringD, `{}`)
+
+	Context("Cluster has minimal cloudProviderVsphere configuration with `global.defaultClusterStorageClass` set to empty string", func() {
+		BeforeEach(func() {
+			d.BindingContexts.Set(d.GenerateBeforeHelmContext())
+			d.RunHook()
+		})
+
+		It("Default storage class should be `other-bar` if `global.defaultClusterStorageClass` is empty", func() {
+			Expect(d).To(ExecuteSuccessfully())
+			Expect(d.ValuesGet("cloudProviderVsphere.internal.defaultStorageClass").String()).To(Equal(`other-bar`))
 		})
 	})
 })

@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2024 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
@@ -15,9 +15,11 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: cloud-provider-vcd :: hooks :: cloud_provider_discovery_data ::", func() {
+var _ = Describe("Modules :: cloud-provider-zvirt :: hooks :: cloud_provider_discovery_data ::", func() {
+	// TODO: rewrite this tests because I cannot find any documents about Zvirt, so I get tests from VCD provider and slightly modify it
+
 	initValues := `
-cloudProviderVcd:
+cloudProviderZvirt:
   internal: {}
 `
 
@@ -30,13 +32,13 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: Helm
     heritage: deckhouse
-    module: cloud-provider-vcd
+    module: cloud-provider-zvirt
   annotations:
-    meta.helm.sh/release-name: cloud-provider-Vcd
+    meta.helm.sh/release-name: cloud-provider-Zvirt
     meta.helm.sh/release-namespace: d8-system
 provisioner: named-disk.csi.cloud-director.vmware.com
 parameters:
-  storageProfile: "SAS"
+  storageDomain: "SAS"
 reclaimPolicy: Delete
 allowVolumeExpansion: false
 volumeBindingMode: WaitForFirstConsumer
@@ -65,13 +67,13 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: Helm
     heritage: deckhouse
-    module: cloud-provider-vcd
+    module: cloud-provider-zvirt
   annotations:
-    meta.helm.sh/release-name: cloud-provider-Vcd
+    meta.helm.sh/release-name: cloud-provider-Zvirt
     meta.helm.sh/release-namespace: d8-system
 provisioner: named-disk.csi.cloud-director.vmware.com
 parameters:
-  storageProfile: "HDD"
+  storageDomain: "HDD"
 reclaimPolicy: Delete
 allowVolumeExpansion: false
 volumeBindingMode: WaitForFirstConsumer
@@ -86,14 +88,14 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: Helm
     heritage: deckhouse
-    module: cloud-provider-vcd
+    module: cloud-provider-zvirt
   annotations:
-    meta.helm.sh/release-name: cloud-provider-Vcd
+    meta.helm.sh/release-name: cloud-provider-Zvirt
     meta.helm.sh/release-namespace: d8-system
     storageclass.kubernetes.io/is-default-class: 'true'
 provisioner: named-disk.csi.cloud-director.vmware.com
 parameters:
-  storageProfile: "SAS"
+  storageDomain: "SAS"
 reclaimPolicy: Delete
 allowVolumeExpansion: false
 volumeBindingMode: WaitForFirstConsumer
@@ -122,13 +124,13 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: Helm
     heritage: deckhouse
-    module: cloud-provider-vcd
+    module: cloud-provider-zvirt
   annotations:
-    meta.helm.sh/release-name: cloud-provider-Vcd
+    meta.helm.sh/release-name: cloud-provider-Zvirt
     meta.helm.sh/release-namespace: d8-system
 provisioner: named-disk.csi.cloud-director.vmware.com
 parameters:
-  storageProfile: "HDD"
+  storageDomain: "HDD"
 reclaimPolicy: Delete
 allowVolumeExpansion: false
 volumeBindingMode: WaitForFirstConsumer
@@ -141,7 +143,7 @@ metadata:
   name: manual-default
 provisioner: named-disk.csi.cloud-director.vmware.com
 parameters:
-  storageProfile: "MANUAL-DEFAULT"
+  storageDomain: "MANUAL-DEFAULT"
 reclaimPolicy: Delete
 allowVolumeExpansion: false
 volumeBindingMode: WaitForFirstConsumer
@@ -154,7 +156,7 @@ metadata:
     storageclass.kubernetes.io/is-default-class: 'true'
 provisioner: named-disk.csi.cloud-director.vmware.com
 parameters:
-  storageProfile: "MANUAL-SAS"
+  storageDomain: "MANUAL-SAS"
 reclaimPolicy: Delete
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
@@ -164,8 +166,8 @@ volumeBindingMode: WaitForFirstConsumer
 	discoveryData := `
 {
   "apiVersion": "deckhouse.io/v1",
-  "kind": "VCDCloudProviderDiscoveryData",
-  "storageProfiles": [
+  "kind": "ZvirtCloudProviderDiscoveryData",
+  "storageDomains": [
     {
       "name": "D1",
       "isEnabled": true
@@ -211,45 +213,45 @@ data:
 			b.RunHook()
 		})
 
-		It("Should discover all volumeTypes only for storage classes where deployed by cloud-provider-Vcd module and no default", func() {
+		It("Should discover all volumeTypes only for storage classes where deployed by cloud-provider-Zvirt module and no default", func() {
 			Expect(b).To(ExecuteSuccessfully())
-			Expect(b.ValuesGet("cloudProviderVcd.internal.storageClasses").String()).To(MatchJSON(`
+			Expect(b.ValuesGet("cloudProviderZvirt.internal.storageClasses").String()).To(MatchJSON(`
 [
          {
             "name": "default",
-            "storageProfile": "SAS"
+            "storageDomain": "SAS"
           },
           {
             "name": "hdd",
-            "storageProfile": "HDD"
+            "storageDomain": "HDD"
           }
 ]
 `))
-			Expect(b.ValuesGet("cloudProviderVcd.internal.defaultStorageClass").Exists()).To(BeFalse())
+			Expect(b.ValuesGet("cloudProviderZvirt.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
 	})
 
-	Context("Cluster has only storage classes wit default", func() {
+	Context("Cluster has only storage classes with default", func() {
 		BeforeEach(func() {
 			b.BindingContexts.Set(b.KubeStateSet(storageClassesWithDefault))
 			b.RunHook()
 		})
 
-		It("Should discover all volumeTypes only for storage classes where deployed by cloud-provider-Vcd module and no default", func() {
+		It("Should discover all volumeTypes only for storage classes where deployed by cloud-provider-Zvirt module and no default", func() {
 			Expect(b).To(ExecuteSuccessfully())
-			Expect(b.ValuesGet("cloudProviderVcd.internal.storageClasses").String()).To(MatchJSON(`
+			Expect(b.ValuesGet("cloudProviderZvirt.internal.storageClasses").String()).To(MatchJSON(`
 [
          {
             "name": "default",
-            "storageProfile": "SAS"
+            "storageDomain": "SAS"
           },
           {
             "name": "hdd",
-            "storageProfile": "HDD"
+            "storageDomain": "HDD"
           }
 ]
 `))
-			Expect(b.ValuesGet("cloudProviderVcd.internal.defaultStorageClass").String()).Should(Equal("default"))
+			Expect(b.ValuesGet("cloudProviderZvirt.internal.defaultStorageClass").String()).Should(Equal("default"))
 		})
 	})
 
@@ -262,7 +264,7 @@ data:
 
 		It("Should not discover manual volumeTypes", func() {
 			Expect(c).To(ExecuteSuccessfully())
-			Expect(c.ValuesGet("cloudProviderVcd.internal.storageClasses").String()).To(BeEmpty())
+			Expect(c.ValuesGet("cloudProviderZvirt.internal.storageClasses").String()).To(BeEmpty())
 		})
 	})
 
@@ -275,19 +277,19 @@ data:
 
 		It("Should discover all deckhouse managed volumeTypes and no default", func() {
 			Expect(d).To(ExecuteSuccessfully())
-			Expect(d.ValuesGet("cloudProviderVcd.internal.storageClasses").String()).To(MatchJSON(`
+			Expect(d.ValuesGet("cloudProviderZvirt.internal.storageClasses").String()).To(MatchJSON(`
 [
           {
             "name": "default",
-            "storageProfile": "SAS"
+            "storageDomain": "SAS"
           },
           {
             "name": "hdd",
-            "storageProfile": "HDD"
+            "storageDomain": "HDD"
           }
 ]
 `))
-			Expect(d.ValuesGet("cloudProviderVcd.internal.defaultStorageClass").Exists()).To(BeFalse())
+			Expect(d.ValuesGet("cloudProviderZvirt.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
 	})
 
@@ -300,24 +302,24 @@ data:
 
 		It("Should discover all enabled volumeTypes and no default", func() {
 			Expect(e).To(ExecuteSuccessfully())
-			Expect(e.ValuesGet("cloudProviderVcd.internal.storageClasses").String()).To(MatchJSON(`
+			Expect(e.ValuesGet("cloudProviderZvirt.internal.storageClasses").String()).To(MatchJSON(`
 [
           {
             "name": "d1",
-            "storageProfile": "D1"
+            "storageDomain": "D1"
           },
           {
             "name": "d3",
-            "storageProfile": "D3"
+            "storageDomain": "D3"
           }
 ]
 `))
-			Expect(e.ValuesGet("cloudProviderVcd.internal.defaultStorageClass").Exists()).To(BeFalse())
+			Expect(e.ValuesGet("cloudProviderZvirt.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
 	})
 
 	initValues = `
-cloudProviderVcd:
+cloudProviderZvirt:
   internal: {}
   storageClass:
     exclude:
@@ -339,22 +341,22 @@ cloudProviderVcd:
 
 		It("Should discover volumeTypes without excluded and default set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cloudProviderVcd.internal.storageClasses").String()).To(MatchJSON(`
+			Expect(f.ValuesGet("cloudProviderZvirt.internal.storageClasses").String()).To(MatchJSON(`
 [
           {
             "name": "d1",
-            "storageProfile": "D1"
+            "storageDomain": "D1"
           }
 ]
 `))
-			Expect(f.ValuesGet("cloudProviderVcd.internal.defaultStorageClass").String()).To(Equal(`d1`))
+			Expect(f.ValuesGet("cloudProviderZvirt.internal.defaultStorageClass").String()).To(Equal(`d1`))
 		})
 	})
 
 	initValues = `
 global:
   defaultClusterStorageClass: default-cluster-sc
-cloudProviderVcd:
+cloudProviderZvirt:
   internal: {}
   storageClass:
     exclude:
@@ -375,14 +377,14 @@ cloudProviderVcd:
 		})
 
 		It("Default storage class should be overrided by `global.defaultClusterStorageClass`", func() {
-			Expect(g.ValuesGet("cloudProviderVcd.internal.defaultStorageClass").String()).To(Equal(`default-cluster-sc`))
+			Expect(g.ValuesGet("cloudProviderZvirt.internal.defaultStorageClass").String()).To(Equal(`default-cluster-sc`))
 		})
 	})
 
 	initValues = `
 global:
   defaultClusterStorageClass: ""
-cloudProviderVcd:
+cloudProviderZvirt:
   internal: {}
   storageClass:
     exclude:
@@ -403,7 +405,7 @@ cloudProviderVcd:
 		})
 
 		It("Default storage class should be `d1` if `global.defaultClusterStorageClass` is empty", func() {
-			Expect(h.ValuesGet("cloudProviderVcd.internal.defaultStorageClass").String()).To(Equal(`d1`))
+			Expect(h.ValuesGet("cloudProviderZvirt.internal.defaultStorageClass").String()).To(Equal(`d1`))
 		})
 	})
 
