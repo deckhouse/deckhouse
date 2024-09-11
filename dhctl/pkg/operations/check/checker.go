@@ -24,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	logger "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -140,13 +141,15 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 	if inClusterMetaConfig.UUID == metaConfig.UUID && bytes.Equal(clusterConfigurationData, inClusterConfigurationData) && bytes.Equal(providerClusterConfigurationData, inClusterProviderClusterConfigurationData) {
 		return CheckStatusInSync, nil
 	}
-	fmt.Println("-------------------MEGA CHECK START----------------------")
-	fmt.Printf("inClusterMetaConfig.UUID == metaConfig.UUID, %s == %s, %t\n", inClusterMetaConfig.UUID, metaConfig.UUID, inClusterMetaConfig.UUID == metaConfig.UUID)
-	fmt.Println("-------------------")
-	fmt.Printf("bytes.Equal(clusterConfigurationData, inClusterConfigurationData), %s == %s, %t", string(clusterConfigurationData), string(inClusterConfigurationData), bytes.Equal(clusterConfigurationData, inClusterConfigurationData))
-	fmt.Println("-------------------")
-	fmt.Printf("bytes.Equal(providerClusterConfigurationData, inClusterProviderClusterConfigurationData), %s == %s, %t", string(providerClusterConfigurationData), string(inClusterProviderClusterConfigurationData), bytes.Equal(providerClusterConfigurationData, inClusterProviderClusterConfigurationData))
-	fmt.Println("-------------------MEGA CHECK END----------------------")
+
+	logger.InfoLn("-------------------MEGA CHECK START----------------------")
+	logger.InfoF("inClusterMetaConfig.UUID == metaConfig.UUID, %s == %s, %t\n", inClusterMetaConfig.UUID, metaConfig.UUID, inClusterMetaConfig.UUID == metaConfig.UUID)
+	logger.InfoLn("-------------------")
+	logger.InfoF("bytes.Equal(clusterConfigurationData, inClusterConfigurationData), %s == %s, %t", string(clusterConfigurationData), string(inClusterConfigurationData), bytes.Equal(clusterConfigurationData, inClusterConfigurationData))
+	logger.InfoLn("-------------------")
+	logger.InfoF("bytes.Equal(providerClusterConfigurationData, inClusterProviderClusterConfigurationData), %s == %s, %t", string(providerClusterConfigurationData), string(inClusterProviderClusterConfigurationData), bytes.Equal(providerClusterConfigurationData, inClusterProviderClusterConfigurationData))
+	logger.InfoLn("-------------------MEGA CHECK END----------------------")
+
 	return CheckStatusOutOfSync, nil
 }
 
