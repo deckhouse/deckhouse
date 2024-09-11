@@ -11,10 +11,14 @@ osDistributions:
     en_support: 'false'
     additional_notes: 'true'
     note_content:
-      ru: 'Рекомендуется использовать ядро <b>linux-image-6.1-debug</b>'
+      ru: 'В версии <b>1.8</b> рекомендуется использовать ядро <b>linux-image-6.1-debug</b>'
   centos:
     name: CentOS
     url: https://www.centos.org/download/
+    additional_notes: 'true'
+    note_content:
+      ru: 'CentOS Linux 8 не поддерживается разработчиками с 31 мая 2024 года.<br>CentOS Linux 7 не поддерживается разработчиками с 30 июня 2024 года.'
+      en: 'CentOS Linux 8 end of life is May 31, 2024.<br>CentOS Linux 7 end of life is June 30, 2024.'
   debian:
     name: Debian
     url: https://www.debian.org/download

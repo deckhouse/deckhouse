@@ -16,18 +16,24 @@
 <table class="supported_versions">
 <thead>
     <tr>
-      <th class="name">{{site.data.i18n.common['linux_distro'][page.lang] }}</th>
-      <th class="versions">{{ site.data.i18n.common['versions_supported'][page.lang] | capitalize }}</th>
-      <th style="text-align: center;" colspan="2">{{ site.data.i18n.common['redactions'][page.lang] | capitalize }}</th>
-      <th>{{ site.data.i18n.common['notes'][page.lang] | capitalize }}</th>
+      <th class="name" style="white-space: nowrap;">{{site.data.i18n.common['linux_distro'][page.lang] }}</th>
+      <th class="versions" style="white-space: nowrap;">{{ site.data.i18n.common['versions_supported'][page.lang] | capitalize }}</th>
+      {%- if page.lang == 'ru' %}
+      <th style="text-align: center; white-space: nowrap;" colspan="2">{{ site.data.i18n.common['redactions'][page.lang] | capitalize }}</th>
+      {% else %}
+      <th style="text-align: center; white-space: nowrap;">{{ site.data.i18n.common['redactions'][page.lang] | capitalize }}</th>
+      {%- endif %}
+      <th style="text-align: center;">{{ site.data.i18n.common['notes'][page.lang] | capitalize }}</th>
     </tr>
 </thead>
 <tbody>
 <tr>
   <td></td>
   <td></td>
+  {%- if page.lang == 'ru' %}
   <td style="text-align: center; width: 170px; font-size: 16px; font-weight: bold; padding: 0 10px;">CE</td>
-  <td style="text-align: center; width: 170px; font-size: 16px; font-weight: bold; padding: 0 10px;">BE, SE, EE</td>
+  {%- endif %}
+  <td style="text-align: center; width: 170px; font-size: 16px; font-weight: bold; padding: 0 10px;">{% if page.lang == 'en' %}CE, {% endif %}BE, SE, EE</td>
   <td></td>
 </tr>
 {%- for osItem in osVersions %}
@@ -50,6 +56,7 @@
 {%- unless forloop.last %},{% endunless %}
 {%- endfor %}
   </td>
+  {%- if page.lang == 'ru' %}
   <td style="text-align: center; width: 170px;">
     {% if site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}
       <img src="{{ partially_supported_img_url }}" data-tippy-content="Работоспособность в Community Edition не гарантируется.">
@@ -57,6 +64,7 @@
       <img src="{{ supported_img_url }}">
     {% endif %}
   </td>
+  {%- endif %}
   <td style="text-align: center; width: 170px;"><img src="{{ supported_img_url }}"></td>
   <td style="text-align: center;">
     {% if site.data.supported_versions.osDistributions[osKey]['additional_notes'] %}
