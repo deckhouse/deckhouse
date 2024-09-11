@@ -52,6 +52,52 @@ cloudProviderAzure:
     exclude:
     - ".*"
 `
+
+		initValuesWithDefaultClusterStorageClass = `
+global:
+  defaultClusterStorageClass: default-cluster-sc
+cloudProviderAzure:
+  internal: {}
+  storageClass:
+    provision:
+    - name: managed-ultra-ssd
+      type: UltraSSD_LRS
+      diskIOPSReadWrite: 600
+      diskMBpsReadWrite: 150
+      tags:
+      - key: key1
+        value: value1
+      - key: key2
+        value: value2
+    exclude:
+    - sc\d+
+    - bar
+    - managed-standard-large
+    default: other-bar
+`
+
+		initValuesWithEmptyDefaultClusterStorageClass = `
+global:
+  defaultClusterStorageClass: ""
+cloudProviderAzure:
+  internal: {}
+  storageClass:
+    provision:
+    - name: managed-ultra-ssd
+      type: UltraSSD_LRS
+      diskIOPSReadWrite: 600
+      diskMBpsReadWrite: 150
+      tags:
+      - key: key1
+        value: value1
+      - key: key2
+        value: value2
+    exclude:
+    - sc\d+
+    - bar
+    - managed-standard-large
+    default: other-bar
+`
 	)
 
 	f := HookExecutionConfigInit(initValuesString, `{}`)
@@ -115,7 +161,34 @@ cloudProviderAzure:
 			Expect(fb.ValuesGet("cloudProviderAzure.internal.storageClasses").String()).To(MatchJSON(`[]`))
 			Expect(fb.ValuesGet("cloudProviderAzure.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
+	})
 
+	a := HookExecutionConfigInit(initValuesWithDefaultClusterStorageClass, `{}`)
+
+	Context("Cluster with `global.defaultClusterStorageClass`", func() {
+		BeforeEach(func() {
+			a.BindingContexts.Set(a.GenerateBeforeHelmContext())
+			a.RunHook()
+		})
+
+		It("Default storage class should be overrided by `global.defaultClusterStorageClass`", func() {
+			Expect(a).To(ExecuteSuccessfully())
+			Expect(a.ValuesGet("cloudProviderAzure.internal.defaultStorageClass").String()).To(Equal(`default-cluster-sc`))
+		})
+	})
+
+	b := HookExecutionConfigInit(initValuesWithEmptyDefaultClusterStorageClass, `{}`)
+
+	Context("Cluster with empty `global.defaultClusterStorageClass`", func() {
+		BeforeEach(func() {
+			b.BindingContexts.Set(b.GenerateBeforeHelmContext())
+			b.RunHook()
+		})
+
+		It("Default storage class should be `other-bar` if `global.defaultClusterStorageClass` is empty", func() {
+			Expect(b).To(ExecuteSuccessfully())
+			Expect(b.ValuesGet("cloudProviderAzure.internal.defaultStorageClass").String()).To(Equal(`other-bar`))
+		})
 	})
 
 })

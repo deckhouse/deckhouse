@@ -34,6 +34,30 @@ cloudProviderGcp:
     - bar
     default: pd-ssd-replicated
 `
+
+		initValuesWithDefaultClusterStorageClass = `
+global:
+  defaultClusterStorageClass: default-cluster-sc
+cloudProviderGcp:
+  internal: {}
+  storageClass:
+    exclude:
+    - .*standard.*
+    - bar
+    default: pd-ssd-replicated
+`
+
+		initValuesWithEmptyDefaultClusterStorageClass = `
+global:
+  defaultClusterStorageClass: ""
+cloudProviderGcp:
+  internal: {}
+  storageClass:
+    exclude:
+    - .*standard.*
+    - bar
+    default: pd-ssd-replicated
+`
 	)
 
 	f := HookExecutionConfigInit(initValuesString, `{}`)
@@ -73,6 +97,34 @@ cloudProviderGcp:
 			Expect(f.ValuesGet("cloudProviderGcp.internal.defaultStorageClass").String()).To(Equal(`pd-ssd-replicated`))
 		})
 
+	})
+
+	a := HookExecutionConfigInit(initValuesWithDefaultClusterStorageClass, `{}`)
+
+	Context("Cluster with `global.defaultClusterStorageClass`", func() {
+		BeforeEach(func() {
+			a.BindingContexts.Set(a.GenerateBeforeHelmContext())
+			a.RunHook()
+		})
+
+		It("Default storage class should be overrided by `global.defaultClusterStorageClass`", func() {
+			Expect(a).To(ExecuteSuccessfully())
+			Expect(a.ValuesGet("cloudProviderGcp.internal.defaultStorageClass").String()).To(Equal(`default-cluster-sc`))
+		})
+	})
+
+	b := HookExecutionConfigInit(initValuesWithEmptyDefaultClusterStorageClass, `{}`)
+
+	Context("Cluster with empty `global.defaultClusterStorageClass`", func() {
+		BeforeEach(func() {
+			b.BindingContexts.Set(b.GenerateBeforeHelmContext())
+			b.RunHook()
+		})
+
+		It("Default storage class should be `pd-ssd-replicated` if `global.defaultClusterStorageClass` is empty", func() {
+			Expect(b).To(ExecuteSuccessfully())
+			Expect(b.ValuesGet("cloudProviderGcp.internal.defaultStorageClass").String()).To(Equal(`pd-ssd-replicated`))
+		})
 	})
 
 })

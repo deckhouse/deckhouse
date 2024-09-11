@@ -366,7 +366,7 @@ cloudProviderZvirt:
 `
 
 	g := HookExecutionConfigInit(initValues, `{}`)
-	Context("Provider data is successfully discovered", func() {
+	Context("Cluster with `global.defaultClusterStorageClass`", func() {
 		BeforeEach(func() {
 			g.BindingContexts.Set(g.KubeStateSet(state))
 			g.RunHook()
@@ -394,7 +394,7 @@ cloudProviderZvirt:
 `
 
 	h := HookExecutionConfigInit(initValues, `{}`)
-	Context("Provider data is successfully discovered", func() {
+	Context("Cluster with empty `global.defaultClusterStorageClass`", func() {
 		BeforeEach(func() {
 			h.BindingContexts.Set(h.KubeStateSet(state))
 			h.RunHook()

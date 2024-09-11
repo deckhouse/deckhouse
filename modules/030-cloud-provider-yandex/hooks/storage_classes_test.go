@@ -34,6 +34,30 @@ cloudProviderYandex:
     - bar
     default: baz
 `
+
+		initValuesStringA = `
+global:
+  defaultClusterStorageClass: default-cluster-sc
+cloudProviderYandex:
+  internal: {}
+  storageClass:
+    exclude:
+    - .*-hdd
+    - bar
+    default: baz
+`
+
+		initValuesStringB = `
+global:
+  defaultClusterStorageClass: ""
+cloudProviderYandex:
+  internal: {}
+  storageClass:
+    exclude:
+    - .*-hdd
+    - bar
+    default: baz
+`
 	)
 
 	f := HookExecutionConfigInit(initValuesString, `{}`)
@@ -64,7 +88,32 @@ cloudProviderYandex:
 `))
 			Expect(f.ValuesGet("cloudProviderYandex.internal.defaultStorageClass").String()).To(Equal(`baz`))
 		})
+	})
 
+	a := HookExecutionConfigInit(initValuesStringA, `{}`)
+	Context("Cluster with `global.defaultClusterStorageClass`", func() {
+		BeforeEach(func() {
+			a.BindingContexts.Set(a.GenerateBeforeHelmContext())
+			a.RunHook()
+		})
+
+		It("Default storage class should be overrided by `global.defaultClusterStorageClass`", func() {
+			Expect(a).To(ExecuteSuccessfully())
+			Expect(a.ValuesGet("cloudProviderYandex.internal.defaultStorageClass").String()).To(Equal(`default-cluster-sc`))
+		})
+	})
+
+	b := HookExecutionConfigInit(initValuesStringB, `{}`)
+	Context("Cluster with empty `global.defaultClusterStorageClass`", func() {
+		BeforeEach(func() {
+			b.BindingContexts.Set(b.GenerateBeforeHelmContext())
+			b.RunHook()
+		})
+
+		It("Default storage class should be `baz` if `global.defaultClusterStorageClass` is empty", func() {
+			Expect(b).To(ExecuteSuccessfully())
+			Expect(b.ValuesGet("cloudProviderYandex.internal.defaultStorageClass").String()).To(Equal(`baz`))
+		})
 	})
 
 })

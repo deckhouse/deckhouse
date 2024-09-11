@@ -50,6 +50,46 @@ cloudProviderAws:
     - ".*"
 `
 
+		initValuesWithDefaultClusterStorageClass = `
+global:
+  defaultClusterStorageClass: default-cluster-sc
+cloudProviderAws:
+  internal: {}
+  storageClass:
+    provision:
+    - iopsPerGB: "5"
+      name: iops-foo
+      type: io1
+    - name: gp3
+      type: gp3
+      iops: "6000"
+      throughput: "300"
+    exclude:
+    - sc\d+
+    - bar
+    default: other-bar
+`
+
+		initValuesWithEmptyDefaultClusterStorageClass = `
+global:
+  defaultClusterStorageClass: ""
+cloudProviderAws:
+  internal: {}
+  storageClass:
+    provision:
+    - iopsPerGB: "5"
+      name: iops-foo
+      type: io1
+    - name: gp3
+      type: gp3
+      iops: "6000"
+      throughput: "300"
+    exclude:
+    - sc\d+
+    - bar
+    default: other-bar
+`
+
 		storageClass = `
 ---
 apiVersion: storage.k8s.io/v1
@@ -117,6 +157,34 @@ parameters:
 			Expect(fb.ValuesGet("cloudProviderAws.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
 
+	})
+
+	a := HookExecutionConfigInit(initValuesWithDefaultClusterStorageClass, `{}`)
+
+	Context("Cluster with `global.defaultClusterStorageClass`", func() {
+		BeforeEach(func() {
+			a.BindingContexts.Set(a.GenerateBeforeHelmContext())
+			a.RunHook()
+		})
+
+		It("Default storage class should be overrided by `global.defaultClusterStorageClass`", func() {
+			Expect(a).To(ExecuteSuccessfully())
+			Expect(a.ValuesGet("cloudProviderAws.internal.defaultStorageClass").String()).To(Equal(`default-cluster-sc`))
+		})
+	})
+
+	b := HookExecutionConfigInit(initValuesWithEmptyDefaultClusterStorageClass, `{}`)
+
+	Context("Cluster with empty `global.defaultClusterStorageClass`", func() {
+		BeforeEach(func() {
+			b.BindingContexts.Set(b.GenerateBeforeHelmContext())
+			b.RunHook()
+		})
+
+		It("Default storage class should be `other-bar` if `global.defaultClusterStorageClass` is empty", func() {
+			Expect(b).To(ExecuteSuccessfully())
+			Expect(b.ValuesGet("cloudProviderAws.internal.defaultStorageClass").String()).To(Equal(`other-bar`))
+		})
 	})
 
 })
