@@ -140,6 +140,13 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 	if inClusterMetaConfig.UUID == metaConfig.UUID && bytes.Equal(clusterConfigurationData, inClusterConfigurationData) && bytes.Equal(providerClusterConfigurationData, inClusterProviderClusterConfigurationData) {
 		return CheckStatusInSync, nil
 	}
+	fmt.Println("-------------------MEGA CHECK START----------------------")
+	fmt.Printf("inClusterMetaConfig.UUID == metaConfig.UUID, %s == %s, %t\n", inClusterMetaConfig.UUID, metaConfig.UUID, inClusterMetaConfig.UUID == metaConfig.UUID)
+	fmt.Println("-------------------")
+	fmt.Printf("bytes.Equal(clusterConfigurationData, inClusterConfigurationData), %s == %s, %t", string(clusterConfigurationData), string(inClusterConfigurationData), bytes.Equal(clusterConfigurationData, inClusterConfigurationData))
+	fmt.Println("-------------------")
+	fmt.Printf("bytes.Equal(providerClusterConfigurationData, inClusterProviderClusterConfigurationData), %s == %s, %t", string(providerClusterConfigurationData), string(inClusterProviderClusterConfigurationData), bytes.Equal(providerClusterConfigurationData, inClusterProviderClusterConfigurationData))
+	fmt.Println("-------------------MEGA CHECK END----------------------")
 	return CheckStatusOutOfSync, nil
 }
 
