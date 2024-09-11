@@ -1,0 +1,28 @@
+diff --git a/go.mod b/go.mod
+index 4844357f..516dcb69 100644
+--- a/go.mod
++++ b/go.mod
+@@ -2,7 +2,7 @@ module github.com/cilium/hubble
+
+ go 1.22.2
+
+-require github.com/cilium/cilium v1.16.0
++require github.com/cilium/cilium v1.16.1
+
+ require (
+ 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
+diff --git a/go.sum b/go.sum
+index 9a2d99e0..24c51f43 100644
+--- a/go.sum
++++ b/go.sum
+@@ -8,8 +8,8 @@ github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM
+ github.com/blang/semver/v4 v4.0.0/go.mod h1:IbckMUScFkM3pff0VJDNKRiT6TG/YpiHIM2yvyW5YoQ=
+ github.com/cespare/xxhash/v2 v2.2.0 h1:DC2CZ1Ep5Y4k3ZQ899DldepgrayRUGE6BBZ/cd9Cj44=
+ github.com/cespare/xxhash/v2 v2.2.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
+-github.com/cilium/cilium v1.16.0 h1:5NqA2H/7si4KbiMjzqeH130LTox7F2MrKSrS3lUYUTk=
+-github.com/cilium/cilium v1.16.0/go.mod h1:u/Hggj4kmmYtLvZ+wG2nppabk7wpAFn09Sm+Bo1kGvo=
++github.com/cilium/cilium v1.16.1 h1:7FiLrRJbO3d/RE423FUN0GxhrFDQBYRwr1veHN7uBys=
++github.com/cilium/cilium v1.16.1/go.mod h1:SIurqFNFBU9/sQTPC9tvrOktAMDnQOGPBCSYtsnjxp4=
+ github.com/cilium/ebpf v0.15.0 h1:7NxJhNiBT3NG8pZJ3c+yfrVdHY8ScgKD27sScgjLMMk=
+ github.com/cilium/ebpf v0.15.0/go.mod h1:DHp1WyrLeiBh19Cf/tfiSMhqheEiK8fXFZ4No0P1Hso=
+ github.com/cilium/hive v0.0.0-20240529072208-d997f86e4219 h1:iX4v9lg63iTv8x8MWUMVbeWqtAGcV6yh/w3Zp9sP3ME=

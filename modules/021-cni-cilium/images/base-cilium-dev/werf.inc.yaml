@@ -1,5 +1,5 @@
 # src of image BASE_ALT_DEV_CILIUM in candi/image_versions.yml
-{{- $goVersion := "1.22.6" }}
+{{- $goVersion := "1.22.7" }}
 {{- $protocVersion := "22.3" }}
 {{- $bazelVersions := "3.7.0 3.7.1 3.7.2 6.3.2" }}
 ---
