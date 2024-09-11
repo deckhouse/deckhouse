@@ -301,5 +301,7 @@ properties:
               type: string
             pool:
               type: string
+            allowVolumeExpansion:
+              type: boolean
       defaultStorageClass:
         type: string
