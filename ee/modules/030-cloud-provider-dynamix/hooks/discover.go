@@ -165,7 +165,7 @@ func handleDiscoveryDataVolumeTypes(
 			Name:                 getStorageClassName(volumeType.Name),
 			StorageEndpoint:      volumeType.Name,
 			Pool:                 volumeType.Pools[0],
-			AllowVolumeExpansion: volumeType.AllowVolumeExpansion,
+			AllowVolumeExpansion: true,
 		}
 	}
 
