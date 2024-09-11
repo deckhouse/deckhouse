@@ -5,6 +5,6 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package hooks
 
-// import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
-//
-// var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/030-cloud-provider-dynamix/candi/openapi/instance_class.yaml")
+import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
+
+var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/030-cloud-provider-dynamix/candi/openapi/instance_class.yaml")

@@ -144,6 +144,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/040-node-manager/capi/dynamix
+  to: /deckhouse/modules/040-node-manager/capi/dynamix
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/040-node-manager/capi/vcd
   to: /deckhouse/modules/040-node-manager/capi/vcd
   stageDependencies:
