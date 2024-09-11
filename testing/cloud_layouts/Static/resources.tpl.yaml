@@ -24,6 +24,14 @@ spec:
   user: '${WORKER_0_USER}'
 ---
 apiVersion: deckhouse.io/v1alpha1
+kind: SSHCredentials
+metadata:
+  name: caps-rosa-id
+spec:
+  privateSSHKey: '${b64_SSH_KEY}'
+  user: '${WORKER_ROSA_USER}'
+---
+apiVersion: deckhouse.io/v1alpha1
 kind: StaticInstance
 metadata:
   name: worker-0
@@ -50,6 +58,16 @@ spec:
   credentialsRef:
     kind: SSHCredentials
     name: caps-1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: static-rosa
+spec:
+  address: '${WORKER_ROSA_IP}'
+  credentialsRef:
+    kind: SSHCredentials
+    name: caps-rosa-id
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
