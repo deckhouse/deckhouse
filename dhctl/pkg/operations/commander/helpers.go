@@ -61,7 +61,7 @@ func CheckShouldUpdateCommanderUUID(ctx context.Context, kubeCl *client.Kubernet
 			// if no commander uuid found then should update
 			return true, nil
 		}
-		return false, fmt.Errorf("unable to get cm/%s in ns/%s: %w", manifests.CommanderUUIDCm, manifests.CommanderUUIDCmNamespace)
+		return false, fmt.Errorf("unable to get cm/%s in ns/%s: %w", manifests.CommanderUUIDCm, manifests.CommanderUUIDCmNamespace, err)
 	}
 	return doCheckShouldUpdateCommanderUUID(cm, requiredCommanderUUID)
 }
