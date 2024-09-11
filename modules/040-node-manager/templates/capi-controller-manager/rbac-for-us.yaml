@@ -105,6 +105,9 @@ rules:
       - vcdclustertemplates
       - vcdmachines
       - vcdmachinetemplates
+      - zvirtclusters
+      - zvirtmachines
+      - zvirtmachinetemplates
     verbs:
       - create
       - delete
