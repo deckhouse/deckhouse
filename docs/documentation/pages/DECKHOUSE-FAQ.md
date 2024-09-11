@@ -555,7 +555,8 @@ Follow these steps for manual loading images of modules, connected from the modu
 1. Create an authentication string for `registry.deckhouse.io` using the following command (provide the license key):
 
    ```shell
-   LICENSE_KEY="LICENSE_KEY" base64 -w0 <<EOF
+   LICENSE_KEY='<LICENSE_KEY>'
+   base64 -w0 <<EOF
      {
        "auths": {
          "registry.deckhouse.io": {
@@ -616,11 +617,11 @@ Follow these steps for manual loading images of modules, connected from the modu
 
    ```shell
    d8 mirror modules push \
-     -d /tmp/d8-modules --registry='corp.company.com:5000/deckhouse/modules' \
+     -d /tmp/d8-modules --registry='corp.company.com:5000/sys/deckhouse/modules' \
      --registry-login='<USER>' --registry-password='<PASSWORD>'
    ```
 
-   > Before pushing images, make sure that the path for loading into the registry exists (`/deckhouse/modules` in the example above), and the account being used has write permissions.
+   > Before pushing images, make sure that the path for loading into the registry exists (`/sys/deckhouse/modules` in the example above), and the account being used has write permissions.
 
 1. After uploading the images to the air-gapped registry, edit the `ModuleSource` YAML manifest prepared in step 3:
 
@@ -638,7 +639,7 @@ Follow these steps for manual loading images of modules, connected from the modu
      registry:
        # Specify the authentication string for your registry.
        dockerCfg: <BASE64_REGISTRY_CREDENTIALS>
-       repo: 'corp.company.com:5000/deckhouse/modules'
+       repo: 'corp.company.com:5000/sys/deckhouse/modules'
        scheme: HTTPS
      # Select the appropriate release channel: Alpha, Beta, EarlyAccess, Stable, or RockSolid
      releaseChannel: "Stable"
