@@ -103,10 +103,20 @@ func doDiscover(input *go_hook.HookInput, dc dependency.Container) error {
 
 	input.Values.Set("cloudProviderVsphere.internal.storageClasses", storageClasses)
 
-	if v, ok := input.Values.GetOk("cloudProviderVsphere.storageClass.default"); ok {
-		input.Values.Set("cloudProviderVsphere.internal.defaultStorageClass", v.String())
+	const internalDefaultSCPath = "cloudProviderVsphere.internal.defaultStorageClass"
+
+	globalDefaultClusterStorageClass, ok := input.Values.GetOk("global.defaultClusterStorageClass")
+	if ok {
+		// override module's storageClass.default with global.defaultClusterStorageClass
+		input.LogEntry.Warnf("Override `cloudProviderVsphere.storageClass.default` with `global.defaultClusterStorageClass` %q", globalDefaultClusterStorageClass)
+		input.Values.Set(internalDefaultSCPath, globalDefaultClusterStorageClass)
 	} else {
-		input.Values.Remove("cloudProviderVsphere.internal.defaultStorageClass")
+		// if `global.defaultClusterStorageClass` is not set, then respect module's storageClass.default
+		if def, ok := input.Values.GetOk("cloudProviderVsphere.storageClass.default"); ok {
+			input.Values.Set(internalDefaultSCPath, def.String())
+		} else {
+			input.Values.Remove(internalDefaultSCPath)
+		}
 	}
 
 	return nil

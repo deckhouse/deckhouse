@@ -106,7 +106,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 			})
 		}
 
-		setStorageClassesValues(input.Values, storageClasses, defaultSCName)
+		setStorageClassesValues(input, storageClasses, defaultSCName)
 
 		return nil
 	}
@@ -181,7 +181,7 @@ func handleDiscoveryDataVolumeTypes(
 		return storageClasses[i].Name < storageClasses[j].Name
 	})
 
-	setStorageClassesValues(input.Values, storageClasses, defaultSCName)
+	setStorageClassesValues(input, storageClasses, defaultSCName)
 }
 
 // Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
@@ -206,23 +206,35 @@ func getStorageClassName(value string) string {
 }
 
 func setStorageClassesValues(
-	values *go_hook.PatchableValues,
+	input *go_hook.HookInput,
 	storageClasses []storageClass,
 	defaultSCName string,
 ) {
-	values.Set("cloudProviderZvirt.internal.storageClasses", storageClasses)
+	const internalDefaultSCPath = "cloudProviderZvirt.internal.defaultStorageClass"
 
-	def, ok := values.GetOk("cloudProviderZvirt.storageClass.default")
+	input.Values.Set("cloudProviderZvirt.internal.storageClasses", storageClasses)
+
+	globalDefaultClusterStorageClass, ok := input.Values.GetOk("global.defaultClusterStorageClass")
 	if ok {
-		values.Set("cloudProviderZvirt.internal.defaultStorageClass", def.String())
+		// override module's storageClass.default with global.defaultClusterStorageClass
+		input.LogEntry.Warnf("Override `cloudProviderZvirt.storageClass.default` with `global.defaultClusterStorageClass` %q", globalDefaultClusterStorageClass)
+		input.Values.Set(internalDefaultSCPath, globalDefaultClusterStorageClass)
+		return
+	}
+
+	// if `global.defaultClusterStorageClass` is not set, then respect module's storageClass.default
+	def, ok := input.Values.GetOk("cloudProviderZvirt.storageClass.default")
+	if ok {
+		input.Values.Set(internalDefaultSCPath, def.String())
 		return
 	}
 
 	if defaultSCName != "" {
-		values.Set("cloudProviderZvirt.internal.defaultStorageClass", defaultSCName)
+		input.Values.Set(internalDefaultSCPath, defaultSCName)
 		return
 	}
-	values.Remove("cloudProviderZvirt.internal.defaultStorageClass")
+
+	input.Values.Remove(internalDefaultSCPath)
 }
 
 type storageClass struct {

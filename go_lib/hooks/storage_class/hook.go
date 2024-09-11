@@ -54,12 +54,22 @@ func storageClasses(input *go_hook.HookInput, pathFunc func(path string) string,
 
 	input.Values.Set(pathFunc("internal.storageClasses"), storageClassesFiltered)
 
-	defaultClass := input.Values.Get(pathFunc("storageClass.default")).String()
-	defaultClassPath := pathFunc("internal.defaultStorageClass")
-	if defaultClass != "" {
-		input.Values.Set(defaultClassPath, defaultClass)
+	internalDefaultSCPath := pathFunc("internal.defaultStorageClass")
+	globalDefaultClusterStorageClass := input.Values.Get("global.defaultClusterStorageClass").String()
+
+	if globalDefaultClusterStorageClass != "" {
+		// override module's storageClass.default with global.defaultClusterStorageClass
+		input.LogEntry.Warnf("Override `%s` with `global.defaultClusterStorageClass` %q", pathFunc("storageClass.default"), globalDefaultClusterStorageClass)
+		input.Values.Set(internalDefaultSCPath, globalDefaultClusterStorageClass)
 	} else {
-		input.Values.Remove(defaultClassPath)
+		// if global.defaultClusterStorageClass is not set, respect module's storageClass.default
+		def, ok := input.Values.GetOk(pathFunc("storageClass.default"))
+
+		if ok {
+			input.Values.Set(internalDefaultSCPath, def.String())
+		} else {
+			input.Values.Remove(internalDefaultSCPath)
+		}
 	}
 
 	return nil

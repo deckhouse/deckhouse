@@ -100,7 +100,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 			})
 		}
 
-		setStorageClassesValues(input.Values, storageClasses)
+		setStorageClassesValues(input, storageClasses)
 
 		return nil
 	}
@@ -159,17 +159,27 @@ func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, volumeTypes []v1al
 		return storageClasses[i].Name < storageClasses[j].Name
 	})
 
-	setStorageClassesValues(input.Values, storageClasses)
+	setStorageClassesValues(input, storageClasses)
 }
 
-func setStorageClassesValues(values *go_hook.PatchableValues, storageClasses []storageClass) {
-	values.Set("cloudProviderOpenstack.internal.storageClasses", storageClasses)
+func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageClass) {
+	const internalDefaultSCPath = "cloudProviderOpenstack.internal.defaultStorageClass"
 
-	def, ok := values.GetOk("cloudProviderOpenstack.storageClass.default")
+	input.Values.Set("cloudProviderOpenstack.internal.storageClasses", storageClasses)
+
+	globalDefaultClusterStorageClass, ok := input.Values.GetOk("global.defaultClusterStorageClass")
 	if ok {
-		values.Set("cloudProviderOpenstack.internal.defaultStorageClass", def.String())
+		// override module's storageClass.default with global.defaultClusterStorageClass
+		input.LogEntry.Warnf("Override `cloudProviderOpenstack.storageClass.default` with `global.defaultClusterStorageClass` %q", globalDefaultClusterStorageClass)
+		input.Values.Set(internalDefaultSCPath, globalDefaultClusterStorageClass)
 	} else {
-		values.Remove("cloudProviderOpenstack.internal.defaultStorageClass")
+		// if `global.defaultClusterStorageClass` is not set, then respect module's storageClass.default
+		def, ok := input.Values.GetOk("cloudProviderOpenstack.storageClass.default")
+		if ok {
+			input.Values.Set(internalDefaultSCPath, def.String())
+		} else {
+			input.Values.Remove(internalDefaultSCPath)
+		}
 	}
 }
 

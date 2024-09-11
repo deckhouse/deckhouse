@@ -127,10 +127,21 @@ func storageClasses(input *go_hook.HookInput) error {
 		input.Values.Set("cloudProviderAzure.internal.storageClasses", storageClasses)
 	}
 
-	if input.Values.Exists("cloudProviderAzure.storageClass.default") {
-		input.Values.Set("cloudProviderAzure.internal.defaultStorageClass", input.Values.Get("cloudProviderAzure.storageClass.default").String())
+	const internalDefaultSCPath = "cloudProviderAzure.internal.defaultStorageClass"
+
+	globalDefaultClusterStorageClass, ok := input.Values.GetOk("global.defaultClusterStorageClass")
+	if ok {
+		// override module's storageClass.default with global.defaultClusterStorageClass
+		input.LogEntry.Warnf("Override `cloudProviderAzure.storageClass.default` with `global.defaultClusterStorageClass` %q", globalDefaultClusterStorageClass)
+		input.Values.Set(internalDefaultSCPath, globalDefaultClusterStorageClass)
 	} else {
-		input.Values.Remove("cloudProviderAzure.internal.defaultStorageClass")
+		// if `global.defaultClusterStorageClass` is not set, then respect module's storageClass.default
+		def, ok := input.Values.GetOk("cloudProviderAzure.storageClass.default")
+		if ok {
+			input.Values.Set(internalDefaultSCPath, def.String())
+		} else {
+			input.Values.Remove(internalDefaultSCPath)
+		}
 	}
 
 	return nil

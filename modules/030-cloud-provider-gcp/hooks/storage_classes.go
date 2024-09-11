@@ -100,10 +100,21 @@ func storageClasses(input *go_hook.HookInput) error {
 
 	input.Values.Set("cloudProviderGcp.internal.storageClasses", storageClassesFiltered)
 
-	if input.Values.Exists("cloudProviderGcp.storageClass.default") {
-		input.Values.Set("cloudProviderGcp.internal.defaultStorageClass", input.Values.Get("cloudProviderGcp.storageClass.default").String())
+	const internalDefaultSCPath = "cloudProviderGcp.internal.defaultStorageClass"
+
+	globalDefaultClusterStorageClass, ok := input.Values.GetOk("global.defaultClusterStorageClass")
+	if ok {
+		// override module's storageClass.default with global.defaultClusterStorageClass
+		input.LogEntry.Warnf("Override `cloudProviderGcp.storageClass.default` with `global.defaultClusterStorageClass` %q", globalDefaultClusterStorageClass)
+		input.Values.Set(internalDefaultSCPath, globalDefaultClusterStorageClass)
 	} else {
-		input.Values.Remove("cloudProviderGcp.internal.defaultStorageClass")
+		// if `global.defaultClusterStorageClass` is not set, then respect module's storageClass.default
+		def, ok := input.Values.GetOk("cloudProviderGcp.storageClass.default")
+		if ok {
+			input.Values.Set(internalDefaultSCPath, def.String())
+		} else {
+			input.Values.Remove(internalDefaultSCPath)
+		}
 	}
 
 	return nil

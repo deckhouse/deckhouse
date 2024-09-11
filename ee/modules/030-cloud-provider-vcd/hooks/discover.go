@@ -106,7 +106,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 			})
 		}
 
-		setStorageClassesValues(input.Values, storageClasses, defaultSCName)
+		setStorageClassesValues(input, storageClasses, defaultSCName)
 
 		return nil
 	}
@@ -175,23 +175,35 @@ func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, volumeTypes []v1al
 		return storageClasses[i].Name < storageClasses[j].Name
 	})
 
-	setStorageClassesValues(input.Values, storageClasses, defaultSCName)
+	setStorageClassesValues(input, storageClasses, defaultSCName)
 }
 
-func setStorageClassesValues(values *go_hook.PatchableValues, storageClasses []storageClass, defaultSCName string) {
-	values.Set("cloudProviderVcd.internal.storageClasses", storageClasses)
+func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageClass, defaultSCName string) {
+	const internalDefaultSCPath = "cloudProviderVcd.internal.defaultStorageClass"
 
-	def, ok := values.GetOk("cloudProviderVcd.storageClass.default")
+	input.Values.Set("cloudProviderVcd.internal.storageClasses", storageClasses)
+
+	globalDefaultClusterStorageClass, ok := input.Values.GetOk("global.defaultClusterStorageClass")
 	if ok {
-		values.Set("cloudProviderVcd.internal.defaultStorageClass", def.String())
+		// override module's storageClass.default with global.defaultClusterStorageClass
+		input.LogEntry.Warnf("Override `cloudProviderVcd.storageClass.default` with `global.defaultClusterStorageClass` %q", globalDefaultClusterStorageClass)
+		input.Values.Set(internalDefaultSCPath, globalDefaultClusterStorageClass)
+		return
+	}
+
+	// if `global.defaultClusterStorageClass` is not set, then respect module's storageClass.default
+	def, ok := input.Values.GetOk("cloudProviderVcd.storageClass.default")
+	if ok {
+		input.Values.Set(internalDefaultSCPath, def.String())
 		return
 	}
 
 	if defaultSCName != "" {
-		values.Set("cloudProviderVcd.internal.defaultStorageClass", defaultSCName)
+		input.Values.Set(internalDefaultSCPath, defaultSCName)
 		return
 	}
-	values.Remove("cloudProviderVcd.internal.defaultStorageClass")
+
+	input.Values.Remove(internalDefaultSCPath)
 }
 
 // Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
