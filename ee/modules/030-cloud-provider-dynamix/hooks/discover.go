@@ -100,10 +100,16 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 				defaultSCName = sc.Name
 			}
 
+			allowVolumeExpansion := true
+			if sc.AllowVolumeExpansion != nil {
+				allowVolumeExpansion = *sc.AllowVolumeExpansion
+			}
+
 			storageClasses = append(storageClasses, storageClass{
-				Name:            sc.Name,
-				StorageEndpoint: sc.Parameters["sep"],
-				Pool:            sc.Parameters["pool"],
+				Name:                 sc.Name,
+				StorageEndpoint:      sc.Parameters["sep"],
+				Pool:                 sc.Parameters["pool"],
+				AllowVolumeExpansion: allowVolumeExpansion,
 			})
 		}
 
@@ -156,9 +162,10 @@ func handleDiscoveryDataVolumeTypes(
 		}
 
 		volumeTypesMap[getStorageClassName(volumeType.Name)] = storageClass{
-			Name:            getStorageClassName(volumeType.Name),
-			StorageEndpoint: volumeType.Name,
-			Pool:            volumeType.Pools[0],
+			Name:                 getStorageClassName(volumeType.Name),
+			StorageEndpoint:      volumeType.Name,
+			Pool:                 volumeType.Pools[0],
+			AllowVolumeExpansion: volumeType.AllowVolumeExpansion,
 		}
 	}
 
@@ -177,9 +184,10 @@ func handleDiscoveryDataVolumeTypes(
 	storageClasses := make([]storageClass, 0, len(volumeTypes))
 	for name, sp := range volumeTypesMap {
 		sc := storageClass{
-			StorageEndpoint: sp.StorageEndpoint,
-			Pool:            sp.Pool,
-			Name:            name,
+			StorageEndpoint:      sp.StorageEndpoint,
+			Pool:                 sp.Pool,
+			Name:                 name,
+			AllowVolumeExpansion: sp.AllowVolumeExpansion,
 		}
 		storageClasses = append(storageClasses, sc)
 	}
@@ -233,7 +241,8 @@ func setStorageClassesValues(
 }
 
 type storageClass struct {
-	Name            string `json:"name"`
-	StorageEndpoint string `json:"storageEndpoint"`
-	Pool            string `json:"pool"`
+	Name                 string `json:"name"`
+	StorageEndpoint      string `json:"storageEndpoint"`
+	Pool                 string `json:"pool"`
+	AllowVolumeExpansion bool   `json:"allowVolumeExpansion"`
 }

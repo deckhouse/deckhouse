@@ -281,6 +281,8 @@ properties:
                   type: array
                   items:
                     type: string
+                allowVolumeExpansion:
+                  type: boolean
                 isEnabled:
                   type: boolean
                 isDefault:
