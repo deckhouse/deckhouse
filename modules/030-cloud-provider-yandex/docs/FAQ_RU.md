@@ -47,18 +47,10 @@ reserved: true
 
 ## Как назначить произвольный StorageClass используемым по умолчанию?
 
-Чтобы назначить произвольный StorageClass используемым по умолчанию, выполните следующие шаги:
-
-1. Добавьте на StorageClass аннотацию `storageclass.kubernetes.io/is-default-class='true'`:
+Чтобы назначить произвольный StorageClass используемым по умолчанию для ваших PVC, укажите его имя в параметре [defaultClusterStorageClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-defaultclusterstorageclass) модуля `global`. Обратите внимание, что после этого аннотация `storageclass.kubernetes.io/is-default-class='true'` снимется со StorageClass'а, который ранее был указан как используемый по умолчанию.
 
    ```shell
-   kubectl annotate sc $STORAGECLASS storageclass.kubernetes.io/is-default-class='true'
-   ```
-
-2. Укажите имя StorageClass'а в параметре [storageClass.default](configuration.html#parameters-storageclass-default) в настройках модуля `cloud-provider-yandex`. Обратите внимание, что после этого аннотация `storageclass.kubernetes.io/is-default-class='true'` снимется со StorageClass'а, который ранее был указан в настройках модуля как используемый по умолчанию.
-
-   ```shell
-   kubectl edit mc cloud-provider-yandex
+   kubectl edit mc global
    ```
 
 ## Добавление CloudStatic-узлов в кластер
