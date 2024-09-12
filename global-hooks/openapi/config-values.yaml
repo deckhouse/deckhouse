@@ -20,8 +20,10 @@ properties:
     default: null
     description: |
       The storage class to use as default for entire cluster.
-        * If defined, all newly created PVCs will use this storage class. Also note, that this value will override any value in `cloud-provider-*.storageClass` parameter.
+        * If defined, all newly created PVCs will use this storage class.
         * This parameter is applied during module activation.
+      **Pay attention to the following:**
+        * This value will **OVERRIDE any value** in `cloud-provider-*.storageClass.default` parameters.
   highAvailability:
     type: boolean
     description: |
