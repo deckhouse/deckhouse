@@ -42,7 +42,7 @@ import (
 	libmirrorCtx "github.com/deckhouse/deckhouse-cli/pkg/libmirror/contexts"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/mirror"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/imgbundle/mirror"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
