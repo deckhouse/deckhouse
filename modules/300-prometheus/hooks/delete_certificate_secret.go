@@ -15,51 +15,30 @@
 package hooks
 
 import (
-    corev1 "k8s.io/api/core/v1"
-    "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-    "github.com/flant/addon-operator/pkg/module_manager/go_hook"
-    "github.com/flant/addon-operator/sdk"
-    "github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-    Queue: "/modules/prometheus/delete_certificate_secret",
-    Kubernetes: []go_hook.KubernetesConfig{
-        {
-            Name:       "secrets",
-            ApiVersion: "v1",
-            Kind:       "Secret",
-            FilterFunc: applySecretFilter,
-            NamespaceSelector: &types.NamespaceSelector{
-                NameSelector: &types.NameSelector{
-                    MatchNames: []string{"d8-monitoring"},
-                },
-            },
-        },
-    },
-}, handleCertificateDeletion)
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+}, removeSecretGrfana)
 
-func applySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-    var secret corev1.Secret
-
-    err := sdk.FromUnstructured(obj, &secret)
-    if err != nil {
-        return nil, err
-    }
-
-    return secret.Name, nil
+type Secret struct {
+	apiVersion string
+	kind       string
+	namespace  string
+	name       string
 }
 
-func handleCertificateDeletion(input *go_hook.HookInput) error {
-    secretSnap := input.Snapshots["secrets"]
+func removeSecretGrfana(input *go_hook.HookInput) error {
+	secret := Secret{
+		apiVersion: "v1",
+		kind:       "Secret",
+		namespace:  "d8-monitoring",
+		name:       "ingress-tls-v10",
+	}
 
-    for _, secretName := range secretSnap {
-        name := secretName.(string)
-        if name == "ingress-tls-v10" {
-            input.PatchCollector.Delete("v1", "Secret", "d8-monitoring", name)
-        }
-    }
+	input.PatchCollector.Delete(secret.apiVersion, secret.kind, secret.namespace, secret.name)
 
-    return nil
+	return nil
 }
