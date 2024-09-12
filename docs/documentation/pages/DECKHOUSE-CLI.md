@@ -8,7 +8,9 @@ Deckhouse CLI is a command line interface for cluster management created by the 
 
 On the command line, the utility can be invoked using the `d8` alias. All the commands are grouped by their function:
 
-> The `d8 d` and `d8 mirror` command groups are not available for Community Edition (CE) and Basic Edition (BE).
+{% alert level="info" %}
+The `d8 d` and `d8 mirror` command groups are not available for Community Edition (CE) and Basic Edition (BE).
+{% endalert %}
 
 * `d8 k` — the `kubectl` command family.  
     For example, `d8 k get pods` is the same as `kubectl get pods`.
@@ -20,8 +22,8 @@ On the command line, the utility can be invoked using the `d8` alias. All the co
 
   Usage scenarios:
 
-  - [Manually uploading images to an air-gapped registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#manually-uploading-images-to-an-air-gapped-registry)
-  - [Manually uploading images of Deckhouse modules into an air-gapped registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#manually-uploading-images-of-deckhouse-modules-into-an-air-gapped-registry)
+  - [Manually uploading images to an air-gapped registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#manually-uploading-images-to-an-air-gapped-registry).
+  - [Manually uploading images of Deckhouse modules into an air-gapped registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#manually-uploading-images-of-deckhouse-modules-into-an-air-gapped-registry).
 
 * `d8 v` — the set of commands for managing virtual machines created by [Deckhouse Virtualization Platform](/modules/virtualization/stable/).  
     For example, the `d8 virtualization console` command execs you into the VM console.
