@@ -62,6 +62,7 @@ function prepare_environment() {
   export AWS_DEFAULT_REGION="$LAYOUT_AWS_DEFAULT_REGION"
   export INITIAL_IMAGE_TAG="$INITIAL_IMAGE_TAG"
   export DECKHOUSE_IMAGE_TAG="$DECKHOUSE_IMAGE_TAG"
+  export PREFIX="$GITHUB_RUN_NUMBER"
 
   if [[ -z "$KUBERNETES_VERSION" ]]; then
     # shellcheck disable=SC2016
@@ -96,7 +97,7 @@ function prepare_environment() {
       <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
   env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-      envsubst '${DECKHOUSE_DOCKERCFG} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI}' \
+      envsubst '${DECKHOUSE_DOCKERCFG} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${PREFIX}' \
       <"$cwd/infra.tf.tpl" >"$cwd/infra.tf"
 
 }

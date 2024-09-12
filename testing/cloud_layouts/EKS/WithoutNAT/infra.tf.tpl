@@ -37,19 +37,16 @@ provider "aws" {
 data "aws_availability_zones" "available" {}
 
 locals {
-  cluster_name = "e2e-eks-${random_string.suffix.result}"
+  cluster_name = "e2e-eks-${KUBERNETES_VERSION}-${PREFIX}"
 }
 
-resource "random_string" "suffix" {
-  length  = 8
-  special = false
-}
+
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "3.19.0"
 
-  name = "${random_string.suffix.result}-vpc"
+  name = local.cluster_name
 
   cidr = "10.0.0.0/16"
   azs  = slice(data.aws_availability_zones.available.names, 0, 3)
