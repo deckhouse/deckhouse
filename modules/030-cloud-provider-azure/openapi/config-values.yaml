@@ -19,6 +19,9 @@ properties:
           If the parameter is omitted, the default StorageClass is either:
           * Existing default StorageClass (that has the annotation [storageclass.kubernetes.io/is-default-class: "true"](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/#changing-the-default-storageclass)).
           * The first (in lexicographic order) StorageClass [created by the module](#storage).
+
+          > **ATTENTION!** If the [defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass)
+          parameter is specified in the `global` module settings, then **its value will be used by default**, **OVERRIDING** this one.
         x-examples:
         - "pd-ssd-not-replicated"
       provision:

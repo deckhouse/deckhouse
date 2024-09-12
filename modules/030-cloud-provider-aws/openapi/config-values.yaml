@@ -80,5 +80,8 @@ properties:
             * If the parameter is omitted, the default StorageClass is either:
               * an arbitrary StorageClass present in the cluster that has the default annotation;
               * the first (in lexicographic order) StorageClass of those created by the module.
+
+          > **ATTENTION!** If the [defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass)
+          parameter is specified in the `global` module settings, then **its value will be used by default**, **OVERRIDING** this one.
         x-examples:
         - "gp3"

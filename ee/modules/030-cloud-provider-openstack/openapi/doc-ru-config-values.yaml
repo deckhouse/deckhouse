@@ -104,7 +104,7 @@ properties:
             * присутствующий в кластере произвольный StorageClass с default-аннотацией;
             * первый StorageClass из создаваемых модулем (в порядке из OpenStack).
 
-          > **Обратите внимание:** Если задан параметр [defaultClusterStorageClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-defaultclusterstorageclass)
+          > **Внимание!** Если задан параметр [defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass)
           в настройках модуля `global`, то именно **его значение будет использоваться по-умолчанию**, **ПЕРЕКРЫВАЯ** указанное здесь.
       topologyEnabled:
         description: |

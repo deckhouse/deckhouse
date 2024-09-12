@@ -12,3 +12,6 @@ properties:
           Если параметр не задан, фактическим StorageClass по умолчанию будет следующим:
           * присутствующий в кластере StorageClass по умолчанию (имеющий аннотацию ([storageclass.kubernetes.io/is-default-class: "true"](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/#changing-the-default-storageclass)));
           * первый StorageClass из создаваемых модулем (в порядке из таблицы выше).
+
+          > **Внимание!** Если задан параметр [defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass)
+          в настройках модуля `global`, то именно **его значение будет использоваться по-умолчанию**, **ПЕРЕКРЫВАЯ** указанное здесь.

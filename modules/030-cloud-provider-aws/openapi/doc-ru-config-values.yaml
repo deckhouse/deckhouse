@@ -39,3 +39,6 @@ properties:
             * Если не задан, фактическим StorageClass по умолчанию будет:
               * присутствующий в кластере произвольный StorageClass с default-аннотацией;
               * лексикографически первый StorageClass из создаваемых модулем.
+
+          > **Внимание!** Если задан параметр [defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass)
+          в настройках модуля `global`, то именно **его значение будет использоваться по-умолчанию**, **ПЕРЕКРЫВАЯ** указанное здесь.

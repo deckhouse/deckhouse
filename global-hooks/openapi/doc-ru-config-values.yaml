@@ -3,7 +3,7 @@ properties:
   storageClass:
     deprecated: true
     description: |
-      Устаревший параметр. Теперь его значение задается в `global.modules.storageClass`.
+      Устаревший параметр. Теперь его значение задается в [global.modules.storageClass](#parameters-modules-storageclass).
 
       Имя storage class, который будет использоваться для всех компонентов Deckhouse (Prometheus, Grafana, OpenVPN и т. д.).
         * Если значение не указано, используется автоматически определяемый `global.discovery.defaultStorageClass`. Если `global.discovery.defaultStorageClass` не определен, используется `emptyDir`.
