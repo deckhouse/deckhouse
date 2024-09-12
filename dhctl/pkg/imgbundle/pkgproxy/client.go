@@ -17,12 +17,13 @@ package pkgproxy
 import (
 	"context"
 	"fmt"
+	"io"
+	"path/filepath"
+
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
-	"io"
-	"path/filepath"
 )
 
 type Client struct {
@@ -43,20 +44,22 @@ func (c *Client) GetPackage(ctx context.Context, log log.Logger, _ *registry.Cli
 
 	layout, err := layout.FromPath(layoutPath)
 	if err != nil {
-		return 0, nil, fmt.Errorf("error: %w", err)
+		return 0, nil, fmt.Errorf("error creating layout from path: %w", err)
 	}
 
 	index, err := layout.ImageIndex()
 	if err != nil {
-		return 0, nil, fmt.Errorf("error: %w", err)
+		return 0, nil, fmt.Errorf("error getting image index: %w", err)
 	}
 
-	image, err := index.Image(v1.Hash{
-		Algorithm: "sha256",
-		Hex:       digest,
-	})
+	hash, err := v1.NewHash(digest)
 	if err != nil {
-		return 0, nil, fmt.Errorf("error: %w", err)
+		return 0, nil, fmt.Errorf("error parsing image digest: %w", err)
+	}
+
+	image, err := index.Image(hash)
+	if err != nil {
+		return 0, nil, fmt.Errorf("error getting image by image digest: %w", err)
 	}
 
 	layers, err := image.Layers()
