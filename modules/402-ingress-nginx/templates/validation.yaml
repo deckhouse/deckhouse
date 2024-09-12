@@ -1,15 +1,9 @@
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 {{- $kubernetesVersion := .Values.global.discovery.kubernetesVersion }}
-{{- if semverCompare ">= 1.26" $kubernetesVersion }}
 ---
 {{- $policyName := "ingressnginxcontroller-settings.deckhouse.io" }}
 {{- $inlets := list "LoadBalancer"  "LoadBalancerWithProxyProtocol" "HostPort" "HostPortWithProxyProtocol" "HostWithFailover" }}
-{{- if semverCompare ">= 1.30" $kubernetesVersion }}
-apiVersion: admissionregistration.k8s.io/v1
-{{- else if semverCompare ">= 1.28" $kubernetesVersion }}
-apiVersion: admissionregistration.k8s.io/v1beta1
-{{- else }}
-apiVersion: admissionregistration.k8s.io/v1alpha1
-{{- end }}
+{{- include "getApiVersion" . }}
 kind: ValidatingAdmissionPolicy
 metadata:
   name: {{ $policyName }}
@@ -32,13 +26,7 @@ spec:
 {{- end }}
 {{- end }}
 ---
-{{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
-apiVersion: admissionregistration.k8s.io/v1
-{{- else if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
-apiVersion: admissionregistration.k8s.io/v1beta1
-{{- else }}
-apiVersion: admissionregistration.k8s.io/v1alpha1
-{{- end }}
+{{- include "getApiVersion" . }}
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   name: {{ $policyName }}

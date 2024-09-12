@@ -1,13 +1,3 @@
-{{ define "getApiVersion" }}
-  {{- if .Capabilities.APIVersions.Has "admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy" }}
-apiVersion: admissionregistration.k8s.io/v1
-  {{- else if .Capabilities.APIVersions.Has "admissionregistration.k8s.io/v1beta1/ValidatingAdmissionPolicy" }}
-  apiVersion: admissionregistration.k8s.io/v1beta1
-  {{- else }}
-apiVersion: admissionregistration.k8s.io/v1alpha1
-  {{- end }}
-{{- end }}
-
 {{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 {{- $policyName := "system-ns.deckhouse.io" }}
 ---
@@ -93,7 +83,6 @@ spec:
     objectSelector:
       matchLabels:
         heritage: deckhouse
-{{- end }}
 
 ---
 {{- $policyName := "update-policy-label-objects.deckhouse.io" }}
@@ -162,4 +151,5 @@ spec:
   policyName: {{ $policyName }}
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   validationActions: [Deny, Audit]
+{{- end }}
 {{- end }}
