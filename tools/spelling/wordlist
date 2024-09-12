@@ -291,6 +291,7 @@ deckhouse
 Deckhouse
 DeckhouseRelease
 DeckhouseReleases
+defaultClusterStorageClass
 DefaultContainerResourcePolicy
 descheduled
 descheduler
