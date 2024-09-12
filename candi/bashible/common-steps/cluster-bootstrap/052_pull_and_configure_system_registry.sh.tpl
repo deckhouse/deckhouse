@@ -47,9 +47,11 @@ bb-sync-file "$registry_pki_path/ca.crt" - << EOF
 {{ .registry.internalRegistryAccess.ca.cert }}
 EOF
 
+{{- if eq .registry.registryMode "Proxy" }}
 bb-sync-file "$registry_pki_path/upstream-registry-ca.crt" - << EOF
 {{ .registry.upstreamRegistry.ca }}
 EOF
+{{- end }}
 
 # Auth certs
 if [ ! -f "$registry_pki_path/auth.key" ]; then

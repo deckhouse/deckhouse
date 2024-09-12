@@ -52,9 +52,11 @@ cat <<EOF > "$IGNITER_DIR/ca.key"
 {{ .registry.internalRegistryAccess.ca.key }}
 EOF
 
+{{- if eq .registry.registryMode "Proxy" }}
 cat <<EOF > "$IGNITER_DIR/upstream-registry-ca.crt"
 {{ .registry.upstreamRegistry.ca }}
 EOF
+{{- end }}
 
 # Auth certs
 if [ ! -f "$IGNITER_DIR/auth.key" ]; then
