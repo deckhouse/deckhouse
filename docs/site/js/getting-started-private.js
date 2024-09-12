@@ -45,7 +45,7 @@ $(document).ready(function () {
     if (noProxyAddressList && noProxyAddressList.length > 0) {
       noProxyAddressList = ('["' + noProxyAddressList.split(',').join('", "') + '"]').replaceAll('""', '"')
     } else {
-      noProxyAddressList = '<NO_PROXY_LIST_WITH_INTERNAL_NETWORK_CIDRS>';
+      noProxyAddressList = '<NO_PROXY_LIST>';
       }
     update_parameter(noProxyAddressList, 'noProxy', '<NO_PROXY_LIST>', null, '[config-yml]');
 

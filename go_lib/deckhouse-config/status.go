@@ -22,9 +22,17 @@ import (
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
+	dynamic_extender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/dynamically_enabled"
+	kube_config_extender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/kube_config"
+	script_extender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/script_enabled"
+	static_extender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/static"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
+	bootstrapped_extender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
+	d7s_version_extender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
+	k8s_version_extender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
@@ -55,6 +63,7 @@ func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.Module
 	// Figure out additional statuses for known modules.
 	statusMsgs := make([]string, 0)
 	msgs := make([]string, 0)
+	moduleName := module.GetName()
 
 	mod := s.moduleManager.GetModule(module.GetName())
 	// return error if module manager doesn't have such a module
@@ -64,8 +73,11 @@ func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.Module
 		}
 	}
 
+	moduleEnabled := s.moduleManager.IsModuleEnabled(moduleName)
+	modeDescriptor := "off"
 	// Calculate state and status.
-	if s.moduleManager.IsModuleEnabled(module.GetName()) {
+	if moduleEnabled {
+		modeDescriptor = "on"
 		lastHookErr := mod.GetLastHookError()
 		if lastHookErr != nil {
 			statusMsgs = append(statusMsgs, fmt.Sprintf("HookError: %v", lastHookErr))
@@ -89,7 +101,7 @@ func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.Module
 				if cfg != nil {
 					cfgStatus := s.ForConfig(cfg)
 					if len(cfgStatus.Message) > 0 {
-						msgs = append(msgs, "Info: check module configuration status")
+						msgs = append(msgs, "check module configuration status")
 					}
 				}
 
@@ -100,48 +112,60 @@ func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.Module
 				statusMsgs = append(statusMsgs, "OnStartUp hooks are completed")
 
 			case modules.WaitForSynchronization:
-				statusMsgs = append(statusMsgs, "Synchronizations tasks are running")
+				statusMsgs = append(statusMsgs, "Synchronization tasks are running")
 
 			case modules.HooksDisabled:
 				statusMsgs = append(statusMsgs, "Pending: hooks are disabled")
 			}
 		}
-	} else {
-		// Special case: no enabled flag in ModuleConfig or ModuleConfig is in terminating stage, module disabled by bundle.
-		if cfg == nil || (cfg != nil && (cfg.Spec.Enabled == nil || cfg.DeletionTimestamp != nil)) {
-			// for external modules it makes sense to notify that they must be explicitly enabled via module configs
-			if module.Properties.Source != "Embedded" {
-				msgs = append(msgs, "Info: apply module config to enable")
-			} else {
-				// Consider merged static enabled flags as '*Enabled flags from the bundle'.
-				enabledMsg := "disabled"
-				// TODO(yalosev): think about it
-				if s.moduleManager.IsModuleEnabled(mod.GetName()) {
-					enabledMsg = "enabled"
-				}
-				msgs = append(msgs, fmt.Sprintf("Info: %s by %s bundle", enabledMsg, bundleName))
-			}
+	}
+
+	updatedBy, updatedByErr := s.moduleManager.GetUpdatedByExtender(moduleName)
+	var actor, additionalInfo string
+
+	switch extenders.ExtenderName(updatedBy) {
+	case "", static_extender.Name:
+		actor = fmt.Sprintf("%s bundle", bundleName)
+		if !moduleEnabled && module.Properties.Source != "Embedded" {
+			additionalInfo = ", apply module config to enable"
 		}
 
-		// Special case: explicitly enabled by the config but effectively disabled by the ModuleManager.
-		if cfg != nil {
-			if cfg.Spec.Enabled != nil {
-				if *cfg.Spec.Enabled {
-					if scriptResult := mod.GetEnabledScriptResult(); scriptResult != nil {
-						if !*scriptResult {
-							msgs = append(msgs, "Info: turned off by 'enabled'-script, refer to the module documentation")
-						}
-					}
-				} else {
-					msgs = append(msgs, "Info: disabled by module config")
-				}
-			}
-		}
+	case dynamic_extender.Name:
+		actor = "dynamic global hook"
+
+	case kube_config_extender.Name:
+		actor = "module config"
+
+	case script_extender.Name:
+		actor = "'enabled'-script"
+		additionalInfo = ", refer to the module's documentation"
+
+	case d7s_version_extender.Name:
+		actor = "DechouseVersion constraint"
+		_, errMsg := d7s_version_extender.Instance().Filter(moduleName, map[string]string{})
+		additionalInfo = fmt.Sprintf(", %s", errMsg)
+
+	case bootstrapped_extender.Name:
+		actor = "ClusterBoostrapped constraint"
+		additionalInfo = ", the cluster isn't bootstrapped yet"
+
+	case k8s_version_extender.Name:
+		actor = "KubernetesVersion constraint"
+		_, errMsg := k8s_version_extender.Instance().Filter(moduleName, map[string]string{})
+		additionalInfo = fmt.Sprintf(", %s", errMsg)
+	default:
+		actor = updatedBy
+	}
+
+	if updatedByErr != nil {
+		msgs = append(msgs, fmt.Sprintf("couldn't get the module's additional info: %s", updatedByErr))
+	} else {
+		msgs = append(msgs, fmt.Sprintf("turned %s by %s%s", modeDescriptor, actor, additionalInfo))
 	}
 
 	return ModuleStatus{
 		Status:     strings.Join(statusMsgs, ", "),
-		Message:    strings.Join(msgs, ", "),
+		Message:    fmt.Sprintf("Info: %s", strings.Join(msgs, ", ")),
 		HooksState: mod.GetHookErrorsSummary(),
 	}
 }

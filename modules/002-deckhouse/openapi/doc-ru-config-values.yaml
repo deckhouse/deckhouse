@@ -54,7 +54,7 @@ properties:
         description: |
           Настройка оповещений о запланированном обновлении Deckhouse.
 
-          Имеет эффект **только** при установленном [автоматическом режиме](#parameters-update-mode) обновлений и **только** при смене минорных версий Deckhouse (при изменении patch-версий настройки параметра `notifications` игнорируются).
+          Имеет эффект **только** при установленном [автоматическом режиме](#parameters-update-mode) обновлений.
         properties:
           webhook:
             description: |
@@ -69,18 +69,18 @@ properties:
               ```json
               {
                 "subject":"Deckhouse",
-                "version": "1.36",
+                "version": "1.36.0",
                 "requirements":  {"k8s": "1.20.0"},
                 "changelogLink": "https://github.com/deckhouse/deckhouse/changelog/1.36.md",
                 "applyTime": "2023-01-01T14:30:00Z00:00",
-                "message": "New Deckhouse Release 1.36 is available. Release will be applied at: Friday, 01-Jan-23 14:30:00 UTC"
+                "message": "New Deckhouse Release 1.36.0 is available. Release will be applied at: Friday, 01-Jan-23 14:30:00 UTC"
               }
               ```
 
               Описание полей POST-запроса:
               - `subject` — строка, тип события обновления. Возможные значения: `Deckhouse`, `Module`;
               - `moduleName` — строка, имя модуля. Устанавливается только если `subject: Module`
-              - `version` — строка, номер минорной версии;
+              - `version` — строка в формате x.y.z (семантическое версионирование);
               - `requirements` — объект, требования к версии;
               - `changelogLink` — строка, ссылка на список изменений (changelog) минорной версии;
               - `applyTime` — строка, дата и время запланированного обновления (с учетом установленных окон обновлений) в формате `RFC3339`;
@@ -124,6 +124,11 @@ properties:
                     Токен для авторизации на webhook.
 
                     Токен будет в заголовке `Authorization` в формате `Bearer <token>`.
+          releaseType:
+            description: |
+              Определяет тип версии, о которой будет отправлено оповещение:
+              - `Minor` — только для обновления минорной версии.
+              - `All` — для любых обновлений, включая обновление патч-версии.
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.

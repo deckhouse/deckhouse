@@ -17,6 +17,8 @@ limitations under the License.
 package template
 
 import (
+	"slices"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -59,15 +61,15 @@ func (nu NodeUserSpec) IsEqual(newSpec NodeUserSpec) bool {
 		return false
 	}
 
-	if !slicesIsEqual(nu.NodeGroups, newSpec.NodeGroups) {
+	if !slices.Equal(nu.NodeGroups, newSpec.NodeGroups) {
 		return false
 	}
 
-	if !slicesIsEqual(nu.SshPublicKeys, newSpec.SshPublicKeys) {
+	if !slices.Equal(nu.SshPublicKeys, newSpec.SshPublicKeys) {
 		return false
 	}
 
-	if !slicesIsEqual(nu.ExtraGroups, newSpec.ExtraGroups) {
+	if !slices.Equal(nu.ExtraGroups, newSpec.ExtraGroups) {
 		return false
 	}
 
