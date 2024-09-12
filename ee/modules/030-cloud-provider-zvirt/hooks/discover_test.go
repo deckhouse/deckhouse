@@ -178,7 +178,7 @@ volumeBindingMode: WaitForFirstConsumer
  	},
     {
       "name": "D3",
-      "isEnabled": true,
+      "isEnabled": true
  	},
   ]
 }`
@@ -219,11 +219,13 @@ data:
 [
          {
             "name": "default",
-            "storageDomain": "SAS"
+            "storageDomain": "SAS",
+            "allowVolumeExpansion": false
           },
           {
             "name": "hdd",
-            "storageDomain": "HDD"
+            "storageDomain": "HDD",
+            "allowVolumeExpansion": false
           }
 ]
 `))
@@ -243,11 +245,13 @@ data:
 [
          {
             "name": "default",
-            "storageDomain": "SAS"
+            "storageDomain": "SAS",
+            "allowVolumeExpansion": false
           },
           {
             "name": "hdd",
-            "storageDomain": "HDD"
+            "storageDomain": "HDD",
+            "allowVolumeExpansion": false
           }
 ]
 `))
@@ -281,11 +285,13 @@ data:
 [
           {
             "name": "default",
-            "storageDomain": "SAS"
+            "storageDomain": "SAS",
+            "allowVolumeExpansion": false
           },
           {
             "name": "hdd",
-            "storageDomain": "HDD"
+            "storageDomain": "HDD",
+            "allowVolumeExpansion": false
           }
 ]
 `))
@@ -306,11 +312,13 @@ data:
 [
           {
             "name": "d1",
-            "storageDomain": "D1"
+            "storageDomain": "D1",
+            "allowVolumeExpansion": true
           },
           {
             "name": "d3",
-            "storageDomain": "D3"
+            "storageDomain": "D3",
+            "allowVolumeExpansion": true
           }
 ]
 `))
@@ -345,7 +353,8 @@ cloudProviderZvirt:
 [
           {
             "name": "d1",
-            "storageDomain": "D1"
+            "storageDomain": "D1",
+            "allowVolumeExpansion": true
           }
 ]
 `))
