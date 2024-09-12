@@ -2,31 +2,31 @@
 title: "The user-authz module"
 ---
 
-The module generates role-based access model objects, based on the standard Kubernetes RBAC mechanism. The module creates a set of cluster roles (`ClusterRole`) suitable for most user and group access management tasks.
+The module generates role-based access model objects based on the standard Kubernetes RBAC mechanism. The module creates a set of cluster roles (`ClusterRole`) suitable for most user and group access management tasks.
 
 {% alert level="warning" %}
-Starting from Deckhouse Kubernetes Platform v1.64, the new role-based access model has been implemented in the module. The old role-based access model will continue to operate but will no longer be supported in the future.
+Starting from Deckhouse Kubernetes Platform v1.64, the module features a new role-based access model. The old role-based access model will continue to operate but support for it will be discontinued in the future.
 
-The new role-based access model is incompatible to the old one.
+The new role-based access model is incompatible with the old one.
 {% endalert %}
 
 {% alert level="warning" %}
-The documentation of the module implies the use of the [new role-based](#the-new-role-based-model), unless otherwise specified.
+The documentation of the module implies that you use the [new role-based model](#the-new-role-based-model), unless specified otherwise.
 {% endalert %}
 
-The module implements a role-based access model based on the standard RBAC mechanism of Kubernetes. It creates a set of cluster roles (`ClusterRole`) suitable for most user and group access management tasks.
+The module implements a role-based access model based on the standard RBAC Kubernetes mechanism. It creates a set of cluster roles (`ClusterRole`) suitable for most user and group access management tasks.
 
 ## The new role-based model
 
-Unlike the [obsolete DKP role-based](#the-obsolete-role-based-model), the new role-based does not use `ClusterAuthorizationRule` and `AuthorizationRule` resources. All access rights is configured in the standard way for RBAC Kubernetes: by creating `RoleBinding` or `ClusterRoleBinding` resources, specifying one of the roles prepared by the `user-authz` module in them.
+Unlike the [obsolete DKP role-based model](#the-obsolete-role-based-model), the new role-based one does not use `ClusterAuthorizationRule` and `AuthorizationRule` resources. All access rights are configured in the standard Kubernetes RBAC way, i.e., by creating `RoleBinding` or `ClusterRoleBinding` resources and specifying one of the roles prepared by the `user-authz` module in them.
 
-The module creates special aggregated cluster roles (`ClusterRole`). By using these roles in `RoleBinding` or `ClusterRoleBinding`, you can accomplish the following tasks:
-- Manage access to modules of a specific [scope](#scopes-of-the-role-based-model) of application.
+The module creates special aggregated cluster roles (`ClusterRole`). By using these roles in `RoleBinding` or `ClusterRoleBinding`, you can do the following:
+- Manage access to modules of a specific [scope](#scopes-of-the-role-based-model).
 
-  For example, to allow a network administrator to configure *network* modules (such as `cni-cilium`, `ingress-nginx`, `istio`, etc.), the `d8:manage:networking:manager` role can be used in `ClusterRoleBinding`.
+  For example, you can use the `d8:manage:networking:manager` role in `ClusterRoleBinding` to allow a network administrator to configure *network* modules (such as `cni-cilium`, `ingress-nginx`, `istio`, etc.).
 - Manage access to *user* resources of modules within the namespace.
 
-  For example, the use of the role `d8:use:role:manager` in `RoleBinding` will allow for deleting/creating/editing [PodLoggingConfig](../460-log-shipper/cr.html#podloggingconfig) resource in the namespace, but will not grant access to cluster-wide resources [ClusterLoggingConfig](../460-log-shipper/cr.html#clusterloggingconfig) and [ClusterLogDestination](../460-log-shipper/cr.html#clusterlogdestination) of the `log-shipper` module, nor will it allow for configuring the `log-shipper` module itself.
+  For example, the `d8:use:role:manager` role in `RoleBinding` enables deleting/creating/editing the [PodLoggingConfig](../460-log-shipper/cr.html#podloggingconfig) resource in the namespace. At the same time, it does not grant access to the cluster-wide [ClusterLoggingConfig](../460-log-shipper/cr.html#clusterloggingconfig) and [ClusterLogDestination](../460-log-shipper/cr.html#clusterlogdestination) resources of the `log-shipper` module, nor does it allow configuration of the `log-shipper` module itself.
 
 The roles created by the module are divided into two classes:
 - [Use roles](#use-roles) — for assigning rights to users (such as application developers) **in a specific namespace**.
