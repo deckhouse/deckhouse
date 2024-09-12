@@ -159,28 +159,29 @@ func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, volumeTypes []v1al
 		return storageClasses[i].Name < storageClasses[j].Name
 	})
 
-	setStorageClassesValues(input, storageClasses)
+	// setStorageClassesValues(input, storageClasses)
+	input.Values.Set("cloudProviderOpenstack.internal.storageClasses", storageClasses)
 }
 
 func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageClass) {
-	const internalDefaultSCPath = "cloudProviderOpenstack.internal.defaultStorageClass"
+	// const internalDefaultSCPath = "cloudProviderOpenstack.internal.defaultStorageClass"
 
 	input.Values.Set("cloudProviderOpenstack.internal.storageClasses", storageClasses)
 
-	globalDefaultClusterStorageClass := input.Values.Get("global.defaultClusterStorageClass").String()
-	if globalDefaultClusterStorageClass != "" {
-		// override module's storageClass.default with global.defaultClusterStorageClass
-		input.LogEntry.Warnf("Override `cloudProviderOpenstack.storageClass.default` with `global.defaultClusterStorageClass` %q", globalDefaultClusterStorageClass)
-		input.Values.Set(internalDefaultSCPath, globalDefaultClusterStorageClass)
-	} else {
-		// if `global.defaultClusterStorageClass` is not set, then respect module's storageClass.default
-		def, ok := input.Values.GetOk("cloudProviderOpenstack.storageClass.default")
-		if ok {
-			input.Values.Set(internalDefaultSCPath, def.String())
-		} else {
-			input.Values.Remove(internalDefaultSCPath)
-		}
-	}
+	// globalDefaultClusterStorageClass := input.Values.Get("global.defaultClusterStorageClass").String()
+	// if globalDefaultClusterStorageClass != "" {
+	// 	// override module's storageClass.default with global.defaultClusterStorageClass
+	// 	input.LogEntry.Warnf("Override `cloudProviderOpenstack.storageClass.default` with `global.defaultClusterStorageClass` %q", globalDefaultClusterStorageClass)
+	// 	input.Values.Set(internalDefaultSCPath, globalDefaultClusterStorageClass)
+	// } else {
+	// 	// if `global.defaultClusterStorageClass` is not set, then respect module's storageClass.default
+	// 	def, ok := input.Values.GetOk("cloudProviderOpenstack.storageClass.default")
+	// 	if ok {
+	// 		input.Values.Set(internalDefaultSCPath, def.String())
+	// 	} else {
+	// 		input.Values.Remove(internalDefaultSCPath)
+	// 	}
+	// }
 }
 
 // Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
