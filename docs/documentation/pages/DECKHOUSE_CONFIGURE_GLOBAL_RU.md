@@ -24,7 +24,7 @@ metadata:
 spec:
   version: 2
   settings: # <-- Параметры модуля из раздела "Параметры" ниже.
-    defaultClusterStorageClass: sc-fast
+    defaultClusterStorageClass: 'sc-fast'
     modules:
       publicDomainTemplate: '%s.kube.company.my'
       resourcesRequests:
