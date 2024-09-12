@@ -21,6 +21,6 @@ import (
 type ClientConfigGetter struct {
 }
 
-func Get(repository string) (*registry.ClientConfig, error) {
+func (_ ClientConfigGetter) Get(repository string) (*registry.ClientConfig, error) {
 	return &registry.ClientConfig{}, nil
 }

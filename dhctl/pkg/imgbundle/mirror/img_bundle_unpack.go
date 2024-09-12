@@ -71,7 +71,7 @@ func unpackAndValidateImgBundle(imgBundlePath string) (string, error) {
 
 	unpackPath, err := unpackImgBundle(imgBundlePath)
 	if err != nil {
-		return unpackPath, err
+		return unpackPath, fmt.Errorf("failed to unpack img bundle: %w", err)
 	}
 
 	if err := libmirrorBundle.ValidateUnpackedBundle(

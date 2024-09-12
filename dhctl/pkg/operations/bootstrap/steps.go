@@ -43,6 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/imgbundle/mirror"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/imgbundle/pkgproxy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -455,7 +456,37 @@ func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, erro
 	return &r.ClientConfig, nil
 }
 
-func StartRegistryPackagesProxy(config config.RegistryData, clusterDomain string) error {
+func StartRegistryPackagesProxy(registryCfg config.Registry, clusterDomain string) error {
+	var clientConfigGetter registry.ClientConfigGetter
+	var client registry.Client
+	var err error
+
+	switch registryCfg.ExtraData.(type) {
+	case config.ProxyModeRegistryData:
+		client = &registry.DefaultClient{}
+		clientConfigGetter, err = newRegistryClientConfigGetter(
+			registryCfg.ExtraData.(config.ProxyModeRegistryData).UpstreamRegistryData,
+		)
+		if err != nil {
+			return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
+		}
+	case config.DetachedModeRegistryData:
+		unpackedImagesPath, err := mirror.UnpackAndValidateImgBundle(
+			registryCfg.ExtraData.(config.DetachedModeRegistryData).ImagesBundlePath,
+		)
+		if err != nil {
+			return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
+		}
+		client = pkgproxy.NewClient(unpackedImagesPath)
+		clientConfigGetter = pkgproxy.ClientConfigGetter{}
+	default:
+		client = &registry.DefaultClient{}
+		clientConfigGetter, err = newRegistryClientConfigGetter(registryCfg.Data)
+		if err != nil {
+			return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
+		}
+	}
+
 	cert, err := generateTLSCertificate(clusterDomain)
 	if err != nil {
 		return fmt.Errorf("Failed to generate TLS certificate for registry proxy: %v", err)
@@ -467,14 +498,9 @@ func StartRegistryPackagesProxy(config config.RegistryData, clusterDomain string
 	if err != nil {
 		return fmt.Errorf("Failed to listen registry proxy socket: %v", err)
 	}
-
-	clientConfigGetter, err := newRegistryClientConfigGetter(config)
-	if err != nil {
-		return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
-	}
 	srv := &http.Server{}
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
-	proxy := proxy.NewProxy(srv, listener, clientConfigGetter, registryPackagesProxyLogger{}, &registry.DefaultClient{})
+	proxy := proxy.NewProxy(srv, listener, clientConfigGetter, registryPackagesProxyLogger{}, client)
 
 	go proxy.Serve()
 
@@ -560,16 +586,8 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 	log.DebugF("Got cluster domain: %s", clusterDomain)
 	log.DebugLn("Starting registry packages proxy")
 
-	registryPackagesProxyData := cfg.Registry.Data
-	switch cfg.Registry.ExtraData.(type) {
-	case config.ProxyModeRegistryData:
-		registryPackagesProxyData = cfg.Registry.ExtraData.(config.ProxyModeRegistryData).UpstreamRegistryData
-	case config.DetachedModeRegistryData:
-		// TODO
-	}
-
 	// we need clusterDomain to generate proper certificate for packages proxy
-	err = StartRegistryPackagesProxy(registryPackagesProxyData, clusterDomain)
+	err = StartRegistryPackagesProxy(cfg.Registry, clusterDomain)
 	if err != nil {
 		return fmt.Errorf("failed to start registry packages proxy: %v", err)
 	}
