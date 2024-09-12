@@ -24,7 +24,7 @@ metadata:
 spec:
   version: 2
   settings: # <-- Параметры модуля из раздела "Параметры" ниже.
-    defaultClusterStorageClass: 'sc-fast'
+    defaultClusterStorageClass: 'default-fast'
     modules:
       publicDomainTemplate: '%s.kube.company.my'
       resourcesRequests:
@@ -34,7 +34,7 @@ spec:
       placement:
         customTolerationKeys:
         - dedicated.example.com
-      storageClass: 'sc-fast'
+      storageClass: 'default-fast'
 ```
 
 ## Параметры
