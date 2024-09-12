@@ -14,8 +14,6 @@
 package hooks
 
 import (
-    "strings"
-
     "github.com/flant/addon-operator/pkg/module_manager/go_hook"
     "github.com/flant/addon-operator/sdk"
     "github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -23,48 +21,43 @@ import (
     "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"    
 )
 
-type Secret struct {
-	Name        string
-}
-
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
     Queue: "/modules/prometheus/delete_certificate_secret",
     Kubernetes: []go_hook.KubernetesConfig{
         {
-			Name:       "secrets",
-			ApiVersion: "v1",
-			Kind:       "Secret",
+            Name:       "secrets",
+            ApiVersion: "v1",
+            Kind:       "Secret",
             FilterFunc: applySecretFilter,
             NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-monitoring"},
-				},
-			},
-		},
+                NameSelector: &types.NameSelector{
+                    MatchNames: []string{"d8-monitoring"},
+                },
+            },
+        },
     },
 }, handleCertificateDeletion)
 
 func applySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var secret corev1.Secret
+    var secret corev1.Secret
 
-	err := sdk.FromUnstructured(obj, &sec)
-	if err != nil {
-		return nil, err
-	}
+    err := sdk.FromUnstructured(obj, &secret)
+    if err != nil {
+        return nil, err
+    }
 
-	return secret.Name, nil
+    return secret.Name, nil
 }
 
 func handleCertificateDeletion(input *go_hook.HookInput) error {
     secretSnap := input.Snapshots["secrets"]
 
     for _, secretName := range secretSnap {
-        if secretName == "ingress-tls-v10"{
-            input.PatchCollector.Delete("v1", "Secret", "d8-monitoring", secretName)
+        name := secretName.(string)
+        if name == "ingress-tls-v10" {
+            input.PatchCollector.Delete("v1", "Secret", "d8-monitoring", name)
         }
+    }
 
     return nil
 }
-
-
