@@ -262,7 +262,7 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 
 	if err != nil {
 		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
-		c.logger.Fatalln("Cannot update cloud data resource. Timed out. See error messages below.")
+		c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
 	}
 }
 
@@ -374,7 +374,7 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 
 	if err != nil {
 		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
-		c.logger.Fatalln("Cannot update cloud data resource. Timed out. See error messages below.")
+		c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
 	}
 }
 
@@ -458,7 +458,7 @@ func (c *Reconciler) orphanedDisksReconcile(ctx context.Context) {
 
 	if err != nil {
 		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
-		c.logger.Fatalln("Cannot update cloud data resource. Timed out. See error messages below.")
+		c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
 	}
 }
 
