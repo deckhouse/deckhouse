@@ -153,7 +153,7 @@ func (c *Creator) ensureRequiredNamespacesExist() (map[int]struct{}, error) {
 	// or after set state "cluster is bootstrapped" (some namespaces will create by deckhouse after it)
 	resourcesToSkipInCurrentIteration := make(map[int]struct{})
 
-	err := retry.NewLoop(fmt.Sprintln("Ensure that required namespaces exist"), 10, 10*time.Second).Run(func() error {
+	err := retry.NewLoop("Ensure that required namespaces exist", 10, 10*time.Second).Run(func() error {
 		for i, res := range c.resources {
 			nsName := res.Object.GetNamespace()
 
