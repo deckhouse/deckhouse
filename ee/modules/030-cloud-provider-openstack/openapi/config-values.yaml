@@ -160,9 +160,8 @@ properties:
             * an arbitrary StorageClass present in the cluster that has the default annotation;
             * the first StorageClass created by the module (in accordance with the order in OpenStack).
 
-          **Pay attention to the following:**
-            * If the [defaultClusterStorageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-defaultclusterstorageclass)
-            parameter is specified in the `global` module settings, then **its value will be used by default**, **OVERRIDING** the one specified here.
+          > **Pay attention to the following: If the [defaultClusterStorageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-defaultclusterstorageclass)
+          > parameter is specified in the `global` module settings, then **its value will be used by default**, **OVERRIDING** the one specified here.
       topologyEnabled:
         type: boolean
         description: |
