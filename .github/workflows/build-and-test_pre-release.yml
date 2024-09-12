@@ -416,6 +416,7 @@ jobs:
             werf build \
               ${SECONDARY_REPO} \
               --parallel=true --parallel-tasks-limit=5 \
+              --save-build-report=true \
               --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
@@ -426,6 +427,7 @@ jobs:
             # - semver tags to Github Container Registry for testing release process.
             werf build \
               --parallel=true --parallel-tasks-limit=5 \
+              --save-build-report=true \
               --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
