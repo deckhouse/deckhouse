@@ -34,7 +34,7 @@ spec:
       placement:
         customTolerationKeys:
         - dedicated.example.com
-      storageClass: sc-fast
+      storageClass: 'sc-fast'
 ```
 
 ## Параметры
