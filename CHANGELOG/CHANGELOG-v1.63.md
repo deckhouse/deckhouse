@@ -68,6 +68,7 @@
  - **[deckhouse-controller]** Fixed panic when processing terminating deckhouse pod. [#9621](https://github.com/deckhouse/deckhouse/pull/9621)
  - **[deckhouse-controller]** Fix panic on invalid module image [#9231](https://github.com/deckhouse/deckhouse/pull/9231)
  - **[deckhouse-controller]** Deckhouse update metrics restored. [#9147](https://github.com/deckhouse/deckhouse/pull/9147)
+ - **[dhctl]** Revert ensure required namespaces while resources creation. [#9715](https://github.com/deckhouse/deckhouse/pull/9715)
  - **[dhctl]** Fixed checking the length of the list of external IP addresses in the `YandexClusterConfiguration`. [#9449](https://github.com/deckhouse/deckhouse/pull/9449)
  - **[dhctl]** Fix static installation consume 100% of CPU. [#9359](https://github.com/deckhouse/deckhouse/pull/9359)
  - **[dhctl]** Wait for resources required by manifest being created. [#9157](https://github.com/deckhouse/deckhouse/pull/9157)
