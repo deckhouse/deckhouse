@@ -105,10 +105,6 @@ func (c *Creator) createAll() error {
 		c.resources = remainResources
 	}()
 
-	if err := c.ensureRequiredNamespacesExist(); err != nil {
-		return err
-	}
-
 	for indx, resource := range c.resources {
 		resourcesList, err := apiResourceGetter.Get(&resource.GVK)
 		if err != nil {
