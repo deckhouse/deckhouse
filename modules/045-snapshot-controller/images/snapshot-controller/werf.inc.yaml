@@ -14,7 +14,7 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
 
 git:
-  - add: /modules/045-snapshot-controller/images/{{ $.ImageName }}/patches
+  - add: /{{ $.ModulePath }}modules/045-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
     stageDependencies:
       setup:
