@@ -1,3 +1,6 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- if $value.csi.snapshotter }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
@@ -8,3 +11,5 @@ import:
     before: setup
 docker:
   ENTRYPOINT: ["/snapshot-validation-webhook"]
+  {{- end }}
+{{- end }}
