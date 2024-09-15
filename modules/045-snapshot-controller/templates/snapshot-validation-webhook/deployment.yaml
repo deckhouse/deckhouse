@@ -3,6 +3,8 @@ cpu: 20m
 memory: 50Mi
 {{- end }}
 
+{{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
+{{- $snapshotValidationWebhookImageName := join "" (list "snapshotValidationWebhook" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -74,7 +76,7 @@ spec:
         - --tls-cert-file=/etc/snapshot-validation-webhook/certs/tls.crt
         - --tls-private-key-file=/etc/snapshot-validation-webhook/certs/tls.key
         - --port=4443
-        image: {{ include "helm_lib_module_image" (list . "snapshotValidationWebhook") }}
+        image: {{ include "helm_lib_module_image" (list . $snapshotValidationWebhookImageName) }}
         imagePullPolicy: IfNotPresent
         ports:
         - name: webhook
