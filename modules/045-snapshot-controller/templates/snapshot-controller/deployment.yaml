@@ -3,6 +3,8 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
+{{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
+{{- $snapshotControllerImageName := join "" (list "snapshotController" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -73,7 +75,7 @@ spec:
         - --v=5
         - --leader-election=true
         - --http-endpoint=127.0.0.1:8080
-        image: {{ include "helm_lib_module_image" (list . "snapshotController") }}
+        image: {{ include "helm_lib_module_image" (list . $snapshotControllerImageName) }}
         imagePullPolicy: IfNotPresent
         resources:
           requests:
