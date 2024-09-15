@@ -427,8 +427,16 @@ var DefaultImagesDigests = map[string]interface{}{
 		"rulesLoader":      "imageHash-runtimeAuditEngine-rulesLoader",
 	},
 	"snapshotController": map[string]interface{}{
-		"snapshotController":        "imageHash-snapshotController-snapshotController",
-		"snapshotValidationWebhook": "imageHash-snapshotController-snapshotValidationWebhook",
+		"snapshotController126":        "imageHash-snapshotController-snapshotController126",
+		"snapshotController127":        "imageHash-snapshotController-snapshotController127",
+		"snapshotController128":        "imageHash-snapshotController-snapshotController128",
+		"snapshotController129":        "imageHash-snapshotController-snapshotController129",
+		"snapshotController130":        "imageHash-snapshotController-snapshotController130",
+		"snapshotValidationWebhook126": "imageHash-snapshotController-snapshotValidationWebhook126",
+		"snapshotValidationWebhook127": "imageHash-snapshotController-snapshotValidationWebhook127",
+		"snapshotValidationWebhook128": "imageHash-snapshotController-snapshotValidationWebhook128",
+		"snapshotValidationWebhook129": "imageHash-snapshotController-snapshotValidationWebhook129",
+		"snapshotValidationWebhook130": "imageHash-snapshotController-snapshotValidationWebhook130",
 	},
 	"staticRoutingManager": map[string]interface{}{
 		"agent": "imageHash-staticRoutingManager-agent",
