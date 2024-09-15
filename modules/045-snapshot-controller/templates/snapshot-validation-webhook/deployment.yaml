@@ -3,7 +3,7 @@ cpu: 20m
 memory: 50Mi
 {{- end }}
 
-{{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
+{{- $kubernetesSemVer := semver $.Values.global.discovery.kubernetesVersion }}
 {{- $snapshotValidationWebhookImageName := join "" (list "snapshotValidationWebhook" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
