@@ -46,6 +46,9 @@ const labels = {
   'e2e/use/k8s/1.30': { type: 'e2e-use', ver: '1.30' },
   'e2e/use/k8s/automatic': { type: 'e2e-use', ver: 'Automatic' },
 
+  // E2E: use multimaster configuration
+  'e2e/use/multimaster': { type: 'e2e-use', multimaster: true },
+
   // Allow running workflows for external PRs.
   'status/ok-to-test': { type: 'ok-to-test' },
 
@@ -144,6 +147,7 @@ module.exports.knownKubernetesVersions = kubernetesVersions;
 
 module.exports.e2eDefaults = {
   criName: 'Containerd',
+  multimaster: false,
 }
 
 const editions = [

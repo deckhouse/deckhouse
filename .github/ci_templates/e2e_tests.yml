@@ -114,6 +114,7 @@ run: |
     LAYOUT=${LAYOUT}
     KUBERNETES_VERSION=${KUBERNETES_VERSION}
     TMP_DIR_PATH=${TMP_DIR_PATH}
+    MASTER_COUNT=${MASTER_COUNT}
   "
 
   ls -lh $(pwd)/testing
@@ -213,6 +214,7 @@ run: |
   docker run --rm \
     -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
     -e PREFIX=${PREFIX} \
+    -e MASTER_COUNT=${MASTER_COUNT} \
     -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
     -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
     -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -285,6 +287,7 @@ check_e2e_labels:
     {!{ printf "run_%s_%s: ${{ steps.check.outputs.run_%s_%s }}" $cri $kubernetesVersionSlug $cri $kubernetesVersionSlug }!}
 {!{- end -}!}
 {!{- end }!}
+    multimaster: ${{ steps.check.outputs.multimaster }}
   steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
     - name: Check e2e labels
@@ -362,6 +365,7 @@ check_e2e_labels:
         REF_FULL: ${{needs.git_info.outputs.ref_full}}
         INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
         MANUAL_RUN: {!{ coll.Has $ctx "manualRun" | conv.ToString | strings.Quote }!}
+        MULTIMASTER: ${{ check_e2e_labels.outputs.multimaster }}
       run: |
         # Calculate unique prefix for e2e test.
         # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -455,6 +459,13 @@ check_e2e_labels:
         SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
         echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
+        if [ "${MULTIMASTER}" == true ] ; then
+          MASTER_COUNT=3
+        else
+          MASTER_COUNT=1
+        fi
+        echo "Multimaster set ${MULTIMASTER}, MASTER_COUNT set ${MASTER_COUNT}"
+
         # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
         echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
         docker pull "${INSTALL_IMAGE_NAME}"
@@ -475,6 +486,7 @@ check_e2e_labels:
         echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
         echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
         echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
+        echo "master-count=${MASTER_COUNT}" >> $GITHUB_OUTPUT
 
         echo '::echo::off'
 
@@ -494,6 +506,7 @@ check_e2e_labels:
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
         PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+        MASTER_COUNT: ${{ steps.setup.outputs.multimaster}}
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
 {!{- if eq $provider "eks" }!}
         TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
@@ -542,6 +555,7 @@ check_e2e_labels:
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
         PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+        MASTER_COUNT: ${{ steps.setup.outputs.master-count }}
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
 {!{- if eq $provider "eks" }!}
         TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}

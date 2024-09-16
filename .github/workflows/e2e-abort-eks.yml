@@ -258,6 +258,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -539,6 +540,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -820,6 +822,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -1101,6 +1104,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -1382,6 +1386,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -1663,6 +1668,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing

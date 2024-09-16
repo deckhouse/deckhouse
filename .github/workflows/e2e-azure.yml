@@ -51,6 +51,10 @@ on:
       initial_ref_slug:
         description: 'An image tag to install first and then switch to workflow context ref'
         required: false
+      multimaster:
+        description: 'Use multimaster'
+        required: false
+        type: boolean
 env:
 
   # <template: werf_envs>
@@ -173,6 +177,7 @@ jobs:
       run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
       run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
       run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+      multimaster: ${{ steps.check.outputs.multimaster }}
     steps:
 
       # <template: checkout_step>
@@ -315,6 +320,7 @@ jobs:
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
+          MULTIMASTER: ${{ check_e2e_labels.outputs.multimaster }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -396,6 +402,13 @@ jobs:
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
+          if [ "${MULTIMASTER}" == true ] ; then
+            MASTER_COUNT=3
+          else
+            MASTER_COUNT=1
+          fi
+          echo "Multimaster set ${MULTIMASTER}, MASTER_COUNT set ${MASTER_COUNT}"
+
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
@@ -410,6 +423,7 @@ jobs:
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "master-count=${MASTER_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -425,6 +439,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          MASTER_COUNT: ${{ steps.setup.outputs.multimaster}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -449,6 +464,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -480,6 +496,7 @@ jobs:
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
+            -e MASTER_COUNT=${MASTER_COUNT} \
             -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
             -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -536,6 +553,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          MASTER_COUNT: ${{ steps.setup.outputs.master-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
@@ -559,6 +577,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -572,6 +591,7 @@ jobs:
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
+            -e MASTER_COUNT=${MASTER_COUNT} \
             -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
             -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -794,6 +814,7 @@ jobs:
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
+          MULTIMASTER: ${{ check_e2e_labels.outputs.multimaster }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -875,6 +896,13 @@ jobs:
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
+          if [ "${MULTIMASTER}" == true ] ; then
+            MASTER_COUNT=3
+          else
+            MASTER_COUNT=1
+          fi
+          echo "Multimaster set ${MULTIMASTER}, MASTER_COUNT set ${MASTER_COUNT}"
+
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
@@ -889,6 +917,7 @@ jobs:
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "master-count=${MASTER_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -904,6 +933,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          MASTER_COUNT: ${{ steps.setup.outputs.multimaster}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -928,6 +958,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -959,6 +990,7 @@ jobs:
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
+            -e MASTER_COUNT=${MASTER_COUNT} \
             -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
             -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -1015,6 +1047,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          MASTER_COUNT: ${{ steps.setup.outputs.master-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
@@ -1038,6 +1071,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -1051,6 +1085,7 @@ jobs:
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
+            -e MASTER_COUNT=${MASTER_COUNT} \
             -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
             -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -1273,6 +1308,7 @@ jobs:
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
+          MULTIMASTER: ${{ check_e2e_labels.outputs.multimaster }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -1354,6 +1390,13 @@ jobs:
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
+          if [ "${MULTIMASTER}" == true ] ; then
+            MASTER_COUNT=3
+          else
+            MASTER_COUNT=1
+          fi
+          echo "Multimaster set ${MULTIMASTER}, MASTER_COUNT set ${MASTER_COUNT}"
+
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
@@ -1368,6 +1411,7 @@ jobs:
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "master-count=${MASTER_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -1383,6 +1427,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          MASTER_COUNT: ${{ steps.setup.outputs.multimaster}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -1407,6 +1452,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -1438,6 +1484,7 @@ jobs:
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
+            -e MASTER_COUNT=${MASTER_COUNT} \
             -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
             -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -1494,6 +1541,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          MASTER_COUNT: ${{ steps.setup.outputs.master-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
@@ -1517,6 +1565,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -1530,6 +1579,7 @@ jobs:
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
+            -e MASTER_COUNT=${MASTER_COUNT} \
             -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
             -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -1752,6 +1802,7 @@ jobs:
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
+          MULTIMASTER: ${{ check_e2e_labels.outputs.multimaster }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -1833,6 +1884,13 @@ jobs:
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
+          if [ "${MULTIMASTER}" == true ] ; then
+            MASTER_COUNT=3
+          else
+            MASTER_COUNT=1
+          fi
+          echo "Multimaster set ${MULTIMASTER}, MASTER_COUNT set ${MASTER_COUNT}"
+
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
@@ -1847,6 +1905,7 @@ jobs:
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "master-count=${MASTER_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -1862,6 +1921,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          MASTER_COUNT: ${{ steps.setup.outputs.multimaster}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -1886,6 +1946,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -1917,6 +1978,7 @@ jobs:
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
+            -e MASTER_COUNT=${MASTER_COUNT} \
             -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
             -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -1973,6 +2035,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          MASTER_COUNT: ${{ steps.setup.outputs.master-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
@@ -1996,6 +2059,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -2009,6 +2073,7 @@ jobs:
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
+            -e MASTER_COUNT=${MASTER_COUNT} \
             -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
             -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -2231,6 +2296,7 @@ jobs:
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
+          MULTIMASTER: ${{ check_e2e_labels.outputs.multimaster }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -2312,6 +2378,13 @@ jobs:
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
+          if [ "${MULTIMASTER}" == true ] ; then
+            MASTER_COUNT=3
+          else
+            MASTER_COUNT=1
+          fi
+          echo "Multimaster set ${MULTIMASTER}, MASTER_COUNT set ${MASTER_COUNT}"
+
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
@@ -2326,6 +2399,7 @@ jobs:
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "master-count=${MASTER_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -2341,6 +2415,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          MASTER_COUNT: ${{ steps.setup.outputs.multimaster}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -2365,6 +2440,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -2396,6 +2472,7 @@ jobs:
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
+            -e MASTER_COUNT=${MASTER_COUNT} \
             -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
             -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -2452,6 +2529,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          MASTER_COUNT: ${{ steps.setup.outputs.master-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
@@ -2475,6 +2553,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -2488,6 +2567,7 @@ jobs:
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
+            -e MASTER_COUNT=${MASTER_COUNT} \
             -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
             -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -2710,6 +2790,7 @@ jobs:
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
+          MULTIMASTER: ${{ check_e2e_labels.outputs.multimaster }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -2791,6 +2872,13 @@ jobs:
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
           echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
+          if [ "${MULTIMASTER}" == true ] ; then
+            MASTER_COUNT=3
+          else
+            MASTER_COUNT=1
+          fi
+          echo "Multimaster set ${MULTIMASTER}, MASTER_COUNT set ${MASTER_COUNT}"
+
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
@@ -2805,6 +2893,7 @@ jobs:
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "master-count=${MASTER_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -2820,6 +2909,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          MASTER_COUNT: ${{ steps.setup.outputs.multimaster}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -2844,6 +2934,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -2875,6 +2966,7 @@ jobs:
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
+            -e MASTER_COUNT=${MASTER_COUNT} \
             -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
             -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -2931,6 +3023,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          MASTER_COUNT: ${{ steps.setup.outputs.master-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
@@ -2954,6 +3047,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -2967,6 +3061,7 @@ jobs:
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
+            -e MASTER_COUNT=${MASTER_COUNT} \
             -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
             -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \

@@ -431,9 +431,11 @@ const removeLabel = async ({ github, context, core, issue_number, label }) => {
 const setCRIAndVersionsFromInputs = ({ context, core, kubernetesDefaultVersion }) => {
   const defaultCRI = e2eDefaults.criName.toLowerCase();
   const defaultVersion = kubernetesDefaultVersion.replace(/\./g, '_');
+  const defaultMultimaster = e2eDefaults.multimaster
 
   let cri = [defaultCRI];
   let ver = [defaultVersion];
+  let multimaster = [defaultMultimaster];
 
   if (!!context.payload.inputs.cri) {
     const requested_cri = context.payload.inputs.cri.toLowerCase();
@@ -443,12 +445,16 @@ const setCRIAndVersionsFromInputs = ({ context, core, kubernetesDefaultVersion }
     const requested_ver = context.payload.inputs.ver.replace(/\./g, '_');
     ver = requested_ver.split(',');
   }
+  if (!!context.payload.inputs.multimaster) {
+    const requested_multimaster = context.payload.inputs.multimaster;
+    multimaster = requested_multimaster;
+  }
 
-  core.info(`workflow_dispatch is release related. e2e inputs: cri='${context.payload.inputs.cri}' and version='${context.payload.inputs.ver}'.`);
-
+  core.info(`workflow_dispatch is release related. e2e inputs: cri='${context.payload.inputs.cri}', multimaster='${context.payload.inputs.multimaster}' and version='${context.payload.inputs.ver}'.`);
+  core.setOutput(`multimaster`, `${multimaster}`);
   for (const out_cri of cri) {
     for (const out_ver of ver) {
-      core.info(`run_${out_cri}_${out_ver}: true`);
+      core.info(`run_${out_cri}_${out_ver}_multimaster_${multimaster}: true`);
       core.setOutput(`run_${out_cri}_${out_ver}`, 'true');
     }
   }
@@ -467,6 +473,7 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
   core.info(`Input labels: ${JSON.stringify(labels.map((l) => l.name), null, '  ')}`);
   let ver = [];
   let cri = [];
+  let multimaster;
 
   for (const label of labels) {
     const info = knownLabels[label.name];
@@ -481,6 +488,10 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
       core.info(`Detect '${label.name}': use Kubernetes version '${info.ver}'`);
       ver.push(info.ver.replace(/\./g, '_'));
     }
+    if (info.multimaster) {
+      core.info(`Detect '${label.name}': use Kubernetes multimaster configuration`);
+      multimaster.push(info.multimaster);
+    }
   }
 
   if (ver.length === 0) {
@@ -493,10 +504,16 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
     core.info(`Will run e2e with default cri=${defaultCRI}.`);
     cri = [defaultCRI];
   }
+  if (multimaster.length === 0) {
+    const defaultMultimaster = e2eDefaults.multimaster;
+    core.info(`Will run e2e with default multimaster=${defaultMultimaster}.`);
+    multimaster = [defaultMultimaster];
+  }
   core.endGroup();
 
   core.startGroup(`Set outputs`);
   core.setCommandEcho(true);
+  core.setOutput(`multimaster`, `${multimaster}`);
   for (const out_cri of cri) {
     for (const out_ver of ver) {
       core.setOutput(`run_${out_cri}_${out_ver}`, 'true');
@@ -708,6 +725,7 @@ const detectSlashCommand = ({ comment , context, core}) => {
     if (workflow_id) {
       let ver = [];
       let cri = [];
+      let multimaster;
       for (const line of lines) {
         let useParts = line.split('/e2e/use/cri/');
         if (useParts[1]) {
@@ -717,11 +735,16 @@ const detectSlashCommand = ({ comment , context, core}) => {
         if (useParts[1]) {
           ver.push(useParts[1]);
         }
+        useParts = line.split('/e2e/use/multimaster/');
+        if (useParts[1]) {
+          multimaster.push(true);
+        }
       }
 
       inputs = {
         cri: cri.join(','),
         ver: ver.join(','),
+        multimaster: multimaster,
       }
 
       // Add initial_ref_slug input when e2e command has two args.

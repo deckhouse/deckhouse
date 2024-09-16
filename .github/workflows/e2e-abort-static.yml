@@ -251,6 +251,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -264,6 +265,7 @@ jobs:
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
+            -e MASTER_COUNT=${MASTER_COUNT} \
             -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
             -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -527,6 +529,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -540,6 +543,7 @@ jobs:
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
+            -e MASTER_COUNT=${MASTER_COUNT} \
             -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
             -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -803,6 +807,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -816,6 +821,7 @@ jobs:
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
+            -e MASTER_COUNT=${MASTER_COUNT} \
             -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
             -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -1079,6 +1085,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -1092,6 +1099,7 @@ jobs:
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
+            -e MASTER_COUNT=${MASTER_COUNT} \
             -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
             -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -1355,6 +1363,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -1368,6 +1377,7 @@ jobs:
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
+            -e MASTER_COUNT=${MASTER_COUNT} \
             -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
             -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -1631,6 +1641,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTER_COUNT=${MASTER_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -1644,6 +1655,7 @@ jobs:
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
+            -e MASTER_COUNT=${MASTER_COUNT} \
             -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
             -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
