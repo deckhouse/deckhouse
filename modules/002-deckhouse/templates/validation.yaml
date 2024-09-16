@@ -1,7 +1,7 @@
 {{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 {{- $policyName := "system-ns.deckhouse.io" }}
 ---
-{{- include "getApiVersion" . }}
+apiVersion: {{- include "helm_lib_get_api_version_by_kind list (. "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
 metadata:
   name: {{ $policyName }}
@@ -22,7 +22,7 @@ spec:
       messageExpression: '''Creation of system namespaces is forbidden'''
 {{- end }}
 ---
-{{- include "getApiVersion" . }}
+apiVersion: {{- include "helm_lib_get_api_version_by_kind list (. "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   name: {{ $policyName }}
@@ -35,7 +35,7 @@ spec:
 
 ---
 {{- $policyName := "label-objects.deckhouse.io" }}
-{{- include "getApiVersion" . }}
+apiVersion: {{- include "helm_lib_get_api_version_by_kind list (. "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
 metadata:
   name: {{ $policyName }}
@@ -69,7 +69,7 @@ spec:
       reason: Forbidden
 {{- end }}
 ---
-{{- include "getApiVersion" . }}
+apiVersion: {{- include "helm_lib_get_api_version_by_kind list (. "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   name: "heritage-label-objects.deckhouse.io"
@@ -86,7 +86,7 @@ spec:
 
 ---
 {{- $policyName := "update-policy-label-objects.deckhouse.io" }}
-{{- include "getApiVersion" . }}
+apiVersion: {{- include "helm_lib_get_api_version_by_kind list (. "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
 metadata:
   name: {{ $policyName }}
@@ -109,7 +109,7 @@ spec:
       messageExpression: "'Manual update-policy change is forbidden. Please, remove the update-policy label to automatically find a new suitable policy'"
       {{- end }}
 ---
-{{- include "getApiVersion" . }}
+apiVersion: {{- include "helm_lib_get_api_version_by_kind list (. "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   name: {{ $policyName }}
@@ -122,7 +122,7 @@ spec:
 
 ---
 {{- $policyName := "moduleconfigs-settings.deckhouse.io" }}
-{{- include "getApiVersion" . }}
+apiVersion: {{- include "helm_lib_get_api_version_by_kind list (. "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
 metadata:
   name: {{ $policyName }}
@@ -142,7 +142,7 @@ spec:
       messageExpression: '''Invalid update windows. Start time (windows.to) should be less than the end time of the update window (windows.from)'''
 {{- end }}
 ---
-{{- include "getApiVersion" . }}
+apiVersion: {{- include "helm_lib_get_api_version_by_kind list (. "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   name: {{ $policyName }}
