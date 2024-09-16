@@ -37,4 +37,6 @@ locals {
   image_name            = var.providerClusterConfiguration.masterNodeGroup.instanceClass.imageName
   tags                  = lookup(var.providerClusterConfiguration, "tags", {})
   ssh_allow_list        = lookup(var.providerClusterConfiguration, "sshAllowList", ["0.0.0.0/0"])
+  server_group          = lookup(var.providerClusterConfiguration.masterNodeGroup, "serverGroup", {})
+  server_group_policy   = lookup(local.server_group, "policy", "")
 }

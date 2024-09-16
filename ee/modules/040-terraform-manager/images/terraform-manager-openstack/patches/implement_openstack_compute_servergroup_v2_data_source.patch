@@ -1,0 +1,97 @@
+Subject: [PATCH] Implement openstack_compute_servergroup_v2 data source
+---
+Index: openstack/data_source_openstack_compute_servergroup_v2.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/openstack/data_source_openstack_compute_servergroup_v2.go b/openstack/data_source_openstack_compute_servergroup_v2.go
+new file mode 100644
+--- /dev/null	(date 1727169550523)
++++ b/openstack/data_source_openstack_compute_servergroup_v2.go	(date 1727169550523)
+@@ -0,0 +1,69 @@
++package openstack
++
++import (
++	"fmt"
++	"log"
++
++	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
++	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
++)
++
++func dataSourceComputeServerGroupV2() *schema.Resource {
++	return &schema.Resource{
++		Read: dataSourceComputeServerGroupV2Read,
++		Schema: map[string]*schema.Schema{
++			"region": {
++				Type:     schema.TypeString,
++				Optional: true,
++				Computed: true,
++			},
++
++			"name": {
++				Type:     schema.TypeString,
++				Required: true,
++			},
++		},
++	}
++}
++
++func dataSourceComputeServerGroupV2Read(d *schema.ResourceData, meta interface{}) error {
++	config := meta.(*Config)
++	computeClient, err := config.ComputeV2Client(GetRegion(d, config))
++	if err != nil {
++		return fmt.Errorf("Error creating OpenStack compute client: %s", err)
++	}
++
++	allPages, err := servergroups.List(computeClient).AllPages()
++	if err != nil {
++		return fmt.Errorf("Error retrieving openstack_compute_servergroup_v2: %s", err)
++	}
++
++	allServerGroups, err := servergroups.ExtractServerGroups(allPages)
++	if err != nil {
++		return fmt.Errorf("Error extracting openstack_compute_servergroup_v2 from response: %s", err)
++	}
++
++	var sg *servergroups.ServerGroup
++
++	for i, serverGroup := range allServerGroups {
++		if serverGroup.Name == d.Get("name").(string) {
++			sg = &allServerGroups[i]
++			d.SetId(serverGroup.ID)
++			break
++		}
++	}
++	
++	if sg == nil {
++		return fmt.Errorf("Server group not found")
++	}
++
++	log.Printf("[DEBUG] Retrieved openstack_compute_servergroup_v2 %s: %#v", d.Id(), sg)
++
++	d.Set("name", sg.Name)
++	d.Set("policies", sg.Policies)
++	d.Set("members", sg.Members)
++
++	d.Set("region", GetRegion(d, config))
++
++	return nil
++}
+Index: openstack/provider.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/openstack/provider.go b/openstack/provider.go
+--- a/openstack/provider.go	(revision 144d9deab7788e6dd2165e1cb673b65f38ebf065)
++++ b/openstack/provider.go	(date 1727161245661)
+@@ -258,6 +258,7 @@
+ 			"openstack_compute_instance_v2":                      dataSourceComputeInstanceV2(),
+ 			"openstack_compute_flavor_v2":                        dataSourceComputeFlavorV2(),
+ 			"openstack_compute_keypair_v2":                       dataSourceComputeKeypairV2(),
++			"openstack_compute_servergroup_v2":                   dataSourceComputeServerGroupV2(),
+ 			"openstack_containerinfra_clustertemplate_v1":        dataSourceContainerInfraClusterTemplateV1(),
+ 			"openstack_containerinfra_cluster_v1":                dataSourceContainerInfraCluster(),
+ 			"openstack_dns_zone_v2":                              dataSourceDNSZoneV2(),
