@@ -10,6 +10,8 @@
   <a href="https://releases.deckhouse.io"><img src="https://img.shields.io/badge/releases-releases.deckhouse.io-blueviolet" alt="Releases"></a>
 </p>
 
+TESTING
+
 [Deckhouse](https://deckhouse.io/) is an Open Source platform for managing Kubernetes clusters in a fully automatic and uniform fashion. It allows you to create homogeneous Kubernetes clusters anywhere and fully manages them. It supplies all the add-ons you need for auto-scaling, observability, security, and service mesh. It comes in Enterprise Edition (EE) and Community Edition (CE).
 
 # Main features
@@ -23,7 +25,7 @@
 - Easy to start: you need a couple of CLI commands and 8 minutes to get production-ready Kubernetes.
 - A fully-featured platform. Many features *(check the diagram below)* — carefully configured & integrated — are available right out of the box.
 
-_Deckhouse Platform [has passed](https://landscape.cncf.io/card-mode?category=certified-kubernetes-distribution,certified-kubernetes-hosted,certified-kubernetes-installer&grouping=category&selected=flant-deckhouse) the CNCF Certified Kubernetes Conformance Program certification for Kubernetes 1.23—1.27._
+*Deckhouse Platform [has passed](https://landscape.cncf.io/card-mode?category=certified-kubernetes-distribution,certified-kubernetes-hosted,certified-kubernetes-installer&grouping=category&selected=flant-deckhouse) the CNCF Certified Kubernetes Conformance Program certification for Kubernetes 1.23—1.27.*
 
 A brief overview of essential Deckhouse Platform features, from infrastructure level to the platform:
 
@@ -54,7 +56,7 @@ If anything works in an unexpected manner or you have any questions, feel free t
 
 In addition to common GitHub features, here are some other online resources related to Deckhouse:
 
-* [Twitter](https://twitter.com/deckhouseio) to stay informed about everything happening around Deckhouse;
-* [Telegram chat](https://t.me/deckhouse) to discuss (there's a dedicated [Telegram chat in Russian](https://t.me/deckhouse_ru) as well);
-* [Deckhouse blog](https://blog.deckhouse.io/) to read the latest articles about Deckhouse.
-* Check our [work board](https://github.com/orgs/deckhouse/projects/2) and [roadmap](https://github.com/orgs/deckhouse/projects/6) for more insights.
+- [Twitter](https://twitter.com/deckhouseio) to stay informed about everything happening around Deckhouse;
+- [Telegram chat](https://t.me/deckhouse) to discuss (there's a dedicated [Telegram chat in Russian](https://t.me/deckhouse_ru) as well);
+- [Deckhouse blog](https://blog.deckhouse.io/) to read the latest articles about Deckhouse.
+- Check our [work board](https://github.com/orgs/deckhouse/projects/2) and [roadmap](https://github.com/orgs/deckhouse/projects/6) for more insights.
