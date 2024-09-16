@@ -1,8 +1,6 @@
 module github.com/deckhouse/deckhouse/go_lib/cloud-data
 
-go 1.22.0
-
-toolchain go1.22.5
+go 1.19
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -19,7 +17,6 @@ require (
 require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/prometheus/client_golang v1.12.1
-	golang.org/x/exp v0.0.0-20240909161429-701f63a606c0
 	k8s.io/api v0.25.5
 )
 
