@@ -316,7 +316,7 @@ jobs:
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
-          MULTIMASTER: ${{ check_e2e_labels.outputs.multimaster }}
+          MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -798,7 +798,7 @@ jobs:
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
-          MULTIMASTER: ${{ check_e2e_labels.outputs.multimaster }}
+          MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -1280,7 +1280,7 @@ jobs:
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
-          MULTIMASTER: ${{ check_e2e_labels.outputs.multimaster }}
+          MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -1762,7 +1762,7 @@ jobs:
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
-          MULTIMASTER: ${{ check_e2e_labels.outputs.multimaster }}
+          MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -2244,7 +2244,7 @@ jobs:
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
-          MULTIMASTER: ${{ check_e2e_labels.outputs.multimaster }}
+          MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -2726,7 +2726,7 @@ jobs:
           REF_FULL: ${{needs.git_info.outputs.ref_full}}
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
-          MULTIMASTER: ${{ check_e2e_labels.outputs.multimaster }}
+          MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
