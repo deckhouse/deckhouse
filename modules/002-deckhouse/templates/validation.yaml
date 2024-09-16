@@ -222,7 +222,7 @@ spec:
     - name: 'exclude-users'
       expression: '!(["system:serviceaccount:d8-system:deckhouse"].exists(e, (e == request.userInfo.username)))'
   validations:
-    - expression: "!((has(object.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in object.metadata.annotations) || (has(oldObject.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in oldObject.metadata.annotations))"
+    - expression: "!((has(object.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in object.metadata.annotations) || (has(oldObject.metadata) && has(oldObject.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in oldObject.metadata.annotations))"
       reason: Forbidden
       messageExpression: '''Creating and updating an StorageClass with the `is-default-class` annotation is forbidden. Use `modules.defaultClusterStorageClass` in ModuleConfig `global`'''
   auditAnnotations:
@@ -230,7 +230,7 @@ spec:
       valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to add StorageClass with the `is-default-class` annotation'"
 {{- else }}
   validations:
-    - expression: "request.userInfo.username == 'system:serviceaccount:d8-system:deckhouse' || !((has(object.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in object.metadata.annotations) || (has(oldObject.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in oldObject.metadata.annotations))"
+    - expression: "request.userInfo.username == 'system:serviceaccount:d8-system:deckhouse' || !((has(object.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in object.metadata.annotations) || (has(oldObject.metadata) && has(oldObject.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in oldObject.metadata.annotations))"
       reason: Forbidden
 {{- end }}
 ---
