@@ -1,4 +1,4 @@
-1950
+1952
 1GB
 2GB
 5XX
@@ -625,6 +625,7 @@ LoadBalancers
 LoadBalancerWithProxyProtocol
 loadbalancing
 localhost
+localpath
 LocalPathProvisioner
 localpref
 Lockbox
@@ -663,6 +664,7 @@ maxReplicas
 maxSurgePerZone
 maxUnavailable
 Mayastor
+mc
 md
 memberlist
 memcached
