@@ -490,7 +490,7 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
     }
     if (info.multimaster) {
       core.info(`Detect '${label.name}': use Kubernetes multimaster configuration`);
-      multimaster.push(info.multimaster);
+      multimaster = true;
     }
   }
 
