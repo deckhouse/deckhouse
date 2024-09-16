@@ -67,7 +67,7 @@
   {%- endif %}
   <td style="text-align: center; width: 170px;"><img src="{{ supported_img_url }}"></td>
   <td style="text-align: center;">
-    {% if site.data.supported_versions.osDistributions[osKey]['additional_notes'] %}
+    {% if site.data.supported_versions.osDistributions[osKey]['note_content'] %}
       <img src="{{ notes_img_url }}" data-tippy-content="{{ site.data.supported_versions.osDistributions[osKey]['note_content'][page.lang] }}">
     {% endif %}
   </td>
