@@ -17,6 +17,7 @@ require (
 require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/prometheus/client_golang v1.12.1
+	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6
 	k8s.io/api v0.25.5
 )
 
