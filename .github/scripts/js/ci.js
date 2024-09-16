@@ -454,7 +454,7 @@ const setCRIAndVersionsFromInputs = ({ context, core, kubernetesDefaultVersion }
   core.setOutput(`multimaster`, `${multimaster}`);
   for (const out_cri of cri) {
     for (const out_ver of ver) {
-      core.info(`run_${out_cri}_${out_ver}_multimaster_${multimaster}: true`);
+      core.info(`run_${out_cri}_${out_ver}: true`);
       core.setOutput(`run_${out_cri}_${out_ver}`, 'true');
     }
   }
