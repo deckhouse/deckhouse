@@ -17,11 +17,11 @@ package hooks
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
-
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-}, removeSecretGrfana)
 
 type Secret struct {
 	apiVersion string
@@ -30,15 +30,49 @@ type Secret struct {
 	name       string
 }
 
-func removeSecretGrfana(input *go_hook.HookInput) error {
-	secret := Secret{
-		apiVersion: "v1",
-		kind:       "Secret",
-		namespace:  "d8-monitoring",
-		name:       "ingress-tls-v10",
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:         "secret",
+			ApiVersion:   "v1",
+			Kind:         "Secret",
+			NameSelector: &types.NameSelector{MatchNames: []string{"ingress-tls-v10"}},
+			FilterFunc:   applySecretFilter,
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-monitoring"},
+				},
+			},
+		},
+	},
+}, removeSecretGrfana)
+
+func applySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var secret corev1.Secret
+	err := sdk.FromUnstructured(obj, &secret)
+	if err != nil {
+		return "", err
 	}
 
-	input.PatchCollector.Delete(secret.apiVersion, secret.kind, secret.namespace, secret.name)
+	return &Secret{
+		name:       secret.Name,
+		namespace:  secret.Namespace,
+		kind:       secret.Kind,
+		apiVersion: secret.APIVersion,
+	}, nil
+}
+
+func removeSecretGrfana(input *go_hook.HookInput) error {
+	if secretSnapshot := input.Snapshots["secret"]; len(secretSnapshot) > 0 {
+		for _, snap := range secretSnapshot {
+			secret := snap.(*Secret)
+			log.Debugf("Deleting secret: %s/%s", secret.namespace, secret.name)
+			input.PatchCollector.Delete(secret.apiVersion, secret.kind, secret.namespace, secret.name)
+		}
+	} else {
+		log.Debug("Secrets not found")
+	}
 
 	return nil
 }
