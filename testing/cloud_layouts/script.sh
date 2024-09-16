@@ -849,9 +849,9 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 kubectl -n d8-system get pods -l app=deckhouse
-DESIRED_REPLICAS=$(kubectl get deployment -n d8-system deckhouse -o jsonpath='{.spec.replicas}')
-READY_REPLICAS=$(kubectl get deployment -n d8-system deckhouse -o jsonpath='{.status.readyReplicas}')
-[ "$READY_REPLICAS" -eq "$DESIRED_REPLICAS" ]
+DESIRED_REPLICAS=\$(kubectl get deployment -n d8-system deckhouse -o jsonpath='{.spec.replicas}')
+READY_REPLICAS=\$(kubectl get deployment -n d8-system deckhouse -o jsonpath='{.status.readyReplicas}')
+[ "\$READY_REPLICAS" -eq "\$DESIRED_REPLICAS" ]
 END_SCRIPT
 )
 
