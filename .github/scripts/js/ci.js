@@ -473,7 +473,7 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
   core.info(`Input labels: ${JSON.stringify(labels.map((l) => l.name), null, '  ')}`);
   let ver = [];
   let cri = [];
-  let multimaster;
+  let multimaster = e2eDefaults.multimaster;
 
   for (const label of labels) {
     const info = knownLabels[label.name];
@@ -503,11 +503,6 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
     const defaultCRI = e2eDefaults.criName.toLowerCase();
     core.info(`Will run e2e with default cri=${defaultCRI}.`);
     cri = [defaultCRI];
-  }
-  if (multimaster.length === 0) {
-    const defaultMultimaster = e2eDefaults.multimaster;
-    core.info(`Will run e2e with default multimaster=${defaultMultimaster}.`);
-    multimaster = [defaultMultimaster];
   }
   core.endGroup();
 
