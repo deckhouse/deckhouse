@@ -1,7 +1,7 @@
 {{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 {{- $policyName := "system-users.deckhouse.io" }}
 ---
-apiVersion: {{- include "helm_lib_get_api_version_by_kind list (. "ValidatingAdmissionPolicy") }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
 metadata:
   name: {{ $policyName }}
@@ -19,7 +19,7 @@ spec:
         && !object.spec.email.matches("^[\\w\\-\\.]+@(?:[\\w-]+\\.)+[\\w-]{2,}$") )'
       reason: Forbidden
 ---
-apiVersion: {{- include "helm_lib_get_api_version_by_kind list (. "ValidatingAdmissionPolicyBinding") }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   name: {{ $policyName }}

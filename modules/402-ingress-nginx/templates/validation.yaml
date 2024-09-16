@@ -3,7 +3,7 @@
 ---
 {{- $policyName := "ingressnginxcontroller-settings.deckhouse.io" }}
 {{- $inlets := list "LoadBalancer"  "LoadBalancerWithProxyProtocol" "HostPort" "HostPortWithProxyProtocol" "HostWithFailover" }}
-apiVersion: {{- include "helm_lib_get_api_version_by_kind list (. "ValidatingAdmissionPolicy") }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
 metadata:
   name: {{ $policyName }}
@@ -26,7 +26,7 @@ spec:
 {{- end }}
 {{- end }}
 ---
-apiVersion: {{- include "helm_lib_get_api_version_by_kind list (. "ValidatingAdmissionPolicyBinding") }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   name: {{ $policyName }}

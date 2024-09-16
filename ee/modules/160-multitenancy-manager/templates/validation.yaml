@@ -1,7 +1,7 @@
 {{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 {{- $policyName := "d8-multitenancy-manager" }}
 ---
-apiVersion: {{- include "helm_lib_get_api_version_by_kind list (. "ValidatingAdmissionPolicy") }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
 metadata:
   name: {{ $policyName }}
@@ -22,7 +22,7 @@ spec:
       messageExpression: "'This resource is managed by ' + string(object.metadata.namespace) + ' Project. Manual modification is forbidden.'"
 {{- end }}
 ---
-apiVersion: {{- include "helm_lib_get_api_version_by_kind list (. "ValidatingAdmissionPolicyBinding") }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   name: {{ $policyName }}
