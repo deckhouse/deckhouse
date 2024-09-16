@@ -99,10 +99,6 @@ on:
       initial_ref_slug:
         description: 'An image tag to install first and then switch to workflow context ref'
         required: false
-      multimaster:
-        description: 'Use multimaster'
-        required: false
-        type: boolean
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
 
