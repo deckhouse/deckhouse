@@ -81,10 +81,10 @@ func (p *Proxy) Serve() {
 			repository = registry.DefaultRepository
 		}
 
-		logEntry := fmt.Sprintf("request from %s received: repo = %s, digest = %s", requestIP, repository, digest)
+		logEntry := fmt.Sprintf("request from client %s received for repo %s digest %s", requestIP, repository, digest)
 
 		if additionalPath != "" {
-			logEntry = fmt.Sprintf("%s, additional_path = %s", logEntry, additionalPath)
+			logEntry = fmt.Sprintf("%s and additional path = %s", logEntry, additionalPath)
 		}
 
 		p.logger.Infof("%s", logEntry)
@@ -126,6 +126,8 @@ func (p *Proxy) Serve() {
 			p.logger.Errorf("send package: %v", err)
 			return
 		}
+
+		p.logger.Infof("package for digest %s sent successfully", digest)
 	})
 
 	p.logger.Debugf("Starting packages proxy listener: %s", p.listener.Addr())
