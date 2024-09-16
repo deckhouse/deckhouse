@@ -37,6 +37,16 @@ sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDSNdUmV2ekit0rFrQE9IoRsVqKT
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+  settings:
+    highAvailability: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
   name: flant-integration
 spec:
   enabled: false
