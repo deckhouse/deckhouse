@@ -9,7 +9,9 @@ metadata:
 spec:
   {{- if $prefix }}
   resourceGroup: "{{ $prefix }}-rg"
+  internalNetwork: "{{ $prefix }}-vins"
   {{- end }}
   {{- if $providerClusterConfiguration.masterNodeGroup.instanceClass.externalNetwork }}
   externalNetwork: "{{ $providerClusterConfiguration.masterNodeGroup.instanceClass.externalNetwork }}"
   {{- end }}
+
