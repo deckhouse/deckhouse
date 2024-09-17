@@ -150,10 +150,7 @@ spec:
 {{- end }}
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
-  externalLabels:
-{{- with .Values.prometheus.externalLabels }}
-    {{- . | toYaml | nindent 4 }}
-{{- end }}
+  externalLabels: {}
     prometheus: deckhouse
   prometheusExternalLabelName: ""
   replicaExternalLabelName: ""
@@ -219,9 +216,16 @@ spec:
     headers:
       X-Auth-Token: {{ .spec.customAuthToken }}
     {{- end }}
+
     {{- if .spec.writeRelabelConfigs }}
     writeRelabelConfigs:
-    {{- .spec.writeRelabelConfigs | toYaml | nindent 4 }}
+      {{- .Values.spec.writeRelabelConfigs | toYaml | nindent 2 }}
+      {{- if .Values.externalLabels }}
+      {{- range $key, $value := .Values.externalLabels }}
+      - action: keep
+        regex: '{{ printf "%s:%s" $key $value | quote }}'
+      {{- end }}
+      {{- end }}
     {{- end }}
     {{- if .spec.tlsConfig }}
       {{- $tlsConfig := .spec.tlsConfig | deepCopy }}
