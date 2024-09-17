@@ -83,5 +83,7 @@ type DeckhouseClusterConfig struct {
 	RegistryDockerCfg string                 `json:"registryDockerCfg,omitempty"`
 	RegistryCA        string                 `json:"registryCA,omitempty"`
 	RegistryScheme    string                 `json:"registryScheme,omitempty"`
+	RegistryMode      string                 `json:"registryMode,omitempty"`
+	ImagesBundlePath  string                 `json:"imagesBundlePath,omitempty"`
 	ConfigOverrides   map[string]interface{} `json:"configOverrides"`
 }

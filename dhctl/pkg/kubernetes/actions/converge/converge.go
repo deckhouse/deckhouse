@@ -291,9 +291,15 @@ func (r *Runner) converge() error {
 		if err != nil {
 			return fmt.Errorf("unable to get cluster config yaml: %w", err)
 		}
+
 		providerClusterConfigurationData, err := metaConfig.ProviderClusterConfigYAML()
 		if err != nil {
 			return fmt.Errorf("unable to get provider cluster config yaml: %w", err)
+		}
+
+		systemRegistryConfigurationData, err := metaConfig.SystemRegistryConfig.ToYAML()
+		if err != nil {
+			return fmt.Errorf("unable to get provider system registry config yaml: %w", err)
 		}
 
 		clusterUUID, err := uuid.Parse(metaConfig.UUID)
@@ -301,7 +307,7 @@ func (r *Runner) converge() error {
 			return fmt.Errorf("unable to parse cluster uuid %q: %w", metaConfig.UUID, err)
 		}
 
-		if err := deckhouse.ConvergeDeckhouseConfiguration(context.TODO(), r.kubeCl, clusterUUID, r.commanderUUID, clusterConfigurationData, providerClusterConfigurationData); err != nil {
+		if err := deckhouse.ConvergeDeckhouseConfiguration(context.TODO(), r.kubeCl, clusterUUID, r.commanderUUID, clusterConfigurationData, providerClusterConfigurationData, systemRegistryConfigurationData); err != nil {
 			return fmt.Errorf("unable to update deckhouse configuration: %w", err)
 		}
 
@@ -646,7 +652,7 @@ func (c *NodeGroupController) updateNode(nodeGroup *NodeGroupGroupOptions, nodeN
 	}
 
 	if pipelineForMaster {
-		err = SaveMasterNodeTerraformState(c.client, nodeName, outputs.TerraformState, []byte(outputs.KubeDataDevicePath))
+		err = SaveMasterNodeTerraformState(c.client, nodeName, outputs.TerraformState, outputs.GetDataDevices())
 		if err != nil {
 			return err
 		}

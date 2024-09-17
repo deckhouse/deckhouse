@@ -13,5 +13,5 @@
 # limitations under the License.
 
 {{- if semverCompare ">1.26" .kubernetesVersion }}
-bb-rp-install "ecr-credential-provider:{{ index .images.registrypackages (printf "ecrCredentialProvider%s" (.kubernetesVersion | replace "." "")) | toString }}"
+bb-package-install "ecr-credential-provider:{{ index .images.registrypackages (printf "ecrCredentialProvider%s" (.kubernetesVersion | replace "." "")) | toString }}"
 {{- end }}
