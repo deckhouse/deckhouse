@@ -1,7 +1,6 @@
 type: object
 properties:
   storageClass:
-    deprecated: true
     description: |
       Устаревший параметр. Теперь его значение задается в [global.modules.storageClass](#parameters-modules-storageclass).
 
@@ -9,7 +8,6 @@ properties:
         * Если значение не указано, используется автоматически определяемый `global.discovery.defaultStorageClass`. Если `global.discovery.defaultStorageClass` не определен, используется `emptyDir`.
         * Этот параметр имеет смысл использовать только в исключительных ситуациях.
         * Этот параметр применяется в процессе включения модуля.
-    x-doc-deprecated: true
   defaultClusterStorageClass:
     type: string
     default: null
