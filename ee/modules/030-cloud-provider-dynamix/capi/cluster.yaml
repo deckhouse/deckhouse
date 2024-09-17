@@ -11,5 +11,5 @@ spec:
   resourceGroup: "{{ $prefix }}-rg"
   {{- end }}
   {{- if $providerClusterConfiguration.masterNodeGroup.instanceClass.externalNetwork }}
-  resourceGroup: "{{ $prefix }}-rg"
+  externalNetwork: "{{ $providerClusterConfiguration.masterNodeGroup.instanceClass.externalNetwork }}"
   {{- end }}
