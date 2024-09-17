@@ -8,7 +8,7 @@
 
 - Open console and run documentation and site containers with one of the following methods:
 
-  - The first method — open two consoles and run containers using the Makefile:
+  - **The first method** — open two consoles and do the following steps.
 
     1. In the first console run:
 		
