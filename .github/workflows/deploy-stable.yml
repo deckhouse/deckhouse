@@ -334,6 +334,29 @@ jobs:
             echo "enable=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Check cooldown for release
+        if: ${{ github.event.inputs.cooldown }}
+        env:
+          COOLDOWN: ${{ github.event.inputs.cooldown }}
+        run: |
+          CURRENT_TIMESTAMP=$(date +%s)
+          COOLDOWN_TIMESTAMP=$(date -u +%s -d "${COOLDOWN}")
+          # Check datetime format
+          if ! [[ "$COOLDOWN" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}$ ]]; then
+            echo "Invalid datetime format."
+            exit 1
+          fi
+          # Check datetime is valid
+          if ! date -d "$COOLDOWN" >/dev/null 2>&1; then
+            echo "Invalid datetime."
+            exit 1
+          fi
+          # Check datetime is expired
+          if [ "$CURRENT_TIMESTAMP" -gt "$COOLDOWN_TIMESTAMP" ]; then
+            echo "The cooldown has expired"
+            exit 1
+          fi
+
 
       - name: Set cooldown for release (CE)
         if: ${{ github.event.inputs.cooldown }}

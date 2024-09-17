@@ -137,7 +137,9 @@ spec:
       messageExpression: "'Manual update-policy change is forbidden. Please, remove the update-policy label to automatically find a new suitable policy'"
       {{- end }}
 ---
-{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
+{{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
+apiVersion: admissionregistration.k8s.io/v1
+{{- else if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1beta1
 {{- else }}
 apiVersion: admissionregistration.k8s.io/v1alpha1
@@ -171,12 +173,12 @@ spec:
     - apiGroups:   ["deckhouse.io"]
       apiVersions: ["*"]
       operations:  ["CREATE", "UPDATE"]
-      resources:   ["moduleconfigs"]    
+      resources:   ["moduleconfigs"]
   validations:
     - expression: '!(object.metadata.name == "deckhouse" && has(object.spec.settings.update) && has(object.spec.settings.update.windows) && object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) > int(string(w.to).replace(":", ""))))'
       reason: Forbidden
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
-      messageExpression: '''Invalid update windows. Start time (windows.to) should be less than the end time of the update window (windows.from)'''         
+      messageExpression: '''Invalid update windows. Start time (windows.to) should be less than the end time of the update window (windows.from)'''
 {{- end }}
 ---
 {{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}

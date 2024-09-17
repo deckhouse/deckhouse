@@ -49,9 +49,12 @@ func (b *ClusterBootstrapper) InstallDeckhouse() error {
 	installConfig.KubeadmBootstrap = app.KubeadmBootstrap
 	installConfig.MasterNodeSelector = app.MasterNodeSelector
 
-	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-		if _, err = wrapper.Client().Start(); err != nil {
-			return fmt.Errorf("unable to start ssh-client: %w", err)
+	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok && wrapper != nil {
+		sshClient := wrapper.Client()
+		if sshClient != nil {
+			if _, err = sshClient.Start(); err != nil {
+				return fmt.Errorf("unable to start ssh-client: %w", err)
+			}
 		}
 	}
 

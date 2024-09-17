@@ -218,7 +218,7 @@ spec:
         {{- if eq "nginx" $crd.spec.ingressClass }}
         - --watch-ingress-without-class=true
         {{- end }}
-        {{- if and $crd.spec.annotationValidationEnabled (eq $controllerVersion "1.9") }}
+        {{- if and $crd.spec.annotationValidationEnabled (or (eq $controllerVersion "1.9") (eq $controllerVersion "1.10")) }}
         - --enable-annotation-validation=true
         {{- end }}
   {{- if $crd.spec.customErrors }}

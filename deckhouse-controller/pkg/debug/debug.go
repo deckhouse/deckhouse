@@ -168,6 +168,26 @@ func createTarball() *bytes.Buffer {
 			Cmd:  "bash",
 			Args: []string{"-c", `kubectl get clusteralerts.deckhouse.io -o json | jq '.items[]'`},
 		},
+		{
+			File: "pods.txt",
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl get pod -A -owide | grep -Pv '\s+([1-9]+[\d]*)\/\1\s+' | grep -v 'Completed\|Evicted' | grep -E "^(d8-|kube-system)"`},
+		},
+		{
+			File: "cluster-authorization-rules.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "clusterauthorizationrules", "-o", "json"},
+		},
+		{
+			File: "authorization-rules.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "authorizationrules", "-o", "json"},
+		},
+		{
+			File: "module-configs.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "moduleconfig", "-o", "json"},
+		},
 	}
 
 	for _, cmd := range debugCommands {

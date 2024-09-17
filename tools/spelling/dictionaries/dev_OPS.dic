@@ -1,4 +1,4 @@
-1944
+1949
 1GB
 2GB
 5XX
@@ -114,6 +114,7 @@ bpfLBMode
 Buildah
 Burstable
 BusyBox
+BypassFwMark
 CAA
 CAInjector
 camelCase
@@ -235,6 +236,7 @@ crons
 CRs
 crt
 cryptocurrency
+Cryptor
 csi
 CSI
 CSR
@@ -568,11 +570,13 @@ JWT
 k3d
 K8s
 KaaS
+Kaspersky
 kb
 keepalived
 Keepalived
 keepalivedEE
 KeepalivedInstance
+KESL
 Keycloak
 keyField
 KeyValue
@@ -770,6 +774,7 @@ NotRegex
 npm
 NSX
 NTP
+NtpFwMark
 Nvidia
 oauth
 OAuth

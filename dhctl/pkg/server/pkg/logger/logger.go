@@ -66,21 +66,7 @@ func Err(err error) slog.Attr {
 	return slog.Attr{Key: errKey, Value: slog.StringValue(err.Error())}
 }
 
-func ToContext(ctx context.Context, log *slog.Logger) context.Context {
-	return context.WithValue(ctx, loggerCtxKey{}, log.With(attrFromCtx(ctx)...))
-}
-
-func L(ctx context.Context) *slog.Logger {
-	l := ctx.Value(loggerCtxKey{})
-	if l == nil {
-		logger := NewLogger(&slog.LevelVar{}).With(slog.String("UNINITIALIZED", "UNINITIALIZED"))
-		return logger
-	}
-
-	return l.(*slog.Logger)
-}
-
-func attrFromCtx(ctx context.Context) []any {
+func AttrFromGRPCCtx(ctx context.Context) []any {
 	attrs := make([]any, 0, 1)
 
 	md, ok := metadata.FromIncomingContext(ctx)
@@ -94,4 +80,18 @@ func attrFromCtx(ctx context.Context) []any {
 	}
 
 	return attrs
+}
+
+func ToContext(ctx context.Context, log *slog.Logger, args ...any) context.Context {
+	return context.WithValue(ctx, loggerCtxKey{}, log.With(args...))
+}
+
+func L(ctx context.Context) *slog.Logger {
+	l := ctx.Value(loggerCtxKey{})
+	if l == nil {
+		logger := NewLogger(&slog.LevelVar{}).With(slog.String("UNINITIALIZED", "UNINITIALIZED"))
+		return logger
+	}
+
+	return l.(*slog.Logger)
 }
