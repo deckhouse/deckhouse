@@ -245,24 +245,24 @@ func (pc *Checker) CheckRegistryCredentials() error {
 	ctx, cancel := context.WithTimeout(context.Background(), httpClientTimeoutSec*time.Second)
 	defer cancel()
 
-	var authData string
-	var err error
+	var registryData config.RegistryData
 
 	switch pc.metaConfig.Registry.ExtraData.(type) {
 	case config.DetachedModeRegistryData:
 		return nil
 	case config.ProxyModeRegistryData:
 		extraData := pc.metaConfig.Registry.ExtraData.(config.ProxyModeRegistryData)
-		authData, err = extraData.UpstreamRegistryData.Auth()
+		registryData = extraData.UpstreamRegistryData
 	default:
-		authData, err = pc.metaConfig.Registry.Data.Auth()
+		registryData = pc.metaConfig.Registry.Data
 	}
 
+	authData, err := registryData.Auth()
 	if err != nil {
 		return err
 	}
 
-	return checkRegistryAuth(ctx, &pc.metaConfig.Registry.Data, authData)
+	return checkRegistryAuth(ctx, &registryData, authData)
 }
 
 func prepareRegistryRequest(
