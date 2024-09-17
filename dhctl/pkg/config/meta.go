@@ -77,11 +77,13 @@ type RegistryData struct {
 type ProxyModeRegistryData struct {
 	UpstreamRegistryData   RegistryData       `json:"-"`
 	InternalRegistryAccess RegistryAccessData `json:"-"`
+	RegistryStorageMode    string             `json:"-"`
 }
 
 type DetachedModeRegistryData struct {
 	ImagesBundlePath       string             `json:"-"`
 	InternalRegistryAccess RegistryAccessData `json:"-"`
+	RegistryStorageMode    string             `json:"-"`
 }
 
 // Prepare extracts all necessary information from raw json messages to the root structure
@@ -136,6 +138,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 			case "Proxy":
 				m.Registry.ExtraData = ProxyModeRegistryData{
 					UpstreamRegistryData: m.Registry.Data,
+					RegistryStorageMode:  m.DeckhouseConfig.RegistryStorageMode,
 				}
 
 				m.Registry.Data = RegistryData{
@@ -148,7 +151,8 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 				}
 			case "Detached":
 				m.Registry.ExtraData = DetachedModeRegistryData{
-					ImagesBundlePath: m.DeckhouseConfig.ImagesBundlePath,
+					ImagesBundlePath:    m.DeckhouseConfig.ImagesBundlePath,
+					RegistryStorageMode: m.DeckhouseConfig.RegistryStorageMode,
 				}
 
 				m.Registry.Data = RegistryData{
@@ -735,17 +739,19 @@ func (m *MetaConfig) LoadInstallerVersion() error {
 	return nil
 }
 
-func (rData *ProxyModeRegistryData) DeepCopy() ProxyModeRegistryData {
+func (rData ProxyModeRegistryData) DeepCopy() ProxyModeRegistryData {
 	return ProxyModeRegistryData{
 		UpstreamRegistryData:   rData.UpstreamRegistryData,
 		InternalRegistryAccess: rData.InternalRegistryAccess,
+		RegistryStorageMode:    rData.RegistryStorageMode,
 	}
 }
 
-func (rData *DetachedModeRegistryData) DeepCopy() DetachedModeRegistryData {
+func (rData DetachedModeRegistryData) DeepCopy() DetachedModeRegistryData {
 	return DetachedModeRegistryData{
 		ImagesBundlePath:       rData.ImagesBundlePath,
 		InternalRegistryAccess: rData.InternalRegistryAccess,
+		RegistryStorageMode:    rData.RegistryStorageMode,
 	}
 }
 
@@ -838,6 +844,7 @@ func (r Registry) ConvertToMap() (map[string]interface{}, error) {
 	switch r.ExtraData.(type) {
 	case ProxyModeRegistryData:
 		extraData := r.ExtraData.(ProxyModeRegistryData)
+		mapData["registryStorageMode"] = extraData.RegistryStorageMode
 		mapData["internalRegistryAccess"] = extraData.InternalRegistryAccess.ConvertToMap()
 		mapData["upstreamRegistry"], err = extraData.UpstreamRegistryData.ConvertToMap()
 		if err != nil {
@@ -845,6 +852,7 @@ func (r Registry) ConvertToMap() (map[string]interface{}, error) {
 		}
 	case DetachedModeRegistryData:
 		extraData := r.ExtraData.(DetachedModeRegistryData)
+		mapData["registryStorageMode"] = extraData.RegistryStorageMode
 		mapData["internalRegistryAccess"] = extraData.InternalRegistryAccess.ConvertToMap()
 	}
 	return mapData, nil

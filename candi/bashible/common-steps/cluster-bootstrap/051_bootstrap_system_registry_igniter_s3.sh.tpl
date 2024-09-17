@@ -13,6 +13,7 @@
 # limitations under the License.
 
 {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+{{- if eq .registry.registryStorageMode "s3" }}
 
 # Prepare UPSTREAM_REGISTRY vars for registryMode == Proxy
 {{- if eq .registry.registryMode "Proxy" }}
@@ -321,4 +322,5 @@ chmod a+x "$IGNITER_DIR/stop_system_registry_igniter.sh"
 bash "$IGNITER_DIR/stop_system_registry_igniter.sh"
 bash "$IGNITER_DIR/start_system_registry_igniter.sh"
 
+{{- end }}
 {{- end }}

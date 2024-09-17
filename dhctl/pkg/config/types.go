@@ -75,15 +75,16 @@ type TerraNodeGroupSpec struct {
 }
 
 type DeckhouseClusterConfig struct {
-	ReleaseChannel    string                 `json:"releaseChannel,omitempty"`
-	DevBranch         string                 `json:"devBranch,omitempty"`
-	Bundle            string                 `json:"bundle,omitempty"`
-	LogLevel          string                 `json:"logLevel,omitempty"`
-	ImagesRepo        string                 `json:"imagesRepo"`
-	RegistryDockerCfg string                 `json:"registryDockerCfg,omitempty"`
-	RegistryCA        string                 `json:"registryCA,omitempty"`
-	RegistryScheme    string                 `json:"registryScheme,omitempty"`
-	RegistryMode      string                 `json:"registryMode,omitempty"`
-	ImagesBundlePath  string                 `json:"imagesBundlePath,omitempty"`
-	ConfigOverrides   map[string]interface{} `json:"configOverrides"`
+	ReleaseChannel      string                 `json:"releaseChannel,omitempty"`
+	DevBranch           string                 `json:"devBranch,omitempty"`
+	Bundle              string                 `json:"bundle,omitempty"`
+	LogLevel            string                 `json:"logLevel,omitempty"`
+	ImagesRepo          string                 `json:"imagesRepo"`
+	RegistryDockerCfg   string                 `json:"registryDockerCfg,omitempty"`
+	RegistryCA          string                 `json:"registryCA,omitempty"`
+	RegistryScheme      string                 `json:"registryScheme,omitempty"`
+	RegistryMode        string                 `json:"registryMode,omitempty"`
+	RegistryStorageMode string                 `json:"registryStorageMode,omitempty"`
+	ImagesBundlePath    string                 `json:"imagesBundlePath,omitempty"`
+	ConfigOverrides     map[string]interface{} `json:"configOverrides"`
 }
