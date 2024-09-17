@@ -56,7 +56,15 @@
 	
 - Open <http://localhost>.
 
-Don't forget to stop documentation and site containers by running:
+- To stop the running containers use the following command:
+  - For the first method (in the each console):
+    ```shell
+    make down
+    ```
+  - For the second method:
+    ```shell
+    make docs-down
+    ```
 
   ```shell
   werf compose down
