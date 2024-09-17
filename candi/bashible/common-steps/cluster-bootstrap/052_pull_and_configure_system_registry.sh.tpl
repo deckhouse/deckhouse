@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+
+# Prepare UPSTREAM_REGISTRY vars for registryMode == Proxy
 {{- if eq .registry.registryMode "Proxy" }}
 UPSTREAM_REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.upstreamRegistry.auth | default "" }}")"
 if [[ "$UPSTREAM_REGISTRY_AUTH" == *":"* ]]; then
@@ -23,13 +26,6 @@ else
 fi
 {{- end }}
 
-{{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
-# Create a directories for the system registry configuration
-mkdir -p /etc/kubernetes/system-registry/{auth_config,seaweedfs_config,distribution_config,pki}
-
-# Create a directories for the system registry data if it does not exist
-mkdir -p /opt/deckhouse/system-registry/seaweedfs_data/
-
 # Prepare vars
 discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 registry_pki_path="/etc/kubernetes/system-registry/pki"
@@ -38,13 +34,20 @@ if [[ "$internal_registry_domain" == *":"* ]]; then
     internal_registry_domain="$(echo "$internal_registry_domain" | cut -d':' -f1)"
 fi
 
-# Prepare certs
-bb-sync-file "$registry_pki_path/ca.key" - << EOF
-{{ .registry.internalRegistryAccess.ca.key }}
-EOF
 
+# Create a directories for the system registry configuration
+mkdir -p /etc/kubernetes/system-registry/{auth_config,seaweedfs_config,distribution_config,pki}
+
+# Create a directories for the system registry data if it does not exist
+mkdir -p /opt/deckhouse/system-registry/seaweedfs_data/
+
+# Prepare certs
 bb-sync-file "$registry_pki_path/ca.crt" - << EOF
 {{ .registry.internalRegistryAccess.ca.cert }}
+EOF
+
+bb-sync-file "$registry_pki_path/ca.key" - << EOF
+{{ .registry.internalRegistryAccess.ca.key }}
 EOF
 
 {{- if eq .registry.registryMode "Proxy" }}
@@ -327,4 +330,5 @@ EOF
 /opt/deckhouse/bin/crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.common "pause") }}
 
 bash "$IGNITER_DIR/stop_system_registry_igniter.sh"
+
 {{- end }}

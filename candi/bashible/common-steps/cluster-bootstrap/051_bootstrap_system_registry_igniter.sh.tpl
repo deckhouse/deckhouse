@@ -26,34 +26,33 @@ else
 fi
 {{- end }}
 
-# Other vars
+# Prepare vars
 discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 internal_registry_domain="{{ .registry.address }}"
 if [[ "$internal_registry_domain" == *":"* ]]; then
     internal_registry_domain="$(echo "$internal_registry_domain" | cut -d':' -f1)"
 fi
 
-
 # Install igniter packages
-bb-package-install "seaweedfs:{{ .images.systemRegistry.seaweedfs }}" "dockerAuth:{{ .images.systemRegistry.dockerAuth }}" "dockerDistribution:{{ .images.systemRegistry.dockerDistribution }}"
-bb-package-install "etcd:{{ .images.controlPlaneManager.etcd }}"
+bb-package-install "etcd:{{ .images.controlPlaneManager.etcd }}" "seaweedfs:{{ .images.systemRegistry.seaweedfs }}" "dockerAuth:{{ .images.systemRegistry.dockerAuth }}" "dockerDistribution:{{ .images.systemRegistry.dockerDistribution }}"
 
 # Create a directories for the system registry configuration
-# Create a directories for the system registry data if it does not exist
 mkdir -p $IGNITER_DIR
+
+# Create a directories for the system registry data if it does not exist
 mkdir -p /opt/deckhouse/system-registry/seaweedfs_data/
 
 # Prepare certs
-cat <<EOF > "$IGNITER_DIR/ca.crt"
+bb-sync-file "$IGNITER_DIR/ca.crt" - << EOF
 {{ .registry.internalRegistryAccess.ca.cert }}
 EOF
 
-cat <<EOF > "$IGNITER_DIR/ca.key"
+bb-sync-file "$IGNITER_DIR/ca.key" - << EOF
 {{ .registry.internalRegistryAccess.ca.key }}
 EOF
 
 {{- if eq .registry.registryMode "Proxy" }}
-cat <<EOF > "$IGNITER_DIR/upstream-registry-ca.crt"
+bb-sync-file "$IGNITER_DIR/upstream-registry-ca.crt" - << EOF
 {{ .registry.upstreamRegistry.ca }}
 EOF
 {{- end }}
@@ -90,7 +89,7 @@ if [ ! -f "$IGNITER_DIR/distribution.crt" ]; then
     -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
 fi
 
-cat <<EOF > "$IGNITER_DIR/auth_config.yaml"
+bb-sync-file "$IGNITER_DIR/auth_config.yaml" - << EOF
 server:
   addr: "localhost:5051"
   certificate: "$IGNITER_DIR/auth.crt"
@@ -118,7 +117,7 @@ acl:
   # Access is denied by default.
 EOF
 
-cat <<EOF > "$IGNITER_DIR/filer.toml"
+bb-sync-file "$IGNITER_DIR/filer.toml" - << EOF
 [filer.options]
 recursive_delete = false # do we really need for registry?
 
@@ -129,7 +128,7 @@ servers = "127.0.0.1:23791"
 key_prefix = "seaweedfs_meta."
 EOF
 
-cat <<EOF > "$IGNITER_DIR/master.toml"
+bb-sync-file "$IGNITER_DIR/master.toml" - << EOF
 [master.volume_growth]
 copy_1 = 1
 copy_2 = 2
@@ -137,7 +136,7 @@ copy_3 = 3
 copy_other = 1
 EOF
 
-cat <<EOF > "$IGNITER_DIR/distribution_config.yaml"
+bb-sync-file "$IGNITER_DIR/distribution_config.yaml" - << EOF
 version: 0.1
 log:
   level: info
@@ -199,7 +198,7 @@ auth:
     autoredirect: false
 EOF
 
-cat <<EOF > "$IGNITER_DIR/start_system_registry_igniter.sh"
+bb-sync-file "$IGNITER_DIR/start_system_registry_igniter.sh" - << EOF
 #!/bin/bash
 
 for var in \$(compgen -e REGISTRY); do
@@ -289,7 +288,7 @@ echo "All services are starting in the background and logs are being written to 
 
 EOF
 
-cat <<EOF > "$IGNITER_DIR/stop_system_registry_igniter.sh"
+bb-sync-file "$IGNITER_DIR/stop_system_registry_igniter.sh" - << EOF
 #!/bin/bash
 
 stop_service() {
