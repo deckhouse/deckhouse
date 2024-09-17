@@ -23,5 +23,5 @@ RUN chown 64535:64535 trivy
 RUN chmod 0700 trivy
 
 FROM $BASE_DISTROLESS
-COPY --from=build /src/trivy /usr/local/bin/
+COPY --from=build /src/trivy/trivy /usr/local/bin/
 ENTRYPOINT [ "/usr/local/bin/trivy" ]
