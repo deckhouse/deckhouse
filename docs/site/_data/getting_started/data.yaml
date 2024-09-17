@@ -578,3 +578,73 @@ installTypes:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
+  red:
+    iconPath: images/icons/platforms/red.png
+    pages_title:
+      en: "Deckhouse Kubernetes Platform for RED virtualization"
+      ru: "Deckhouse Kubernetes Platform на РЕД виртуализации"
+    type: baremetal
+    name:
+      en: RED virtualization
+      ru: РЕД виртуализация
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Setting up cluster
+          ru: Настройка кластера
+        template: getting_started/global/step_cluster_setup.html
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Finishing installation
+          ru: Завершение установки
+        template: getting_started/<INSTALL_CODE>/STEP_FINALIZE.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md   
+  spacevm:
+    iconPath: images/icons/platforms/spacevm.png
+    pages_title:
+      en: "Deckhouse Kubernetes Platform for SpaceVM"
+      ru: "Deckhouse Kubernetes Platform на SpaceVM"
+    type: baremetal
+    name:
+      en: SpaceVM
+      ru: SpaceVM
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Setting up cluster
+          ru: Настройка кластера
+        template: getting_started/global/step_cluster_setup.html
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Finishing installation
+          ru: Завершение установки
+        template: getting_started/<INSTALL_CODE>/STEP_FINALIZE.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md           
