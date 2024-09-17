@@ -13,7 +13,7 @@
 # limitations under the License.
 
 {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
-{{- if ne .registry.registryStorageMode "s3" }}
+{{- if ne .registry.registryStorageMode "S3" }}
 
 # Prepare UPSTREAM_REGISTRY vars for registryMode == Proxy
 {{- if eq .registry.registryMode "Proxy" }}

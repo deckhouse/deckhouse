@@ -31,7 +31,7 @@ bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret ge
   --from-file=upstreamRegistryCA=$registry_pki_path/upstream-registry-ca.crt \
   --from-literal=upstreamRegistryAuth='{{- .registry.upstreamRegistry.auth }}' \
 {{- end }}
-{{- if eq .registry.registryStorageMode "s3" }}
+{{- if eq .registry.registryStorageMode "S3" }}
   --from-file=etcd-ca.key=$etcd_pki_path/ca.key \
   --from-file=etcd-ca.crt=$etcd_pki_path/ca.crt \
   --from-file=seaweedfs.key=$registry_pki_path/seaweedfs.key \

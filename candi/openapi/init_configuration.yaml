@@ -136,7 +136,7 @@ apiVersions:
               registryMode:
                 enum: [Proxy, Detached]
               registryStorageMode:
-                enum: [s3, fs]
+                enum: [S3, Fs]
                 description: |
                   The type of data storage for the system registry module.
-                default: fs
+                default: Fs
