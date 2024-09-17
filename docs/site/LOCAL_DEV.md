@@ -6,7 +6,7 @@
 
 - Install werf.
 
-- Open console and running documentation and site containers with one of the following methods:
+- Open console and run documentation and site containers with one of the following methods:
 
   - The first method — open two consoles and run containers using the Makefile:
 
