@@ -849,11 +849,24 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 kubectl -n d8-system get pods -l app=deckhouse
-kubectl wait -n d8-system --for=condition=available --timeout=1800s deployment/deckhouse
+[[ "$(kubectl -n d8-system get pods -l app=deckhouse -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}{..status.phase}')" ==  "TrueRunning" ]]
 END_SCRIPT
 )
 
-  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"
+  testRunAttempts=60
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    >&2 echo "Check Deckhouse Pod readiness..."
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+      return 0
+    fi
+
+    if [[ $i < $testRunAttempts ]]; then
+      >&2 echo -n "  Deckhouse Pod not ready. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
+      sleep 30
+    else
+      >&2 echo -n "  Deckhouse Pod not ready. Attempt $i/$testRunAttempts failed."
+    fi
+  done
 
   write_deckhouse_logs
 
