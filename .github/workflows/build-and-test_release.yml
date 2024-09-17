@@ -537,7 +537,8 @@ jobs:
             werf build \
               ${SECONDARY_REPO} \
               --parallel=true --parallel-tasks-limit=5 \
-              --report-path images_tags_werf.json
+              --save-build-report=true \
+              --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
@@ -547,7 +548,8 @@ jobs:
             # - semver tags to Github Container Registry for testing release process.
             werf build \
               --parallel=true --parallel-tasks-limit=5 \
-              --report-path images_tags_werf.json
+              --save-build-report=true \
+              --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
             echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
@@ -597,7 +599,8 @@ jobs:
                 --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \
                 --parallel=true --parallel-tasks-limit=5 \
-                --report-path images_tags_werf.json
+                --save-build-report=true \
+                --build-report-path images_tags_werf.json
             fi
             # Note: do not run second werf build for test repo, as it has no secondary repo.
 
@@ -854,7 +857,8 @@ jobs:
             werf build \
               ${SECONDARY_REPO} \
               --parallel=true --parallel-tasks-limit=5 \
-              --report-path images_tags_werf.json
+              --save-build-report=true \
+              --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
@@ -864,7 +868,8 @@ jobs:
             # - semver tags to Github Container Registry for testing release process.
             werf build \
               --parallel=true --parallel-tasks-limit=5 \
-              --report-path images_tags_werf.json
+              --save-build-report=true \
+              --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
             echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
@@ -914,7 +919,8 @@ jobs:
                 --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \
                 --parallel=true --parallel-tasks-limit=5 \
-                --report-path images_tags_werf.json
+                --save-build-report=true \
+                --build-report-path images_tags_werf.json
             fi
             # Note: do not run second werf build for test repo, as it has no secondary repo.
 
@@ -1171,7 +1177,8 @@ jobs:
             werf build \
               ${SECONDARY_REPO} \
               --parallel=true --parallel-tasks-limit=5 \
-              --report-path images_tags_werf.json
+              --save-build-report=true \
+              --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
@@ -1181,7 +1188,8 @@ jobs:
             # - semver tags to Github Container Registry for testing release process.
             werf build \
               --parallel=true --parallel-tasks-limit=5 \
-              --report-path images_tags_werf.json
+              --save-build-report=true \
+              --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
             echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
@@ -1231,7 +1239,8 @@ jobs:
                 --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \
                 --parallel=true --parallel-tasks-limit=5 \
-                --report-path images_tags_werf.json
+                --save-build-report=true \
+                --build-report-path images_tags_werf.json
             fi
             # Note: do not run second werf build for test repo, as it has no secondary repo.
 
@@ -1488,7 +1497,8 @@ jobs:
             werf build \
               ${SECONDARY_REPO} \
               --parallel=true --parallel-tasks-limit=5 \
-              --report-path images_tags_werf.json
+              --save-build-report=true \
+              --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
@@ -1498,7 +1508,8 @@ jobs:
             # - semver tags to Github Container Registry for testing release process.
             werf build \
               --parallel=true --parallel-tasks-limit=5 \
-              --report-path images_tags_werf.json
+              --save-build-report=true \
+              --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
             echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
@@ -1548,7 +1559,8 @@ jobs:
                 --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \
                 --parallel=true --parallel-tasks-limit=5 \
-                --report-path images_tags_werf.json
+                --save-build-report=true \
+                --build-report-path images_tags_werf.json
             fi
             # Note: do not run second werf build for test repo, as it has no secondary repo.
 
@@ -1805,7 +1817,8 @@ jobs:
             werf build \
               ${SECONDARY_REPO} \
               --parallel=true --parallel-tasks-limit=5 \
-              --report-path images_tags_werf.json
+              --save-build-report=true \
+              --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
@@ -1815,7 +1828,8 @@ jobs:
             # - semver tags to Github Container Registry for testing release process.
             werf build \
               --parallel=true --parallel-tasks-limit=5 \
-              --report-path images_tags_werf.json
+              --save-build-report=true \
+              --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
             echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
@@ -1865,7 +1879,8 @@ jobs:
                 --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \
                 --parallel=true --parallel-tasks-limit=5 \
-                --report-path images_tags_werf.json
+                --save-build-report=true \
+                --build-report-path images_tags_werf.json
             fi
             # Note: do not run second werf build for test repo, as it has no secondary repo.
 
