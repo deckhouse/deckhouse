@@ -391,7 +391,7 @@ properties:
       The same as the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, `nodeSelector` will be determined
-      [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).</code>
+      [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).</code>
 ```
 
 An example of the `/openapi/doc-ru-config-values.yaml` file for the Russian translation of the schema:

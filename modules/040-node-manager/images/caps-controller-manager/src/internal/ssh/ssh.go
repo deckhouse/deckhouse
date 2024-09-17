@@ -46,14 +46,14 @@ func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout i
 	defer func() {
 		errD := sshKey.Close()
 		if errD != nil {
-			err = errors.Wrapf(err, "failed to close temporary file '%s' with private ssh key", sshKey.Name())
-			return
+			// It is not critical if we can't close the file.
+			instanceScope.Logger.Error(err, fmt.Sprintf("failed to close temporary file '%s' with private ssh key", sshKey.Name()))
 		}
 
 		errD = os.Remove(sshKey.Name())
 		if errD != nil {
-			err = errors.Wrapf(err, "failed to remove temporary file '%s' with private ssh key", sshKey.Name())
-			return
+			// It is not critical if we can't remove the file.
+			instanceScope.Logger.Error(err, fmt.Sprintf("failed to remove temporary file '%s' with private ssh key", sshKey.Name()))
 		}
 	}()
 

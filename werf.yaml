@@ -56,6 +56,10 @@ cleanup:
 # Source repo  settings
 {{- $_ := set . "SOURCE_REPO" (env "SOURCE_REPO" | default "https://github.com") }}
 
+# source repo with protected cloud providers
+# use example.com as default because we can fail build without env
+{{- $_ := set . "CLOUD_PROVIDERS_SOURCE_REPO" (env "CLOUD_PROVIDERS_SOURCE_REPO" | default "https://example.com") }}
+
 # goproxy  settings
 {{- $_ := set . "GOPROXY" (env "GOPROXY") }}
 
@@ -610,7 +614,7 @@ git:
 import:
 - artifact: dhctl
   add: /dhctl/bin/dhctl
-  to: /usr/bin/dhctl
+  to: /dhctl
   after: setup
 - image: dev-prebuild
   add: /deckhouse
@@ -681,6 +685,7 @@ docker:
 shell:
   setup:
   - |
+    ln -fs /dhctl /usr/bin/dhctl
     cat <<"EOD" > /etc/inputrc
     {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 4 }}
     EOD
@@ -880,6 +885,7 @@ args:
   BASE_JEKYLL: {{ .Images.BASE_JEKYLL }}
   BASE_SCRATCH: {{ .Images.BASE_SCRATCH }}
   SOURCE_REPO: {{ .SOURCE_REPO }}
+  CLOUD_PROVIDERS_SOURCE_REPO: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
   # proxies for various packages
   GOPROXY: {{ .GOPROXY }}
   {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless")) }}
@@ -947,6 +953,7 @@ dependencies:
   {{- $_ := set $ctx "CandiVersionMap" $Root.CandiVersionMap }}
   {{- $_ := set $ctx "TF" $Root.TF }}
   {{- $_ := set $ctx "SOURCE_REPO" $Root.SOURCE_REPO }}
+  {{- $_ := set $ctx "CLOUD_PROVIDERS_SOURCE_REPO" $Root.CLOUD_PROVIDERS_SOURCE_REPO }}
   {{- $_ := set $ctx "GOPROXY" $Root.GOPROXY }}
 ---
 {{ include "module_image_template" $ctx }}

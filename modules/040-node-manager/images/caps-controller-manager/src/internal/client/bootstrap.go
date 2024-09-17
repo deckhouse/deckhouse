@@ -273,11 +273,13 @@ func waitForNode(ctx context.Context, instanceScope *scope.InstanceScope) (*core
 
 	node := &nodes.Items[0]
 
-	if node.Annotations["node.deckhouse.io/configuration-checksum"] == "" {
-		return nil, errors.Errorf("Node '%s' doesn't have 'node.deckhouse.io/configuration-checksum' annotation", node.Name)
+	for _, condition := range node.Status.Conditions {
+		if condition.Type == corev1.NodeReady && condition.Status == corev1.ConditionTrue {
+			return node, nil
+		}
 	}
 
-	return node, nil
+	return nil, errors.Errorf("Node '%s' is not ready", node.Name)
 }
 
 // getBootstrapScript returns the bootstrap data from the secret in the Machine's bootstrap.dataSecretName.

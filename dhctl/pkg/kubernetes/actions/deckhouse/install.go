@@ -222,12 +222,18 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name:     `Namespace "d8-system"`,
 			Manifest: func() interface{} { return manifests.DeckhouseNamespace("d8-system") },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Namespaces().Create(context.TODO(), manifest.(*apiv1.Namespace), metav1.CreateOptions{})
+				_, err := kubeCl.CoreV1().Namespaces().Get(context.TODO(), manifest.(*apiv1.Namespace).GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.CoreV1().Namespaces().Create(context.TODO(), manifest.(*apiv1.Namespace), metav1.CreateOptions{})
+					}
+				} else {
+					log.InfoLn("Already exists. Skip!")
+				}
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Namespaces().Update(context.TODO(), manifest.(*apiv1.Namespace), metav1.UpdateOptions{})
-				return err
+				return nil
 			},
 		},
 		{
@@ -466,6 +472,10 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 
 	tasks = append(tasks, controllerDeploymentTask(kubeCl, cfg))
 
+	if err := config.CheckOrSetupArbitaryCNIModuleConfig(cfg); err != nil {
+		return err
+	}
+
 	if len(cfg.ModuleConfigs) > 0 {
 		createTask := func(mc *config.ModuleConfig, createMsg string) actions.ManifestTask {
 			mcUnstructMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(mc)
@@ -598,16 +608,6 @@ func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *config.Deck
 }
 
 func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.DeckhouseDeploymentParams {
-	// TODO remove this after integrating external-module-manager into deckhouse-controller
-	externalModuleManagerEnabled := strings.ToLower(cfg.Bundle) != "minimal"
-	for _, mc := range cfg.ModuleConfigs {
-		if mc != nil && mc.GetName() == "external-module-manager" {
-			if mc.Spec.Enabled != nil {
-				externalModuleManagerEnabled = *mc.Spec.Enabled
-			}
-		}
-	}
-
 	return manifests.DeckhouseDeploymentParams{
 		Registry:               cfg.GetImage(true),
 		LogLevel:               cfg.LogLevel,
@@ -615,7 +615,6 @@ func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.
 		IsSecureRegistry:       cfg.IsRegistryAccessRequired(),
 		KubeadmBootstrap:       cfg.KubeadmBootstrap,
 		MasterNodeSelector:     cfg.MasterNodeSelector,
-		ExternalModulesEnabled: externalModuleManagerEnabled,
 	}
 }
 

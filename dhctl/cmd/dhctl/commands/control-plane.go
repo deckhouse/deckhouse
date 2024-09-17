@@ -17,14 +17,15 @@ package commands
 import (
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 func DefineTestControlPlaneManagerReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -40,7 +41,10 @@ func DefineTestControlPlaneManagerReadyCommand(parent *kingpin.CmdClause) *kingp
 			return err
 		}
 
-		kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
+		kubeCl := client.NewKubernetesClient().
+			WithNodeInterface(
+				ssh.NewNodeInterfaceWrapper(sshClient),
+			)
 		// auto init
 		err = kubeCl.Init(client.AppKubernetesInitParams())
 		if err != nil {
@@ -77,7 +81,10 @@ func DefineTestControlPlaneNodeReadyCommand(parent *kingpin.CmdClause) *kingpin.
 			return err
 		}
 
-		kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
+		kubeCl := client.NewKubernetesClient().
+			WithNodeInterface(
+				ssh.NewNodeInterfaceWrapper(sshClient),
+			)
 		// auto init
 		err = kubeCl.Init(client.AppKubernetesInitParams())
 		if err != nil {

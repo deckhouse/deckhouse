@@ -17,6 +17,8 @@ resources:
   value: {{ pluck .Values.web.env .Values.vrouter.logLevel | first | default .Values.vrouter.logLevel._default | quote }}
 - name: VROUTER_PATH_STATIC
   value: {{ pluck .Values.web.env .Values.vrouter.pathStatic | first | default .Values.vrouter.pathStatic._default | quote }}
+- name: VROUTER_LOCATION_VERSIONS
+  value: {{ .Values.vrouter.locationVersions | quote }}
 - name: VROUTER_PATH_CHANNELS_FILE
   value: {{ pluck .Values.web.env .Values.vrouter.pathChannelsFile | first | default .Values.vrouter.pathChannelsFile._default | quote }}
 - name: VROUTER_PATH_TPLS

@@ -1,8 +1,878 @@
+Subject: [PATCH] added cef encoder
+---
+Index: website/cue/reference/components/sinks/base/webhdfs.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/webhdfs.cue b/website/cue/reference/components/sinks/base/webhdfs.cue
+--- a/website/cue/reference/components/sinks/base/webhdfs.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/webhdfs.cue	(date 1723658498485)
+@@ -107,6 +107,91 @@
+ 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
+ 				}
+ 			}
++			cef: {
++				description:   "The CEF Serializer Options."
++				relevant_when: "codec = \"cef\""
++				required:      true
++				type: object: options: {
++					device_event_class_id: {
++						description: """
++																Unique identifier for each event-type. Identifies the type of event reported.
++																The value length must be lower or equal to 1023.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_product: {
++						description: """
++																Identifies the product of a vendor.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_vendor: {
++						description: """
++																Identifies the vendor of the product.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_version: {
++						description: """
++																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
++																The value length must be lower or equal to 31.
++																"""
++						required: false
++						type: string: {}
++					}
++					extensions: {
++						description: """
++																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
++																The event can have any number of key-value pairs in any order.
++																"""
++						required: false
++						type: object: options: "*": {
++							description: "This is a path that points to the extension value of a log event."
++							required:    true
++							type: string: {}
++						}
++					}
++					name: {
++						description: """
++																This is a path that points to the human-readable description of a log event.
++																The value length must be lower or equal to 512.
++																Equals to "cef.name" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					severity: {
++						description: """
++																This is a path that points to filed of a log event that reflects importance of the event.
++																Reflects importance of the event.
++
++																It must point to a number from 0 to 10.
++																0 = Lowest, 10 = Highest.
++																Equals to "cef.severity" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					version: {
++						description: """
++																CEF Version. Can be either 0 or 1.
++																Equals to "0" by default.
++																"""
++						required: true
++						type: string: enum: {
++							V0: "CEF specification version 0.1."
++							V1: "CEF specification version 1.x."
++						}
++					}
++				}
++			}
+ 			codec: {
+ 				description: "The codec to use for encoding events."
+ 				required:    true
+@@ -116,6 +201,7 @@
+
+ 						[apache_avro]: https://avro.apache.org/
+ 						"""
++					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
+ 					csv: """
+ 						Encodes an event as a CSV message.
+
+Index: website/cue/reference/components/sinks/base/humio_logs.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/humio_logs.cue b/website/cue/reference/components/sinks/base/humio_logs.cue
+--- a/website/cue/reference/components/sinks/base/humio_logs.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/humio_logs.cue	(date 1723658498450)
+@@ -107,6 +107,91 @@
+ 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
+ 				}
+ 			}
++			cef: {
++				description:   "The CEF Serializer Options."
++				relevant_when: "codec = \"cef\""
++				required:      true
++				type: object: options: {
++					device_event_class_id: {
++						description: """
++																Unique identifier for each event-type. Identifies the type of event reported.
++																The value length must be lower or equal to 1023.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_product: {
++						description: """
++																Identifies the product of a vendor.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_vendor: {
++						description: """
++																Identifies the vendor of the product.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_version: {
++						description: """
++																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
++																The value length must be lower or equal to 31.
++																"""
++						required: false
++						type: string: {}
++					}
++					extensions: {
++						description: """
++																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
++																The event can have any number of key-value pairs in any order.
++																"""
++						required: false
++						type: object: options: "*": {
++							description: "This is a path that points to the extension value of a log event."
++							required:    true
++							type: string: {}
++						}
++					}
++					name: {
++						description: """
++																This is a path that points to the human-readable description of a log event.
++																The value length must be lower or equal to 512.
++																Equals to "cef.name" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					severity: {
++						description: """
++																This is a path that points to filed of a log event that reflects importance of the event.
++																Reflects importance of the event.
++
++																It must point to a number from 0 to 10.
++																0 = Lowest, 10 = Highest.
++																Equals to "cef.severity" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					version: {
++						description: """
++																CEF Version. Can be either 0 or 1.
++																Equals to "0" by default.
++																"""
++						required: true
++						type: string: enum: {
++							V0: "CEF specification version 0.1."
++							V1: "CEF specification version 1.x."
++						}
++					}
++				}
++			}
+ 			codec: {
+ 				description: "The codec to use for encoding events."
+ 				required:    true
+@@ -116,6 +201,7 @@
+
+ 						[apache_avro]: https://avro.apache.org/
+ 						"""
++					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
+ 					csv: """
+ 						Encodes an event as a CSV message.
+
+Index: website/cue/reference/components/sinks/base/socket.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/socket.cue b/website/cue/reference/components/sinks/base/socket.cue
+--- a/website/cue/reference/components/sinks/base/socket.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/socket.cue	(date 1723658498476)
+@@ -53,6 +53,91 @@
+ 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
+ 				}
+ 			}
++			cef: {
++				description:   "The CEF Serializer Options."
++				relevant_when: "codec = \"cef\""
++				required:      true
++				type: object: options: {
++					device_event_class_id: {
++						description: """
++																Unique identifier for each event-type. Identifies the type of event reported.
++																The value length must be lower or equal to 1023.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_product: {
++						description: """
++																Identifies the product of a vendor.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_vendor: {
++						description: """
++																Identifies the vendor of the product.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_version: {
++						description: """
++																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
++																The value length must be lower or equal to 31.
++																"""
++						required: false
++						type: string: {}
++					}
++					extensions: {
++						description: """
++																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
++																The event can have any number of key-value pairs in any order.
++																"""
++						required: false
++						type: object: options: "*": {
++							description: "This is a path that points to the extension value of a log event."
++							required:    true
++							type: string: {}
++						}
++					}
++					name: {
++						description: """
++																This is a path that points to the human-readable description of a log event.
++																The value length must be lower or equal to 512.
++																Equals to "cef.name" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					severity: {
++						description: """
++																This is a path that points to filed of a log event that reflects importance of the event.
++																Reflects importance of the event.
++
++																It must point to a number from 0 to 10.
++																0 = Lowest, 10 = Highest.
++																Equals to "cef.severity" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					version: {
++						description: """
++																CEF Version. Can be either 0 or 1.
++																Equals to "0" by default.
++																"""
++						required: true
++						type: string: enum: {
++							V0: "CEF specification version 0.1."
++							V1: "CEF specification version 1.x."
++						}
++					}
++				}
++			}
+ 			codec: {
+ 				description: "The codec to use for encoding events."
+ 				required:    true
+@@ -62,6 +147,7 @@
+
+ 						[apache_avro]: https://avro.apache.org/
+ 						"""
++					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
+ 					csv: """
+ 						Encodes an event as a CSV message.
+
+Index: website/cue/reference/components/sinks/base/aws_sqs.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/aws_sqs.cue b/website/cue/reference/components/sinks/base/aws_sqs.cue
+--- a/website/cue/reference/components/sinks/base/aws_sqs.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/aws_sqs.cue	(date 1723658498423)
+@@ -143,6 +143,91 @@
+ 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
+ 				}
+ 			}
++			cef: {
++				description:   "The CEF Serializer Options."
++				relevant_when: "codec = \"cef\""
++				required:      true
++				type: object: options: {
++					device_event_class_id: {
++						description: """
++																Unique identifier for each event-type. Identifies the type of event reported.
++																The value length must be lower or equal to 1023.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_product: {
++						description: """
++																Identifies the product of a vendor.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_vendor: {
++						description: """
++																Identifies the vendor of the product.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_version: {
++						description: """
++																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
++																The value length must be lower or equal to 31.
++																"""
++						required: false
++						type: string: {}
++					}
++					extensions: {
++						description: """
++																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
++																The event can have any number of key-value pairs in any order.
++																"""
++						required: false
++						type: object: options: "*": {
++							description: "This is a path that points to the extension value of a log event."
++							required:    true
++							type: string: {}
++						}
++					}
++					name: {
++						description: """
++																This is a path that points to the human-readable description of a log event.
++																The value length must be lower or equal to 512.
++																Equals to "cef.name" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					severity: {
++						description: """
++																This is a path that points to filed of a log event that reflects importance of the event.
++																Reflects importance of the event.
++
++																It must point to a number from 0 to 10.
++																0 = Lowest, 10 = Highest.
++																Equals to "cef.severity" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					version: {
++						description: """
++																CEF Version. Can be either 0 or 1.
++																Equals to "0" by default.
++																"""
++						required: true
++						type: string: enum: {
++							V0: "CEF specification version 0.1."
++							V1: "CEF specification version 1.x."
++						}
++					}
++				}
++			}
+ 			codec: {
+ 				description: "The codec to use for encoding events."
+ 				required:    true
+@@ -152,6 +237,7 @@
+
+ 						[apache_avro]: https://avro.apache.org/
+ 						"""
++					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
+ 					csv: """
+ 						Encodes an event as a CSV message.
+
+Index: website/cue/reference/components/sinks/base/http.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/http.cue b/website/cue/reference/components/sinks/base/http.cue
+--- a/website/cue/reference/components/sinks/base/http.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/http.cue	(date 1723658498446)
+@@ -154,6 +154,91 @@
+ 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
+ 				}
+ 			}
++			cef: {
++				description:   "The CEF Serializer Options."
++				relevant_when: "codec = \"cef\""
++				required:      true
++				type: object: options: {
++					device_event_class_id: {
++						description: """
++																Unique identifier for each event-type. Identifies the type of event reported.
++																The value length must be lower or equal to 1023.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_product: {
++						description: """
++																Identifies the product of a vendor.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_vendor: {
++						description: """
++																Identifies the vendor of the product.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_version: {
++						description: """
++																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
++																The value length must be lower or equal to 31.
++																"""
++						required: false
++						type: string: {}
++					}
++					extensions: {
++						description: """
++																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
++																The event can have any number of key-value pairs in any order.
++																"""
++						required: false
++						type: object: options: "*": {
++							description: "This is a path that points to the extension value of a log event."
++							required:    true
++							type: string: {}
++						}
++					}
++					name: {
++						description: """
++																This is a path that points to the human-readable description of a log event.
++																The value length must be lower or equal to 512.
++																Equals to "cef.name" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					severity: {
++						description: """
++																This is a path that points to filed of a log event that reflects importance of the event.
++																Reflects importance of the event.
++
++																It must point to a number from 0 to 10.
++																0 = Lowest, 10 = Highest.
++																Equals to "cef.severity" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					version: {
++						description: """
++																CEF Version. Can be either 0 or 1.
++																Equals to "0" by default.
++																"""
++						required: true
++						type: string: enum: {
++							V0: "CEF specification version 0.1."
++							V1: "CEF specification version 1.x."
++						}
++					}
++				}
++			}
+ 			codec: {
+ 				description: "The codec to use for encoding events."
+ 				required:    true
+@@ -163,6 +248,7 @@
+
+ 						[apache_avro]: https://avro.apache.org/
+ 						"""
++					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
+ 					csv: """
+ 						Encodes an event as a CSV message.
+
+Index: website/cue/reference/components/sinks/base/splunk_hec_logs.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/splunk_hec_logs.cue b/website/cue/reference/components/sinks/base/splunk_hec_logs.cue
+--- a/website/cue/reference/components/sinks/base/splunk_hec_logs.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/splunk_hec_logs.cue	(date 1723658498481)
+@@ -157,6 +157,91 @@
+ 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
+ 				}
+ 			}
++			cef: {
++				description:   "The CEF Serializer Options."
++				relevant_when: "codec = \"cef\""
++				required:      true
++				type: object: options: {
++					device_event_class_id: {
++						description: """
++																Unique identifier for each event-type. Identifies the type of event reported.
++																The value length must be lower or equal to 1023.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_product: {
++						description: """
++																Identifies the product of a vendor.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_vendor: {
++						description: """
++																Identifies the vendor of the product.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_version: {
++						description: """
++																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
++																The value length must be lower or equal to 31.
++																"""
++						required: false
++						type: string: {}
++					}
++					extensions: {
++						description: """
++																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
++																The event can have any number of key-value pairs in any order.
++																"""
++						required: false
++						type: object: options: "*": {
++							description: "This is a path that points to the extension value of a log event."
++							required:    true
++							type: string: {}
++						}
++					}
++					name: {
++						description: """
++																This is a path that points to the human-readable description of a log event.
++																The value length must be lower or equal to 512.
++																Equals to "cef.name" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					severity: {
++						description: """
++																This is a path that points to filed of a log event that reflects importance of the event.
++																Reflects importance of the event.
++
++																It must point to a number from 0 to 10.
++																0 = Lowest, 10 = Highest.
++																Equals to "cef.severity" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					version: {
++						description: """
++																CEF Version. Can be either 0 or 1.
++																Equals to "0" by default.
++																"""
++						required: true
++						type: string: enum: {
++							V0: "CEF specification version 0.1."
++							V1: "CEF specification version 1.x."
++						}
++					}
++				}
++			}
+ 			codec: {
+ 				description: "The codec to use for encoding events."
+ 				required:    true
+@@ -166,6 +251,7 @@
+
+ 						[apache_avro]: https://avro.apache.org/
+ 						"""
++					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
+ 					csv: """
+ 						Encodes an event as a CSV message.
+
+Index: website/cue/reference/components/sinks/base/loki.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/loki.cue b/website/cue/reference/components/sinks/base/loki.cue
+--- a/website/cue/reference/components/sinks/base/loki.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/loki.cue	(date 1723658498456)
+@@ -156,6 +156,91 @@
+ 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
+ 				}
+ 			}
++			cef: {
++				description:   "The CEF Serializer Options."
++				relevant_when: "codec = \"cef\""
++				required:      true
++				type: object: options: {
++					device_event_class_id: {
++						description: """
++																Unique identifier for each event-type. Identifies the type of event reported.
++																The value length must be lower or equal to 1023.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_product: {
++						description: """
++																Identifies the product of a vendor.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_vendor: {
++						description: """
++																Identifies the vendor of the product.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_version: {
++						description: """
++																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
++																The value length must be lower or equal to 31.
++																"""
++						required: false
++						type: string: {}
++					}
++					extensions: {
++						description: """
++																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
++																The event can have any number of key-value pairs in any order.
++																"""
++						required: false
++						type: object: options: "*": {
++							description: "This is a path that points to the extension value of a log event."
++							required:    true
++							type: string: {}
++						}
++					}
++					name: {
++						description: """
++																This is a path that points to the human-readable description of a log event.
++																The value length must be lower or equal to 512.
++																Equals to "cef.name" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					severity: {
++						description: """
++																This is a path that points to filed of a log event that reflects importance of the event.
++																Reflects importance of the event.
++
++																It must point to a number from 0 to 10.
++																0 = Lowest, 10 = Highest.
++																Equals to "cef.severity" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					version: {
++						description: """
++																CEF Version. Can be either 0 or 1.
++																Equals to "0" by default.
++																"""
++						required: true
++						type: string: enum: {
++							V0: "CEF specification version 0.1."
++							V1: "CEF specification version 1.x."
++						}
++					}
++				}
++			}
+ 			codec: {
+ 				description: "The codec to use for encoding events."
+ 				required:    true
+@@ -165,6 +250,7 @@
+
+ 						[apache_avro]: https://avro.apache.org/
+ 						"""
++					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
+ 					csv: """
+ 						Encodes an event as a CSV message.
+
+Index: website/cue/reference/components/sinks/base/nats.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/nats.cue b/website/cue/reference/components/sinks/base/nats.cue
+--- a/website/cue/reference/components/sinks/base/nats.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/nats.cue	(date 1723658498459)
+@@ -141,6 +141,91 @@
+ 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
+ 				}
+ 			}
++			cef: {
++				description:   "The CEF Serializer Options."
++				relevant_when: "codec = \"cef\""
++				required:      true
++				type: object: options: {
++					device_event_class_id: {
++						description: """
++																Unique identifier for each event-type. Identifies the type of event reported.
++																The value length must be lower or equal to 1023.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_product: {
++						description: """
++																Identifies the product of a vendor.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_vendor: {
++						description: """
++																Identifies the vendor of the product.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_version: {
++						description: """
++																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
++																The value length must be lower or equal to 31.
++																"""
++						required: false
++						type: string: {}
++					}
++					extensions: {
++						description: """
++																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
++																The event can have any number of key-value pairs in any order.
++																"""
++						required: false
++						type: object: options: "*": {
++							description: "This is a path that points to the extension value of a log event."
++							required:    true
++							type: string: {}
++						}
++					}
++					name: {
++						description: """
++																This is a path that points to the human-readable description of a log event.
++																The value length must be lower or equal to 512.
++																Equals to "cef.name" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					severity: {
++						description: """
++																This is a path that points to filed of a log event that reflects importance of the event.
++																Reflects importance of the event.
++
++																It must point to a number from 0 to 10.
++																0 = Lowest, 10 = Highest.
++																Equals to "cef.severity" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					version: {
++						description: """
++																CEF Version. Can be either 0 or 1.
++																Equals to "0" by default.
++																"""
++						required: true
++						type: string: enum: {
++							V0: "CEF specification version 0.1."
++							V1: "CEF specification version 1.x."
++						}
++					}
++				}
++			}
+ 			codec: {
+ 				description: "The codec to use for encoding events."
+ 				required:    true
+@@ -150,6 +235,7 @@
+
+ 						[apache_avro]: https://avro.apache.org/
+ 						"""
++					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
+ 					csv: """
+ 						Encodes an event as a CSV message.
+
+Index: lib/codecs/src/encoding/format/cef.rs
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
 diff --git a/lib/codecs/src/encoding/format/cef.rs b/lib/codecs/src/encoding/format/cef.rs
 new file mode 100644
-index 000000000..b808b0599
---- /dev/null
-+++ b/lib/codecs/src/encoding/format/cef.rs
+--- /dev/null	(date 1723658419631)
++++ b/lib/codecs/src/encoding/format/cef.rs	(date 1723658419631)
 @@ -0,0 +1,483 @@
 +use std::{collections::HashMap, fmt::Write};
 +
@@ -306,8 +1176,8 @@ index 000000000..b808b0599
 +            &self.device.product,
 +            &self.device.version,
 +            &self.device.event_class_id,
-+            severity,
 +            name,
++            severity,
 +        ))?;
 +        if !formatted_extensions.is_empty() {
 +            formatted_extensions.sort();
@@ -487,48 +1357,1203 @@ index 000000000..b808b0599
 +        );
 +    }
 +}
+Index: src/components/validation/resources/mod.rs
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/components/validation/resources/mod.rs b/src/components/validation/resources/mod.rs
+--- a/src/components/validation/resources/mod.rs	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/src/components/validation/resources/mod.rs	(date 1723658498397)
+@@ -208,6 +208,7 @@
+ ) -> vector_lib::Result<decoding::Deserializer> {
+     let deserializer_config = match config {
+         SerializerConfig::Avro { .. } => todo!(),
++        SerializerConfig::Cef { .. } => todo!(),
+         SerializerConfig::Csv { .. } => todo!(),
+         SerializerConfig::Gelf => DeserializerConfig::Gelf(Default::default()),
+         SerializerConfig::Json(_) => DeserializerConfig::Json(Default::default()),
+Index: website/cue/reference/components/sinks/base/console.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/console.cue b/website/cue/reference/components/sinks/base/console.cue
+--- a/website/cue/reference/components/sinks/base/console.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/console.cue	(date 1723658498430)
+@@ -41,6 +41,91 @@
+ 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
+ 				}
+ 			}
++			cef: {
++				description:   "The CEF Serializer Options."
++				relevant_when: "codec = \"cef\""
++				required:      true
++				type: object: options: {
++					device_event_class_id: {
++						description: """
++																Unique identifier for each event-type. Identifies the type of event reported.
++																The value length must be lower or equal to 1023.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_product: {
++						description: """
++																Identifies the product of a vendor.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_vendor: {
++						description: """
++																Identifies the vendor of the product.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_version: {
++						description: """
++																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
++																The value length must be lower or equal to 31.
++																"""
++						required: false
++						type: string: {}
++					}
++					extensions: {
++						description: """
++																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
++																The event can have any number of key-value pairs in any order.
++																"""
++						required: false
++						type: object: options: "*": {
++							description: "This is a path that points to the extension value of a log event."
++							required:    true
++							type: string: {}
++						}
++					}
++					name: {
++						description: """
++																This is a path that points to the human-readable description of a log event.
++																The value length must be lower or equal to 512.
++																Equals to "cef.name" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					severity: {
++						description: """
++																This is a path that points to filed of a log event that reflects importance of the event.
++																Reflects importance of the event.
++
++																It must point to a number from 0 to 10.
++																0 = Lowest, 10 = Highest.
++																Equals to "cef.severity" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					version: {
++						description: """
++																CEF Version. Can be either 0 or 1.
++																Equals to "0" by default.
++																"""
++						required: true
++						type: string: enum: {
++							V0: "CEF specification version 0.1."
++							V1: "CEF specification version 1.x."
++						}
++					}
++				}
++			}
+ 			codec: {
+ 				description: "The codec to use for encoding events."
+ 				required:    true
+@@ -50,6 +135,7 @@
+
+ 						[apache_avro]: https://avro.apache.org/
+ 						"""
++					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
+ 					csv: """
+ 						Encodes an event as a CSV message.
+
+Index: src/sinks/websocket/sink.rs
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/sinks/websocket/sink.rs b/src/sinks/websocket/sink.rs
+--- a/src/sinks/websocket/sink.rs	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/src/sinks/websocket/sink.rs	(date 1723659848980)
+@@ -236,12 +236,12 @@
+
+     const fn should_encode_as_binary(&self) -> bool {
+         use vector_lib::codecs::encoding::Serializer::{
+-            Avro, Csv, Gelf, Json, Logfmt, Native, NativeJson, Protobuf, RawMessage, Text,
++            Avro, Cef, Csv, Gelf, Json, Logfmt, Native, NativeJson, Protobuf, RawMessage, Text,
+         };
+
+         match self.encoder.serializer() {
+             RawMessage(_) | Avro(_) | Native(_) | Protobuf(_) => true,
+-            Csv(_) | Logfmt(_) | Gelf(_) | Json(_) | Text(_) | NativeJson(_) => false,
++            Cef(_) | Csv(_) | Logfmt(_) | Gelf(_) | Json(_) | Text(_) | NativeJson(_) => false,
+         }
+     }
+
+Index: src/codecs/encoding/config.rs
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/codecs/encoding/config.rs b/src/codecs/encoding/config.rs
+--- a/src/codecs/encoding/config.rs	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/src/codecs/encoding/config.rs	(date 1723658498384)
+@@ -119,7 +119,8 @@
+             }
+             (
+                 None,
+-                Serializer::Csv(_)
++                Serializer::Cef(_)
++                | Serializer::Csv(_)
+                 | Serializer::Logfmt(_)
+                 | Serializer::NativeJson(_)
+                 | Serializer::RawMessage(_)
+Index: website/cue/reference/components/sinks/base/papertrail.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/papertrail.cue b/website/cue/reference/components/sinks/base/papertrail.cue
+--- a/website/cue/reference/components/sinks/base/papertrail.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/papertrail.cue	(date 1723658498463)
+@@ -41,6 +41,91 @@
+ 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
+ 				}
+ 			}
++			cef: {
++				description:   "The CEF Serializer Options."
++				relevant_when: "codec = \"cef\""
++				required:      true
++				type: object: options: {
++					device_event_class_id: {
++						description: """
++																Unique identifier for each event-type. Identifies the type of event reported.
++																The value length must be lower or equal to 1023.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_product: {
++						description: """
++																Identifies the product of a vendor.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_vendor: {
++						description: """
++																Identifies the vendor of the product.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_version: {
++						description: """
++																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
++																The value length must be lower or equal to 31.
++																"""
++						required: false
++						type: string: {}
++					}
++					extensions: {
++						description: """
++																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
++																The event can have any number of key-value pairs in any order.
++																"""
++						required: false
++						type: object: options: "*": {
++							description: "This is a path that points to the extension value of a log event."
++							required:    true
++							type: string: {}
++						}
++					}
++					name: {
++						description: """
++																This is a path that points to the human-readable description of a log event.
++																The value length must be lower or equal to 512.
++																Equals to "cef.name" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					severity: {
++						description: """
++																This is a path that points to filed of a log event that reflects importance of the event.
++																Reflects importance of the event.
++
++																It must point to a number from 0 to 10.
++																0 = Lowest, 10 = Highest.
++																Equals to "cef.severity" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					version: {
++						description: """
++																CEF Version. Can be either 0 or 1.
++																Equals to "0" by default.
++																"""
++						required: true
++						type: string: enum: {
++							V0: "CEF specification version 0.1."
++							V1: "CEF specification version 1.x."
++						}
++					}
++				}
++			}
+ 			codec: {
+ 				description: "The codec to use for encoding events."
+ 				required:    true
+@@ -50,6 +135,7 @@
+
+ 						[apache_avro]: https://avro.apache.org/
+ 						"""
++					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
+ 					csv: """
+ 						Encodes an event as a CSV message.
+
+Index: website/cue/reference/components/sinks/base/aws_kinesis_firehose.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/aws_kinesis_firehose.cue b/website/cue/reference/components/sinks/base/aws_kinesis_firehose.cue
+--- a/website/cue/reference/components/sinks/base/aws_kinesis_firehose.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/aws_kinesis_firehose.cue	(date 1723658498412)
+@@ -212,6 +212,91 @@
+ 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
+ 				}
+ 			}
++			cef: {
++				description:   "The CEF Serializer Options."
++				relevant_when: "codec = \"cef\""
++				required:      true
++				type: object: options: {
++					device_event_class_id: {
++						description: """
++																Unique identifier for each event-type. Identifies the type of event reported.
++																The value length must be lower or equal to 1023.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_product: {
++						description: """
++																Identifies the product of a vendor.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_vendor: {
++						description: """
++																Identifies the vendor of the product.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_version: {
++						description: """
++																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
++																The value length must be lower or equal to 31.
++																"""
++						required: false
++						type: string: {}
++					}
++					extensions: {
++						description: """
++																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
++																The event can have any number of key-value pairs in any order.
++																"""
++						required: false
++						type: object: options: "*": {
++							description: "This is a path that points to the extension value of a log event."
++							required:    true
++							type: string: {}
++						}
++					}
++					name: {
++						description: """
++																This is a path that points to the human-readable description of a log event.
++																The value length must be lower or equal to 512.
++																Equals to "cef.name" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					severity: {
++						description: """
++																This is a path that points to filed of a log event that reflects importance of the event.
++																Reflects importance of the event.
++
++																It must point to a number from 0 to 10.
++																0 = Lowest, 10 = Highest.
++																Equals to "cef.severity" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					version: {
++						description: """
++																CEF Version. Can be either 0 or 1.
++																Equals to "0" by default.
++																"""
++						required: true
++						type: string: enum: {
++							V0: "CEF specification version 0.1."
++							V1: "CEF specification version 1.x."
++						}
++					}
++				}
++			}
+ 			codec: {
+ 				description: "The codec to use for encoding events."
+ 				required:    true
+@@ -221,6 +306,7 @@
+
+ 						[apache_avro]: https://avro.apache.org/
+ 						"""
++					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
+ 					csv: """
+ 						Encodes an event as a CSV message.
+
+Index: src/codecs/encoding/encoder.rs
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/codecs/encoding/encoder.rs b/src/codecs/encoding/encoder.rs
+--- a/src/codecs/encoding/encoder.rs	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/src/codecs/encoding/encoder.rs	(date 1723658498391)
+@@ -116,6 +116,7 @@
+             (Serializer::Native(_), _) | (Serializer::Protobuf(_), _) => "application/octet-stream",
+             (
+                 Serializer::Avro(_)
++                | Serializer::Cef(_)
+                 | Serializer::Csv(_)
+                 | Serializer::Gelf(_)
+                 | Serializer::Json(_)
+Index: lib/codecs/src/encoding/format/mod.rs
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
 diff --git a/lib/codecs/src/encoding/format/mod.rs b/lib/codecs/src/encoding/format/mod.rs
-index 1d4e00838..63e4c86d5 100644
---- a/lib/codecs/src/encoding/format/mod.rs
-+++ b/lib/codecs/src/encoding/format/mod.rs
-@@ -4,6 +4,7 @@
- #![deny(missing_docs)]
+--- a/lib/codecs/src/encoding/format/mod.rs	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/lib/codecs/src/encoding/format/mod.rs	(date 1723658432803)
+@@ -5,6 +5,7 @@
 
  mod avro;
+ mod common;
 +mod cef;
  mod csv;
  mod gelf;
  mod json;
-@@ -17,6 +18,7 @@ use std::fmt::Debug;
+@@ -19,6 +20,7 @@
 
  pub use self::csv::{CsvSerializer, CsvSerializerConfig};
  pub use avro::{AvroSerializer, AvroSerializerConfig, AvroSerializerOptions};
 +pub use cef::{CefSerializer, CefSerializerConfig};
  use dyn_clone::DynClone;
  pub use gelf::{GelfSerializer, GelfSerializerConfig};
- pub use json::{JsonSerializer, JsonSerializerConfig};
+ pub use json::{JsonSerializer, JsonSerializerConfig, JsonSerializerOptions};
+Index: website/cue/reference/components/sinks/base/websocket.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/websocket.cue b/website/cue/reference/components/sinks/base/websocket.cue
+--- a/website/cue/reference/components/sinks/base/websocket.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/websocket.cue	(date 1723658498488)
+@@ -88,6 +88,91 @@
+ 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
+ 				}
+ 			}
++			cef: {
++				description:   "The CEF Serializer Options."
++				relevant_when: "codec = \"cef\""
++				required:      true
++				type: object: options: {
++					device_event_class_id: {
++						description: """
++																Unique identifier for each event-type. Identifies the type of event reported.
++																The value length must be lower or equal to 1023.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_product: {
++						description: """
++																Identifies the product of a vendor.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_vendor: {
++						description: """
++																Identifies the vendor of the product.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_version: {
++						description: """
++																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
++																The value length must be lower or equal to 31.
++																"""
++						required: false
++						type: string: {}
++					}
++					extensions: {
++						description: """
++																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
++																The event can have any number of key-value pairs in any order.
++																"""
++						required: false
++						type: object: options: "*": {
++							description: "This is a path that points to the extension value of a log event."
++							required:    true
++							type: string: {}
++						}
++					}
++					name: {
++						description: """
++																This is a path that points to the human-readable description of a log event.
++																The value length must be lower or equal to 512.
++																Equals to "cef.name" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					severity: {
++						description: """
++																This is a path that points to filed of a log event that reflects importance of the event.
++																Reflects importance of the event.
++
++																It must point to a number from 0 to 10.
++																0 = Lowest, 10 = Highest.
++																Equals to "cef.severity" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					version: {
++						description: """
++																CEF Version. Can be either 0 or 1.
++																Equals to "0" by default.
++																"""
++						required: true
++						type: string: enum: {
++							V0: "CEF specification version 0.1."
++							V1: "CEF specification version 1.x."
++						}
++					}
++				}
++			}
+ 			codec: {
+ 				description: "The codec to use for encoding events."
+ 				required:    true
+@@ -97,6 +182,7 @@
+
+ 						[apache_avro]: https://avro.apache.org/
+ 						"""
++					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
+ 					csv: """
+ 						Encodes an event as a CSV message.
+
+Index: website/cue/reference/components/sinks/base/pulsar.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/pulsar.cue b/website/cue/reference/components/sinks/base/pulsar.cue
+--- a/website/cue/reference/components/sinks/base/pulsar.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/pulsar.cue	(date 1723658498467)
+@@ -135,6 +135,91 @@
+ 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
+ 				}
+ 			}
++			cef: {
++				description:   "The CEF Serializer Options."
++				relevant_when: "codec = \"cef\""
++				required:      true
++				type: object: options: {
++					device_event_class_id: {
++						description: """
++																Unique identifier for each event-type. Identifies the type of event reported.
++																The value length must be lower or equal to 1023.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_product: {
++						description: """
++																Identifies the product of a vendor.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_vendor: {
++						description: """
++																Identifies the vendor of the product.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_version: {
++						description: """
++																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
++																The value length must be lower or equal to 31.
++																"""
++						required: false
++						type: string: {}
++					}
++					extensions: {
++						description: """
++																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
++																The event can have any number of key-value pairs in any order.
++																"""
++						required: false
++						type: object: options: "*": {
++							description: "This is a path that points to the extension value of a log event."
++							required:    true
++							type: string: {}
++						}
++					}
++					name: {
++						description: """
++																This is a path that points to the human-readable description of a log event.
++																The value length must be lower or equal to 512.
++																Equals to "cef.name" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					severity: {
++						description: """
++																This is a path that points to filed of a log event that reflects importance of the event.
++																Reflects importance of the event.
++
++																It must point to a number from 0 to 10.
++																0 = Lowest, 10 = Highest.
++																Equals to "cef.severity" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					version: {
++						description: """
++																CEF Version. Can be either 0 or 1.
++																Equals to "0" by default.
++																"""
++						required: true
++						type: string: enum: {
++							V0: "CEF specification version 0.1."
++							V1: "CEF specification version 1.x."
++						}
++					}
++				}
++			}
+ 			codec: {
+ 				description: "The codec to use for encoding events."
+ 				required:    true
+@@ -144,6 +229,7 @@
+
+ 						[apache_avro]: https://avro.apache.org/
+ 						"""
++					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
+ 					csv: """
+ 						Encodes an event as a CSV message.
+
+Index: website/cue/reference/components/sinks/base/gcp_chronicle_unstructured.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/gcp_chronicle_unstructured.cue b/website/cue/reference/components/sinks/base/gcp_chronicle_unstructured.cue
+--- a/website/cue/reference/components/sinks/base/gcp_chronicle_unstructured.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/gcp_chronicle_unstructured.cue	(date 1723658498435)
+@@ -110,6 +110,91 @@
+ 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
+ 				}
+ 			}
++			cef: {
++				description:   "The CEF Serializer Options."
++				relevant_when: "codec = \"cef\""
++				required:      true
++				type: object: options: {
++					device_event_class_id: {
++						description: """
++																Unique identifier for each event-type. Identifies the type of event reported.
++																The value length must be lower or equal to 1023.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_product: {
++						description: """
++																Identifies the product of a vendor.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_vendor: {
++						description: """
++																Identifies the vendor of the product.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_version: {
++						description: """
++																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
++																The value length must be lower or equal to 31.
++																"""
++						required: false
++						type: string: {}
++					}
++					extensions: {
++						description: """
++																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
++																The event can have any number of key-value pairs in any order.
++																"""
++						required: false
++						type: object: options: "*": {
++							description: "This is a path that points to the extension value of a log event."
++							required:    true
++							type: string: {}
++						}
++					}
++					name: {
++						description: """
++																This is a path that points to the human-readable description of a log event.
++																The value length must be lower or equal to 512.
++																Equals to "cef.name" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					severity: {
++						description: """
++																This is a path that points to filed of a log event that reflects importance of the event.
++																Reflects importance of the event.
++
++																It must point to a number from 0 to 10.
++																0 = Lowest, 10 = Highest.
++																Equals to "cef.severity" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					version: {
++						description: """
++																CEF Version. Can be either 0 or 1.
++																Equals to "0" by default.
++																"""
++						required: true
++						type: string: enum: {
++							V0: "CEF specification version 0.1."
++							V1: "CEF specification version 1.x."
++						}
++					}
++				}
++			}
+ 			codec: {
+ 				description: "The codec to use for encoding events."
+ 				required:    true
+@@ -119,6 +204,7 @@
+
+ 						[apache_avro]: https://avro.apache.org/
+ 						"""
++					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
+ 					csv: """
+ 						Encodes an event as a CSV message.
+
+Index: website/cue/reference/components/sinks/base/kafka.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/kafka.cue b/website/cue/reference/components/sinks/base/kafka.cue
+--- a/website/cue/reference/components/sinks/base/kafka.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/kafka.cue	(date 1723658498452)
+@@ -96,6 +96,91 @@
+ 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
+ 				}
+ 			}
++			cef: {
++				description:   "The CEF Serializer Options."
++				relevant_when: "codec = \"cef\""
++				required:      true
++				type: object: options: {
++					device_event_class_id: {
++						description: """
++																Unique identifier for each event-type. Identifies the type of event reported.
++																The value length must be lower or equal to 1023.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_product: {
++						description: """
++																Identifies the product of a vendor.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_vendor: {
++						description: """
++																Identifies the vendor of the product.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_version: {
++						description: """
++																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
++																The value length must be lower or equal to 31.
++																"""
++						required: false
++						type: string: {}
++					}
++					extensions: {
++						description: """
++																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
++																The event can have any number of key-value pairs in any order.
++																"""
++						required: false
++						type: object: options: "*": {
++							description: "This is a path that points to the extension value of a log event."
++							required:    true
++							type: string: {}
++						}
++					}
++					name: {
++						description: """
++																This is a path that points to the human-readable description of a log event.
++																The value length must be lower or equal to 512.
++																Equals to "cef.name" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					severity: {
++						description: """
++																This is a path that points to filed of a log event that reflects importance of the event.
++																Reflects importance of the event.
++
++																It must point to a number from 0 to 10.
++																0 = Lowest, 10 = Highest.
++																Equals to "cef.severity" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					version: {
++						description: """
++																CEF Version. Can be either 0 or 1.
++																Equals to "0" by default.
++																"""
++						required: true
++						type: string: enum: {
++							V0: "CEF specification version 0.1."
++							V1: "CEF specification version 1.x."
++						}
++					}
++				}
++			}
+ 			codec: {
+ 				description: "The codec to use for encoding events."
+ 				required:    true
+@@ -105,6 +190,7 @@
+
+ 						[apache_avro]: https://avro.apache.org/
+ 						"""
++					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
+ 					csv: """
+ 						Encodes an event as a CSV message.
+
+Index: website/cue/reference/components/sinks/base/file.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/file.cue b/website/cue/reference/components/sinks/base/file.cue
+--- a/website/cue/reference/components/sinks/base/file.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/file.cue	(date 1723658498432)
+@@ -61,6 +61,91 @@
+ 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
+ 				}
+ 			}
++			cef: {
++				description:   "The CEF Serializer Options."
++				relevant_when: "codec = \"cef\""
++				required:      true
++				type: object: options: {
++					device_event_class_id: {
++						description: """
++																Unique identifier for each event-type. Identifies the type of event reported.
++																The value length must be lower or equal to 1023.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_product: {
++						description: """
++																Identifies the product of a vendor.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_vendor: {
++						description: """
++																Identifies the vendor of the product.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_version: {
++						description: """
++																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
++																The value length must be lower or equal to 31.
++																"""
++						required: false
++						type: string: {}
++					}
++					extensions: {
++						description: """
++																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
++																The event can have any number of key-value pairs in any order.
++																"""
++						required: false
++						type: object: options: "*": {
++							description: "This is a path that points to the extension value of a log event."
++							required:    true
++							type: string: {}
++						}
++					}
++					name: {
++						description: """
++																This is a path that points to the human-readable description of a log event.
++																The value length must be lower or equal to 512.
++																Equals to "cef.name" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					severity: {
++						description: """
++																This is a path that points to filed of a log event that reflects importance of the event.
++																Reflects importance of the event.
++
++																It must point to a number from 0 to 10.
++																0 = Lowest, 10 = Highest.
++																Equals to "cef.severity" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					version: {
++						description: """
++																CEF Version. Can be either 0 or 1.
++																Equals to "0" by default.
++																"""
++						required: true
++						type: string: enum: {
++							V0: "CEF specification version 0.1."
++							V1: "CEF specification version 1.x."
++						}
++					}
++				}
++			}
+ 			codec: {
+ 				description: "The codec to use for encoding events."
+ 				required:    true
+@@ -70,6 +155,7 @@
+
+ 						[apache_avro]: https://avro.apache.org/
+ 						"""
++					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
+ 					csv: """
+ 						Encodes an event as a CSV message.
+
+Index: website/cue/reference/components/sinks/base/gcp_cloud_storage.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/gcp_cloud_storage.cue b/website/cue/reference/components/sinks/base/gcp_cloud_storage.cue
+--- a/website/cue/reference/components/sinks/base/gcp_cloud_storage.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/gcp_cloud_storage.cue	(date 1723658498439)
+@@ -199,6 +199,91 @@
+ 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
+ 				}
+ 			}
++			cef: {
++				description:   "The CEF Serializer Options."
++				relevant_when: "codec = \"cef\""
++				required:      true
++				type: object: options: {
++					device_event_class_id: {
++						description: """
++																Unique identifier for each event-type. Identifies the type of event reported.
++																The value length must be lower or equal to 1023.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_product: {
++						description: """
++																Identifies the product of a vendor.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_vendor: {
++						description: """
++																Identifies the vendor of the product.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_version: {
++						description: """
++																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
++																The value length must be lower or equal to 31.
++																"""
++						required: false
++						type: string: {}
++					}
++					extensions: {
++						description: """
++																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
++																The event can have any number of key-value pairs in any order.
++																"""
++						required: false
++						type: object: options: "*": {
++							description: "This is a path that points to the extension value of a log event."
++							required:    true
++							type: string: {}
++						}
++					}
++					name: {
++						description: """
++																This is a path that points to the human-readable description of a log event.
++																The value length must be lower or equal to 512.
++																Equals to "cef.name" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					severity: {
++						description: """
++																This is a path that points to filed of a log event that reflects importance of the event.
++																Reflects importance of the event.
++
++																It must point to a number from 0 to 10.
++																0 = Lowest, 10 = Highest.
++																Equals to "cef.severity" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					version: {
++						description: """
++																CEF Version. Can be either 0 or 1.
++																Equals to "0" by default.
++																"""
++						required: true
++						type: string: enum: {
++							V0: "CEF specification version 0.1."
++							V1: "CEF specification version 1.x."
++						}
++					}
++				}
++			}
+ 			codec: {
+ 				description: "The codec to use for encoding events."
+ 				required:    true
+@@ -208,6 +293,7 @@
+
+ 						[apache_avro]: https://avro.apache.org/
+ 						"""
++					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
+ 					csv: """
+ 						Encodes an event as a CSV message.
+
+Index: website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue b/website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue
+--- a/website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue	(date 1723658498408)
+@@ -233,6 +233,91 @@
+ 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
+ 				}
+ 			}
++			cef: {
++				description:   "The CEF Serializer Options."
++				relevant_when: "codec = \"cef\""
++				required:      true
++				type: object: options: {
++					device_event_class_id: {
++						description: """
++																Unique identifier for each event-type. Identifies the type of event reported.
++																The value length must be lower or equal to 1023.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_product: {
++						description: """
++																Identifies the product of a vendor.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_vendor: {
++						description: """
++																Identifies the vendor of the product.
++																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
++																The value length must be lower or equal to 63.
++																"""
++						required: false
++						type: string: {}
++					}
++					device_version: {
++						description: """
++																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
++																The value length must be lower or equal to 31.
++																"""
++						required: false
++						type: string: {}
++					}
++					extensions: {
++						description: """
++																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
++																The event can have any number of key-value pairs in any order.
++																"""
++						required: false
++						type: object: options: "*": {
++							description: "This is a path that points to the extension value of a log event."
++							required:    true
++							type: string: {}
++						}
++					}
++					name: {
++						description: """
++																This is a path that points to the human-readable description of a log event.
++																The value length must be lower or equal to 512.
++																Equals to "cef.name" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					severity: {
++						description: """
++																This is a path that points to filed of a log event that reflects importance of the event.
++																Reflects importance of the event.
++
++																It must point to a number from 0 to 10.
++																0 = Lowest, 10 = Highest.
++																Equals to "cef.severity" by default.
++																"""
++						required: true
++						type: string: {}
++					}
++					version: {
++						description: """
++																CEF Version. Can be either 0 or 1.
++																Equals to "0" by default.
++																"""
++						required: true
++						type: string: enum: {
++							V0: "CEF specification version 0.1."
++							V1: "CEF specification version 1.x."
++						}
++					}
++				}
++			}
+ 			codec: {
+ 				description: "The codec to use for encoding events."
+ 				required:    true
+@@ -242,6 +327,7 @@
+
+ 						[apache_avro]: https://avro.apache.org/
+ 						"""
++					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
+ 					csv: """
+ 						Encodes an event as a CSV message.
+
+Index: lib/codecs/src/encoding/mod.rs
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
 diff --git a/lib/codecs/src/encoding/mod.rs b/lib/codecs/src/encoding/mod.rs
-index f95164117..eadbc9fa7 100644
---- a/lib/codecs/src/encoding/mod.rs
-+++ b/lib/codecs/src/encoding/mod.rs
-@@ -8,11 +8,11 @@ use std::fmt::Debug;
+--- a/lib/codecs/src/encoding/mod.rs	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/lib/codecs/src/encoding/mod.rs	(date 1723658498361)
+@@ -8,8 +8,8 @@
 
  use bytes::BytesMut;
  pub use format::{
 -    AvroSerializer, AvroSerializerConfig, AvroSerializerOptions, CsvSerializer,
 -    CsvSerializerConfig, GelfSerializer, GelfSerializerConfig, JsonSerializer,
--    JsonSerializerConfig, LogfmtSerializer, LogfmtSerializerConfig, NativeJsonSerializer,
--    NativeJsonSerializerConfig, NativeSerializer, NativeSerializerConfig, RawMessageSerializer,
--    RawMessageSerializerConfig, TextSerializer, TextSerializerConfig,
-+    AvroSerializer, AvroSerializerConfig, AvroSerializerOptions, CefSerializer,
-+    CefSerializerConfig, CsvSerializer, CsvSerializerConfig, GelfSerializer, GelfSerializerConfig,
-+    JsonSerializer, JsonSerializerConfig, LogfmtSerializer, LogfmtSerializerConfig,
-+    NativeJsonSerializer, NativeJsonSerializerConfig, NativeSerializer, NativeSerializerConfig,
-+    RawMessageSerializer, RawMessageSerializerConfig, TextSerializer, TextSerializerConfig,
- };
- pub use framing::{
-     BoxedFramer, BoxedFramingError, BytesEncoder, BytesEncoderConfig, CharacterDelimitedEncoder,
-@@ -185,6 +185,13 @@ pub enum SerializerConfig {
++    AvroSerializer, AvroSerializerConfig, AvroSerializerOptions, CefSerializer, CefSerializerConfig,
++    CsvSerializer, CsvSerializerConfig, GelfSerializer, GelfSerializerConfig, JsonSerializer,
+     JsonSerializerConfig, LogfmtSerializer, LogfmtSerializerConfig, NativeJsonSerializer,
+     NativeJsonSerializerConfig, NativeSerializer, NativeSerializerConfig, ProtobufSerializer,
+     ProtobufSerializerConfig, ProtobufSerializerOptions, RawMessageSerializer,
+@@ -184,6 +184,13 @@
          avro: AvroSerializerOptions,
      },
 
@@ -542,7 +2567,7 @@ index f95164117..eadbc9fa7 100644
      /// Encodes an event as a CSV message.
      ///
      /// This codec must be configured with fields to encode.
-@@ -248,6 +255,12 @@ impl From<AvroSerializerConfig> for SerializerConfig {
+@@ -265,6 +272,12 @@
      }
  }
 
@@ -555,7 +2580,7 @@ index f95164117..eadbc9fa7 100644
  impl From<CsvSerializerConfig> for SerializerConfig {
      fn from(config: CsvSerializerConfig) -> Self {
          Self::Csv(config)
-@@ -303,6 +316,7 @@ impl SerializerConfig {
+@@ -326,6 +339,7 @@
              SerializerConfig::Avro { avro } => Ok(Serializer::Avro(
                  AvroSerializerConfig::new(avro.schema.clone()).build()?,
              )),
@@ -563,17 +2588,17 @@ index f95164117..eadbc9fa7 100644
              SerializerConfig::Csv(config) => Ok(Serializer::Csv(config.build()?)),
              SerializerConfig::Gelf => Ok(Serializer::Gelf(GelfSerializerConfig::new().build())),
              SerializerConfig::Json(config) => Ok(Serializer::Json(config.build())),
-@@ -335,7 +349,8 @@ impl SerializerConfig {
-             SerializerConfig::Avro { .. } | SerializerConfig::Native => {
-                 FramingConfig::LengthDelimited
+@@ -361,7 +375,8 @@
+             | SerializerConfig::Protobuf(_) => {
+                 FramingConfig::LengthDelimited(LengthDelimitedEncoderConfig::default())
              }
 -            SerializerConfig::Csv(_)
 +            SerializerConfig::Cef(_)
 +            | SerializerConfig::Csv(_)
-             | SerializerConfig::Gelf
              | SerializerConfig::Json(_)
              | SerializerConfig::Logfmt
-@@ -351,6 +366,7 @@ impl SerializerConfig {
+             | SerializerConfig::NativeJson
+@@ -379,6 +394,7 @@
              SerializerConfig::Avro { avro } => {
                  AvroSerializerConfig::new(avro.schema.clone()).input_type()
              }
@@ -581,7 +2606,7 @@ index f95164117..eadbc9fa7 100644
              SerializerConfig::Csv(config) => config.input_type(),
              SerializerConfig::Gelf { .. } => GelfSerializerConfig::input_type(),
              SerializerConfig::Json(config) => config.input_type(),
-@@ -368,6 +384,7 @@ impl SerializerConfig {
+@@ -397,6 +413,7 @@
              SerializerConfig::Avro { avro } => {
                  AvroSerializerConfig::new(avro.schema.clone()).schema_requirement()
              }
@@ -589,7 +2614,7 @@ index f95164117..eadbc9fa7 100644
              SerializerConfig::Csv(config) => config.schema_requirement(),
              SerializerConfig::Gelf { .. } => GelfSerializerConfig::schema_requirement(),
              SerializerConfig::Json(config) => config.schema_requirement(),
-@@ -385,6 +402,8 @@ impl SerializerConfig {
+@@ -415,6 +432,8 @@
  pub enum Serializer {
      /// Uses an `AvroSerializer` for serialization.
      Avro(AvroSerializer),
@@ -598,7 +2623,7 @@ index f95164117..eadbc9fa7 100644
      /// Uses a `CsvSerializer` for serialization.
      Csv(CsvSerializer),
      /// Uses a `GelfSerializer` for serialization.
-@@ -409,6 +428,7 @@ impl Serializer {
+@@ -441,6 +460,7 @@
          match self {
              Serializer::Json(_) | Serializer::NativeJson(_) | Serializer::Gelf(_) => true,
              Serializer::Avro(_)
@@ -606,7 +2631,7 @@ index f95164117..eadbc9fa7 100644
              | Serializer::Csv(_)
              | Serializer::Logfmt(_)
              | Serializer::Text(_)
-@@ -429,6 +449,7 @@ impl Serializer {
+@@ -462,6 +482,7 @@
              Serializer::Json(serializer) => serializer.to_json_value(event),
              Serializer::NativeJson(serializer) => serializer.to_json_value(event),
              Serializer::Avro(_)
@@ -614,7 +2639,7 @@ index f95164117..eadbc9fa7 100644
              | Serializer::Csv(_)
              | Serializer::Logfmt(_)
              | Serializer::Text(_)
-@@ -446,6 +467,12 @@ impl From<AvroSerializer> for Serializer {
+@@ -480,6 +501,12 @@
      }
  }
 
@@ -627,7 +2652,7 @@ index f95164117..eadbc9fa7 100644
  impl From<CsvSerializer> for Serializer {
      fn from(serializer: CsvSerializer) -> Self {
          Self::Csv(serializer)
-@@ -500,6 +527,7 @@ impl tokio_util::codec::Encoder<Event> for Serializer {
+@@ -540,6 +567,7 @@
      fn encode(&mut self, event: Event, buffer: &mut BytesMut) -> Result<(), Self::Error> {
          match self {
              Serializer::Avro(serializer) => serializer.encode(event, buffer),
@@ -635,1193 +2660,15 @@ index f95164117..eadbc9fa7 100644
              Serializer::Csv(serializer) => serializer.encode(event, buffer),
              Serializer::Gelf(serializer) => serializer.encode(event, buffer),
              Serializer::Json(serializer) => serializer.encode(event, buffer),
-diff --git a/src/codecs/encoding/config.rs b/src/codecs/encoding/config.rs
-index 97096de1e..b1d970e8e 100644
---- a/src/codecs/encoding/config.rs
-+++ b/src/codecs/encoding/config.rs
-@@ -109,7 +109,8 @@ impl EncodingConfigWithFraming {
-             }
-             (
-                 None,
--                Serializer::Csv(_)
-+                Serializer::Cef(_)
-+                | Serializer::Csv(_)
-                 | Serializer::Gelf(_)
-                 | Serializer::Logfmt(_)
-                 | Serializer::NativeJson(_)
-diff --git a/src/codecs/encoding/encoder.rs b/src/codecs/encoding/encoder.rs
-index 3f9970fb9..09b824199 100644
---- a/src/codecs/encoding/encoder.rs
-+++ b/src/codecs/encoding/encoder.rs
-@@ -116,6 +116,7 @@ impl Encoder<Framer> {
-             (Serializer::Native(_), _) => "application/octet-stream",
-             (
-                 Serializer::Avro(_)
-+                | Serializer::Cef(_)
-                 | Serializer::Csv(_)
-                 | Serializer::Gelf(_)
-                 | Serializer::Json(_)
-diff --git a/src/components/validation/resources/mod.rs b/src/components/validation/resources/mod.rs
-index 2b9fc3c54..f8ab26834 100644
---- a/src/components/validation/resources/mod.rs
-+++ b/src/components/validation/resources/mod.rs
-@@ -180,6 +180,7 @@ fn decoder_framing_to_encoding_framer(framing: &decoding::FramingConfig) -> enco
- fn serializer_config_to_deserializer(config: &SerializerConfig) -> decoding::Deserializer {
-     let deserializer_config = match config {
-         SerializerConfig::Avro { .. } => todo!(),
-+        SerializerConfig::Cef { .. } => todo!(),
-         SerializerConfig::Csv { .. } => todo!(),
-         SerializerConfig::Gelf => DeserializerConfig::Gelf(Default::default()),
-         SerializerConfig::Json(_) => DeserializerConfig::Json(Default::default()),
-diff --git a/website/cue/reference/components/sinks/base/amqp.cue b/website/cue/reference/components/sinks/base/amqp.cue
-index cd201bb51..4ea9e0b87 100644
---- a/website/cue/reference/components/sinks/base/amqp.cue
-+++ b/website/cue/reference/components/sinks/base/amqp.cue
-@@ -57,6 +57,91 @@ base: components: sinks: amqp: configuration: {
- 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
- 				}
- 			}
-+			cef: {
-+				description:   "The CEF Serializer Options."
-+				relevant_when: "codec = \"cef\""
-+				required:      true
-+				type: object: options: {
-+					device_event_class_id: {
-+						description: """
-+																Unique identifier for each event-type. Identifies the type of event reported.
-+																The value length must be lower or equal to 1023.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_product: {
-+						description: """
-+																Identifies the product of a vendor.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_vendor: {
-+						description: """
-+																Identifies the vendor of the product.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_version: {
-+						description: """
-+																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
-+																The value length must be lower or equal to 31.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					extensions: {
-+						description: """
-+																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
-+																The event can have any number of key-value pairs in any order.
-+																"""
-+						required: false
-+						type: object: options: "*": {
-+							description: "This is a path that points to the extension value of a log event."
-+							required:    true
-+							type: string: {}
-+						}
-+					}
-+					name: {
-+						description: """
-+																This is a path that points to the human-readable description of a log event.
-+																The value length must be lower or equal to 512.
-+																Equals to "cef.name" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					severity: {
-+						description: """
-+																This is a path that points to filed of a log event that reflects importance of the event.
-+																Reflects importance of the event.
-+
-+																It must point to a number from 0 to 10.
-+																0 = Lowest, 10 = Highest.
-+																Equals to "cef.severity" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					version: {
-+						description: """
-+																CEF Version. Can be either 0 or 1.
-+																Equals to "0" by default.
-+																"""
-+						required: true
-+						type: string: enum: {
-+							V0: "CEF specification version 0.1."
-+							V1: "CEF specification version 1.x."
-+						}
-+					}
-+				}
-+			}
- 			codec: {
- 				description: "The codec to use for encoding events."
- 				required:    true
-@@ -66,6 +151,7 @@ base: components: sinks: amqp: configuration: {
-
- 						[apache_avro]: https://avro.apache.org/
- 						"""
-+					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
- 					csv: """
- 						Encodes an event as a CSV message.
-
-diff --git a/website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue b/website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue
-index e5ea22305..68adbc7c0 100644
---- a/website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue
-+++ b/website/cue/reference/components/sinks/base/aws_cloudwatch_logs.cue
-@@ -219,6 +219,91 @@ base: components: sinks: aws_cloudwatch_logs: configuration: {
- 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
- 				}
- 			}
-+			cef: {
-+				description:   "The CEF Serializer Options."
-+				relevant_when: "codec = \"cef\""
-+				required:      true
-+				type: object: options: {
-+					device_event_class_id: {
-+						description: """
-+																Unique identifier for each event-type. Identifies the type of event reported.
-+																The value length must be lower or equal to 1023.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_product: {
-+						description: """
-+																Identifies the product of a vendor.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_vendor: {
-+						description: """
-+																Identifies the vendor of the product.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_version: {
-+						description: """
-+																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
-+																The value length must be lower or equal to 31.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					extensions: {
-+						description: """
-+																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
-+																The event can have any number of key-value pairs in any order.
-+																"""
-+						required: false
-+						type: object: options: "*": {
-+							description: "This is a path that points to the extension value of a log event."
-+							required:    true
-+							type: string: {}
-+						}
-+					}
-+					name: {
-+						description: """
-+																This is a path that points to the human-readable description of a log event.
-+																The value length must be lower or equal to 512.
-+																Equals to "cef.name" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					severity: {
-+						description: """
-+																This is a path that points to filed of a log event that reflects importance of the event.
-+																Reflects importance of the event.
-+
-+																It must point to a number from 0 to 10.
-+																0 = Lowest, 10 = Highest.
-+																Equals to "cef.severity" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					version: {
-+						description: """
-+																CEF Version. Can be either 0 or 1.
-+																Equals to "0" by default.
-+																"""
-+						required: true
-+						type: string: enum: {
-+							V0: "CEF specification version 0.1."
-+							V1: "CEF specification version 1.x."
-+						}
-+					}
-+				}
-+			}
- 			codec: {
- 				description: "The codec to use for encoding events."
- 				required:    true
-@@ -228,6 +313,7 @@ base: components: sinks: aws_cloudwatch_logs: configuration: {
-
- 						[apache_avro]: https://avro.apache.org/
- 						"""
-+					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
- 					csv: """
- 						Encodes an event as a CSV message.
-
-diff --git a/website/cue/reference/components/sinks/base/aws_kinesis_firehose.cue b/website/cue/reference/components/sinks/base/aws_kinesis_firehose.cue
-index 19a708606..03f26bd96 100644
---- a/website/cue/reference/components/sinks/base/aws_kinesis_firehose.cue
-+++ b/website/cue/reference/components/sinks/base/aws_kinesis_firehose.cue
-@@ -198,6 +198,91 @@ base: components: sinks: aws_kinesis_firehose: configuration: {
- 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
- 				}
- 			}
-+			cef: {
-+				description:   "The CEF Serializer Options."
-+				relevant_when: "codec = \"cef\""
-+				required:      true
-+				type: object: options: {
-+					device_event_class_id: {
-+						description: """
-+																Unique identifier for each event-type. Identifies the type of event reported.
-+																The value length must be lower or equal to 1023.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_product: {
-+						description: """
-+																Identifies the product of a vendor.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_vendor: {
-+						description: """
-+																Identifies the vendor of the product.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_version: {
-+						description: """
-+																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
-+																The value length must be lower or equal to 31.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					extensions: {
-+						description: """
-+																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
-+																The event can have any number of key-value pairs in any order.
-+																"""
-+						required: false
-+						type: object: options: "*": {
-+							description: "This is a path that points to the extension value of a log event."
-+							required:    true
-+							type: string: {}
-+						}
-+					}
-+					name: {
-+						description: """
-+																This is a path that points to the human-readable description of a log event.
-+																The value length must be lower or equal to 512.
-+																Equals to "cef.name" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					severity: {
-+						description: """
-+																This is a path that points to filed of a log event that reflects importance of the event.
-+																Reflects importance of the event.
-+
-+																It must point to a number from 0 to 10.
-+																0 = Lowest, 10 = Highest.
-+																Equals to "cef.severity" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					version: {
-+						description: """
-+																CEF Version. Can be either 0 or 1.
-+																Equals to "0" by default.
-+																"""
-+						required: true
-+						type: string: enum: {
-+							V0: "CEF specification version 0.1."
-+							V1: "CEF specification version 1.x."
-+						}
-+					}
-+				}
-+			}
- 			codec: {
- 				description: "The codec to use for encoding events."
- 				required:    true
-@@ -207,6 +292,7 @@ base: components: sinks: aws_kinesis_firehose: configuration: {
-
- 						[apache_avro]: https://avro.apache.org/
- 						"""
-+					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
- 					csv: """
- 						Encodes an event as a CSV message.
-
-diff --git a/website/cue/reference/components/sinks/base/aws_kinesis_streams.cue b/website/cue/reference/components/sinks/base/aws_kinesis_streams.cue
-index 40164b9d0..5d7cfc2ee 100644
---- a/website/cue/reference/components/sinks/base/aws_kinesis_streams.cue
-+++ b/website/cue/reference/components/sinks/base/aws_kinesis_streams.cue
-@@ -198,6 +198,91 @@ base: components: sinks: aws_kinesis_streams: configuration: {
- 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
- 				}
- 			}
-+			cef: {
-+				description:   "The CEF Serializer Options."
-+				relevant_when: "codec = \"cef\""
-+				required:      true
-+				type: object: options: {
-+					device_event_class_id: {
-+						description: """
-+																Unique identifier for each event-type. Identifies the type of event reported.
-+																The value length must be lower or equal to 1023.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_product: {
-+						description: """
-+																Identifies the product of a vendor.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_vendor: {
-+						description: """
-+																Identifies the vendor of the product.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_version: {
-+						description: """
-+																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
-+																The value length must be lower or equal to 31.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					extensions: {
-+						description: """
-+																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
-+																The event can have any number of key-value pairs in any order.
-+																"""
-+						required: false
-+						type: object: options: "*": {
-+							description: "This is a path that points to the extension value of a log event."
-+							required:    true
-+							type: string: {}
-+						}
-+					}
-+					name: {
-+						description: """
-+																This is a path that points to the human-readable description of a log event.
-+																The value length must be lower or equal to 512.
-+																Equals to "cef.name" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					severity: {
-+						description: """
-+																This is a path that points to filed of a log event that reflects importance of the event.
-+																Reflects importance of the event.
-+
-+																It must point to a number from 0 to 10.
-+																0 = Lowest, 10 = Highest.
-+																Equals to "cef.severity" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					version: {
-+						description: """
-+																CEF Version. Can be either 0 or 1.
-+																Equals to "0" by default.
-+																"""
-+						required: true
-+						type: string: enum: {
-+							V0: "CEF specification version 0.1."
-+							V1: "CEF specification version 1.x."
-+						}
-+					}
-+				}
-+			}
- 			codec: {
- 				description: "The codec to use for encoding events."
- 				required:    true
-@@ -207,6 +292,7 @@ base: components: sinks: aws_kinesis_streams: configuration: {
-
- 						[apache_avro]: https://avro.apache.org/
- 						"""
-+					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
- 					csv: """
- 						Encodes an event as a CSV message.
-
-diff --git a/website/cue/reference/components/sinks/base/aws_s3.cue b/website/cue/reference/components/sinks/base/aws_s3.cue
-index 11265897c..f5f6a74ed 100644
---- a/website/cue/reference/components/sinks/base/aws_s3.cue
-+++ b/website/cue/reference/components/sinks/base/aws_s3.cue
-@@ -307,6 +307,91 @@ base: components: sinks: aws_s3: configuration: {
- 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
- 				}
- 			}
-+			cef: {
-+				description:   "The CEF Serializer Options."
-+				relevant_when: "codec = \"cef\""
-+				required:      true
-+				type: object: options: {
-+					device_event_class_id: {
-+						description: """
-+																Unique identifier for each event-type. Identifies the type of event reported.
-+																The value length must be lower or equal to 1023.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_product: {
-+						description: """
-+																Identifies the product of a vendor.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_vendor: {
-+						description: """
-+																Identifies the vendor of the product.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_version: {
-+						description: """
-+																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
-+																The value length must be lower or equal to 31.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					extensions: {
-+						description: """
-+																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
-+																The event can have any number of key-value pairs in any order.
-+																"""
-+						required: false
-+						type: object: options: "*": {
-+							description: "This is a path that points to the extension value of a log event."
-+							required:    true
-+							type: string: {}
-+						}
-+					}
-+					name: {
-+						description: """
-+																This is a path that points to the human-readable description of a log event.
-+																The value length must be lower or equal to 512.
-+																Equals to "cef.name" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					severity: {
-+						description: """
-+																This is a path that points to filed of a log event that reflects importance of the event.
-+																Reflects importance of the event.
-+
-+																It must point to a number from 0 to 10.
-+																0 = Lowest, 10 = Highest.
-+																Equals to "cef.severity" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					version: {
-+						description: """
-+																CEF Version. Can be either 0 or 1.
-+																Equals to "0" by default.
-+																"""
-+						required: true
-+						type: string: enum: {
-+							V0: "CEF specification version 0.1."
-+							V1: "CEF specification version 1.x."
-+						}
-+					}
-+				}
-+			}
- 			codec: {
- 				description: "The codec to use for encoding events."
- 				required:    true
-@@ -316,6 +401,7 @@ base: components: sinks: aws_s3: configuration: {
-
- 						[apache_avro]: https://avro.apache.org/
- 						"""
-+					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
- 					csv: """
- 						Encodes an event as a CSV message.
-
-diff --git a/website/cue/reference/components/sinks/base/aws_sqs.cue b/website/cue/reference/components/sinks/base/aws_sqs.cue
-index 403beb674..a7f57cc28 100644
---- a/website/cue/reference/components/sinks/base/aws_sqs.cue
-+++ b/website/cue/reference/components/sinks/base/aws_sqs.cue
-@@ -134,6 +134,91 @@ base: components: sinks: aws_sqs: configuration: {
- 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
- 				}
- 			}
-+			cef: {
-+				description:   "The CEF Serializer Options."
-+				relevant_when: "codec = \"cef\""
-+				required:      true
-+				type: object: options: {
-+					device_event_class_id: {
-+						description: """
-+																Unique identifier for each event-type. Identifies the type of event reported.
-+																The value length must be lower or equal to 1023.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_product: {
-+						description: """
-+																Identifies the product of a vendor.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_vendor: {
-+						description: """
-+																Identifies the vendor of the product.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_version: {
-+						description: """
-+																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
-+																The value length must be lower or equal to 31.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					extensions: {
-+						description: """
-+																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
-+																The event can have any number of key-value pairs in any order.
-+																"""
-+						required: false
-+						type: object: options: "*": {
-+							description: "This is a path that points to the extension value of a log event."
-+							required:    true
-+							type: string: {}
-+						}
-+					}
-+					name: {
-+						description: """
-+																This is a path that points to the human-readable description of a log event.
-+																The value length must be lower or equal to 512.
-+																Equals to "cef.name" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					severity: {
-+						description: """
-+																This is a path that points to filed of a log event that reflects importance of the event.
-+																Reflects importance of the event.
-+
-+																It must point to a number from 0 to 10.
-+																0 = Lowest, 10 = Highest.
-+																Equals to "cef.severity" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					version: {
-+						description: """
-+																CEF Version. Can be either 0 or 1.
-+																Equals to "0" by default.
-+																"""
-+						required: true
-+						type: string: enum: {
-+							V0: "CEF specification version 0.1."
-+							V1: "CEF specification version 1.x."
-+						}
-+					}
-+				}
-+			}
- 			codec: {
- 				description: "The codec to use for encoding events."
- 				required:    true
-@@ -143,6 +228,7 @@ base: components: sinks: aws_sqs: configuration: {
-
- 						[apache_avro]: https://avro.apache.org/
- 						"""
-+					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
- 					csv: """
- 						Encodes an event as a CSV message.
-
-diff --git a/website/cue/reference/components/sinks/base/azure_blob.cue b/website/cue/reference/components/sinks/base/azure_blob.cue
-index 5c2568145..05b998055 100644
---- a/website/cue/reference/components/sinks/base/azure_blob.cue
-+++ b/website/cue/reference/components/sinks/base/azure_blob.cue
-@@ -170,6 +170,91 @@ base: components: sinks: azure_blob: configuration: {
- 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
- 				}
- 			}
-+			cef: {
-+				description:   "The CEF Serializer Options."
-+				relevant_when: "codec = \"cef\""
-+				required:      true
-+				type: object: options: {
-+					device_event_class_id: {
-+						description: """
-+																Unique identifier for each event-type. Identifies the type of event reported.
-+																The value length must be lower or equal to 1023.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_product: {
-+						description: """
-+																Identifies the product of a vendor.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_vendor: {
-+						description: """
-+																Identifies the vendor of the product.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_version: {
-+						description: """
-+																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
-+																The value length must be lower or equal to 31.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					extensions: {
-+						description: """
-+																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
-+																The event can have any number of key-value pairs in any order.
-+																"""
-+						required: false
-+						type: object: options: "*": {
-+							description: "This is a path that points to the extension value of a log event."
-+							required:    true
-+							type: string: {}
-+						}
-+					}
-+					name: {
-+						description: """
-+																This is a path that points to the human-readable description of a log event.
-+																The value length must be lower or equal to 512.
-+																Equals to "cef.name" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					severity: {
-+						description: """
-+																This is a path that points to filed of a log event that reflects importance of the event.
-+																Reflects importance of the event.
-+
-+																It must point to a number from 0 to 10.
-+																0 = Lowest, 10 = Highest.
-+																Equals to "cef.severity" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					version: {
-+						description: """
-+																CEF Version. Can be either 0 or 1.
-+																Equals to "0" by default.
-+																"""
-+						required: true
-+						type: string: enum: {
-+							V0: "CEF specification version 0.1."
-+							V1: "CEF specification version 1.x."
-+						}
-+					}
-+				}
-+			}
- 			codec: {
- 				description: "The codec to use for encoding events."
- 				required:    true
-@@ -179,6 +264,7 @@ base: components: sinks: azure_blob: configuration: {
-
- 						[apache_avro]: https://avro.apache.org/
- 						"""
-+					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
- 					csv: """
- 						Encodes an event as a CSV message.
-
-diff --git a/website/cue/reference/components/sinks/base/console.cue b/website/cue/reference/components/sinks/base/console.cue
-index c4deb39c4..693ebc0de 100644
---- a/website/cue/reference/components/sinks/base/console.cue
-+++ b/website/cue/reference/components/sinks/base/console.cue
-@@ -41,6 +41,91 @@ base: components: sinks: console: configuration: {
- 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
- 				}
- 			}
-+			cef: {
-+				description:   "The CEF Serializer Options."
-+				relevant_when: "codec = \"cef\""
-+				required:      true
-+				type: object: options: {
-+					device_event_class_id: {
-+						description: """
-+																Unique identifier for each event-type. Identifies the type of event reported.
-+																The value length must be lower or equal to 1023.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_product: {
-+						description: """
-+																Identifies the product of a vendor.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_vendor: {
-+						description: """
-+																Identifies the vendor of the product.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_version: {
-+						description: """
-+																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
-+																The value length must be lower or equal to 31.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					extensions: {
-+						description: """
-+																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
-+																The event can have any number of key-value pairs in any order.
-+																"""
-+						required: false
-+						type: object: options: "*": {
-+							description: "This is a path that points to the extension value of a log event."
-+							required:    true
-+							type: string: {}
-+						}
-+					}
-+					name: {
-+						description: """
-+																This is a path that points to the human-readable description of a log event.
-+																The value length must be lower or equal to 512.
-+																Equals to "cef.name" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					severity: {
-+						description: """
-+																This is a path that points to filed of a log event that reflects importance of the event.
-+																Reflects importance of the event.
-+
-+																It must point to a number from 0 to 10.
-+																0 = Lowest, 10 = Highest.
-+																Equals to "cef.severity" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					version: {
-+						description: """
-+																CEF Version. Can be either 0 or 1.
-+																Equals to "0" by default.
-+																"""
-+						required: true
-+						type: string: enum: {
-+							V0: "CEF specification version 0.1."
-+							V1: "CEF specification version 1.x."
-+						}
-+					}
-+				}
-+			}
- 			codec: {
- 				description: "The codec to use for encoding events."
- 				required:    true
-@@ -50,6 +135,7 @@ base: components: sinks: console: configuration: {
-
- 						[apache_avro]: https://avro.apache.org/
- 						"""
-+					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
- 					csv: """
- 						Encodes an event as a CSV message.
-
-diff --git a/website/cue/reference/components/sinks/base/file.cue b/website/cue/reference/components/sinks/base/file.cue
-index 383b9d208..5aa831dbe 100644
---- a/website/cue/reference/components/sinks/base/file.cue
-+++ b/website/cue/reference/components/sinks/base/file.cue
-@@ -61,6 +61,91 @@ base: components: sinks: file: configuration: {
- 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
- 				}
- 			}
-+			cef: {
-+				description:   "The CEF Serializer Options."
-+				relevant_when: "codec = \"cef\""
-+				required:      true
-+				type: object: options: {
-+					device_event_class_id: {
-+						description: """
-+																Unique identifier for each event-type. Identifies the type of event reported.
-+																The value length must be lower or equal to 1023.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_product: {
-+						description: """
-+																Identifies the product of a vendor.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_vendor: {
-+						description: """
-+																Identifies the vendor of the product.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_version: {
-+						description: """
-+																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
-+																The value length must be lower or equal to 31.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					extensions: {
-+						description: """
-+																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
-+																The event can have any number of key-value pairs in any order.
-+																"""
-+						required: false
-+						type: object: options: "*": {
-+							description: "This is a path that points to the extension value of a log event."
-+							required:    true
-+							type: string: {}
-+						}
-+					}
-+					name: {
-+						description: """
-+																This is a path that points to the human-readable description of a log event.
-+																The value length must be lower or equal to 512.
-+																Equals to "cef.name" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					severity: {
-+						description: """
-+																This is a path that points to filed of a log event that reflects importance of the event.
-+																Reflects importance of the event.
-+
-+																It must point to a number from 0 to 10.
-+																0 = Lowest, 10 = Highest.
-+																Equals to "cef.severity" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					version: {
-+						description: """
-+																CEF Version. Can be either 0 or 1.
-+																Equals to "0" by default.
-+																"""
-+						required: true
-+						type: string: enum: {
-+							V0: "CEF specification version 0.1."
-+							V1: "CEF specification version 1.x."
-+						}
-+					}
-+				}
-+			}
- 			codec: {
- 				description: "The codec to use for encoding events."
- 				required:    true
-@@ -70,6 +155,7 @@ base: components: sinks: file: configuration: {
-
- 						[apache_avro]: https://avro.apache.org/
- 						"""
-+					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
- 					csv: """
- 						Encodes an event as a CSV message.
-
-diff --git a/website/cue/reference/components/sinks/base/gcp_chronicle_unstructured.cue b/website/cue/reference/components/sinks/base/gcp_chronicle_unstructured.cue
-index 82d963fc5..aa5042360 100644
---- a/website/cue/reference/components/sinks/base/gcp_chronicle_unstructured.cue
-+++ b/website/cue/reference/components/sinks/base/gcp_chronicle_unstructured.cue
-@@ -110,6 +110,91 @@ base: components: sinks: gcp_chronicle_unstructured: configuration: {
- 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
- 				}
- 			}
-+			cef: {
-+				description:   "The CEF Serializer Options."
-+				relevant_when: "codec = \"cef\""
-+				required:      true
-+				type: object: options: {
-+					device_event_class_id: {
-+						description: """
-+																Unique identifier for each event-type. Identifies the type of event reported.
-+																The value length must be lower or equal to 1023.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_product: {
-+						description: """
-+																Identifies the product of a vendor.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_vendor: {
-+						description: """
-+																Identifies the vendor of the product.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_version: {
-+						description: """
-+																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
-+																The value length must be lower or equal to 31.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					extensions: {
-+						description: """
-+																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
-+																The event can have any number of key-value pairs in any order.
-+																"""
-+						required: false
-+						type: object: options: "*": {
-+							description: "This is a path that points to the extension value of a log event."
-+							required:    true
-+							type: string: {}
-+						}
-+					}
-+					name: {
-+						description: """
-+																This is a path that points to the human-readable description of a log event.
-+																The value length must be lower or equal to 512.
-+																Equals to "cef.name" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					severity: {
-+						description: """
-+																This is a path that points to filed of a log event that reflects importance of the event.
-+																Reflects importance of the event.
-+
-+																It must point to a number from 0 to 10.
-+																0 = Lowest, 10 = Highest.
-+																Equals to "cef.severity" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					version: {
-+						description: """
-+																CEF Version. Can be either 0 or 1.
-+																Equals to "0" by default.
-+																"""
-+						required: true
-+						type: string: enum: {
-+							V0: "CEF specification version 0.1."
-+							V1: "CEF specification version 1.x."
-+						}
-+					}
-+				}
-+			}
- 			codec: {
- 				description: "The codec to use for encoding events."
- 				required:    true
-@@ -119,6 +204,7 @@ base: components: sinks: gcp_chronicle_unstructured: configuration: {
-
- 						[apache_avro]: https://avro.apache.org/
- 						"""
-+					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
- 					csv: """
- 						Encodes an event as a CSV message.
-
-diff --git a/website/cue/reference/components/sinks/base/gcp_cloud_storage.cue b/website/cue/reference/components/sinks/base/gcp_cloud_storage.cue
-index 89b2f3761..f50a7ec06 100644
---- a/website/cue/reference/components/sinks/base/gcp_cloud_storage.cue
-+++ b/website/cue/reference/components/sinks/base/gcp_cloud_storage.cue
-@@ -194,6 +194,91 @@ base: components: sinks: gcp_cloud_storage: configuration: {
- 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
- 				}
- 			}
-+			cef: {
-+				description:   "The CEF Serializer Options."
-+				relevant_when: "codec = \"cef\""
-+				required:      true
-+				type: object: options: {
-+					device_event_class_id: {
-+						description: """
-+																Unique identifier for each event-type. Identifies the type of event reported.
-+																The value length must be lower or equal to 1023.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_product: {
-+						description: """
-+																Identifies the product of a vendor.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_vendor: {
-+						description: """
-+																Identifies the vendor of the product.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_version: {
-+						description: """
-+																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
-+																The value length must be lower or equal to 31.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					extensions: {
-+						description: """
-+																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
-+																The event can have any number of key-value pairs in any order.
-+																"""
-+						required: false
-+						type: object: options: "*": {
-+							description: "This is a path that points to the extension value of a log event."
-+							required:    true
-+							type: string: {}
-+						}
-+					}
-+					name: {
-+						description: """
-+																This is a path that points to the human-readable description of a log event.
-+																The value length must be lower or equal to 512.
-+																Equals to "cef.name" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					severity: {
-+						description: """
-+																This is a path that points to filed of a log event that reflects importance of the event.
-+																Reflects importance of the event.
-+
-+																It must point to a number from 0 to 10.
-+																0 = Lowest, 10 = Highest.
-+																Equals to "cef.severity" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					version: {
-+						description: """
-+																CEF Version. Can be either 0 or 1.
-+																Equals to "0" by default.
-+																"""
-+						required: true
-+						type: string: enum: {
-+							V0: "CEF specification version 0.1."
-+							V1: "CEF specification version 1.x."
-+						}
-+					}
-+				}
-+			}
- 			codec: {
- 				description: "The codec to use for encoding events."
- 				required:    true
-@@ -203,6 +288,7 @@ base: components: sinks: gcp_cloud_storage: configuration: {
-
- 						[apache_avro]: https://avro.apache.org/
- 						"""
-+					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
- 					csv: """
- 						Encodes an event as a CSV message.
-
+Index: website/cue/reference/components/sinks/base/gcp_pubsub.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
 diff --git a/website/cue/reference/components/sinks/base/gcp_pubsub.cue b/website/cue/reference/components/sinks/base/gcp_pubsub.cue
-index 9c45e6195..8219f4c6d 100644
---- a/website/cue/reference/components/sinks/base/gcp_pubsub.cue
-+++ b/website/cue/reference/components/sinks/base/gcp_pubsub.cue
-@@ -108,6 +108,91 @@ base: components: sinks: gcp_pubsub: configuration: {
+--- a/website/cue/reference/components/sinks/base/gcp_pubsub.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/gcp_pubsub.cue	(date 1723658498443)
+@@ -108,6 +108,91 @@
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -1913,7 +2760,7 @@ index 9c45e6195..8219f4c6d 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -117,6 +202,7 @@ base: components: sinks: gcp_pubsub: configuration: {
+@@ -117,6 +202,7 @@
 
  						[apache_avro]: https://avro.apache.org/
  						"""
@@ -1921,11 +2768,15 @@ index 9c45e6195..8219f4c6d 100644
  					csv: """
  						Encodes an event as a CSV message.
 
-diff --git a/website/cue/reference/components/sinks/base/http.cue b/website/cue/reference/components/sinks/base/http.cue
-index c737b39f5..354535237 100644
---- a/website/cue/reference/components/sinks/base/http.cue
-+++ b/website/cue/reference/components/sinks/base/http.cue
-@@ -149,6 +149,91 @@ base: components: sinks: http: configuration: {
+Index: website/cue/reference/components/sinks/base/aws_s3.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/aws_s3.cue b/website/cue/reference/components/sinks/base/aws_s3.cue
+--- a/website/cue/reference/components/sinks/base/aws_s3.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/aws_s3.cue	(date 1723658498420)
+@@ -321,6 +321,91 @@
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -2017,7 +2868,7 @@ index c737b39f5..354535237 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -158,6 +243,7 @@ base: components: sinks: http: configuration: {
+@@ -330,6 +415,7 @@
 
  						[apache_avro]: https://avro.apache.org/
  						"""
@@ -2025,635 +2876,15 @@ index c737b39f5..354535237 100644
  					csv: """
  						Encodes an event as a CSV message.
 
-diff --git a/website/cue/reference/components/sinks/base/humio_logs.cue b/website/cue/reference/components/sinks/base/humio_logs.cue
-index 8d8253417..566c4c99d 100644
---- a/website/cue/reference/components/sinks/base/humio_logs.cue
-+++ b/website/cue/reference/components/sinks/base/humio_logs.cue
-@@ -102,6 +102,91 @@ base: components: sinks: humio_logs: configuration: {
- 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
- 				}
- 			}
-+			cef: {
-+				description:   "The CEF Serializer Options."
-+				relevant_when: "codec = \"cef\""
-+				required:      true
-+				type: object: options: {
-+					device_event_class_id: {
-+						description: """
-+																Unique identifier for each event-type. Identifies the type of event reported.
-+																The value length must be lower or equal to 1023.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_product: {
-+						description: """
-+																Identifies the product of a vendor.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_vendor: {
-+						description: """
-+																Identifies the vendor of the product.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_version: {
-+						description: """
-+																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
-+																The value length must be lower or equal to 31.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					extensions: {
-+						description: """
-+																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
-+																The event can have any number of key-value pairs in any order.
-+																"""
-+						required: false
-+						type: object: options: "*": {
-+							description: "This is a path that points to the extension value of a log event."
-+							required:    true
-+							type: string: {}
-+						}
-+					}
-+					name: {
-+						description: """
-+																This is a path that points to the human-readable description of a log event.
-+																The value length must be lower or equal to 512.
-+																Equals to "cef.name" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					severity: {
-+						description: """
-+																This is a path that points to filed of a log event that reflects importance of the event.
-+																Reflects importance of the event.
-+
-+																It must point to a number from 0 to 10.
-+																0 = Lowest, 10 = Highest.
-+																Equals to "cef.severity" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					version: {
-+						description: """
-+																CEF Version. Can be either 0 or 1.
-+																Equals to "0" by default.
-+																"""
-+						required: true
-+						type: string: enum: {
-+							V0: "CEF specification version 0.1."
-+							V1: "CEF specification version 1.x."
-+						}
-+					}
-+				}
-+			}
- 			codec: {
- 				description: "The codec to use for encoding events."
- 				required:    true
-@@ -111,6 +196,7 @@ base: components: sinks: humio_logs: configuration: {
-
- 						[apache_avro]: https://avro.apache.org/
- 						"""
-+					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
- 					csv: """
- 						Encodes an event as a CSV message.
-
-diff --git a/website/cue/reference/components/sinks/base/kafka.cue b/website/cue/reference/components/sinks/base/kafka.cue
-index 97de9c947..994fc76c7 100644
---- a/website/cue/reference/components/sinks/base/kafka.cue
-+++ b/website/cue/reference/components/sinks/base/kafka.cue
-@@ -96,6 +96,91 @@ base: components: sinks: kafka: configuration: {
- 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
- 				}
- 			}
-+			cef: {
-+				description:   "The CEF Serializer Options."
-+				relevant_when: "codec = \"cef\""
-+				required:      true
-+				type: object: options: {
-+					device_event_class_id: {
-+						description: """
-+																Unique identifier for each event-type. Identifies the type of event reported.
-+																The value length must be lower or equal to 1023.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_product: {
-+						description: """
-+																Identifies the product of a vendor.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_vendor: {
-+						description: """
-+																Identifies the vendor of the product.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_version: {
-+						description: """
-+																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
-+																The value length must be lower or equal to 31.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					extensions: {
-+						description: """
-+																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
-+																The event can have any number of key-value pairs in any order.
-+																"""
-+						required: false
-+						type: object: options: "*": {
-+							description: "This is a path that points to the extension value of a log event."
-+							required:    true
-+							type: string: {}
-+						}
-+					}
-+					name: {
-+						description: """
-+																This is a path that points to the human-readable description of a log event.
-+																The value length must be lower or equal to 512.
-+																Equals to "cef.name" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					severity: {
-+						description: """
-+																This is a path that points to filed of a log event that reflects importance of the event.
-+																Reflects importance of the event.
-+
-+																It must point to a number from 0 to 10.
-+																0 = Lowest, 10 = Highest.
-+																Equals to "cef.severity" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					version: {
-+						description: """
-+																CEF Version. Can be either 0 or 1.
-+																Equals to "0" by default.
-+																"""
-+						required: true
-+						type: string: enum: {
-+							V0: "CEF specification version 0.1."
-+							V1: "CEF specification version 1.x."
-+						}
-+					}
-+				}
-+			}
- 			codec: {
- 				description: "The codec to use for encoding events."
- 				required:    true
-@@ -105,6 +190,7 @@ base: components: sinks: kafka: configuration: {
-
- 						[apache_avro]: https://avro.apache.org/
- 						"""
-+					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
- 					csv: """
- 						Encodes an event as a CSV message.
-
-diff --git a/website/cue/reference/components/sinks/base/loki.cue b/website/cue/reference/components/sinks/base/loki.cue
-index 0071c5b2a..9317f72f2 100644
---- a/website/cue/reference/components/sinks/base/loki.cue
-+++ b/website/cue/reference/components/sinks/base/loki.cue
-@@ -153,6 +153,91 @@ base: components: sinks: loki: configuration: {
- 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
- 				}
- 			}
-+			cef: {
-+				description:   "The CEF Serializer Options."
-+				relevant_when: "codec = \"cef\""
-+				required:      true
-+				type: object: options: {
-+					device_event_class_id: {
-+						description: """
-+																Unique identifier for each event-type. Identifies the type of event reported.
-+																The value length must be lower or equal to 1023.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_product: {
-+						description: """
-+																Identifies the product of a vendor.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_vendor: {
-+						description: """
-+																Identifies the vendor of the product.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_version: {
-+						description: """
-+																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
-+																The value length must be lower or equal to 31.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					extensions: {
-+						description: """
-+																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
-+																The event can have any number of key-value pairs in any order.
-+																"""
-+						required: false
-+						type: object: options: "*": {
-+							description: "This is a path that points to the extension value of a log event."
-+							required:    true
-+							type: string: {}
-+						}
-+					}
-+					name: {
-+						description: """
-+																This is a path that points to the human-readable description of a log event.
-+																The value length must be lower or equal to 512.
-+																Equals to "cef.name" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					severity: {
-+						description: """
-+																This is a path that points to filed of a log event that reflects importance of the event.
-+																Reflects importance of the event.
-+
-+																It must point to a number from 0 to 10.
-+																0 = Lowest, 10 = Highest.
-+																Equals to "cef.severity" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					version: {
-+						description: """
-+																CEF Version. Can be either 0 or 1.
-+																Equals to "0" by default.
-+																"""
-+						required: true
-+						type: string: enum: {
-+							V0: "CEF specification version 0.1."
-+							V1: "CEF specification version 1.x."
-+						}
-+					}
-+				}
-+			}
- 			codec: {
- 				description: "The codec to use for encoding events."
- 				required:    true
-@@ -162,6 +247,7 @@ base: components: sinks: loki: configuration: {
-
- 						[apache_avro]: https://avro.apache.org/
- 						"""
-+					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
- 					csv: """
- 						Encodes an event as a CSV message.
-
-diff --git a/website/cue/reference/components/sinks/base/nats.cue b/website/cue/reference/components/sinks/base/nats.cue
-index 2708c111c..d128faa1c 100644
---- a/website/cue/reference/components/sinks/base/nats.cue
-+++ b/website/cue/reference/components/sinks/base/nats.cue
-@@ -141,6 +141,91 @@ base: components: sinks: nats: configuration: {
- 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
- 				}
- 			}
-+			cef: {
-+				description:   "The CEF Serializer Options."
-+				relevant_when: "codec = \"cef\""
-+				required:      true
-+				type: object: options: {
-+					device_event_class_id: {
-+						description: """
-+																Unique identifier for each event-type. Identifies the type of event reported.
-+																The value length must be lower or equal to 1023.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_product: {
-+						description: """
-+																Identifies the product of a vendor.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_vendor: {
-+						description: """
-+																Identifies the vendor of the product.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_version: {
-+						description: """
-+																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
-+																The value length must be lower or equal to 31.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					extensions: {
-+						description: """
-+																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
-+																The event can have any number of key-value pairs in any order.
-+																"""
-+						required: false
-+						type: object: options: "*": {
-+							description: "This is a path that points to the extension value of a log event."
-+							required:    true
-+							type: string: {}
-+						}
-+					}
-+					name: {
-+						description: """
-+																This is a path that points to the human-readable description of a log event.
-+																The value length must be lower or equal to 512.
-+																Equals to "cef.name" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					severity: {
-+						description: """
-+																This is a path that points to filed of a log event that reflects importance of the event.
-+																Reflects importance of the event.
-+
-+																It must point to a number from 0 to 10.
-+																0 = Lowest, 10 = Highest.
-+																Equals to "cef.severity" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					version: {
-+						description: """
-+																CEF Version. Can be either 0 or 1.
-+																Equals to "0" by default.
-+																"""
-+						required: true
-+						type: string: enum: {
-+							V0: "CEF specification version 0.1."
-+							V1: "CEF specification version 1.x."
-+						}
-+					}
-+				}
-+			}
- 			codec: {
- 				description: "The codec to use for encoding events."
- 				required:    true
-@@ -150,6 +235,7 @@ base: components: sinks: nats: configuration: {
-
- 						[apache_avro]: https://avro.apache.org/
- 						"""
-+					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
- 					csv: """
- 						Encodes an event as a CSV message.
-
-diff --git a/website/cue/reference/components/sinks/base/papertrail.cue b/website/cue/reference/components/sinks/base/papertrail.cue
-index 8b4cce6d5..d782f06d2 100644
---- a/website/cue/reference/components/sinks/base/papertrail.cue
-+++ b/website/cue/reference/components/sinks/base/papertrail.cue
-@@ -41,6 +41,91 @@ base: components: sinks: papertrail: configuration: {
- 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
- 				}
- 			}
-+			cef: {
-+				description:   "The CEF Serializer Options."
-+				relevant_when: "codec = \"cef\""
-+				required:      true
-+				type: object: options: {
-+					device_event_class_id: {
-+						description: """
-+																Unique identifier for each event-type. Identifies the type of event reported.
-+																The value length must be lower or equal to 1023.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_product: {
-+						description: """
-+																Identifies the product of a vendor.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_vendor: {
-+						description: """
-+																Identifies the vendor of the product.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_version: {
-+						description: """
-+																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
-+																The value length must be lower or equal to 31.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					extensions: {
-+						description: """
-+																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
-+																The event can have any number of key-value pairs in any order.
-+																"""
-+						required: false
-+						type: object: options: "*": {
-+							description: "This is a path that points to the extension value of a log event."
-+							required:    true
-+							type: string: {}
-+						}
-+					}
-+					name: {
-+						description: """
-+																This is a path that points to the human-readable description of a log event.
-+																The value length must be lower or equal to 512.
-+																Equals to "cef.name" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					severity: {
-+						description: """
-+																This is a path that points to filed of a log event that reflects importance of the event.
-+																Reflects importance of the event.
-+
-+																It must point to a number from 0 to 10.
-+																0 = Lowest, 10 = Highest.
-+																Equals to "cef.severity" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					version: {
-+						description: """
-+																CEF Version. Can be either 0 or 1.
-+																Equals to "0" by default.
-+																"""
-+						required: true
-+						type: string: enum: {
-+							V0: "CEF specification version 0.1."
-+							V1: "CEF specification version 1.x."
-+						}
-+					}
-+				}
-+			}
- 			codec: {
- 				description: "The codec to use for encoding events."
- 				required:    true
-@@ -50,6 +135,7 @@ base: components: sinks: papertrail: configuration: {
-
- 						[apache_avro]: https://avro.apache.org/
- 						"""
-+					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
- 					csv: """
- 						Encodes an event as a CSV message.
-
-diff --git a/website/cue/reference/components/sinks/base/pulsar.cue b/website/cue/reference/components/sinks/base/pulsar.cue
-index cc62959b4..69a4b1b28 100644
---- a/website/cue/reference/components/sinks/base/pulsar.cue
-+++ b/website/cue/reference/components/sinks/base/pulsar.cue
-@@ -135,6 +135,91 @@ base: components: sinks: pulsar: configuration: {
- 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
- 				}
- 			}
-+			cef: {
-+				description:   "The CEF Serializer Options."
-+				relevant_when: "codec = \"cef\""
-+				required:      true
-+				type: object: options: {
-+					device_event_class_id: {
-+						description: """
-+																Unique identifier for each event-type. Identifies the type of event reported.
-+																The value length must be lower or equal to 1023.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_product: {
-+						description: """
-+																Identifies the product of a vendor.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_vendor: {
-+						description: """
-+																Identifies the vendor of the product.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_version: {
-+						description: """
-+																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
-+																The value length must be lower or equal to 31.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					extensions: {
-+						description: """
-+																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
-+																The event can have any number of key-value pairs in any order.
-+																"""
-+						required: false
-+						type: object: options: "*": {
-+							description: "This is a path that points to the extension value of a log event."
-+							required:    true
-+							type: string: {}
-+						}
-+					}
-+					name: {
-+						description: """
-+																This is a path that points to the human-readable description of a log event.
-+																The value length must be lower or equal to 512.
-+																Equals to "cef.name" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					severity: {
-+						description: """
-+																This is a path that points to filed of a log event that reflects importance of the event.
-+																Reflects importance of the event.
-+
-+																It must point to a number from 0 to 10.
-+																0 = Lowest, 10 = Highest.
-+																Equals to "cef.severity" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					version: {
-+						description: """
-+																CEF Version. Can be either 0 or 1.
-+																Equals to "0" by default.
-+																"""
-+						required: true
-+						type: string: enum: {
-+							V0: "CEF specification version 0.1."
-+							V1: "CEF specification version 1.x."
-+						}
-+					}
-+				}
-+			}
- 			codec: {
- 				description: "The codec to use for encoding events."
- 				required:    true
-@@ -144,6 +229,7 @@ base: components: sinks: pulsar: configuration: {
-
- 						[apache_avro]: https://avro.apache.org/
- 						"""
-+					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
- 					csv: """
- 						Encodes an event as a CSV message.
-
+Index: website/cue/reference/components/sinks/base/redis.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
 diff --git a/website/cue/reference/components/sinks/base/redis.cue b/website/cue/reference/components/sinks/base/redis.cue
-index 774370ce5..03d7c5222 100644
---- a/website/cue/reference/components/sinks/base/redis.cue
-+++ b/website/cue/reference/components/sinks/base/redis.cue
-@@ -94,6 +94,91 @@ base: components: sinks: redis: configuration: {
+--- a/website/cue/reference/components/sinks/base/redis.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/redis.cue	(date 1723658498473)
+@@ -94,6 +94,91 @@
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -2745,7 +2976,7 @@ index 774370ce5..03d7c5222 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -103,6 +188,7 @@ base: components: sinks: redis: configuration: {
+@@ -103,6 +188,7 @@
 
  						[apache_avro]: https://avro.apache.org/
  						"""
@@ -2753,11 +2984,15 @@ index 774370ce5..03d7c5222 100644
  					csv: """
  						Encodes an event as a CSV message.
 
-diff --git a/website/cue/reference/components/sinks/base/socket.cue b/website/cue/reference/components/sinks/base/socket.cue
-index c0b0c62ad..07d65c1d7 100644
---- a/website/cue/reference/components/sinks/base/socket.cue
-+++ b/website/cue/reference/components/sinks/base/socket.cue
-@@ -53,6 +53,91 @@ base: components: sinks: socket: configuration: {
+Index: website/cue/reference/components/sinks/base/azure_blob.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/azure_blob.cue b/website/cue/reference/components/sinks/base/azure_blob.cue
+--- a/website/cue/reference/components/sinks/base/azure_blob.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/azure_blob.cue	(date 1723658498428)
+@@ -175,6 +175,91 @@
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -2849,7 +3084,7 @@ index c0b0c62ad..07d65c1d7 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -62,6 +147,7 @@ base: components: sinks: socket: configuration: {
+@@ -184,6 +269,7 @@
 
  						[apache_avro]: https://avro.apache.org/
  						"""
@@ -2857,11 +3092,15 @@ index c0b0c62ad..07d65c1d7 100644
  					csv: """
  						Encodes an event as a CSV message.
 
-diff --git a/website/cue/reference/components/sinks/base/splunk_hec_logs.cue b/website/cue/reference/components/sinks/base/splunk_hec_logs.cue
-index 184db1386..1e7c6e417 100644
---- a/website/cue/reference/components/sinks/base/splunk_hec_logs.cue
-+++ b/website/cue/reference/components/sinks/base/splunk_hec_logs.cue
-@@ -152,6 +152,91 @@ base: components: sinks: splunk_hec_logs: configuration: {
+Index: website/cue/reference/components/sinks/base/aws_kinesis_streams.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/aws_kinesis_streams.cue b/website/cue/reference/components/sinks/base/aws_kinesis_streams.cue
+--- a/website/cue/reference/components/sinks/base/aws_kinesis_streams.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/aws_kinesis_streams.cue	(date 1723658498415)
+@@ -212,6 +212,91 @@
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -2953,7 +3192,7 @@ index 184db1386..1e7c6e417 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -161,6 +246,7 @@ base: components: sinks: splunk_hec_logs: configuration: {
+@@ -221,6 +306,7 @@
 
  						[apache_avro]: https://avro.apache.org/
  						"""
@@ -2961,11 +3200,15 @@ index 184db1386..1e7c6e417 100644
  					csv: """
  						Encodes an event as a CSV message.
 
-diff --git a/website/cue/reference/components/sinks/base/webhdfs.cue b/website/cue/reference/components/sinks/base/webhdfs.cue
-index b07f00ae7..0373e26ee 100644
---- a/website/cue/reference/components/sinks/base/webhdfs.cue
-+++ b/website/cue/reference/components/sinks/base/webhdfs.cue
-@@ -102,6 +102,91 @@ base: components: sinks: webhdfs: configuration: {
+Index: website/cue/reference/components/sinks/base/amqp.cue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/website/cue/reference/components/sinks/base/amqp.cue b/website/cue/reference/components/sinks/base/amqp.cue
+--- a/website/cue/reference/components/sinks/base/amqp.cue	(revision 1167aa9cdaf4fdf5e860434fc98b01851c7a2676)
++++ b/website/cue/reference/components/sinks/base/amqp.cue	(date 1723658498404)
+@@ -57,6 +57,91 @@
  					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
  				}
  			}
@@ -3057,7 +3300,7 @@ index b07f00ae7..0373e26ee 100644
  			codec: {
  				description: "The codec to use for encoding events."
  				required:    true
-@@ -111,6 +196,7 @@ base: components: sinks: webhdfs: configuration: {
+@@ -66,6 +151,7 @@
 
  						[apache_avro]: https://avro.apache.org/
  						"""
@@ -3065,107 +3308,4 @@ index b07f00ae7..0373e26ee 100644
  					csv: """
  						Encodes an event as a CSV message.
 
-diff --git a/website/cue/reference/components/sinks/base/websocket.cue b/website/cue/reference/components/sinks/base/websocket.cue
-index ad51d78f9..4358337af 100644
---- a/website/cue/reference/components/sinks/base/websocket.cue
-+++ b/website/cue/reference/components/sinks/base/websocket.cue
-@@ -88,6 +88,91 @@ base: components: sinks: websocket: configuration: {
- 					type: string: examples: ["{ \"type\": \"record\", \"name\": \"log\", \"fields\": [{ \"name\": \"message\", \"type\": \"string\" }] }"]
- 				}
- 			}
-+			cef: {
-+				description:   "The CEF Serializer Options."
-+				relevant_when: "codec = \"cef\""
-+				required:      true
-+				type: object: options: {
-+					device_event_class_id: {
-+						description: """
-+																Unique identifier for each event-type. Identifies the type of event reported.
-+																The value length must be lower or equal to 1023.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_product: {
-+						description: """
-+																Identifies the product of a vendor.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_vendor: {
-+						description: """
-+																Identifies the vendor of the product.
-+																The part of a unique device identifier. No two products can use the same pair of devide vendor and device product combination.
-+																The value length must be lower or equal to 63.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					device_version: {
-+						description: """
-+																Identifies the version of the problem. In combination with device product and vendor, it composes the unique id of device that sends messages.
-+																The value length must be lower or equal to 31.
-+																"""
-+						required: false
-+						type: string: {}
-+					}
-+					extensions: {
-+						description: """
-+																The collection fo key-value pairs. Keys are the keys of the extensions, and values are path that point to the extension values of a log event.
-+																The event can have any number of key-value pairs in any order.
-+																"""
-+						required: false
-+						type: object: options: "*": {
-+							description: "This is a path that points to the extension value of a log event."
-+							required:    true
-+							type: string: {}
-+						}
-+					}
-+					name: {
-+						description: """
-+																This is a path that points to the human-readable description of a log event.
-+																The value length must be lower or equal to 512.
-+																Equals to "cef.name" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					severity: {
-+						description: """
-+																This is a path that points to filed of a log event that reflects importance of the event.
-+																Reflects importance of the event.
-+
-+																It must point to a number from 0 to 10.
-+																0 = Lowest, 10 = Highest.
-+																Equals to "cef.severity" by default.
-+																"""
-+						required: true
-+						type: string: {}
-+					}
-+					version: {
-+						description: """
-+																CEF Version. Can be either 0 or 1.
-+																Equals to "0" by default.
-+																"""
-+						required: true
-+						type: string: enum: {
-+							V0: "CEF specification version 0.1."
-+							V1: "CEF specification version 1.x."
-+						}
-+					}
-+				}
-+			}
- 			codec: {
- 				description: "The codec to use for encoding events."
- 				required:    true
-@@ -97,6 +182,7 @@ base: components: sinks: websocket: configuration: {
-
- 						[apache_avro]: https://avro.apache.org/
- 						"""
-+					cef: "Encodes an event as a CEF (Common Event Format) formatted message."
- 					csv: """
- 						Encodes an event as a CSV message.
 

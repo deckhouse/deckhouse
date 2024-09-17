@@ -20,6 +20,7 @@
       "healthcheck": {
         "enabled": false
       },
+      "api_version": "v8",
       "endpoint": "https://192.168.0.1:9200",
       "encoding": {
         "timestamp_format": "rfc3339"

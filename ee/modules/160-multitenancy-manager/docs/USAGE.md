@@ -6,6 +6,8 @@ title: "The multitenancy-manager module: usage examples"
 ## Default project templates
 
 The following project templates are included in the Deckhouse Kubernetes Platform:
+- `empty` - an empty template without predefined resources
+
 - `default` — a template that covers basic project use cases:
   * resource limitation;
   * network isolation;
@@ -66,7 +68,7 @@ kubectl get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.paramet
    kubectl get projects my-project
    ```
 
-   A successfully created project should be in the `Sync` state. If the state equals `Error`, add the `-o yaml` argument to the command (e.g., `kubectl get projects my-project -o yaml`) to get more detailed information about the error.
+   A successfully created project should be in the `Deployed` state. If the state equals `Error`, add the `-o yaml` argument to the command (e.g., `kubectl get projects my-project -o yaml`) to get more detailed information about the error.
 
 ## Creating your own project template
 

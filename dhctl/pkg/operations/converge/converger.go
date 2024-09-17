@@ -29,7 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
@@ -61,12 +61,12 @@ type Converger struct {
 }
 
 func NewConverger(params *Params) *Converger {
-	//if params.CommanderMode {
+	// if params.CommanderMode {
 	// FIXME(dhctl-for-commander): commander uuid currently optional, make it required later
-	//if params.CommanderUUID == uuid.Nil {
+	// if params.CommanderUUID == uuid.Nil {
 	//	panic("CommanderUUID required for bootstrap operation in commander mode!")
-	//}
-	//}
+	// }
+	// }
 
 	return &Converger{
 		Params:                 params,
@@ -102,7 +102,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		return nil, err
 	}
 
-	kubeCl, err := operations.ConnectToKubernetesAPI(c.SSHClient)
+	kubeCl, err := operations.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(c.SSHClient))
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (c *Converger) AutoConverge() error {
 		return err
 	}
 
-	kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
+	kubeCl := client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
 	if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 		return err
 	}

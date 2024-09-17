@@ -1,4 +1,15 @@
 alerts:
+    - name: CapsInstanceUnavailable
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/caps-nodes.tpl
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        In MachineDeployment `{{ $labels.machine_deployment_name }}` number of unavailable instances is **{{ $value }}**. Take a look and check at the state of the instances in the cluster: `kubectl get instance -l node.deckhouse.io/group={{ $labels.machine_deployment_name }}`
+      summary: |
+        There are unavailable instances in the {{ $labels.machine_deployment_name }} MachineDeployment.
+      severity: "8"
+      markupFormat: markdown
     - name: CertmanagerCertificateExpired
       sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/certificate.yaml
       moduleUrl: 101-cert-manager
@@ -431,6 +442,20 @@ alerts:
         The {{ $labels.module }}/{{ $labels.hook }} Deckhouse hook crashes way too often.
       severity: "9"
       markupFormat: markdown
+    - name: D8DeckhouseModuleUpdatePolicyNotFound
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module update policy not found for {{ $labels.module_release }}
+
+        You need to remove label from MR: `kubectl label mr {{ $labels.module_release }} modules.deckhouse.io/update-policy-`.
+        A new suitable policy will be detected automatically.
+      summary: |
+        Module update policy not found for {{ $labels.module_release }}
+      severity: "5"
+      markupFormat: markdown
     - name: D8DeckhousePodIsNotReady
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 340-monitoring-deckhouse
@@ -527,6 +552,34 @@ alerts:
       summary: |
         Prometheus is unable to scrape Dex metrics.
       severity: "6"
+      markupFormat: markdown
+    - name: D8EtcdDatabaseHighFragmentationRatio
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |
+        The etcd database size in use on instance `{{ $labels.instance }}` is less than 50% of the actual allocated disk space, indicating potential fragmentation
+
+        Possible solutions:
+        - You can do defragmentation. Use the following command:
+          `kubectl -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s`
+      summary: |
+        etcd database size in use is less than 50% of the actual allocated storage, indicating potential fragmentation, and the total storage size exceeds 75% of the configured quota.
+      severity: "7"
+      markupFormat: markdown
+    - name: D8EtcdExcessiveDatabaseGrowth
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |
+        Predicting that the etcd database will run out of disk space in the next 1 day on instance `{{ $labels.instance }}` based on 6h growth rate.
+
+        Please check and take action as it might be disruptive.
+      summary: |
+        etcd cluster database growing very fast.
+      severity: "4"
       markupFormat: markdown
     - name: D8GrafanaDeploymentReplicasUnavailable
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.yaml
@@ -676,7 +729,7 @@ alerts:
         ```
         max by (namespace, dataplane_pod) (d8_istio_dataplane_metadata{full_version="{{$labels.full_version}}"})
         ```
-        Also consider using the automatic istio data-plane update described in the documentation: https://deckhouse.io/documentation/v1/modules/110-istio/examples.html#upgrading-istio
+        Also consider using the automatic istio data-plane update described in the documentation: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/110-istio/examples.html#upgrading-istio
       summary: |
         There are Pods with data-plane version different from control-plane one.
       severity: "8"
@@ -803,7 +856,7 @@ alerts:
 
         Reproducing (run from deckhouse pod):
         ```
-        TOKEN="$(deckhouse-controller module values istio -o json | jq -r --arg ah {{$labels.api_host}} '.istio.internal.multiclusters[] | select(.apiHost == $ah) | .apiJWT')"
+        TOKEN="$(deckhouse-controller module values istio -o json | jq -r --arg ah {{$labels.api_host}} '.internal.multiclusters[]| select(.apiHost == $ah)| .apiJWT ')"
         curl -H "Authorization: Bearer $TOKEN" https://{{$labels.api_host}}/version
         ```
       summary: |
@@ -877,7 +930,7 @@ alerts:
           ....
       summary: |
         etcd db size is close to the limit
-      severity: "6"
+      severity: "3"
       markupFormat: markdown
     - name: D8KubernetesVersionIsDeprecated
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
@@ -927,7 +980,7 @@ alerts:
       edition: ce
       description: |-
         Found ClusterLogDestination resource {{$labels.resource_name}} without authorization params.
-        You should [add](https://deckhouse.io/documentation/v1/modules/460-log-shipper/faq.html#how-to-add-authorization-params-to-the-cluster-log-destination-resource-which-is-used-to-send-logs-to-the-d8-loki) authorization params to the ClusterLogDestination resource.
+        You should [add](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource) authorization params to the ClusterLogDestination resource.
       summary: |
         Required authorization params for ClusterLogDestination.
       severity: "9"
@@ -2800,9 +2853,9 @@ alerts:
            * 'kubectl -n d8-chrony exec <POD_NAME> -- /opt/chrony-static/bin/chronyc sources'
         3. Correct the time synchronization problems:
            * correct network problems:
-             - provide availability to upstream time synchronization servers defined in the module [configuration](https://deckhouse.io/documentation/v1/modules/470-chrony/configuration.html);
+             - provide availability to upstream time synchronization servers defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/470-chrony/configuration.html);
              - eliminate large packet loss and excessive latency to upstream time synchronization servers.
-           * Modify NTP servers list defined in the module [configuration](https://deckhouse.io/documentation/v1/modules/470-chrony/configuration.html).
+           * Modify NTP servers list defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/470-chrony/configuration.html).
       summary: |
         NTP daemon on node {{$labels.node}} have not synchronized time for too long.
       severity: "5"
@@ -2845,7 +2898,7 @@ alerts:
         ```shell
         kubectl -n {{ $labels.namespace }} exec -ti {{ $labels.pod_name }} -c prometheus -- df -PBG /prometheus
         ```
-        Consider increasing it https://deckhouse.io/documentation/v1/modules/300-prometheus/faq.html#how-to-expand-disk-size
+        Consider increasing it https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-to-expand-disk-size
       summary: |
         Prometheus disk is over 95% used.
       severity: "4"

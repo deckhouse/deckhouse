@@ -27,6 +27,7 @@ import (
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	"k8s.io/utils/pointer"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
@@ -45,7 +46,10 @@ const (
 	PhaseSkipped    = "Skipped"
 )
 
-var ErrNotReadyForDeploy = errors.New("not ready for deploy")
+var (
+	ErrNotReadyForDeploy  = errors.New("not ready for deploy")
+	ErrRequirementsNotMet = errors.New("release requirements not met")
+)
 
 type Updater[R Release] struct {
 	now          time.Time
@@ -109,6 +113,14 @@ func NewUpdater[R Release](logger logger.Logger, notificationConfig *Notificatio
 // for patch we check less conditions, then for minor release
 // - Canary settings
 func (du *Updater[R]) checkPatchReleaseConditions(predictedRelease *R) bool {
+	// check: Notification
+	if du.notificationConfig != nil && du.notificationConfig.ReleaseType == ReleaseTypeAll {
+		passed := du.checkReleaseNotification(predictedRelease, nil)
+		if !passed {
+			return false
+		}
+	}
+
 	// check: canary settings
 	if (*predictedRelease).GetApplyAfter() != nil && !(*predictedRelease).GetApplyNow() {
 		if du.now.Before(*(*predictedRelease).GetApplyAfter()) {
@@ -145,7 +157,7 @@ func (du *Updater[R]) checkReleaseNotification(predictedRelease *R, updateWindow
 	predictedReleaseVersion := (*predictedRelease).GetVersion()
 	if du.notificationConfig.WebhookURL != "" {
 		data := WebhookData{
-			Version:       fmt.Sprintf("%d.%d", predictedReleaseVersion.Major(), predictedReleaseVersion.Minor()),
+			Version:       predictedReleaseVersion.String(),
 			Requirements:  (*predictedRelease).GetRequirements(),
 			ChangelogLink: (*predictedRelease).GetChangelogLink(),
 			ApplyTime:     releaseApplyTime.Format(time.RFC3339),
@@ -283,7 +295,7 @@ func (du *Updater[R]) checkMinorReleaseConditions(predictedRelease *R, updateWin
 //   - Release requirements
 func (du *Updater[R]) ApplyPredictedRelease(updateWindows update.Windows) error {
 	if du.predictedReleaseIndex == -1 {
-		return fmt.Errorf("release not found") // has no predicted release
+		return ErrRequirementsNotMet // has no predicted release
 	}
 
 	var currentRelease *R
@@ -554,6 +566,7 @@ func (du *Updater[R]) PredictedReleaseIsPatch() bool {
 }
 
 func (du *Updater[R]) processPendingRelease(index int, release R) {
+	releaseRequirementsMet := du.checkReleaseRequirements(&release)
 	// check: already has predicted release and current is a patch
 	if du.predictedReleaseIndex >= 0 {
 		previousPredictedRelease := du.releases[du.predictedReleaseIndex]
@@ -565,7 +578,9 @@ func (du *Updater[R]) processPendingRelease(index int, release R) {
 			return
 		}
 		// it's a patch for predicted release, continue
-		du.skippedPatchesIndexes = append(du.skippedPatchesIndexes, du.predictedReleaseIndex)
+		if releaseRequirementsMet {
+			du.skippedPatchesIndexes = append(du.skippedPatchesIndexes, du.predictedReleaseIndex)
+		}
 	}
 
 	// if we have a deployed a release
@@ -578,28 +593,46 @@ func (du *Updater[R]) processPendingRelease(index int, release R) {
 	}
 
 	// release is predicted to be Deployed
-	du.predictedReleaseIndex = index
+	if releaseRequirementsMet {
+		du.predictedReleaseIndex = index
+	}
 }
 
 func (du *Updater[R]) checkReleaseRequirements(rl *R) bool {
-	for key, value := range (*rl).GetRequirements() {
-		// these fields are checked by extenders in module release controller
-		if extenders.IsExtendersField(key) {
-			continue
-		}
-		passed, err := requirements.CheckRequirement(key, value, du.enabledModules)
-		if !passed {
-			msg := fmt.Sprintf("%q requirement for DeckhouseRelease %q not met: %s", key, (*rl).GetVersion(), err)
-			if errors.Is(err, requirements.ErrNotRegistered) {
-				du.logger.Error(err)
-				msg = fmt.Sprintf("%q requirement is not registered", key)
-			}
-			err := du.updateStatus(rl, msg, PhasePending)
+	switch any(*rl).(type) {
+	case *v1alpha1.ModuleRelease:
+		du.logger.Debugf("checking requirements of '%s' for module '%s' by extenders", (*rl).GetName(), (*rl).GetModuleName())
+		if err := extenders.CheckModuleReleaseRequirements((*rl).GetName(), (*rl).GetRequirements()); err != nil {
+			err = du.updateStatus(rl, err.Error(), PhasePending)
 			if err != nil {
 				du.logger.Error(err)
 			}
 			return false
 		}
+
+	case *v1alpha1.DeckhouseRelease:
+		for key, value := range (*rl).GetRequirements() {
+			// these fields are checked by extenders in module release controller
+			if extenders.IsExtendersField(key) {
+				continue
+			}
+			passed, err := requirements.CheckRequirement(key, value, du.enabledModules)
+			if !passed {
+				msg := fmt.Sprintf("%q requirement for DeckhouseRelease %q not met: %s", key, (*rl).GetVersion(), err)
+				if errors.Is(err, requirements.ErrNotRegistered) {
+					du.logger.Error(err)
+					msg = fmt.Sprintf("%q requirement is not registered", key)
+				}
+				err := du.updateStatus(rl, msg, PhasePending)
+				if err != nil {
+					du.logger.Error(err)
+				}
+				return false
+			}
+		}
+	default:
+		du.logger.Error("Unknown release %s type: %T", (*rl).GetName(), *rl)
+		return false
 	}
 
 	return true

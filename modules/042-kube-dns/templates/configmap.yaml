@@ -10,7 +10,9 @@ data:
   Corefile: |
     . {
         errors
-        health
+        health {
+          lameduck 15s
+        }
         ready
 {{- if .Values.kubeDns.hosts }}
         hosts {

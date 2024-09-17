@@ -30,8 +30,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 )
 
 var (
@@ -51,7 +51,13 @@ const (
 
 func (pc *Checker) CheckRegistryAccessThroughProxy() error {
 	if app.PreflightSkipRegistryThroughProxy {
-		log.InfoLn("Checking if registry is accessible through proxy was skipped")
+		log.InfoLn("Checking if registry is accessible through proxy was skipped (via skip flag)")
+		return nil
+	}
+
+	wrapper, ok := pc.nodeInterface.(*ssh.NodeInterfaceWrapper)
+	if !ok {
+		log.InfoLn("Checking if registry is accessible through proxy was skipped (local run)")
 		return nil
 	}
 
@@ -71,7 +77,7 @@ func (pc *Checker) CheckRegistryAccessThroughProxy() error {
 		return nil
 	}
 
-	tun, err := setupSSHTunnelToProxyAddr(pc.sshClient, proxyUrl)
+	tun, err := setupSSHTunnelToProxyAddr(wrapper.Client(), proxyUrl)
 	if err != nil {
 		return fmt.Errorf(`Cannot setup tunnel to control-plane host: %w.
 Please check connectivity to control-plane host and that the sshd config parameter 'AllowTcpForwarding' set to 'yes' on control-plane node.`, err)

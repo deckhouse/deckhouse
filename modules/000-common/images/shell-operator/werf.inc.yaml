@@ -2,7 +2,7 @@
 {{- $jqVersion := "b6be13d5"}}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}
-from: {{ $.Images.BASE_ALT }}
+from: {{ $.Images.BASE_ALT_P11 }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /shell-operator/shell-operator
@@ -26,8 +26,12 @@ import:
   add: /src/_output/bin/kubectl
   to: /usr/local/bin/kubectl
   before: setup
+- artifact: tini-artifact
+  add: /tini/tini-static
+  to: /sbin/tini
+  before: setup
 docker:
-  ENTRYPOINT: ["/shell-operator"]
+  ENTRYPOINT: ["tini", "--", "/shell-operator"]
 ---
 artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}

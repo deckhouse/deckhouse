@@ -94,6 +94,46 @@ type CRDsInstaller struct {
 	k8sTasks *multierror.Group
 }
 
+func (cp *CRDsInstaller) DeleteCRDs(ctx context.Context, crdsToDelete []string) ([]string, error) {
+	var deletedCRDs []string
+	// delete crds listed in crdsToDelete if there are no related custom resources in the cluster
+	for _, crdName := range crdsToDelete {
+		deleteCRD := true
+		crd, err := cp.getCRDFromCluster(ctx, crdName)
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("error occurred during %s CRD clean up: %w", crdName, err)
+			}
+			continue
+		}
+
+		for _, version := range crd.Spec.Versions {
+			gvr := schema.GroupVersionResource{
+				Group:    crd.Spec.Group,
+				Version:  version.Name,
+				Resource: crd.Spec.Names.Plural,
+			}
+			list, err := cp.k8sClient.Dynamic().Resource(gvr).List(ctx, apimachineryv1.ListOptions{})
+			if err != nil {
+				return nil, fmt.Errorf("error occurred listing %s CRD objects of version %s: %w", crdName, version.Name, err)
+			}
+			if len(list.Items) > 0 {
+				deleteCRD = false
+				break
+			}
+		}
+
+		if deleteCRD {
+			err := cp.k8sClient.Dynamic().Resource(crdGVR).Delete(ctx, crdName, apimachineryv1.DeleteOptions{})
+			if err != nil {
+				return nil, fmt.Errorf("error occurred deleting %s CRD: %w", crdName, err)
+			}
+			deletedCRDs = append(deletedCRDs, crdName)
+		}
+	}
+	return deletedCRDs, nil
+}
+
 func (cp *CRDsInstaller) Run(ctx context.Context) *multierror.Error {
 	result := new(multierror.Error)
 

@@ -111,11 +111,11 @@ func (e *Extender) IsTerminator() bool {
 
 // Filter implements Extender interface, it is used by scheduler in addon-operator
 func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
-	if e.err != nil {
-		return nil, &scherror.PermanentError{Err: fmt.Errorf("parse deckhouse version failed: %s", e.err)}
-	}
 	if !e.versionMatcher.Has(name) {
 		return nil, nil
+	}
+	if e.err != nil {
+		return nil, &scherror.PermanentError{Err: fmt.Errorf("parse deckhouse version failed: %s", e.err)}
 	}
 	if err := e.versionMatcher.Validate(name); err != nil {
 		e.logger.Errorf("requirements of the '%s' module are not satisfied: current deckhouse version is not suitable: %s", name, err.Error())
