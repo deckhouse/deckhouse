@@ -2,7 +2,7 @@
   rules:
   - alert: CertmanagerCertificateExpiredSoon
     expr: |
-      max by (name, exported_namespace) (certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"} - time() < 1209600)
+     max by (name, exported_namespace)((certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"} - time()) / on(name) group_left clamp_min(certmanager_certificate_ready_status{job="cert-manager", condition="False"} == 0, 1)) < 1209600
     for: 1h
     labels:
       severity_level: "4"
@@ -23,8 +23,8 @@
       plk_protocol_version: "1"
       plk_create_group_if_not_exists__cluster_has_expired_certificates: ClusterHasCertmanagerCertificatesExpired,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__cluster_has_expired_certificates: ClusterHasCertmanagerCertificatesExpired,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-      description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} expired
-      summary: Certificate expired
+      description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} expired or has False condition due to another reason.
+      summary: Certificate has False condition
 
   - alert: CertmanagerCertificateOrderErrors
     expr: |
