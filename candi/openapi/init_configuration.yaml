@@ -85,7 +85,7 @@ apiVersions:
               The structure specified in the parameter will be used to create a [global Deckhouse configuration](../deckhouse-configure-global.html) (moduleConfig `global`) and [module settings](../#configuring-the-module) (moduleConfig `<module-name>`).
 
               **Caution!** The module name in **camelCase** is used to enable/disable the module and specify its settings (for example, `userAuthn`) in the `configOverrides` structure. After installing Deckhouse, the moduleConfig resource is used to manage the module with the module name in **snake-case** (for example, `user-authn`).
-        allOf:
+        anyOf:
         - oneOf:
           - properties:
               registryMode:
