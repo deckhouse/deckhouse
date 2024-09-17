@@ -40,7 +40,7 @@
     make dev
     ```
 	
-  - The second method — open console and run containers in a single iteration using Makefile in the root of the repo:
+  - **The second method** — open console and run the necessary containers in the root of the repo:
    
     ```shell
     cd deckhouse
