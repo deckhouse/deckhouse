@@ -16,4 +16,5 @@ parameters:
   location: {{ $providerClusterConfiguration.location | quote }}
   storageEndpoint: {{ $storageClass.storageEndpoint | quote }}
   pool: {{ $storageClass.pool | quote }}
+  allowVolumeExpansion: {{ $storageClass.allowVolumeExpansion | toString | quote }}
 {{- end }}
