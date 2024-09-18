@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2023 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,8 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if systemctl is-enabled --quiet unattended-upgrades ; then
-  systemctl disable --now unattended-upgrades
-fi
+function set_apt_timeout() {
+  if [[ -f /etc/apt/apt.conf.d/99timeout ]]; then
+    return 0
+  fi
 
-bb-apt-remove unattended-upgrades
+  echo 'Acquire::http::Timeout "120";' > /etc/apt/apt.conf.d/99timeout
+}
+
+case $(bb-is-bundle) in
+  debian|ubuntu-lts|astra|altlinux) set_apt_timeout ;;
+esac
+
+

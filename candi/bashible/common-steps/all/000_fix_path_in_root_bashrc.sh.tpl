@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [[ -f /etc/apt/apt.conf.d/99timeout ]]; then
-  return 0
-fi
-
-echo 'Acquire::http::Timeout "120";' > /etc/apt/apt.conf.d/99timeout
+# if grep -q "^PATH=" /root/.bashrc 2>/dev/null; then
+#  sed 's/^PATH=.*//' -i /root/.bashrc
+# fi

@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if systemctl is-active -q firewalld; then
-  systemctl stop firewalld
+if ! systemctl list-unit-files unattended-upgrades  > /dev/null 2>&1; then
+  exit 0
 fi
 
-if systemctl is-enabled -q firewalld; then
-  systemctl disable firewalld
-  systemctl mask firewalld
+if systemctl is-enabled --quiet unattended-upgrades ; then
+  systemctl disable --now unattended-upgrades
 fi
+
+bb-apt-remove unattended-upgrades

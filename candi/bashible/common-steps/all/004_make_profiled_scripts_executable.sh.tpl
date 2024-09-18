@@ -13,4 +13,6 @@
 # limitations under the License.
 
 # On AltLinux, scripts under /etc/profile.d should be executable.
-chmod +x /etc/profile.d/*.sh
+if $(bb-is-bundle) == 'altlinux'; then
+  chmod +x /etc/profile.d/*.sh
+fi

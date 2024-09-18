@@ -12,10 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if bb-is-debian-version? 10 || bb-is-debian-version? 11 || bb-is-debian-version? 12 ; then
-  if ls -l /etc/alternatives/iptables | grep -q iptables-nft; then
-    update-alternatives --set iptables /usr/sbin/iptables-legacy
-    update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
-    update-alternatives --set ebtables /usr/sbin/ebtables-legacy
-  fi
+# exit if unit doesn't exist
+if ! systemctl list-unit-files firewalld  > /dev/null 2>&1; then
+  exit 0
+fi
+
+if systemctl is-active -q firewalld; then
+  systemctl stop firewalld
+fi
+
+if systemctl is-enabled -q firewalld; then
+  systemctl disable firewalld
+  systemctl mask firewalld
 fi

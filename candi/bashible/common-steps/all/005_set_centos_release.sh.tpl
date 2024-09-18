@@ -1,4 +1,5 @@
-# Copyright 2023 Flant JSC
+#!/bin/bash
+# Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if grep -q "^PATH=" /root/.bashrc 2>/dev/null; then
-  sed 's/^PATH=.*//' -i /root/.bashrc
-fi
+set -Eeo pipefail
+mkdir -p /opt/deckhouse/bin
+cp -f nvme /opt/deckhouse/bin
