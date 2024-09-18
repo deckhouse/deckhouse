@@ -20,7 +20,6 @@ data "decort_extnet_list" "extnets" {
 locals {
   image_id = data.decort_image_list.images.items[0].image_id
   rg_id = data.decort_rg_list.resource_group.items[0].rg_id
-  vins_id = data.decort_vins_list.vins.items[0].vins_id
   extnet_id = data.decort_extnet_list.extnets.items[0].net_id
 }
 
@@ -39,9 +38,12 @@ resource "decort_kvmvm" "node_vm" {
     net_type = local.net_type_extnet
     net_id = local.extnet_id
   }
-  network {
-    net_type = local.net_type_vins
-    net_id = local.vins_id
+  dynamic "network" {
+    for_each = length(data.decort_vins_list.vins.items) > 0 ? [data.decort_vins_list.vins.items[0].vins_id] : []
+    content {
+      net_type = local.net_type_vins
+      net_id = network.value
+    }
   }
 
   lifecycle {
