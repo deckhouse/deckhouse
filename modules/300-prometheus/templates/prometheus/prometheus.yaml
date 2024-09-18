@@ -229,6 +229,8 @@ spec:
         regex: "^$"
         targetLabel: {{ $key }}
         replacement: {{ $value | quote }}
+      - target_label: __tmp_{{ $key }}_exists
+        action: drop
       {{- end }}
       {{- end }}
     {{- end }}
