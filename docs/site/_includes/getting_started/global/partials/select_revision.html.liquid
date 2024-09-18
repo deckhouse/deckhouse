@@ -41,6 +41,17 @@
 </div>
 {%- endfor %}
 
+{% if page.platform_code == 'yandex' %}
+  <div class="warning alert__wrap">
+    <svg class="alert__icon icon--warning">
+      <use xlink:href="/images/sprite.svg#warning-icon"></use>
+    </svg>
+    <div>
+      <p>Подсеть, указанная в <code>nodeNetworkCIDR</code>, будет автоматически разбита на три равные части для использования в трех зонах Yandex Cloud.<br>Убедитесь, что выбранной размерности подсети хватит для вашего кластера!</p>
+    </div>
+  </div>
+{% endif %}
+
 <div class="dimmer-block-content common" markdown="1">
 
 {% if page.platform_type == 'cloud' %}
