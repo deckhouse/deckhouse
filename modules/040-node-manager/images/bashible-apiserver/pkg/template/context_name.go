@@ -48,3 +48,8 @@ func GetBashibleContextKey(name string) (string, error) {
 	}
 	return fmt.Sprintf("bashible-%s-%s", os, nodegroup), nil
 }
+
+// GetBootstrapContextKey parses context secretKey bootstrap
+func GetBootstrapContextKey(nodegroup string) (string, error) {
+	return fmt.Sprintf("bashible-common-%s", nodegroup), nil
+}
