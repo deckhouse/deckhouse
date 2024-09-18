@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 {{- if eq .runType "Normal" }}
-  {{- if or (eq .nodeGroup.nodeType "Static") (eq .nodeGroup.nodeType "CloudStatic")) }}
+  {{- if or (eq .nodeGroup.nodeType "Static") (eq .nodeGroup.nodeType "CloudStatic") }}
 if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
   exit 0
 fi
