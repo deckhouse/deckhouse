@@ -218,11 +218,11 @@ spec:
 
     {{- if .spec.writeRelabelConfigs }}
     writeRelabelConfigs:
-      {{- .Values.spec.writeRelabelConfigs | toYaml | nindent 2 }}
+      {{- .spec.writeRelabelConfigs | toYaml | nindent 4 }}
       - action: keep
         regex: "prometheus: deckhouse.*"
-      {{- if .Values.externalLabels }}
-      {{- range $key, $value := .Values.externalLabels }}
+      {{- if .Values.prometheus.externalLabels }}
+      {{- range $key, $value := .Values.prometheus.externalLabels }}
       - action: keep
         regex: '{{ printf "%s:%s.*" $key $value | quote }}'
       {{- end }}
