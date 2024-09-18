@@ -20,7 +20,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1core "k8s.io/api/core/v1"
 	storage "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,22 +29,28 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       "default_cluster_sc",
-			ApiVersion: "v1",
-			Kind:       "ConfigMap",
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"d8-default-cluster-storage-class"},
-			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{d8Namespace},
-				},
-			},
-			FilterFunc: applyDefaultClusterStorageClassCmFilter,
-		},
-	},
+	OnBeforeAll: &go_hook.OrderedConfig{Order: 25},
+	// TODO: протестить conversion для global.storageClass -> global.modules.storageClass
+	// TODO: выпилить авто-миграцию global.storageClass -> global.modules.storageClass
+	// TODO: убрать логику internal.defaultStorageClass из helm
+	// TODO: проверить, что в дефолтном кластере (только что созданном) storageClass-ы НЕ МЕНЯЮТСЯ (если не задан `global.defaultStorageClass`)
+
+	// Kubernetes: []go_hook.KubernetesConfig{
+	// 	{
+	// 		Name:       "default_cluster_sc",
+	// 		ApiVersion: "v1",
+	// 		Kind:       "ConfigMap",
+	// 		NameSelector: &types.NameSelector{
+	// 			MatchNames: []string{"d8-default-cluster-storage-class"},
+	// 		},
+	// 		NamespaceSelector: &types.NamespaceSelector{
+	// 			NameSelector: &types.NameSelector{
+	// 				MatchNames: []string{d8Namespace},
+	// 			},
+	// 		},
+	// 		FilterFunc: applyDefaultClusterStorageClassCmFilter,
+	// 	},
+	// },
 }, dependency.WithExternalDependencies(setupDefaultStorageClass))
 
 func applyDefaultClusterStorageClassCmFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
