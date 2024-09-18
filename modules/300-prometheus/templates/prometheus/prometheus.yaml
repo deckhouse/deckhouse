@@ -220,8 +220,8 @@ spec:
     {{- .spec.writeRelabelConfigs | toYaml | nindent 4 }}
     - targetLabel: prometheus
       replacement: deckhouse
-    {{- if .Values.prometheus.externalLabels }}
-    {{- range $key, $value := .Values.prometheus.externalLabels }}
+    {{- if .Values.externalLabels }}
+    {{- range $key, $value := .Values.externalLabels }}
     - sourceLabels: [{{ $key }}]
       targetLabel: __tmp_{{ $key }}_exists
     - sourceLabels: [__tmp_{{ $key }}_exists]
