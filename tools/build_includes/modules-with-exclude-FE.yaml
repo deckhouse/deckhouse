@@ -451,11 +451,19 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/fe/modules/002-deckhouse/templates/flant-module-source.yaml
-  to: /deckhouse/modules/002-deckhouse/templates/flant-module-source.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
+- add: /ee/fe/modules/002-deckhouse
+  to: /deckhouse/modules/002-deckhouse
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/fe/modules/040-node-manager/templates/ngc-ca-certificate.yaml
   to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
   stageDependencies:

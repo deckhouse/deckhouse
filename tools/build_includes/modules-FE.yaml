@@ -274,11 +274,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/fe/modules/002-deckhouse/templates/flant-module-source.yaml
-  to: /deckhouse/modules/002-deckhouse/templates/flant-module-source.yaml
+- add: /ee/fe/modules/002-deckhouse
+  to: /deckhouse/modules/002-deckhouse
   stageDependencies:
     setup:
-        - '**/*'
+        - '**/*.go'
 - add: /ee/fe/modules/040-node-manager/templates/ngc-ca-certificate.yaml
   to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
   stageDependencies:
