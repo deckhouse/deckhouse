@@ -52,6 +52,11 @@ spec:
                     Name of the OS image to base this VM on.
                   x-doc-examples: ['alt-p10-cloud-x86_64.img']
                   type: string
+                externalNetwork:
+                  type: string
+                  description: |
+                    External network name.
+                  example: extnet_vlan_1700
             status:
               type: object
               properties:

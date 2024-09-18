@@ -24,3 +24,6 @@ spec:
       {{- if .nodeGroup.instanceClass.rootDiskSizeGb }}
       rootDiskSizeGb: {{ .nodeGroup.instanceClass.rootDiskSizeGb }}
       {{- end }}
+      {{- if .nodeGroup.instanceClass.externalNetwork }}
+      externalNetwork: {{ .nodeGroup.instanceClass.externalNetwork }}
+      {{- end }}

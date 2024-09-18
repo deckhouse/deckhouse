@@ -115,6 +115,9 @@ spec:
                           description: The VM image this instance will be created
                             from.
                           type: string
+                        externalNetwork:
+                          description: ExternalNetwork holds Dynamix external network name.
+                          type: string
                       required:
                         - rootDiskSizeGb
                         - imageName
