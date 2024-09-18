@@ -217,15 +217,15 @@ spec:
     {{- end }}
     {{- if .spec.writeRelabelConfigs }}
     writeRelabelConfigs:
-      {{- .spec.writeRelabelConfigs | toYaml | nindent 4 }}
-      - action: keep
-        regex: "prometheus: deckhouse.*"
-      {{- if .Values.prometheus.externalLabels }}
-      {{- range $key, $value := .Values.prometheus.externalLabels }}
-      - action: keep
-        regex: '{{ printf "%s:%s.*" $key $value | quote }}'
-      {{- end }}
-      {{- end }}
+    {{- .spec.writeRelabelConfigs | toYaml | nindent 4 }}
+    - action: keep
+      regex: "prometheus: deckhouse.*"
+    {{- if .Values.prometheus.externalLabels }}
+    {{- range $key, $value := .Values.prometheus.externalLabels }}
+    - action: keep
+      regex: '{{ printf "%s:%s.*" $key $value | quote }}'
+    {{- end }}
+    {{- end }}
     {{- end }}
     {{- if .spec.tlsConfig }}
       {{- $tlsConfig := .spec.tlsConfig | deepCopy }}
