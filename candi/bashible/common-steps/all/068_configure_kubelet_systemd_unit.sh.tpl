@@ -52,9 +52,7 @@ credential_provider_flags=""
 
 bb-event-on 'bb-sync-file-changed' '_enable_kubelet_service'
 function _enable_kubelet_service() {
-{{- if ne .runType "ImageBuilding" }}
   systemctl daemon-reload
-{{- end }}
   systemctl enable kubelet.service
   bb-flag-set kubelet-need-restart
 }

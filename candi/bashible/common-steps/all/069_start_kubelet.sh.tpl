@@ -32,7 +32,6 @@ function wait-kubelet-client-certificate() {
 
 if bb-flag? kubelet-need-restart; then
 
-{{- if ne .runType "ImageBuilding" }}
   bb-log-warning "'kubelet-need-restart' flag was set, restarting kubelet."
   if [ -f /var/lib/kubelet/cpu_manager_state ]; then rm /var/lib/kubelet/cpu_manager_state; fi
   if [ -f /var/lib/kubelet/memory_manager_state ]; then rm /var/lib/kubelet/memory_manager_state; fi
@@ -46,12 +45,10 @@ if bb-flag? kubelet-need-restart; then
     sleep 60
   fi
   {{- end }}
-{{- end }}
 
   bb-flag-unset kubelet-need-restart
 fi
 
-{{- if ne .runType "ImageBuilding" }}
 if bb-flag? reboot; then
   exit 0
 fi
@@ -69,4 +66,3 @@ else
   bb-log-error "Kubelet has not started. Exit"
   exit 1
 fi
-{{- end }}

@@ -14,10 +14,8 @@
 
 bb-event-on 'd8-service-changed' '_on_bashible_service_config_changed'
 _on_bashible_service_config_changed() {
-{{ if ne .runType "ImageBuilding" }}
   systemctl daemon-reload
   systemctl restart bashible.timer
-{{ end }}
   systemctl enable bashible.timer
 }
 

@@ -14,9 +14,7 @@
 
 {{- if eq .cri "Containerd" }}
 _on_containerd_config_changed() {
-  {{- if ne .runType "ImageBuilding" }}
   bb-flag-set containerd-need-restart
-  {{- end }}
 }
 
 bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'

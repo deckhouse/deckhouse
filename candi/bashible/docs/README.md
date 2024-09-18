@@ -36,7 +36,6 @@ Bashible consists of small bash scripts, that are called `steps`.
 * `runType` - step execution type, which is used during Go templates compilation:
   * ClusterBootstrap - bootstrap first master node
   * Normal - daily bashible execution by schedule
-  * ImageBuilding - setup a VM image
 
 ## Steps location
 

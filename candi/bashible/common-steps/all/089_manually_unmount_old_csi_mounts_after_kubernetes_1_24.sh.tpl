@@ -13,7 +13,6 @@
 # limitations under the License.
 
 function disable_systemd_units() {
-{{- if ne .runType "ImageBuilding" }}
   if [[ -f "/etc/systemd/system/old-csi-mount-cleaner.service" ]]; then
     systemctl stop old-csi-mount-cleaner.service
     systemctl disable old-csi-mount-cleaner.service
@@ -27,7 +26,6 @@ function disable_systemd_units() {
     systemctl disable old-csi-mount-cleaner.timer
     rm -f /etc/systemd/system/old-csi-mount-cleaner.timer
   fi
-{{- end }}
 
 return 0
 }
@@ -94,10 +92,8 @@ ExecStart=/var/lib/bashible/old-csi-mount-cleaner.sh
 WantedBy=multi-user.target
 EOF
 
-  {{- if ne .runType "ImageBuilding" }}
 systemctl daemon-reload
 systemctl restart old-csi-mount-cleaner.timer
 systemctl restart old-csi-mount-cleaner
-  {{- end }}
 systemctl enable old-csi-mount-cleaner.timer
 systemctl enable old-csi-mount-cleaner

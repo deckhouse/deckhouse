@@ -33,9 +33,7 @@ post-install() {
   if [[ "${PACKAGE}" == "containerd" ]]; then
     systemctl daemon-reload
     systemctl enable containerd-deckhouse.service
-    {{- if ne .runType "ImageBuilding" }}
     bb-flag-set containerd-need-restart
-    {{- end }}
   fi
 }
 
