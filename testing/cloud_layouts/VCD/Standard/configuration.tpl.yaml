@@ -40,7 +40,7 @@ masterNodeGroup:
     etcdDiskSizeGb: 10
     rootDiskSizeGb: 50
     template: private-templates/Ubuntu 24.04 Server (20240628)
-  replicas: ${MASTER_COUNT}
+  replicas: ${MASTERS_COUNT}
 provider:
   password: ${VCD_PASSWORD}
   server: ${VCD_SERVER}

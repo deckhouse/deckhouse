@@ -26,7 +26,7 @@ provider:
   providerSecretAccessKey: '${AWS_SECRET_ACCESS_KEY}'
   region: eu-central-1
 masterNodeGroup:
-  replicas: ${MASTER_COUNT}
+  replicas: ${MASTERS_COUNT}
   instanceClass:
     instanceType: m5.xlarge
     ami: ami-0022e2e80fa74c5d7 # Centos 9

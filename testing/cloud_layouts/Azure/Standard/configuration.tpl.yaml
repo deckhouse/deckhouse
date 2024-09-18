@@ -25,7 +25,7 @@ sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDSNdUmV2ekit0rFrQE9IoRsVqKT
 vNetCIDR: 10.50.0.0/16
 subnetCIDR: 10.50.0.0/24
 masterNodeGroup:
-  replicas: ${MASTER_COUNT}
+  replicas: ${MASTERS_COUNT}
   instanceClass:
     machineSize: Standard_F4
     urn: OpenLogic:CentOS:8_3:8.3.2021020400
