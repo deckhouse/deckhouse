@@ -56,16 +56,16 @@ resource "decort_kvmvm" "master_vm" {
   extra_disks = [ decort_disk.kubernetes_data_disk.id ]
   cloud_init = local.master_cloud_init_script
 
-  network {
-    net_type = local.net_type_extnet
-    net_id = local.extnet_id
-  }
   dynamic "network" {
     for_each = length(data.decort_vins_list.vins.items) > 0 ? [data.decort_vins_list.vins.items[0].vins_id] : []
     content {
       net_type = local.net_type_vins
       net_id = network.value
     }
+  }
+  network {
+    net_type = local.net_type_extnet
+    net_id = local.extnet_id
   }
 
   lifecycle {

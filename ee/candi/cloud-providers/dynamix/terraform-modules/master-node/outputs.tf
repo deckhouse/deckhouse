@@ -10,7 +10,7 @@ output "master_ip_address_for_ssh" {
   value = local.master_vm_network_extnet[0].ip_address
 }
 output "node_internal_ip_address" {
-  value = local.master_vm_network_vins[0].ip_address
+  value = length(local.master_vm_network_vins) > 0 ? local.master_vm_network_vins[0].ip_address : local.master_vm_network_extnet[0].ip_address
 }
 output "kubernetes_data_device_path" {
   value = "/dev/vdb"

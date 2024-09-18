@@ -34,16 +34,16 @@ resource "decort_kvmvm" "node_vm" {
   pool = local.pool
   cloud_init = local.cloud_init_script
 
-  network {
-    net_type = local.net_type_extnet
-    net_id = local.extnet_id
-  }
   dynamic "network" {
     for_each = length(data.decort_vins_list.vins.items) > 0 ? [data.decort_vins_list.vins.items[0].vins_id] : []
     content {
       net_type = local.net_type_vins
       net_id = network.value
     }
+  }
+  network {
+    net_type = local.net_type_extnet
+    net_id = local.extnet_id
   }
 
   lifecycle {
