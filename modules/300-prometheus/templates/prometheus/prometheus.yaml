@@ -196,6 +196,7 @@ spec:
     matchLabels:
       prometheus: main
       component: rules
+{{- $externalLabels := .Values.prometheus.externalLabels }}
 {{- if .Values.prometheus.internal.remoteWrite }}
   remoteWrite:
   {{- range .Values.prometheus.internal.remoteWrite }}
@@ -220,7 +221,7 @@ spec:
       {{- .spec.writeRelabelConfigs | toYaml | nindent 4 }}
       - targetLabel: prometheus
         replacement: deckhouse
-      {{- with .Values.prometheus.externalLabels }}
+      {{- with $externalLabels }}
       {{- range $key, $value := . }}
       - sourceLabels: [{{ $key }}]
         targetLabel: __tmp_{{ $key }}_exists
