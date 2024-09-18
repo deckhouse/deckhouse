@@ -11,7 +11,7 @@ spec:
   resourceGroup: "{{ $prefix }}-rg"
   internalNetwork: "{{ $prefix }}-vins"
   {{- end }}
-  {{- if $providerClusterConfiguration.masterNodeGroup.instanceClass.externalNetwork }}
-  externalNetwork: "{{ $providerClusterConfiguration.masterNodeGroup.instanceClass.externalNetwork }}"
+  {{- if $providerClusterConfiguration.externalNetwork }}
+  externalNetwork: "{{ $providerClusterConfiguration.externalNetwork }}"
   {{- end }}
 

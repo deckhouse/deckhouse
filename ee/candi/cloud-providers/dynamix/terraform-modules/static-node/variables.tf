@@ -36,7 +36,7 @@ locals {
   image_name = lookup(local.instance_class, "imageName", null)
   resource_group_name = join("-", [local.resource_name_prefix, "rg"])
   pool = lookup(local.instance_class, "pool", null)
-  extnet_name = lookup(local.instance_class, "externalNetwork", null)
+  extnet_name = lookup(var.providerClusterConfiguration, "externalNetwork", null)
   vins_name = join("-", [local.resource_name_prefix, "vins"])
   driver = "KVM_X86"
   net_type_vins = "VINS"

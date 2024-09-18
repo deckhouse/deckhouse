@@ -43,7 +43,7 @@ apiVersions:
           username: '<USERNAME>'
           password: '<PASSWORD>'
           insecure: true
-    required: [apiVersion, kind, sshPublicKey, location, account, masterNodeGroup, nodeNetworkCIDR, layout, provider]
+    required: [apiVersion, kind, sshPublicKey, location, account, externalNetwork, masterNodeGroup, nodeNetworkCIDR, layout, provider]
     properties:
       apiVersion:
         type: string
@@ -60,6 +60,11 @@ apiVersions:
       account:
         type: string
         description: Account name.
+      externalNetwork:
+        type: string
+        description: |
+          External network name.
+        example: extnet_vlan_1700
       masterNodeGroup:
         type: object
         additionalProperties: false
@@ -79,7 +84,7 @@ apiVersions:
           instanceClass:
             type: object
             additionalProperties: false
-            required: [numCPUs, memory, imageName, storageEndpoint, pool, externalNetwork]
+            required: [numCPUs, memory, imageName, storageEndpoint, pool]
             description: |
               Partial contents of the fields of the [DynamixInstanceClass](cr.html#dynamixinstanceclass).
             properties: &instanceClassProperties
@@ -122,11 +127,6 @@ apiVersions:
                 description: |
                   Storage pool name.
                 example: pool_a
-              externalNetwork:
-                type: string
-                description: |
-                  External network name.
-                example: extnet_vlan_1700
       nodeGroups:
         type: array
         description: |
