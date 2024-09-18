@@ -219,7 +219,7 @@ jobs:
           path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ success() }}
+        if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
           PROVIDER: Static
@@ -495,7 +495,7 @@ jobs:
           path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ success() }}
+        if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
           PROVIDER: Static
@@ -771,7 +771,7 @@ jobs:
           path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ success() }}
+        if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
           PROVIDER: Static
@@ -1047,7 +1047,7 @@ jobs:
           path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ success() }}
+        if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
           PROVIDER: Static
@@ -1323,7 +1323,7 @@ jobs:
           path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ success() }}
+        if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
           PROVIDER: Static
@@ -1599,7 +1599,7 @@ jobs:
           path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ success() }}
+        if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
           PROVIDER: Static

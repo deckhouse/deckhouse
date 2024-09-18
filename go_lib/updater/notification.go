@@ -33,11 +33,19 @@ type DeckhouseUpdateSettings struct {
 	ClusterUUID            string
 }
 
+type ReleaseType string
+
+const (
+	ReleaseTypeMinor ReleaseType = "Minor"
+	ReleaseTypeAll   ReleaseType = "All"
+)
+
 type NotificationConfig struct {
 	WebhookURL              string          `json:"webhook"`
 	SkipTLSVerify           bool            `json:"tlsSkipVerify"`
 	MinimalNotificationTime libapi.Duration `json:"minimalNotificationTime"`
 	Auth                    *Auth           `json:"auth,omitempty"`
+	ReleaseType             ReleaseType     `json:"releaseType"`
 }
 
 type Auth struct {

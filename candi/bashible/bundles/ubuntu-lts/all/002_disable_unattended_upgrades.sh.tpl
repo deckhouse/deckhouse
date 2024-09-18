@@ -12,22 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Avoid problems with expired ca-certificates
-bb-apt-install --force ca-certificates
-
-{{- if .registry.ca }}
-bb-event-on 'registry-ca-changed' '_update_ca_certificates'
-_update_ca_certificates() {
-  bb-flag-set containerd-need-restart
-  update-ca-certificates
-}
-
-bb-sync-file /usr/local/share/ca-certificates/registry-ca.crt - registry-ca-changed << "EOF"
-{{ .registry.ca }}
-EOF
-{{- else }}
-if [ -f /usr/local/share/ca-certificates/registry-ca.crt ]; then
-  rm -f /usr/local/share/ca-certificates/registry-ca.crt
-  _update_ca_certificates
+if systemctl is-enabled --quiet unattended-upgrades ; then
+  systemctl disable --now unattended-upgrades
 fi
-{{- end }}
+
+bb-apt-remove unattended-upgrades

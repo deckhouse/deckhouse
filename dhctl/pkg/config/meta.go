@@ -89,18 +89,19 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
 		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
 
-		if err := validateRegistryDockerCfg(m.DeckhouseConfig.RegistryDockerCfg); err != nil {
+		parts := strings.SplitN(m.DeckhouseConfig.ImagesRepo, "/", 2)
+		m.Registry.Address = parts[0]
+		if len(parts) == 2 {
+			m.Registry.Path = fmt.Sprintf("/%s", parts[1])
+		}
+
+		if err := validateRegistryDockerCfg(m.DeckhouseConfig.RegistryDockerCfg, m.Registry.Address); err != nil {
 			return nil, err
 		}
 		m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
 		m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
 		m.Registry.CA = m.DeckhouseConfig.RegistryCA
 
-		parts := strings.SplitN(m.DeckhouseConfig.ImagesRepo, "/", 2)
-		m.Registry.Address = parts[0]
-		if len(parts) == 2 {
-			m.Registry.Path = fmt.Sprintf("/%s", parts[1])
-		}
 	}
 
 	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
@@ -175,10 +176,9 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 	return m, nil
 }
 
-func validateRegistryDockerCfg(cfg string) error {
-	// cause CE version might have empty registryDockerCfg field
+func validateRegistryDockerCfg(cfg string, repo string) error {
 	if cfg == "" {
-		return nil
+		return fmt.Errorf("can't be empty")
 	}
 
 	regcrd, err := base64.StdEncoding.DecodeString(cfg)
@@ -212,7 +212,12 @@ func validateRegistryDockerCfg(cfg string) error {
 		}
 	}
 
-	return nil
+	for k := range creds.Auths {
+		if k == repo {
+			return nil
+		}
+	}
+	return fmt.Errorf("incorrect registryDockerCfg. It must contain auths host {\"auths\": { \"%s\": {}}}", repo)
 }
 
 func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {

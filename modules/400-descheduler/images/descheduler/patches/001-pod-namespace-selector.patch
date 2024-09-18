@@ -1,0 +1,568 @@
+From 1b6910e74b6dbc678c2d3e2a6da18b9719fc5ba7 Mon Sep 17 00:00:00 2001
+From: Denis Romanenko <denis.romanenko@flant.com>
+Date: Thu, 22 Aug 2024 14:48:40 +0300
+Subject: [PATCH 1/4] Support of the namespaceLabelSelector in DefaultEvictor
+ plugin
+
+---
+ README.md                                     | 23 +++---
+ .../plugins/defaultevictor/defaultevictor.go  | 59 ++++++++++++++++
+ .../defaultevictor/defaultevictor_test.go     | 70 +++++++++++++++++++
+ .../plugins/defaultevictor/defaults.go        |  3 +
+ pkg/framework/plugins/defaultevictor/types.go | 24 ++++---
+ .../defaultevictor/zz_generated.deepcopy.go   |  6 ++
+ 6 files changed, 163 insertions(+), 22 deletions(-)
+
+diff --git a/README.md b/README.md
+index f8479b7a73..b853eda104 100644
+--- a/README.md
++++ b/README.md
+@@ -132,18 +132,19 @@ These are top level keys in the Descheduler Policy that you can use to configure
+ 
+ The Default Evictor Plugin is used by default for filtering pods before processing them in an strategy plugin, or for applying a PreEvictionFilter of pods before eviction. You can also create your own Evictor Plugin or use the Default one provided by Descheduler.  Other uses for the Evictor plugin can be to sort, filter, validate or group pods by different criteria, and that's why this is handled by a plugin and not configured in the top level config.
+ 
+-| Name |type| Default Value | Description |
+-|------|----|---------------|-------------|
+-| `nodeSelector` |`string`| `nil` | limiting the nodes which are processed |
+-| `evictLocalStoragePods` |`bool`| `false` | allows eviction of pods with local storage |
++| Name                      |type| Default Value | Description |
++|---------------------------|----|---------------|-------------|
++| `nodeSelector`            |`string`| `nil` | limiting the nodes which are processed |
++| `evictLocalStoragePods`   |`bool`| `false` | allows eviction of pods with local storage |
+ | `evictSystemCriticalPods` |`bool`| `false` | [Warning: Will evict Kubernetes system pods] allows eviction of pods with any priority, including system pods like kube-dns |
+-| `ignorePvcPods` |`bool`| `false` | set whether PVC pods should be evicted or ignored |
+-| `evictFailedBarePods` |`bool`| `false` | allow eviction of pods without owner references and in failed phase |
+-|`labelSelector`|`metav1.LabelSelector`||(see [label filtering](#label-filtering))|
+-|`priorityThreshold`|`priorityThreshold`||(see [priority filtering](#priority-filtering))|
+-|`nodeFit`|`bool`|`false`|(see [node fit filtering](#node-fit-filtering))|
+-|`minReplicas`|`uint`|`0`| ignore eviction of pods where owner (e.g. `ReplicaSet`) replicas is below this threshold |
+-|`minPodAge`|`metav1.Duration`|`0`| ignore eviction of pods with a creation time within this threshold |
++| `ignorePvcPods`           |`bool`| `false` | set whether PVC pods should be evicted or ignored |
++| `evictFailedBarePods`     |`bool`| `false` | allow eviction of pods without owner references and in failed phase |
++| `namespaceLabelSelector`  |`metav1.LabelSelector`|| limiting the pods which are processed by namespace (see [label filtering](#label-filtering))                                |
++| `labelSelector`           |`metav1.LabelSelector`||(see [label filtering](#label-filtering))|
++| `priorityThreshold`       |`priorityThreshold`||(see [priority filtering](#priority-filtering))|
++| `nodeFit`                 |`bool`|`false`|(see [node fit filtering](#node-fit-filtering))|
++| `minReplicas`             |`uint`|`0`| ignore eviction of pods where owner (e.g. `ReplicaSet`) replicas is below this threshold |
++| `minPodAge`               |`metav1.Duration`|`0`| ignore eviction of pods with a creation time within this threshold |
+ 
+ ### Example policy
+ 
+diff --git a/pkg/framework/plugins/defaultevictor/defaultevictor.go b/pkg/framework/plugins/defaultevictor/defaultevictor.go
+index 7b20517dbc..04a27a196e 100644
+--- a/pkg/framework/plugins/defaultevictor/defaultevictor.go
++++ b/pkg/framework/plugins/defaultevictor/defaultevictor.go
+@@ -25,8 +25,10 @@ import (
+ 	"k8s.io/apimachinery/pkg/labels"
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
++
+ 	"k8s.io/client-go/tools/cache"
+ 	"k8s.io/klog/v2"
++
+ 	nodeutil "sigs.k8s.io/descheduler/pkg/descheduler/node"
+ 	podutil "sigs.k8s.io/descheduler/pkg/descheduler/pod"
+ 	frameworktypes "sigs.k8s.io/descheduler/pkg/framework/types"
+@@ -216,6 +218,27 @@ func (d *DefaultEvictor) PreEvictionFilter(pod *v1.Pod) bool {
+ 		}
+ 		return true
+ 	}
++
++	// check pod by namespace label filter
++	if d.args.NamespaceLabelSelector != nil {
++		indexName := "metadata.namespace"
++		indexer, err := getNamespacesListByLabelSelector(indexName, d.args.NamespaceLabelSelector, d.handle)
++		if err != nil {
++			klog.ErrorS(err, "unable to list namespaces", "pod", klog.KObj(pod))
++			return false
++		}
++		objs, err := indexer.ByIndex(indexName, pod.Namespace)
++		if err != nil {
++			klog.ErrorS(err, "unable to list namespaces for namespaceLabelSelector filter in the policy parameter", "pod", klog.KObj(pod))
++			return false
++		}
++		if len(objs) == 0 {
++			klog.InfoS("pod namespace do not match the namespaceLabelSelector filter in the policy parameter", "pod", klog.KObj(pod))
++			return false
++		}
++		return true
++	}
++
+ 	return true
+ }
+ 
+@@ -278,3 +301,39 @@ func getPodIndexerByOwnerRefs(indexName string, handle frameworktypes.Handle) (c
+ 
+ 	return indexer, nil
+ }
++
++func getNamespacesListByLabelSelector(indexName string, labelSelector *metav1.LabelSelector, handle frameworktypes.Handle) (cache.Indexer, error) {
++	nsInformer := handle.SharedInformerFactory().Core().V1().Namespaces().Informer()
++	indexer := nsInformer.GetIndexer()
++
++	// do not reinitialize the indexer, if it's been defined already
++	for name := range indexer.GetIndexers() {
++		if name == indexName {
++			return indexer, nil
++		}
++	}
++
++	if err := nsInformer.AddIndexers(cache.Indexers{
++		indexName: func(obj interface{}) ([]string, error) {
++			ns, ok := obj.(*v1.Namespace)
++			if !ok {
++				return []string{}, errors.New("unexpected object")
++			}
++
++			selector, err := metav1.LabelSelectorAsSelector(labelSelector)
++			if err != nil {
++				return []string{}, errors.New("could not get selector from label selector")
++			}
++			if labelSelector != nil && !selector.Empty() {
++				if !selector.Matches(labels.Set(ns.Labels)) {
++					return []string{}, nil
++				}
++			}
++			return []string{ns.GetName()}, nil
++		},
++	}); err != nil {
++		return nil, err
++	}
++
++	return indexer, nil
++}
+diff --git a/pkg/framework/plugins/defaultevictor/defaultevictor_test.go b/pkg/framework/plugins/defaultevictor/defaultevictor_test.go
+index ab3f3c6469..c2b1661cac 100644
+--- a/pkg/framework/plugins/defaultevictor/defaultevictor_test.go
++++ b/pkg/framework/plugins/defaultevictor/defaultevictor_test.go
+@@ -27,6 +27,7 @@ import (
+ 	"k8s.io/apimachinery/pkg/util/uuid"
+ 	"k8s.io/client-go/informers"
+ 	"k8s.io/client-go/kubernetes/fake"
++
+ 	"sigs.k8s.io/descheduler/pkg/api"
+ 	podutil "sigs.k8s.io/descheduler/pkg/descheduler/pod"
+ 	frameworkfake "sigs.k8s.io/descheduler/pkg/framework/fake"
+@@ -44,11 +45,19 @@ type testCase struct {
+ 	evictSystemCriticalPods bool
+ 	priorityThreshold       *int32
+ 	nodeFit                 bool
++	useNamespaceSelector    bool
+ 	minReplicas             uint
+ 	minPodAge               *metav1.Duration
+ 	result                  bool
+ }
+ 
++var namespace = "test"
++var namespaceSelector = &metav1.LabelSelector{
++	MatchLabels: map[string]string{
++		"kubernetes.io/metadata.name": namespace,
++	},
++}
++
+ func TestDefaultEvictorPreEvictionFilter(t *testing.T) {
+ 	n1 := test.BuildTestNode("node1", 1000, 2000, 13, nil)
+ 
+@@ -305,6 +314,63 @@ func TestDefaultEvictorPreEvictionFilter(t *testing.T) {
+ 			nodeFit:                 false,
+ 			result:                  true,
+ 		},
++		{
++			description: "Pod with namespace matched namespace selector, should be evicted",
++			pods: []*v1.Pod{
++				test.BuildTestPod("p1", 400, 0, n1.Name, func(pod *v1.Pod) {
++					pod.ObjectMeta.Namespace = namespace
++					pod.ObjectMeta.OwnerReferences = test.GetNormalPodOwnerRefList()
++					pod.Spec.NodeSelector = map[string]string{
++						nodeLabelKey: nodeLabelValue,
++					}
++				}),
++			},
++			nodes: []*v1.Node{
++				test.BuildTestNode("node2", 1000, 2000, 13, func(node *v1.Node) {
++					node.ObjectMeta.Labels = map[string]string{
++						nodeLabelKey: nodeLabelValue,
++					}
++				}),
++				test.BuildTestNode("node3", 1000, 2000, 13, func(node *v1.Node) {
++					node.ObjectMeta.Labels = map[string]string{
++						nodeLabelKey: nodeLabelValue,
++					}
++				}),
++			},
++			evictLocalStoragePods:   false,
++			evictSystemCriticalPods: false,
++			nodeFit:                 true,
++			useNamespaceSelector:    true,
++			result:                  true,
++		},
++		{
++			description: "Pod wit namespace does not matched namespace selector, should not be evicted",
++			pods: []*v1.Pod{
++				test.BuildTestPod("p1", 400, 0, n1.Name, func(pod *v1.Pod) {
++					pod.ObjectMeta.OwnerReferences = test.GetNormalPodOwnerRefList()
++					pod.Spec.NodeSelector = map[string]string{
++						nodeLabelKey: "fail",
++					}
++				}),
++			},
++			nodes: []*v1.Node{
++				test.BuildTestNode("node2", 1000, 2000, 13, func(node *v1.Node) {
++					node.ObjectMeta.Labels = map[string]string{
++						nodeLabelKey: nodeLabelValue,
++					}
++				}),
++				test.BuildTestNode("node3", 1000, 2000, 13, func(node *v1.Node) {
++					node.ObjectMeta.Labels = map[string]string{
++						nodeLabelKey: nodeLabelValue,
++					}
++				}),
++			},
++			evictLocalStoragePods:   false,
++			evictSystemCriticalPods: false,
++			nodeFit:                 true,
++			useNamespaceSelector:    true,
++			result:                  false,
++		},
+ 	}
+ 
+ 	for _, test := range testCases {
+@@ -838,6 +904,10 @@ func initializePlugin(ctx context.Context, test testCase) (frameworktypes.Plugin
+ 		MinPodAge:   test.minPodAge,
+ 	}
+ 
++	if test.useNamespaceSelector {
++		defaultEvictorArgs.NamespaceLabelSelector = namespaceSelector
++	}
++
+ 	evictorPlugin, err := New(
+ 		defaultEvictorArgs,
+ 		&frameworkfake.HandleImpl{
+diff --git a/pkg/framework/plugins/defaultevictor/defaults.go b/pkg/framework/plugins/defaultevictor/defaults.go
+index 463ddd5185..cc99225ad0 100644
+--- a/pkg/framework/plugins/defaultevictor/defaults.go
++++ b/pkg/framework/plugins/defaultevictor/defaults.go
+@@ -43,6 +43,9 @@ func SetDefaults_DefaultEvictorArgs(obj runtime.Object) {
+ 	if !args.EvictFailedBarePods {
+ 		args.EvictFailedBarePods = false
+ 	}
++	if args.NamespaceLabelSelector == nil {
++		args.NamespaceLabelSelector = nil
++	}
+ 	if args.LabelSelector == nil {
+ 		args.LabelSelector = nil
+ 	}
+diff --git a/pkg/framework/plugins/defaultevictor/types.go b/pkg/framework/plugins/defaultevictor/types.go
+index 6e4d84f55d..c509d92e59 100644
+--- a/pkg/framework/plugins/defaultevictor/types.go
++++ b/pkg/framework/plugins/defaultevictor/types.go
+@@ -15,6 +15,7 @@ package defaultevictor
+ 
+ import (
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++
+ 	"sigs.k8s.io/descheduler/pkg/api"
+ )
+ 
+@@ -25,15 +26,16 @@ import (
+ type DefaultEvictorArgs struct {
+ 	metav1.TypeMeta `json:",inline"`
+ 
+-	NodeSelector            string                 `json:"nodeSelector,omitempty"`
+-	EvictLocalStoragePods   bool                   `json:"evictLocalStoragePods,omitempty"`
+-	EvictDaemonSetPods      bool                   `json:"evictDaemonSetPods,omitempty"`
+-	EvictSystemCriticalPods bool                   `json:"evictSystemCriticalPods,omitempty"`
+-	IgnorePvcPods           bool                   `json:"ignorePvcPods,omitempty"`
+-	EvictFailedBarePods     bool                   `json:"evictFailedBarePods,omitempty"`
+-	LabelSelector           *metav1.LabelSelector  `json:"labelSelector,omitempty"`
+-	PriorityThreshold       *api.PriorityThreshold `json:"priorityThreshold,omitempty"`
+-	NodeFit                 bool                   `json:"nodeFit,omitempty"`
+-	MinReplicas             uint                   `json:"minReplicas,omitempty"`
+-	MinPodAge               *metav1.Duration       `json:"minPodAge,omitempty"`
++	NodeSelector            string                 `json:"nodeSelector"`
++	EvictLocalStoragePods   bool                   `json:"evictLocalStoragePods"`
++	EvictDaemonSetPods      bool                   `json:"evictDaemonSetPods"`
++	EvictSystemCriticalPods bool                   `json:"evictSystemCriticalPods"`
++	IgnorePvcPods           bool                   `json:"ignorePvcPods"`
++	EvictFailedBarePods     bool                   `json:"evictFailedBarePods"`
++	NamespaceLabelSelector  *metav1.LabelSelector  `json:"namespaceLabelSelector"`
++	LabelSelector           *metav1.LabelSelector  `json:"labelSelector"`
++	PriorityThreshold       *api.PriorityThreshold `json:"priorityThreshold"`
++	NodeFit                 bool                   `json:"nodeFit"`
++	MinReplicas             uint                   `json:"minReplicas"`
++	MinPodAge               *metav1.Duration       `json:"minPodAge"`
+ }
+diff --git a/pkg/framework/plugins/defaultevictor/zz_generated.deepcopy.go b/pkg/framework/plugins/defaultevictor/zz_generated.deepcopy.go
+index 9d1746e853..1cc9891d07 100644
+--- a/pkg/framework/plugins/defaultevictor/zz_generated.deepcopy.go
++++ b/pkg/framework/plugins/defaultevictor/zz_generated.deepcopy.go
+@@ -46,6 +46,12 @@ func (in *DefaultEvictorArgs) DeepCopyInto(out *DefaultEvictorArgs) {
+ 		*out = new(v1.Duration)
+ 		**out = **in
+ 	}
++
++	if in.NamespaceLabelSelector != nil {
++		in, out := &in.NamespaceLabelSelector, &out.NamespaceLabelSelector
++		*out = new(v1.LabelSelector)
++		(*in).DeepCopyInto(*out)
++	}
+ 	return
+ }
+ 
+
+From 19c8c3ddc35382853d7eadc6b4de14f2eba79f26 Mon Sep 17 00:00:00 2001
+From: Denis Romanenko <denis.romanenko@flant.com>
+Date: Wed, 4 Sep 2024 15:25:36 +0300
+Subject: [PATCH 2/4] Support of the namespaceLabelSelector in DefaultEvictor
+ plugin
+
+---
+ .../plugins/defaultevictor/defaultevictor.go     |  4 +---
+ .../defaultevictor/defaultevictor_test.go        | 11 +++++++++++
+ test/test_utils.go                               | 16 ++++++++++++++++
+ 3 files changed, 28 insertions(+), 3 deletions(-)
+
+diff --git a/pkg/framework/plugins/defaultevictor/defaultevictor.go b/pkg/framework/plugins/defaultevictor/defaultevictor.go
+index 04a27a196e..7e56fa79d0 100644
+--- a/pkg/framework/plugins/defaultevictor/defaultevictor.go
++++ b/pkg/framework/plugins/defaultevictor/defaultevictor.go
+@@ -216,12 +216,11 @@ func (d *DefaultEvictor) PreEvictionFilter(pod *v1.Pod) bool {
+ 			klog.InfoS("pod does not fit on any other node because of nodeSelector(s), Taint(s), or nodes marked as unschedulable", "pod", klog.KObj(pod))
+ 			return false
+ 		}
+-		return true
+ 	}
+ 
+ 	// check pod by namespace label filter
+ 	if d.args.NamespaceLabelSelector != nil {
+-		indexName := "metadata.namespace"
++		indexName := "namespaceWithLabelSelector"
+ 		indexer, err := getNamespacesListByLabelSelector(indexName, d.args.NamespaceLabelSelector, d.handle)
+ 		if err != nil {
+ 			klog.ErrorS(err, "unable to list namespaces", "pod", klog.KObj(pod))
+@@ -236,7 +235,6 @@ func (d *DefaultEvictor) PreEvictionFilter(pod *v1.Pod) bool {
+ 			klog.InfoS("pod namespace do not match the namespaceLabelSelector filter in the policy parameter", "pod", klog.KObj(pod))
+ 			return false
+ 		}
+-		return true
+ 	}
+ 
+ 	return true
+diff --git a/pkg/framework/plugins/defaultevictor/defaultevictor_test.go b/pkg/framework/plugins/defaultevictor/defaultevictor_test.go
+index c2b1661cac..bc126a92d1 100644
+--- a/pkg/framework/plugins/defaultevictor/defaultevictor_test.go
++++ b/pkg/framework/plugins/defaultevictor/defaultevictor_test.go
+@@ -40,6 +40,7 @@ type testCase struct {
+ 	description             string
+ 	pods                    []*v1.Pod
+ 	nodes                   []*v1.Node
++	namespaces              []*v1.Namespace
+ 	evictFailedBarePods     bool
+ 	evictLocalStoragePods   bool
+ 	evictSystemCriticalPods bool
+@@ -337,6 +338,10 @@ func TestDefaultEvictorPreEvictionFilter(t *testing.T) {
+ 					}
+ 				}),
+ 			},
++			namespaces: []*v1.Namespace{
++				test.BuildTestNamespace("default"),
++				test.BuildTestNamespace(namespace),
++			},
+ 			evictLocalStoragePods:   false,
+ 			evictSystemCriticalPods: false,
+ 			nodeFit:                 true,
+@@ -871,13 +876,19 @@ func TestReinitialization(t *testing.T) {
+ 
+ func initializePlugin(ctx context.Context, test testCase) (frameworktypes.Plugin, error) {
+ 	var objs []runtime.Object
++
+ 	for _, node := range test.nodes {
+ 		objs = append(objs, node)
+ 	}
++
+ 	for _, pod := range test.pods {
+ 		objs = append(objs, pod)
+ 	}
+ 
++	for _, namespace := range test.namespaces {
++		objs = append(objs, namespace)
++	}
++
+ 	fakeClient := fake.NewSimpleClientset(objs...)
+ 
+ 	sharedInformerFactory := informers.NewSharedInformerFactory(fakeClient, 0)
+diff --git a/test/test_utils.go b/test/test_utils.go
+index c43a942ff7..6bf2752a0a 100644
+--- a/test/test_utils.go
++++ b/test/test_utils.go
+@@ -70,6 +70,22 @@ func BuildTestDeployment(name, namespace string, replicas int32, labels map[stri
+ 	return deployment
+ }
+ 
++// BuildTestNamespace creates a test namespace with given parameters.
++func BuildTestNamespace(name string) *v1.Namespace {
++	namespace := &v1.Namespace{
++		TypeMeta: metav1.TypeMeta{
++			Kind:       "Namespace",
++			APIVersion: "v1",
++		},
++		ObjectMeta: metav1.ObjectMeta{
++			Name:   name,
++			UID:    uuid.NewUUID(),
++			Labels: map[string]string{"kubernetes.io/metadata.name": name},
++		},
++	}
++	return namespace
++}
++
+ // BuildTestPod creates a test pod with given parameters.
+ func BuildTestPod(name string, cpu, memory int64, nodeName string, apply func(*v1.Pod)) *v1.Pod {
+ 	pod := &v1.Pod{
+
+From e18ba479d57d1aa748e74fa2663b4e9de9a71f55 Mon Sep 17 00:00:00 2001
+From: Denis Romanenko <denis.romanenko@flant.com>
+Date: Wed, 4 Sep 2024 21:05:36 +0300
+Subject: [PATCH 3/4] Support of the namespaceLabelSelector in DefaultEvictor
+ plugin
+
+---
+ .../plugins/defaultevictor/defaultevictor.go  | 72 +++++++++----------
+ 1 file changed, 35 insertions(+), 37 deletions(-)
+
+diff --git a/pkg/framework/plugins/defaultevictor/defaultevictor.go b/pkg/framework/plugins/defaultevictor/defaultevictor.go
+index 7e56fa79d0..6fb3b70723 100644
+--- a/pkg/framework/plugins/defaultevictor/defaultevictor.go
++++ b/pkg/framework/plugins/defaultevictor/defaultevictor.go
+@@ -25,6 +25,8 @@ import (
+ 	"k8s.io/apimachinery/pkg/labels"
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
++	clientset "k8s.io/client-go/kubernetes"
++	listersv1 "k8s.io/client-go/listers/core/v1"
+ 
+ 	"k8s.io/client-go/tools/cache"
+ 	"k8s.io/klog/v2"
+@@ -220,18 +222,12 @@ func (d *DefaultEvictor) PreEvictionFilter(pod *v1.Pod) bool {
+ 
+ 	// check pod by namespace label filter
+ 	if d.args.NamespaceLabelSelector != nil {
+-		indexName := "namespaceWithLabelSelector"
+-		indexer, err := getNamespacesListByLabelSelector(indexName, d.args.NamespaceLabelSelector, d.handle)
++		ns, err := getNamespaces(context.TODO(), d.handle.ClientSet(), d.handle.SharedInformerFactory().Core().V1().Namespaces().Lister(), metav1.FormatLabelSelector(d.args.NamespaceLabelSelector))
+ 		if err != nil {
+ 			klog.ErrorS(err, "unable to list namespaces", "pod", klog.KObj(pod))
+-			return false
+-		}
+-		objs, err := indexer.ByIndex(indexName, pod.Namespace)
+-		if err != nil {
+-			klog.ErrorS(err, "unable to list namespaces for namespaceLabelSelector filter in the policy parameter", "pod", klog.KObj(pod))
+-			return false
+ 		}
+-		if len(objs) == 0 {
++
++		if _, ok := ns[pod.Namespace]; !ok {
+ 			klog.InfoS("pod namespace do not match the namespaceLabelSelector filter in the policy parameter", "pod", klog.KObj(pod))
+ 			return false
+ 		}
+@@ -300,38 +296,40 @@ func getPodIndexerByOwnerRefs(indexName string, handle frameworktypes.Handle) (c
+ 	return indexer, nil
+ }
+ 
+-func getNamespacesListByLabelSelector(indexName string, labelSelector *metav1.LabelSelector, handle frameworktypes.Handle) (cache.Indexer, error) {
+-	nsInformer := handle.SharedInformerFactory().Core().V1().Namespaces().Informer()
+-	indexer := nsInformer.GetIndexer()
++func getNamespaces(ctx context.Context, client clientset.Interface, nsLister listersv1.NamespaceLister, labelSelector string) (map[string]struct{}, error) {
++	ret := make(map[string]struct{})
++	namespaceSelector, err := labels.Parse(labelSelector)
++	if err != nil {
++		return ret, err
++	}
+ 
+-	// do not reinitialize the indexer, if it's been defined already
+-	for name := range indexer.GetIndexers() {
+-		if name == indexName {
+-			return indexer, nil
+-		}
++	var ns []*v1.Namespace
++	// err is defined above
++	if ns, err = nsLister.List(namespaceSelector); err != nil {
++		return ret, err
+ 	}
+ 
+-	if err := nsInformer.AddIndexers(cache.Indexers{
+-		indexName: func(obj interface{}) ([]string, error) {
+-			ns, ok := obj.(*v1.Namespace)
+-			if !ok {
+-				return []string{}, errors.New("unexpected object")
+-			}
++	if len(ns) == 0 {
++		klog.V(2).InfoS("Namespace lister returned empty list, now fetch directly")
+ 
+-			selector, err := metav1.LabelSelectorAsSelector(labelSelector)
+-			if err != nil {
+-				return []string{}, errors.New("could not get selector from label selector")
+-			}
+-			if labelSelector != nil && !selector.Empty() {
+-				if !selector.Matches(labels.Set(ns.Labels)) {
+-					return []string{}, nil
+-				}
+-			}
+-			return []string{ns.GetName()}, nil
+-		},
+-	}); err != nil {
+-		return nil, err
++		nItems, err := client.CoreV1().Namespaces().List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
++		if err != nil {
++			return ret, err
++		}
++
++		if nItems == nil || len(nItems.Items) == 0 {
++			return ret, nil
++		}
++
++		for i := range nItems.Items {
++			namespace := nItems.Items[i]
++			ns = append(ns, &namespace)
++		}
+ 	}
+ 
+-	return indexer, nil
++	for _, n := range ns {
++		ret[n.Name] = struct{}{}
++	}
++
++	return ret, nil
+ }
+
+From 3d0cee395f9bb490c9921d242afec6c4ee7b3e74 Mon Sep 17 00:00:00 2001
+From: Denis Romanenko <denis.romanenko@flant.com>
+Date: Wed, 4 Sep 2024 21:06:53 +0300
+Subject: [PATCH 4/4] Support of the namespaceLabelSelector in DefaultEvictor
+ plugin
+
+---
+ pkg/framework/plugins/defaultevictor/defaultevictor.go | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/pkg/framework/plugins/defaultevictor/defaultevictor.go b/pkg/framework/plugins/defaultevictor/defaultevictor.go
+index 6fb3b70723..092e6f5482 100644
+--- a/pkg/framework/plugins/defaultevictor/defaultevictor.go
++++ b/pkg/framework/plugins/defaultevictor/defaultevictor.go
+@@ -222,7 +222,7 @@ func (d *DefaultEvictor) PreEvictionFilter(pod *v1.Pod) bool {
+ 
+ 	// check pod by namespace label filter
+ 	if d.args.NamespaceLabelSelector != nil {
+-		ns, err := getNamespaces(context.TODO(), d.handle.ClientSet(), d.handle.SharedInformerFactory().Core().V1().Namespaces().Lister(), metav1.FormatLabelSelector(d.args.NamespaceLabelSelector))
++		ns, err := getNamespacesListByLabelSelector(context.TODO(), d.handle.ClientSet(), d.handle.SharedInformerFactory().Core().V1().Namespaces().Lister(), metav1.FormatLabelSelector(d.args.NamespaceLabelSelector))
+ 		if err != nil {
+ 			klog.ErrorS(err, "unable to list namespaces", "pod", klog.KObj(pod))
+ 		}
+@@ -296,7 +296,7 @@ func getPodIndexerByOwnerRefs(indexName string, handle frameworktypes.Handle) (c
+ 	return indexer, nil
+ }
+ 
+-func getNamespaces(ctx context.Context, client clientset.Interface, nsLister listersv1.NamespaceLister, labelSelector string) (map[string]struct{}, error) {
++func getNamespacesListByLabelSelector(ctx context.Context, client clientset.Interface, nsLister listersv1.NamespaceLister, labelSelector string) (map[string]struct{}, error) {
+ 	ret := make(map[string]struct{})
+ 	namespaceSelector, err := labels.Parse(labelSelector)
+ 	if err != nil {

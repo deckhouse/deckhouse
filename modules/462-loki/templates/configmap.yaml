@@ -1,3 +1,7 @@
+{{- $lokiConfigSnakeCase := dict }}
+{{- range (keys .Values.loki.lokiConfig) }}
+{{- $_ := set $lokiConfigSnakeCase (. | snakecase) (. | get $.Values.loki.lokiConfig) }}
+{{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -12,9 +16,11 @@ data:
     server:
       http_listen_address: 127.0.0.1
       http_listen_port: 3101
+      {{- pick $lokiConfigSnakeCase "grpc_server_max_send_msg_size" "grpc_server_max_recv_msg_size" "grpc_server_max_concurrent_streams" | toYaml | nindent 6 }}
 
     limits_config:
       retention_period: {{ .Values.loki.retentionPeriodHours | default 168 }}h
+      {{- omit $lokiConfigSnakeCase "grpc_server_max_send_msg_size" "grpc_server_max_recv_msg_size" "grpc_server_max_concurrent_streams" | toYaml | nindent 6 }}
 
     common:
       path_prefix: /loki

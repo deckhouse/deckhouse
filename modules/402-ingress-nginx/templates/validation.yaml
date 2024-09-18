@@ -1,15 +1,9 @@
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 {{- $kubernetesVersion := .Values.global.discovery.kubernetesVersion }}
-{{- if semverCompare ">= 1.26" $kubernetesVersion }}
 ---
 {{- $policyName := "ingressnginxcontroller-settings.deckhouse.io" }}
 {{- $inlets := list "LoadBalancer"  "LoadBalancerWithProxyProtocol" "HostPort" "HostPortWithProxyProtocol" "HostWithFailover" }}
-{{- if semverCompare ">= 1.30" $kubernetesVersion }}
-apiVersion: admissionregistration.k8s.io/v1
-{{- else if semverCompare ">= 1.28" $kubernetesVersion }}
-apiVersion: admissionregistration.k8s.io/v1beta1
-{{- else }}
-apiVersion: admissionregistration.k8s.io/v1alpha1
-{{- end }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
 metadata:
   name: {{ $policyName }}
@@ -21,22 +15,18 @@ spec:
       - apiGroups:   ["deckhouse.io"]
         apiVersions: ["*"]
         operations:  ["CREATE", "UPDATE"]
-        resources:   ["ingressnginxcontrollers"]    
+        resources:   ["ingressnginxcontrollers"]
   validations:
 {{- range $inlet := $inlets }}
 {{- $spec :=  printf "%s%s" (lower $inlet | trunc 1)  (substr 1 -1 $inlet) }}
     - expression: '!(has(object.spec.{{ $spec }} ) && object.spec.inlet != "{{ $inlet }}" )'
       reason: Forbidden
 {{- if semverCompare ">= 1.27" $kubernetesVersion }}
-      messageExpression: '''parameters "spec.{{ $spec }}" avalible only for inlet "{{ $inlet }}"'''        
-{{- end }}      
-{{- end }}  
----
-{{- if semverCompare ">= 1.28" $kubernetesVersion }}
-apiVersion: admissionregistration.k8s.io/v1beta1
-{{- else }}
-apiVersion: admissionregistration.k8s.io/v1alpha1
+      messageExpression: '''parameters "spec.{{ $spec }}" avalible only for inlet "{{ $inlet }}"'''
 {{- end }}
+{{- end }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   name: {{ $policyName }}

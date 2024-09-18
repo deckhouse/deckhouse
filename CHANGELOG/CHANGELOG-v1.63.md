@@ -62,10 +62,13 @@
  - **[cni-cilium]** Fixing masquerading between DVP virtual machines. [#9529](https://github.com/deckhouse/deckhouse/pull/9529)
     This fix disables masquerading between virtual machines.
  - **[cni-cilium]** Improved the `CiliumAgentUnreachableHealthEndpoints` metric expression to avoid false positives. [#9198](https://github.com/deckhouse/deckhouse/pull/9198)
+ - **[deckhouse]** Use tmpfs for hooks execution dir. [#9646](https://github.com/deckhouse/deckhouse/pull/9646)
  - **[deckhouse]** Allow admins to change objects with `kind=StorageClass`. [#9398](https://github.com/deckhouse/deckhouse/pull/9398)
  - **[deckhouse]** Allow admins to change objects with `kind=StorageClass`. [#9362](https://github.com/deckhouse/deckhouse/pull/9362)
+ - **[deckhouse-controller]** Fixed panic when processing terminating deckhouse pod. [#9621](https://github.com/deckhouse/deckhouse/pull/9621)
  - **[deckhouse-controller]** Fix panic on invalid module image [#9231](https://github.com/deckhouse/deckhouse/pull/9231)
  - **[deckhouse-controller]** Deckhouse update metrics restored. [#9147](https://github.com/deckhouse/deckhouse/pull/9147)
+ - **[dhctl]** Revert ensure required namespaces while resources creation. [#9715](https://github.com/deckhouse/deckhouse/pull/9715)
  - **[dhctl]** Fixed checking the length of the list of external IP addresses in the `YandexClusterConfiguration`. [#9449](https://github.com/deckhouse/deckhouse/pull/9449)
  - **[dhctl]** Fix static installation consume 100% of CPU. [#9359](https://github.com/deckhouse/deckhouse/pull/9359)
  - **[dhctl]** Wait for resources required by manifest being created. [#9157](https://github.com/deckhouse/deckhouse/pull/9157)
@@ -89,6 +92,8 @@
  - **[multitenancy-manager]** Fix templates bugs. [#9205](https://github.com/deckhouse/deckhouse/pull/9205)
  - **[network-policy-engine]** Downgrade iptables version from `1.8.10` to `1.8.9` due to iptables chains overflow. You need to clear unwanted iptables rules manually or reboot the affected nodes. [#9315](https://github.com/deckhouse/deckhouse/pull/9315)
  - **[node-local-dns]** Use `prefer_udp `to connect with kube-dns. [#9548](https://github.com/deckhouse/deckhouse/pull/9548)
+ - **[node-manager]** Fix NodeGroupConfiguration comparsion function. [#9606](https://github.com/deckhouse/deckhouse/pull/9606)
+    bashible apiserver will restart.
  - **[node-manager]** Fix role rights for cluster-autoscaler `1.29`, `1.30`. [#9294](https://github.com/deckhouse/deckhouse/pull/9294)
  - **[node-manager]** Reducing unnecessary kube-apiserver logsl. [#9134](https://github.com/deckhouse/deckhouse/pull/9134)
     Reducing unnecessary kube-apiserver logs.
@@ -128,6 +133,7 @@
  - **[istio]** For all new pods, the CPU limit will be set to 2 in the Istio sidecar container. If this value is too small for your cluster, you can set a higher value in the istio ModuleConfig. To apply the new limits to previously created pods, you will need to restart them manually. [#9036](https://github.com/deckhouse/deckhouse/pull/9036)
     For all new Istio sidecar containers the CPU limit will be set to 2 (you can tune this). To apply the limit to existing pods, you will need to restart them manually.
  - **[istio]** Kiali inherits cluster access rules from an authenticated user (impersonate him), not considering him as anonymous and not provides unwanted privileges. [#8830](https://github.com/deckhouse/deckhouse/pull/8830)
+ - **[node-manager]** Fix instance controller hook. [#9639](https://github.com/deckhouse/deckhouse/pull/9639)
  - **[node-manager]** Add the ability to customize the topology-manager in a NodeGroup. [#7199](https://github.com/deckhouse/deckhouse/pull/7199)
  - **[prometheus]** Disable Grafanav v10 unified alerting navigation. [#9150](https://github.com/deckhouse/deckhouse/pull/9150)
  - **[prometheus]** Update Grafana to `v10.4.5`. [#9088](https://github.com/deckhouse/deckhouse/pull/9088)
