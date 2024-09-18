@@ -437,12 +437,14 @@ const setCRIAndVersionsFromInputs = ({ context, core, kubernetesDefaultVersion }
   let ver = [defaultVersion];
   let multimaster = [defaultMultimaster];
 
-  if (!!context.payload.inputs.cri) {
-    const requested_cri = context.payload.inputs.cri.toLowerCase();
+  let test_config = JSON.parse(context.payload.inputs.test_config)
+
+  if (!!test_config.cri) {
+    const requested_cri = test_config.cri.toLowerCase();
     cri = requested_cri.split(',');
   }
-  if (!!context.payload.inputs.ver) {
-    const requested_ver = context.payload.inputs.ver.replace(/\./g, '_');
+  if (!!test_config.ver) {
+    const requested_ver = test_config.ver.replace(/\./g, '_');
     ver = requested_ver.split(',');
   }
   if (!!context.payload.inputs.multimaster) {
@@ -450,8 +452,10 @@ const setCRIAndVersionsFromInputs = ({ context, core, kubernetesDefaultVersion }
     multimaster = requested_multimaster;
   }
 
-  core.info(`workflow_dispatch is release related. e2e inputs: cri='${context.payload.inputs.cri}', multimaster='${context.payload.inputs.multimaster}' and version='${context.payload.inputs.ver}'.`);
+  core.info(`e2e inputs: '${JSON.stringify(context.payload.inputs)}'`);
+  core.info(`workflow_dispatch is release related. e2e parsed inputs: cri='${test_config.cri}' and version='${test_config.ver}'.`);
   core.setOutput(`multimaster`, `${multimaster}`);
+
   for (const out_cri of cri) {
     for (const out_ver of ver) {
       core.info(`run_${out_cri}_${out_ver}: true`);
@@ -737,8 +741,7 @@ const detectSlashCommand = ({ comment , context, core}) => {
       }
 
       inputs = {
-        cri: cri.join(','),
-        ver: ver.join(','),
+        test_config: JSON.stringify({ cri: cri.join(','), ver: ver.join(','), editions: "FE" }),
         multimaster: multimaster,
       }
 

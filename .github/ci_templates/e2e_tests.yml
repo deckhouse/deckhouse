@@ -642,7 +642,7 @@ check_e2e_labels:
 # <template: e2e_run_job_template>
 {!{ $ctx.jobID }!}:
   name: "{!{ $ctx.jobName }!}"
-  if: ${{ github.event.inputs.cri == '{!{ $ctx.cri }!}' && github.event.inputs.k8s_version == '{!{ $ctx.kubernetesVersion }!}' && github.event.inputs.layout == '{!{ $ctx.layout }!}' }}
+  if: ${{ fromJson(inputs.test_config).cri == '{!{ $ctx.cri }!}' && github.event.inputs.k8s_version == '{!{ $ctx.kubernetesVersion }!}' && github.event.inputs.layout == '{!{ $ctx.layout }!}' }}
   env:
     PROVIDER: {!{ $ctx.providerName }!}
     CRI: {!{ $ctx.criName }!}

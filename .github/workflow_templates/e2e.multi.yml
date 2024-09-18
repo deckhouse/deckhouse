@@ -90,12 +90,10 @@ on:
       pull_request_head_label:
         description: 'Head label of pull request. e.g. my_repo:my_feature_branch'
         required: false
-      cri:
-        description: 'A comma-separated list of cri to test. Available: Containerd.'
+      test_config:
+        description: 'JSON string of parameters of current test'
         required: false
-      ver:
-        description: 'A comma-separated list of versions to test. Available: from 1.24 to 1.28.'
-        required: false
+        default: '{"cri":"Containerd","ver":"1.27","editions":"FE"}'
       initial_ref_slug:
         description: 'An image tag to install first and then switch to workflow context ref'
         required: false
