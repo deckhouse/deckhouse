@@ -121,11 +121,15 @@ apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
 # [<en>] List of internal cluster networks (e.g., '10.0.4.0/24'), which is
 # [<en>] used for linking Kubernetes components (kube-apiserver, kubelet etc.).
-# [<en>] If every node in cluster has only one network interface
-# [<en>] StaticClusterConfiguration resource can be skipped.
+# [<en>] The parameter is mandatory in the following cases:
+# [<en>]   - Cluster nodes have more than one network interface
+# [<en>]   - The cluster is deployed inside a Deckhouse Virtualization Platform
+# [<en>] In other cases, the StaticClusterConfiguration resource can be omitted.
 # [<ru>] Список внутренних сетей узлов кластера (например, '10.0.4.0/24'), который
 # [<ru>] используется для связи компонентов Kubernetes (kube-apiserver, kubelet...) между собой.
-# [<ru>] Если каждый узел в кластере имеет только один сетевой интерфейс,
-# [<ru>] ресурс StaticClusterConfiguration можно не создавать.
+# [<ru>] Параметр обязателен к заполнению, если:
+# [<ru>]   -  Узлы кластера имеют более одного сетевого интерфейса
+# [<ru>]   -  Развертывание кластера происходит внутри Deckhouse Virtualization Platform
+# [<ru>] В остальных случаях ресурс StaticClusterConfiguration можно не создавать.
 internalNetworkCIDRs:
 - *!CHANGE_internalNetworkCIDRs*
