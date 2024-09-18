@@ -592,7 +592,7 @@ installTypes:
         name:
           en: Installation information
           ru: Информация об установке
-        template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
+        template: getting_started/bm/STEP_INSTALL_SCHEMA.md
       step3:
         name:
           en: Setting up cluster
@@ -607,7 +607,7 @@ installTypes:
         name:
           en: Finishing installation
           ru: Завершение установки
-        template: getting_started/<INSTALL_CODE>/STEP_FINALIZE.md
+        template: getting_started/bm/STEP_FINALIZE.md
       step6:
         name:
           en: What can I do next?
@@ -627,7 +627,7 @@ installTypes:
         name:
           en: Installation information
           ru: Информация об установке
-        template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
+        template: getting_started/bm/STEP_INSTALL_SCHEMA.md
       step3:
         name:
           en: Setting up cluster
@@ -642,7 +642,7 @@ installTypes:
         name:
           en: Finishing installation
           ru: Завершение установки
-        template: getting_started/<INSTALL_CODE>/STEP_FINALIZE.md
+        template: getting_started/bm/STEP_FINALIZE.md
       step6:
         name:
           en: What can I do next?
