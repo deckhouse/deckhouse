@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: dev-registry.deckhouse.io/sys/deckhouse-oss/shell-operator-dev:pr654
+fromImage: common/shell-operator
 import:
   - artifact: yq4-artifact
     add: /usr/local/bin/yq
