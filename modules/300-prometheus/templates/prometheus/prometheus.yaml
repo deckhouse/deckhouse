@@ -151,7 +151,6 @@ spec:
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
   externalLabels: {}
-    prometheus: deckhouse
   prometheusExternalLabelName: ""
   replicaExternalLabelName: ""
   serviceAccountName: prometheus
@@ -220,10 +219,12 @@ spec:
     {{- if .spec.writeRelabelConfigs }}
     writeRelabelConfigs:
       {{- .Values.spec.writeRelabelConfigs | toYaml | nindent 2 }}
+      - action: keep
+        regex: "prometheus: deckhouse.*"
       {{- if .Values.externalLabels }}
       {{- range $key, $value := .Values.externalLabels }}
       - action: keep
-        regex: '{{ printf "%s:%s" $key $value | quote }}'
+        regex: '{{ printf "%s:%s.*" $key $value | quote }}'
       {{- end }}
       {{- end }}
     {{- end }}
