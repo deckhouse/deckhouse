@@ -218,11 +218,7 @@ spec:
     {{- if .spec.writeRelabelConfigs }}
     writeRelabelConfigs:
     {{- .spec.writeRelabelConfigs | toYaml | nindent 4 }}
-    - source_labels: [prometheus]
-      target_label: __tmp_prometheus_exists
-    - source_labels: [__tmp_prometheus_exists]
-      regex: "^$"
-      target_label: prometheus
+    - target_label: prometheus
       replacement: deckhouse
     {{- if .Values.prometheus.externalLabels }}
     {{- range $key, $value := .Values.prometheus.externalLabels }}
