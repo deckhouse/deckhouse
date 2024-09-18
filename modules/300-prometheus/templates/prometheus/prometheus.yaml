@@ -218,7 +218,7 @@ spec:
     {{- end }}
     {{- if .spec.writeRelabelConfigs }}
     writeRelabelConfigs:
-      {{- .spec.writeRelabelConfigs | toYaml | nindent 4 }}
+      {{- .spec.writeRelabelConfigs | toYaml | nindent 6 }}
       - targetLabel: prometheus
         replacement: deckhouse
       {{- with $externalLabels }}
