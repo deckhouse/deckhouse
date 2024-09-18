@@ -215,22 +215,22 @@ spec:
     headers:
       X-Auth-Token: {{ .spec.customAuthToken }}
     {{- end }}
-  {{- if .spec.writeRelabelConfigs }}
-  writeRelabelConfigs:
-    {{- .spec.writeRelabelConfigs | toYaml | nindent 4 }}
-    - targetLabel: prometheus
-      replacement: deckhouse
-    {{- if .Values.prometheus.externalLabels }}
-    {{- range $key, $value := .Values.prometheus.externalLabels }}
-    - sourceLabels: [{{ $key }}]
-      targetLabel: __tmp_{{ $key }}_exists
-    - sourceLabels: [__tmp_{{ $key }}_exists]
-      regex: "^$"
-      targetLabel: {{ $key }}
-      replacement: {{ $value | quote }}
+    {{- if .spec.writeRelabelConfigs }}
+    writeRelabelConfigs:
+      {{- .spec.writeRelabelConfigs | toYaml | nindent 4 }}
+      - targetLabel: prometheus
+        replacement: deckhouse
+      {{- with .Values.prometheus.externalLabels }}
+      {{- range $key, $value := . }}
+      - sourceLabels: [{{ $key }}]
+        targetLabel: __tmp_{{ $key }}_exists
+      - sourceLabels: [__tmp_{{ $key }}_exists]
+        regex: "^$"
+        targetLabel: {{ $key }}
+        replacement: {{ $value | quote }}
+      {{- end }}
+      {{- end }}
     {{- end }}
-    {{- end }}
-  {{- end }}
     {{- if .spec.tlsConfig }}
       {{- $tlsConfig := .spec.tlsConfig | deepCopy }}
       {{- if .spec.tlsConfig.ca }}
