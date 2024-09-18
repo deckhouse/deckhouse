@@ -149,9 +149,6 @@ spec:
           mountPath: /host/opt/cni/bin
         - name: etc-cni-netd
           mountPath: /host/etc/cni/net.d
-        - name: cilium-config-path
-          mountPath: /tmp/cilium/config-map
-          readOnly: true
         {{- if has "virtualization" $context.Values.global.enabledModules }}
         - mountPath: /etc/config
           name: ip-masq-agent
@@ -166,6 +163,8 @@ spec:
         - name: hubble-tls
           mountPath: /var/lib/cilium/tls/hubble
           readOnly: true
+        - name: tmp
+          mountPath: /tmp
         resources:
         {{ include "helm_lib_resources_management_pod_resources" (list $context.Values.cniCilium.resourcesManagement) | nindent 10 }}
       - name: kube-rbac-proxy
@@ -207,6 +206,36 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
       {{- include "module_init_container_check_linux_kernel" (tuple $context ">= 4.9.17") | nindent 6 }}
+      - name: config
+        image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - cilium
+        - build-config
+        - --allow-config-keys=debug,single-cluster-route
+        env:
+        - name: K8S_NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: CILIUM_K8S_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: KUBERNETES_SERVICE_HOST
+          value: "127.0.0.1"
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6445"
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        securityContext:
+          privileged: false
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: mount-cgroup
         image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         env:
@@ -378,6 +407,8 @@ spec:
       serviceAccountName: agent
       terminationGracePeriodSeconds: 1
       volumes:
+      - name: tmp
+        emptyDir: {}
       - name: host-proc-sys-net
         hostPath:
           type: Directory
@@ -417,9 +448,6 @@ spec:
         hostPath:
           path: /run/xtables.lock
           type: FileOrCreate
-      - name: cilium-config-path
-        configMap:
-          name: cilium-config
       {{- if has "virtualization" $context.Values.global.enabledModules }}
       - name: ip-masq-agent
         configMap:
