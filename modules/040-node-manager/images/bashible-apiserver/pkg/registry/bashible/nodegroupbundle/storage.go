@@ -30,7 +30,7 @@ import (
 
 // NewStorage returns a RESTStorage object that will work against API services.
 func NewStorage(rootDir string, stepsStorage *template.StepsStorage, bashibleContext template.Context) (*StorageWithK8sBundles, error) {
-	ngRenderer := template.NewStepsRenderer(stepsStorage, bashibleContext, rootDir, "node-group", template.GetNodegroupContextKey)
+	ngRenderer := template.NewStepsRenderer(stepsStorage, bashibleContext, rootDir, "all", template.GetNodegroupContextKey)
 	k8sRenderer := template.NewStepsRenderer(stepsStorage, bashibleContext, rootDir, "all", template.GetVersionContextKey)
 
 	return &StorageWithK8sBundles{
