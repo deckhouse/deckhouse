@@ -249,8 +249,12 @@ spec:
     name: prometheus-main-additional-configs
     key: scrapes.yaml
   additionalAlertRelabelConfigs:
-    name: prometheus-main-additional-configs
+  - name: prometheus-main-additional-configs
     key: alert-relabels.yaml
+    {{- if .Values.prometheus.externalLabels }}
+  - name: prometheus-alert-relable-secret
+    key: prometheus-alert-relabels.yaml
+    {{ end }}
   additionalAlertManagerConfigs:
     name: prometheus-main-additional-configs
     key: alert-managers.yaml
