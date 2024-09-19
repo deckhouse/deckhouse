@@ -1,10 +1,11 @@
 diff --git a/pkg/cloudprovider/vsphere/nodemanager.go b/pkg/cloudprovider/vsphere/nodemanager.go
+index be3b693..9e86ebd 100644
 --- a/pkg/cloudprovider/vsphere/nodemanager.go
 +++ b/pkg/cloudprovider/vsphere/nodemanager.go
-@@ -340,6 +340,17 @@ func (nm *NodeManager) DiscoverNode(nodeID string, searchBy cm.FindVM) error {
+@@ -355,6 +355,17 @@ func (nm *NodeManager) DiscoverNode(nodeID string, searchBy cm.FindVM) error {
  		}
  	}
-
+ 
 +	var internalAddressExists bool
 +	for _, addr := range addrs {
 +		if addr.Type == v1.NodeInternalIP {
