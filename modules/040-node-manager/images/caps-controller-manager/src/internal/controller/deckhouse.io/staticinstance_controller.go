@@ -160,10 +160,10 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 		return r.adoptBootstrappedStaticInstance(ctx, instanceScope)
 	}
 
-	if instanceScope.Instance.Status.CurrentStatus == nil ||
+	if (instanceScope.Instance.Status.CurrentStatus == nil ||
 		instanceScope.Instance.Status.CurrentStatus.Phase == "" ||
-		(instanceScope.Instance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseError &&
-			conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason).Status == corev1.ConditionTrue) {
+		instanceScope.Instance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseError) &&
+		conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason).Status == corev1.ConditionTrue {
 
 		conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceAddedToNodeGroupCondition)
 		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
