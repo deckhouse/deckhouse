@@ -99,7 +99,6 @@ func (cb *ContextBuilder) SetVersionMapData(data map[string]interface{}) {
 
 func (cb *ContextBuilder) SetInputData(data inputData) {
 	sort.Strings(data.AllowedBundles)
-	sort.Strings(data.AllowedKubernetesVersions)
 	sort.Slice(data.NodeGroups, func(i, j int) bool {
 		ngi := data.NodeGroups[i]
 		ngj := data.NodeGroups[j]
@@ -179,16 +178,6 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 			}
 			// bashibleContext always exists. Err is only for checksum generation
 			bb.bashibleContexts[bashibleContextName] = bashibleContext
-		}
-
-		for _, k8sVersion := range cb.clusterInputData.AllowedKubernetesVersions {
-			k8sContextName := fmt.Sprintf("bundle-%s-%s", bundle, k8sVersion)
-			bb.bashibleContexts[k8sContextName] = bundleK8sVersionContext{
-				tplContextCommon:  commonContext,
-				Bundle:            bundle,
-				KubernetesVersion: k8sVersion,
-				CloudProvider:     cb.clusterInputData.CloudProvider,
-			}
 		}
 	}
 
@@ -558,16 +547,15 @@ type dockerCfg struct {
 }
 
 type inputData struct {
-	ClusterDomain             string                 `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress         string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	CloudProvider             interface{}            `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
-	Proxy                     map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
-	BootstrapTokens           map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
-	PackagesProxy             map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
-	APIServerEndpoints        []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	KubernetesCA              string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
-	AllowedBundles            []string               `json:"allowedBundles" yaml:"allowedBundles"`
-	AllowedKubernetesVersions []string               `json:"allowedKubernetesVersions" yaml:"allowedKubernetesVersions"`
-	NodeGroups                []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
-	Freq                      interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
+	ClusterDomain      string                 `json:"clusterDomain" yaml:"clusterDomain"`
+	ClusterDNSAddress  string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
+	CloudProvider      interface{}            `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
+	Proxy              map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	BootstrapTokens    map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
+	PackagesProxy      map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	APIServerEndpoints []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
+	KubernetesCA       string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
+	AllowedBundles     []string               `json:"allowedBundles" yaml:"allowedBundles"`
+	NodeGroups         []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
+	Freq               interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
 }
