@@ -35,10 +35,9 @@ properties:
           Полные имена (или regex выражения имен) StorageClass, которые не будут созданы в кластере.
       default:
         description: |
+          > **УСТАРЕЛ**. Вместо этого параметра используйте [global.defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass).
+
           Имя StorageClass, который будет использоваться в кластере по умолчанию:
             * Если не задан, фактическим StorageClass по умолчанию будет:
               * присутствующий в кластере произвольный StorageClass с default-аннотацией;
               * лексикографически первый StorageClass из создаваемых модулем.
-
-          > **Внимание!** Если задан параметр [defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass)
-          в настройках модуля `global`, то именно **его значение будет использоваться по-умолчанию**, **ПЕРЕКРЫВАЯ** указанное здесь.
