@@ -228,6 +228,8 @@ spec:
       - sourceLabels: [{{ $key }}]
         regex: "^$"
         replacement: {{ $value | quote }}
+      - target_label: __tmp_{{ $key }}_exists
+        action: drop
       {{- end }}
       {{- end }}
     {{- end }}
