@@ -24,7 +24,6 @@ shell:
     sudo \
     libcap-devel \
     clang17.0 clang17.0-tools lldb17.0 lld17.0 llvm17.0-devel \
-    libstdc++-devel libstdc++-devel-static libstdc++10-devel-static \
     libcxxabi-devel
   - ln -f -s llvm-17.0 "/usr/lib/llvm-17"
   - update-alternatives --install /usr/bin/python python /usr/bin/python3 1

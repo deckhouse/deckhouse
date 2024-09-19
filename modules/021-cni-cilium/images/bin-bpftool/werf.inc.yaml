@@ -23,7 +23,7 @@ shell:
   - git checkout {{ $bpftoolRev }}
   install:
   - update-alternatives --install /usr/bin/python python /usr/bin/python2 1
-  - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 2
+  - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 2
   setup:
   - cd /src/linux/tools/bpf/bpftool
   - make -j "$(getconf _NPROCESSORS_ONLN)"

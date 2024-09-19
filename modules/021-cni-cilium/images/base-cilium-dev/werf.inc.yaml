@@ -1,5 +1,5 @@
 # src of image BASE_ALT_DEV_CILIUM in candi/image_versions.yml
-{{- $goVersion := "1.22.7" }}
+{{- $goVersion := "1.23.1" }}
 {{- $protocVersion := "22.3" }}
 {{- $bazelVersions := "3.7.0 3.7.1 3.7.2 6.3.2" }}
 ---
@@ -25,7 +25,7 @@
 # #####################################################################
 ---
 image: {{ $.ModuleName }}/base-cilium-dev
-from: {{ $.Images.BASE_ALT }}
+from: {{ $.Images.BASE_ALT_P11 }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -42,12 +42,15 @@ shell:
     iptables iptables-ipv6 iptables-nft \
     coreutils binutils git zip unzip wget mount patch patchelf \
     make automake autoconf cmake ccache bison flex ninja-build pkg-config \
-    gcc gcc9 gcc-c++ glibc \
+    gcc gcc-c++ glibc \
+    libstdc++-devel libstdc++-devel-static \
     python python3 python3-module-pip python3-module-virtualenv \
-    build-essential libtool glibc-devel glibc-devel-static \
+    libtool glibc-devel glibc-devel-static \
     libnetfilter_conntrack libnetfilter_conntrack-devel libnfnetlink-devel \
     libmnl-devel libnftnl-devel elfutils-devel zlib-devel
-  - apt-get install -y llvm-devel
+  ##- apt-get install -y emacs-base gettext  gettext-tools
+  - apt-get install -y build-essential
+  ##- apt-get install -y llvm-devel
   # for debug
   - apt-get install -y strace vim-console
   # apt clean
@@ -58,8 +61,8 @@ shell:
     sudo \
     libcap-devel libpcap-devel \
     clang17.0 clang17.0-tools lldb17.0 lld17.0 llvm17.0-devel \
-    libstdc++-devel libstdc++-devel-static libstdc++10-devel-static \
-    libcxxabi-devel
+    libcxxabi-devel \
+    llvm-devel
   install:
   # Install Go
   - curl -sfL https://go.dev/dl/go{{ $goVersion }}.linux-amd64.tar.gz -o go.tar.gz

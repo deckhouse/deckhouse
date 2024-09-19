@@ -146,7 +146,7 @@ import:
   before: setup
 shell:
   install:
-  - yes | cp -r --remove-destination -f iptables/* /
+  - rsync -a --keep-dirlinks iptables/* /
   - rm -rf /iptables
   - chown root:root /usr/sbin/iptables-wrapper
   - chmod 755 /usr/sbin/iptables-wrapper
