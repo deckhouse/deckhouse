@@ -57,7 +57,7 @@ fi
 */}}
 if ! [ -b "$DATA_DEVICE" ]; then
   >&2 echo "failed to find $DATA_DEVICE disk. Trying to detect the correct one"
-  for disk in $(lsblk -npd | grep -v zram | awk '{if ($6=="disk" && $7=="") {print $1}}'); do
+  for disk in $(lsblk -npd | awk '{if ($6=="disk" && $7=="") {print $1}}'); do
     if ! lsblk -np $disk | grep -q part; then
       DATA_DEVICE=$disk
     fi
