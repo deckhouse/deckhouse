@@ -69,8 +69,8 @@ func (s Storage) Render(ng string) (runtime.Object, error) {
 	return &obj, nil
 }
 
-func (s Storage) getContext(ng string) (map[string]interface{}, error) {
-	contextKey, err := template.GetBootstrapContextKey(ng)
+func (s Storage) getContext(name string) (map[string]interface{}, error) {
+	contextKey, err := template.GetBashibleContextKey(name)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get context key: %v", err)
 	}
