@@ -63,6 +63,7 @@ resource "decort_kvmvm" "master_vm" {
       net_id = network.value
     }
   }
+
   network {
     net_type = local.net_type_extnet
     net_id = local.extnet_id
