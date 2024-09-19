@@ -10,37 +10,37 @@
 
   - **The first method** — open two consoles and do any of the following steps:
 
-  1. For the main mode use `make up`:
+    1. For the main mode use `make up`:
 
-     In the first console run:
+       In the first console run:
 
-     ```shell
-     cd docs/documentation
-     make up
-     ```
+       ```shell
+       cd docs/documentation
+       make up
+       ```
 
-     In the second console run:
+       In the second console run:
 
-     ```shell
-     cd docs/site
-     make up
-     ```
+       ```shell
+       cd docs/site
+       make up
+       ```
 
-  2. For the development mode use `make dev` instead:
+    2. For the development mode use `make dev` instead:
 
-     In the first console run:
+       In the first console run:
 
-     ```shell
-     cd docs/documentation
-     make dev
-     ```
+       ```shell
+       cd docs/documentation
+       make dev
+       ```
 
-    In the second console run:
+      In the second console run:
 
-    ```shell
-    cd docs/site
-    make dev
-    ```
+      ```shell
+      cd docs/site
+      make dev
+      ```
 
   - **The second method** — open console and run the necessary containers in the root of the repo:
 
