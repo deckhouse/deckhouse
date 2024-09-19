@@ -59,7 +59,24 @@ Estimates of the resources required for the clusters to run:
 - Add worker nodes to this, taking into account the nature of the workloads.
 
 ## Things to consider when configuring
+### Single-master Installation
 
+{% alert %}
+No failover capability, not recommended for production environments.
+{% endalert %}
+
+[Quick Start](https://deckhouse.io/products/kubernetes-platform/gs/bm/step5.html) allows you to run Deckhouse on a single master node for functional testing by removing taints from it.
+For the normal operation of all Deckhouse components in the [bundle: Default](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/002-deckhouse/configuration.html#parameters-bundle) configuration and default settings, the following specifications are recommended:
+- 6 CPU, 12 GB RAM, 60 GB disk space on a high-speed disk (400+ IOPS)
+
+This configuration will also allow some useful workload to be run, with Deckhouse occupying:
+- 25% CPU, 9 GB RAM, 20 GB disk space
+
+In this configuration, with a load of 2500 rps on a nominal web application (static Nginx page) from 30 pods and incoming traffic of 3 MB/s:
+- Total CPU load will increase to 60%
+- RAM and disk values do not rise, but will actually depend on the number of metrics collected from the applications and the nature of the useful workload processing
+
+It is recommended to conduct load testing of your application and adjust the server's capacity accordingly based on the results.
 ### Master nodes
 
 {% alert %}
