@@ -86,13 +86,6 @@ func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePat
 }
 
 func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider, bundle, devicePath string) error {
-	dataWithoutNodeGroup := withoutNodeGroup(templateData)
-	getDataForStep := func(step string) map[string]interface{} {
-		if step != "node-group" {
-			return dataWithoutNodeGroup
-		}
-		return templateData
-	}
 
 	saveInfo := []saveFromTo{
 		{
@@ -109,7 +102,7 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 		saveInfo = append(saveInfo, saveFromTo{
 			from: filepath.Join(candiBashibleDir, "common-steps", steps),
 			to:   stepsDir,
-			data: getDataForStep(steps),
+			data: templateData,
 		})
 	}
 
