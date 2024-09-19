@@ -15,6 +15,9 @@ properties:
           additionalAPIAudiences:
             description: |
               Список API audience'ов, которые следует добавить при создании токенов ServiceAccount.
+          additionalAPIIssuers:
+            description: |
+              Список дополнительных API issuer'ов, которые следует добавить при создании токенов ServiceAccount.
       admissionPlugins:
         description: |
           Список включенных дополнительных [admission plugin'ов](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers).

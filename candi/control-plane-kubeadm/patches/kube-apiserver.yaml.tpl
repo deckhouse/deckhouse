@@ -153,3 +153,21 @@ spec:
     {{- end }}
   {{- end }}
 {{- end }}
+
+{{- if .apiserver.serviceAccount }}
+  {{- if .apiserver.serviceAccount.additionalAPIIssuers }}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-apiserver
+  namespace: kube-system
+spec:
+  containers:
+  - name: kube-apiserver
+    args:
+    {{- range .apiserver.serviceAccount.additionalAPIIssuers }}
+    - --service-account-issuer={{ . }}
+    {{- end }}
+  {{- end }}
+{{- end }}

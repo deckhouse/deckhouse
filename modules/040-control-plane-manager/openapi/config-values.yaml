@@ -44,6 +44,12 @@ properties:
               A list of API audiences to add when provisioning ServiceAccount tokens.
             items:
               type: string
+          additionalAPIIssuers:
+            type: array
+            description: |
+              A list of API issuers to add when provisioning ServiceAccount tokens.
+            items:
+              type: string
       admissionPlugins:
         type: array
         description: |
