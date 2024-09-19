@@ -295,7 +295,7 @@ func (cb *ContextBuilder) generateBashibleChecksum(checksumCollector hash.Hash, 
 	}
 
 	// render ng steps
-	ngSteps, err := cb.stepsStorage.Render("node-group", bc.Bundle, providerType, bundleRes, bc.NodeGroup.Name())
+	ngSteps, err := cb.stepsStorage.Render("all", bc.Bundle, providerType, bundleRes, bc.NodeGroup.Name())
 	if err != nil {
 		return errors.Wrap(err, "NG steps render failed")
 	}
