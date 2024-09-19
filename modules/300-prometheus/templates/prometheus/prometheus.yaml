@@ -224,12 +224,8 @@ spec:
       {{- with $externalLabels }}
       {{- range $key, $value := . }}
       - sourceLabels: [{{ $key }}]
-        targetLabel: __tmp_{{ $key }}_exists
-      - sourceLabels: [{{ $key }}]
         regex: "^$"
         replacement: {{ $value | quote }}
-      - target_label: __tmp_{{ $key }}_exists
-        action: drop
       {{- end }}
       {{- end }}
     {{- end }}
