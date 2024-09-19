@@ -8,7 +8,7 @@ properties:
     default: null
     deprecated: true
     description: |
-      Deprecated. Moved to [global.modules.storageClass](#parameters-modules-storageclass).
+      > **DEPRECATED**. Moved to [global.modules.storageClass](#parameters-modules-storageclass).
 
       The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
         * If not defined, components use `global.discovery.defaultStorageClass` (which is determined automatically) or `emptyDir` (if `global.discovery.defaultStorageClass` isn't defined).
@@ -22,8 +22,6 @@ properties:
       The storage class to use as default for entire cluster.
         * If defined, all newly created PVCs will use this storage class.
         * This parameter is applied during module activation.
-
-      > **Pay attention to the following:** This value will **OVERRIDE any value** in `cloud-provider-*.storageClass.default` parameters.
   highAvailability:
     type: boolean
     description: |

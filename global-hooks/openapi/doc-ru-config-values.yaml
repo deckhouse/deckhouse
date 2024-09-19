@@ -2,7 +2,7 @@ type: object
 properties:
   storageClass:
     description: |
-      Устаревший параметр. Теперь его значение задается в [global.modules.storageClass](#parameters-modules-storageclass).
+      > **УСТАРЕВШИЙ**. Теперь его значение задается в [global.modules.storageClass](#parameters-modules-storageclass).
 
       Имя storage class, который будет использоваться для всех компонентов Deckhouse (Prometheus, Grafana, OpenVPN и т. д.).
         * Если значение не указано, используется автоматически определяемый `global.discovery.defaultStorageClass`. Если `global.discovery.defaultStorageClass` не определен, используется `emptyDir`.
@@ -15,8 +15,6 @@ properties:
       Имя storage class, который будет использоваться для всего кластера.
         * Если значение указано, то все вновь создаваемые PVC будут использовать указанный storage class.
         * Этот параметр применяется в процессе включения модуля.
-
-      > **Обратите внимание:** Значение этого параметра **ПЕРЕКРЫВАЕТ значения** параметров `cloud-provider-*.storageClass.default`.
   highAvailability:
     description: |
       Параметр глобального включения *режима отказоустойчивости* для модулей, которые его поддерживают.
