@@ -67,7 +67,7 @@
       ```shell
     make docs-down
       ```
-  - To stop the documentation and site containers run:
+  - You can also stop documentation and site containers by running:
 
       ```shell
      werf compose down
