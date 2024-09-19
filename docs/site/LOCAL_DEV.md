@@ -29,16 +29,16 @@
     1. In the first console run:
 
       ```shell
-       cd docs/documentation
-       make dev
-       ```
+      cd docs/documentation
+      make dev
+      ```
 
     2. In the second console run:
 
       ```shell
-       cd docs/site
-       make dev
-       ```
+      cd docs/site
+      make dev
+      ```
 
   - **The second method** — open console and run the necessary containers in the root of the repo:
 
@@ -49,7 +49,7 @@
 
     For development mode use `make docs-dev` instead:
 
-   ```shell
+    ```shell
     cd deckhouse
     make docs-dev
     ```
