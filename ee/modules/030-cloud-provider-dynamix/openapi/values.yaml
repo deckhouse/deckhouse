@@ -252,6 +252,7 @@ properties:
               layout:
                 enum:
                   - Standard
+                  - StandardWithInternalNetwork
                 type: string
       providerDiscoveryData:
         type: object

@@ -18,7 +18,7 @@ shell:
   install:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
-    - export VERSION="v0.1.0"
+    - export VERSION="v0.2.0"
     - export VERSION_COMMON="v0.2.0"
     - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/cloud-controller-manager.git /cloud-controller-manager/src
     - git clone --depth 1 --branch ${VERSION_COMMON} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /dynamix-common
