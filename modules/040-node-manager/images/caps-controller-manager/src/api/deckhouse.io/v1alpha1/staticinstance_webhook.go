@@ -83,7 +83,7 @@ func (r *StaticInstance) ValidateDelete() (admission.Warnings, error) {
 		return nil, apierrors.NewForbidden(schema.GroupResource{
 			Group:    r.GroupVersionKind().Group,
 			Resource: "staticinstances",
-		}, r.Name, errors.New(`if you need to delete a StaticInstance that is not pending or Error, you need to add the label '"node.deckhouse.io/allow-bootstrap": "false"' to the StaticInstance, after which you need to wait until the StaticInstance status becomes 'Pending'. Do not forget to decrease the 'NodeGroup.spec.staticInstances.count' field by 1, if needed`))
+		}, r.Name, errors.New(`if you need to delete a StaticInstance that is not Pending or Error, you need to add the label '"node.deckhouse.io/allow-bootstrap": "false"' to the StaticInstance, after which you need to wait until the StaticInstance status becomes 'Pending'. Do not forget to decrease the 'NodeGroup.spec.staticInstances.count' field by 1, if needed`))
 	}
 
 	return nil, nil
