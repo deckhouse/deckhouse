@@ -150,8 +150,13 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 		}
 		return true
 	})
-	if done == nil || !*done {
+	if done == nil {
 		return ctrl.Result{RequeueAfter: delay}, nil
+	}
+	if !*done {
+		err := errors.New("Failed to connect via tcp")
+		instanceScope.Logger.Error(err, "Failed to connect via tcp to StaticInstance address", "address", address)
+		return ctrl.Result{}, err
 	}
 
 	c.tcpCheckRateLimiter.Forget(address)
