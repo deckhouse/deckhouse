@@ -31,7 +31,6 @@ import (
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeAll: &go_hook.OrderedConfig{Order: 25},
 	// TODO: протестить conversion для global.storageClass -> global.modules.storageClass
-	// TODO: выпилить авто-миграцию global.storageClass -> global.modules.storageClass
 	// TODO: убрать логику internal.defaultStorageClass из helm
 	// TODO: проверить, что в дефолтном кластере (только что созданном) storageClass-ы НЕ МЕНЯЮТСЯ (если не задан `global.defaultStorageClass`)
 
