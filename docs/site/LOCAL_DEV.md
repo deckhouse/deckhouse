@@ -35,12 +35,12 @@
        make dev
        ```
 
-      In the second console run:
+       In the second console run:
 
-      ```shell
-      cd docs/site
-      make dev
-      ```
+       ```shell
+       cd docs/site
+       make dev
+       ```
 
   - **The second method** — open console and run the necessary containers in the root of the repo:
 
