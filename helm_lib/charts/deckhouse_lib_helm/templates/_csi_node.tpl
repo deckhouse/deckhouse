@@ -131,7 +131,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" 10 | nindent 12 }}
-  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "node_driver_registrar_resources" $context | nindent 12 }}
   {{- end }}
       - name: node
@@ -160,7 +160,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "node_resources" $context | nindent 12 }}
   {{- end }}
   {{- if $initContainerCommand }}

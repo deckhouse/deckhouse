@@ -4,7 +4,7 @@ metadata:
   name: instancetypescatalogs.deckhouse.io
   labels:
     heritage: deckhouse
-    module: cluster-autoscaler-crd
+    module: node-manager
 spec:
   group: deckhouse.io
   scope: Cluster

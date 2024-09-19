@@ -42,7 +42,7 @@
 {{- /* returns dashboard-definintions from monitoring/grafana-dashboards/ */ -}}
 {{- define "helm_lib_grafana_dashboard_definitions" -}}
   {{- $context := . }} {{- /* Template context with .Values, .Chart, etc */ -}}
-  {{- if ( $context.Values.global.enabledModules | has "prometheus" ) }}
+  {{- if ( $context.Values.global.enabledModules | has "prometheus-crd" ) }}
 {{- include "helm_lib_grafana_dashboard_definitions_recursion" (list $context "monitoring/grafana-dashboards") }}
   {{- end }}
 {{- end }}

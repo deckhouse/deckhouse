@@ -39,8 +39,10 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
+// fake *-crd modules are required for backward compatibility with lib_helm library
+// TODO: remove fake crd modules
 const globalValues = `
-  enabledModules: ["vertical-pod-autoscaler", "cloud-provider-yandex", "operator-prometheus"]
+  enabledModules: ["vertical-pod-autoscaler", "cloud-provider-yandex", "operator-prometheus", "operator-prometheus-crd"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:

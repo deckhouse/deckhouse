@@ -303,7 +303,7 @@ func HookExecutionConfigInit(initValues, initConfigValues string, k8sVersion ...
 		if err != nil {
 			panic(err)
 		}
-		mergedValuesYaml, err := addonutils.MergeValues(defaultConfigValues, values).YamlBytes()
+		mergedValuesYaml, err := addonutils.MergeValues(addonutils.MergeValues(defaultConfigValues, values), configValues).YamlBytes()
 		if err != nil {
 			panic(err)
 		}

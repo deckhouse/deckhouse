@@ -82,7 +82,7 @@ memory: 50Mi
   {{- $livenessprobeImage := include "helm_lib_module_common_image_no_fail" (list $context $livenessprobeImageName) }}
 
   {{- if $provisionerImage }}
-    {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+    {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -239,7 +239,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "provisioner_resources" $context | nindent 12 }}
   {{- end }}
       - name: attacher
@@ -266,7 +266,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "attacher_resources" $context | nindent 12 }}
   {{- end }}
             {{- if $resizerEnabled }}
@@ -294,7 +294,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "resizer_resources" $context | nindent 12 }}
   {{- end }}
             {{- end }}
@@ -321,7 +321,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "syncer_resources" $context | nindent 12 }}
   {{- end }}
             {{- end }}
@@ -350,7 +350,7 @@ spec:
         resources:
           requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "snapshotter_resources" $context | nindent 12 }}
   {{- end }}
             {{- end }}
@@ -373,7 +373,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "livenessprobe_resources" $context | nindent 12 }}
   {{- end }}
       - name: controller
@@ -409,7 +409,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "controller_resources" $context | nindent 12 }}
   {{- end }}
     {{- if $additionalContainers }}
