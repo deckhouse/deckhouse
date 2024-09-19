@@ -133,11 +133,16 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 			conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection, err.Error(), clusterv1.ConditionSeverityError, "")
 			err2 := instanceScope.Patch(ctx)
 			if err2 != nil {
-				instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
+				instanceScope.Logger.Error(err, "Failed to set StaticInstance: tcpCheck")
 			}
 			return false
 		}
 		defer conn.Close()
+		conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
+		err2 := instanceScope.Patch(ctx)
+		if err2 != nil {
+			instanceScope.Logger.Error(err, "Failed to set StaticInstance: tcpCheck")
+		}
 
 		return true
 	})
