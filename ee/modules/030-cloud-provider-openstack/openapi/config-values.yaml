@@ -151,17 +151,18 @@ properties:
           - [".*-hdd", "iscsi-fast"]
       default:
         type: string
+        deprecated: true
+        x-doc-deprecated: true
         x-examples:
           - "ceph-ssd"
         description: |
+          > **DEPRECATED**. Use [global.defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass) instead.
+
           The name of StorageClass that will be used in the cluster by default.
 
           If the parameter is omitted, the default StorageClass is either:
             * an arbitrary StorageClass present in the cluster that has the default annotation;
             * the first StorageClass created by the module (in accordance with the order in OpenStack).
-
-          > **ATTENTION!** If the [defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass)
-          parameter is specified in the `global` module settings, then **its value will be used by default**, **OVERRIDING** this one.
       topologyEnabled:
         type: boolean
         description: |

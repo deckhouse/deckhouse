@@ -391,7 +391,7 @@ cloudProviderOpenstack:
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
-		It("Should discover volumeTypes without excluded and default set", func() {
+		It("Should discover volumeTypes without excluded and DEPRECATED default NOT set", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cloudProviderOpenstack.internal.storageClasses").String()).To(MatchJSON(`
 [
@@ -413,79 +413,7 @@ cloudProviderOpenstack:
   }
 ]
 `))
-			Expect(f.ValuesGet("cloudProviderOpenstack.internal.defaultStorageClass").String()).To(Equal(`other-bar`))
-		})
-	})
-
-	initValues = `
-global:
-  defaultClusterStorageClass: default-cluster-sc
-cloudProviderOpenstack:
-  internal:
-    connection:
-      authURL: https://test.tests.com:5000/v3/
-      username: jamie
-      password: nein
-      domainName: default
-      tenantName: default
-      tenantID: "123"
-      region: HetznerFinland
-  storageClass:
-    exclude:
-    - .*-foo
-    - bar
-    default: other-bar
-`
-
-	g := HookExecutionConfigInit(initValues, `{}`)
-	Context("Cluster with `global.defaultClusterStorageClass`", func() {
-		BeforeEach(func() {
-			g.BindingContexts.Set(g.KubeStateSet(state))
-			g.RunHook()
-		})
-
-		It("All values should be gathered from discovered data", func() {
-			Expect(g).To(ExecuteSuccessfully())
-		})
-
-		It("Default storage class should be overrided by `global.defaultClusterStorageClass`", func() {
-			Expect(g.ValuesGet("cloudProviderOpenstack.internal.defaultStorageClass").String()).To(Equal(`default-cluster-sc`))
-		})
-	})
-
-	initValues = `
-global:
-  defaultClusterStorageClass: ""
-cloudProviderOpenstack:
-  internal:
-    connection:
-      authURL: https://test.tests.com:5000/v3/
-      username: jamie
-      password: nein
-      domainName: default
-      tenantName: default
-      tenantID: "123"
-      region: HetznerFinland
-  storageClass:
-    exclude:
-    - .*-foo
-    - bar
-    default: other-bar
-`
-
-	h := HookExecutionConfigInit(initValues, `{}`)
-	Context("Cluster with empty `global.defaultClusterStorageClass`", func() {
-		BeforeEach(func() {
-			h.BindingContexts.Set(h.KubeStateSet(state))
-			h.RunHook()
-		})
-
-		It("All values should be gathered from discovered data", func() {
-			Expect(h).To(ExecuteSuccessfully())
-		})
-
-		It("Default storage class should be `other-bar` if `global.defaultClusterStorageClass` is empty", func() {
-			Expect(h.ValuesGet("cloudProviderOpenstack.internal.defaultStorageClass").String()).To(Equal(`other-bar`))
+			Expect(f.ValuesGet("cloudProviderOpenstack.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
 	})
 })
