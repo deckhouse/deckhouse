@@ -28,6 +28,9 @@ const (
 	// Checking the linked object for authorization (SSHCredentials)
 	StaticInstanceWaitingForCredentialsRefReason = "WaitingForCredentialsRefToBeAssigned"
 
+	// Checking tcp connection
+	StaticInstanceCheckTcpConnection = "CheckTcpConnection"
+
 	// Checking ssh connection
 	StaticInstanceCheckSshCondition = "CheckSshCondition"
 
