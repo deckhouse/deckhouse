@@ -42,10 +42,10 @@
 	
   - **The second method** — open console and run the necessary containers in the root of the repo:
    
-      ```shell
+    ```shell
     cd deckhouse
     make docs
-      ```
+    ```
 	
     For development mode use `make docs-dev` instead:
 	
@@ -59,19 +59,19 @@
 - To stop the running containers use the following command:
   - For the first method (in the each console):
 
-      ```shell
+    ```shell
     make down
-      ```
+    ```
   - For the second method:
 
-      ```shell
+    ```shell
     make docs-down
-      ```
+    ```
   - You can also stop documentation and site containers by running:
 
-      ```shell
-     werf compose down
-      ```
+    ```shell
+    werf compose down
+    ```
 
 ## How to debug
 
