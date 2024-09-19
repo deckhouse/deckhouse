@@ -8,37 +8,39 @@
 
 - Open console and run documentation and site containers with one of the following methods:
 
-  - **The first method** — open two consoles and do the following steps.
+  - **The first method** — open two consoles and do any of the following steps:
 
-    1. In the first console run:
+  1. For the main mode use `make up`:
 
-       ```shell
-       cd docs/documentation
-       make up
-       ```
+     In the first console run:
 
-    2. In the second console run:
+     ```shell
+     cd docs/documentation
+     make up
+     ```
 
-       ```shell
-       cd docs/site
-       make up
-       ```
+     In the second console run:
 
-    For development mode use `make dev` instead:
+     ```shell
+     cd docs/site
+     make up
+     ```
 
-    1. In the first console run:
+  2. For the development mode use `make dev` instead:
 
-      ```shell
-      cd docs/documentation
-      make dev
-      ```
+     In the first console run:
 
-    2. In the second console run:
+     ```shell
+     cd docs/documentation
+     make dev
+     ```
 
-      ```shell
-      cd docs/site
-      make dev
-      ```
+    In the second console run:
+
+    ```shell
+    cd docs/site
+    make dev
+    ```
 
   - **The second method** — open console and run the necessary containers in the root of the repo:
 
