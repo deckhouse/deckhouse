@@ -86,7 +86,6 @@ func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePat
 }
 
 func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider, bundle, devicePath string) error {
-	dataWithoutNodeGroup := withoutNodeGroup(templateData)
 
 	saveInfo := []saveFromTo{
 		{
@@ -103,7 +102,7 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 		saveInfo = append(saveInfo, saveFromTo{
 			from: filepath.Join(candiBashibleDir, "common-steps", steps),
 			to:   stepsDir,
-			data: dataWithoutNodeGroup,
+			data: templateData,
 		})
 	}
 
@@ -111,7 +110,7 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 		saveInfo = append(saveInfo, saveFromTo{
 			from: filepath.Join(candiBashibleDir, "bundles", bundle, steps),
 			to:   stepsDir,
-			data: dataWithoutNodeGroup,
+			data: templateData,
 		})
 	}
 
@@ -119,7 +118,7 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 		saveInfo = append(saveInfo, saveFromTo{
 			from: filepath.Join(candiDir, "cloud-providers", provider, "bashible", "common-steps", steps),
 			to:   stepsDir,
-			data: dataWithoutNodeGroup,
+			data: templateData,
 		})
 	}
 
@@ -127,7 +126,7 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 		saveInfo = append(saveInfo, saveFromTo{
 			from: filepath.Join(candiDir, "cloud-providers", provider, "bashible", "bundles", bundle, steps),
 			to:   stepsDir,
-			data: dataWithoutNodeGroup,
+			data: templateData,
 		})
 	}
 
