@@ -126,24 +126,28 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 	delay := c.tcpCheckRateLimiter.When(address)
 
 	done := c.tcpCheckTaskManager.spawn(taskID(address), func() bool {
+		status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
 		conn, err := net.DialTimeout("tcp", address, delay)
 		if err != nil {
-			c.recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceTcpFailed", err.Error())
-			instanceScope.Logger.Error(err, "Failed to check the StaticInstance address by establishing a tcp connection", "address", address)
-			conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection, err.Error(), clusterv1.ConditionSeverityError, "")
-			err2 := instanceScope.Patch(ctx)
-			if err2 != nil {
-				instanceScope.Logger.Error(err, "Failed to set StaticInstance: tcpCheck")
+			if status == nil || status.Status != corev1.ConditionFalse || status.Reason != err.Error() {
+				c.recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceTcpFailed", err.Error())
+				instanceScope.Logger.Error(err, "Failed to check the StaticInstance address by establishing a tcp connection", "address", address)
+				conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection, err.Error(), clusterv1.ConditionSeverityError, "")
+				err2 := instanceScope.Patch(ctx)
+				if err2 != nil {
+					instanceScope.Logger.Error(err, "Failed to set StaticInstance: tcpCheck")
+				}
 			}
 			return false
 		}
 		defer conn.Close()
-		conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
-		err2 := instanceScope.Patch(ctx)
-		if err2 != nil {
-			instanceScope.Logger.Error(err, "Failed to set StaticInstance: tcpCheck")
+		if status == nil || status.Status != corev1.ConditionTrue {
+			conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
+			err := instanceScope.Patch(ctx)
+			if err != nil {
+				instanceScope.Logger.Error(err, "Failed to set StaticInstance: tcpCheck")
+			}
 		}
-
 		return true
 	})
 	if done == nil || !*done {
@@ -177,10 +181,10 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 		}
 		if status == nil || status.Status != corev1.ConditionTrue {
 			conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
-		}
-		err = instanceScope.Patch(ctx)
-		if err != nil {
-			instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
+			err = instanceScope.Patch(ctx)
+			if err != nil {
+				instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
+			}
 		}
 		return true
 	})
