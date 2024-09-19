@@ -24,7 +24,7 @@
        make up
        ```
 
-  For development mode use `make dev` instead:
+    For development mode use `make dev` instead:
 
     1. In the first console run:
 
