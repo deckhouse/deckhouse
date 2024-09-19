@@ -21,7 +21,10 @@ on:
   pull_request_target:
      types:
       - opened
+      - reopened
+      - ready_for_review
       - edited
+      - synchronize
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
