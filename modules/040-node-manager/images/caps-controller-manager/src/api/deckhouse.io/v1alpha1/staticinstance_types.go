@@ -66,7 +66,6 @@ type StaticInstanceStatusCurrentStatusPhase string
 
 const (
 	StaticInstanceStatusCurrentStatusPhaseError         StaticInstanceStatusCurrentStatusPhase = "Error"
-	StaticInstanceStatusCurrentStatusPhaseInit          StaticInstanceStatusCurrentStatusPhase = "Init"
 	StaticInstanceStatusCurrentStatusPhasePending       StaticInstanceStatusCurrentStatusPhase = "Pending"
 	StaticInstanceStatusCurrentStatusPhaseBootstrapping StaticInstanceStatusCurrentStatusPhase = "Bootstrapping"
 	StaticInstanceStatusCurrentStatusPhaseRunning       StaticInstanceStatusCurrentStatusPhase = "Running"

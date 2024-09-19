@@ -110,11 +110,6 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 		return ctrl.Result{}, errors.Wrap(err, "failed to load SSHCredentials")
 	} else {
-		if instanceScope.Instance.Status.CurrentStatus == nil ||
-			instanceScope.Instance.Status.CurrentStatus.Phase == "" ||
-			instanceScope.Instance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseError {
-			instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseInit)
-		}
 		if status == nil || status.Status != corev1.ConditionTrue {
 			conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason)
 		}
@@ -165,9 +160,12 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 		return r.adoptBootstrappedStaticInstance(ctx, instanceScope)
 	}
 
-	if instanceScope.Instance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseInit {
-		conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceAddedToNodeGroupCondition)
+	if instanceScope.Instance.Status.CurrentStatus == nil ||
+		instanceScope.Instance.Status.CurrentStatus.Phase == "" ||
+		(instanceScope.Instance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseError &&
+			conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason).Status == corev1.ConditionTrue) {
 
+		conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceAddedToNodeGroupCondition)
 		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
 
 		err := instanceScope.Patch(ctx)
