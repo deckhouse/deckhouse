@@ -54,23 +54,9 @@ func storageClasses(input *go_hook.HookInput, pathFunc func(path string) string,
 
 	input.Values.Set(pathFunc("internal.storageClasses"), storageClassesFiltered)
 
-	internalDefaultSCPath := pathFunc("internal.defaultStorageClass")
-	globalDefaultClusterStorageClass := input.Values.Get("global.defaultClusterStorageClass").String()
-
-	if globalDefaultClusterStorageClass != "" {
-		// override module's storageClass.default with global.defaultClusterStorageClass
-		input.LogEntry.Warnf("Override `%s` with `global.defaultClusterStorageClass` %q", pathFunc("storageClass.default"), globalDefaultClusterStorageClass)
-		input.Values.Set(internalDefaultSCPath, globalDefaultClusterStorageClass)
-	} else {
-		// if global.defaultClusterStorageClass is not set, respect module's storageClass.default
-		def, ok := input.Values.GetOk(pathFunc("storageClass.default"))
-
-		if ok {
-			input.Values.Set(internalDefaultSCPath, def.String())
-		} else {
-			input.Values.Remove(internalDefaultSCPath)
-		}
-	}
+	// cloud-provider's `internal.defaultStorageClass` (getted from `<cloud-provider>.storageClass.default`) was deprecated and
+	// should NOT used. Now `global.defaultClusterStorageClass` should used instead.
+	input.Values.Remove(pathFunc("internal.defaultStorageClass"))
 
 	return nil
 }
