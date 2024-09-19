@@ -255,7 +255,7 @@ data:
           }
 ]
 `))
-			Expect(b.ValuesGet("cloudProviderZvirt.internal.defaultStorageClass").String()).Should(Equal("default"))
+			Expect(b.ValuesGet("cloudProviderZvirt.internal.defaultStorageClass").Exists()).Should(BeFalse())
 		})
 	})
 
@@ -358,64 +358,6 @@ cloudProviderZvirt:
           }
 ]
 `))
-			Expect(f.ValuesGet("cloudProviderZvirt.internal.defaultStorageClass").String()).To(Equal(`d1`))
 		})
 	})
-
-	initValues = `
-global:
-  defaultClusterStorageClass: default-cluster-sc
-cloudProviderZvirt:
-  internal: {}
-  storageClass:
-    exclude:
-    - d3*
-    - bar
-    default: d1
-`
-
-	g := HookExecutionConfigInit(initValues, `{}`)
-	Context("Cluster with `global.defaultClusterStorageClass`", func() {
-		BeforeEach(func() {
-			g.BindingContexts.Set(g.KubeStateSet(state))
-			g.RunHook()
-		})
-
-		It("All values should be gathered from discovered data", func() {
-			Expect(g).To(ExecuteSuccessfully())
-		})
-
-		It("Default storage class should be overrided by `global.defaultClusterStorageClass`", func() {
-			Expect(g.ValuesGet("cloudProviderZvirt.internal.defaultStorageClass").String()).To(Equal(`default-cluster-sc`))
-		})
-	})
-
-	initValues = `
-global:
-  defaultClusterStorageClass: ""
-cloudProviderZvirt:
-  internal: {}
-  storageClass:
-    exclude:
-    - d3*
-    - bar
-    default: d1
-`
-
-	h := HookExecutionConfigInit(initValues, `{}`)
-	Context("Cluster with empty `global.defaultClusterStorageClass`", func() {
-		BeforeEach(func() {
-			h.BindingContexts.Set(h.KubeStateSet(state))
-			h.RunHook()
-		})
-
-		It("All values should be gathered from discovered data", func() {
-			Expect(h).To(ExecuteSuccessfully())
-		})
-
-		It("Default storage class should be `d1` if `global.defaultClusterStorageClass` is empty", func() {
-			Expect(h.ValuesGet("cloudProviderZvirt.internal.defaultStorageClass").String()).To(Equal(`d1`))
-		})
-	})
-
 })

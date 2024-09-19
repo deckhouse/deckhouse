@@ -197,8 +197,6 @@ func handleDiscoveryDataVolumeTypes(
 
 	input.LogEntry.Infof("Found zvirt storage classes using StorageClass snapshots, StorageDomain discovery data: %v", storageClasses)
 
-	input.LogEntry.Infof("Found zvirt storage classes using StorageClass snapshots, StorageDomain discovery data: %v", storageClasses)
-
 	setStorageClassesValues(input, storageClasses, defaultSCName)
 }
 
@@ -228,31 +226,11 @@ func setStorageClassesValues(
 	storageClasses []storageClass,
 	defaultSCName string,
 ) {
-	const internalDefaultSCPath = "cloudProviderZvirt.internal.defaultStorageClass"
-
 	input.Values.Set("cloudProviderZvirt.internal.storageClasses", storageClasses)
 
-	globalDefaultClusterStorageClass := input.Values.Get("global.defaultClusterStorageClass").String()
-	if globalDefaultClusterStorageClass != "" {
-		// override module's storageClass.default with global.defaultClusterStorageClass
-		input.LogEntry.Warnf("Override `cloudProviderZvirt.storageClass.default` with `global.defaultClusterStorageClass` %q", globalDefaultClusterStorageClass)
-		input.Values.Set(internalDefaultSCPath, globalDefaultClusterStorageClass)
-		return
-	}
-
-	// if `global.defaultClusterStorageClass` is not set, then respect module's storageClass.default
-	def, ok := input.Values.GetOk("cloudProviderZvirt.storageClass.default")
-	if ok {
-		input.Values.Set(internalDefaultSCPath, def.String())
-		return
-	}
-
-	if defaultSCName != "" {
-		input.Values.Set(internalDefaultSCPath, defaultSCName)
-		return
-	}
-
-	input.Values.Remove(internalDefaultSCPath)
+	// cloud-provider's `internal.defaultStorageClass` (getted from `<cloud-provider>.storageClass.default`) was deprecated and
+	// should NOT used. Now `global.defaultClusterStorageClass` should used instead.
+	input.Values.Remove("cloudProviderZvirt.internal.defaultStorageClass")
 }
 
 type storageClass struct {
