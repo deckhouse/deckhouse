@@ -224,13 +224,8 @@ spec:
       {{- with $externalLabels }}
       {{- range $key, $value := . }}
       - sourceLabels: [{{ $key }}]
-        targetLabel: __tmp_{{ $key }}_exists
-      - sourceLabels: [__tmp_{{ $key }}_exists]
         regex: "^$"
-        targetLabel: {{ $key }}
         replacement: {{ $value | quote }}
-      - target_label: __tmp_{{ $key }}_exists
-        action: drop
       {{- end }}
       {{- end }}
     {{- end }}
@@ -252,9 +247,9 @@ spec:
   - name: prometheus-main-additional-configs
     key: alert-relabels.yaml
     {{- if .Values.prometheus.externalLabels }}
-  - name: prometheus-alert-relable-secret
+  - name: prometheus-external-labels-alert-relabel-secret
     key: prometheus-alert-relabels.yaml
-    {{ end }}
+    {{- end }}
   additionalAlertManagerConfigs:
     name: prometheus-main-additional-configs
     key: alert-managers.yaml
