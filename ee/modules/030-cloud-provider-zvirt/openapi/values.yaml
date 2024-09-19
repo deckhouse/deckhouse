@@ -270,5 +270,7 @@ properties:
               type: string
             storageDomain:
               type: string
+            allowVolumeExpansion:
+              type: boolean
       defaultStorageClass:
         type: string

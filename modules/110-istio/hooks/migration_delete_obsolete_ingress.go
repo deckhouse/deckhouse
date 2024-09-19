@@ -17,16 +17,34 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
+
+const (
+	istioNs         = "d8-istio"
+	obsoleteIngress = "kiali-rewrite"
+)
+
+// This hook deletes d8-istio/kiali-rewrite obsolete ingress
+// TODO: Remove this hook after 1.65
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 10},
-}, removeValidatingWebhook)
+}, dependency.WithExternalDependencies(deleteIngress))
 
-func removeValidatingWebhook(input *go_hook.HookInput) error {
-	input.PatchCollector.Delete("apiextensions.k8s.io/v1", "CustomResourceDefinition", "", "addresspools.metallb.io", object_patch.InForeground())
+func deleteIngress(_ *go_hook.HookInput, dc dependency.Container) error {
+	kubeClient := dc.MustGetK8sClient()
+
+	if err := kubeClient.NetworkingV1().Ingresses(istioNs).Delete(context.Background(), obsoleteIngress, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+
 	return nil
 }

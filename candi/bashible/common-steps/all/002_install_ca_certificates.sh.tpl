@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,22 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Avoid problems with expired ca-certificates
-bb-apt-install --force ca-certificates
+bb-package-install "d8-ca-updater:{{ .images.registrypackages.d8CaUpdater060824 }}"
+
+REGISTRY_CACERT_PATH="/opt/deckhouse/share/ca-certificates/registry-ca.crt"
 
 {{- if .registry.ca }}
-bb-event-on 'registry-ca-changed' '_update_ca_certificates'
-_update_ca_certificates() {
-  bb-flag-set containerd-need-restart
-  update-ca-certificates
-}
-
-bb-sync-file /usr/local/share/ca-certificates/registry-ca.crt - registry-ca-changed << "EOF"
+bb-sync-file $REGISTRY_CACERT_PATH - << "EOF"
 {{ .registry.ca }}
 EOF
 {{- else }}
-if [ -f /usr/local/share/ca-certificates/registry-ca.crt ]; then
-  rm -f /usr/local/share/ca-certificates/registry-ca.crt
-  _update_ca_certificates
+if [ -f $REGISTRY_CACERT_PATH ]; then
+  rm -f $REGISTRY_CACERT_PATH
 fi
 {{- end }}

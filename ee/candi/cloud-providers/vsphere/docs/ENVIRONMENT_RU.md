@@ -73,7 +73,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
 govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
 govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
 
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
 ```
 

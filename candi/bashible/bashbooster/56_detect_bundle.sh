@@ -68,7 +68,7 @@ bb-is-bundle(){
       bb-exit 1 "ERROR: Can't determine OS! No ID in /etc/os-release."
     ;;
   esac
-  
+
   if [ -n "$os" ]; then
     echo "$os"
   else
