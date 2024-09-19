@@ -229,7 +229,7 @@ data:
 		})
 	})
 
-	Context("Cluster has only storage classes wit default", func() {
+	Context("Cluster has only storage classes with default", func() {
 		BeforeEach(func() {
 			b.BindingContexts.Set(b.KubeStateSet(storageClassesWithDefault))
 			b.RunHook()
@@ -249,7 +249,6 @@ data:
           }
 ]
 `))
-			Expect(b.ValuesGet("cloudProviderVcd.internal.defaultStorageClass").String()).Should(Equal("default"))
 		})
 	})
 
@@ -347,64 +346,7 @@ cloudProviderVcd:
           }
 ]
 `))
-			Expect(f.ValuesGet("cloudProviderVcd.internal.defaultStorageClass").String()).To(Equal(`d1`))
+			Expect(f.ValuesGet("cloudProviderVcd.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
 	})
-
-	initValues = `
-global:
-  defaultClusterStorageClass: default-cluster-sc
-cloudProviderVcd:
-  internal: {}
-  storageClass:
-    exclude:
-    - d3*
-    - bar
-    default: d1
-`
-
-	g := HookExecutionConfigInit(initValues, `{}`)
-	Context("Cluster with `global.defaultClusterStorageClass`", func() {
-		BeforeEach(func() {
-			g.BindingContexts.Set(g.KubeStateSet(state))
-			g.RunHook()
-		})
-
-		It("All values should be gathered from discovered data", func() {
-			Expect(g).To(ExecuteSuccessfully())
-		})
-
-		It("Default storage class should be overrided by `global.defaultClusterStorageClass`", func() {
-			Expect(g.ValuesGet("cloudProviderVcd.internal.defaultStorageClass").String()).To(Equal(`default-cluster-sc`))
-		})
-	})
-
-	initValues = `
-global:
-  defaultClusterStorageClass: ""
-cloudProviderVcd:
-  internal: {}
-  storageClass:
-    exclude:
-    - d3*
-    - bar
-    default: d1
-`
-
-	h := HookExecutionConfigInit(initValues, `{}`)
-	Context("Cluster with empty `global.defaultClusterStorageClass`", func() {
-		BeforeEach(func() {
-			h.BindingContexts.Set(h.KubeStateSet(state))
-			h.RunHook()
-		})
-
-		It("All values should be gathered from discovered data", func() {
-			Expect(h).To(ExecuteSuccessfully())
-		})
-
-		It("Default storage class should be `d1` if `global.defaultClusterStorageClass` is empty", func() {
-			Expect(h.ValuesGet("cloudProviderVcd.internal.defaultStorageClass").String()).To(Equal(`d1`))
-		})
-	})
-
 })

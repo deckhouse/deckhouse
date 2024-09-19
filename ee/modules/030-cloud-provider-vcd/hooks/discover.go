@@ -179,31 +179,11 @@ func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, volumeTypes []v1al
 }
 
 func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageClass, defaultSCName string) {
-	const internalDefaultSCPath = "cloudProviderVcd.internal.defaultStorageClass"
-
 	input.Values.Set("cloudProviderVcd.internal.storageClasses", storageClasses)
 
-	globalDefaultClusterStorageClass := input.Values.Get("global.defaultClusterStorageClass").String()
-	if globalDefaultClusterStorageClass != "" {
-		// override module's storageClass.default with global.defaultClusterStorageClass
-		input.LogEntry.Warnf("Override `cloudProviderVcd.storageClass.default` with `global.defaultClusterStorageClass` %q", globalDefaultClusterStorageClass)
-		input.Values.Set(internalDefaultSCPath, globalDefaultClusterStorageClass)
-		return
-	}
-
-	// if `global.defaultClusterStorageClass` is not set, then respect module's storageClass.default
-	def, ok := input.Values.GetOk("cloudProviderVcd.storageClass.default")
-	if ok {
-		input.Values.Set(internalDefaultSCPath, def.String())
-		return
-	}
-
-	if defaultSCName != "" {
-		input.Values.Set(internalDefaultSCPath, defaultSCName)
-		return
-	}
-
-	input.Values.Remove(internalDefaultSCPath)
+	// cloud-provider's `internal.defaultStorageClass` (getted from `<cloud-provider>.storageClass.default`) was deprecated and
+	// should NOT used. Now `global.defaultClusterStorageClass` should used instead.
+	input.Values.Remove("cloudProviderVcd.internal.defaultStorageClass")
 }
 
 // Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
