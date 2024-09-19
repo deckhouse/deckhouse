@@ -12,33 +12,33 @@
 
     1. In the first console run:
 		
-      ```shell
-    cd docs/documentation
-    make up 
-      ```
+       ```shell
+       cd docs/documentation
+       make up 
+       ```
 
     2. In the second console run:
 
-      ```shell
-    cd docs/site
-    make up 
-      ```
+       ```shell
+       cd docs/site
+       make up 
+       ```
 	
 	For development mode use `make dev` instead:
 	
     1. In the first console run:
   
-	  ```shell
-    cd docs/documentation
-    make dev
-    ```
+	     ```shell
+       cd docs/documentation
+       make dev
+       ```
 	
     2. In the second console run:
 	
-	  ```shell
-    cd docs/site
-    make dev
-    ```
+	     ```shell
+       cd docs/site
+       make dev
+       ```
 	
   - **The second method** — open console and run the necessary containers in the root of the repo:
    
