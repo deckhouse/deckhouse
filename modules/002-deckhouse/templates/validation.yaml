@@ -170,7 +170,7 @@ spec:
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'exclude-users'
-      expression: '!(["system:serviceaccount:d8-system:deckhouse"].exists(e, (e == request.userInfo.username)))'
+      expression: '!(["system:serviceaccount:d8-system:deckhouse", "kubernetes-admin"].exists(e, (e == request.userInfo.username)))'
   validations:
     - expression: |
         !(
@@ -185,7 +185,7 @@ spec:
 {{- else }}
   validations:
     - expression: |
-        request.userInfo.username == 'system:serviceaccount:d8-system:deckhouse' || !(
+        ["system:serviceaccount:d8-system:deckhouse", "kubernetes-admin"].exists(e, (e == request.userInfo.username)) || !(
           (object != null && has(object.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in object.metadata.annotations) ||
           (oldObject != null && has(oldObject.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in oldObject.metadata.annotations)
         )
