@@ -1,4 +1,4 @@
-# Running a site with the documentation locally.
+# Running a site with the documentation locally
 
 - Clone repo firstly.
 
@@ -24,18 +24,18 @@
        make up
        ```
 
-	For development mode use `make dev` instead:
+ For development mode use `make dev` instead:
 
     1. In the first console run:
 
-	     ```shell
+      ```shell
        cd docs/documentation
        make dev
        ```
 
     2. In the second console run:
 
-	     ```shell
+      ```shell
        cd docs/site
        make dev
        ```
@@ -49,7 +49,7 @@
 
     For development mode use `make docs-dev` instead:
 
-	  ```shell
+   ```shell
     cd deckhouse
     make docs-dev
     ```
@@ -62,11 +62,13 @@
     ```shell
     make down
     ```
+
   - For the second method:
 
     ```shell
     make docs-down
     ```
+
   - You can also stop documentation and site containers by running:
 
     ```shell
