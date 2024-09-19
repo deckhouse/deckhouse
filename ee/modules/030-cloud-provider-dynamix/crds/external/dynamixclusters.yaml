@@ -58,12 +58,6 @@ spec:
                     - host
                     - port
                   type: object
-                externalNetwork:
-                  description: ExternalNetwork holds Dynamix external network name.
-                  type: string
-                internalNetwork:
-                  description: InternalNetwork holds Dynamix internal network name.
-                  type: string
                 resourceGroup:
                   description: ResourceGroup holds Dynamix resource group name.
                   type: string
