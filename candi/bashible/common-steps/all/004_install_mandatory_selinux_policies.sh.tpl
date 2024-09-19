@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if ! command -v getenforce &> /dev/null; then 
+if ! command -v getenforce >/dev/null 2>&1; then 
   exit 0
 fi
 

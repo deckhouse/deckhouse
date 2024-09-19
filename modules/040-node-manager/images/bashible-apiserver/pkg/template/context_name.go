@@ -5,11 +5,10 @@ import (
 	"strings"
 )
 
-// Parses resource name that is expected to be of form {os}.{target} with hyphens as delimiters,
+// Parses resource name for nodegroup bundles that is expected to be of form {os}.{target} with hyphens as delimiters,
 // e.g.
 //
 //	`ubuntu-lts.master`  for nodegroup bundles
-//	`ubuntu-lts.1-19`    for generic bundles
 func ParseName(name string) (string, string, error) {
 	parts := strings.Split(name, ".")
 	if len(parts) != 2 {
@@ -28,16 +27,6 @@ func GetNodegroupContextKey(name string) (string, error) {
 		return "", fmt.Errorf("bad os name: %v", err)
 	}
 	return fmt.Sprintf("bundle-%s-%s", os, ng), nil
-}
-
-// GetVersionContextKey parses context secretKey for kubernetes bundles
-func GetVersionContextKey(name string) (string, error) {
-	os, version, err := ParseName(name)
-	if err != nil {
-		return "", fmt.Errorf("bad os name: %v", err)
-	}
-	version = strings.ReplaceAll(version, "-", ".")
-	return fmt.Sprintf("bundle-%s-%s", os, version), nil
 }
 
 // GetBashibleContextKey parses context secretKey bashible
