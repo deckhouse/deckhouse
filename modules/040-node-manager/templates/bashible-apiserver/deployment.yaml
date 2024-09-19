@@ -151,8 +151,6 @@ spec:
     {{- end }}
     allowedBundles:
       {{- $.Values.nodeManager.allowedBundles | toYaml | nindent 6 }}
-    allowedKubernetesVersions:
-      {{- $.Values.nodeManager.allowedKubernetesVersions | toYaml | nindent 6 }}
     nodeGroups:
       {{- $.Values.nodeManager.internal.nodeGroups | toYaml | nindent 6 }}
     nodeStatusUpdateFrequency: {{ $.Values.nodeManager.internal.nodeStatusUpdateFrequency | toYaml | default 0 }}
