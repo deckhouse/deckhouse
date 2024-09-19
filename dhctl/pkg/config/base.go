@@ -42,7 +42,7 @@ var (
 	imagesDigestsJSON = candiDir + "/images_digests.json"
 
 	// don't forget to update the version in release requirements (release.yaml) 'autoK8sVersion' key
-	DefaultKubernetesVersion = "1.27"
+	DefaultKubernetesVersion = "1.29"
 )
 
 func LoadConfigFromFile(paths []string, opts ...ValidateOption) (*MetaConfig, error) {
