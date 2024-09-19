@@ -1,8 +1,8 @@
 diff --git a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go b/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go
-index c3deb5e64..2db8bd502 100644
+index b6dfeb84d..2f3b18d05 100644
 --- a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go
 +++ b/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go
-@@ -733,7 +733,27 @@ func (m *McmManager) GetMachineDeploymentNodeTemplate(machinedeployment *Machine
+@@ -836,7 +836,27 @@ func (m *McmManager) GetMachineDeploymentNodeTemplate(machinedeployment *Machine
  			return nil, cloudprovider.ErrNotImplemented
  		}
  	default:

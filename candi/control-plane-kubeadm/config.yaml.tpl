@@ -3,13 +3,13 @@ RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 {{- $featureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," }}
-{{- if semverCompare ">= 1.26" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare "> 1.26" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "ValidatingAdmissionPolicy=true" | join "," }}
 {{- end }}
 {{- if semverCompare "> 1.26" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "AdmissionWebhookMatchConditions=true" | join "," }}
 {{- end }}
-{{- if semverCompare "< 1.27" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare "= 1.27" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" | join "," }}
 {{- end }}
 {{- if semverCompare "< 1.28" .clusterConfiguration.kubernetesVersion }}
@@ -74,7 +74,7 @@ apiServer:
     feature-gates: {{ $featureGates | quote }}
 {{- if semverCompare ">= 1.28" .clusterConfiguration.kubernetesVersion }}
     runtime-config: "admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true"
-{{- else if semverCompare ">= 1.26" .clusterConfiguration.kubernetesVersion }}
+{{- else if semverCompare "> 1.26" .clusterConfiguration.kubernetesVersion }}
     runtime-config: "admissionregistration.k8s.io/v1alpha1=true"
 {{- end }}
 {{- if hasKey . "arguments" }}
@@ -169,7 +169,7 @@ controllerManager:
     node-monitor-period: "{{ .arguments.nodeMonitorPeriod }}s"
     node-monitor-grace-period: "{{ .arguments.nodeMonitorGracePeriod }}s"
   {{- end }}
-  {{- if and (hasKey .arguments "podEvictionTimeout") (semverCompare "< 1.27" .clusterConfiguration.kubernetesVersion) }}
+  {{- if and (hasKey .arguments "podEvictionTimeout") (semverCompare "= 1.27" .clusterConfiguration.kubernetesVersion) }}
     pod-eviction-timeout: "{{ .arguments.podEvictionTimeout }}s"
   {{- end }}
 {{- end }}
