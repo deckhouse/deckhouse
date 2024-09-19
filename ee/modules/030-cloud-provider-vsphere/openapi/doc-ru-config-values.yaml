@@ -48,14 +48,13 @@ properties:
           Полные имена (или regex выражения имен) StorageClass'ов, которые не будут созданы в кластере.
       default:
         description: |
+          > **УСТАРЕЛ**. Вместо этого параметра используйте [global.defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass).
+
           Имя StorageClass'а, который будет использоваться в кластере по умолчанию.
 
           Если параметр не задан, фактическим StorageClass'ом по умолчанию будет один из следующих:
             * Присутствующий в кластере произвольный StorageClass с default-аннотацией.
             * Лексикографически первый StorageClass из создаваемых модулем.
-
-          > **Внимание!** Если задан параметр [defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass)
-          в настройках модуля `global`, то именно **его значение будет использоваться по-умолчанию**, **ПЕРЕКРЫВАЯ** указанное здесь.
       compatibilityFlag:
         description: |
           Флаг, разрешающий использование старой версии CSI:
