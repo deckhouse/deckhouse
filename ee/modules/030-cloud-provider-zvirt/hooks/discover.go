@@ -224,7 +224,7 @@ func getStorageClassName(value string) string {
 func setStorageClassesValues(
 	input *go_hook.HookInput,
 	storageClasses []storageClass,
-	defaultSCName string,
+	_ string,
 ) {
 	input.Values.Set("cloudProviderZvirt.internal.storageClasses", storageClasses)
 

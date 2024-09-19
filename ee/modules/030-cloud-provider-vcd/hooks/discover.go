@@ -178,7 +178,7 @@ func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, volumeTypes []v1al
 	setStorageClassesValues(input, storageClasses, defaultSCName)
 }
 
-func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageClass, defaultSCName string) {
+func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageClass, _ string) {
 	input.Values.Set("cloudProviderVcd.internal.storageClasses", storageClasses)
 
 	// cloud-provider's `internal.defaultStorageClass` (getted from `<cloud-provider>.storageClass.default`) was deprecated and
