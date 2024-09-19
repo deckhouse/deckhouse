@@ -247,5 +247,5 @@ apiVersions:
         layout:
           enum:
           - Standard
-          - StandartWithInternalNetwork
+          - StandardWithInternalNetwork
           type: string
