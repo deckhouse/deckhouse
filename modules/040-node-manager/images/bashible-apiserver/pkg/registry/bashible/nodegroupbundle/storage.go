@@ -31,11 +31,11 @@ import (
 // NewStorage returns a RESTStorage object that will work against API services.
 func NewStorage(rootDir string, stepsStorage *template.StepsStorage, bashibleContext template.Context) (*StorageWithK8sBundles, error) {
 	ngRenderer := template.NewStepsRenderer(stepsStorage, bashibleContext, rootDir, "all", template.GetNodegroupContextKey)
-	k8sRenderer := template.NewStepsRenderer(stepsStorage, bashibleContext, rootDir, "all", template.GetVersionContextKey)
+	// k8sRenderer := template.NewStepsRenderer(stepsStorage, bashibleContext, rootDir, "all", template.GetVersionContextKey)
 
 	return &StorageWithK8sBundles{
-		ngRenderer:      ngRenderer,
-		k8sRenderer:     k8sRenderer,
+		ngRenderer: ngRenderer,
+		// k8sRenderer:     k8sRenderer,
 		bashibleContext: bashibleContext,
 	}, nil
 }
@@ -59,25 +59,25 @@ func (s StorageWithK8sBundles) Render(name string) (runtime.Object, error) {
 		return nil, err
 	}
 
-	k8sBundleName, err := s.getK8sBundleName(name)
-	if err != nil {
-		return nil, err
-	}
+	// k8sBundleName, err := s.getK8sBundleName(name)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	k8sBundleData, err := s.k8sRenderer.Render(k8sBundleName)
-	if err != nil {
-		return nil, err
-	}
+	// k8sBundleData, err := s.k8sRenderer.Render(k8sBundleName)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	data, err := s.merge(ngBundleData, k8sBundleData)
-	if err != nil {
-		return nil, err
-	}
+	// data, err := s.merge(ngBundleData, k8sBundleData)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	obj := bashible.NodeGroupBundle{}
 	obj.ObjectMeta.Name = name
 	obj.ObjectMeta.CreationTimestamp = metav1.NewTime(time.Now())
-	obj.Data = data
+	obj.Data = ngBundleData
 
 	return &obj, nil
 }
