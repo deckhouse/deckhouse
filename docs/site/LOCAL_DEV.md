@@ -11,49 +11,49 @@
   - **The first method** — open two consoles and do the following steps.
 
     1. In the first console run:
-		
+
        ```shell
        cd docs/documentation
-       make up 
+       make up
        ```
 
     2. In the second console run:
 
        ```shell
        cd docs/site
-       make up 
+       make up
        ```
-	
+
 	For development mode use `make dev` instead:
-	
+
     1. In the first console run:
-  
+
 	     ```shell
        cd docs/documentation
        make dev
        ```
-	
+
     2. In the second console run:
-	
+
 	     ```shell
        cd docs/site
        make dev
        ```
-	
+
   - **The second method** — open console and run the necessary containers in the root of the repo:
-   
+
     ```shell
     cd deckhouse
     make docs
     ```
-	
+
     For development mode use `make docs-dev` instead:
-	
+
 	  ```shell
     cd deckhouse
-    make docs-dev 
+    make docs-dev
     ```
-	
+
 - Open <http://localhost>.
 
 - To stop the running containers use the following command:
