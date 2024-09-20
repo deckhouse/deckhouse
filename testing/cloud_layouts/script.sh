@@ -503,9 +503,15 @@ fi
 ENDSC
 )
 
-  if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<$testScript; then
-    return 0
-  fi
+  testRequirementsAttempts=10
+  for ((i=1; i<=$testRequirementsAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<$testScript; then
+        return 0
+    else
+      >&2 echo "Test requirements $i/$testRequirementsAttempts failed. Sleeping 5 seconds..."
+      sleep 5
+    fi
+  done
 
   write_deckhouse_logs
   return 1
