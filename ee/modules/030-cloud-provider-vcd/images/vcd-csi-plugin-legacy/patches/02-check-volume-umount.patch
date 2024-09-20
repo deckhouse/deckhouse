@@ -1,5 +1,5 @@
 diff --git a/pkg/csi/node.go b/pkg/csi/node.go
-index a2356b5..3bf16f7 100644
+index a2356b5..18955f9 100644
 --- a/pkg/csi/node.go
 +++ b/pkg/csi/node.go
 @@ -8,13 +8,14 @@ package csi
@@ -34,4 +34,21 @@ index a2356b5..3bf16f7 100644
 +
  	klog.Infof("NodeUnstageVolume successful for target [%s] for volume [%s]", mountDir, deviceName)
  	return &csi.NodeUnstageVolumeResponse{}, nil
+ }
+@@ -379,6 +390,16 @@ func (ns *nodeService) NodeUnpublishVolume(ctx context.Context,
+ 		return nil, fmt.Errorf("unable to unmount pod mount dir [%s]: [%v]", podMountDir, err)
+ 	}
+ 
++	isDirMounted, err = ns.checkIfDirMounted(ctx, podMountDir)
++
++	if err != nil {
++		return nil, status.Errorf(codes.Internal, "unable to check if [%s] is mounted: [%v]", podMountDir, err)
++	}
++
++	if isDirMounted {
++		return nil, status.Errorf(codes.Internal, "directory is still mounted: [%s]", podMountDir)
++	}
++
+ 	klog.Infof("NodeUnpublishVolume successful for disk [%s] at mount dir [%s]", diskName, podMountDir)
+ 	return &csi.NodeUnpublishVolumeResponse{}, nil
  }
