@@ -101,7 +101,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 			scanner := bufio.NewScanner(strings.NewReader(data))
 			for scanner.Scan() {
 				str := scanner.Text()
-				if strings.Contains(str, "The node already exists in the cluster and under bashible.") {
+				if strings.Contains(str, "debug1: Exit status 2") {
 					return true
 				}
 			}
