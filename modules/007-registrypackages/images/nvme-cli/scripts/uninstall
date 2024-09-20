@@ -13,5 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+<<<<<<<< HEAD:modules/007-registrypackages/images/nvme-cli/scripts/uninstall
 set -Eeo pipefail
 rm -f /opt/deckhouse/bin/nvme
+========
+case $(bb-is-bundle) in
+  debian|ubuntu-lts) bb-apt-install nvme-cli ;;
+  centos) bb-yum-install nvme-cli ;;
+esac
+>>>>>>>> 69f3ba0d67 (del bundles path in dhctl):candi/cloud-providers/aws/bashible/common-steps/all/000_install_nvme_cli.sh.tpl

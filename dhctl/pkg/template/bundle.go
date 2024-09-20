@@ -108,23 +108,7 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 
 	for _, steps := range []string{"all", "cluster-bootstrap"} {
 		saveInfo = append(saveInfo, saveFromTo{
-			from: filepath.Join(candiBashibleDir, "bundles", bundle, steps),
-			to:   stepsDir,
-			data: templateData,
-		})
-	}
-
-	for _, steps := range []string{"all", "cluster-bootstrap"} {
-		saveInfo = append(saveInfo, saveFromTo{
 			from: filepath.Join(candiDir, "cloud-providers", provider, "bashible", "common-steps", steps),
-			to:   stepsDir,
-			data: templateData,
-		})
-	}
-
-	for _, steps := range []string{"all", "cluster-bootstrap"} {
-		saveInfo = append(saveInfo, saveFromTo{
-			from: filepath.Join(candiDir, "cloud-providers", provider, "bashible", "bundles", bundle, steps),
 			to:   stepsDir,
 			data: templateData,
 		})
