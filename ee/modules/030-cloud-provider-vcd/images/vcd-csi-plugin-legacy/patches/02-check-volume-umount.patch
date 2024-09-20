@@ -1,0 +1,37 @@
+diff --git a/pkg/csi/node.go b/pkg/csi/node.go
+index a2356b5..3bf16f7 100644
+--- a/pkg/csi/node.go
++++ b/pkg/csi/node.go
+@@ -8,13 +8,14 @@ package csi
+ import (
+ 	"context"
+ 	"fmt"
+-	"github.com/vmware/cloud-director-named-disk-csi-driver/pkg/util"
+ 	"os"
+ 	"os/exec"
+ 	"path/filepath"
+ 	"regexp"
+ 	"strings"
+ 
++	"github.com/vmware/cloud-director-named-disk-csi-driver/pkg/util"
++
+ 	"github.com/akutz/gofsutil"
+ 	"github.com/container-storage-interface/spec/lib/go/csi"
+ 	"golang.org/x/sys/unix"
+@@ -236,6 +237,16 @@ func (ns *nodeService) NodeUnstageVolume(ctx context.Context,
+ 		return nil, status.Errorf(codes.Internal, "unable to unmount [%s]: [%v", mountDir, err)
+ 	}
+ 
++	isMountDirMounted, err = ns.checkIfDirMounted(ctx, mountDir)
++
++	if err != nil {
++		return nil, status.Errorf(codes.Internal, "unable to check if [%s] is mounted: [%v]", mountDir, err)
++	}
++
++	if isMountDirMounted {
++		return nil, status.Errorf(codes.Internal, "directory is still mounted: [%s]", mountDir)
++	}
++
+ 	klog.Infof("NodeUnstageVolume successful for target [%s] for volume [%s]", mountDir, deviceName)
+ 	return &csi.NodeUnstageVolumeResponse{}, nil
+ }
