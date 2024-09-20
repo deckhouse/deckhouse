@@ -461,13 +461,23 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 
-d8-curl -sLfo /usr/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_386
+>&2 echo "Download yq..."
 
-chmod +x /usr/bin/yq
+d8-curl -sLfo /opt/deckhouse/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
 
-command -v yq >/dev/null 2>&1 || exit 1
+>&2 echo "chmod yq..."
+
+chmod +x /opt/deckhouse/bin/yq
+
+>&2 echo "Create release file ..."
 
 echo "$release" > /tmp/releaseFile.yaml
+
+>&2 echo "Release file ..."
+
+cat /tmp/releaseFile.yaml
+
+>&2 echo "Apply module config ..."
 
 echo 'apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -479,6 +489,8 @@ spec:
     update:
       mode: Auto' | kubectl apply -f -
 
+>&2 echo "Apply deckhousereleases ..."
+
 echo 'apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
@@ -488,10 +500,14 @@ metadata:
   name: v1.96.3
 spec:
   version: v1.96.3
-  requirements:
-' | yq '. | load("/tmp/releaseFile.yaml") as \$d1 | .spec.requirements=\$d1.requirements' | kubectl apply -f -
+  requirements: {}
+' | /opt/deckhouse/bin/yq '. | load("/tmp/releaseFile.yaml") as \$d1 | .spec.requirements=\$d1.requirements' | kubectl apply -f -
+
+>&2 echo "Remove release file ..."
 
 rm /tmp/releaseFile.yaml
+
+>&2 echo "Sleep 5 seconds before check..."
 
 sleep 5
 
