@@ -53,8 +53,8 @@ function send_post() {
 if [ "$failure" = true ]; then
   message=${fail_message}
 else
-  base_report_id=$(upload_file ../../out/base-images.html)
-  deckhouse_report_id=$(upload_file ../../out/d8-images.html)
+  base_report_id=$(upload_file ./out/base-images.html)
+  deckhouse_report_id=$(upload_file ./out/d8-images.html)
 fi
 
 send_post
