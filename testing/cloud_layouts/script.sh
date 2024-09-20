@@ -456,6 +456,7 @@ function test_requirements() {
   >&2 echo "Run script ... "
 
   testScript=$(cat <<ENDSC
+set -x
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
