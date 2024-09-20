@@ -196,7 +196,8 @@ spec:
     matchLabels:
       prometheus: main
       component: rules
-{{- $externalLabels := .Values.prometheus.externalLabels }}
+{{- $externalLabels = merge (dict "prometheus" "deckhouse") $externalLabels }}
+{{- $externalLabels := .Values.externalLabels }}
 {{- if .Values.prometheus.internal.remoteWrite }}
   remoteWrite:
   {{- range .Values.prometheus.internal.remoteWrite }}
@@ -224,8 +225,6 @@ spec:
       {{- with $externalLabels }}
       {{- range $key, $value := . }}
       - sourceLabels: [{{ $key }}]
-        targetLabel: __tmp_{{ $key }}_exists
-      - sourceLabels: [__tmp_{{ $key }}_exists]
         regex: "^$"
         targetLabel: {{ $key }}
         replacement: {{ $value | quote }}
