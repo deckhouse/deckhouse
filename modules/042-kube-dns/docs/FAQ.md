@@ -7,15 +7,43 @@ search: DNS, domain, clusterdomain
 
 Add the new domain and save the old one:
 
-1. In the [controlPlaneManager.apiserver.certSANs](../040-control-plane-manager/configuration.html#parameters-apiserver-certsans) section, enter the following parameters:
-    - `kubernetes.default.svc.<old clusterDomain>`
-    - `kubernetes.default.svc.<new clusterDomain>`
+1. In the [controlPlaneManager.apiserver](../040-control-plane-manager/configuration.html) configure the following parameters:
+
+- [controlPlaneManager.apiserver.certSANs](../040-control-plane-manager/configuration.html#parameters-apiserver-certsans)
+- [apiserver.serviceAccount.additionalAPIAudiences](../040-control-plane-manager/configuration.html#parameters-apiserver-serviceaccount-additionalapiaudiences)
+- [apiserver.serviceAccount.additionalAPIIssuers](../040-control-plane-manager/configuration.html#parameters-apiserver-serviceaccount-additionalapiissuers)
+
+Example:
+
+```
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  enabled: true
+  settings:
+    apiserver:
+      certSANs:
+       - kubernetes.default.svc.<old clusterDomain>
+       - kubernetes.default.svc.<new clusterDomain>
+      serviceAccount:
+        additionalAPIAudiences:
+        - https://kubernetes.default.svc.<old clusterDomain>
+        - https://kubernetes.default.svc.<new clusterDomain>
+        additionalAPIIssuers:
+        - https://kubernetes.default.svc.<old clusterDomain>
+        - https://kubernetes.default.svc.<new clusterDomain>
+```
+
+
 1. In the [kubeDns.clusterDomainAliases](configuration.html#parameters) section, enter:
     - the old clusterDomain.
     - the new clusterDomain.
 1. Wait until kube-apiserver is restarted.
 1. Replace the old `clusterDomain` with the new one in `dhctl config edit cluster-configuration`
+1.
 
-**Important!** If your Kubernetes version is 1.20 and higher, your controllers in the cluster use [advanced ServiceAccount tokens](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection) to work with apiserver. Those tokens have extra fields `iss:` and `aud:` that contain `clusterDomain` (e.g. `"iss": "https://kubernetes.default.svc.cluster.local"`). After changing `clusterDomain` apiserver starts to deny queries with old tokens and controllers are bond to provide errors (including deckhouse). The solution is to wait until Kubernetes rotates the tokens (it will be quite fast despite the expiration date) or restart all pods with controllers.
+**Important!** If your Kubernetes version is 1.20 and higher, your controllers in the cluster use [advanced ServiceAccount tokens](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection) to work with apiserver. Those tokens have extra fields `iss:` and `aud:` that contain `clusterDomain` (e.g. `"iss": "https://kubernetes.default.svc.cluster.local"`). After changing the clusterDomain, the apiserver will start issuing tokens with the new service-account-issuer, but thanks to the configuration of additionalAPIAudiences and additionalAPIIssuers, the apiserver will continue to accept the old tokens. After 48 minutes (80% of 3607 seconds), Kubernetes will begin to refresh the issued tokens, and the new service-account-issuer will be used for the updated tokens. After 90 minutes (3607 seconds plus a short buffer) following the kube-apiserver restart, you can remove the serviceAccount configuration from the control-plane-manager configuration.
 
 **Important!** If you use [istio](../../modules/110-istio/) module, you have to restart all the application pods under istio control after changing `clusterDomain`.
