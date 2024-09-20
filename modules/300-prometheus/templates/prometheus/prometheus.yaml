@@ -196,7 +196,7 @@ spec:
     matchLabels:
       prometheus: main
       component: rules
-{{- $externalLabels := .Values.externalLabels }}
+{{- $externalLabels := .Values.prometheus.externalLabels }}
 {{- $externalLabels = merge (dict "prometheus" "deckhouse") $externalLabels }}
 {{- if .Values.prometheus.internal.remoteWrite }}
   remoteWrite:
