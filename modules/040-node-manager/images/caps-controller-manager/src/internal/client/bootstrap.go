@@ -93,11 +93,20 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 	}
 
 	done := c.bootstrapTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
-		err := ssh.ExecSSHCommand(instanceScope, fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name && echo '%s' | base64 -d | bash", instanceScope.MachineScope.StaticMachine.Spec.ProviderID, instanceScope.MachineScope.Machine.Name, base64.StdEncoding.EncodeToString(bootstrapScript)), nil, nil)
+		var data string
+		data, err := ssh.ExecSSHCommandToString(instanceScope,
+			fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name && echo '%s' | base64 -d | bash",
+				instanceScope.MachineScope.StaticMachine.Spec.ProviderID, instanceScope.MachineScope.Machine.Name, base64.StdEncoding.EncodeToString(bootstrapScript)))
 		if err != nil {
+			scanner := bufio.NewScanner(strings.NewReader(data))
+			for scanner.Scan() {
+				str := scanner.Text()
+				if strings.Contains(str, "The node already exists in the cluster and under bashible.") {
+					return true
+				}
+			}
 			// If Node reboots, the ssh connection will close, and we will get an error.
 			instanceScope.Logger.Error(err, "Failed to bootstrap StaticInstance: failed to exec ssh command")
-
 			return false
 		}
 
