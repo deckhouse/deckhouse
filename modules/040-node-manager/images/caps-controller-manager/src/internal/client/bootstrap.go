@@ -93,7 +93,6 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 	}
 
 	done := c.bootstrapTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
-		var data string
 		data, err := ssh.ExecSSHCommandToString(instanceScope,
 			fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name && echo '%s' | base64 -d | bash",
 				instanceScope.MachineScope.StaticMachine.Spec.ProviderID, instanceScope.MachineScope.Machine.Name, base64.StdEncoding.EncodeToString(bootstrapScript)))
@@ -172,7 +171,6 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 
 	check := c.checkTaskManager.spawn(taskID(address), func() bool {
 		status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
-		var data string
 		data, err := ssh.ExecSSHCommandToString(instanceScope, "echo check_ssh")
 		if err != nil {
 			scanner := bufio.NewScanner(strings.NewReader(data))
