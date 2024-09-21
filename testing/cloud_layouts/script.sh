@@ -460,6 +460,14 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 
+>&2 echo "Download yq..."
+
+/opt/deckhouse/bin/d8-curl -sSLfv -o /opt/deckhouse/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
+
+>&2 echo "chmod yq..."
+
+chmod +x /opt/deckhouse/bin/yq
+
 >&2 echo "Create release file ..."
 
 echo "$release" > /tmp/releaseFile.yaml
@@ -706,33 +714,6 @@ ENDSSH
 
 =============================================================="
 
-  installYqFailed=""
-  installYqAttempts=10
-
-  for ((i=1; i<=$installYqAttempts; i++)); do
-    # Install yq
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
-           >&2 echo "Download yq..."
-
-           /opt/deckhouse/bin/d8-curl -sSLfv -o /opt/deckhouse/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
-
-           >&2 echo "chmod yq..."
-
-           chmod +x /opt/deckhouse/bin/yq
-ENDSSH
-          installYqFailed=""
-          break
-        else
-          installYqFailed="true"
-          >&2 echo "Install yq setup of master in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
-          sleep 5
-        fi
-  done
-
-  if [[ $installYqFailed == "true" ]] ; then
-      return 1
-  fi
-
   >&2 echo 'Fetch registration script ...'
   for ((i=0; i<10; i++)); do
     bootstrap_system="$($ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash << "ENDSSH"
@@ -783,6 +764,30 @@ ENDSSH
   if [[ $registration_failed == "true" ]] ; then
     return 1
   fi
+
+  restartProxyFailed=""
+  restartProxyAttempts=10
+
+  >&2 echo "Restart proxy"
+
+  for ((i=1; i<=$restartProxyAttempts; i++)); do
+    # restart proxy
+    if  $ssh_command -i "$ssh_private_key_path" "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
+        docker container restart tinyproxy
+ENDSSH
+          restartProxyFailed=""
+          break
+        else
+          restartProxyFailed="true"
+          >&2 echo "Install yq setup of master in progress (attempt #$i of $restartProxyAttempts). Sleeping 5 seconds ..."
+          sleep 5
+        fi
+  done
+
+  if [[ $restartProxyFailed == "true" ]] ; then
+      return 1
+  fi
+
 }
 
 function bootstrap() {
