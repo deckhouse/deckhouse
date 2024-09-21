@@ -521,7 +521,7 @@ ENDSC
 
   testRequirementsAttempts=10
   for ((i=1; i<=$testRequirementsAttempts; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<$testScript; then
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su - -c /bin/bash <<<$testScript; then
         return 0
     else
       >&2 echo "Test requirements $i/$testRequirementsAttempts failed. Sleeping 5 seconds..."
@@ -764,30 +764,6 @@ ENDSSH
   if [[ $registration_failed == "true" ]] ; then
     return 1
   fi
-
-  restartProxyFailed=""
-  restartProxyAttempts=10
-
-  >&2 echo "Restart proxy"
-
-  for ((i=1; i<=$restartProxyAttempts; i++)); do
-    # restart proxy
-    if  $ssh_command -i "$ssh_private_key_path" "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
-        docker container restart tinyproxy
-ENDSSH
-          restartProxyFailed=""
-          break
-        else
-          restartProxyFailed="true"
-          >&2 echo "Install yq setup of master in progress (attempt #$i of $restartProxyAttempts). Sleeping 5 seconds ..."
-          sleep 5
-        fi
-  done
-
-  if [[ $restartProxyFailed == "true" ]] ; then
-      return 1
-  fi
-
 }
 
 function bootstrap() {
