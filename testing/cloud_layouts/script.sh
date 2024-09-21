@@ -463,7 +463,7 @@ set -Eeuo pipefail
 
 >&2 echo "Download yq..."
 
-/opt/deckhouse/bin/d8-curl -sSLf https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -o - > /opt/deckhouse/bin/yq
+/opt/deckhouse/bin/d8-curl -sSLfv -o /tmp/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
 
 >&2 echo "chmod yq..."
 
@@ -501,7 +501,7 @@ metadata:
 spec:
   version: v1.96.3
   requirements: {}
-' | /opt/deckhouse/bin/yq '. | load("/tmp/releaseFile.yaml") as \$d1 | .spec.requirements=\$d1.requirements' | kubectl apply -f -
+' | /tmp/yq '. | load("/tmp/releaseFile.yaml") as \$d1 | .spec.requirements=\$d1.requirements' | kubectl apply -f -
 
 >&2 echo "Remove release file ..."
 
