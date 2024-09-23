@@ -24,6 +24,14 @@ cleanup:
 - apt-get update
 {{- end }}
 
+{{- define "ubuntu packages proxy" }}
+  # Replace ubuntu repos with our proxy
+  {{- if $.DistroPackagesProxy }}
+- sed -i "s/http:\/\/deb\.debian\.org/http:\/\/{{ $.DistroPackagesProxy }}\/repository/g" /etc/apt/sources.list.d/debian.sources
+  {{- end }}
+- apt-get update
+{{- end }}
+
 {{- define "alpine packages proxy" }}
 # Replace alpine repos with our proxy
   {{- if $.DistroPackagesProxy }}

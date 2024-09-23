@@ -46,6 +46,7 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make bash rsync
   install:
   - export GO_VERSION=${GOLANG_VERSION}
