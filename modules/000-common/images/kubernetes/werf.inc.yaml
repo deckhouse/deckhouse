@@ -46,7 +46,7 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache make bash
+  - apk add --no-cache make bash rsync
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
