@@ -4,6 +4,10 @@
 {%- assign k8sVersions = site.data.supported_versions.k8s  %}
 {%- assign langSupportKey = page.lang | append: "_support" %}
 
+{%- assign supported_img_url = '/images/icons/supported.svg' %}
+{%- assign partially_supported_img_url = '/images/icons/intermediate.svg' %}
+{%- assign notes_img_url = '/images/icons/note.svg' %}
+
 ## Linux
 
 {{ site.data.i18n.common['os_supported_phrase'][page.lang] }}:
@@ -12,29 +16,39 @@
 <table class="supported_versions">
 <thead>
     <tr>
-      <th class="name">{{site.data.i18n.common['linux_distro'][page.lang] }}</th>
-      <th class="versions">{{ site.data.i18n.common['versions_supported'][page.lang] | capitalize }}</th>
+      <th class="name" style="white-space: nowrap;">{{site.data.i18n.common['linux_distro'][page.lang] }}</th>
+      <th class="versions" style="white-space: nowrap;">{{ site.data.i18n.common['versions_supported'][page.lang] | capitalize }}</th>
+      {%- if page.lang == 'ru' %}
+      <th style="text-align: center; white-space: nowrap;" colspan="2">{{ site.data.i18n.common['redactions'][page.lang] | capitalize }}</th>
+      {% else %}
+      <th style="text-align: center; white-space: nowrap;">{{ site.data.i18n.common['redactions'][page.lang] | capitalize }}</th>
+      {%- endif %}
+      <th style="text-align: center;">{{ site.data.i18n.common['notes'][page.lang] | capitalize }}</th>
     </tr>
 </thead>
 <tbody>
+<tr>
+  <td></td>
+  <td></td>
+  {%- if page.lang == 'ru' %}
+  <td style="text-align: center; width: 170px; font-size: 16px; font-weight: bold; padding: 0 10px;">CE</td>
+  {%- endif %}
+  <td style="text-align: center; width: 170px; font-size: 16px; font-weight: bold; padding: 0 10px;">{% if page.lang == 'en' %}CE, {% endif %}BE, SE, EE</td>
+  <td></td>
+</tr>
 {%- for osItem in osVersions %}
 {%- assign osKey = osItem[0] %}
 {%- assign osName = site.data.supported_versions.osDistributions[osKey].name | default: osKey  %}
 {%- if site.data.supported_versions.osDistributions[osKey][langSupportKey] and site.data.supported_versions.osDistributions[osKey][langSupportKey] != "true" %}{% continue %}{% endif %}
 <tr>
   <td class="name">
-    <span
-      {% if site.data.supported_versions.osDistributions[osKey]['additional_notes'] %}
-        class="table__double_asterisk"
-      {% elsif site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}
-        class="table__asterisk"
-      {% endif %}
-    >
+    <span>
       {%- if site.data.supported_versions.osDistributions[osKey].url %}
         <a href="{{ site.data.supported_versions.osDistributions[osKey].url }}" target="_blank">{{ osName }}</a>
       {%- else %}{{ osName }}
       {%- endif %}
-    </span></td>
+    </span>
+  </td>
   <td class="versions">
 {%- for osData in osItem[1] %}
 {%- assign osVersion = osData[0] %}
@@ -42,13 +56,26 @@
 {%- unless forloop.last %},{% endunless %}
 {%- endfor %}
   </td>
+  {%- if page.lang == 'ru' %}
+  <td style="text-align: center; width: 170px;">
+    {% if site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}
+      <img src="{{ partially_supported_img_url }}" data-tippy-content="Работоспособность в Community Edition не гарантируется.">
+    {% else %}
+      <img src="{{ supported_img_url }}">
+    {% endif %}
+  </td>
+  {%- endif %}
+  <td style="text-align: center; width: 170px;"><img src="{{ supported_img_url }}"></td>
+  <td style="text-align: center;">
+    {% if site.data.supported_versions.osDistributions[osKey]['note_content'] %}
+      <img src="{{ notes_img_url }}" data-tippy-content="{{ site.data.supported_versions.osDistributions[osKey]['note_content'][page.lang] }}">
+    {% endif %}
+  </td>
 </tr>
 {%- endfor %}
 </tbody>
 </table>
 {% if page.lang == 'ru' %}
-<em style="margin-top: 16px; display: block;">* Поддержка предоставляется только в Basic Edition, Standard Edition, Enterprise Edition. Работоспособность в Community Edition не гарантируется.</em>
-<em style="margin-top: 16px; display: block;">** Невозможна работа модуля runtime-audit-engine (из-за отсутствия поддержки ядром BPF Type Format (BTF)). Для <strong>РОСА «КОБАЛЬТ» Сервер</strong> рекомендуется установка ядра не ниже версии <code>5.15.33</code> (пакет <code>kernel-ml</code>).</em>
 {%  endif %}
 </div>
 
@@ -133,5 +160,17 @@ $(document).ready(function () {
       });
 {%- endif -%}
 {%- endfor %}
+});
+
+$(document).ready(function () {
+  tippy('[data-tippy-content]', {
+    interactive: true,
+    placement: 'left',
+    interactiveDebounce: 75,
+    maxWidth: 900,
+    theme: 'comparison',
+    allowHTML: true,
+    arrow: false,
+  });
 });
 </script>
