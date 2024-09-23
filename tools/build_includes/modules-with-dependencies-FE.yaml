@@ -832,26 +832,8 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/fe/modules/040-node-manager/templates/ngc-ca-certificate.yaml
-  to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
+- add: /ee/fe/modules/002-deckhouse/templates/flant-module-source.yaml
+  to: /deckhouse/modules/002-deckhouse/templates/flant-module-source.yaml
   stageDependencies:
     setup:
         - '**/*'

@@ -6,6 +6,9 @@
         - '**/*'
 - add: /ee/be/candi/bashible/bashbooster/55_ee_distro_version.sh
   to: /deckhouse/candi/bashible/bashbooster/55_ee_distro_version.sh
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/be/candi/bashible/detect_bundle.sh
   to: /deckhouse/candi/bashible/detect_bundle.sh
   stageDependencies:
