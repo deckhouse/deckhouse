@@ -35,7 +35,7 @@ cleanup:
 {{- define "alpine packages proxy" }}
 # Replace alpine repos with our proxy
   {{- if $.DistroPackagesProxy }}
-- sed -i 's/https:\\/\\/dl-cdn\\.alpinelinux\\.org/http:\\/\\/{{ $.DistroPackagesProxy }}\\/repository/g' /etc/apk/repositories
+- sed -i 's/https:\/\/dl-cdn\.alpinelinux\.org/http:\/\/{{ $.DistroPackagesProxy }}\/repository/g' /etc/apk/repositories
   {{- end }}
 - apk update
 {{- end }}
