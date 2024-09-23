@@ -1,0 +1,32 @@
+---
+artifact: {{ .ModuleName }}/resolv-watcher-src-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+git:
+- add: /{{ $.ModulePath }}/modules/042-kube-dns/images/resolv-watcher/src/
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+---
+artifact: {{ .ModuleName }}/resolv-watcher-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+import:
+  - artifact: {{ .ModuleName }}/resolv-watcher-src-artifact
+    add: /src
+    to: /src
+    before: install
+shell:
+  install:
+    - CGO_ENABLED=0 go build -ldflags="-s -w" -o resolv-watcher main.go
+    - chown 64535:64535 /src/resolv-watcher
+    - chmod 0700 /src/resolv-watcher
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - artifact: {{ .ModuleName }}/resolv-watcher-artifact
+    add: /src/resolv-watcher
+    to: /resolv-watcher
+    before: setup
+docker:
+  ENTRYPOINT: ["/resolv-watcher"]

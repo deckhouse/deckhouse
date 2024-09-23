@@ -1,6 +1,6 @@
 ---
 artifact: {{ .ModuleName }}/coredns-src-artifact
-from: {{ .Images.BASE_GOLANG_21_ALPINE_DEV }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
 git:
   - add: /{{ $.ModulePath }}/modules/042-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
@@ -15,7 +15,7 @@ shell:
     - find /patches -name '*.patch' -exec git apply {} \;
 ---
 artifact: {{ .ModuleName }}/coredns-artifact
-from: {{ .Images.BASE_GOLANG_21_ALPINE_DEV }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
 import:
   - artifact: {{ .ModuleName }}/coredns-src-artifact
     add: /src

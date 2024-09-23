@@ -1,0 +1,30 @@
+---
+artifact: {{ .ModuleName }}/sts-pods-hosts-appender-webhook-src-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+git:
+- add: /{{ $.ModulePath }}/modules/042-kube-dns/images/sts-pods-hosts-appender-webhook/src/
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+---
+artifact: {{ .ModuleName }}/sts-pods-hosts-appender-webhook-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+import:
+  - artifact: {{ .ModuleName }}/sts-pods-hosts-appender-webhook-src-artifact
+    add: /src
+    to: /src
+    before: install
+shell:
+  install:
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o sts-pods-hosts-appender-webhook main.go
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - artifact: {{ .ModuleName }}/sts-pods-hosts-appender-webhook-artifact
+    add: /src/sts-pods-hosts-appender-webhook
+    to: /sts-pods-hosts-appender-webhook
+    before: setup
+docker:
+  ENTRYPOINT: ["/sts-pods-hosts-appender-webhook"]
