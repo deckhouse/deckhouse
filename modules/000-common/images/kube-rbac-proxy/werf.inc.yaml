@@ -36,6 +36,7 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make bash
   install:
   - cd /src
