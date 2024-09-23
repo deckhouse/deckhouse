@@ -13,17 +13,28 @@ import:
 docker:
   ENTRYPOINT: ["/csi-snapshotter"]
 ---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+fromArtifact: src-artifact
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $value.csi.snapshotter }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-snapshotter.git /src
+---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+  add: /src
+  to: /src
+  before: install
 shell:
   beforeInstall:
-    - git clone --depth 1 --branch {{ $value.csi.snapshotter }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-snapshotter.git /src
+  - apk add --no-cache make bash
   install:
-    - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-    - cd /src
-    - make build
-    - cp bin/snapshot-controller bin/csi-snapshotter bin/snapshot-validation-webhook /
-    - chown 64535:64535 /snapshot-controller /csi-snapshotter /snapshot-validation-webhook
-    - chmod 0755 /snapshot-controller /csi-snapshotter /snapshot-validation-webhook
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - cd /src
+  - make build
+  - cp bin/snapshot-controller bin/csi-snapshotter bin/snapshot-validation-webhook /
+  - chown 64535:64535 /snapshot-controller /csi-snapshotter /snapshot-validation-webhook
+  - chmod 0755 /snapshot-controller /csi-snapshotter /snapshot-validation-webhook
   {{- end }}
 {{- end }}
