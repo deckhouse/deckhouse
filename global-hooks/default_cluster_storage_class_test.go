@@ -199,4 +199,48 @@ var _ = Describe("Global hooks :: default_storage_class_name_test ::", func() {
 		})
 	})
 
+	// cluster D: global.defaultClusterStorageClass = "non-existent"
+	d := HookExecutionConfigInit(fmt.Sprintf(initValuesWithDefinedDefaultClusterStorageClass, `non-existent`), `{}`)
+
+	Context("User set global.defaultClusterStorageClass to non-existent/misspelling `non-existent`", func() {
+		BeforeEach(func() {
+			d.BindingContexts.Set(d.KubeStateSet(scDefault + scNonDefault))
+
+			// create required storage classes in fake k8s cluster
+			for _, scYaml := range []string{scDefault, scNonDefault} {
+				var sc storage.StorageClass
+				_ = yaml.Unmarshal([]byte(scYaml), &sc)
+				_, err := dependency.TestDC.MustGetK8sClient().
+					StorageV1().
+					StorageClasses().
+					Create(context.TODO(), &sc, metav1.CreateOptions{})
+
+				Expect(err).To(BeNil())
+			}
+
+			d.RunHook()
+		})
+
+		Context("`default` and `non-default` storage classes", func() {
+			It("StorageClass `default` should stay AS IS", func() {
+				Expect(d).To(ExecuteSuccessfully())
+
+				sc := d.KubernetesGlobalResource("StorageClass", "default")
+				Expect(sc.Exists()).To(BeTrue())
+
+				Expect(sc.Field(`metadata.annotations`).Exists()).To(BeTrue())
+				Expect(sc.Field(`metadata.annotations.storageclass\.kubernetes\.io\/is-default-class`).String()).To(Equal("true"))
+			})
+
+			It("StorageClass `non-default` should stay AS IS", func() {
+				Expect(d).To(ExecuteSuccessfully())
+
+				sc := d.KubernetesGlobalResource("StorageClass", "non-default")
+				Expect(sc.Exists()).To(BeTrue())
+				Expect(sc.Field(`metadata.annotations`).Exists()).To(BeTrue())
+				Expect(sc.Field(`metadata.annotations.storageclass\.kubernetes\.io\/is-default-class`).Exists()).To(BeFalse())
+			})
+		})
+	})
+
 })

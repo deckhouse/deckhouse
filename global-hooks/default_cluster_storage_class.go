@@ -16,7 +16,6 @@ package hooks
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -36,7 +35,7 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 	defaultClusterStorageClass := input.Values.Get(paramPath).String()
 
 	if defaultClusterStorageClass == "" {
-		input.LogEntry.Infoln(fmt.Sprintf("Parameter `%s` not set. Skipping", paramPath))
+		input.LogEntry.Infof("Parameter `%s` not set. Skipping", paramPath)
 		return nil
 	}
 
@@ -51,6 +50,21 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 		return nil
 	}
 
+	// first pass: check that we have StorageClass with name in defaultClusterStorageClass
+	haveStorageClass := false
+	for _, sc := range storageClasses.Items {
+		if sc.GetName() == defaultClusterStorageClass {
+			haveStorageClass = true
+			break
+		}
+	}
+
+	if !haveStorageClass {
+		input.LogEntry.Warnf("StorageClass `%s` does not exists in cluster (set in `%s` parameter)", defaultClusterStorageClass, paramPath)
+		return nil
+	}
+
+	// second pass: now we can mark/unmark default StorageClass
 	for _, sc := range storageClasses.Items {
 		if sc.GetName() == defaultClusterStorageClass {
 			// it's that storage class which we want
