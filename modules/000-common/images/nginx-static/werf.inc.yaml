@@ -19,10 +19,10 @@ import:
 shell:
   beforeInstall:
   {{- include "ubuntu packages proxy" . | nindent 2 }}
-  - apt-get install -y build-essential libpcre3-dev
+  - apt-get install -y build-essential libpcre3-dev zlib1g-dev
   install:
   - cd /src
-  - ./auto/configure --prefix=/opt/nginx-static --with-cc-opt="-static -static-libgcc" --with-ld-opt="-static" --with-stream --with-cpu-opt=generic --with-pcre --with-mail --with-ipv6 --with-poll_module --with-select_module --with-select_module --with-poll_module --with-http_ssl_module --with-http_realip_module --with-http_addition_module --with-http_sub_module --with-http_dav_module --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_auth_request_module --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module --with-http_stub_status_module --with-mail --with-mail_ssl_module --with-openssl=./openssl
+  - ./auto/configure --prefix=/opt/nginx-static --with-cc-opt="-static -static-libgcc" --with-ld-opt="-static" --with-stream --with-cpu-opt=generic --with-pcre --with-mail --with-ipv6 --with-poll_module --with-select_module --with-http_ssl_module --with-http_realip_module --with-http_addition_module --with-http_sub_module --with-http_dav_module --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_auth_request_module --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module --with-http_stub_status_module --with-mail --with-mail_ssl_module --with-openssl=./openssl
   - make -j1
   - make -j1 install
   - chown -R 64535:64535 /opt/nginx-static
