@@ -140,26 +140,23 @@ func (c *Client) initActionConfig(namespace string) error {
 
 // Upgrade upgrades resources
 func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
-	projectName := project.Name
-	templateName := template.Name
-	values := buildValues(project, template)
-
-	ch, err := makeChart(c.templates, projectName)
+	ch, err := makeChart(c.templates, project.Name)
 	if err != nil {
-		c.log.Error(err, "failed to make chart", "release", projectName, "namespace", projectName)
+		c.log.Error(err, "failed to make chart", "release", project.Name, "namespace", project.Name)
 		return err
 	}
 
+	values := buildValues(project, template)
 	hash := hashMD5(c.templates, values)
-	post := newPostRenderer(projectName, templateName, c.log)
+	post := newPostRenderer(project.Name, template.Name, c.log)
 
-	releases, err := action.NewHistory(c.conf).Run(projectName)
+	releases, err := action.NewHistory(c.conf).Run(project.Name)
 	if err != nil {
 		if errors.Is(err, driver.ErrReleaseNotFound) {
-			c.log.Info("release not found, installing it", "release", projectName, "namespace", projectName)
+			c.log.Info("release not found, installing it", "release", project.Name, "namespace", project.Name)
 			install := action.NewInstall(c.conf)
-			install.ReleaseName = projectName
-			install.Namespace = projectName
+			install.ReleaseName = project.Name
+			install.Namespace = project.Name
 			install.Timeout = c.opts.Timeout
 			install.UseReleaseName = true
 			install.Labels = map[string]string{
@@ -167,33 +164,33 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 			}
 			install.PostRenderer = post
 			if _, err = install.RunWithContext(ctx, ch, values); err != nil {
-				c.log.Error(err, "failed to install release", "release", projectName, "namespace", projectName)
+				c.log.Error(err, "failed to install release", "release", project.Name, "namespace", project.Name)
 				return fmt.Errorf("failed to install release: %w", err)
 			}
-			c.log.Info("release installed", "release", projectName, "namespace", projectName)
+			c.log.Info("release installed", "release", project.Name, "namespace", project.Name)
 			return nil
 		}
-		c.log.Error(err, "failed to retrieve history for release", "release", projectName, "namespace", projectName)
+		c.log.Error(err, "failed to retrieve history for release", "release", project.Name, "namespace", project.Name)
 		return fmt.Errorf("failed to retrieve history for release: %w", err)
 	}
 
 	releaseutil.Reverse(releases, releaseutil.SortByRevision)
 	if releaseHash, ok := releases[0].Labels[consts.ReleaseHashLabel]; ok {
 		if releaseHash == hash && releases[0].Info.Status == release.StatusDeployed {
-			c.log.Info("release is up to date", "release", projectName, "namespace", projectName)
+			c.log.Info("release is up to date", "release", project.Name, "namespace", project.Name)
 			return nil
 		}
 	}
 
 	if releases[0].Info.Status.IsPending() {
 		if err = c.rollbackLatestRelease(releases); err != nil {
-			c.log.Error(err, "failed to rollback latest release", "release", projectName, "namespace", projectName)
+			c.log.Error(err, "failed to rollback latest release", "release", project.Name, "namespace", project.Name)
 			return fmt.Errorf("failed to rollback latest release: %w", err)
 		}
 	}
 
 	upgrade := action.NewUpgrade(c.conf)
-	upgrade.Namespace = projectName
+	upgrade.Namespace = project.Name
 	upgrade.Install = true
 	upgrade.MaxHistory = int(c.opts.HistoryMax)
 	upgrade.Timeout = c.opts.Timeout
@@ -202,12 +199,12 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 	}
 	upgrade.PostRenderer = post
 
-	if _, err = upgrade.RunWithContext(ctx, projectName, ch, values); err != nil {
-		c.log.Error(err, "failed to upgrade release", "release", projectName, "namespace", projectName)
+	if _, err = upgrade.RunWithContext(ctx, project.Name, ch, values); err != nil {
+		c.log.Error(err, "failed to upgrade release", "release", project.Name, "namespace", project.Name)
 		return fmt.Errorf("failed to upgrade release: %s", err)
 	}
 
-	c.log.Info("release upgraded", "release", projectName, "namespace", projectName)
+	c.log.Info("release upgraded", "release", project.Name, "namespace", project.Name)
 	return nil
 }
 
