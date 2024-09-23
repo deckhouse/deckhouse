@@ -7,9 +7,6 @@ git:
   stageDependencies:
     install:
     - '**/*'
-shell:
-  install:
-  - apk add git
 ---
 artifact: {{ .ModuleName }}/resolv-watcher-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
