@@ -46,7 +46,7 @@ properties:
         description: |
           Максимальное общее количество потоков логов для экземпляра Loki.
 
-          Каждый поток логов имеет уникальный набор меток. Количество потоков равно количеству уникальных наборов меток. Например: '{job="my-app", instance="kube-node-1", namespace="production", pod_name="backend-79dbf6fcb7-v5gs7", app="backend"}'.
+          Каждый поток логов имеет уникальный набор меток. Количество потоков равно количеству уникальных наборов меток. Например: `{job="my-app", instance="kube-node-1", namespace="production", pod_name="backend-79dbf6fcb7-v5gs7", app="backend"}`.
 
           Значение 0 отключает ограничение.
       maxEntriesLimitPerQuery:
