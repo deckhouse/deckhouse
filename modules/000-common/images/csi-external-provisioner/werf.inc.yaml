@@ -13,28 +13,28 @@ import:
 docker:
   ENTRYPOINT: ["/csi-provisioner"]
 ---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+fromArtifact: src-artifact
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $value.csi.provisioner }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-provisioner.git /src
+---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.30" $version }}
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
-    {{- else }}
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
-    {{- end }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+  add: /src
+  to: /src
+  before: install
 shell:
   beforeInstall:
-    - git clone --depth 1 --branch {{ $value.csi.provisioner }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-provisioner.git /src
+  - apk add --no-cache make
   install:
-    - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-    - cd /src
-    {{- if semverCompare "<1.29" $version }}
-    - go get golang.org/x/net@v0.17.0
-    - go get google.golang.org/grpc@v1.56.3
-    - go mod tidy
-    - go mod vendor
-    - go mod edit -dropreplace google.golang.org/grpc
-    {{- end }}
-    - make build
-    - cp bin/csi-provisioner /csi-provisioner
-    - chown 64535:64535 /csi-provisioner
-    - chmod 0755 /csi-provisioner
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - cd /src
+  - make build
+  - cp bin/csi-provisioner /csi-provisioner
+  - chown 64535:64535 /csi-provisioner
+  - chmod 0755 /csi-provisioner
   {{- end }}
 {{- end }}
