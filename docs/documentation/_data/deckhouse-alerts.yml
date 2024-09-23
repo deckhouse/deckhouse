@@ -1210,7 +1210,7 @@ alerts:
       description: |-
         Some nodes have deprecated OS versions. Please update nodes to actual OS version.
 
-        To observe affected nodes use the expr `kube_node_info{os_image=~"Debian GNU/Linux 9.*"}` in Prometheus.
+        To observe affected nodes use the expr `kube_node_info{os_image=~"Debian GNU/Linux 10.*"}` in Prometheus.
       summary: |
         Nodes have deprecated OS versions.
       severity: "4"
