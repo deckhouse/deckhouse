@@ -28,7 +28,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache gcc
+  - apk add --no-cache build-essential
   install:
   - cd /src
   - gcc -Os -Wall -Werror -static -o /pause-linux-amd64 pause.c
