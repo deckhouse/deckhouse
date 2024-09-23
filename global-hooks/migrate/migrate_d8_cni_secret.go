@@ -96,8 +96,10 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 		return err
 	}
 
+	resourceVersion := ""
 	for _, mc := range moduleConfigs.Items {
 		if slices.Contains([]string{"cni-cilium", "cni-flannel", "cni-simple-bridge"}, mc.GetName()) {
+			resourceVersion = mc.GetResourceVersion()
 			moduleEnabled, exists, err := unstructured.NestedBool(mc.UnstructuredContent(), "spec", "enabled")
 			if err != nil {
 				return err
@@ -209,7 +211,7 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 	}
 
 	// create ModuleConfig
-	err = upToDateMC(kubeCl, cniModuleConfig)
+	err = upToDateMC(kubeCl, cniModuleConfig, resourceVersion)
 	if err != nil {
 		return err
 	}
@@ -230,13 +232,14 @@ func removeD8CniSecret(input *go_hook.HookInput, kubeCl k8s.Client, secret *v1.S
 }
 
 // create Module Config
-func upToDateMC(kubeCl k8s.Client, mc *config.ModuleConfig) error {
+func upToDateMC(kubeCl k8s.Client, mc *config.ModuleConfig, resourceVersion string) error {
 	obj, err := sdk.ToUnstructured(mc)
 	if err != nil {
 		return err
 	}
 	_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Create(context.TODO(), obj, metav1.CreateOptions{})
 	if errors.IsAlreadyExists(err) {
+		obj.SetResourceVersion(resourceVersion)
 		_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Update(context.TODO(), obj, metav1.UpdateOptions{})
 		return err
 	}
