@@ -14,11 +14,12 @@ function __main__() {
 
   # Check if var clusterType exist
   if ! values::has global.clusterConfiguration.clusterType ; then
+    echo "Unknown cluster type"
     echo "false" > "$MODULE_ENABLED_RESULT"
     return
   fi
 
-  # Check if var clusterType equal "Static"
+  # Check if clusterType is "Static"
   cluster_type=$(values::get global.clusterConfiguration.clusterType)
   if [ "$cluster_type" != "Static" ]; then
     echo "false" > "$MODULE_ENABLED_RESULT"
