@@ -142,7 +142,7 @@ func (c *Client) initActionConfig(namespace string) error {
 func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
 	projectName := project.Name
 	templateName := template.Name
-	values := valuesFromProjectAndTemplate(project, template)
+	values := buildValues(project, template)
 
 	ch, err := makeChart(c.templates, projectName)
 	if err != nil {
@@ -231,7 +231,7 @@ func makeChart(templates map[string][]byte, releaseName string) (*chart.Chart, e
 	return ch, nil
 }
 
-func valuesFromProjectAndTemplate(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) map[string]interface{} {
+func buildValues(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) map[string]interface{} {
 	structs.DefaultTagName = "yaml"
 	preparedProject := struct {
 		Name         string                 `json:"projectName" yaml:"projectName"`
@@ -295,21 +295,24 @@ func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.Pr
 		return err
 	}
 
-	values, err := chartutil.ToRenderValues(ch, valuesFromProjectAndTemplate(project, template), chartutil.ReleaseOptions{
+	values, err := chartutil.ToRenderValues(ch, buildValues(project, template), chartutil.ReleaseOptions{
 		Name:      project.Name,
 		Namespace: project.Name,
 	}, nil)
 	if err != nil {
 		return err
 	}
+
 	rendered, err := engine.Render(ch, values)
 	if err != nil {
 		return err
 	}
+
 	buf := bytes.NewBuffer(nil)
 	for _, file := range rendered {
 		buf.WriteString(file)
 	}
+
 	_, err = newPostRenderer(project.Name, template.Name, c.log).Run(buf)
 	return err
 }
