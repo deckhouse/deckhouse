@@ -49,12 +49,12 @@ k8s:
     csi:
       vsphere: v3.0.3
       openstack: v1.27.1
-      provisioner: v3.5.0
-      attacher: v4.3.0
-      resizer: v1.8.0
-      registrar: v2.8.0
+      provisioner: v5.1.0
+      attacher: v4.7.0
+      resizer: v1.12.0
+      registrar: v2.12.0
       snapshotter: v8.1.0
-      livenessprobe: v2.11.0
+      livenessprobe: v2.14.0
   '1.28':
     status: available
     patch: 13
@@ -70,12 +70,12 @@ k8s:
     csi:
       vsphere: v3.0.3
       openstack: v1.28.0
-      provisioner: v3.6.0
-      attacher: v4.4.0
-      resizer: v1.9.0
-      registrar: v2.9.0
+      provisioner: v5.1.0
+      attacher: v4.7.0
+      resizer: v1.12.0
+      registrar: v2.12.0
       snapshotter: v8.1.0
-      livenessprobe: v2.11.0
+      livenessprobe: v2.14.0
   '1.29':
     status: available
     patch: 8
@@ -91,12 +91,12 @@ k8s:
     csi:
       vsphere: v3.0.3
       openstack: v1.29.0
-      provisioner: v4.0.0
-      attacher: v4.5.0
-      resizer: v1.9.3
-      registrar: v2.10.0
+      provisioner: v5.1.0
+      attacher: v4.7.0
+      resizer: v1.12.0
+      registrar: v2.12.0
       snapshotter: v8.1.0
-      livenessprobe: v2.12.0
+      livenessprobe: v2.14.0
   '1.30':
     status: preview
     patch: 4
@@ -112,11 +112,11 @@ k8s:
     csi:
       vsphere: v3.0.3
       openstack: v1.30.0
-      provisioner: v5.0.0
-      attacher: v4.6.1
-      resizer: v1.11.0
-      registrar: v2.11.0
+      provisioner: v5.1.0
+      attacher: v4.7.0
+      resizer: v1.12.0
+      registrar: v2.12.0
       snapshotter: v8.1.0
-      livenessprobe: v2.13.0
+      livenessprobe: v2.14.0
 d8:
   d8CliVersion: v0.3.2
