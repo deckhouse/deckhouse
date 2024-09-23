@@ -1,6 +1,12 @@
 ---
 artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromArtifact: src-artifact
+git:
+  - add: /{{ $.ModulePath }}/modules/042-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
 shell:
   install:
     - git clone --depth 1 -b v1.11.3 {{ $.SOURCE_REPO }}/{{ $.ImageName }}/{{ $.ImageName }}.git /src
