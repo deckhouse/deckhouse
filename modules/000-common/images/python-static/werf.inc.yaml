@@ -12,7 +12,7 @@ shell:
   install:
   - git clone -b {{ $PythonVersion }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/python/cpython.git /src
   - cd /src
-  - ls -l /
+  - ls -l
   - mv /Setup.local /src/src/Modules/Setup.local
 ---
 artifact: {{ .ModuleName }}/build-python-static-artifact
