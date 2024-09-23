@@ -28,7 +28,7 @@ import:
   before: install
 shell:
   beforeInstall:
-  - apk add --no-cache make
+  - apk add --no-cache make bash
   install:
   - cd /src
   - make build
