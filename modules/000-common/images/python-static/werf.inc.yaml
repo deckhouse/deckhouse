@@ -10,7 +10,7 @@ git:
     - '**/*'
 shell:
   install:
-  - git clone -b v${PYTHON_VERSION} --single-branch --depth=1 {{ $.SOURCE_REPO }}/python/cpython.git /src
+  - git clone -b {{ $PythonVersion }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/python/cpython.git /src
   - cd /src
   - mv /src/Setup.local /src/src/Modules/Setup.local
 ---
