@@ -15,7 +15,6 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 fromArtifact: src-artifact
-git:
 shell:
   install:
   - git clone --depth 1 --branch {{ $value.csi.registrar }} {{ $.SOURCE_REPO }}/kubernetes-csi/node-driver-registrar.git /src
@@ -37,4 +36,5 @@ shell:
   - cp bin/csi-node-driver-registrar /csi-node-driver-registrar
   - chown 64535:64535 /csi-node-driver-registrar
   - chmod 0755 /csi-node-driver-registrar
+  {{- end }}
 {{- end }}
