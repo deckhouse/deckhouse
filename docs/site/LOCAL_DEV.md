@@ -12,27 +12,27 @@
 
 - To start documentation, open two separate consoles and follow the steps:
 
-  1.  In the first console run:
+1.  In the first console run:
 
-      ```shell
+    ```shell
       cd docs/documentation
       make up
-      ```
+    ```
 
-  1.  In the second console run:
+1.  In the second console run:
 
-      ```shell
+    ```shell
       cd docs/site
       make up
-      ```
+    ```
 
-  1.  Open <http://localhost>
+1.  Open <http://localhost>
 
- - To stop documentation, open console and run:
+- To stop documentation, open console and run:
 
-      ```shell
+    ```shell
       make down
-      ```    
+    ```    
 
 ## Starting and stopping a site with the documentation locally — the second method
 
@@ -40,18 +40,18 @@
 
 1.  In the console run:
 
-      ```shell
+    ```shell
       cd deckhouse
       make docs
-      ```
+    ```
 
 1.  Open <http://localhost>
 
 -  To stop documentation, open console and run:
 
-      ```shell
+    ```shell
       make docs-down
-      ```
+    ```
 
 ## How to debug
 
