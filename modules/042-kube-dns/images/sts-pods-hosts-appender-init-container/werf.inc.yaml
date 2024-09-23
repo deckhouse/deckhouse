@@ -2,7 +2,7 @@
 artifact: {{ .ModuleName }}/sts-pods-hosts-appender-init-container-src-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
 git:
-- add: /{{ $.ModulePath }}/modules/042-kube-dns/images/sts-pods-hosts-appender-init-container/src/
+- add: /{{ $.ModulePath }}/modules/042-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
   to: /src
   stageDependencies:
     install:
@@ -11,7 +11,7 @@ git:
 artifact: {{ .ModuleName }}/sts-pods-hosts-appender-init-container-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
 import:
-  - artifact: {{ .ModuleName }}/sts-pods-hosts-appender-init-container-src-artifact
+  - artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
     to: /src
     before: install
@@ -22,7 +22,7 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - artifact: {{ .ModuleName }}/sts-pods-hosts-appender-init-container-artifact
+  - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/sts-pods-hosts-appender-init-container
     to: /sts-pods-hosts-appender-init-container
     before: setup
