@@ -6,6 +6,46 @@ gitWorktree:
 cleanup:
   disableGitHistoryBasedPolicy: {{ env "WERF_DISABLE_META_TAGS" "false" }}
 ---
+{{- $DistroPackagesProxy := env "DISTRO_PACKAGES_PROXY" "" }}
+# Templates for distro proxy for packages (deb,rpm,apk)
+  {{- define "alt packages proxy" }}
+# Replace altlinux repos with our proxy
+  {{- if $DistroPackagesProxy }}
+- sed -i "s/ftp.altlinux.org\/pub\/distributions\/ALTLinux/{{ $DistroPackagesProxy }}\/repository\/ALT-Linux-APT-Repository/g" /etc/apt/sources.list.d/alt.list
+  {{- end }}
+- apt-get update
+{{- end }}
+
+{{- define "debian packages proxy" }}
+# Replace debian repos with our proxy
+  {{- if $DistroPackagesProxy }}
+- sed -i "s/http:\/\/deb\.debian\.org/http:\/\/{{ $DistroPackagesProxy }}\/repository/g" /etc/apt/sources.list.d/debian.sources
+  {{- end }}
+- apt-get update
+{{- end }}
+
+{{- define "alpine packages proxy" }}
+# Replace alpine repos with our proxy
+  {{- if $DistroPackagesProxy }}
+- sed -i 's/https:\\/\\/dl-cdn\\.alpinelinux\\.org/http:\\/\\/{{ $DistroPackagesProxy }}\\/repository/g' /etc/apk/repositories
+  {{- end }}
+- apk update
+{{- end }}
+
+{{- define "pypi proxy" }}
+  {{- if $DistroPackagesProxy }}
+- |
+  cat <<"EOD" > /etc/pip.conf
+  [global]
+  index = http://{{ $DistroPackagesProxy }}/repository/pypi-proxy/pypi
+  index-url = http://{{ $DistroPackagesProxy }}/repository/pypi-proxy/simple
+  trusted-host = {{ $DistroPackagesProxy }}
+  EOD
+  {{- end }}
+{{- end }}
+---
+
+---
 # revisions settings
 {{- $editionsSettings := (.Files.Get "editions.yaml" | fromYaml) }}
 {{- $_ := set . "Editions" $editionsSettings.editions }}
