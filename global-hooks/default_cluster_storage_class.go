@@ -22,6 +22,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	storage "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
@@ -35,10 +36,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:       "default_cluster_sc",
 			ApiVersion: "storage.k8s.io/v1",
-			Kind:       "Storageclass",
+			Kind:       "StorageClass",
+			FilterFunc: storageClassFilter,
 		},
 	},
 }, dependency.WithExternalDependencies(setupDefaultStorageClass))
+
+func storageClassFilter(_ *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return true, nil
+}
 
 func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container) error {
 	const paramPath = "global.defaultClusterStorageClass"
