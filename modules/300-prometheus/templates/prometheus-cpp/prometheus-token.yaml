@@ -1,0 +1,12 @@
+{{- if .Values.prometheus.internal.prometheusPlusPlus  }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: prometheus-cpp-token
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-cpp")) | nindent 2 }}
+  annotations:
+    kubernetes.io/service-account.name: prometheus-cpp
+type: kubernetes.io/service-account-token
+{{- end }}
