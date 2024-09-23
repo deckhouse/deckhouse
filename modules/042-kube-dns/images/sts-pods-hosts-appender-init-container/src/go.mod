@@ -1,3 +1,3 @@
 module sts-pods-hosts-appender-init-container
 
-go 1.21
+go 1.23
