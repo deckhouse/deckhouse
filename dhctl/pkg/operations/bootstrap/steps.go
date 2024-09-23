@@ -372,7 +372,7 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 			}),
 			DeckhouseRegistryRepo: "registry.deckhouse.io/deckhouse/ee",
 			RegistryHost:          distributionHost,
-			RegistryPath:          "/sys/deckhouse",
+			RegistryPath:          "/system/deckhouse",
 			BundlePath:            registryData.ImagesBundlePath,
 			UnpackedImagesPath:    unpackedBundlePath,
 			Insecure:              false,
