@@ -6,7 +6,27 @@
 source /deckhouse/shell_lib.sh
 
 function __main__() {
-  echo "true" > $MODULE_ENABLED_RESULT
+  # Like control-plane
+  if ! values::has global.clusterConfiguration ; then
+    echo "false" > "$MODULE_ENABLED_RESULT"
+    return
+  fi
+
+  # Check if var clusterType exist
+  if ! values::has global.clusterConfiguration.clusterType ; then
+    echo "false" > "$MODULE_ENABLED_RESULT"
+    return
+  fi
+
+  # Check if var clusterType equal "Static"
+  cluster_type=$(values::get global.clusterConfiguration.clusterType)
+  if [ "$cluster_type" != "Static" ]; then
+    echo "false" > "$MODULE_ENABLED_RESULT"
+    echo "The module is supported only for cluster type Static."
+    # Should not return an error, because default enable: true (in ee/modules/values-default.yaml)
+    return
+  fi
+  echo "true" > "$MODULE_ENABLED_RESULT"
 }
 
 enabled::run "$@"
