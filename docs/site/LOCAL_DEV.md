@@ -1,82 +1,57 @@
 # Running a site with the documentation locally
 
+## Requirements
+
 - Clone repo firstly.
 
 - Free 80 port to bind.
 
-- Install werf.
+- Install [werf](https://werf.io/getting_started/).
 
-- Open console and run documentation and site containers with one of the following methods:
+## Starting and stopping a site with the documentation locally — the first method
 
-  - **The first method** — open two consoles and do any of the following steps:
+- To start documentation, open two separate consoles and follow the steps:
 
-    1. For the main mode use `make up`:
+  1.  In the first console run:
 
-       In the first console run:
+      ```shell
+      cd docs/documentation
+      make up
+      ```
 
-       ```shell
-       cd docs/documentation
-       make up
-       ```
+  1.  In the second console run:
 
-       In the second console run:
+      ```shell
+      cd docs/site
+      make up
+      ```
 
-       ```shell
-       cd docs/site
-       make up
-       ```
+  1.  Open <http://localhost>
 
-    2. For the development mode use `make dev` instead:
+ - To stop documentation, open console and run:
 
-       In the first console run:
+      ```shell
+      make down
+      ```    
 
-       ```shell
-       cd docs/documentation
-       make dev
-       ```
+## Starting and stopping a site with the documentation locally — the second method
 
-       In the second console run:
+-  To start documentation, open console and follow the steps:
 
-       ```shell
-       cd docs/site
-       make dev
-       ```
+1.  In the console run:
 
-  - **The second method** — open console and run the necessary containers in the root of the repo:
+      ```shell
+      cd deckhouse
+      make docs
+      ```
 
-    ```shell
-    cd deckhouse
-    make docs
-    ```
+1.  Open <http://localhost>
 
-    For development mode use `make docs-dev` instead:
+-  To stop documentation, open console and run:
 
-    ```shell
-    cd deckhouse
-    make docs-dev
-    ```
-
-- Open <http://localhost>.
-
-- To stop the running containers use the following command:
-
-  - For the first method (in the each console):
-
-    ```shell
-    make down
-    ```
-
-  - For the second method:
-
-    ```shell
-    make docs-down
-    ```
-
-  - You can also stop documentation and site containers by running:
-
-    ```shell
-    werf compose down
-    ```
+      ```shell
+      make docs-down
+      ```
 
 ## How to debug
 
