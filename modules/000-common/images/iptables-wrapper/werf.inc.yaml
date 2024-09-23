@@ -19,7 +19,7 @@ artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 mount:
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
