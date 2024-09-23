@@ -647,4 +647,4 @@ installTypes:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
-        template: getting_started/global/STEP_FINISH.md           
+        template: getting_started/global/STEP_FINISH.md.          
