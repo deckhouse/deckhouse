@@ -71,4 +71,4 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy => ../../../../../go_lib/registry-packages-proxy
+replace github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy => ./registry-packages-proxy
