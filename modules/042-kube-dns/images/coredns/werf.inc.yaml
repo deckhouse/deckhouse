@@ -2,11 +2,11 @@
 artifact: {{ .ModuleName }}/coredns-src-artifact
 from: {{ .Images.BASE_GOLANG_21_ALPINE_DEV }}
 git:
-- add: /{{ $.ModulePath }}/modules/042-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-      - '**/*'
+  - add: /{{ $.ModulePath }}/modules/042-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
 shell:
   install:
     - mkdir -p /src
@@ -17,16 +17,16 @@ shell:
 artifact: {{ .ModuleName }}/coredns-artifact
 from: {{ .Images.BASE_GOLANG_21_ALPINE_DEV }}
 import:
-- artifact: {{ .ModuleName }}/coredns-src-artifact
-  add: /src
-  to: /src
-  before: install
+  - artifact: {{ .ModuleName }}/coredns-src-artifact
+    add: /src
+    to: /src
+    before: install
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
+  install:
     - cd /src
-    - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
     - go build -ldflags='-extldflags "-static" -s -w -X github.com/coredns/coredns/coremain.GitCommit=v1.11.3' -o /coredns
     - chown 64535:64535 /coredns
     - chmod 0700 /coredns
@@ -34,9 +34,9 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/coredns-artifact
-  add: /coredns
-  to: /coredns
-  before: setup
+  - artifact: {{ .ModuleName }}/coredns-artifact
+    add: /coredns
+    to: /coredns
+    before: setup
 docker:
   ENTRYPOINT: ["/coredns"]
