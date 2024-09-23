@@ -38,8 +38,8 @@ link_debian_CAs() {
 
 copy_redhat_ca_bundle() {
   cp -f "$CERT_SRC_DIR/ca-bundle/ca-certificates.crt" "$REDHAT_CA_DIR/extracted/pem/tls-ca-bundle.pem"
-  ln -sf /etc/ssl/certs/ca-bundle.crt "$REDHAT_CA_DIR/extracted/pem/tls-ca-bundle.pem"
-  ln -sf /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-bundle.crt
+  ln -sf "$REDHAT_CA_DIR/extracted/pem/tls-ca-bundle.pem" /etc/ssl/certs/ca-bundle.crt
+  ln -sf /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
 }
 
 copy_debian_ca_bundle() {
