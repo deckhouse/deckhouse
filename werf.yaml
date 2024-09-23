@@ -58,7 +58,14 @@ cleanup:
 
 # goproxy  settings
 {{- $_ := set . "GOPROXY" (env "GOPROXY") }}
-
+---
+# base artifact to store sources
+artifact: src-artifact
+from: {{ $.Images.BASE_ALPINE }}
+shell:
+  beforeInstall:
+  - apk add --no-cache git
+  - mkdir -p /src
 ---
 artifact: jq
 from: {{ $.Images.BASE_ALPINE_DEV }}
