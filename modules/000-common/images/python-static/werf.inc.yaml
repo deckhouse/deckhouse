@@ -1,24 +1,38 @@
+{{- $PythonVersion := "3.11.10" }}
 ---
-artifact: {{ .ModuleName }}/build-python-static-artifact
-from: {{ .Images.BASE_UBUNTU_DEV }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromArtifact: src-artifact
 git:
-- add: /{{ $.ModulePath }}modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}/Setup.local
-  to: /build/Setup.local
+- add: /{{ $.ModulePath }}modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/Setup.local
+  to: /src/Setup.local
   stageDependencies:
     install:
     - '**/*'
 shell:
   install:
-  - export PYTHON_VERSION=3.11.6 BUILD_THREADS=4 PYTHON_PREFIX=/opt/python-static
-  - git clone -b v${PYTHON_VERSION} --single-branch --depth=1 {{ $.SOURCE_REPO }}/python/cpython.git /build/src
-  - cp /build/Setup.local /build/src/Modules/Setup.local
-  - cd /build/src
-  - ./configure LDFLAGS="-static" --disable-shared --prefix=${PYTHON_PREFIX} --enable-optimizations --with-ensurepip=install
+  - git clone -b v${PYTHON_VERSION} --single-branch --depth=1 {{ $.SOURCE_REPO }}/python/cpython.git /src
+  - cd /src
+  - mv /src/Setup.local /src/src/Modules/Setup.local
+---
+artifact: {{ .ModuleName }}/build-python-static-artifact
+from: {{ .Images.BASE_UBUNTU_DEV }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "ubuntu packages proxy" . | nindent 2 }}
+  - apt-get install -y build-essential
+  install:
+  - cd /src
+  - ./configure LDFLAGS="-static" --disable-shared --prefix=/opt/python-static --enable-optimizations --with-ensurepip=install
   - make LDFLAGS="-static" LINKFORSHARED=" " -j ${BUILD_THREADS}
-  - make install -j ${BUILD_THREADS}
-  - chown -R 64535:64535 ${PYTHON_PREFIX}
-  - chmod 0700 ${PYTHON_PREFIX}/bin/python3
-  - chmod 0700 ${PYTHON_PREFIX}/bin/pip3
+  - make install -j 4
+  - chown -R 64535:64535 /opt/python-static
+  - chmod 0700 /opt/python-static/bin/python3
+  - chmod 0700 /opt/python-static/bin/pip3
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
