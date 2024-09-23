@@ -460,17 +460,23 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 
-if which wget >/dev/null; then
-  wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_386 -O /usr/bin/yq
-else
-  curl -sLfo /usr/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_386
-fi
+>&2 echo "Download yq..."
 
-chmod +x /usr/bin/yq
+/opt/deckhouse/bin/d8-curl -sSLf -o /opt/deckhouse/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
 
-command -v yq >/dev/null 2>&1 || exit 1
+>&2 echo "chmod yq..."
+
+chmod +x /opt/deckhouse/bin/yq
+
+>&2 echo "Create release file ..."
 
 echo "$release" > /tmp/releaseFile.yaml
+
+>&2 echo "Release file ..."
+
+cat /tmp/releaseFile.yaml
+
+>&2 echo "Apply module config ..."
 
 echo 'apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -482,6 +488,8 @@ spec:
     update:
       mode: Auto' | kubectl apply -f -
 
+>&2 echo "Apply deckhousereleases ..."
+
 echo 'apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
@@ -491,10 +499,14 @@ metadata:
   name: v1.96.3
 spec:
   version: v1.96.3
-  requirements:
-' | yq '. | load("/tmp/releaseFile.yaml") as \$d1 | .spec.requirements=\$d1.requirements' | kubectl apply -f -
+  requirements: {}
+' | /opt/deckhouse/bin/yq '. | load("/tmp/releaseFile.yaml") as \$d1 | .spec.requirements=\$d1.requirements' | kubectl apply -f -
+
+>&2 echo "Remove release file ..."
 
 rm /tmp/releaseFile.yaml
+
+>&2 echo "Sleep 5 seconds before check..."
 
 sleep 5
 
@@ -507,9 +519,15 @@ fi
 ENDSC
 )
 
-  if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<$testScript; then
-    return 0
-  fi
+  testRequirementsAttempts=10
+  for ((i=1; i<=$testRequirementsAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su - -c /bin/bash <<<$testScript; then
+        return 0
+    else
+      >&2 echo "Test requirements $i/$testRequirementsAttempts failed. Sleeping 5 seconds..."
+      sleep 5
+    fi
+  done
 
   write_deckhouse_logs
   return 1
