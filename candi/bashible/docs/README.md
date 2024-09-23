@@ -41,10 +41,6 @@ Bashible consists of small bash scripts, that are called `steps`.
 
 * `bashible/`
   * `bashbooster/` – bashbooster framework directory (it makes writing bashible steps easier)
-  * `bundles/` – the list of directories, their names are equal to the names of supported bundles
-    * `*bundle_name*/`
-      * `all/` - for all run types
-      * `cluster-bootstrap/` - only for the `ClusterBootstrap` run type
   * `common-steps/` - common steps for all bundles
     * `all/` - for all run types
     * `cluster-bootstrap/` - only for the `ClusterBootstrap` run type
@@ -53,10 +49,6 @@ Bashible consists of small bash scripts, that are called `steps`.
 * `cloud-providers/` - cloud-providers list
   * `*cloud_provider_name*/`
     * `bashible/`
-      * `bundles/` – additional steps that will included to bundle for cloud installations
-        * `*bundle_name*/`
-          * `all/` - for all run types
-          * `bootstrap-networks.sh.tpl` – a minimal script to do initials network bootstrap to be able to connect to the Kubernetes API (only for run type `Normal` or `ClusterBootstrap`)
       * `common_steps/` – common steps for all bundles
         * `bootstrap-networks.sh.tpl` – if file exists, it will be used instead of a file from a bundle
 
