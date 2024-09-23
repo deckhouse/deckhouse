@@ -28,6 +28,16 @@ import (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeAll: &go_hook.OrderedConfig{Order: 15},
+
+	// watch for cluster's StorageClass changes
+	// in case, when there is NO StorageClass exists yet (which name in `global.defaultClusterStorageClass`)
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:       "default_cluster_sc",
+			ApiVersion: "storage.k8s.io/v1",
+			Kind:       "Storageclass",
+		},
+	},
 }, dependency.WithExternalDependencies(setupDefaultStorageClass))
 
 func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container) error {
