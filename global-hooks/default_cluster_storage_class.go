@@ -60,7 +60,7 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 	}
 
 	if !haveStorageClass {
-		input.LogEntry.Warnf("StorageClass `%s` does not exists in cluster (set in `%s` parameter)", defaultClusterStorageClass, paramPath)
+		input.LogEntry.Warnf("StorageClass `%s` does not exists in cluster (set in `%s` parameter). Skipping", defaultClusterStorageClass, paramPath)
 		return nil
 	}
 
