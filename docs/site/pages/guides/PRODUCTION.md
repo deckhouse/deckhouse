@@ -69,11 +69,11 @@ No failover capability, not recommended for production environments.
 For the normal operation of all Deckhouse components in the [bundle: Default](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/002-deckhouse/configuration.html#parameters-bundle) configuration and default settings, the following specifications are recommended:
 - 6 CPU, 12 GB RAM, 60 GB disk space on a high-speed disk (400+ IOPS)
 
-This configuration will also allow some useful workload to be run, with Deckhouse occupying:
-- 25% CPU, 9 GB RAM, 20 GB disk space
+This configuration will also allow some useful workload to be run, with Deckhouse occupying about:
+- ~25% CPU, ~9 GB RAM, ~20 GB disk space
 
-In this configuration, with a load of 2500 rps on a nominal web application (static Nginx page) from 30 pods and incoming traffic of 3 MB/s:
-- Total CPU load will increase to 60%
+In this configuration, with a load of 2500 rps on a nominal web application (static Nginx page) from 30 pods and incoming traffic of 24 Mbps:
+- Total CPU load will increase to ~60%
 - RAM and disk values do not rise, but will actually depend on the number of metrics collected from the applications and the nature of the useful workload processing
 
 It is recommended to conduct load testing of your application and adjust the server's capacity accordingly based on the results.
