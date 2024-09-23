@@ -11,7 +11,7 @@ shell:
   install:
     - mkdir -p /src
     - cd /src
-    - git clone --depth 1 -b v1.11.1 {{ $.SOURCE_REPO }}/coredns/coredns.git .
+    - git clone --depth 1 -b v1.11.3 {{ $.SOURCE_REPO }}/coredns/coredns.git .
     - find /patches -name '*.patch' -exec git apply {} \;
 ---
 artifact: {{ .ModuleName }}/coredns-artifact
