@@ -17,6 +17,7 @@ import:
     before: install
 shell:
   install:
+    - cd src/
     - CGO_ENABLED=0 go build -ldflags="-s -w" -o resolv-watcher main.go
     - chown 64535:64535 /src/resolv-watcher
     - chmod 0700 /src/resolv-watcher
