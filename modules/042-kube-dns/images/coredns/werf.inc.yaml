@@ -1,5 +1,5 @@
 ---
-artifact: {{ .ModuleName }}/coredns-artifact
+artifact: {{ .ModuleName }}/coredns-src-artifact
 from: {{ .Images.BASE_GOLANG_21_ALPINE_DEV }}
 git:
 - add: /{{ $.ModulePath }}/modules/042-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -7,17 +7,27 @@ git:
   stageDependencies:
     install:
       - '**/*'
-mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
 shell:
   install:
     - mkdir -p /src
     - cd /src
     - git clone --depth 1 -b v1.11.1 {{ $.SOURCE_REPO }}/coredns/coredns.git .
     - find /patches -name '*.patch' -exec git apply {} \;
+---
+artifact: {{ .ModuleName }}/coredns-artifact
+from: {{ .Images.BASE_GOLANG_21_ALPINE_DEV }}
+import:
+- artifact: {{ .ModuleName }}/coredns-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+    - cd /src
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-    - go build -ldflags='-extldflags "-static" -s -w -X github.com/coredns/coredns/coremain.GitCommit=v1.11.1' -o /coredns
+    - go build -ldflags='-extldflags "-static" -s -w -X github.com/coredns/coredns/coremain.GitCommit=v1.11.3' -o /coredns
     - chown 64535:64535 /coredns
     - chmod 0700 /coredns
 ---
