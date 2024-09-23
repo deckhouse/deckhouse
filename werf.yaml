@@ -27,7 +27,8 @@ cleanup:
 {{- define "ubuntu packages proxy" }}
   # Replace ubuntu repos with our proxy
   {{- if $.DistroPackagesProxy }}
-- sed -i "s/http:\/\/deb\.debian\.org/http:\/\/{{ $.DistroPackagesProxy }}\/repository/g" /etc/apt/sources.list.d/debian.sources
+- sed -i 's/http:\/\/archive\.ubuntu\.com/http:\/\/{{ $.DistroPackagesProxy }}\/repository\/archive-ubuntu/g' /etc/apt/sources.list.d/ubuntu.sources
+- sed -i 's/http:\/\/security\.ubuntu\.com/http:\/\/{{ $.DistroPackagesProxy }}\/repository\/security-ubuntu/g' /etc/apt/sources.list.d/ubuntu.sources
   {{- end }}
 - apt-get update
 {{- end }}
