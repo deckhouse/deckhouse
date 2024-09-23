@@ -15,7 +15,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache gcc
+  - apk add --no-cache build-base gcc make
   install:
   - cd /src
   # disable Redis protected mode [1] as it is unnecessary in context of Docker
