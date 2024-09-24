@@ -1,0 +1,26 @@
+syntax="proto3";
+
+package proto;
+
+message HistogramMessage {
+    int32 MappingIndex = 1;
+    repeated string Labels = 2;
+    map<string, uint64> Buckets = 3;
+    double Sum = 4;
+    uint64 Count = 5;
+    map<string, string> Annotations = 6;
+}
+
+message CounterMessage {
+    int32 MappingIndex = 1;
+    repeated string Labels = 2;
+    uint64 Value = 3;
+    map<string, string> Annotations = 4;
+}
+
+message GaugeMessage {
+    int32 MappingIndex = 1;
+    repeated string Labels = 2;
+    double Value = 3;
+    map<string, string> Annotations = 4;
+}
