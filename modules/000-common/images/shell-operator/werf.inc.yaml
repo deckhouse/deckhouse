@@ -16,7 +16,7 @@ import:
   to: /frameworks
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /src/jq/jq
+  add: /jq/jq
   to: /usr/local/bin/jq
   before: setup
 {{- $k8sVersion := "1.27" }}
@@ -58,9 +58,6 @@ shell:
   beforeInstall:
   - apk add --no-cache automake autoconf libtool build-base git
   install:
-  - cd /src/shell-operator
-  - go mod tidy
-  setup:
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 GOOS=linux
   - cd /src/jq
   - autoreconf -fi
@@ -68,9 +65,13 @@ shell:
   - make -j4
   - make install-libLTLIBRARIES install-includeHEADERS
   - cp -f modules/oniguruma/src/.libs/libonig.* /libjq/lib
+  - mkdir -p /jq
+  - cp jq /jq
+  - chown -R 64535:64535 /jq
+  - chmod 700 /jq/jq
   - cd /src/shell-operator
   - CGO_CFLAGS="-I/libjq/include" CGO_LDFLAGS="-L/libjq/lib" go build -ldflags="-linkmode external -extldflags '-static' -s -w -X 'github.com/flant/shell-operator/pkg/app.Version={{ $shellOperatorVersion }}'" -tags use_libjq -o shell-operator ./cmd/shell-operator
   - mkdir -p /shell-operator
   - cp -r shell_lib.sh frameworks shell-operator /shell-operator
-  - chown -R 64535:64535 /shell-operator/shell-operator
+  - chown -R 64535:64535 /shell-operator
   - chmod 700 /shell-operator/shell-operator
