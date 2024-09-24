@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	copyCustomCertificateImport = "github.com/deckhouse/deckhouse/go_lib/hooks/copy_custom_certificate"
+	copyCustomCertificateImport = `"github.com/deckhouse/deckhouse/go_lib/hooks/copy_custom_certificate"`
 )
 
 func IngressHooksCheck(m utils.Module, object storage.StoreObject) errors.LintRuleError {
@@ -91,14 +91,8 @@ func getImports(filename string) (map[string]struct{}, error) {
 
 	var imports = make(map[string]struct{})
 	for _, s := range astFile.Imports {
-		imports[trimQuotes(s.Path.Value)] = struct{}{}
+		imports[s.Path.Value] = struct{}{}
 	}
 
 	return imports, nil
-}
-
-func trimQuotes(s string) string {
-	return strings.TrimFunc(s, func(r rune) bool {
-		return r == '"'
-	})
 }
