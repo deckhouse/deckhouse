@@ -1,4 +1,3 @@
-{{- if .Values.prometheus.internal.prometheusPlusPlus  }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -25,4 +24,3 @@ spec:
   namespaceSelector:
     matchNames:
     - d8-monitoring
-{{- end }}

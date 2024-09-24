@@ -1,5 +1,4 @@
 {{- if (include "helm_lib_ha_enabled" .) }}
-  {{- if .Values.prometheus.internal.prometheusPlusPlus }}
 ---
 apiVersion: v1
 kind: Service
@@ -17,5 +16,4 @@ spec:
   selector:
     app.kubernetes.io/name: prometheus
     prometheus: main
-  {{- end }}
 {{- end }}

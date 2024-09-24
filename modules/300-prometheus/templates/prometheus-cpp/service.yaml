@@ -1,4 +1,3 @@
-{{- if .Values.prometheus.internal.prometheusPlusPlus  }}
 ---
 apiVersion: v1
 kind: Service
@@ -54,5 +53,4 @@ spec:
     prometheus-cpp: main
     app.kubernetes.io/name: prometheus-cpp
     statefulset.kubernetes.io/pod-name: prometheus-cpp-main-1
-{{- end }}
 {{- end }}

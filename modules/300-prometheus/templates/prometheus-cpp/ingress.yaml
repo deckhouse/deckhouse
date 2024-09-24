@@ -1,5 +1,4 @@
 {{- if .Values.global.modules.publicDomainTemplate }}
-{{- if .Values.prometheus.internal.prometheusPlusPlus }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -67,5 +66,4 @@ spec:
             port:
               name: https
   {{- end }}
-{{- end }}
 {{- end }}
