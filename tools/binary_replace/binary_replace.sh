@@ -57,6 +57,14 @@ while getopts ":h:i:f:o:" option; do
     esac
 done
 
+tools=("ldd" "readlink" "mkdir" "awk" "cp" "dirname" "cat")
+for tool in "${tools[@]}"; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "$tool is not installed."
+    exit 1
+  fi
+done
+
 if [[ -z $RDIR ]];then
   RDIR="/relocate"
 fi
@@ -80,12 +88,12 @@ function relocate_item() {
   local new_place="${RDIR}$(dirname ${file})"
 
   mkdir -p ${new_place}
-  cp -a ${file} ${new_place}
+  cp -a ${file} ${new_place} || exit 2
 
   # if symlink, copy original file too
   local orig_file="$(readlink -f ${file})"
   if [[ "${file}" != "${orig_file}" ]]; then
-    cp -a ${orig_file} ${new_place}
+    cp -a ${orig_file} ${new_place} || exit 3
   fi
 }
 
