@@ -61,7 +61,7 @@ func IngressHooksCheck(m utils.Module, object storage.StoreObject) errors.LintRu
 
 func collectGoHooks(moduleDir string) []string {
 	goHooks := make([]string, 0)
-	_ = filepath.Walk(moduleDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(moduleDir, func(path string, _ os.FileInfo, err error) error {
 		switch {
 		case err != nil:
 			return err
