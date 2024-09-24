@@ -19,14 +19,13 @@ shell:
 {{- $v := semver $version }}
 {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
-# {{- if and (semverCompare ">=1.27" $version) (semverCompare "<1.28" $version) }}
-artifact: src-artifact
+artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+fromArtifact: src-artifact
 import:
   - artifact: common/kubernetes-src-artifact-{{ $image_version }}
     add: /src/staging/src/k8s.io/kube-proxy
     to: /src
     before: setup
-# {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
