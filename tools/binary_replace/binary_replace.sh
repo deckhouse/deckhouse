@@ -83,13 +83,31 @@ function relocate() {
   done
 }
 
+function create_dir() {
+  local dir=$1
+  local new_dir="${RDIR}${dir}"
+  if [ -L "${dir}" ]; then
+    if ! [ -L "${new_dir}" ]; then
+      cp -a "${dir}" "${new_dir}"
+    fi
+    local orig_dir="$(readlink -f ${dir})"
+    if ! [ -d "${RDIR}${orig_dir}" ]; then
+      mkdir -p "${RDIR}${orig_dir}"
+    fi
+  else
+    if ! [ -d "${new_dir}" ]; then
+      mkdir -p "${new_dir}"
+    fi
+  fi
+}
+
 function relocate_item() {
   local file=$1
   local new_place="${RDIR}${file}"
 
   if ! [ -f "${new_place}" -o -L "${new_place}" ]; then
     echo "copy ${file}"
-    mkdir -p $(dirname ${new_place})
+    create_dir "$(dirname ${file})"
     cp -a ${file} ${new_place} || exit 2
   fi
 

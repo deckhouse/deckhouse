@@ -64,7 +64,8 @@ git:
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y curl jq iptables iptables-nft bind-utils glibc-utils
+  - apt-get install -y glibc-utils curl jq iptables iptables-nft bind-utils
+  - rm -rf /var/lib/apt/lists/*
   install:
   - |
       /binary_replace.sh -i "\
@@ -81,3 +82,9 @@ shell:
         /sbin/xtables* \
         /sbin/arptables* \
         " -o /relocate
+  - |
+      set -x
+      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+        rm -f "/relocate/sbin/${cmd}"
+        ln -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
+      done
