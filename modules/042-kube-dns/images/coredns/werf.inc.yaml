@@ -38,8 +38,8 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-    add: /{{ $.ImageName }}
-    to: /{{ $.ImageName }}
+    add: /coredns
+    to: /coredns
     before: setup
 docker:
-  ENTRYPOINT: ["/{{ $.ImageName }}"]
+  ENTRYPOINT: ["/coredns"]

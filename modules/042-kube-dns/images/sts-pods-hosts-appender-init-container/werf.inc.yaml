@@ -27,8 +27,8 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-    add: /src/{{ $.ImageName }}
-    to: /{{ $.ImageName }}
+    add: /src/sts-pods-hosts-appender-init-container
+    to: /sts-pods-hosts-appender-init-container
     before: setup
 docker:
-  ENTRYPOINT: ["/{{ $.ImageName }}"]
+  ENTRYPOINT: ["/sts-pods-hosts-appender-init-container"]

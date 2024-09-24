@@ -29,8 +29,8 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-    add: /src/{{ $.ImageName }}
-    to: /{{ $.ImageName }}
+    add: /src/resolv-watcher
+    to: /resolv-watcher
     before: setup
 docker:
-  ENTRYPOINT: ["/{{ $.ImageName }}"]
+  ENTRYPOINT: ["/resolv-watcher"]
