@@ -21,7 +21,7 @@ shell:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromArtifact: src-artifact
 git:
-- add: /{{ .ModulePath }}modules/035-{{ $.ModuleName }}l/images/{{ $.ImageName }}/entrypoint
+- add: /{{ .ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint
   to: /src/entrypoint
   stageDependencies:
     install:
