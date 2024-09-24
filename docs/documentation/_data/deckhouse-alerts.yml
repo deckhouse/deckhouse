@@ -2369,6 +2369,17 @@ alerts:
         Kubernetes version &quot;{{ $labels.k8s_version }}&quot; has reached End Of Life.
       severity: "4"
       markupFormat: markdown
+    - name: L2LoadBalancerModuleDeprecated
+      sourceFile: ee/modules/381-l2-load-balancer/monitoring/prometheus-rules/services.yaml
+      moduleUrl: 381-l2-load-balancer
+      module: l2-load-balancer
+      edition: ee
+      description: |
+        The L2LoadBalancer module is deprecated and will be removed in a future release. Disable the module and use MetalLB module in L2 mode.
+      summary: |
+        L2LoadBalancer module is deprecated
+      severity: "3"
+      markupFormat: markdown
     - name: L2LoadBalancerOrphanServiceFound
       sourceFile: ee/modules/381-l2-load-balancer/monitoring/prometheus-rules/services.yaml
       moduleUrl: 381-l2-load-balancer
