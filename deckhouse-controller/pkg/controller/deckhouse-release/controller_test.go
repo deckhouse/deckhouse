@@ -127,7 +127,7 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 	gotB := suite.fetchResults()
 
 	if golden {
-		err := os.WriteFile(goldenFile, got, 0o666)
+		err := os.WriteFile(goldenFile, gotB, 0o666)
 		require.NoError(suite.T(), err)
 	} else {
 		got := singleDocToManifests(gotB)
