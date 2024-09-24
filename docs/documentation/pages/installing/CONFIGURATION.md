@@ -6,7 +6,7 @@ permalink: en/installing/configuration.html
 Reference of the resources used during [Deckhouse installation](./).
 
 {% alert level="danger" %}
-We do not recommend changing the parameters `internalNetworkCIDRs`, `serviceSubnetCIDR`, `podSubnetNodeCIDRPrefix`, `podSubnetCIDR` in an operational cluster. It is recommended to create a new cluster to change these parameters.
+We do not recommend changing the parameters `internalNetworkCIDRs`, `serviceSubnetCIDR`, `podSubnetNodeCIDRPrefix`, `podSubnetCIDR` in a running cluster. It is recommended to create a new cluster to change these parameters.
 {% endalert %}
 
 {{ site.data.schemas.global.cluster_configuration | format_cluster_configuration }}
