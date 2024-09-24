@@ -47,6 +47,6 @@ shell:
   setup:
   - cd /src
   - go test ./... -v
-  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o loop main.go
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o loop main.go
   - chown -R 64535:64535 /src/
   - chmod 0700 /src/loop
