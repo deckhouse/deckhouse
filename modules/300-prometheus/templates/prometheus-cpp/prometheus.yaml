@@ -7,8 +7,8 @@ memory: 1000Mi
 cpu: 10m
 memory: 25Mi
 {{- end }}
+
 {{- if .Values.prometheus.internal.prometheusPlusPlus  }}
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
