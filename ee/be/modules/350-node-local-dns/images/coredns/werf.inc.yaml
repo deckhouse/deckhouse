@@ -43,8 +43,8 @@ mount:
   to: /go/pkg
 shell:
   install:
-  - cd /src
   - export GOPROXY={{ .GOPROXY }}
+  - cd /src
   - go mod tidy
   setup:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0

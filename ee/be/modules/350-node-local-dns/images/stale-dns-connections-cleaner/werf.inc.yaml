@@ -39,6 +39,7 @@ mount:
   to: /go/pkg
 shell:
   install:
+  - export GOPROXY={{ .GOPROXY }}
   - cd /src
   - go mod tidy
   setup:
