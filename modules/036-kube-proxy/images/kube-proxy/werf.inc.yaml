@@ -7,7 +7,6 @@ shell:
     - mkdir -p /src
     - cd /src
     - git clone --depth 1 -b {{ $.ImageName }} {{ $.SOURCE_REPO }}/{{ $.ImageName }}/{{ $.ImageName }}.git .
-
 ---
 artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
