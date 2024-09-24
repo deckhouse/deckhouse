@@ -16,7 +16,7 @@ spec:
         resources:   ["users"]
   validations:
     - expression: '!( request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
-        && !object.spec.email.matches("^[\\w\\-\\.]+@(?:[\\w-]+\\.)+[\\w-]{2,}$") )'
+        && !object.spec.email.matches("^[\\w\\+\\-\\.]+@(?:[\\w-]+\\.)+[\\w-]{2,}$") )'
       reason: Forbidden
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
