@@ -1,20 +1,8 @@
 {{- $binaries := "/sbin/xtables-nft-multi /sbin/ip6tables-nft /sbin/ip6tables-nft-restore /sbin/ip6tables-nft-save /sbin/iptables-nft /sbin/iptables-nft-restore /sbin/iptables-nft-save /sbin/xtables-legacy-multi /sbin/iptables /sbin/iptables-restore /sbin/iptables-save /sbin/iptables-legacy /sbin/iptables-legacy-restore /sbin/iptables-legacy-save /sbin/ip6tables /sbin/ip6tables-restore /sbin/ip6tables-save /sbin/ip6tables-legacy /sbin/ip6tables-legacy-restore /sbin/ip6tables-legacy-save /usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so*" }}
----
-artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
-fromArtifact: src-artifact
-shell:
-  install:
-    - mkdir -p /src
-    - cd /src
-    - git clone --depth 1 -b {{ $.ImageName }} {{ $.SOURCE_REPO }}/{{ $.ImageName }}/{{ $.ImageName }}.git .
+
 ---
 artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
-import:
-  - artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
-    add: /src
-    to: /src
-    before: install
 shell:
   install:
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
@@ -30,6 +18,15 @@ shell:
 {{- $patch := $value.patch | toString }}
 {{- $v := semver $version }}
 {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
+---
+# {{- if and (semverCompare ">=1.27" $version) (semverCompare "<1.28" $version) }}
+artifact: src-artifact
+import:
+  - artifact: common/kubernetes-src-artifact-{{ $image_version }}
+    add: /src/staging/src/k8s.io/kube-proxy
+    to: /src
+    before: setup
+# {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
