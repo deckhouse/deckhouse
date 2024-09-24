@@ -127,7 +127,7 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 	gotB := suite.fetchResults()
 
 	if golden {
-		err := os.WriteFile(goldenFile, gotB, 0666)
+		err := os.WriteFile(goldenFile, got, 0o666)
 		require.NoError(suite.T(), err)
 	} else {
 		got := singleDocToManifests(gotB)
@@ -140,6 +140,7 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 		}
 	}
 }
+
 func (suite *ControllerTestSuite) setupController(
 	filename string,
 	initValues string,
@@ -543,9 +544,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Notification: bearer token auth", func() {
-		var (
-			headerValue string
-		)
+		var headerValue string
 		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 			headerValue = r.Header.Get("Authorization")
 		}))

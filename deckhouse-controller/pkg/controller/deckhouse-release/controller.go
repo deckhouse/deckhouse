@@ -41,10 +41,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	d8updater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release/updater"
@@ -77,7 +74,8 @@ type deckhouseReleaseReconciler struct {
 }
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
-	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metric_storage.MetricStorage) error {
+	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metric_storage.MetricStorage,
+) error {
 	lg := log.WithField("component", "DeckhouseRelease")
 
 	r := &deckhouseReleaseReconciler{
@@ -109,42 +107,12 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		return err
 	}
 
+	lg.Info("Controller started")
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.DeckhouseRelease{}).
-		WithEventFilter(predicate.And(
-			predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}),
-			releasePhasePredicate{},
-		)).
+		WithEventFilter(logWrapper{lg, newEventFilter()}).
 		Complete(ctr)
-}
-
-type releasePhasePredicate struct{}
-
-func (rp releasePhasePredicate) Create(ev event.CreateEvent) bool {
-	switch ev.Object.(*v1alpha1.DeckhouseRelease).Status.Phase {
-	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended, v1alpha1.PhaseDeployed:
-		return false
-	}
-	return true
-}
-
-// Delete returns true if the Delete event should be processed
-func (rp releasePhasePredicate) Delete(_ event.DeleteEvent) bool {
-	return false
-}
-
-// Update returns true if the Update event should be processed
-func (rp releasePhasePredicate) Update(ev event.UpdateEvent) bool {
-	switch ev.ObjectNew.(*v1alpha1.DeckhouseRelease).Status.Phase {
-	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended, v1alpha1.PhaseDeployed:
-		return false
-	}
-	return true
-}
-
-// Generic returns true if the Generic event should be processed
-func (rp releasePhasePredicate) Generic(_ event.GenericEvent) bool {
-	return true
 }
 
 func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -304,7 +272,6 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		r.logger, r.client, r.dc, dus, releaseData, r.metricStorage, podReady,
 		clusterBootstrapping, imagesRegistry, r.moduleManager.GetEnabledModuleNames(),
 	)
-
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("initializing deckhouse updater: %w", err)
 	}

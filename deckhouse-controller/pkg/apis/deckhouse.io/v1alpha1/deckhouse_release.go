@@ -25,15 +25,15 @@ import (
 )
 
 var (
-	DeckhouseReleaseGVR = schema.GroupVersionResource{
-		Group:    SchemeGroupVersion.Group,
-		Version:  SchemeGroupVersion.Version,
-		Resource: "deckhousereleases",
-	}
 	DeckhouseReleaseGVK = schema.GroupVersionKind{
 		Group:   SchemeGroupVersion.Group,
 		Version: SchemeGroupVersion.Version,
-		Kind:    "DeckhouseRelease",
+		Kind:    DeckhouseReleaseKind,
+	}
+	DeckhouseReleaseGVR = schema.GroupVersionResource{
+		Group:    SchemeGroupVersion.Group,
+		Version:  SchemeGroupVersion.Version,
+		Resource: DeckhouseReleasesKind,
 	}
 )
 
