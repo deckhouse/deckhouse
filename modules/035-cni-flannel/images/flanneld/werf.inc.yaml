@@ -37,7 +37,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make bash
+  - apk add --no-cache make bash gcc
   install:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src/entrypoint
