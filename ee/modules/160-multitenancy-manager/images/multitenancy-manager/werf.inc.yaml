@@ -26,11 +26,15 @@ git:
   - '**/*.go'
   - '**/*.mod'
   - '**/*.sum'
+  - '**/*.tpl'
+  - '**/*.yaml'
   stageDependencies:
     install:
     - '**/*.go'
     - 'go.mod'
     - 'go.sum'
+    - '**/*.tpl'
+    - '**/*.yaml'
 shell:
   install:
   - cd /src
@@ -49,9 +53,8 @@ shell:
   - go mod tidy
   setup:
   - cd /src
-  - go test ./... -v
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o multitenancy-manager ./cmd/main.go
-  - chown 64535:64535 /src
+  - chown -R 64535:64535 /src
   - chmod 0755 /src/multitenancy-manager
 mount:
 - fromPath: ~/go-pkg-cache
