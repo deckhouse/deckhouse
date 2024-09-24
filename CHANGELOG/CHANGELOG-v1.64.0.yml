@@ -19,6 +19,8 @@ candi:
     - summary: Added debugging information in case of error in bb-package-fetch-blob.
       pull_request: https://github.com/deckhouse/deckhouse/pull/9018
   fixes:
+    - summary: Improve catch errors in bootstrap-network scripts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9695
     - summary: Disable and remove unattended upgrades early for Debian, Ubuntu and Astra.
       pull_request: https://github.com/deckhouse/deckhouse/pull/9574
     - summary: Fix bootstrap script for static nodes in hybrid clusters to avoid using cloud metadata.
@@ -223,8 +225,6 @@ docs:
     - summary: Add new module `deckhouse-tools`.
       pull_request: https://github.com/deckhouse/deckhouse/pull/9140
   fixes:
-    - summary: Update notes for bare metal in the Getting started.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/9736
     - summary: The table with supported Linux versions has been refactored
       pull_request: https://github.com/deckhouse/deckhouse/pull/9653
     - summary: Replaced the description of the `noProxy` parameter in `config.yml` in GS.
@@ -286,9 +286,6 @@ loki:
     - summary: Configurable Loki limits.
       pull_request: https://github.com/deckhouse/deckhouse/pull/9437
       impact: Loki pod will be restarted. Short disruption will occur.
-  fixes:
-    - summary: Update `maxStreamsPerUser` parameter description.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/9775
 metallb:
   fixes:
     - summary: Restore AddressPool CRD of MetalLB module.
@@ -320,6 +317,8 @@ node-manager:
   fixes:
     - summary: Remove unused data from tests
       pull_request: https://github.com/deckhouse/deckhouse/pull/9740
+    - summary: Fix CAPS bootstrap multiple nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9672
     - summary: Fix `CertificateSigningRequest` validation in the auto approve hook.
       pull_request: https://github.com/deckhouse/deckhouse/pull/9509
     - summary: Fix panic in mcm when deleting several NodeGroups.
