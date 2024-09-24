@@ -44,6 +44,7 @@
 ## Fixes
 
 
+ - **[candi]** Add PVC disks to ignore_changes lifecycle for CloudPermanent nodes at VMware Cloud Director. [#9781](https://github.com/deckhouse/deckhouse/pull/9781)
  - **[candi]** Fix for bootstrap or upgrade an existing cluster installed in AWS using the "Standard" layout. [#9545](https://github.com/deckhouse/deckhouse/pull/9545)
  - **[candi]** Fix catch exit codes in cloud-providers bootstrap-network scripts. [#9448](https://github.com/deckhouse/deckhouse/pull/9448)
  - **[candi]** Before running `kubectl` check if it exists. [#9438](https://github.com/deckhouse/deckhouse/pull/9438)
@@ -68,6 +69,7 @@
  - **[deckhouse-controller]** Fixed panic when processing terminating deckhouse pod. [#9621](https://github.com/deckhouse/deckhouse/pull/9621)
  - **[deckhouse-controller]** Fix panic on invalid module image [#9231](https://github.com/deckhouse/deckhouse/pull/9231)
  - **[deckhouse-controller]** Deckhouse update metrics restored. [#9147](https://github.com/deckhouse/deckhouse/pull/9147)
+ - **[dhctl]** Fix attempt to change protected objects. [#9560](https://github.com/deckhouse/deckhouse/pull/9560)
  - **[dhctl]** Revert ensure required namespaces while resources creation. [#9715](https://github.com/deckhouse/deckhouse/pull/9715)
  - **[dhctl]** Fixed checking the length of the list of external IP addresses in the `YandexClusterConfiguration`. [#9449](https://github.com/deckhouse/deckhouse/pull/9449)
  - **[dhctl]** Fix static installation consume 100% of CPU. [#9359](https://github.com/deckhouse/deckhouse/pull/9359)
