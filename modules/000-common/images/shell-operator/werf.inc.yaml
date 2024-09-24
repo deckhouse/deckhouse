@@ -16,7 +16,7 @@ import:
   to: /frameworks
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /jq/jq
+  add: /src/jq/jq
   to: /usr/local/bin/jq
   before: setup
 {{- $k8sVersion := "1.27" }}
@@ -36,6 +36,7 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromArtifact: src-artifact
 shell:
   install:
+  - git clone --branch {{ $shellOperatorVersion }} --depth 1 {{ .SOURCE_REPO }}/flant/shell-operator.git /src/shell-operator
   - git clone --depth 1 {{ .SOURCE_REPO }}/jqlang/jq --branch "jq-1.7.1" /src/jq
   - cd /src/jq
   - |
@@ -45,8 +46,6 @@ shell:
       url = {{ .SOURCE_REPO }}/flant/oniguruma.git
     EOF
   - git submodule update --init
-  - cd /
-  - git clone --branch {{ $shellOperatorVersion }} --depth 1 {{ .SOURCE_REPO }}/flant/shell-operator.git /src/shell-operator
 ---
 artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
@@ -59,6 +58,9 @@ shell:
   beforeInstall:
   - apk add --no-cache automake autoconf libtool build-base git
   install:
+  - cd /src/shell-operator
+  - go mod tidy
+  setup:
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 GOOS=linux
   - cd /src/jq
   - autoreconf -fi
@@ -67,5 +69,4 @@ shell:
   - make install-libLTLIBRARIES install-includeHEADERS
   - cp -f modules/oniguruma/src/.libs/libonig.* /libjq/lib
   - cd /src/shell-operator
-  - go mod tidy
   - CGO_CFLAGS="-I/libjq/include" CGO_LDFLAGS="-L/libjq/lib" go build -ldflags="-linkmode external -extldflags '-static' -s -w -X 'github.com/flant/shell-operator/pkg/app.Version={{ $shellOperatorVersion }}'" -tags use_libjq -o shell-operator ./cmd/shell-operator
