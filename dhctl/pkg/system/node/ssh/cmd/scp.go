@@ -96,6 +96,7 @@ func (s *SCP) SCP() *SCP {
 		"-o", "ServerAliveInterval=10",
 		"-o", "ServerAliveCountMax=3",
 		"-o", "ConnectTimeout=15",
+		"-p", //preserve explicitly
 	}
 
 	if app.IsDebug {
