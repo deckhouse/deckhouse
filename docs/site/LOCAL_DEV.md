@@ -28,7 +28,7 @@
 
   1. Open <http://localhost>
 
-- To stop documentation, open console and run:
+- To stop documentation, cancel the process in the consoles and run:
 
   ```shell
   make down
@@ -41,13 +41,12 @@
   1. In the console run:
 
      ```shell
-     cd deckhouse
      make docs
      ```
 
   1. Open <http://localhost>
 
-- To stop documentation, open console and run:
+- To stop documentation, cancel the process in the console and run:
 
   ```shell
   make docs-down
