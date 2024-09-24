@@ -1,7 +1,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 git:
-- add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}
   to: /
   includePaths:
   - '**/*.sh'
