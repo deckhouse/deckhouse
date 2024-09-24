@@ -3,19 +3,19 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_ALT_P11 }}
 import:
 - artifact: common/shell-operator-artifact
-  add: /shell-operator/shell-operator
+  add: /src/shell-operator/shell-operator
   to: /shell-operator
   before: setup
 - artifact: common/shell-operator-artifact
-  add: /shell-operator/shell_lib.sh
+  add: /src/shell-operator/shell_lib.sh
   to: /shell_lib.sh
   before: setup
 - artifact: common/shell-operator-artifact
-  add: /shell-operator/frameworks
+  add: /src/shell-operator/frameworks
   to: /frameworks
   before: setup
 - artifact: common/shell-operator-artifact
-  add: /jq/jq
+  add: /src/jq/jq
   to: /usr/local/bin/jq
   before: setup
 {{- $k8sVersion := "1.27" }}
