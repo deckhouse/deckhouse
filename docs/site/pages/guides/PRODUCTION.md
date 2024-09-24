@@ -59,6 +59,7 @@ Estimates of the resources required for the clusters to run:
 - Add worker nodes to this, taking into account the nature of the workloads.
 
 ## Things to consider when configuring
+
 ### Master nodes
 
 {% alert %}
