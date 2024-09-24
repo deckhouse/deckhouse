@@ -185,8 +185,8 @@ function main() {
   comment="created by deckhouse"
 
 	if [ -d "$home_base_path" ]; then
-		chmod -c 755  $home_base_path 
-		chown -c root:root $home_base_path 
+		chmod -c 755  $home_base_path
+		chown -c root:root $home_base_path
 	else
 		mkdir -p $home_base_path
 	fi
@@ -277,7 +277,15 @@ function main() {
     done
     if [[ "$is_user_id_found" == "false" ]]; then
       if [ "$local_user_id" -gt "1000" ]; then
-        userdel -r "$(id -nu $local_user_id)"
+        while true
+        do
+          # Emulate pkill -U $local_user_id
+          ps aux | grep "^$(id -nu $local_user_id)" | awk '{print $2}' | xargs kill -9
+
+          if userdel -r "$(id -nu $local_user_id)"; then
+            break
+          fi
+        done
       else
         bb-log-error "Strange user with UID: $local_user_id, cannot delete it"
         return

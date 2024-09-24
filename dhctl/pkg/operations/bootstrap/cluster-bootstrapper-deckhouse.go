@@ -16,10 +16,10 @@ package bootstrap
 
 import (
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
@@ -63,7 +63,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse() error {
 		return err
 	}
 
-	kubeCl, err := operations.ConnectToKubernetesAPI(b.NodeInterface)
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(b.NodeInterface)
 	if err != nil {
 		return err
 	}

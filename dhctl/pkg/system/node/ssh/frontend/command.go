@@ -105,7 +105,15 @@ func (c *Command) Sudo() {
 			if !passSent {
 				// send pass through stdin
 				log.DebugLn("Send become pass to cmd")
-				_, _ = c.Executor.Stdin.Write([]byte(app.BecomePass + "\n"))
+				var becomePass string
+
+				if c.Session.BecomePass != "" {
+					becomePass = c.Session.BecomePass
+				} else {
+					becomePass = app.BecomePass
+				}
+
+				_, _ = c.Executor.Stdin.Write([]byte(becomePass + "\n"))
 				passSent = true
 			} else {
 				// Second prompt is error!
