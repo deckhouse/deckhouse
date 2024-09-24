@@ -67,8 +67,8 @@ import:
   add: /
   to: /
   includePaths:
-  - lib64/iptables
-  - lib64/libm*
+  - usr/lib64/iptables
+  - usr/lib64/libm.*
   before: setup
 - image: common/iptables-wrapper
   add: /iptables-wrapper
