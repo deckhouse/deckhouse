@@ -72,28 +72,31 @@ mkdir -p "${RDIR}"
 
 function relocate() {
   local binary=$1
-  relocate_item ${binary}
+  relocate_item "${binary}"
 
   for lib in $(ldd ${binary} 2>/dev/null | awk '{if ($2=="=>") print $3; else print $1}'); do
     # don't try to relocate linux-vdso.so lib due to this lib is virtual
     if [[ "${lib}" =~ "linux-vdso" ]]; then
       continue
     fi
-    relocate_item ${lib}
+    relocate_item "${lib}"
   done
 }
 
 function relocate_item() {
   local file=$1
-  local new_place="${RDIR}$(dirname ${file})"
+  local new_place="${RDIR}${file}"
 
-  mkdir -p ${new_place}
-  cp -a ${file} ${new_place} || exit 2
+  if ! [ -f "${new_place}" -o -L "${new_place}" ]; then
+    echo "copy ${file}"
+    mkdir -p $(dirname ${new_place})
+    cp -a ${file} ${new_place} || exit 2
+  fi
 
   # if symlink, copy original file too
   local orig_file="$(readlink -f ${file})"
   if [[ "${file}" != "${orig_file}" ]]; then
-    cp -a ${orig_file} ${new_place} || exit 3
+    relocate_item "${orig_file}"
   fi
 }
 
@@ -102,8 +105,9 @@ function get_binary_path () {
   BINARY_LIST=()
 
   for bin in "$@"; do
-    if [[ ! -f $bin ]] || [ "${bin}" == "${RDIR}" ]; then
-      continue
+    if ! [ -f "${bin}" -o -L "${bin}" ] || [ "${bin}" == "${RDIR}" ]; then
+      echo "not found $bin"
+      exit 3
     fi
     BINARY_LIST+=$(ls -la $bin 2>/dev/null | awk '{print $9}')" "
   done

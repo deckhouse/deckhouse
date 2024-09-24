@@ -58,10 +58,13 @@ from: {{ .Images.BASE_ALT_P11 }}
 git:
 - add: /tools/dev_images/additional_tools/alt/binary_replace.sh
   to: /binary_replace.sh
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y curl jq iptables iptables-nft glibc-utils
+  - apt-get install -y curl jq iptables iptables-nft bind-utils glibc-utils
   install:
   - |
       /binary_replace.sh -i "\
