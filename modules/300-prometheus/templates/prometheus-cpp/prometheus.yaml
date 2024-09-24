@@ -43,7 +43,7 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
 metadata:
-  name: main
+  name: cpp
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
 spec:
