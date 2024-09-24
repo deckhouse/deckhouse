@@ -117,6 +117,8 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 }
 
 func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	r.logger.Debugln("processing release %s", req.Name)
+
 	if r.updateSettings.Get().ReleaseChannel == "" {
 		return ctrl.Result{}, nil
 	}
