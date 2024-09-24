@@ -49,7 +49,7 @@ metadata:
 spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   retention: {{ .Values.prometheus.retentionDays }}d
-  retentionSize: {{ .Values.prometheus.internal.prometheusPlusPlus.retentionGigabytes }}GB
+  retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
   image: {{ include "helm_lib_module_image" (list . "prometheus") }}
   version: v2.45.2
   enableRemoteWriteReceiver: true
@@ -241,7 +241,7 @@ spec:
   {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 2 }}
   {{- include "helm_lib_tolerations" (tuple . "monitoring" "without-storage-problems") | nindent 2 }}
   {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 2 }}
-{{- $storageClass := .Values.prometheus.internal.prometheusPlusPlus.effectiveStorageClass }}
+{{- $storageClass := .Values.prometheus.internal.prometheusMain.effectiveStorageClass }}
 {{- if $storageClass }}
   storage:
     volumeClaimTemplate:
@@ -250,7 +250,7 @@ spec:
         - ReadWriteOnce
         resources:
           requests:
-            storage: {{ .Values.prometheus.internal.prometheusPlusPlus.diskSizeGigabytes }}Gi
+            storage: {{ .Values.prometheus.internal.prometheusMain.diskSizeGigabytes }}Gi
         storageClassName: {{ $storageClass }}
 {{- end }}
   resources:
