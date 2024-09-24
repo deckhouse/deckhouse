@@ -353,3 +353,22 @@ List of checks performed by the installer before starting the installation of De
 If the installation was carried out in a supported cloud and was interrupted for any reason, or if problems occurred during the installation, resources that were created during the installation may end up residing in the cloud. To purge them, run the `dhctl bootstrap-phase abort` command in the installer container.
 
 > Note that the **config file** that is passed via the `--config` parameter to run the installer must be the **same** as the one used to initiate the installation in the first place.
+
+### Single-master Installation
+
+{% alert %}
+No failover capability, not recommended for production environments.
+{% endalert %}
+
+[Quick Start](https://deckhouse.io/products/kubernetes-platform/gs/bm/step5.html) allows you to run Deckhouse on a single master node for functional testing by removing taints from it.
+For the normal operation of all Deckhouse components in the [bundle: Default](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/002-deckhouse/configuration.html#parameters-bundle) configuration and default settings, the following specifications are recommended:
+- 6 CPU, 12 GB RAM, 60 GB disk space on a high-speed disk (400+ IOPS)
+
+This configuration will also allow some useful workload to be run, with Deckhouse occupying about:
+- ~25% CPU, ~9 GB RAM, ~20 GB disk space
+
+In this configuration, with a load of 2500 rps on a nominal web application (static Nginx page) from 30 pods and incoming traffic of 24 Mbps:
+- Total CPU load will increase to ~60%
+- RAM and disk values do not rise, but will actually depend on the number of metrics collected from the applications and the nature of the useful workload processing
+
+It is recommended to conduct load testing of your application and adjust the server's capacity accordingly based on the results
