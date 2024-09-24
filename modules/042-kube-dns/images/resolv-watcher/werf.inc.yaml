@@ -1,17 +1,17 @@
 ---
-artifact: {{ .ModuleName }}/resolv-watcher-src-artifact
+artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
 git:
-- add: /{{ $.ModulePath }}/modules/042-kube-dns/images/resolv-watcher/src/
+- add: /{{ $.ModulePath }}/modules/042-kube-dns/images/{{ $.ImageName }}/src/
   to: /src
   stageDependencies:
     install:
     - '**/*'
 ---
-artifact: {{ .ModuleName }}/resolv-watcher-artifact
+artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
 import:
-  - artifact: {{ .ModuleName }}/resolv-watcher-src-artifact
+  - artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
     to: /src
     before: install
@@ -19,15 +19,15 @@ shell:
   install:
     - cd src/
     - CGO_ENABLED=0 go build -ldflags="-s -w" -o resolv-watcher main.go
-    - chown 64535:64535 /src/resolv-watcher
-    - chmod 0700 /src/resolv-watcher
+    - chown 64535:64535 /src/{{ $.ImageName }}
+    - chmod 0700 /src/{{ $.ImageName }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - artifact: {{ .ModuleName }}/resolv-watcher-artifact
-    add: /src/resolv-watcher
-    to: /resolv-watcher
+  - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+    add: /src/{{ $.ImageName }}
+    to: /{{ $.ImageName }}
     before: setup
 docker:
-  ENTRYPOINT: ["/resolv-watcher"]
+  ENTRYPOINT: ["/{{ $.ImageName }}"]
