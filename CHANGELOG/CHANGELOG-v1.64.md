@@ -4,7 +4,6 @@
 
 
  - Ingress nginx controller will restart.
- - The l2-load-balancer module is deprecated.
  - l2-load-balancer module is deprecated. To upgrade to the next DKP version, you must disable the l2-load-balancer module.
 
 ## Features
@@ -56,6 +55,7 @@
 ## Fixes
 
 
+ - **[candi]** Improve catch errors in bootstrap-network scripts. [#9695](https://github.com/deckhouse/deckhouse/pull/9695)
  - **[candi]** Disable and remove unattended upgrades early for Debian, Ubuntu and Astra. [#9574](https://github.com/deckhouse/deckhouse/pull/9574)
  - **[candi]** Fix bootstrap script for static nodes in hybrid clusters to avoid using cloud metadata. [#9502](https://github.com/deckhouse/deckhouse/pull/9502)
  - **[candi]** Fix network configuration in OpenStack when using DirectRoutingWithPortSecurityEnabled. [#9402](https://github.com/deckhouse/deckhouse/pull/9402)
@@ -105,6 +105,7 @@
  - **[metallb]** Restore AddressPool CRD of MetalLB module. [#9724](https://github.com/deckhouse/deckhouse/pull/9724)
  - **[monitoring-ping]** Fix `monitoring-ping` pods crashing. [#9533](https://github.com/deckhouse/deckhouse/pull/9533)
  - **[multitenancy-manager]** Regeneration RBAC for multitenancy-manager. [#9547](https://github.com/deckhouse/deckhouse/pull/9547)
+ - **[node-manager]** Fix CAPS bootstrap multiple nodes. [#9672](https://github.com/deckhouse/deckhouse/pull/9672)
  - **[node-manager]** Fix `CertificateSigningRequest` validation in the auto approve hook. [#9509](https://github.com/deckhouse/deckhouse/pull/9509)
  - **[node-manager]** Fix panic in mcm when deleting several NodeGroups. [#9499](https://github.com/deckhouse/deckhouse/pull/9499)
  - **[node-manager]** Fix `ValidatingAdmissionPolicy` so that a cluster with CAPI rosurces can be deleted successfully. [#9426](https://github.com/deckhouse/deckhouse/pull/9426)
@@ -169,12 +170,12 @@
  - **[istio]** Add migration hook for kiali ingresses. [#9748](https://github.com/deckhouse/deckhouse/pull/9748)
  - **[istio]** Enable internal TLS authentication between Ingress controller and Kiali. [#9298](https://github.com/deckhouse/deckhouse/pull/9298)
  - **[istio]** Removed wildcard RBAC from `istio-operator` and control plane. `istio-operator` discharged from deploying RBACs, we handle them from our templates. [#9191](https://github.com/deckhouse/deckhouse/pull/9191)
- - **[l2-load-balancer]** The l2-load-balancer module is deprecated. [#9611](https://github.com/deckhouse/deckhouse/pull/9611)
-    The l2-load-balancer module is deprecated.
  - **[log-shipper]** Bump vector to `0.40.1`. [#9520](https://github.com/deckhouse/deckhouse/pull/9520)
     All log-shipper pods will restart.
  - **[log-shipper]** Update vector to 0.40.0 release. [#9384](https://github.com/deckhouse/deckhouse/pull/9384)
     All log-shipper pods will restart.
+ - **[operator-trivy]** Fix trivy-server image building procedure. [#9746](https://github.com/deckhouse/deckhouse/pull/9746)
+    Trivy-server pod'll be recreated.
  - **[prometheus]** Update Python in images `grafana-dashboard-provisioner`. [#9289](https://github.com/deckhouse/deckhouse/pull/9289)
  - **[registrypackages]** Add standalone docker-registry package. [#9353](https://github.com/deckhouse/deckhouse/pull/9353)
  - **[runtime-audit-engine]** Update falco to `0.38.1`. [#9189](https://github.com/deckhouse/deckhouse/pull/9189)
