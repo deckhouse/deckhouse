@@ -90,6 +90,6 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// ensure template
-	r.log.Info("ensuring the  template", "template", template.Name)
+	r.log.Info("ensuring the template", "template", template.Name)
 	return r.templateManager.Handle(ctx, template)
 }
