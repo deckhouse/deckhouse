@@ -219,8 +219,8 @@ apiVersions:
               systemRegistryDiskSizeGb:
                 description: |
                   System registry disk size in gibibytes.
-                example: 40
-                default: 40
+                example: 100
+                default: 100
                 type: integer
               additionalTags: &instanceClassAdditionalTags
                 description: |

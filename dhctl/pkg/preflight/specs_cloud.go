@@ -26,9 +26,10 @@ import (
 )
 
 const (
-	minimumRequiredCPUCores       = 4
-	minimumRequiredMemoryMB       = 8192 - reservedMemoryThresholdMB
-	minimumRequiredRootDiskSizeGB = 50
+	minimumRequiredCPUCores           = 4
+	minimumRequiredMemoryMB           = 8192 - reservedMemoryThresholdMB
+	minimumRequiredRootDiskSizeGB     = 50
+	minimumRequiredRegistryDiskSizeGB = 100
 
 	reservedMemoryThresholdMB = 512
 )
@@ -45,21 +46,29 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 		return fmt.Errorf("unmarshal provider cluster configuration: %v", err)
 	}
 
-	var coreCountPropertyPath, ramAmountPropertyPath, rootDiskPropertyPath []string
+	var coreCountPropertyPath, ramAmountPropertyPath, rootDiskPropertyPath, registryDiskPropertyPath []string
 	switch configKind {
-	case "AWSClusterConfiguration", "GCPClusterConfiguration":
+	case "AWSClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "diskSizeGb"}
+		registryDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "systemRegistryDisk", "sizeGb"}
+
+	case "GCPClusterConfiguration":
+		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "diskSizeGb"}
+		registryDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "systemRegistryDiskSizeGb"}
 
 	case "AzureClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "diskSizeGb"}
+		registryDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "systemRegistryDiskSizeGb"}
 
 	case "YandexClusterConfiguration":
 		coreCountPropertyPath = []string{"masterNodeGroup", "instanceClass", "cores"}
 		ramAmountPropertyPath = []string{"masterNodeGroup", "instanceClass", "memory"}
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "diskSizeGB"}
+		registryDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "systemRegistryDiskSizeGb"}
 
 	case "OpenStackClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSize"}
+		registryDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "systemRegistryDiskSizeGb"}
 
 	case "VsphereClusterConfiguration":
 		coreCountPropertyPath = []string{"masterNodeGroup", "instanceClass", "numCPUs"}
@@ -68,11 +77,13 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 
 	case "VCDClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSizeGb"}
+		registryDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "systemRegistryDiskSizeGb"}
 
 	case "ZvirtClusterConfiguration":
 		coreCountPropertyPath = []string{"masterNodeGroup", "instanceClass", "numCPUs"}
 		ramAmountPropertyPath = []string{"masterNodeGroup", "instanceClass", "memory"}
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSizeGb"}
+		registryDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "systemRegistryDiskSizeGb"}
 
 	default:
 		return fmt.Errorf("unknown provider cluster configuration kind: %s", configKind)
@@ -86,6 +97,11 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 	}
 	if err = validateIntegerPropertyAtPath(configObject, coreCountPropertyPath, minimumRequiredCPUCores, false); err != nil {
 		return fmt.Errorf("CPU cores count: %v", err)
+	}
+	if pc.metaConfig.Registry.Mode != "Direct" {
+		if err = validateIntegerPropertyAtPath(configObject, registryDiskPropertyPath, minimumRequiredRegistryDiskSizeGB, true); err != nil {
+			return fmt.Errorf("Registry disk capacity: %v", err)
+		}
 	}
 
 	return nil

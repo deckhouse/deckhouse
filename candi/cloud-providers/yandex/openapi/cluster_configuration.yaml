@@ -146,8 +146,8 @@ apiVersions:
                   system disk size in gibibytes.
 
                   If this parameter is changed, each system registry disk must be manually expanded in the Yandex Cloud interface (the reason for this behavior is in the [issue](https://github.com/yandex-cloud/terraform-provider-yandex/issues/226)).
-                example: 40
-                default: 40
+                example: 100
+                default: 100
               externalIPAddresses: &instanceClassExternalIPAddresses
                 type: array
                 description: |

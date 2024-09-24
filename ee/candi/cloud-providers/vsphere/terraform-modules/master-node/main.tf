@@ -131,7 +131,7 @@ resource "vsphere_virtual_disk" "kubernetes_data" {
 
 resource "vsphere_virtual_disk" "system_registry_data" {
   count              = var.systemRegistryEnable ? 1 : 0
-  size               = 40
+  size               = 100
   datastore          = local.master_instance_class.datastore
   datacenter         = data.vsphere_dynamic.datacenter_id.inventory_path
   type               = "eagerZeroedThick"

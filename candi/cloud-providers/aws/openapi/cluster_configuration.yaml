@@ -132,7 +132,7 @@ apiVersions:
                     type: string
               systemRegistryDisk:
                 type: object
-                default: {sizeGb: 40, type: "gp3"}
+                default: {sizeGb: 100, type: "gp3"}
                 properties:
                   sizeGb:
                     description: System registry disk size in gibibytes.
