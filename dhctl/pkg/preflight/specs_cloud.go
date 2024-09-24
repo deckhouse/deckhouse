@@ -99,7 +99,7 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 		return fmt.Errorf("CPU cores count: %v", err)
 	}
 	if pc.metaConfig.Registry.Mode != "Direct" {
-		if err = validateIntegerPropertyAtPath(configObject, registryDiskPropertyPath, minimumRequiredRegistryDiskSizeGB, true); err != nil {
+		if err = validateIntegerPropertyAtPath(configObject, registryDiskPropertyPath, minimumRequiredRegistryDiskSizeGB, false); err != nil {
 			return fmt.Errorf("Registry disk capacity: %v", err)
 		}
 	}
