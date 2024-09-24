@@ -116,6 +116,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-monitoring:monitoring-ping",
 	"system:serviceaccount:d8-monitoring:node-exporter",
 	"system:serviceaccount:d8-monitoring:prometheus",
+	"system:serviceaccount:d8-monitoring:prometheus-cpp",
 	"system:serviceaccount:d8-monitoring:trickster",
 	"system:serviceaccount:d8-multitenancy-manager:multitenancy-manager",
 	"system:serviceaccount:d8-okmeter:okmeter",
