@@ -17,6 +17,9 @@ git:
   stageDependencies:
     install:
     - '**/*'
+    - '*.go'
+    - 'go.mod'
+    - 'go.sum'
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
