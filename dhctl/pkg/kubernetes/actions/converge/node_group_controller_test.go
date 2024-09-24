@@ -113,6 +113,7 @@ func Test_getNodesToDeleteInfo(t *testing.T) {
 			name:     "3 replicas and no deleted nodes",
 			replicas: 3,
 			nodes:    []string{"node-1", "node-3", "node-2"},
+			deleted:  []string{},
 		},
 		{
 			name:  "validation error",
