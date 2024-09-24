@@ -76,7 +76,7 @@ apiVersions:
               additionalProperties: false
               required: [template, storageProfile, sizingPolicy]
               description: |
-                Partial contents of the fields of the [VCDInstanceClass](cr.html#vcdinstanceclass).
+                Partial contents of the fields of the [VCDInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vcd/cr.html#vcdinstanceclass).
               properties:
                 rootDiskSizeGb:
                   description: |
