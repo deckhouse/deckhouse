@@ -1,0 +1,48 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/kube-state-metrics
+  to: /bin/kube-state-metrics
+  before: setup
+docker:
+  ENTRYPOINT: ["/bin/kube-state-metrics"]
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+shell:
+  install:
+  - cd /src
+  - git clone --depth 1 --branch v2.7.0 {{ $.SOURCE_REPO }}/kubernetes/kube-state-metrics/ .
+  - for patchfile in /patches/*.patch ; do echo "Apply ${patchfile} ... "; git apply ${patchfile}; done
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - apk add --no-cache make git
+  install:
+  - cd /src
+  - export GOPROXY={{ .GOPROXY }}
+  - go mod tidy
+  setup:
+  - cd /src
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - make build-local
+  - chown 64535:64535 /src/kube-state-metrics
+  - chmod 0700 /src/kube-state-metrics
