@@ -24,7 +24,7 @@ apiVersions:
                 Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
             instanceClass:
               description: |
-                Частичное содержимое полей [VCDInstanceClass](cr.html#vcdinstanceclass).
+                Частичное содержимое полей [VCDInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vcd/cr.html#vcdinstanceclass).
               properties:
                 rootDiskSizeGb:
                   description: |
