@@ -27,6 +27,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/160-multitenancy-manager/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/300-prometheus/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/381-l2-load-balancer/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/modules/381-l2-load-balancer/requirements"
 	_ "github.com/deckhouse/deckhouse/ee/modules/450-keepalived/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/450-network-gateway/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/500-operator-trivy/hooks"
