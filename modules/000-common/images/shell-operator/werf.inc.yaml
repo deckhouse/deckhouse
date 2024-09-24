@@ -4,15 +4,15 @@ image: {{ .ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_ALT_P11 }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /src/shell-operator/shell-operator
+  add: /shell-operator/shell-operator
   to: /shell-operator
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /src/shell-operator/shell_lib.sh
+  add: /shell-operator/shell_lib.sh
   to: /shell_lib.sh
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /src/shell-operator/frameworks
+  add: /shell-operator/frameworks
   to: /frameworks
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
@@ -69,3 +69,7 @@ shell:
   - cd /src/shell-operator
   - go mod tidy
   - CGO_CFLAGS="-I/libjq/include" CGO_LDFLAGS="-L/libjq/lib" go build -ldflags="-linkmode external -extldflags '-static' -s -w -X 'github.com/flant/shell-operator/pkg/app.Version={{ $shellOperatorVersion }}'" -tags use_libjq -o shell-operator ./cmd/shell-operator
+  - mkdir -p /shell-operator
+  - cp -r shell_lib.sh frameworks shell-operator /shell-operator
+  - chown -R 64535:64535 /shell-operator/shell-operator
+  - chmod 700 /shell-operator/shell-operator
