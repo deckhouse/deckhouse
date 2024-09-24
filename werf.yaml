@@ -118,6 +118,17 @@ shell:
   - apk add --no-cache git
   - mkdir -p /src
 ---
+# base artifact to do relocate
+artifact: relocate-artifact
+from: {{ $.Images.BASE_ALT_P11 }}
+git:
+- add: /tools/binary_replace/binary_replace.sh
+  to: /binary_replace.sh
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y glibc-utils
+---
 artifact: jq
 from: {{ $.Images.BASE_ALPINE_DEV }}
 git:
