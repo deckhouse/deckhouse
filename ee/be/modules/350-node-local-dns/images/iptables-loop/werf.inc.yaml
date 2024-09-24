@@ -24,7 +24,7 @@ docker:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
 git:
-- add: /{{ $.ModulePath }}modules/350-{{ $.ModuleName }}/images/{{ $.ImageName }}
+- add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
   to: /relocate
   stageDependencies:
     install:
