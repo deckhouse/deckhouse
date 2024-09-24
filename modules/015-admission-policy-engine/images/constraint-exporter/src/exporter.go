@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package src
 
 import (
 	"sync"
@@ -25,7 +25,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog/v2"
 	controllerClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
