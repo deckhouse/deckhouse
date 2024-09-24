@@ -1,12 +1,6 @@
 ---
 artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromArtifact: src-artifact
-git:
-  - add: /{{ $.ModulePath }}/modules/042-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      install:
-        - '**/*'
 shell:
   install:
     - mkdir -p /src
