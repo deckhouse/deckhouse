@@ -11,7 +11,7 @@ git:
 artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
 import:
-  - artifact: {{ .ModuleName }}/sts-pods-hosts-appender-webhook-src-artifact
+  - artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
     to: /src
     before: install
@@ -24,8 +24,8 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-    add: /src/sts-pods-hosts-appender-webhook
-    to: /sts-pods-hosts-appender-webhook
+    add: /src/{{ $.ImageName }}
+    to: /{{ $.ImageName }}
     before: setup
 docker:
-  ENTRYPOINT: ["/sts-pods-hosts-appender-webhook"]
+  ENTRYPOINT: ["/{{ $.ImageName }}"]
