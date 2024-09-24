@@ -14,7 +14,7 @@ fromArtifact: src-artifact
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v1.8.2 {{ $.SOURCE_REPO }}/prometheus/node_exporter.git .
+  - git clone --depth 1 --branch v1.8.2 {{ .SOURCE_REPO }}/prometheus/node_exporter.git .
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
@@ -34,7 +34,8 @@ shell:
   - export GOPROXY={{ .GOPROXY }}
   - go mod tidy
   setup:
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 
   - cd /src
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o node_exporter node_exporter.go
+  - go build -ldflags='-extldflags "-static" -s -w' -o node_exporter node_exporter.go
   - chown -R 64535:64535 /src/
   - chmod 0700 /src/node_exporter

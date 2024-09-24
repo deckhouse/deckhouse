@@ -12,7 +12,7 @@ docker:
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: src-artifact
 git:
-- add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
@@ -20,7 +20,7 @@ git:
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v2.7.0 {{ $.SOURCE_REPO }}/kubernetes/kube-state-metrics/ .
+  - git clone --depth 1 --branch v2.7.0 {{ .SOURCE_REPO }}/kubernetes/kube-state-metrics/ .
   - for patchfile in /patches/*.patch ; do echo "Apply ${patchfile} ... "; git apply ${patchfile}; done
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
@@ -42,7 +42,7 @@ shell:
   - go mod tidy
   setup:
   - cd /src
-  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - make build-local
   - chown 64535:64535 /src/kube-state-metrics
   - chmod 0700 /src/kube-state-metrics

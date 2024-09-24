@@ -12,7 +12,7 @@ docker:
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: src-artifact
 git:
-- add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
   to: /src
   includePaths:
   - '**/*.go'
@@ -43,8 +43,9 @@ shell:
   - export GOPROXY={{ .GOPROXY }}
   - go mod tidy
   setup:
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
   - go test ./... -v
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o loop main.go
+  - go build -ldflags='-extldflags "-static" -s -w' -o loop main.go
   - chown -R 64535:64535 /src/
   - chmod 0700 /src/loop
