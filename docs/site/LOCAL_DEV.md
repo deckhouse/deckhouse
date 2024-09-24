@@ -14,17 +14,17 @@
 
   1. In the first console run:
 
-   ```shell
-   cd docs/documentation
-   make up
-   ```
+     ```shell
+     cd docs/documentation
+     make up
+     ```
 
   1. In the second console run:
 
-   ```shell
-   cd docs/site
-   make up
-   ```
+     ```shell
+     cd docs/site
+     make up
+     ```
 
   1. Open <http://localhost>
 
@@ -40,10 +40,10 @@
 
   1. In the console run:
 
-   ```shell
-   cd deckhouse
-   make docs
-   ```
+     ```shell
+     cd deckhouse
+     make docs
+     ```
 
   1. Open <http://localhost>
 
