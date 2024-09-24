@@ -64,15 +64,6 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: l2-load-balancer
-spec:
-  enabled: true
-  settings:
-  version: 1
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
   name: static-routing-manager
 spec:
   version: 1
