@@ -15,6 +15,9 @@ osDistributions:
   debian:
     name: Debian
     url: https://www.debian.org/download
+  opensuse:
+    name: openSUSE
+    url: https://get.opensuse.org/
   rocky:
     name: Rocky Linux
     url: https://rockylinux.org/download
