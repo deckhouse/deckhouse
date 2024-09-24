@@ -124,8 +124,11 @@ from: {{ $.Images.BASE_ALT_P11 }}
 git:
 - add: /tools/binary_replace/binary_replace.sh
   to: /binary_replace.sh
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
-  beforeInstall:
+  install:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y glibc-utils
 ---
