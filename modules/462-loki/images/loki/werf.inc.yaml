@@ -19,6 +19,7 @@ git:
     - '**/*'
 shell:
   install:
+  - ls /patches
   - cd /src
   - git clone --depth 1 --branch v2.9.10 {{ .SOURCE_REPO }}/grafana/loki/ .
   - git apply /patches/*.patch --verbose
