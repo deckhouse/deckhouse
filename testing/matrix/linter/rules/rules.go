@@ -306,6 +306,8 @@ func (l *ObjectLinter) ApplyObjectRules(object storage.StoreObject) {
 	l.ErrorsList.Add(modules.PromtoolRuleCheck(l.Module, object))
 
 	l.ErrorsList.Add(roles.ObjectRolesWildcard(object))
+
+	l.ErrorsList.Add(modules.IngressHooksCheck(l.Module, object))
 }
 
 func objectRecommendedLabels(object storage.StoreObject) errors.LintRuleError {
