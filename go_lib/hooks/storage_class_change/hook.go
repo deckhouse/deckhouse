@@ -195,12 +195,6 @@ func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, current
 		}
 	}
 
-	if input.ConfigValues.Exists("global.storageClass") {
-		// DEPRECATED
-		input.LogEntry.Warnf("`global.storageClass` deprecated. Use `global.modules.storageClass` instead.")
-		effectiveStorageClass = input.ConfigValues.Get("global.storageClass").String()
-	}
-
 	if input.ConfigValues.Exists("global.modules.storageClass") {
 		effectiveStorageClass = input.ConfigValues.Get("global.modules.storageClass").String()
 	}
