@@ -1,4 +1,3 @@
-x-config-version: 2
 type: object
 default: {}
 additionalProperties: false
@@ -6,15 +5,11 @@ properties:
   storageClass:
     type: string
     default: null
-    deprecated: true
     description: |
-      > **DEPRECATED**. Moved to [global.modules.storageClass](#parameters-modules-storageclass).
-
       The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
         * If not defined, components use `global.discovery.defaultStorageClass` (which is determined automatically) or `emptyDir` (if `global.discovery.defaultStorageClass` isn't defined).
         * Use this parameter only in exceptional circumstances.
         * This parameter is applied during module activation.
-    x-doc-deprecated: true
   defaultClusterStorageClass:
     type: string
     default: null
@@ -221,15 +216,6 @@ properties:
                     * For a managed cluster, the default value is `1Gi` minus `everyNode.memory`.
                 type: string
                 pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-      storageClass:
-        type: string
-        default: null
-        description: |
-          The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
-            * If not defined, components use `global.discovery.defaultStorageClass` (which is determined automatically) or `emptyDir` (if `global.discovery.defaultStorageClass` isn't defined).
-            * Use this parameter only in exceptional circumstances.
-            * This parameter is applied during module activation.
-
 # TODO remove after 1.42 release
       proxy:
         deprecated: true

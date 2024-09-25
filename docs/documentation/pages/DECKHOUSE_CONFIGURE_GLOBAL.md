@@ -21,7 +21,7 @@ kind: ModuleConfig
 metadata:
   name: global
 spec:
-  version: 2
+  version: 1
   settings: # <-- Module parameters from the "Parameters" section below.
     defaultClusterStorageClass: 'default-fast'
     modules:
@@ -33,7 +33,7 @@ spec:
       placement:
         customTolerationKeys:
         - dedicated.example.com
-      storageClass: 'default-fast'
+    storageClass: 'default-fast'
 ```
 
 ## Parameters
