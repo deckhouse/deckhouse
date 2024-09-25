@@ -88,6 +88,25 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		metricStorage:  metricStorage,
 	}
 
+	//TODO: rm file
+	release := &v1alpha1.DeckhouseRelease{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "DeckhouseRelease",
+			APIVersion: "deckhouse.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "v1.63.9",
+		},
+		Spec: v1alpha1.DeckhouseReleaseSpec{
+			Version: "v1.63.9",
+		},
+	}
+
+	err := r.client.Create(ctx, release)
+	if err != nil {
+		return fmt.Errorf("ФСЁ СЛАМАЛАСЬ: %w", err)
+	}
+
 	// wait for cache sync
 	go func() {
 		if ok := mgr.GetCache().WaitForCacheSync(ctx); !ok {
