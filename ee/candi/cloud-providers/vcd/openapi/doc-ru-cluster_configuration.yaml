@@ -24,7 +24,7 @@ apiVersions:
                 Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
             instanceClass:
               description: |
-                Частичное содержимое полей [VCDInstanceClass](../cluster_configuration.html#vcdinstanceclass).
+                Частичное содержимое полей [VCDInstanceClass](cr.html#vcdinstanceclass).
               properties:
                 rootDiskSizeGb:
                   description: |
