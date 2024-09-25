@@ -57,7 +57,6 @@ while getopts ":h:i:f:o:" option; do
     esac
 done
 
-
 if [[ -z $RDIR ]];then
   RDIR="/relocate"
 fi
