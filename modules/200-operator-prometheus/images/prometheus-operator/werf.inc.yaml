@@ -21,7 +21,7 @@ shell:
   install:
   - cd /src
   - git clone --depth 1 --branch "v{{ $version }}" {{ .SOURCE_REPO }}/prometheus-operator/prometheus-operator.git .
-  - git apply /patches/*.patch --verbose  
+  - git apply /patches/*.patch --verbose
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
