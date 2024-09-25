@@ -23,7 +23,7 @@ shell:
   - git clone --depth 1 --branch v2.9.10 {{ $.SOURCE_REPO }}/grafana/loki/ .
   - for patchfile in /patches/*.patch ; do echo "Apply ${patchfile} ... "; git apply ${patchfile}; done
 ---
-artifact: {{ $.ModuleName } }/{{ $.ImageName }}-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
