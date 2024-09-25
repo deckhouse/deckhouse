@@ -88,7 +88,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		metricStorage:  metricStorage,
 	}
 
-	//TODO: rm file
+	//TODO: rm this
 	release := &v1alpha1.DeckhouseRelease{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "DeckhouseRelease",
@@ -102,7 +102,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		},
 	}
 
-	err := r.client.Create(ctx, release)
+	err := client.IgnoreAlreadyExists(r.client.Create(ctx, release))
 	if err != nil {
 		return fmt.Errorf("ФСЁ СЛАМАЛАСЬ: %w", err)
 	}
