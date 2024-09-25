@@ -8,11 +8,10 @@ git:
       - '**/*'
 shell:
   install:
-    - mkdir -p /src
-    - cd /src
-    - git clone --depth 1 -b vertical-pod-autoscaler-0.14.0 {{ $.SOURCE_REPO }}/kubernetes/autoscaler.git .
+    - git clone --depth 1 -b vertical-pod-autoscaler-0.14.0 {{ $.SOURCE_REPO }}/kubernetes/autoscaler.git /src/autoscaler
+    - cd /src/autoscaler
     - git apply /patches/*.patch --verbose
-    - mv autoscaler/vertical-pod-autoscaler /src/vertical-pod-autoscaler
+    - mv vertical-pod-autoscaler /src/vertical-pod-autoscaler
     - rm -rf /src/autoscaler
     - rm -rf /src/vertical-pod-autoscaler/e2e/
 ---
