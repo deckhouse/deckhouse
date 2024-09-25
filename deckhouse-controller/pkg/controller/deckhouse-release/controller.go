@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -29,6 +30,7 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -108,11 +110,76 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.DeckhouseRelease{}).
-		WithEventFilter(predicate.And(
+		WithEventFilter(logWrapper{lg, predicate.And(
 			predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}),
 			releasePhasePredicate{},
-		)).
+		)}).
 		Complete(ctr)
+}
+
+type logWrapper struct {
+	l *logrus.Entry
+	p predicate.Predicate
+}
+
+func (w logWrapper) Create(createEvent event.CreateEvent) bool {
+	logEntry := w.l.WithField("event", createEvent)
+	defer w.recover(logEntry)
+
+	result := w.p.Create(createEvent)
+	logEntry.
+		WithField("result", result).
+		Debugln("processed create event")
+
+	return result
+}
+
+func (w logWrapper) Delete(deleteEvent event.DeleteEvent) bool {
+	logEntry := w.l.WithField("event", deleteEvent)
+	defer w.recover(logEntry)
+
+	result := w.p.Delete(deleteEvent)
+	logEntry.
+		WithField("result", result).
+		Debugln("processed delete event")
+
+	return result
+}
+
+func (w logWrapper) Update(updateEvent event.UpdateEvent) bool {
+	logEntry := w.l.WithField("event", updateEvent)
+	defer w.recover(logEntry)
+
+	result := w.p.Update(updateEvent)
+	logEntry.
+		WithField("result", result).
+		Debugln("processed update event")
+
+	return result
+}
+
+func (w logWrapper) Generic(genericEvent event.GenericEvent) bool {
+	logEntry := w.l.WithField("event", genericEvent)
+	defer w.recover(logEntry)
+
+	result := w.p.Generic(genericEvent)
+	logEntry.
+		WithField("result", result).
+		Debugln("processed generic event")
+
+	return result
+}
+
+func (w logWrapper) recover(logEntry *logrus.Entry) {
+	r := recover()
+	if r == nil {
+		return
+	}
+
+	logEntry.
+		WithField("panic", r).
+		WithField("stack", debug.Stack()).
+		Errorln("recovered from panic")
 }
 
 type releasePhasePredicate struct{}
