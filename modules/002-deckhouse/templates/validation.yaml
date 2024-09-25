@@ -59,7 +59,7 @@ spec:
   validations:
     - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-")'
       reason: Forbidden
-      messageExpression: "'Creating, updating and deleting an objects with the `heritage: deckhouse` label is forbidden: ' + string(request.userInfo.username)"
+      messageExpression: "'Creating, updating and deleting an objects with the `heritage: deckhouse` label is forbidden'"
   auditAnnotations:
     - key: 'source-user'
       valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change object with the heritage label'"
@@ -68,6 +68,8 @@ spec:
     - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || ["system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler"].exists(e, (e == request.userInfo.username)) || ["system:nodes", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups)) || (has(request.kind) && ["StorageClass"].exists(e, (e == request.kind.kind)))'
       reason: Forbidden
 {{- end }}
+
+{{- if ne .Values.global.deckhouseVersion "dev" }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
@@ -83,7 +85,7 @@ spec:
     objectSelector:
       matchLabels:
         heritage: deckhouse
-
+{{- end }}
 ---
 {{- $policyName := "update-policy-label-objects.deckhouse.io" }}
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
