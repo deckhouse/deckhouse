@@ -19,9 +19,6 @@ shell:
 {{- $v := semver $version }}
 {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
-fromArtifact: common/kubernetes-src-artifact-{{ $image_version }}
----
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
