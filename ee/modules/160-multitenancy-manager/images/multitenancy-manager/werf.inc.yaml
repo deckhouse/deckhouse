@@ -49,11 +49,9 @@ import:
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ .GOPROXY }}
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 
   - go mod tidy
-  setup:
-  - cd /src
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o multitenancy-manager ./cmd/main.go
+  - go build -ldflags="-s -w" -o multitenancy-manager ./cmd/main.go
   - chown -R 64535:64535 /src
   - chmod 0755 /src/multitenancy-manager
 mount:
