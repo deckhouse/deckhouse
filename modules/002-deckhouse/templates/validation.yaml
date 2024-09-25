@@ -51,7 +51,7 @@ spec:
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'exclude-groups'
-      expression: '!(["system:nodes", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups)))'
+      expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
     - name: 'exclude-users'
       expression: '!(["system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl"].exists(e, (e == request.userInfo.username)))'
     - name: 'exclude-kinds'
@@ -59,7 +59,7 @@ spec:
   validations:
     - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-")'
       reason: Forbidden
-      messageExpression: '''Creating, updating and deleting an objects with the `heritage: deckhouse` label is forbidden'''
+      messageExpression: "'Creating, updating and deleting an objects with the `heritage: deckhouse` label is forbidden: ' + string(request.userInfo.username)"
   auditAnnotations:
     - key: 'source-user'
       valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change object with the heritage label'"
