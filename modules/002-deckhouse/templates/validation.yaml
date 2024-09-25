@@ -53,7 +53,7 @@ spec:
     - name: 'exclude-groups'
       expression: '!(["system:nodes", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups)))'
     - name: 'exclude-users'
-      expression: '!(["system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler"].exists(e, (e == request.userInfo.username)))'
+      expression: '!(["system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl"].exists(e, (e == request.userInfo.username)))'
     - name: 'exclude-kinds'
       expression: '!(has(request.kind) && ["StorageClass"].exists(e, (e == request.kind.kind)))'
   validations:
