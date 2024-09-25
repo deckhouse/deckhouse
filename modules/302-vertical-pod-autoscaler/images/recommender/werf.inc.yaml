@@ -1,11 +1,10 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-fromCacheVersion: "2024-09-25 00:00"
 import:
-- artifact: {{ .ModuleName }}/vertical-pod-autoscaler-artifact
-  add: /recommender
-  to: /recommender
-  before: setup
+  - artifact: {{ .ModuleName }}/vertical-pod-autoscaler-artifact
+    add: /recommender
+    to: /recommender
+    before: setup
 docker:
   ENTRYPOINT: ["/recommender"]

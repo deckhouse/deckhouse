@@ -1,12 +1,11 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-fromCacheVersion: "2024-09-25 00:00"
 import:
-- artifact: {{ .ModuleName }}/vertical-pod-autoscaler-artifact
-  add: /admission-controller
-  to: /admission-controller
-  before: setup
+  - artifact: {{ .ModuleName }}/vertical-pod-autoscaler-artifact
+    add: /admission-controller
+    to: /admission-controller
+    before: setup
 docker:
   ENTRYPOINT: ["/admission-controller"]
   CMD: ["--v=4", "--stderrthreshold=info"]

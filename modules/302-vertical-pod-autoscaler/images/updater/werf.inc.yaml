@@ -1,12 +1,11 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-fromCacheVersion: "2024-09-25 00:00"
 import:
-- artifact: {{ .ModuleName }}/vertical-pod-autoscaler-artifact
-  add: /updater
-  to: /updater
-  before: setup
+  - artifact: {{ .ModuleName }}/vertical-pod-autoscaler-artifact
+    add: /updater
+    to: /updater
+    before: setup
 docker:
   ENTRYPOINT: ["/updater"]
   CMD: ["--v=4", "--stderrthreshold=info"]
