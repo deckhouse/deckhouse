@@ -61,8 +61,8 @@ func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
 		next:   make(chan error),
 	}
 
-	s.startBootstrapperReceiver(server, receiveCh, doneCh, internalErrCh)
-	s.startBootstrapperSender(server, sendCh, internalErrCh)
+	s.startBootstrapperReceiver(ctx, server, receiveCh, doneCh, internalErrCh)
+	s.startBootstrapperSender(ctx, server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -120,6 +120,7 @@ connectionProcessor:
 }
 
 func (s *Service) startBootstrapperReceiver(
+	ctx context.Context,
 	server pb.DHCTL_BootstrapServer,
 	receiveCh chan *pb.BootstrapRequest,
 	doneCh chan struct{},
@@ -133,15 +134,18 @@ func (s *Service) startBootstrapperReceiver(
 				return
 			}
 			if err != nil {
+				logger.L(ctx).Error("receiving BootstrapRequest", logger.Err(err))
 				internalErrCh <- fmt.Errorf("receiving message: %w", err)
 				return
 			}
+			logger.L(ctx).Info("receive BootstrapRequest", slog.String("message", request.String()))
 			receiveCh <- request
 		}
 	}()
 }
 
 func (s *Service) startBootstrapperSender(
+	ctx context.Context,
 	server pb.DHCTL_BootstrapServer,
 	sendCh chan *pb.BootstrapResponse,
 	internalErrCh chan error,
@@ -153,9 +157,11 @@ func (s *Service) startBootstrapperSender(
 				return server.Send(response)
 			})
 			if err != nil {
+				logger.L(ctx).Info("sending BootstrapResponse", logger.Err(err))
 				internalErrCh <- fmt.Errorf("sending message: %w", err)
 				return
 			}
+			logger.L(ctx).Info("send BootstrapResponse", slog.String("message", response.String()))
 		}
 	}()
 }
