@@ -18,7 +18,7 @@ import:
   to: /sbin/iptables-wrapper
   before: setup
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /coredns
+  add: /src/coredns
   to: /coredns
   before: setup
 docker:
@@ -47,8 +47,8 @@ shell:
   - cd /src
   - go mod tidy
   - go build -v -ldflags="-s -w" -o coredns
-  - chmod 0700 /coredns
-  - chown 64535:64535 /coredns
+  - chmod -R 0700 /src/coredns
+  - chown -R 64535:64535 /src/coredns
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
 fromArtifact: relocate-artifact
