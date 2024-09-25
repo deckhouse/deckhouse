@@ -156,10 +156,6 @@ func storageClasses(input *go_hook.HookInput) error {
 		input.Values.Set("cloudProviderAws.internal.storageClasses", []StorageClass{})
 	}
 
-	// cloud-provider's `internal.defaultStorageClass` (getted from `<cloud-provider>.storageClass.default`) was deprecated and
-	// should NOT used. Now `global.defaultClusterStorageClass` should used instead.
-	input.Values.Remove("cloudProviderAws.internal.defaultStorageClass")
-
 	var existedStorageClasses []StorageClass
 	for _, v := range input.Snapshots["module_storageclasses"] {
 		sc := v.(*storagev1.StorageClass)
