@@ -171,7 +171,7 @@ func (k *KubeProxy) tryToRestartFully(startID int) {
 func (k *KubeProxy) proxyCMD(startID int) *Command {
 	kubectlProxy := fmt.Sprintf(
 		// --disable-filter is needed to exec into etcd pods
-		"kubectl proxy --as=dhctl --as-group=system:serviceaccounts:kube-system --port=%s --kubeconfig /etc/kubernetes/admin.conf --disable-filter",
+		"kubectl proxy --as=dhctl --as-group=system:masters --port=%s --kubeconfig /etc/kubernetes/admin.conf --disable-filter",
 		k.port,
 	)
 	if v := os.Getenv("KUBE_PROXY_ACCEPT_HOSTS"); v != "" {
