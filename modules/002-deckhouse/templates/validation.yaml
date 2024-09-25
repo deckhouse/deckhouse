@@ -65,7 +65,7 @@ spec:
       valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change object with the heritage label'"
 {{- else }}
   validations:
-    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || ["system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler"].exists(e, (e == request.userInfo.username)) || ["system:nodes", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups)) || (has(request.kind) && ["StorageClass"].exists(e, (e == request.kind.kind)))'
+    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || ["system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl"].exists(e, (e == request.userInfo.username)) || ["system:nodes", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups)) || (has(request.kind) && ["StorageClass"].exists(e, (e == request.kind.kind)))'
       reason: Forbidden
 {{- end }}
 
