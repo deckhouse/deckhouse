@@ -13,19 +13,19 @@ memory: 25Mi
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: prometheus-cpp-main
+  name: prometheus-cpp
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-cpp")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: StatefulSet
-    name: prometheus-cpp-main
+    name: prometheus-cpp
   updatePolicy:
     updateMode: {{ .Values.prometheus.vpa.updateMode | quote }}
   resourcePolicy:
     containerPolicies:
-    - containerName: "prometheus"
+    - containerName: "prometheus-cpp"
       minAllowed:
         {{- include "prometheus_resources" . | nindent 8 }}
       maxAllowed:
@@ -81,7 +81,7 @@ spec:
       name: prometheus-main-db
       subPath: prometheus-db
   containers:
-  - name: prometheus-cpp
+  - name: prometheus
     startupProbe:
       failureThreshold: 300
   - name: kube-rbac-proxy
@@ -137,7 +137,7 @@ spec:
         podAffinityTerm:
           labelSelector:
             matchLabels:
-              app: prometheus
+              app: prometheus-cpp
               prometheus: longterm
           topologyKey: kubernetes.io/hostname
 {{- if (include "helm_lib_ha_enabled" .) }}
@@ -145,7 +145,7 @@ spec:
       - labelSelector:
           matchLabels:
             app.kubernetes.io/name: prometheus-cpp
-            prometheus-cpp: main
+            prometheus: cpp
         topologyKey: kubernetes.io/hostname
 {{- end }}
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
@@ -154,7 +154,7 @@ spec:
 {{- with .Values.prometheus.externalLabels }}
     {{- . | toYaml | nindent 4 }}
 {{- end }}
-    prometheus-cpp: deckhouse
+    prometheus: deckhouse
   prometheusExternalLabelName: ""
   replicaExternalLabelName: ""
   serviceAccountName: prometheus-cpp
@@ -181,16 +181,16 @@ spec:
       checksum/kube-rbac-proxy: {{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
   serviceMonitorSelector:
     matchLabels:
-      prometheus-cpp: main
+      prometheus: cpp
   podMonitorSelector:
     matchLabels:
-      prometheus-cpp: main
+      prometheus: cpp
   probeSelector:
     matchLabels:
-      prometheus-cpp: main
+      prometheus: cpp
   scrapeConfigSelector:
     matchLabels:
-      prometheus-cpp: main
+      prometheus: cpp
   secrets:
   - alertmanagers-tls-config
   rules:
@@ -198,7 +198,7 @@ spec:
       resendDelay: 29s
   ruleSelector:
     matchLabels:
-      prometheus-cpp: main
+      prometheus: cpp
       component: rules
 {{- if .Values.prometheus.internal.remoteWrite }}
   remoteWrite:
@@ -207,10 +207,10 @@ spec:
     {{- if .spec.basicAuth }}
     basicAuth:
       username:
-        name: d8-prometheus-cpp-remote-write-{{ .name }}
+        name: d8-prometheus-remote-write-{{ .name }}
         key: username
       password:
-        name: d8-prometheus-cpp-remote-write-{{ .name }}
+        name: d8-prometheus-remote-write-{{ .name }}
         key: password
     {{- else if .spec.bearerToken }}
     bearerToken: {{ .spec.bearerToken }}
