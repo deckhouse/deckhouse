@@ -116,8 +116,9 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		Complete(ctr)
 }
 
-func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.logger.Debugln("processing release %s", req.Name)
+func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
+	r.logger.Debugf("%s release processing started", req.Name)
+	defer func() { r.logger.Debugf("%s release processing complete: %+v", req.Name, result) }()
 
 	if r.updateSettings.Get().ReleaseChannel == "" {
 		return ctrl.Result{}, nil
@@ -126,7 +127,7 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	r.metricStorage.GroupedVault.ExpireGroupMetrics(metricReleasesGroup)
 
 	release := new(v1alpha1.DeckhouseRelease)
-	err := r.client.Get(ctx, req.NamespacedName, release)
+	err = r.client.Get(ctx, req.NamespacedName, release)
 	if err != nil {
 		// The DeckhouseRelease resource may no longer exist, in which case we stop
 		// processing.
