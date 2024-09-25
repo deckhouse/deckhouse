@@ -130,7 +130,8 @@ spec:
           secretName: webhook-handler-certs
       - emptyDir: {}
         name: run
-      - emptyDir: {}
+      - emptyDir:
+          medium: Memory
         name: tmp
       - emptyDir: {}
         name: hooks

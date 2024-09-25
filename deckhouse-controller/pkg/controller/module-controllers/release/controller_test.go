@@ -31,6 +31,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -41,6 +43,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
@@ -74,7 +78,7 @@ func (suite *ReleaseControllerTestSuite) SetupSuite() {
 	flag.Parse()
 	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 	suite.tmpDir = suite.T().TempDir()
-	suite.T().Setenv("EXTERNAL_MODULES_DIR", suite.tmpDir)
+	suite.T().Setenv(d8env.DownloadedModulesDir, suite.tmpDir)
 	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0777)
 }
 
@@ -98,27 +102,96 @@ func (suite *ReleaseControllerTestSuite) TearDownSubTest() {
 }
 
 func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
-	entries, err := os.ReadDir("./testdata/releaseController")
+	err := os.Setenv("TEST_EXTENDER_DECKHOUSE_VERSION", "v1.0.0")
 	require.NoError(suite.T(), err)
-
+	err = os.Setenv("TEST_EXTENDER_KUBERNETES_VERSION", "1.28.0")
+	require.NoError(suite.T(), err)
 	suite.Run("testdata cases", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
 			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}}"}}}, nil
 		}}, nil)
 
-		for _, en := range entries {
-			if en.IsDir() {
-				continue
-			}
+		suite.Run("simple", func() {
+			suite.setupReleaseController(string(suite.fetchTestFileData("simple.yaml")))
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
 
-			suite.Run(en.Name(), func() {
-				suite.setupReleaseController(string(suite.fetchTestFileData(en.Name())))
-				mr := suite.getModuleRelease(suite.testMRName)
-				_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
-				require.NoError(suite.T(), err)
-			})
-		}
+		suite.Run("with annotation", func() {
+			suite.setupReleaseController(string(suite.fetchTestFileData("with-annotation.yaml")))
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("deckhouse suitable version", func() {
+			suite.setupReleaseController(string(suite.fetchTestFileData("dVersion-suitable.yaml")))
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("deckhouse unsuitable version", func() {
+			suite.setupReleaseController(string(suite.fetchTestFileData("dVersion-suitable.yaml")))
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("kubernetes suitable version", func() {
+			suite.setupReleaseController(string(suite.fetchTestFileData("kVersion-suitable.yaml")))
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("kubernetes unsuitable version", func() {
+			suite.setupReleaseController(string(suite.fetchTestFileData("kVersion-suitable.yaml")))
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("deploy with outdated module releases", func() {
+			dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
+			suite.setupReleaseController(string(suite.fetchTestFileData("clean-up-outdated-module-releases-when-deploy.yaml")))
+			err := suite.updateModuleReleasesStatuses()
+			require.NoError(suite.T(), err)
+			mr := suite.getModuleRelease("echo-v0.4.54")
+			_, err = suite.ctr.reconcilePendingRelease(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("clean up for a deployed module release with outdated module releases", func() {
+			dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
+			suite.setupReleaseController(string(suite.fetchTestFileData("clean-up-outdated-module-releases-for-deployed.yaml")))
+			err := suite.updateModuleReleasesStatuses()
+			require.NoError(suite.T(), err)
+			mr := suite.getModuleRelease("echo-v0.4.54")
+			_, err = suite.ctr.reconcileDeployedRelease(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
 	})
+}
+
+func (suite *ReleaseControllerTestSuite) updateModuleReleasesStatuses() error {
+	var releases v1alpha1.ModuleReleaseList
+	err := suite.kubeClient.List(context.TODO(), &releases)
+	if err != nil {
+		return err
+	}
+
+	caser := cases.Title(language.English)
+	for _, release := range releases.Items {
+		release.Status.Phase = caser.String(release.ObjectMeta.Labels["status"])
+		err = suite.kubeClient.Status().Update(context.TODO(), &release)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (suite *ReleaseControllerTestSuite) setupReleaseController(yamlDoc string) {
@@ -161,15 +234,15 @@ type: Opaque
 	cl := fake.NewClientBuilder().WithScheme(sc).WithObjects(initObjects...).WithStatusSubresource(&v1alpha1.ModuleSource{}, &v1alpha1.ModuleRelease{}).Build()
 
 	rec := &moduleReleaseReconciler{
-		client:             cl,
-		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
-		dc:                 dependency.NewDependencyContainer(),
-		logger:             log.New(),
-		symlinksDir:        filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
-		moduleManager:      stubModulesManager{},
-		delayTimer:         time.NewTimer(3 * time.Second),
+		client:               cl,
+		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		dc:                   dependency.NewDependencyContainer(),
+		logger:               log.New(),
+		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
+		moduleManager:        stubModulesManager{},
+		delayTimer:           time.NewTimer(3 * time.Second),
 
-		deckhouseEmbeddedPolicy: v1alpha1.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
+		deckhouseEmbeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
 			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
 				Mode: "Auto",
 			},
@@ -275,6 +348,10 @@ func (s stubModulesManager) GetModule(_ string) *addonmodules.BasicModule {
 
 func (s stubModulesManager) GetEnabledModuleNames() []string {
 	return nil
+}
+
+func (s stubModulesManager) IsModuleEnabled(_ string) bool {
+	return true
 }
 
 func (s stubModulesManager) RunModuleWithNewOpenAPISchema(_, _, _ string) error {

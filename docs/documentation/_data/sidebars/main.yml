@@ -34,6 +34,10 @@ entries:
             - title: Custom Resources
               url: /cr.html
         - title:
+            en: Platform uninstalling
+            ru: Удаление платформы
+          url: /uninstalling/
+        - title:
             en: Module development
             ru: Разработка модуля
           folders:
@@ -448,13 +452,19 @@ entries:
                 ru: Описание
               url: /modules/040-control-plane-manager/
             - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/040-control-plane-manager/configuration.html
+                - title: Custom Resources
+                  url: /modules/040-control-plane-manager/cr.html
+            - title:
                 en: Examples
                 ru: Примеры
               url: /modules/040-control-plane-manager/examples.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/040-control-plane-manager/configuration.html
             - title: FAQ
               url: /modules/040-control-plane-manager/faq.html
         - title:
@@ -1304,6 +1314,16 @@ entries:
                 en: Description
                 ru: Описание
               url: /modules/600-secret-copier/
+        - title: deckhouse-tools
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/800-deckhouse-tools/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/800-deckhouse-tools/configuration.html
     - title:
         en: Bare Metal
         ru: Bare Metal
@@ -1333,6 +1353,7 @@ entries:
               url: /modules/450-keepalived/faq.html
         - title: l2-load-balancer
           d8Revision: ee
+          featureStatus: deprecated
           folders:
             - title:
                 en: Description

@@ -20,6 +20,9 @@ spec:
         - jsonPath: .status.ready
           name: Ready
           type: boolean
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
       schema:
         openAPIV3Schema:
           description: |

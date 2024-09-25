@@ -11,7 +11,7 @@ apiVersions:
       Run the following command to change the configuration in a running cluster:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit provider-cluster-configuration
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
     x-doc-search: |
       ProviderClusterConfiguration
@@ -84,7 +84,7 @@ apiVersions:
             type: object
             required: [instanceType, ami]
             description: |
-              Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
+              Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
             properties:
               instanceType:
                 type: string
@@ -222,7 +222,7 @@ apiVersions:
               required: [instanceType, ami]
               type: object
               description: |
-                Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
+                Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
               properties:
                 instanceType:
                   type: string
@@ -283,7 +283,7 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/layouts.html) about possible provider layouts.
+          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/layouts.html) about possible provider layouts.
 
           > **Note,** that the `Standard` layout is deprecated.
         enum: ['WithoutNAT', 'WithNAT', 'Standard']
@@ -318,7 +318,7 @@ apiVersions:
                 type: object
                 required: [instanceType, ami]
                 description: |
-                  Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
+                  Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
                 properties:
                   instanceType:
                     type: string
@@ -408,7 +408,7 @@ apiVersions:
         additionalProperties: false
         required: [providerAccessKeyId, providerSecretAccessKey, region]
         description: |
-          Contains [settings to connect](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/environment.html) to the AWS API.
+          Contains [settings to connect](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/environment.html) to the AWS API.
         properties:
           providerAccessKeyId:
             type: string
@@ -431,7 +431,7 @@ apiVersions:
         uniqueItems: true
         description: |
           The globally restricted set of zones that this cloud provider works with.
-          
+
           Restricts only the **creation** of nodes in the cluster.
       additionalRolePolicies:
         type: array

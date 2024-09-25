@@ -19,10 +19,10 @@
           The recommended actions are as follows:
           - Follow these instructions to clean up the node and add it to the cluster: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster
     {{- else }}
-        summary: The {{`{{ $labels.node }}`}} Node is not managed by the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/) module.
+        summary: The {{`{{ $labels.node }}`}} Node is not managed by the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/) module.
         description: |
-          The {{`{{ $labels.node }}`}} Node is not managed by the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/) module.
+          The {{`{{ $labels.node }}`}} Node is not managed by the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/) module.
 
           The recommended actions are as follows:
-          - Follow these instructions to clean up the node and add it to the cluster: https://deckhouse.io/documentation/v1/modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster
+          - Follow these instructions to clean up the node and add it to the cluster: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster
     {{- end }}

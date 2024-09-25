@@ -62,6 +62,7 @@ import (
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 )
 
 const (
@@ -89,7 +90,7 @@ type DeckhouseController struct {
 	deckhouseModules map[string]*models.DeckhouseModule
 	// <module-name>: <module-source>
 	sourceModules           map[string]string
-	embeddedDeckhousePolicy *v1alpha1.ModuleUpdatePolicySpecContainer
+	embeddedDeckhousePolicy *helpers.ModuleUpdatePolicySpecContainer
 	deckhouseSettings       *helpers.DeckhouseSettingsContainer
 }
 
@@ -101,7 +102,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 
 	dc := dependency.NewDependencyContainer()
 	// create a default policy, it'll be filled in with relevant settings from the deckhouse moduleConfig, see runDeckhouseConfigObserver method
-	embeddedDeckhousePolicy := v1alpha1.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
+	embeddedDeckhousePolicy := helpers.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
 		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
 			Mode: "Auto",
 		},
@@ -153,6 +154,9 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 						namespace: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse", "module": "deckhouse"}),
 						},
+						"kube-system": {
+							LabelSelector: labels.SelectorFromSet(map[string]string{"name": "d8-cluster-configuration"}),
+						},
 					},
 				},
 				// for DeckhouseRelease controller
@@ -176,6 +180,13 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	// register extenders
+	for _, extender := range extenders.Extenders() {
+		if err = mm.AddExtender(extender); err != nil {
+			return nil, err
+		}
 	}
 
 	err = deckhouse_release.NewDeckhouseReleaseController(ctx, mgr, dc, mm, dsContainer, metricStorage)
@@ -336,7 +347,6 @@ func (dml *DeckhouseController) InitModulesAndConfigsStatuses() error {
 			err := dml.updateModuleStatus(module.Name)
 			if err != nil {
 				log.Errorf("Error occurred during the module %q status update: %s", module.Name, err)
-				return err
 			}
 		}
 
@@ -349,7 +359,6 @@ func (dml *DeckhouseController) InitModulesAndConfigsStatuses() error {
 			err := dml.updateModuleConfigStatus(config.Name)
 			if err != nil {
 				log.Errorf("Error occurred during the module config %q status update: %s", config.Name, err)
-				return err
 			}
 		}
 		return nil
@@ -388,28 +397,24 @@ func (dml *DeckhouseController) runEventLoop(moduleEventCh <-chan events.ModuleE
 			err := dml.handleModuleRegistration(mod)
 			if err != nil {
 				log.Errorf("Error occurred during the module %q registration: %s", mod.GetBasicModule().GetName(), err)
-				continue
 			}
 
 		case events.ModuleEnabled:
 			err := dml.handleEnabledModule(mod, true)
 			if err != nil {
 				log.Errorf("Error occurred during the module %q turning on: %s", mod.GetBasicModule().GetName(), err)
-				continue
 			}
 
 		case events.ModuleDisabled:
 			err := dml.handleEnabledModule(mod, false)
 			if err != nil {
 				log.Errorf("Error occurred during the module %q turning off: %s", mod.GetBasicModule().GetName(), err)
-				continue
 			}
 
 		case events.ModuleStateChanged:
 			err := dml.updateModuleStatus(event.ModuleName)
 			if err != nil {
 				log.Errorf("Error occurred during the module %q status update: %s", event.ModuleName, err)
-				continue
 			}
 		}
 	}

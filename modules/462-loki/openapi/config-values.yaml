@@ -54,6 +54,76 @@ properties:
       Save logs from the `d8-*` namespaces to loki.
 
       The [log-shipper](../460-log-shipper) module must be enabled.
+  lokiConfig:
+    type: object
+    default: {}
+    description: |
+      Loki configuration options available for tuning.
+      
+      See [Loki documentation](https://grafana.com/docs/loki/v2.9.x/configure/) for more information.
+      
+      > Caution! Incorrect settings may lead to the malfunction of Loki.
+    properties:
+      ingestionRateMB:
+        type: number
+        description: |
+          Overall ingestion rate limit in megabytes per second.
+        default: 4
+      ingestionBurstSizeMB:
+        type: number
+        description: |
+          Overall ingestion burst size in megabytes. E.g., maximum push request size.
+        default: 6
+      maxStreamsPerUser:
+        type: integer
+        description: |
+          The maximum total number of streams for the Loki instance.
+
+          Each stream has unique labels. The number of streams is the number of unique label sets. E. g. '{job="my-app", instance="kube-node-1", namespace="production", pod_name="backend-79dbf6fcb7-v5gs7", app="backend"}'.
+
+          0 means unlimited.
+        default: 0
+      maxEntriesLimitPerQuery:
+        type: integer
+        description: |
+          The maximum number of entries returned for the query.
+        default: 5000
+      maxChunksPerQuery:
+        type: integer
+        description: |
+          The maximum number of chunks that can be fetched per query.
+        default: 2000000
+      perStreamRateLimit:
+        oneOf:
+          - type: string
+            pattern: '^[0-9]+(KB|MB|GB)?$'
+          - type: number
+        description: |
+          Maximum byte rate per second per stream. Can be either a number or a string with a unit (KB, MB, GB).
+        default: "3MB"
+      perStreamRateLimitBurst:
+        oneOf:
+          - type: string
+            pattern: '^[0-9]+(KB|MB|GB)?$'
+          - type: number
+        description: |
+          Maximum burst size per stream. Can be either a number or a string with a unit (KB, MB, GB).
+        default: "15MB"
+      grpcServerMaxSendMsgSize:
+        type: integer
+        description: |
+          Limit on the size of a gRPC message this server can send in bytes.
+        default: 4194304
+      grpcServerMaxRecvMsgSize:
+        type: integer
+        description: |
+          Limit on the size of a gRPC message this server can receive in bytes.
+        default: 104857600
+      grpcServerMaxConcurrentStreams:
+        type: integer
+        description: |
+          Limit on the number of concurrent streams for gRPC calls.
+        default: 100
   nodeSelector:
     type: object
     additionalProperties:
@@ -62,14 +132,14 @@ properties:
       The same as the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, `nodeSelector` will be determined
-      [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     description: >
       The same as the Pods' `spec.tolerations` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, `tolerations` will be determined
-      [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
     items:
       type: object
       properties:

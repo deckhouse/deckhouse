@@ -145,11 +145,6 @@ tests-openapi: ## Run tests against modules openapi values schemas.
 tests-controller: ## Run deckhouse-controller unit tests.
 	go test ./deckhouse-controller/... -v
 
-.PHONY: tests-doc-links
-tests-doc-links: ## Build documentation and run checker of html links.
-	bash tools/doc_check_links.sh
-
-
 .PHONY: validate
 validate: ## Check common patterns through all modules.
 	go test -tags=validation -run Validation -timeout=${TESTS_TIMEOUT} ./testing/...
@@ -226,20 +221,28 @@ cve-base-images: bin/trivy bin/jq ## Check CVE in our base images.
 .PHONY: docs
 docs: ## Run containers with the documentation.
 	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --env local
-	cd docs/site/; werf compose up --docker-compose-command-options='-d' --env local
+	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --env local --repo ":local"
+	cd docs/site/; werf compose up --docker-compose-command-options='-d' --env local --repo ":local"
 	echo "Open http://localhost to access the documentation..."
 
 .PHONY: docs-dev
 docs-dev: ## Run containers with the documentation in the dev mode (allow uncommited files).
+	export WERF_REPO=:local
+	export SECONDARY_REPO=""
+	export DOC_API_URL=dev
+	export DOC_API_KEY=dev
 	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --dev --env development
-	cd docs/site/; werf compose up --docker-compose-command-options='-d' --dev --env development
+	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local"
+	cd docs/site/; werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local"
 	echo "Open http://localhost to access the documentation..."
 
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)
 	docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 documentation 2>/dev/null; docker network rm deckhouse
+
+.PHONY: tests-doc-links
+docs-linkscheck: ## Build documentation and run checker of html links.
+	bash tools/doc_check_links.sh
 
 .PHONY: docs-spellcheck
 docs-spellcheck: ## Check the spelling in the documentation.
@@ -351,7 +354,7 @@ set-build-envs:
 
 build: set-build-envs ## Build Deckhouse images.
 	##~ Options: FOCUS=image-name
-	werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --report-path images_tags_werf.json $(SECONDARY_REPO) $(FOCUS)
+	werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --save-build-report=true --build-report-path images_tags_werf.json $(SECONDARY_REPO) $(FOCUS)
   ifeq ($(FOCUS),)
     ifneq ($(CI_COMMIT_REF_SLUG),)
 				@# By default in the Github CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches.

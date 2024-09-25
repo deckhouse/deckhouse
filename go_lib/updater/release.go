@@ -17,6 +17,7 @@ limitations under the License.
 package updater
 
 import (
+	"context"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -41,6 +42,7 @@ type DeckhouseReleaseData struct {
 
 type Release interface {
 	GetName() string
+	GetModuleName() string
 	GetApplyAfter() *time.Time
 	GetVersion() *semver.Version
 	GetRequirements() map[string]string
@@ -60,8 +62,8 @@ type Release interface {
 
 type KubeAPI[R Release] interface {
 	UpdateReleaseStatus(release R, msg, phase string) error
-	PatchReleaseAnnotations(release R, annotations map[string]interface{}) error
+	PatchReleaseAnnotations(ctx context.Context, release R, annotations map[string]interface{}) error
 	PatchReleaseApplyAfter(release R, applyTime time.Time) error
-	SaveReleaseData(release R, data DeckhouseReleaseData) error
-	DeployRelease(release R) error
+	SaveReleaseData(ctx context.Context, release R, data DeckhouseReleaseData) error
+	DeployRelease(ctx context.Context, release R) error
 }

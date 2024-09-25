@@ -80,9 +80,9 @@ Provider specific environment variables:
 
 \$LAYOUT_VSPHERE_PASSWORD
 
-  vCloudDirector:
+  VCD:
 
-\$LAYOUT_VCLOUD_DIRECTOR_PASSWORD
+\$LAYOUT_VCD_PASSWORD
 
   Static:
 
@@ -338,7 +338,7 @@ function prepare_environment() {
     ssh_user="ubuntu"
     ;;
 
-"vCloudDirector")
+"VCD")
     # shellcheck disable=SC2016
     env VCD_PASSWORD="$(base64 -d <<<"$LAYOUT_VCD_PASSWORD")" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" \
@@ -460,8 +460,9 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 
-wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_386 -O /usr/bin/yq &&\
- chmod +x /usr/bin/yq
+d8-curl -sLfo /usr/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_386
+
+chmod +x /usr/bin/yq
 
 command -v yq >/dev/null 2>&1 || exit 1
 
@@ -502,9 +503,15 @@ fi
 ENDSC
 )
 
-  if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<$testScript; then
-    return 0
-  fi
+  testRequirementsAttempts=10
+  for ((i=1; i<=$testRequirementsAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<$testScript; then
+        return 0
+    else
+      >&2 echo "Test requirements $i/$testRequirementsAttempts failed. Sleeping 5 seconds..."
+      sleep 5
+    fi
+  done
 
   write_deckhouse_logs
   return 1

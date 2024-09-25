@@ -8,7 +8,6 @@
   - '*/openapi/values.yaml'
   - '*/openapi/*-tests.yaml'
   - '*/docs/internal/'
-  - '005-external-module-manager/crds/external-module-*'
   - '040-node-manager/crds/deckhousecontrolplane.yaml'
   - '040-node-manager/crds/mcm.yaml'
   - '040-node-manager/crds/cluster.yaml'
@@ -325,12 +324,6 @@
     setup: ['**/*']
 - add: /dhctl/pkg/config/base.go
   to: /srv/jekyll-data/documentation/_data/dhctl-base.go
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-- add: /modules/007-registrypackages/images/d8/werf.inc.yaml
-  to: /src/registrypackages/werf.inc.yaml
   owner: jekyll
   group: jekyll
   stageDependencies:

@@ -1,0 +1,5 @@
+module: cni-cilium
+scopes:
+  - networking
+crds:
+  - modules/021-cni-cilium/crds/*.yaml

@@ -17,9 +17,15 @@ limitations under the License.
 package hooks
 
 import (
+	"bytes"
+	"encoding/json"
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v3"
 
+	v1alpha1 "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks/internal/apis"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -42,6 +48,27 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle operatio
 		})
 	})
 })
+
+func TestMarshalOperationPolicy(t *testing.T) {
+	var tmp map[string]any
+	err := yaml.Unmarshal([]byte(testOperationPolicy), &tmp)
+	if err != nil {
+		t.Error(err)
+	}
+
+	jsonSpec, err := json.Marshal(tmp["spec"])
+	if err != nil {
+		t.Error(err)
+	}
+
+	var spec v1alpha1.OperationPolicySpec
+	dec := json.NewDecoder(bytes.NewBuffer(jsonSpec))
+	dec.DisallowUnknownFields()
+	err = dec.Decode(&spec)
+	if err != nil {
+		t.Error(err)
+	}
+}
 
 var testOperationPolicy = `
 ---
@@ -81,6 +108,12 @@ spec:
     priorityClassNames:
       - foo
       - bar
+    ingressClassNames:
+      - ing1
+      - ing2
+    storageClassNames:
+      - st1
+      - st2
     checkHostNetworkDNSPolicy: true
     checkContainerDuplicates: true
     replicaLimits:

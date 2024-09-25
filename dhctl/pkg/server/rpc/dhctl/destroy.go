@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"sync"
-	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -38,10 +36,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
@@ -55,14 +52,17 @@ func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
 	internalErrCh := make(chan error)
 	receiveCh := make(chan *pb.DestroyRequest)
 	sendCh := make(chan *pb.DestroyResponse)
-	phaseSwitcher := &destroyPhaseSwitcher{
-		sendCh: sendCh,
-		f:      f,
-		next:   make(chan error),
+	phaseSwitcher := &fsmPhaseSwitcher[*pb.DestroyResponse, any]{
+		f: f, dataFunc: s.destroySwitchPhaseData, sendCh: sendCh, next: make(chan error),
 	}
+	logWriter := logger.NewLogWriter(logger.L(ctx).With(logTypeDHCTL), sendCh,
+		func(lines []string) *pb.DestroyResponse {
+			return &pb.DestroyResponse{Message: &pb.DestroyResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+	)
 
-	s.startDestroyerReceiver(server, receiveCh, doneCh, internalErrCh)
-	s.startDestroyerSender(server, sendCh, internalErrCh)
+	startReceiver[*pb.DestroyRequest, *pb.DestroyResponse](server, receiveCh, doneCh, internalErrCh)
+	startSender[*pb.DestroyRequest, *pb.DestroyResponse](server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -88,9 +88,10 @@ connectionProcessor:
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startDestroy(
-					ctx, message.Start, phaseSwitcher, &destroyLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
-				)
+				go func() {
+					result := s.destroy(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					sendCh <- &pb.DestroyResponse{Message: &pb.DestroyResponse_Result{Result: result}}
+				}()
 
 			case *pb.DestroyRequest_Continue:
 				err := f.Event("toNextPhase")
@@ -119,68 +120,10 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) startDestroyerReceiver(
-	server pb.DHCTL_DestroyServer,
-	receiveCh chan *pb.DestroyRequest,
-	doneCh chan struct{},
-	internalErrCh chan error,
-) {
-	go func() {
-		for {
-			request, err := server.Recv()
-			if errors.Is(err, io.EOF) {
-				close(doneCh)
-				return
-			}
-			if err != nil {
-				internalErrCh <- fmt.Errorf("receiving message: %w", err)
-				return
-			}
-			receiveCh <- request
-		}
-	}()
-}
-
-func (s *Service) startDestroyerSender(
-	server pb.DHCTL_DestroyServer,
-	sendCh chan *pb.DestroyResponse,
-	internalErrCh chan error,
-) {
-	go func() {
-		for response := range sendCh {
-			loop := retry.NewSilentLoop("send message", 10, time.Millisecond*100)
-			err := loop.Run(func() error {
-				return server.Send(response)
-			})
-			if err != nil {
-				internalErrCh <- fmt.Errorf("sending message: %w", err)
-				return
-			}
-		}
-	}()
-}
-
-func (s *Service) startDestroy(
-	ctx context.Context,
-	request *pb.DestroyStart,
-	phaseSwitcher *destroyPhaseSwitcher,
-	logWriter *destroyLogWriter,
-	sendCh chan *pb.DestroyResponse,
-) {
-	go func() {
-		result := s.destroy(ctx, request, phaseSwitcher, logWriter)
-		sendCh <- &pb.DestroyResponse{
-			Message: &pb.DestroyResponse_Result{
-				Result: result,
-			},
-		}
-	}()
-}
-
 func (s *Service) destroy(
 	_ context.Context,
 	request *pb.DestroyStart,
-	phaseSwitcher *destroyPhaseSwitcher,
+	switchPhase phases.DefaultOnPhaseFunc,
 	logWriter io.Writer,
 ) *pb.DestroyResult {
 	var err error
@@ -243,7 +186,7 @@ func (s *Service) destroy(
 	err = log.Process("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			request.ConnectionConfig,
-			config.NewSchemaStore(),
+			s.schemaStore,
 			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
@@ -272,9 +215,9 @@ func (s *Service) destroy(
 	}
 
 	destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
-		SSHClient:     sshClient,
+		NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
 		StateCache:    cache.Global(),
-		OnPhaseFunc:   phaseSwitcher.switchPhase,
+		OnPhaseFunc:   switchPhase,
 		CommanderMode: true,
 		CommanderUUID: commanderUUID,
 		CommanderModeParams: commander.NewCommanderModeParams(
@@ -315,64 +258,14 @@ func (s *Service) destroyServerTransitions() []fsm.Transition {
 	}
 }
 
-type destroyLogWriter struct {
-	l      *slog.Logger
-	sendCh chan *pb.DestroyResponse
-
-	m    sync.Mutex
-	prev []byte
-}
-
-func (w *destroyLogWriter) Write(p []byte) (n int, err error) {
-	w.m.Lock()
-	defer w.m.Unlock()
-
-	var r []string
-
-	for _, b := range p {
-		switch b {
-		case '\n', '\r':
-			s := string(w.prev)
-			if s != "" {
-				r = append(r, s)
-			}
-			w.prev = []byte{}
-		default:
-			w.prev = append(w.prev, b)
-		}
-	}
-
-	if len(r) > 0 {
-		for _, line := range r {
-			w.l.Info(line, logTypeDHCTL)
-		}
-		w.sendCh <- &pb.DestroyResponse{
-			Message: &pb.DestroyResponse_Logs{Logs: &pb.Logs{Logs: r}},
-		}
-	}
-
-	return len(p), nil
-}
-
-type destroyPhaseSwitcher struct {
-	sendCh chan *pb.DestroyResponse
-	f      *fsm.FiniteStateMachine
-	next   chan error
-}
-
-func (b *destroyPhaseSwitcher) switchPhase(
+func (s *Service) destroySwitchPhaseData(
 	completedPhase phases.OperationPhase,
 	completedPhaseState phases.DhctlState,
-	_ interface{},
+	_ any,
 	nextPhase phases.OperationPhase,
 	nextPhaseCritical bool,
-) error {
-	err := b.f.Event("wait")
-	if err != nil {
-		return fmt.Errorf("changing state to waiting: %w", err)
-	}
-
-	b.sendCh <- &pb.DestroyResponse{
+) (*pb.DestroyResponse, error) {
+	return &pb.DestroyResponse{
 		Message: &pb.DestroyResponse_PhaseEnd{
 			PhaseEnd: &pb.DestroyPhaseEnd{
 				CompletedPhase:      string(completedPhase),
@@ -381,11 +274,5 @@ func (b *destroyPhaseSwitcher) switchPhase(
 				NextPhaseCritical:   nextPhaseCritical,
 			},
 		},
-	}
-
-	switchErr, ok := <-b.next
-	if !ok {
-		return fmt.Errorf("server stopped, cancel task")
-	}
-	return switchErr
+	}, nil
 }

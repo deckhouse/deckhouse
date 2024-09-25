@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
+	"runtime/pprof"
 	"runtime/trace"
 	"strings"
 	"time"
@@ -59,9 +61,6 @@ func main() {
 		fmt.Printf("%s %s\n", app.AppName, app.AppVersion)
 		return nil
 	})
-
-	commands.DefineMirrorCommand(kpApp)
-	commands.DefineMirrorModulesCommand(kpApp)
 
 	commands.DefineServerCommand(kpApp)
 	commands.DefineSingleThreadedServerCommand(kpApp)
@@ -199,36 +198,64 @@ func runApplication(kpApp *kingpin.Application) {
 }
 
 func EnableTrace() func() {
-	fName := os.Getenv("DHCTL_TRACE")
-	if fName == "" || fName == "0" || fName == "no" {
+	traceFileName := os.Getenv("DHCTL_TRACE")
+	cpuProfileFileName := traceFileName + ".prof.cpu"
+
+	if traceFileName == "" || traceFileName == "0" || traceFileName == "no" {
 		return func() {}
 	}
-	if fName == "1" || fName == "yes" {
-		fName = "trace.out"
+	if traceFileName == "1" || traceFileName == "yes" {
+		traceFileName = "trace.out"
+		cpuProfileFileName = "pprof.cpu"
 	}
 
 	fns := make([]func(), 0)
 
-	f, err := os.Create(fName)
+	traceF, err := os.Create(traceFileName)
 	if err != nil {
-		log.InfoF("failed to create trace output file '%s': %v", fName, err)
+		log.InfoF("failed to create trace output file '%s': %v", traceFileName, err)
 		os.Exit(1)
 	}
+
 	fns = append([]func(){
 		func() {
-			if err := f.Close(); err != nil {
-				log.InfoF("failed to close trace file '%s': %v", fName, err)
+			if err := traceF.Close(); err != nil {
+				log.InfoF("failed to close trace file '%s': %v", traceFileName, err)
 				os.Exit(1)
 			}
 		},
 	}, fns...)
 
-	if err := trace.Start(f); err != nil {
-		log.InfoF("failed to start trace to '%s': %v", fName, err)
+	profCPU, err := os.Create(cpuProfileFileName)
+	if err != nil {
+		log.InfoF("failed to create pprof cpu file '%s': %v", cpuProfileFileName, err)
+		os.Exit(1)
+	}
+
+	fns = append([]func(){
+		func() {
+			if err := profCPU.Close(); err != nil {
+				log.InfoF("failed to close pprof cpu file '%s': %v", cpuProfileFileName, err)
+				os.Exit(1)
+			}
+		},
+	}, fns...)
+
+	if err := trace.Start(traceF); err != nil {
+		log.InfoF("failed to start trace to '%s': %v", traceFileName, err)
 		os.Exit(1)
 	}
 	fns = append([]func(){
 		trace.Stop,
+	}, fns...)
+
+	if err := pprof.StartCPUProfile(profCPU); err != nil {
+		log.InfoF("failed to start profile cpu to '%s': %v", cpuProfileFileName, err)
+		os.Exit(1)
+	}
+
+	fns = append([]func(){
+		pprof.StopCPUProfile,
 	}, fns...)
 
 	return func() {
@@ -253,22 +280,26 @@ func restoreTerminal() func() {
 }
 
 func initGlobalVars() {
-	// get current path
-	pwd, err := os.Getwd()
+	// get current location of called binary
+	dhctlPath, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", os.Getpid()))
 	if err != nil {
 		panic(err)
 	}
+	dhctlPath = filepath.Dir(dhctlPath)
+	if dhctlPath == "/" {
+		dhctlPath = "" // All our paths are already absolute by themselves
+	}
 
 	// set path to ssh and terraform binaries
-	if err := os.Setenv("PATH", fmt.Sprintf("%s/bin:%s", pwd, os.Getenv("PATH"))); err != nil {
+	if err = os.Setenv("PATH", fmt.Sprintf("%s/bin:%s", dhctlPath, os.Getenv("PATH"))); err != nil {
 		panic(err)
 	}
 
 	// set relative path to config and template files
-	config.InitGlobalVars(pwd)
-	commands.InitGlobalVars(pwd)
-	app.InitGlobalVars(pwd)
-	terraform.InitGlobalVars(pwd)
-	manifests.InitGlobalVars(pwd)
-	template.InitGlobalVars(pwd)
+	config.InitGlobalVars(dhctlPath)
+	commands.InitGlobalVars(dhctlPath)
+	app.InitGlobalVars(dhctlPath)
+	terraform.InitGlobalVars(dhctlPath)
+	manifests.InitGlobalVars(dhctlPath)
+	template.InitGlobalVars(dhctlPath)
 }

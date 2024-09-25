@@ -168,7 +168,7 @@ spec:
 ```
 
 {% alert %}
-If you do not specify the address in the [update.notification.webhook](configuration.html#parameters-update-notification-webhook) parameter, but specify the time in the [update.notification.minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) parameter, then the release will still be postponed for at least the time specified in the `minimalNotificationTime` parameter. In this case, the notification of the appearance of a new version can be considered the appearance of a [DeckhouseRelease](cr.html#deckhouserelease) resource with a name corresponding to the new version.
+If you do not specify the address in the [update.notification.webhook](configuration.html#parameters-update-notification-webhook) parameter, but specify the time in the [update.notification.minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) parameter, then the release will still be postponed for at least the time specified in the `minimalNotificationTime` parameter. In this case, the notification of the appearance of a new version can be considered the appearance of a [DeckhouseRelease](../../cr.html#deckhouserelease) resource with a name corresponding to the new version.
 {% endalert %}
 
 ## Collect debug info

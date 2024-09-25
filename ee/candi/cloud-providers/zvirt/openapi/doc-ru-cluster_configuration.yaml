@@ -12,7 +12,7 @@ apiVersions:
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit provider-cluster-configuration
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
     doc-search: |
       ProviderClusterConfiguration
@@ -106,14 +106,14 @@ apiVersions:
                     ```
             instanceClass:
               description: |
-                Частичное содержимое полей [ZvirtInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-zvirt/cr.html#zvirtinstanceclass).
+                Частичное содержимое полей [ZvirtInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-zvirt/cr.html#zvirtinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
       layout:
         description: |
           Название схемы размещения.
 
-          [Подробнее](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-zvirt/layouts.html)  о возможных схемах размещения провайдера.
+          [Подробнее](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-zvirt/layouts.html)  о возможных схемах размещения провайдера.
       provider:
         description: Параметры для подключения к Zvirt.
         properties:

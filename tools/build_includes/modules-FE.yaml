@@ -99,8 +99,8 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/021-cni-cilium/monitoring/prometheus-rules
-  to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules
+- add: /ee/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
+  to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
   stageDependencies:
     setup:
         - '**/*.go'
@@ -266,6 +266,11 @@
         - '**/*.go'
 - add: /ee/modules/650-runtime-audit-engine
   to: /deckhouse/modules/650-runtime-audit-engine
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/fe/modules/040-node-manager/templates/ngc-ca-certificate.yaml
+  to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
   stageDependencies:
     setup:
         - '**/*.go'

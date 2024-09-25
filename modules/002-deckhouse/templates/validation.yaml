@@ -1,13 +1,7 @@
-{{- if semverCompare ">= 1.26" .Values.global.discovery.kubernetesVersion }}
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 {{- $policyName := "system-ns.deckhouse.io" }}
 ---
-{{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
-apiVersion: admissionregistration.k8s.io/v1
-{{- else if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
-apiVersion: admissionregistration.k8s.io/v1beta1
-{{- else }}
-apiVersion: admissionregistration.k8s.io/v1alpha1
-{{- end }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
 metadata:
   name: {{ $policyName }}
@@ -16,10 +10,10 @@ spec:
   failurePolicy: Fail
   matchConstraints:
     resourceRules:
-      - apiGroups:   [""]
+      - apiGroups: [""]
         apiVersions: ["*"]
-        operations:  ["CREATE"]
-        resources:   ["namespaces"]
+        operations: ["CREATE"]
+        resources: ["namespaces"]
   validations:
     - expression: '!(request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
         && (object.metadata.name.startsWith("d8-") || object.metadata.name.startsWith("kube-")))'
@@ -28,11 +22,7 @@ spec:
       messageExpression: '''Creation of system namespaces is forbidden'''
 {{- end }}
 ---
-{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
-apiVersion: admissionregistration.k8s.io/v1beta1
-{{- else }}
-apiVersion: admissionregistration.k8s.io/v1alpha1
-{{- end }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   name: {{ $policyName }}
@@ -42,23 +32,19 @@ spec:
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   validationActions: [Deny]
 {{- end }}
+
 ---
-{{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
-apiVersion: admissionregistration.k8s.io/v1
-{{- else if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
-apiVersion: admissionregistration.k8s.io/v1beta1
-{{- else }}
-apiVersion: admissionregistration.k8s.io/v1alpha1
-{{- end }}
+{{- $policyName := "label-objects.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
 metadata:
-  name: "label-objects.deckhouse.io"
+  name: {{ $policyName }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
 spec:
   failurePolicy: Fail
   matchConstraints:
     resourceRules:
-      - apiGroups:   ["*"]
+      - apiGroups: ["*"]
         apiVersions: ["*"]
         operations:  ["CREATE", "UPDATE", "DELETE"]
         resources:   ["*"]
@@ -68,6 +54,8 @@ spec:
       expression: '!(["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups)))'
     - name: 'exclude-users'
       expression: '!(["kubernetes-admin", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler"].exists(e, (e == request.userInfo.username)))'
+    - name: 'exclude-kinds'
+      expression: '!(has(request.kind) && ["StorageClass"].exists(e, (e == request.kind.kind)))'
   validations:
     - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-")'
       reason: Forbidden
@@ -77,21 +65,17 @@ spec:
       valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change object with the heritage label'"
 {{- else }}
   validations:
-    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || ["kubernetes-admin", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler"].exists(e, (e == request.userInfo.username)) || ["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups))'
+    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || ["kubernetes-admin", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler"].exists(e, (e == request.userInfo.username)) || ["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups)) || (has(request.kind) && ["StorageClass"].exists(e, (e == request.kind.kind)))'
       reason: Forbidden
 {{- end }}
 ---
-{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
-apiVersion: admissionregistration.k8s.io/v1beta1
-{{- else }}
-apiVersion: admissionregistration.k8s.io/v1alpha1
-{{- end }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   name: "heritage-label-objects.deckhouse.io"
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
 spec:
-  policyName: "label-objects.deckhouse.io"
+  policyName: {{ $policyName }}
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   validationActions: [Deny, Audit]
 {{- end }}
@@ -99,4 +83,73 @@ spec:
     objectSelector:
       matchLabels:
         heritage: deckhouse
+
+---
+{{- $policyName := "update-policy-label-objects.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["UPDATE"]
+        resources:   ["modulereleases"]
+  validations:
+    - expression: request.userInfo.username.startsWith("system:serviceaccount:d8-")
+        || ! ("modules.deckhouse.io/update-policy" in object.metadata.labels)
+        || ! ("modules.deckhouse.io/update-policy" in oldObject.metadata.labels)
+        || object.metadata.labels["modules.deckhouse.io/update-policy"] == oldObject.metadata.labels["modules.deckhouse.io/update-policy"]
+      reason: Forbidden
+      {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+      messageExpression: "'Manual update-policy change is forbidden. Please, remove the update-policy label to automatically find a new suitable policy'"
+      {{- end }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: "update-policy-label-objects.deckhouse.io"
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+  validationActions: [Deny]
+{{- end }}
+
+---
+{{- $policyName := "moduleconfigs-settings.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["deckhouse.io"]
+      apiVersions: ["*"]
+      operations:  ["CREATE", "UPDATE"]
+      resources:   ["moduleconfigs"]
+  validations:
+    - expression: '!(object.metadata.name == "deckhouse" && has(object.spec.settings.update) && has(object.spec.settings.update.windows) && object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) > int(string(w.to).replace(":", ""))))'
+      reason: Forbidden
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+      messageExpression: '''Invalid update windows. Start time (windows.to) should be less than the end time of the update window (windows.from)'''
+{{- end }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+  validationActions: [Deny, Audit]
+{{- end }}
 {{- end }}

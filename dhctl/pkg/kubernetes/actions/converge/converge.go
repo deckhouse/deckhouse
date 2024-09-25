@@ -36,7 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
@@ -441,8 +441,9 @@ func (c *NodeGroupController) populateNodeToHost() error {
 	}
 
 	var userPassedHosts []string
-	if c.client.SSHClient != nil {
-		userPassedHosts = c.client.SSHClient.Settings.AvailableHosts()
+	// AvailableHosts is supposed to be empty on local runs
+	if wrapper, ok := c.client.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+		userPassedHosts = wrapper.Client().Settings.AvailableHosts()
 	}
 
 	nodesNames := make([]string, 0, len(c.state.State))

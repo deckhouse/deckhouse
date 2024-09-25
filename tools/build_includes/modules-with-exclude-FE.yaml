@@ -246,8 +246,8 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/modules/021-cni-cilium/monitoring/prometheus-rules
-  to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules
+- add: /ee/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
+  to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
   excludePaths:
     - docs
     - README.md
@@ -586,6 +586,19 @@
     - .build.yaml
 - add: /ee/modules/650-runtime-audit-engine
   to: /deckhouse/modules/650-runtime-audit-engine
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/fe/modules/040-node-manager/templates/ngc-ca-certificate.yaml
+  to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
   excludePaths:
     - docs
     - README.md

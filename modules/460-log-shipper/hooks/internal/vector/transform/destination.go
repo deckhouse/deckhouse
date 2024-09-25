@@ -41,10 +41,6 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 		}
 	}
 
-	if dest.Spec.Type == v1alpha1.DestSocket && dest.Spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecSyslog {
-		transforms = append(transforms, SyslogEncoding())
-	}
-
 	if dest.Spec.Type == v1alpha1.DestSplunk {
 		transforms = append(transforms, DateTime())
 	}
@@ -62,12 +58,21 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 	}
 
 	switch dest.Spec.Type {
-	case v1alpha1.DestElasticsearch, v1alpha1.DestLogstash, v1alpha1.DestVector:
+	case v1alpha1.DestSocket, v1alpha1.DestElasticsearch, v1alpha1.DestLogstash, v1alpha1.DestVector:
 		transforms = append(transforms, CleanUpParsedDataTransform())
 	case v1alpha1.DestLoki:
 		if len(dest.Spec.ExtraLabels) > 0 {
 			transforms = append(transforms, CreateParseDataTransforms())
 		}
+	}
+
+	/// encoding transforms go last to prevent mutating fields that have to be deleted
+	if dest.Spec.Type == v1alpha1.DestSocket && dest.Spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecSyslog {
+		transforms = append(transforms, SyslogEncoding())
+	}
+
+	if dest.Spec.Type == v1alpha1.DestSocket && dest.Spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecGELF {
+		transforms = append(transforms, GELFCodecRelabeling())
 	}
 
 	dTransforms, err := BuildFromMapSlice("destination", name, transforms)

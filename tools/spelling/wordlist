@@ -17,6 +17,7 @@ aggregator
 aggregators
 alertmanager
 Alertmanager
+alertmanagers
 Alertmanagers
 AllowedAddressPairs
 allowedBundles
@@ -112,6 +113,7 @@ bpfLBMode
 Buildah
 Burstable
 BusyBox
+BypassFwMark
 CAA
 CAInjector
 camelCase
@@ -233,6 +235,7 @@ crons
 CRs
 crt
 cryptocurrency
+Cryptor
 csi
 CSI
 CSR
@@ -566,11 +569,13 @@ JWT
 k3d
 K8s
 KaaS
+Kaspersky
 kb
 keepalived
 Keepalived
 keepalivedEE
 KeepalivedInstance
+KESL
 Keycloak
 keyField
 KeyValue
@@ -768,6 +773,7 @@ NotRegex
 npm
 NSX
 NTP
+NtpFwMark
 Nvidia
 oauth
 OAuth
@@ -1323,6 +1329,8 @@ zVirt
 бекенды
 беспроблемный
 биллинга
+биндинг
+биндинги
 биндятся
 блокирующе
 блокчейном
@@ -1402,6 +1410,8 @@ zVirt
 дефолтный
 донастройка
 доустановить
+дэшборд
+дэшборды
 е
 ев
 журналирования
@@ -1469,6 +1479,12 @@ zVirt
 коммиты
 компонентa
 конвержа
+контеинер
+контеинеризации
+контеинеризация
+контейнер
+контейнеризации
+контейнеризация
 контролллер
 контролллера
 конфиг
@@ -1762,6 +1778,7 @@ zVirt
 сustom
 сайдкар
 Сайдкар
+сайдкара
 сайдкаров
 сайдкаром
 сайдкары

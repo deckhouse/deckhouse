@@ -72,7 +72,7 @@ metadata:
 spec:
   enabled: true
   settings:
-    vmCIDRs:
+    virtualMachineCIDRs:
     - 10.10.10.0/24
     - 10.9.8.0/24
   version: 1

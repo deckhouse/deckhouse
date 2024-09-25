@@ -43,6 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
+	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 )
 
 const (
@@ -170,12 +171,13 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 	kubeConfigChannel := kubeConfigBackend.GetEventsChannel()
 
 	operator.SetupKubeConfigManager(kubeConfigBackend)
-	validation.RegisterAdmissionHandlers(operator)
 
 	err = operator.Setup()
 	if err != nil {
 		return err
 	}
+
+	validation.RegisterAdmissionHandlers(operator)
 
 	dController, err := controller.NewDeckhouseController(ctx, operator.KubeClient().RestConfig(), operator.ModuleManager, operator.MetricStorage)
 	if err != nil {
@@ -190,7 +192,7 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 	d8config.InitService(operator.ModuleManager)
 
 	// Runs preflight checks first (restore the modules' file system)
-	if os.Getenv("EXTERNAL_MODULES_DIR") != "" {
+	if d8env.GetDownloadedModulesDir() != "" {
 		dController.StartPluggableModulesControllers(ctx)
 	}
 

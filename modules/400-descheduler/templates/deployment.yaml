@@ -3,21 +3,20 @@ cpu: 25m
 memory: 50Mi
 {{- end }}
 
-{{- range $d := .Values.descheduler.internal.deschedulers }}
-  {{- $deschedulerSpec := $d.spec }}
+{{- if len .Values.descheduler.internal.deschedulers }}
   {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: descheduler-{{ $d.metadata.name | sha1sum }}
+  name: descheduler
   namespace: d8-descheduler
   {{- include "helm_lib_module_labels" (list $ (dict "app" "descheduler")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: descheduler-{{ $d.metadata.name | sha1sum }}
+    name: descheduler
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
@@ -28,40 +27,39 @@ spec:
       maxAllowed:
         cpu: 50m
         memory: 100Mi
+      {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
   {{- end }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: descheduler-{{ $d.metadata.name | sha1sum }}
+  name: descheduler
   namespace: d8-descheduler
   {{- include "helm_lib_module_labels" (list $ (dict "app" "descheduler")) | nindent 2 }}
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      app: descheduler-{{ $d.metadata.name }}
+      app: descheduler
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: descheduler-{{ $d.metadata.name | sha1sum }}
+  name: descheduler
   namespace: d8-descheduler
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "descheduler" "name" $d.metadata.name)) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "descheduler")) | nindent 2 }}
 spec:
   replicas: 1
   revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: descheduler
-      name: {{ $d.metadata.name }}
   template:
     metadata:
       labels:
         app: descheduler
-        name: {{ $d.metadata.name }}
       annotations:
-        checksum/config: {{ $deschedulerSpec | toJson | sha256sum }}
+        checksum/config: {{ $.Values.descheduler.internal.deschedulers | toJson | sha256sum }}
     spec:
       serviceAccountName: descheduler
       imagePullSecrets:
@@ -74,10 +72,20 @@ spec:
       - name: descheduler
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $ "descheduler") }}
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10258
+            scheme: HTTPS
+          initialDelaySeconds: 3
+          periodSeconds: 10
         volumeMounts:
         - mountPath: /policy
           name: policy-volume
         args:
+        - "--bind-address"
+        - "127.0.0.1"
         - "--policy-config-file"
         - "/policy/policy.yaml"
         - "--logging-format"
@@ -89,11 +97,49 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
-{{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "descheduler_resources" $ | nindent 12 }}
-{{- end }}
+  {{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):10258"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+        env:
+          - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              excludePaths:
+              - /healthz
+              upstreams:
+              - upstream: https://127.0.0.1:10258/
+                upstreamInsecureSkipVerify: true
+                path: /
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-{{ .Chart.Name }}
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: prometheus-metrics
+                    name: descheduler
+        ports:
+          - containerPort: 10258
+            name: https-metrics
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+  {{- end }}
       volumes:
       - name: policy-volume
         configMap:
-          name: descheduler-policy-{{ $d.metadata.name | sha1sum }}
+          name: descheduler-policy
 {{- end }}

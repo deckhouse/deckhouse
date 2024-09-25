@@ -1,0 +1,51 @@
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- $policyName := "machines.deckhouse.io" }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["machine.sapcloud.io", "cluster.x-k8s.io"]
+        apiVersions: ["*"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["*"]
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+  matchConditions:
+    - name: 'exclude-groups'
+      expression: '!(["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups)))'
+    - name: 'exclude-users'
+      expression: '!(["kubernetes-admin", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler"].exists(e, (e == request.userInfo.username)))'
+  validations:
+    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-")'
+      reason: Forbidden
+      messageExpression: '''Deleting an object of kind machines.machine.sapcloud.io or machines.cluster.x-k8s.io is forbidden.'''
+  auditAnnotations:
+    - key: 'source-user'
+      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to delete object of kind machines.sapcloud.io or machines.cluster.x-k8s'"
+{{- else }}
+  validations:
+    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || ["kubernetes-admin", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler"].exists(e, (e == request.userInfo.username)) || ["system:nodes", "system:masters", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups))'
+      reason: Forbidden
+      messageExpression: '''Deleting an object of kind machines.machine.sapcloud.io or machines.cluster.x-k8s.io is forbidden.'''
+{{- end }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}-binding
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+  validationActions: [Deny, Audit]
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        heritage: deckhouse
+{{- end }}
+{{- end }}

@@ -33,11 +33,19 @@ type DeckhouseUpdateSettings struct {
 	ClusterUUID            string
 }
 
+type ReleaseType string
+
+const (
+	ReleaseTypeMinor ReleaseType = "Minor"
+	ReleaseTypeAll   ReleaseType = "All"
+)
+
 type NotificationConfig struct {
 	WebhookURL              string          `json:"webhook"`
 	SkipTLSVerify           bool            `json:"tlsSkipVerify"`
 	MinimalNotificationTime libapi.Duration `json:"minimalNotificationTime"`
 	Auth                    *Auth           `json:"auth,omitempty"`
+	ReleaseType             ReleaseType     `json:"releaseType"`
 }
 
 type Auth struct {
@@ -63,7 +71,7 @@ func (a *Auth) Fill(req *http.Request) {
 	}
 }
 
-func sendWebhookNotification(config *NotificationConfig, data webhookData) error {
+func sendWebhookNotification(config *NotificationConfig, data WebhookData) error {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: config.SkipTLSVerify},
 	}
@@ -96,11 +104,13 @@ func sendWebhookNotification(config *NotificationConfig, data webhookData) error
 	return err
 }
 
-type webhookData struct {
+type WebhookData struct {
+	Subject       string            `json:"subject"`
 	Version       string            `json:"version"`
 	Requirements  map[string]string `json:"requirements,omitempty"`
-	ChangelogLink string            `json:"changelogLink"`
-	ApplyTime     string            `json:"applyTime,omitempty"`
+	ChangelogLink string            `json:"changelogLink,omitempty"`
+	ModuleName    string            `json:"moduleName,omitempty"`
 
-	Message string `json:"message"`
+	ApplyTime string `json:"applyTime,omitempty"`
+	Message   string `json:"message"`
 }

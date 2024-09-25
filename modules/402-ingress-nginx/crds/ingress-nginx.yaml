@@ -112,7 +112,7 @@ spec:
                   description: |
                     The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
                     **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
                 tolerations:
@@ -120,7 +120,7 @@ spec:
                   description: |
                     [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods' `spec.tolerations` parameter in Kubernetes;
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
                     **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
                   items:
@@ -151,9 +151,9 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        > **Caution!** The cloud provider may not support this option or ignore it.  
-                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.  
-                        > Providers ignoring the option: _YandexCloud_.  
+                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
+                        > Providers ignoring the option: _YandexCloud_.
                         > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
                       items:
                         type: string
@@ -168,6 +168,10 @@ spec:
                         Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
                       additionalProperties:
                         type: string
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        The LoadBalancer class (it is passed to the `spec.loadBalancerClass` parameter of the provisioned service of the LoadBalancer type).
                     behindL7Proxy:
                       type: boolean
                       description: |
@@ -193,9 +197,9 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        > **Caution!** The cloud provider may not support this option or ignore it.  
-                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.  
-                        > Providers ignoring the option: _YandexCloud_.  
+                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
+                        > Providers ignoring the option: _YandexCloud_.
                         > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
                       items:
                         type: string
@@ -210,6 +214,10 @@ spec:
                       additionalProperties:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        The LoadBalancer class (it is passed to the `spec.loadBalancerClass` parameter of the provisioned service of the LoadBalancer type).
                 hostPort:
                   type: object
                   description: |
@@ -615,7 +623,7 @@ spec:
                       SSL Passthrough leverages SNI and reads the virtual domain from the TLS negotiation, which requires compatible clients. After a connection has been accepted by the TLS listener, it is handled by the controller itself and piped back and forth between the backend and the client.
 
                       If there is no hostname matching the requested host name, the request is handed over to NGINX on the configured SSL Passthrough proxy port (default: 442), which proxies the request to the default backend.
-                    
+
                       > **Caution!** SSL Passthrough feature is implemented by intercepting all traffic on the configured HTTPS port (default: 443) and handing it over to a local TCP proxy. This bypasses NGINX completely and introduces a non-negligible performance penalty.
                       >
                       > **Caution!** Unlike HTTP backends, traffic to SSL Passthrough backends is sent to the ClusterIP of the backing Service instead of individual Endpoints.
@@ -631,7 +639,7 @@ spec:
 
                       SSL Passthrough leverages SNI and reads the virtual domain from the TLS negotiation, which requires compatible clients. After a connection has been accepted by the TLS listener, it is handled by the controller itself and piped back and forth between the backend and the client.
 
-                      If there is no hostname matching the requested host name, the request is handed over to NGINX on the configured passthrough proxy port (default: 442), 
+                      If there is no hostname matching the requested host name, the request is handed over to NGINX on the configured passthrough proxy port (default: 442),
                       which proxies the request to the default backend.
 
                       > **Caution!** SSL Passthrough feature is implemented by intercepting all traffic on the configured HTTPS port (default: 443) and handing it over to a local TCP proxy. This bypasses NGINX completely and introduces a non-negligible performance penalty.
@@ -687,7 +695,7 @@ spec:
                   description: |
                     Enables the annotation validation feature.
 
-                    Requires a controller of 1.9 version.
+                    Requires a controller of 1.9 version or higher.
                 nodeSelector:
                   type: object
                   additionalProperties:
@@ -696,7 +704,7 @@ spec:
                   description: |
                     The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
                     **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
                 tolerations:
@@ -704,7 +712,7 @@ spec:
                   description: |
                     [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods' `spec.tolerations` parameter in Kubernetes;
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
                     **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
                   items:
@@ -735,9 +743,9 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        > **Caution!** The cloud provider may not support this option or ignore it.  
-                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.  
-                        > Providers ignoring the option: _YandexCloud_.  
+                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
+                        > Providers ignoring the option: _YandexCloud_.
                         > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
                       items:
                         type: string
@@ -752,6 +760,10 @@ spec:
                         Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
                       additionalProperties:
                         type: string
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        The LoadBalancer class (it is passed to the `spec.loadBalancerClass` parameter of the provisioned service of the LoadBalancer type).
                     behindL7Proxy:
                       type: boolean
                       description: |
@@ -777,9 +789,9 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        > **Caution!** The cloud provider may not support this option or ignore it.  
-                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.  
-                        > Providers ignoring the option: _YandexCloud_.  
+                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
+                        > Providers ignoring the option: _YandexCloud_.
                         > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
                       items:
                         type: string
@@ -794,6 +806,10 @@ spec:
                       additionalProperties:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        The LoadBalancer class (it is passed to the `spec.loadBalancerClass` parameter of the provisioned service of the LoadBalancer type).
                 loadBalancerWithSSLPassthrough:
                   type: object
                   x-doc-required: false
@@ -805,9 +821,9 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        > **Caution!** The cloud provider may not support this option or ignore it.  
-                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.  
-                        > Providers ignoring the option: _Yandex Cloud_.  
+                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
+                        > Providers ignoring the option: _Yandex Cloud_.
                         > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
                       items:
                         type: string
@@ -822,6 +838,10 @@ spec:
                       additionalProperties:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        The LoadBalancer class (it is passed to the `spec.loadBalancerClass` parameter of the provisioned service of the LoadBalancer type).
                 hostPort:
                   type: object
                   description: |
@@ -1207,8 +1227,8 @@ spec:
                       enum: ['HostWithFailover']
                     hostWithFailover: {}
               x-kubernetes-validations:
-                - message: .spec.controllerVersion should be explicitly set to 1.9 for .spec.annotationValidationEnabled to make effect
-                  rule: 'self.annotationValidationEnabled == true ? self.controllerVersion == ''1.9'': true'
+                - message: .spec.controllerVersion should be set to 1.9 or higher for .spec.annotationValidationEnabled to make effect
+                  rule: 'self.annotationValidationEnabled == true ? (self.controllerVersion == ''1.9'' || self.controllerVersion == ''1.10'') : true'
                 - message: .spec.controllerVersion should be explicitly set to 1.10 for .spec.enableHTTP3 to make effect
                   rule: 'self.enableHTTP3 == true ? self.controllerVersion == ''1.10'': true'
       additionalPrinterColumns:

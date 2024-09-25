@@ -28,16 +28,58 @@ properties:
       Сохранять логи из пространства имен `d8-*` в loki.
 
       Для работы необходим включенный модуль [log-shipper](../460-log-shipper).
+  lokiConfig:
+    description: |
+      Опции Loki, доступные для изменения.
+
+      Подробнее о настройки Loki читайте в [документации Loki](https://grafana.com/docs/loki/v2.9.x/configure/).
+      
+      > Внимание! Ошибочные  настройки могут привести к неработоспособности Loki.
+    properties:
+      ingestionRateMB:
+        description: |
+          Общий лимит скорости приема логов в мегабайтах в секунду.
+      ingestionBurstSizeMB:
+        description: |
+          Общий лимит всплеска объема принимаемых логов. Например, максимальный размер запроса на запись.
+      maxStreamsPerUser:
+        description: |
+          Максимальное общее количество потоков логов для экземпляра Loki.
+
+          Каждый поток логов имеет уникальный набор меток. Количество потоков равно количеству уникальных наборов меток. Например: '{job="my-app", instance="kube-node-1", namespace="production", pod_name="backend-79dbf6fcb7-v5gs7", app="backend"}'.
+
+          Значение 0 отключает ограничение.
+      maxEntriesLimitPerQuery:
+        description: |
+          Максимальное количество записей, возвращаемых для одного запроса.
+      maxChunksPerQuery:
+        description: |
+          Максимальное количество файлов, которые могут быть скачаны в рамках одного запроса.
+      perStreamRateLimit:
+        description: |
+          Максимальная скорость в байтах в секунду для одного потока. Может быть как числом, так и строкой с единицей измерения (KB, MB, GB).
+      perStreamRateLimitBurst:
+        description: |
+          Максимальный размер всплеска объема логов для одного потока. Может быть как числом, так и строкой с единицей измерения (KB, MB, GB).
+      grpcServerMaxSendMsgSize:
+        description: |
+          Ограничение на размер сообщения gRPC, которое может отправить сервер, в байтах.
+      grpcServerMaxRecvMsgSize:
+        description: |
+          Ограничение на размер сообщения gRPC, которое может получить сервер, в байтах.
+      grpcServerMaxConcurrentStreams:
+        description: |
+          Ограничение на количество одновременных потоков для вызовов gRPC.
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   resourcesManagement:
     description: |
       Настройки запросов (requests) и ограничений (limits) использования CPU и памяти подами Loki.
