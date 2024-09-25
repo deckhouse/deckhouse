@@ -756,7 +756,7 @@ func (i *namedIndex) String() string {
 func ValidateClusterConfigurationPrefix(prefix string, provider string) error {
 	regex, ok := cloudProviderSpecificClusterPrefix[provider]
 	if !ok {
-		return fmt.Errorf("validation failed: unknown provider '%v'", provider)
+		return nil
 	}
 
 	if !regex.(*regexp.Regexp).MatchString(prefix) {
