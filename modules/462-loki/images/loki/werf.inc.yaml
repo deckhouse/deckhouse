@@ -14,7 +14,7 @@ fromArtifact: src-artifact
 git:
 - add: /{{ .ModulePath }}modules/462-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
-  branch: cse-release-1.64-loki
+  branch: cse-release-1.64-loki # TODO убрать при рефакторинге
   stageDependencies:
     install:
     - '**/*'
