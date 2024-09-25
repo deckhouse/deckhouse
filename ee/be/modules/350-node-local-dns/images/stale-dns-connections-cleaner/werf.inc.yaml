@@ -39,12 +39,9 @@ mount:
   to: /go/pkg
 shell:
   install:
-  - export GOPROXY={{ .GOPROXY }}
+  - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src
   - go mod tidy
-  setup:
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - cd /src
   - go test ./... -v
   - go build -ldflags="-s -w" -o stale-dns-connections-cleaner .
   - chmod +x /src/stale-dns-connections-cleaner

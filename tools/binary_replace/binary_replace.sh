@@ -57,13 +57,6 @@ while getopts ":h:i:f:o:" option; do
     esac
 done
 
-tools=("ldd" "readlink" "mkdir" "awk" "cp" "dirname" "cat")
-for tool in "${tools[@]}"; do
-  if ! command -v "$tool" >/dev/null 2>&1; then
-    echo "$tool is not installed."
-    exit 1
-  fi
-done
 
 if [[ -z $RDIR ]];then
   RDIR="/relocate"
@@ -72,49 +65,28 @@ mkdir -p "${RDIR}"
 
 function relocate() {
   local binary=$1
-  relocate_item "${binary}"
+  relocate_item ${binary}
 
   for lib in $(ldd ${binary} 2>/dev/null | awk '{if ($2=="=>") print $3; else print $1}'); do
     # don't try to relocate linux-vdso.so lib due to this lib is virtual
     if [[ "${lib}" =~ "linux-vdso" ]]; then
       continue
     fi
-    relocate_item "${lib}"
+    relocate_item ${lib}
   done
-}
-
-function create_dir() {
-  local dir=$1
-  local new_dir="${RDIR}${dir}"
-  if [ -L "${dir}" ]; then
-    if ! [ -L "${new_dir}" ]; then
-      cp -a "${dir}" "${new_dir}"
-    fi
-    local orig_dir="$(readlink -f ${dir})"
-    if ! [ -d "${RDIR}${orig_dir}" ]; then
-      mkdir -p "${RDIR}${orig_dir}"
-    fi
-  else
-    if ! [ -d "${new_dir}" ]; then
-      mkdir -p "${new_dir}"
-    fi
-  fi
 }
 
 function relocate_item() {
   local file=$1
-  local new_place="${RDIR}${file}"
+  local new_place="${RDIR}$(dirname ${file})"
 
-  if ! [ -f "${new_place}" -o -L "${new_place}" ]; then
-    echo "copy ${file}"
-    create_dir "$(dirname ${file})"
-    cp -a ${file} ${new_place} || exit 2
-  fi
+  mkdir -p ${new_place}
+  cp -a ${file} ${new_place}
 
   # if symlink, copy original file too
   local orig_file="$(readlink -f ${file})"
   if [[ "${file}" != "${orig_file}" ]]; then
-    relocate_item "${orig_file}"
+    cp -a ${orig_file} ${new_place}
   fi
 }
 
@@ -123,9 +95,8 @@ function get_binary_path () {
   BINARY_LIST=()
 
   for bin in "$@"; do
-    if ! [ -f "${bin}" -o -L "${bin}" ] || [ "${bin}" == "${RDIR}" ]; then
-      echo "not found $bin"
-      exit 3
+    if [[ ! -f $bin ]] || [ "${bin}" == "${RDIR}" ]; then
+      continue
     fi
     BINARY_LIST+=$(ls -la $bin 2>/dev/null | awk '{print $9}')" "
   done

@@ -43,13 +43,10 @@ mount:
   to: /go/pkg
 shell:
   install:
-  - export GOPROXY={{ .GOPROXY }}
+  - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src
   - go mod tidy
-  setup:
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - cd /src
-  - go build -ldflags='-extldflags "-static" -s -w' -o /coredns
+  - go build -v -ldflags="-s -w" -o coredns
   - chmod 0700 /coredns
   - chown 64535:64535 /coredns
 ---
