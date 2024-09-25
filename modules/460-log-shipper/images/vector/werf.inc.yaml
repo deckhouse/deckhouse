@@ -37,6 +37,7 @@ shell:
   - git clone --depth 1 --branch v0.40.2 {{ .SOURCE_REPO }}/vectordotdev/vector.git /src/vector
   - cd /src/vector
   - git apply /patches/*.patch --verbose
+  - rm -r /src/vector/website
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_ALT_P11 }}
