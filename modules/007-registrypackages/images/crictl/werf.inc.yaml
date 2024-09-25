@@ -23,7 +23,7 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 fromArtifact: src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-  to: /
+  to: /src/scripts
   stageDependencies:
     install:
       - '**/*'
@@ -33,20 +33,21 @@ shell:
   {{- if semverCompare " = 1.26 || = 1.27 || = 1.30 || = 1.31" $version }}
     {{- $patchVersion = "1" }}
   {{- end }}
-  - git clone --depth 1 --branch v{{ $version }}.{{ $patchVersion }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git /src
+  - git clone --depth 1 --branch v{{ $version }}.{{ $patchVersion }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git /src/cri-tools
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 import:
-- artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install
 shell:
   setup:
   - export GOPROXY={{ $.GOPROXY }}
-  - cd /src
+  - cd /src/cri-tools
   - make install crictl
   - mv /usr/local/bin/crictl /crictl
+  - mv /src/scripts/* /
   - chmod +x /crictl /install /uninstall
 {{- end }}

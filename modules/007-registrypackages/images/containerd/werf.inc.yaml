@@ -30,7 +30,7 @@ artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
 fromArtifact: src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-  to: /
+  to: /src/scripts
   stageDependencies:
     install:
       - '**/*'
@@ -60,3 +60,4 @@ shell:
   - git config --global user.email "builder@deckhouse.io"
   - make static
   - mv runc /runc
+  - mv /src/scripts/* /
