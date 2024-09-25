@@ -19,7 +19,7 @@ docker:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromArtifact: src-artifact
 git:
-- add: /{{ $.ModulePath }}/modules/031-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /src/scripts
   stageDependencies:
     install:
