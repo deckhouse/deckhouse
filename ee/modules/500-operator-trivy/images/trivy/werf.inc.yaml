@@ -10,6 +10,7 @@ docker:
   ENTRYPOINT: ["/trivy"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromCacheVersion: "2024-09-25 16:30"
 fromArtifact: src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
