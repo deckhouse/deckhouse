@@ -52,6 +52,7 @@ const globalValues = `
     d8SpecificNodeCountByRole:
       worker: 1
       master: 3
+    defaultStorageClass: mydsname1
     podSubnet: 10.0.1.0/16
     kubernetesVersion: "%s.1"
 `
@@ -420,7 +421,7 @@ labels:
 			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesB)
-			f.ValuesSetFromYaml("cloudProviderVsphere.internal.defaultStorageClass", `mydsname2`)
+			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `mydsname2`)
 			f.HelmRender()
 		})
 
