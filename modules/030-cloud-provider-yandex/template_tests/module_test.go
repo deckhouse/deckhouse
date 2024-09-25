@@ -60,6 +60,7 @@ const globalValues = `
     d8SpecificNodeCountByRole:
       worker: 1
       master: 3
+    defaultStorageClass: network-hdd
     podSubnet: 10.0.1.0/16
     kubernetesVersion: 1.29.0
     clusterUUID: 3b5058e1-e93a-4dfa-be32-395ef4b3da45
@@ -346,7 +347,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderYandex", moduleValues)
-			f.ValuesSetFromYaml("cloudProviderYandex.internal.defaultStorageClass", `network-ssd`)
+			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `network-ssd`)
 			f.HelmRender()
 		})
 
