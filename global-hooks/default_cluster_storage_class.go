@@ -27,6 +27,11 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
+const (
+	betaDefaultAnnotation   = "storageclass.beta.kubernetes.io/is-default-class"
+	stableDefaultAnnotation = "storageclass.kubernetes.io/is-default-class"
+)
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeAll: &go_hook.OrderedConfig{Order: 15},
 
@@ -91,7 +96,7 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 				patch := map[string]any{
 					"metadata": map[string]any{
 						"annotations": map[string]any{
-							"storageclass.kubernetes.io/is-default-class": "true",
+							stableDefaultAnnotation: "true",
 						},
 					},
 				}
@@ -106,8 +111,8 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 				patch := map[string]any{
 					"metadata": map[string]any{
 						"annotations": map[string]any{
-							"storageclass.beta.kubernetes.io/is-default-class": nil,
-							"storageclass.kubernetes.io/is-default-class":      nil,
+							betaDefaultAnnotation:   nil,
+							stableDefaultAnnotation: nil,
 						},
 					},
 				}
@@ -123,18 +128,13 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 func isMarkedDefault(sc *storage.StorageClass) bool {
 	annotations := sc.GetAnnotations()
 
-	annotToCheck := []string{
-		"storageclass.beta.kubernetes.io/is-default-class",
-		"storageclass.kubernetes.io/is-default-class",
-	}
+	annotToCheck := []string{stableDefaultAnnotation, betaDefaultAnnotation}
 
-	isDefault := false
 	for _, annot := range annotToCheck {
 		if v, ok := annotations[annot]; ok && strings.ToLower(v) == "true" {
-			isDefault = true
-			break
+			return true
 		}
 	}
 
-	return isDefault
+	return false
 }
