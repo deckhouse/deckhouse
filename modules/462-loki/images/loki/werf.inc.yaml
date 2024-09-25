@@ -12,11 +12,11 @@ docker:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromArtifact: src-artifact
 git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ $.ModulePath }}modules/462-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
-      - '**/*'
+    - '**/*'
 shell:
   install:
   - cd /src
