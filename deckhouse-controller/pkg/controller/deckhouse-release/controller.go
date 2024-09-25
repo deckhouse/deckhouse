@@ -73,7 +73,8 @@ type deckhouseReleaseReconciler struct {
 }
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
-	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metric_storage.MetricStorage) error {
+	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metric_storage.MetricStorage,
+) error {
 	lg := log.WithField("component", "DeckhouseRelease")
 
 	r := &deckhouseReleaseReconciler{
@@ -143,7 +144,10 @@ func (rp releasePhasePredicate) Generic(_ event.GenericEvent) bool {
 	return true
 }
 
-func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
+	r.logger.Debugf("%s release processing started", req.Name)
+	defer func() { r.logger.Debugf("%s release processing complete: %+v", req.Name, result) }()
+
 	if r.updateSettings.Get().ReleaseChannel == "" {
 		return ctrl.Result{}, nil
 	}
@@ -151,7 +155,7 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	r.metricStorage.GroupedVault.ExpireGroupMetrics(metricReleasesGroup)
 
 	release := new(v1alpha1.DeckhouseRelease)
-	err := r.client.Get(ctx, req.NamespacedName, release)
+	err = r.client.Get(ctx, req.NamespacedName, release)
 	if err != nil {
 		// The DeckhouseRelease resource may no longer exist, in which case we stop
 		// processing.
@@ -282,7 +286,6 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		r.logger, r.client, r.dc, dus, releaseData, r.metricStorage, podReady,
 		clusterBootstrapping, imagesRegistry, r.moduleManager.GetEnabledModuleNames(),
 	)
-
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("initializing deckhouse updater: %w", err)
 	}
