@@ -25,7 +25,7 @@ spec:
     updateMode: {{ .Values.prometheus.vpa.updateMode | quote }}
   resourcePolicy:
     containerPolicies:
-    - containerName: "prometheus-cpp"
+    - containerName: "prometheus"
       minAllowed:
         {{- include "prometheus_resources" . | nindent 8 }}
       maxAllowed:
