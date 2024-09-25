@@ -17,7 +17,6 @@ limitations under the License.
 package deckhouse_release
 
 import (
-	"reflect"
 	"runtime/debug"
 
 	"github.com/sirupsen/logrus"
@@ -29,7 +28,7 @@ import (
 
 func newEventFilter() predicate.Predicate {
 	return predicate.And(
-		predicate.Or(predicate.GenerationChangedPredicate{}, annotationChangedPredicate{}),
+		predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}),
 		releasePhasePredicate{},
 	)
 }
@@ -97,20 +96,6 @@ func (w logWrapper) recover(logEntry *logrus.Entry) {
 		WithField("panic", r).
 		WithField("stack", debug.Stack()).
 		Errorln("recovered from panic")
-}
-
-// annotationChangedPredicate, unlike predicate.AnnotationChangedPredicate, returns true if one or both annotations are empty
-type annotationChangedPredicate struct {
-	predicate.Funcs
-}
-
-func (annotationChangedPredicate) Update(e event.UpdateEvent) bool {
-	if e.ObjectOld == nil || e.ObjectOld.GetAnnotations() == nil ||
-		e.ObjectNew == nil || e.ObjectNew.GetAnnotations() == nil {
-		return true
-	}
-
-	return !reflect.DeepEqual(e.ObjectNew.GetAnnotations(), e.ObjectOld.GetAnnotations())
 }
 
 type releasePhasePredicate struct{}
