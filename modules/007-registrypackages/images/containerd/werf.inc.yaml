@@ -1,6 +1,6 @@
-{{- $containerd_version := "1.7.13" }}
+{{- $containerd_version := "1.7.22" }}
 {{- $image_version := $containerd_version | replace "." "-" }}
-{{- $runc_version := "1.1.12" }}
+{{- $runc_version := "1.1.14" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
@@ -26,30 +26,37 @@ docker:
     containerd: {{ $containerd_version }}
     runc: {{ $runc_version }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_GOLANG_21_BULLSEYE_DEV }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+fromArtifact: src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
   stageDependencies:
     install:
       - '**/*'
+shell:
+  install:
+  - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git /src/containerd
+  - git clone --depth=1 --branch v{{ $runc_version }} {{ $.SOURCE_REPO }}/opencontainers/runc /src/runc
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   install:
   - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p /src
-  - cd /src
-  - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git
-  - cd containerd
+  - cd /src/containerd
   - git config --global user.email "builder@deckhouse.io"
   - make STATIC=1 all
   - mv bin/* /
-  - cd /src
-  - git clone --depth=1 --branch v{{ $runc_version }} {{ $.SOURCE_REPO }}/opencontainers/runc
-  - cd runc
+  - cd /src/runc
   - git config --global user.email "builder@deckhouse.io"
   - make static
   - mv runc /runc
