@@ -21,7 +21,7 @@ shell:
   install:
   - cd /src
   - git clone --depth 1 --branch v2.7.0 {{ .SOURCE_REPO }}/kubernetes/kube-state-metrics/ .
-  - for patchfile in /patches/*.patch ; do echo "Apply ${patchfile} ... "; git apply ${patchfile}; done
+  - git apply /patches/*.patch --verbose
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
@@ -38,11 +38,8 @@ shell:
   - apk add --no-cache make git
   install:
   - cd /src
-  - export GOPROXY={{ .GOPROXY }}
-  - go mod tidy
-  setup:
-  - cd /src
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go mod tidy
   - make build-local
   - chown 64535:64535 /src/kube-state-metrics
   - chmod 0700 /src/kube-state-metrics
