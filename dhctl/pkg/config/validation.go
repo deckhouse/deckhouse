@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/go-openapi/spec"
@@ -48,6 +49,17 @@ var cloudProviderToProviderKind = map[string]string{
 	"Azure":     "AzureClusterConfiguration",
 	"VCD":       "VCDClusterConfiguration",
 	"Zvirt":     "ZvirtClusterConfiguration",
+}
+
+var cloudProviderSpecificClusterPrefix = map[string]interface{}{
+	"OpenStack": regexp.MustCompile(".+"),
+	"AWS":       regexp.MustCompile(".+"),
+	"GCP":       regexp.MustCompile(".+"),
+	"Yandex":    regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$"),
+	"vSphere":   regexp.MustCompile(".+"),
+	"Azure":     regexp.MustCompile(".+"),
+	"VCD":       regexp.MustCompile(".+"),
+	"Zvirt":     regexp.MustCompile(".+"),
 }
 
 type ClusterConfig struct {
@@ -739,4 +751,17 @@ func (i *namedIndex) String() string {
 		return fmt.Sprintf("%s, %s", i.Kind, i.Version)
 	}
 	return fmt.Sprintf("%s, %s, metadata.name: %q", i.Kind, i.Version, i.Metadata.Name)
+}
+
+func ValidateClusterConfigurationPrefix(prefix string, provider string) error {
+	regex, ok := cloudProviderSpecificClusterPrefix[provider]
+	if !ok {
+		return fmt.Errorf("validation failed: unknown provider '%v'", provider)
+	}
+
+	if !regex.(*regexp.Regexp).MatchString(prefix) {
+		return fmt.Errorf("invalid prefix '%v' for provider '%v', prefix must match the pattern: %v", prefix, provider, regex)
+	}
+
+	return nil
 }

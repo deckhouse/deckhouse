@@ -127,6 +127,10 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 	}
 
 	if cloud.Provider == "Yandex" {
+		if err := ValidateClusterConfigurationPrefix(cloud.Prefix, cloud.Provider); err != nil {
+			return nil, err
+		}
+
 		var masterNodeGroup YandexMasterNodeGroupSpec
 		if err := json.Unmarshal(m.ProviderClusterConfig["masterNodeGroup"], &masterNodeGroup); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
@@ -134,7 +138,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 
 		if masterNodeGroup.Replicas > 0 &&
 			len(masterNodeGroup.InstanceClass.ExternalIPAddresses) > 0 &&
-			masterNodeGroup.Replicas != len(masterNodeGroup.InstanceClass.ExternalIPAddresses) {
+			masterNodeGroup.Replica s != len(masterNodeGroup.InstanceClass.ExternalIPAddresses) {
 			return nil, fmt.Errorf("number of masterNodeGroup.replicas should be equal to the length of masterNodeGroup.instanceClass.externalIPAddresses")
 		}
 
