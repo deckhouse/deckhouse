@@ -36,6 +36,9 @@ import:
   to: /src
   before: install
 shell:
+  beforeInstall:
+  {{- include "debian packages proxy" . | nindent 2 }}
+  - sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
   setup:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src/deckhouse-cli
