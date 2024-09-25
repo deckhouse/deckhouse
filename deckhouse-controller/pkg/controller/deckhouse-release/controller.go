@@ -121,6 +121,7 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	defer func() { r.logger.Debugf("%s release processing complete: %+v", req.Name, result) }()
 
 	if r.updateSettings.Get().ReleaseChannel == "" {
+		r.logger.Debug("release channel not set")
 		return ctrl.Result{}, nil
 	}
 
@@ -129,6 +130,7 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	release := new(v1alpha1.DeckhouseRelease)
 	err = r.client.Get(ctx, req.NamespacedName, release)
 	if err != nil {
+		r.logger.Debug("get release: %s", err.Error())
 		// The DeckhouseRelease resource may no longer exist, in which case we stop
 		// processing.
 		if apierrors.IsNotFound(err) {
@@ -139,6 +141,7 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	if !release.DeletionTimestamp.IsZero() {
+		r.logger.Debug("release deletion timestamp: %s", release.DeletionTimestamp.String())
 		return ctrl.Result{}, nil
 	}
 
@@ -160,6 +163,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 		return ctrl.Result{Requeue: true}, nil // process to the next phase
 
 	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended:
+		r.logger.Debug("release phase: %s", dr.Status.Phase)
 		return ctrl.Result{}, nil
 
 	case v1alpha1.PhaseDeployed:
@@ -306,6 +310,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	deckhouseUpdater.SetReleases(pointerReleases)
 
 	if deckhouseUpdater.ReleasesCount() == 0 {
+		r.logger.Debug("releases count is zero")
 		return ctrl.Result{}, nil
 	}
 
@@ -314,6 +319,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	// has already Deployed the latest release
 	if deckhouseUpdater.LastReleaseDeployed() {
+		r.logger.Debug("latest release is deployed")
 		return ctrl.Result{}, nil
 	}
 
@@ -332,6 +338,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	if rel := deckhouseUpdater.GetPredictedRelease(); rel != nil {
 		if rel.GetName() != dr.GetName() {
 			// don't requeue releases other than predicted one
+			r.logger.Debugf("processing wrong release (current: %s, predicted: %s)", dr.Name, rel.Name)
 			return ctrl.Result{}, nil
 		}
 	}
