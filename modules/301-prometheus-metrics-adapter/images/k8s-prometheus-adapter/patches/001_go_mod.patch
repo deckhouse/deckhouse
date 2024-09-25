@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 19cc2c5..3f489b9 100644
+index 19cc2c5..b3f97e4 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,11 +1,11 @@
@@ -98,7 +98,7 @@ index 19cc2c5..3f489b9 100644
 +	gopkg.in/inf.v0 v0.9.1 // indirect
 +	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 +	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
-+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
++	gopkg.in/yaml.v3 v3.0.0-20220521103104-8f96da9f5d5e // indirect
 +	k8s.io/gengo v0.0.0-20201214224949-b6c5ce23f027 // indirect
 +	k8s.io/utils v0.0.0-20210802155522-efc7438f0176 // indirect
 +	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.22 // indirect
@@ -106,7 +106,7 @@ index 19cc2c5..3f489b9 100644
 +	sigs.k8s.io/yaml v1.2.0 // indirect
 +)
 diff --git a/go.sum b/go.sum
-index 178a12e..f2cf140 100644
+index 178a12e..5f864ee 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -104,7 +104,6 @@ github.com/cenkalti/backoff v2.2.1+incompatible/go.mod h1:90ReRw6GdpyfrHakVjL/QH
@@ -268,3 +268,12 @@ index 178a12e..f2cf140 100644
  gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLkstjWtayDeSgw=
  gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
  gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+@@ -1117,6 +1132,8 @@ gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C
+ gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+ gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b h1:h8qDotaEPuJATrMmW04NCwg7v22aHH28wwpauUhK9Oo=
+ gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
++gopkg.in/yaml.v3 v3.0.0-20220521103104-8f96da9f5d5e h1:3i3ny04XV6HbZ2N1oIBw1UBYATHAOpo4tfTF83JM3Z0=
++gopkg.in/yaml.v3 v3.0.0-20220521103104-8f96da9f5d5e/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+ gotest.tools/v3 v3.0.2/go.mod h1:3SzNCllyD9/Y+b5r9JIKQ474KzkZyqLqEfYqMsX94Bk=
+ gotest.tools/v3 v3.0.3/go.mod h1:Z7Lb0S5l+klDB31fvDQX8ss/FlKDxtlFlw3Oa8Ymbl8=
+ honnef.co/go/tools v0.0.0-20180728063816-88497007e858/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
