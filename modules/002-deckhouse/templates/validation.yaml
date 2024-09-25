@@ -69,6 +69,7 @@ spec:
       reason: Forbidden
 {{- end }}
 
+{{- if ne .Values.global.deckhouseVersion "dev" }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
@@ -84,6 +85,7 @@ spec:
     objectSelector:
       matchLabels:
         heritage: deckhouse
+{{- end }}
 ---
 {{- $policyName := "update-policy-label-objects.deckhouse.io" }}
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
