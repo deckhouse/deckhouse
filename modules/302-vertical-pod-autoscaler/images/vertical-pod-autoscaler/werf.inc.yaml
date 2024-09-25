@@ -30,8 +30,9 @@ shell:
   {{- include "alpine packages proxy" . | nindent 2 }}
   install:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - cd /src/vertical-pod-autoscaler/
     - go mod vendor
-    
+
     - cd /src/vertical-pod-autoscaler/pkg/admission-controller
     - go build -ldflags="-s -w" -o /admission-controller
 
