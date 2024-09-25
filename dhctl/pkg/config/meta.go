@@ -138,7 +138,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 
 		if masterNodeGroup.Replicas > 0 &&
 			len(masterNodeGroup.InstanceClass.ExternalIPAddresses) > 0 &&
-			masterNodeGroup.Replica s != len(masterNodeGroup.InstanceClass.ExternalIPAddresses) {
+			masterNodeGroup.Replicas != len(masterNodeGroup.InstanceClass.ExternalIPAddresses) {
 			return nil, fmt.Errorf("number of masterNodeGroup.replicas should be equal to the length of masterNodeGroup.instanceClass.externalIPAddresses")
 		}
 
