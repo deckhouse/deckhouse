@@ -1,5 +1,9 @@
 # Patches
 
+### 001-go-mod.patch
+
+Bump libraries versions to fix security errors.
+
 ### 001-add-registry-secret-as-dockerconfigjson.patch
 
 This patch adds docker auth config via kubernetes volume/volumeMount to scanjobs in Standalone mode so that trivy init container can download trivy-db from a private registry. ClientServer mode doesn't have to download trivy-db on its own.
