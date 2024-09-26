@@ -34,6 +34,8 @@ shell:
   install:
   - git clone --depth 1 --branch {{ $docker_auth_version }} {{ $.SOURCE_REPO }}/cesanta/docker_auth.git /src/docker_auth
   - git clone --depth 1 --branch v{{ $docker_version }} {{ $.SOURCE_REPO }}/distribution/distribution.git /src/distribution
+  - cd /src/docker_auth
+  - git apply /patches/*.patch --verbose 
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
