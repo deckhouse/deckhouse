@@ -42,7 +42,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make
+  - apk add --no-cache make build-base
   install:
   - cd /src/e2fsprogs
   - CFLAGS='-static' LDFLAGS="-static" ./configure
