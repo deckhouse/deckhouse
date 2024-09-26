@@ -42,15 +42,12 @@ shell:
     iptables iptables-ipv6 iptables-nft \
     coreutils binutils git zip unzip wget mount patch patchelf \
     make automake autoconf cmake ccache bison flex ninja-build pkg-config \
-    gcc gcc-c++ glibc \
-    libstdc++-devel libstdc++-devel-static \
+    gcc gcc-c++ libstdc++-devel libstdc++-devel-static \
+    glibc glibc-devel glibc-devel-static \
     python python3 python3-module-pip python3-module-virtualenv \
-    libtool glibc-devel glibc-devel-static \
+    build-essential libtool \
     libnetfilter_conntrack libnetfilter_conntrack-devel libnfnetlink-devel \
     libmnl-devel libnftnl-devel elfutils-devel zlib-devel
-  ##- apt-get install -y emacs-base gettext  gettext-tools
-  - apt-get install -y build-essential
-  ##- apt-get install -y llvm-devel
   # for debug
   - apt-get install -y strace vim-console
   # apt clean
@@ -62,7 +59,6 @@ shell:
     libcap-devel libpcap-devel \
     clang17.0 clang17.0-tools lldb17.0 lld17.0 llvm17.0-devel \
     libcxxabi-devel \
-    llvm-devel
   install:
   # Install Go
   - curl -sfL https://go.dev/dl/go{{ $goVersion }}.linux-amd64.tar.gz -o go.tar.gz

@@ -1,5 +1,5 @@
 {{- $llvmRev := "llvmorg-10.0.0" }}
-{{- $llvmCacheRev := "llvmorg-10.0.0-alt-v1" }}
+{{- $llvmCacheRev := "llvmorg-10.0.0-alt-p11-gcc13-v1" }}
 ---
 # #####################################################################
 # Build LLVM binaries (based on base-cilium-dev)
