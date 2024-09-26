@@ -47,7 +47,7 @@ mount:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make gettext-dev autoconf automake libtool clang g++ linux-headers bash pkgconf rsync libfdisk g++ bzip2-dev libnl3 patch libnftnl lz4-libs ruby sqlite-libs autoconf libc-dev libnl3-dev coreutils libuv utmps-libs glib-dev net-snmp-dev docbook-xml libmnl-static alpine-sdk nghttp2-libs musl libbz2 libcurl git gdbm pcre gcc perl-error tzdata zlib-dev libstdc++ ncurses-libs zlib file-dev net-snmp-libs linux-headers mpdecimal net-snmp-agent-libs
+  - apk add --no-cache make gettext-dev autoconf automake libtool clang g++ linux-headers bash pkgconf bzip2-dev libnl3 libc-dev libnl3-dev coreutils libuv utmps-libs glib-dev libmnl-static nghttp2-libs musl libbz2 gdbm pcre gcc perl-error zlib-dev libstdc++ ncurses-libs zlib file-dev linux-headers mpdecimal
   install:
   - export PKG_CONFIG_PATH=/opt/deckhouse/bin/.libs/pkgconfig
   - cd /src/libmnl
