@@ -21,6 +21,7 @@ shell:
   install:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
+    - go mod tidy
     - go build -ldflags="-s -w" -o entrypoint main.go
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
