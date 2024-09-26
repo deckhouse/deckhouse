@@ -24,18 +24,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-var (
-	DeckhouseReleaseGVK = schema.GroupVersionKind{
-		Group:   SchemeGroupVersion.Group,
-		Version: SchemeGroupVersion.Version,
-		Kind:    DeckhouseReleaseKind,
-	}
-	DeckhouseReleaseGVR = schema.GroupVersionResource{
-		Group:    SchemeGroupVersion.Group,
-		Version:  SchemeGroupVersion.Version,
-		Resource: DeckhouseReleasesKind,
-	}
-)
+var DeckhouseReleaseGVK = schema.GroupVersionKind{
+	Group:   SchemeGroupVersion.Group,
+	Version: SchemeGroupVersion.Version,
+	Kind:    DeckhouseReleaseKind,
+}
 
 // +genclient
 // +genclient:nonNamespaced

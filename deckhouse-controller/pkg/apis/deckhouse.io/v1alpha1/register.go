@@ -23,9 +23,8 @@ import (
 )
 
 const (
-	Version               = "v1alpha1"
-	DeckhouseReleaseKind  = "DeckhouseRelease"
-	DeckhouseReleasesKind = "DeckhouseReleases"
+	Version              = "v1alpha1"
+	DeckhouseReleaseKind = "DeckhouseRelease"
 )
 
 // SchemeGroupVersion is group version used to register these objects
