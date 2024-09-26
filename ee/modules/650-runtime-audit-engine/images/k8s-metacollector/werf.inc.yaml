@@ -7,14 +7,26 @@ import:
   to: /manager
   before: setup
 ---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromArtifact: src-artifact
+shell:
+  install:
+  - git clone --depth 1 --branch v0.1.1 {{ .SOURCE_REPO }}/falcosecurity/k8s-metacollector.git /src
+---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   beforeInstall:
-  - git clone --depth 1 --branch v0.1.1 {{ .SOURCE_REPO }}/falcosecurity/k8s-metacollector.git /src
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make bash
   install:
   - cd /src
   - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
