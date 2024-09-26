@@ -11,9 +11,9 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.13.0
-	github.com/flant/addon-operator v1.4.4-0.20240926083035-21a3b57b109e
+	github.com/flant/addon-operator v1.4.4-0.20240926141942-5dc4c05ebd2c
 	github.com/flant/kube-client v1.1.0
-	github.com/flant/shell-operator v1.4.12-0.20240925230508-e0ccb7e15b36
+	github.com/flant/shell-operator v1.4.12-0.20240926141852-4fdec1eaf695
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.8
