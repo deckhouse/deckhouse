@@ -325,6 +325,38 @@ spec:
     # the request_id field should be present in the log message
     syslog.message_id: "{{ request_id }}"
 ```
+## Logs in CEF Format
+
+There is a way to format logs in CEF format using `codec: CEF`, with overriding `cef.name` and `cef.severity` based on values from the `message` field (application log) in JSON format.
+
+In the example below, `app` and `log_level` are keys containing values for overriding:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: siem-kafka
+spec:
+  extraLabels:
+    cef.name: '{{ app }}'
+    cef.severity: '{{ log_level }}'
+  type: Kafka
+  kafka:
+    bootstrapServers:
+      - my-cluster-kafka-brokers.kafka:9092
+    encoding:
+      codec: CEF
+    tls:
+      verifyCertificate: false
+      verifyHostname: true
+    topic: logs
+```
+You can also manually set your own values:
+```yaml
+extraLabels:
+  cef.name: 'TestName'
+  cef.severity: '1'
+```
 
 ## Collect Kubernetes Events
 
