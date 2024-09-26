@@ -1065,7 +1065,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    > kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable registry-packages-proxy
    > ```
 
-1. Очистите временные файлы, `NodeGroupConfiguration` и переменные:
+1. Удалите временные файлы, ресурс NodeGroupConfiguration и переменные:
 
    ```shell
    kubectl delete ngc containerd-ce-config.sh
@@ -1088,7 +1088,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    EOF
    ```
 
-   После синхронизации bashible (статус синхронизации на узлах можно отследить по значению `UPTODATE` у NodeGroup) удалите созданную ngc:
+   После синхронизации bashible (статус синхронизации на узлах можно отследить по значению `UPTODATE` у NodeGroup) удалите созданный ресурс NodeGroupConfiguration:
 
    ```shell
    kubectl  delete ngc del-temp-config.sh
@@ -1111,7 +1111,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
    ```
 
-1. Cоздайте `NodeGroupConfiguration` для переходной авторизации в `registry.deckhouse.ru`:
+1. Cоздайте ресурс NodeGroupConfiguration для переходной авторизации в `registry.deckhouse.ru`:
 
    ```shell
    kubectl apply -f - <<EOF
@@ -1230,7 +1230,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
      admission-policy-engine cert-manager chrony cloud-data-crd ...
      ```
 
-1. Создайте `NodeGroupConfiguration`:
+1. Создайте ресурс NodeGroupConfiguration:
 
    ```shell
    $ kubectl apply -f - <<EOF
@@ -1323,7 +1323,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
       | select(.image | contains("deckhouse.ru/deckhouse/ce"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
-1. Очистите временные файлы, `NodeGroupConfiguration` и переменные:
+1. Удалите временные файлы, ресурс NodeGroupConfiguration и переменные:
 
    ```shell
    kubectl delete ngc containerd-ee-config.sh ee-set-sha-images.sh
@@ -1349,7 +1349,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    EOF
    ```
 
-   После синхронизации bashible (статус синхронизации на узлах можно отследить по значению `UPTODATE` у nodegroup) удалите созданную ngc:
+   После синхронизации bashible (статус синхронизации на узлах можно отследить по значению `UPTODATE` у NodeGroup) удалите созданный ресурс NodeGroupConfiguration:
 
    ```shell
    kubectl  delete ngc del-temp-config.sh
@@ -1366,7 +1366,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 Для переключения кластера Deckhouse Enterprise Edition на Certified Security Edition выполните следующие действия (все команды выполняются на master-узле действующего кластера):
 
-1. Подготовьте переменные с токеном лицензии и создайте NodeGroupConfiguration для переходной авторизации в `registry-cse.deckhouse.ru`:
+1. Подготовьте переменные с токеном лицензии и создайте ресурс NodeGroupConfiguration для переходной авторизации в `registry-cse.deckhouse.ru`:
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
@@ -1473,7 +1473,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
    Дождитесь перехода пода Deckhouse в статус `Ready` и [выполнения всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse).
 
-1. Создайте NodeGroupConfiguration:
+1. Создайте ресурс NodeGroupConfiguration:
 
    ```shell
    kubectl apply -f - <<EOF
@@ -1570,7 +1570,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
    ```
 
-1. Очистите временные файлы, ngc и переменные:
+1. Удалите временные файлы, ресурс NodeGroupConfiguration и переменные:
 
    ```console
    rm /tmp/cse-deckhouse-registry.yaml
@@ -1600,7 +1600,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    EOF
    ```
 
-   После синхронизации bashible (статус синхронизации на узлах можно отследить по значению `UPTODATE` у nodegroup) удалите созданную ngc:
+   После синхронизации bashible (статус синхронизации на узлах можно отследить по значению `UPTODATE` у NodeGroup) удалите созданный ресурс NodeGroupConfiguration:
 
    ```shell
    kubectl  delete ngc del-temp-config.sh

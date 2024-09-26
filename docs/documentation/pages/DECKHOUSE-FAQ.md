@@ -942,7 +942,7 @@ Perform the following steps to switch a Deckhouse Enterprise Edition cluster to 
    ```
 
    An example of the output you might get as a result of running the previous command:
-   
+
    ```console
    Defaulted container "deckhouse" out of: deckhouse, kube-rbac-proxy, init-external-modules (init)
    Module metallb-crd disabled
@@ -991,7 +991,7 @@ Perform the following steps to switch a Deckhouse Enterprise Edition cluster to 
    ```
 
    Wait for the `/etc/containerd/conf.d/ce-registry.toml` file to propagate to the nodes and for bashible synchronization to complete.
-   
+
    The synchronization status can be tracked by the `UPTODATE` value (the displayed number of nodes in this status must match the total number of nodes (`NODES`) in the group):
 
    ```shell
@@ -1036,7 +1036,7 @@ Perform the following steps to switch a Deckhouse Enterprise Edition cluster to 
    kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ce:v1.63.7
    ```
 
-1. Wait for the Deckhouse pod to become `Ready` and for [ all the queued jobs to complete](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse). If an `ImagePullBackOff` error is generated in the process, wait for the pod to be restarted automatically.
+1. Wait for the Deckhouse pod to become `Ready` and for [all the queued jobs to complete](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse). If an `ImagePullBackOff` error is generated in the process, wait for the pod to be restarted automatically.
 
    Use the following command to check the Deckhouse pod's status:
 
@@ -1063,7 +1063,7 @@ Perform the following steps to switch a Deckhouse Enterprise Edition cluster to 
    > kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable registry-packages-proxy
    > ```
 
-1. Purge temporary files, `NodeGroupConfiguration`, and variables:
+1. Purge temporary files, NodeGroupConfiguration resource, and variables:
 
    ```shell
    kubectl delete ngc containerd-ce-config.sh
@@ -1086,7 +1086,7 @@ Perform the following steps to switch a Deckhouse Enterprise Edition cluster to 
    EOF
    ```
 
-   Once bashible synchronization is complete (you can track the synchronization status on nodes via the `UPTODATE` value of the NodeGroup), delete the ngc you created earlier:
+   Once bashible synchronization is complete (you can track the synchronization status on nodes via the `UPTODATE` value of the NodeGroup), delete the NodeGroupConfiguration resource you created earlier:
 
    ```shell
    kubectl  delete ngc del-temp-config.sh
@@ -1109,7 +1109,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
    AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
    ```
 
-1. Create a `NodeGroupConfiguration` for authorization in `registry.deckhouse.ru` during the migration:
+1. Create a NodeGroupConfiguration resource for authorization in `registry.deckhouse.ru` during the migration:
 
    ```shell
    kubectl apply -f - <<EOF
@@ -1142,9 +1142,9 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
    ```
 
    Wait for the `/etc/containerd/conf.d/ee-registry.toml` file to propagate to the nodes and for bashible synchronization to complete.
-   
+
    You can track the synchronization status via the `UPTODATE` value (the displayed number of nodes having this status must match the total number of nodes (`NODES`) in the group):
-   
+
    ```console
    $ kubectl  get ng  -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    NAME     NODES   READY   UPTODATE
@@ -1228,7 +1228,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
      admission-policy-engine cert-manager chrony cloud-data-crd ...
      ```
 
-1. Create a `NodeGroupConfiguration`:
+1. Create a NodeGroupConfiguration resource:
 
    ```shell
    $ kubectl apply -f - <<EOF
@@ -1321,7 +1321,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
       | select(.image | contains("deckhouse.ru/deckhouse/ce"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
-1. Purge temporary files, `NodeGroupConfiguration`, and variables:
+1. Purge temporary files, NodeGroupConfiguration resource, and variables:
 
    ```shell
    kubectl delete ngc containerd-ee-config.sh ee-set-sha-images.sh
@@ -1347,7 +1347,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
    EOF
    ```
 
-   Once bashible synchronization is complete (you can track the synchronization status on nodes via the `UPTODATE` value of the NodeGroup), delete the ngc you created earlier:
+   Once bashible synchronization is complete (you can track the synchronization status on nodes via the `UPTODATE` value of the NodeGroup), delete the NodeGroupConfiguration resource you created earlier:
 
    ```shell
    kubectl  delete ngc del-temp-config.sh
