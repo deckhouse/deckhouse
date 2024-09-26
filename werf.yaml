@@ -56,8 +56,6 @@ cleanup:
   {{- end }}
 {{- end }}
 ---
-
----
 # revisions settings
 {{- $editionsSettings := (.Files.Get "editions.yaml" | fromYaml) }}
 {{- $_ := set . "Editions" $editionsSettings.editions }}
