@@ -1,30 +1,40 @@
 ---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromArtifact: src-artifact
+shell:
+  beforeInstall:
+  - git clone -b v3.5.16 --depth 1 {{ $.SOURCE_REPO }}/etcd-io/etcd.git /src
+  - rm -rf /src/tools
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-  - image: common/pause
-    add: /pause
-    to: /pause
-    before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /
-    to: /usr/bin
-    includePaths:
-    - etcd
-    - etcdctl
-    before: setup
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
+  to: /usr/bin
+  includePaths:
+  - etcd
+  - etcdctl
+  before: setup
 docker:
   ENTRYPOINT: ["/usr/bin/etcd"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /
+  before: install
 shell:
   install:
     - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-    - mkdir /src && cd /src
-    - git clone -b v3.5.9 --depth 1 {{ $.SOURCE_REPO }}/etcd-io/etcd.git .
     - cd server && go build -ldflags="-s -w" -o /etcd . && cd ..
     - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..
