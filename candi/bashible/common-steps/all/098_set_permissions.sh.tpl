@@ -15,6 +15,6 @@
 find /etc/kubernetes -type d -exec chmod 700 {} \;
 find /etc/kubernetes -type f -exec chmod 600 {} \;
 
-find /var/lib/kubelet -type d \( -name pods -o -name plugins \) -prune -o -type d -exec chmod 700 {} \;
-find /var/lib/kubelet -type d \( -name pods -o -name plugins \) -prune -o -type f -exec chmod 600 {} \;
+find /var/lib/kubelet ! -path "/var/lib/kubelet/plugins/*" ! -path "/var/lib/kubelet/pods/*" -type d -exec chmod 700 {} \;
+find /var/lib/kubelet ! -path "/var/lib/kubelet/plugins/*" ! -path "/var/lib/kubelet/pods/*" -type f -exec chmod 600 {} \;
 
