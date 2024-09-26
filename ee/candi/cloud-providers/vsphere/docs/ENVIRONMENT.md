@@ -125,7 +125,7 @@ You can read more in the [documentation](https://github.com/hashicorp/terraform-
 {% endalert %}
 
 {% alert %}
-Deckhouse uses `ens192` as default interface for virtual machines in vSphere, so if you want to use static IP addresses for the `mainNetwork`, you must create `ens192` as default interface in the virtual machine image.
+Deckhouse uses the `ens192` interface as the default interface for virtual machines in vSphere. Therefore, when using static IP addresses in `mainNetwork`, you must create an interface named `ens192` in the OS image as the default interface.
 {% endalert %}
 
 ## Infrastructure
