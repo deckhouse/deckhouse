@@ -1,8 +1,8 @@
 ---
-artifact: apiserver
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: src-artifact
 git:
-- add: /{{ $.ModulePath }}modules/040-node-manager/images/bashible-apiserver
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}
   to: /src
   excludePaths:
   - "**/*.md"
@@ -12,20 +12,24 @@ git:
     install:
     - go.mod
     - go.sum
-    setup:
-    - go.mod
-    - go.sum
     - "**/*.go"
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   install:
+  - export GOPROXY={{ $.GOPROXY }}
   - cd /src
-  - GOPROXY={{ $.GOPROXY }} go mod download
-  setup:
-  - cd /src
-  - CGO_ENABLED=0 GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bashible-apiserver .
+  - go mod download
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bashible-apiserver .
   - chown 64535:64535 bashible-apiserver
   - chmod 0700 bashible-apiserver
 ---
@@ -34,7 +38,7 @@ fromImage: common/distroless
 docker:
   ENTRYPOINT: ["/bashible-apiserver", "--tls-cipher-suites", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA"]
 import:
-- artifact: apiserver
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/bashible-apiserver
   to: /bashible-apiserver
   before: setup
