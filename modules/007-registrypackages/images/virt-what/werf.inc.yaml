@@ -41,9 +41,9 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make autoconf
+  - apk add --no-cache make autoconf pkgconf automake build-base
   setup:
-  - cd /src
+  - cd /src/virt-what
   - autoreconf -fi
   - autoconf
   - LDFLAGS="-static" ./configure
