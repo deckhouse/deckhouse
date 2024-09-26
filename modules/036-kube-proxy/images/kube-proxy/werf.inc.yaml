@@ -30,8 +30,8 @@ import:
     add: /
     to: /
     includePaths:
-      - lib64/iptables
-      - lib64/libm*
+      - usr/lib64/iptables
+      - usr/lib64/libm.*
     before: setup
   - artifact: common/kubernetes-artifact-{{ $image_version }}
     add: /src/_output/bin/kube-proxy
