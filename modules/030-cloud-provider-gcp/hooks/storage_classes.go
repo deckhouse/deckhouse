@@ -100,9 +100,5 @@ func storageClasses(input *go_hook.HookInput) error {
 
 	input.Values.Set("cloudProviderGcp.internal.storageClasses", storageClassesFiltered)
 
-	// cloud-provider's `internal.defaultStorageClass` (getted from `<cloud-provider>.storageClass.default`) was deprecated and
-	// should NOT used. Now `global.defaultClusterStorageClass` should used instead.
-	input.Values.Remove("cloudProviderOpenstack.internal.defaultStorageClass")
-
 	return nil
 }

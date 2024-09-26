@@ -54,10 +54,6 @@ func storageClasses(input *go_hook.HookInput, pathFunc func(path string) string,
 
 	input.Values.Set(pathFunc("internal.storageClasses"), storageClassesFiltered)
 
-	// cloud-provider's `internal.defaultStorageClass` (getted from `<cloud-provider>.storageClass.default`) was deprecated and
-	// should NOT used. Now `global.defaultClusterStorageClass` should used instead.
-	input.Values.Remove(pathFunc("internal.defaultStorageClass"))
-
 	return nil
 }
 

@@ -164,10 +164,6 @@ func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, volumeTypes []v1al
 
 func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageClass) {
 	input.Values.Set("cloudProviderOpenstack.internal.storageClasses", storageClasses)
-
-	// cloud-provider's `internal.defaultStorageClass` (getted from `<cloud-provider>.storageClass.default`) was deprecated and
-	// should NOT used. Now `global.defaultClusterStorageClass` should used instead.
-	input.Values.Remove("cloudProviderOpenstack.internal.defaultStorageClass")
 }
 
 // Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names

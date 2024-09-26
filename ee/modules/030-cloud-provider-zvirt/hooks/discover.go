@@ -227,10 +227,6 @@ func setStorageClassesValues(
 	_ string,
 ) {
 	input.Values.Set("cloudProviderZvirt.internal.storageClasses", storageClasses)
-
-	// cloud-provider's `internal.defaultStorageClass` (getted from `<cloud-provider>.storageClass.default`) was deprecated and
-	// should NOT used. Now `global.defaultClusterStorageClass` should used instead.
-	input.Values.Remove("cloudProviderZvirt.internal.defaultStorageClass")
 }
 
 type storageClass struct {

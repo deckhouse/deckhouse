@@ -103,9 +103,5 @@ func doDiscover(input *go_hook.HookInput, dc dependency.Container) error {
 
 	input.Values.Set("cloudProviderVsphere.internal.storageClasses", storageClasses)
 
-	// cloud-provider's `internal.defaultStorageClass` (getted from `<cloud-provider>.storageClass.default`) was deprecated and
-	// should NOT used. Now `global.defaultClusterStorageClass` should used instead.
-	input.Values.Remove("cloudProviderVsphere.internal.defaultStorageClass")
-
 	return nil
 }
