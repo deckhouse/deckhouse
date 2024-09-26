@@ -37,7 +37,6 @@ shell:
   install:
   - cd /src
   - export GOPROXY={{ .GOPROXY }}
-  - go get golang.org/x/net@v0.17.0
   - go mod tidy
   - go mod vendor
   setup:
