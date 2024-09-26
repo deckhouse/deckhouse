@@ -40,7 +40,7 @@ shell:
   {{- end }}
   - git clone --depth 1 --branch v{{ $version }}.{{ $patchVersion }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git /src/cri-tools
   - cd /src/cri-tools
-  - git apply /patches/{{ $version }}/*.patch --verbose 
+  - test -d /patches/{{ $version }} && git apply /patches/{{ $version }}/*.patch --verbose 
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
