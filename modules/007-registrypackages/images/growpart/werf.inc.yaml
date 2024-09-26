@@ -48,12 +48,12 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make gettext-dev
+  - apk add --no-cache make gettext-dev autoconf automake libtool flex bison
   install:
   - cd /src/util-linux
   - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s" 
   - export CFLAGS="-fPIC -pie -fstack-protector-all -O2 -D_FORTIFY_SOURCE=2 -static -s"
-  - ./autogen.sh && ./configure --enable-static --enable-static-programs=fdisk,sfdisk --disable-pylibmount --without-python --disable-liblastlog2 
+  - ./autogen.sh && ./configure --enable-static --enable-static-programs=fdisk,sfdisk --disable-pylibmount --without-python --disable-liblastlog2
   - make fdisk.static sfdisk.static && strip ./build/fdisk.static && strip ./build/sfdisk.static
   - mv ./fdisk.static /fdisk && mv ./sfdisk.static /sfdisk 
   - chmod +x /fdisk /sfdisk
