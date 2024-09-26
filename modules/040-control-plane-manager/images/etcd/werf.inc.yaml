@@ -3,7 +3,8 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromArtifact: src-artifact
 shell:
   beforeInstall:
-  - git clone -b v3.5.9 --depth 1 {{ $.SOURCE_REPO }}/etcd-io/etcd.git /src
+  - git clone -b v3.5.16 --depth 1 {{ $.SOURCE_REPO }}/etcd-io/etcd.git /src
+  - rm -rf /src/tools
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
