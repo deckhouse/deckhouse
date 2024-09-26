@@ -50,6 +50,9 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  {{- include "debian packages proxy" . | nindent 2 }}
+  - apt-get update && apt-get install libseccomp-dev
   install:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src/containerd
