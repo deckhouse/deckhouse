@@ -580,11 +580,7 @@ installTypes:
         template: getting_started/global/STEP_FINISH.md
   red:
     iconPath: images/icons/platforms/red.png
-    ee_only: true
     languages: ["ru"]
-    layouts:
-      code: standard
-      name: standard
     pages_title:
       en: "Deckhouse Kubernetes Platform for RED virtualization"
       ru: "Deckhouse Kubernetes Platform на РЕД виртуализации"
