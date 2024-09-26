@@ -584,9 +584,6 @@ installTypes:
       en: "Deckhouse Kubernetes Platform for RED virtualization"
       ru: "Deckhouse Kubernetes Platform на РЕД виртуализации"
     type: baremetal
-    description:
-      ru: Облачная платформа SpaceVM – инструмент серверной виртуализации для эффективного управления ИТ-инфраструктурой
-      en: Облачная платформа SpaceVM – инструмент серверной виртуализации для эффективного управления ИТ-инфраструктурой
     name:
       en: RED virtualization
       ru: РЕД виртуализация
@@ -625,6 +622,9 @@ installTypes:
     name:
       en: SpaceVM
       ru: SpaceVM
+    description:
+      ru: Облачная платформа SpaceVM – инструмент серверной виртуализации для эффективного управления ИТ-инфраструктурой
+      en: Облачная платформа SpaceVM – инструмент серверной виртуализации для эффективного управления ИТ-инфраструктурой  
     steps:
       step2:
         name:
