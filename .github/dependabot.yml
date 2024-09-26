@@ -52,7 +52,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/be/modules/350-node-local-dns/images/stale-dns-connections-cleaner"
+  directory: "/ee/be/modules/350-node-local-dns/images/stale-dns-connections-cleaner/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -70,7 +70,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/015-admission-policy-engine/images/trivy-provider"
+  directory: "/ee/modules/015-admission-policy-engine/images/trivy-provider/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -151,7 +151,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/160-multitenancy-manager/images/multitenancy-manager"
+  directory: "/ee/modules/160-multitenancy-manager/images/multitenancy-manager/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -160,7 +160,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/500-operator-trivy/images/report-updater"
+  directory: "/ee/modules/500-operator-trivy/images/report-updater/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -223,7 +223,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/015-admission-policy-engine/images/constraint-exporter"
+  directory: "/modules/015-admission-policy-engine/images/constraint-exporter/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -502,7 +502,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/301-prometheus-metrics-adapter/images/prometheus-reverse-proxy/app"
+  directory: "/modules/301-prometheus-metrics-adapter/images/prometheus-reverse-proxy/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

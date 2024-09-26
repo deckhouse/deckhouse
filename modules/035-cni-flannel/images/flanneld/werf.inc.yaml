@@ -1,48 +1,63 @@
 {{- $binaries := "/sbin/xtables-nft-multi /sbin/ip6tables-nft /sbin/ip6tables-nft-restore /sbin/ip6tables-nft-save /sbin/iptables-nft /sbin/iptables-nft-restore /sbin/iptables-nft-save /sbin/xtables-legacy-multi /sbin/iptables /sbin/iptables-restore /sbin/iptables-save /sbin/iptables-legacy /sbin/iptables-legacy-restore /sbin/iptables-legacy-save /sbin/ip6tables /sbin/ip6tables-restore /sbin/ip6tables-save /sbin/ip6tables-legacy /sbin/ip6tables-legacy-restore /sbin/ip6tables-legacy-save /usr/lib64/libnetfilter_conntrack.so*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
+fromArtifact: relocate-artifact
 shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y iptables iptables-nft
   install:
-    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
-    - |
-      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore ip6tables-nft ip6tables-nft-restore ip6tables-nft-save iptables-nft iptables-nft-restore iptables-nft-save; do
-        ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
-      done
-      # broken symlinks are not imported from the artifact
-      touch /iptables-wrapper
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+  - |
+    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore ip6tables-nft ip6tables-nft-restore ip6tables-nft-save iptables-nft iptables-nft-restore iptables-nft-save; do
+      ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
+    done
+    # broken symlinks are not imported from the artifact
+    touch /iptables-wrapper
 ---
-artifact: {{ .ModuleName }}/entrypoint-artifact
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromArtifact: src-artifact
 git:
-- add: /{{ .ModulePath }}modules/035-cni-flannel/images/flanneld/entrypoint
-  to: /src
+- add: /{{ .ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint
+  to: /src/entrypoint
   stageDependencies:
     install:
-      - '**/*'
+    - '**/*'
 shell:
   install:
-    - export GOPROXY={{ $.GOPROXY }}
-    - cd /src
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /entrypoint main.go
+  - git clone --depth 1 --branch v0.25.6 {{ $.SOURCE_REPO }}/flannel-io/flannel.git /src/flannel
 ---
-artifact: {{ .ModuleName }}/flanneld-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE_DEV }}
+artifact: {{ .ModuleName }}/artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make bash gcc glib-static musl-dev linux-headers
   install:
-    - mkdir -p /src
-    - cd /src
-    - git clone --depth 1 --branch v0.23.0 {{ $.SOURCE_REPO }}/flannel-io/flannel.git .
-    - export GO_VERSION=${GOLANG_VERSION}
-    - export GOPROXY={{ $.GOPROXY }}
-    - make dist/flanneld
+  - export GOPROXY={{ $.GOPROXY }}
+  - cd /src/entrypoint
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /entrypoint main.go
+  - cd /src/flannel
+  - make dist/flanneld
+  - cp dist/flanneld /
+  - chown 64535:64535 /entrypoint /flanneld
+  - chmod 700 /entrypoint /flanneld
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/flanneld-artifact
-  add: /src/dist/flanneld
+- artifact: {{ .ModuleName }}/artifact
+  add: /flanneld
   to: /opt/bin/flanneld
+  before: setup
+- artifact: {{ .ModuleName }}/artifact
+  add: /entrypoint
+  to: /entrypoint
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
@@ -52,12 +67,8 @@ import:
   add: /
   to: /
   includePaths:
-  - lib64/iptables
-  - lib64/libm*
-  before: setup
-- artifact: {{ .ModuleName }}/entrypoint-artifact
-  add: /entrypoint
-  to: /entrypoint
+  - usr/lib64/iptables
+  - usr/lib64/libm.*
   before: setup
 - image: common/iptables-wrapper
   add: /iptables-wrapper

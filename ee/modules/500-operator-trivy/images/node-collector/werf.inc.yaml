@@ -1,0 +1,31 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /node-collector
+  to: /node-collector
+  before: install
+docker:
+  ENTRYPOINT: ["/node-collector"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromArtifact: src-artifact
+shell:
+  install:
+  - git clone --depth 1 --branch v0.3.1 {{ $.SOURCE_REPO }}/aquasecurity/k8s-node-collector.git /src
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  install:
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - cd /src
+  - go build -ldflags '-s -w -extldflags "-static"' -o /node-collector ./cmd/node-collector/main.go
+  - chown 64535:64535 /node-collector
+  - chmod 0755 /node-collector

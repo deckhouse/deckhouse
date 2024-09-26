@@ -1,0 +1,36 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /report-updater
+  to: /report-updater
+  before: install
+docker:
+  ENTRYPOINT: ["/report-updater"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromCacheVersion: "2024-09-25 14:50"
+fromArtifact: src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  install:
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - cd /src
+  - go test ./...
+  - go build -ldflags="-s -w" -o /report-updater main.go
+  - chown 64535:64535 /report-updater
+  - chmod 0755 /report-updater
