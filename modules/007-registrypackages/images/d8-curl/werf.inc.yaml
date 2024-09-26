@@ -41,7 +41,7 @@ shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make autoconf
-  setup:
+  install:
   - export CC=clang
   - cd /src/curl
   - autoreconf -fi
