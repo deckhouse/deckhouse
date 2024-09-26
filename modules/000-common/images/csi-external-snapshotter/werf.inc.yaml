@@ -20,7 +20,7 @@ shell:
   - git clone --depth 1 --branch {{ $value.csi.snapshotter }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-snapshotter.git /src
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
   add: /src
@@ -29,7 +29,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make bash
+  - apk add --no-cache make bash git
   install:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
