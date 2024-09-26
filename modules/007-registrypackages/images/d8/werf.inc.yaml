@@ -38,7 +38,7 @@ import:
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
-  - apt-get update && apt-get install libbtrfs-dev
+  - apt-get update && apt-get install libbtrfs-dev -y
   install:
   - export GOPROXY={{ $.GOPROXY }}
   - go install github.com/go-task/task/v3/cmd/task@v3.39.2
