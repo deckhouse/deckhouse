@@ -1,0 +1,25 @@
+diff --git a/web/federate.go b/web/federate.go
+index b0f4c0610..5981e4466 100644
+--- a/web/federate.go
++++ b/web/federate.go
+@@ -71,6 +71,8 @@ func (h *Handler) federation(w http.ResponseWriter, req *http.Request) {
+ 		matcherSets = append(matcherSets, matchers)
+ 	}
+ 
++	dropExternalLabels := (req.Form.Get("drop_external_labels") == "1")
++
+ 	var (
+ 		mint   = timestamp.FromTime(h.now().Time().Add(-h.lookbackDelta))
+ 		maxt   = timestamp.FromTime(h.now().Time())
+@@ -169,6 +171,11 @@ Loop:
+ 	sort.Sort(byName(vec))
+ 
+ 	externalLabels := h.config.GlobalConfig.ExternalLabels.Map()
++
++	if dropExternalLabels {
++		externalLabels = make(map[string]string)
++	}
++
+ 	if _, ok := externalLabels[model.InstanceLabel]; !ok {
+ 		externalLabels[model.InstanceLabel] = ""
+ 	}
