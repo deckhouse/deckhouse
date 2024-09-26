@@ -582,39 +582,39 @@ installTypes:
     iconPath: images/icons/platforms/red.png
     languages: ["ru"]
     pages_title:
-      #en: "Deckhouse Kubernetes Platform for RED virtualization"
+      en: "Deckhouse Kubernetes Platform for RED virtualization"
       ru: "Deckhouse Kubernetes Platform на РЕД виртуализации"
     type: baremetal
     name:
-      #en: RED virtualization
+      en: RED virtualization
       ru: РЕД виртуализация
     description:
       ru: <a href="https://redos.red-soft.ru/product/red-virtualizatsiya/">РЕД виртуализация</a> – система управления виртуализацией серверов и рабочих станций.
-      #en: <a href="https://redos.red-soft.ru/product/red-virtualizatsiya/">РЕД виртуализация</a> – система управления виртуализацией серверов и рабочих станций.   
+      en: <a href="https://redos.red-soft.ru/product/red-virtualizatsiya/">РЕД виртуализация</a> – система управления виртуализацией серверов и рабочих станций.   
     steps:
       step2:
         name:
-          #en: Installation information
+          en: Installation information
           ru: Информация об установке
         template: getting_started/bm/STEP_INSTALL_SCHEMA.md
       step3:
         name:
-          #en: Setting up cluster
+          en: Setting up cluster
           ru: Настройка кластера
         template: getting_started/global/step_cluster_setup.html
       step4:
         name:
-          #en: Installation
+          en: Installation
           ru: Установка
         template: getting_started/global/STEP_INSTALL.md
       step5:
         name:
-          #en: Finishing installation
+          en: Finishing installation
           ru: Завершение установки
         template: getting_started/bm/STEP_FINALIZE.md
       step6:
         name:
-          #en: What can I do next?
+          en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md   
   spacevm:
