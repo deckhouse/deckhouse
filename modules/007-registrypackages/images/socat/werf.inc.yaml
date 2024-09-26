@@ -32,10 +32,15 @@ shell:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_ALT }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
-  -  apt-get update && apt-get install yodl make autconf -y
+  - apt-get update && apt-get install yodl make autoconf -y
   install:
   - cd /src
   - CC='/usr/bin/gcc -static' CFLAGS="-fPIC" CPPFLAGS="-I/build -DNETDB_INTERNAL=-1" ./configure
