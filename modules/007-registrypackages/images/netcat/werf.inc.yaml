@@ -18,19 +18,33 @@ docker:
     version: all
     nc: {{ $version }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_ALPINE_DEV }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+fromArtifact: src-artifact
 git:
-  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-    to: /
-    stageDependencies:
-      setup:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
       - '**/*'
 shell:
-  setup:
-    - git clone -b applied/{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/netcat src
-    - cd src
+  install:
+  - git clone --depth 1 --branch applied/{{ $version }} {{ $.SOURCE_REPO }}/netcat /src/netcat
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make
+  install:
+    - cd /src/netcat
     - make linux LDFLAGS='-static' DFLAGS='-DDEBIAN_VERSION=\"Flant\"'
     - strip ./nc
     - mv ./nc /nc
+    - mv /src/scripts/* /
     - chmod +x /nc /install /uninstall

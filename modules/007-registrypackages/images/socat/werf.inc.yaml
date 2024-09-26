@@ -18,22 +18,29 @@ docker:
     version: all
     socat: {{ $version }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_ALT_DEV }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+fromArtifact: src-artifact
 git:
-  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-    to: /
-    stageDependencies:
-      setup:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
       - '**/*'
 shell:
-  setup:
-    - apt-get update && apt-get install yodl -y
-    - git clone -b tag-{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/socat.git src
-    - cd /src
-    - autoconf
-    - CC='/usr/bin/gcc -static' CFLAGS="-fPIC" CPPFLAGS="-I/build -DNETDB_INTERNAL=-1" ./configure
-    - make
-    - strip ./socat
-    - mv ./socat /socat
-    - chmod +x /socat  /install /uninstall
+  install:
+  - git clone --depth 1 --branch tag-{{ $version }}  {{ $.SOURCE_REPO }}/socat.git /src/socat
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_ALT }}
+shell:
+  beforeInstall:
+  {{- include "altlinux packages proxy" . | nindent 2 }}
+  -  apt-get update && apt-get install yodl make autconf -y
+  install:
+  - cd /src
+  - CC='/usr/bin/gcc -static' CFLAGS="-fPIC" CPPFLAGS="-I/build -DNETDB_INTERNAL=-1" ./configure
+  - make
+  - strip ./socat
+  - mv ./socat /socat
+  - mv /src/scripts/* /
+  - chmod +x /socat /install /uninstall

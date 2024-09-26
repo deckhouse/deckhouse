@@ -61,7 +61,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make 
+  - apk add --no-cache make bash
   install:
     - export GOPROXY={{ $.GOPROXY }}
     - cd /src/plugins
