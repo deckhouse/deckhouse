@@ -36,11 +36,9 @@ import:
   to: /src
   before: install
 shell:
-  beforeInstall:
-  {{- include "debian packages proxy" . | nindent 2 }}
-  - sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
-  setup:
+  install:
   - export GOPROXY={{ $.GOPROXY }}
+  - go install github.com/go-task/task/v3/cmd/task@latest
   - cd /src/deckhouse-cli
   - task build:dist:linux:amd64
   - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/d8 /d8
