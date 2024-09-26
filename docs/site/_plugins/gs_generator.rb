@@ -5,21 +5,17 @@ module GSGenerator
     def generate(site)
       site.data['getting_started']['data']['installTypes'].each do |installTypeKey, installTypeData|
         
-        # Пропускаем, если нет шагов
         next unless installTypeData['steps']
 
         puts "Processing %s... (%s)" % [installTypeKey, installTypeData['name']]
 
-        # Обрабатываем шаги
         installTypeData['steps'].each do |stepName, stepData|
           
-          # Если есть языки, обрабатываем для каждого
           if installTypeData['languages']
             installTypeData['languages'].each do |lang|
               site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, lang)
             end
           else
-            # Если языков нет, создаём страницы для русского и английского
             site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, 'ru')
             site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, 'en')
           end

@@ -619,6 +619,7 @@ installTypes:
         template: getting_started/global/STEP_FINISH.md   
   spacevm:
     iconPath: images/icons/platforms/spacevm.png
+    languages: ["ru"]
     pages_title:
       en: "Deckhouse Kubernetes Platform for SpaceVM"
       ru: "Deckhouse Kubernetes Platform на SpaceVM"
