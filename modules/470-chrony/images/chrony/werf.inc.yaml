@@ -29,7 +29,7 @@ import:
 shell:
   beforeInstall:
 {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache gcc make bash g++
+  - apk add --no-cache gcc make bash g++ bison
   install:
   - echo "{{ $version }}" > version.txt
   - cd /src
