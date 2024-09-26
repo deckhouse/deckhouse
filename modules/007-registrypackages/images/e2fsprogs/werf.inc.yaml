@@ -30,7 +30,7 @@ git:
       - '**/*'
 shell:
   install:
-  - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/ext2/e2fsprogs.git /src
+  - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/ext2/e2fsprogs.git /src/e2fsprogs
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_ALPINE }}
@@ -44,10 +44,10 @@ shell:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make
   install:
-    - cd /src
-    - CFLAGS='-static' LDFLAGS="-static" ./configure
-    - make
-    - strip ./misc/mke2fs && strip ./misc/fsck
-    - mv ./misc/mke2fs /mke2fs && mv ./misc/fsck /fsck
-    - mv /src/scripts/* /
-    - chmod +x /mke2fs /fsck  /install /uninstall
+  - cd /src/e2fsprogs
+  - CFLAGS='-static' LDFLAGS="-static" ./configure
+  - make
+  - strip ./misc/mke2fs && strip ./misc/fsck
+  - mv ./misc/mke2fs /mke2fs && mv ./misc/fsck /fsck
+  - mv /src/scripts/* /
+  - chmod +x /mke2fs /fsck  /install /uninstall
