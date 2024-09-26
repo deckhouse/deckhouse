@@ -44,6 +44,7 @@ shell:
     if [[ -d /patches/{{ $version }} ]]; then
       git apply /patches/{{ $version }}/*.patch --verbose
     fi
+  - go mod vendor
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
