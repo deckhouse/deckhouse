@@ -5,24 +5,40 @@ module GSGenerator
     def generate(site)
       site.data['getting_started']['data']['installTypes'].each do |installTypeKey, installTypeData|
         
-        if ! installTypeData['steps'] then next end
+        # Пропускаем, если нет шагов
+        next unless installTypeData['steps']
   
+        # Обрабатываем каждую запись
         puts "Processing %s... (%s)" % [installTypeKey, installTypeData['name']]
-  
-        installTypeData['steps'].each do |stepName, stepData|
-          if installTypeData['languages']
-            installTypeData['languages'].each do |lang|
-              site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, lang )
-          else
-          end  
-            site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, 'ru' )
-            site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, 'en' )
+        
+        # Проверяем если это 'red'
+        if installTypeKey == 'red'
+          # Генерируем только для русского языка
+          installTypeData['steps'].each do |stepName, stepData|
+            if installTypeData['languages'] && installTypeData['languages'].include?('ru')
+              site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, 'ru')
+            end
+          end
+        else
+          # Для всех остальных генерируем страницы для всех указанных языков
+          installTypeData['steps'].each do |stepName, stepData|
+            if installTypeData['languages']
+              installTypeData['languages'].each do |lang|
+                site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, lang)
+              end
+            else
+              # Если языки не указаны, по умолчанию создаём страницы для русского и английского
+              site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, 'ru')
+              site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, 'en')
+            end
           end
         end
       end
-    
+    end
   
   end
+end
+
   
 
   class GSPage < Jekyll::Page
