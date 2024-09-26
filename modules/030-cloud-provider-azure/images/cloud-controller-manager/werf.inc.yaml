@@ -39,9 +39,7 @@ shell:
     - mkdir /src
     - cd /src
     - wget https://github.com/kubernetes-sigs/cloud-provider-azure/archive/{{ $value.ccm.azure }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
-    - if [[ -d /patches/{{ $version }} ]]; then
-        git apply /patches/{{ $version }}/*.patch --verbose
-      fi
+    - test -d /patches/{{ $version }} && git apply /patches/{{ $version }}/*.patch --verbose
     - hack/pkg-config.sh > .pkg_config
     - export VERSION={{ $value.ccm.azure }}
     - make bin/azure-cloud-controller-manager
