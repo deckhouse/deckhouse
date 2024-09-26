@@ -1,4 +1,20 @@
 ---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromArtifact: src-artifact
+git:
+- add: /{{ .ModulePath }}
+  to: /src/available_hooks
+  includePaths:
+    - 'modules/*/webhooks/'
+    - 'ee/modules/*/webhooks/'
+# - 'ee/fe/modules/*/webhooks/'
+- add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/entrypoint.sh
+  to: /src/entrypoint.sh
+- add: /{{ .ModulePath }}shell_lib/semver.sh
+  to: /src/{{ .ModulePath }}frameworks/shell/semver.sh
+- add: /{{ .ModulePath }}python_lib
+  to: /src/frameworks/python
+---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
 import:
@@ -33,19 +49,10 @@ import:
     add: /usr/lib64/python3.12
     to: /usr/lib64/python3.12
     before: setup
-git:
-- add: /{{ .ModulePath }}
-  to: /available_hooks
-  includePaths:
-  - 'modules/*/webhooks/'
-  - 'ee/modules/*/webhooks/'
-# - 'ee/fe/modules/*/webhooks/'
-- add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/entrypoint.sh
-  to: /entrypoint.sh
-- add: /{{ .ModulePath }}shell_lib/semver.sh
-  to: /{{ .ModulePath }}frameworks/shell/semver.sh
-- add: /{{ .ModulePath }}python_lib
-  to: /frameworks/python
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /
+    before: setup
 docker:
   ENV:
     PYTHONPATH: /frameworks/python
@@ -56,5 +63,7 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ $.Images.BASE_ALT_P11 }}
 shell:
   beforeInstall:
-    - apt-get update
-    - apt-get install -y python3
+{{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get update
+  - apt-get install -y python3
+  - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
