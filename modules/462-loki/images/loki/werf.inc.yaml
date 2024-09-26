@@ -3,7 +3,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /loki/loki
+  add: /src/loki
   to: /usr/bin/loki
   before: setup
 docker:
@@ -42,7 +42,5 @@ shell:
   setup:
   - cd /src
   - go build -ldflags="-s -w" -o loki cmd/loki/main.go
-  - ls
-  - pwd
-  - chown 64535:64535 loki/
-  - chmod 0700 loki/loki
+  - chown 64535:64535 /src/
+  - chmod 0700 /src/loki
