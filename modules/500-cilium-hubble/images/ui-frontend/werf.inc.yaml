@@ -1,35 +1,47 @@
 {{- $hubbleUIVersion := "0.13.1" }}
----
 # Based on https://github.com/cilium/cilium/blob/v1.14.14/install/kubernetes/cilium/values.yaml#L1375
 # and https://github.com/cilium/hubble-ui/blob/v0.13.1/Dockerfile
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-from: {{ $.Images.BASE_NODE_20_ALPINE_DEV }}
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: src-artifact
 git:
-  - add: /{{ $.ModulePath }}/modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      install:
-        - '**/*'
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
 shell:
+  install:
+  - git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /src/hubble-ui
+  - cd /src/hubble-ui
+  - find /patches -name '*.patch' | xargs git apply --verbose
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+from: {{ $.Images.BASE_NODE_20_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache git bash
   install:
   - export "TARGETOS=linux"
   - export "TARGETARCH=amd64"
-  - mkdir -p /app
-  - git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /app
-  - cd /app
-  - find /patches -name '*.patch' | xargs git apply --verbose
+  - cd /src/hubble-ui
   - npm --target_arch=${TARGETARCH} install
   - export "NODE_ENV=production"
   - npm run build
-  - chown -R 64535:64535 /app/server/public
+  - chown -R 64535:64535 /src/hubble-ui/server/public
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/nginx-static
-fromCacheVersion: 2
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-  add: /app/server/public
-  to: /app
+  add: /src/hubble-ui/server/public
+  to: /src/hubble-ui
   before: install
 docker:
   USER: 64535
