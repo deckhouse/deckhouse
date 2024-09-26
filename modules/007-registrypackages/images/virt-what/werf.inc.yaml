@@ -19,22 +19,36 @@ docker:
     version: all
     virt-what: {{ $version }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_ALPINE_DEV }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+fromArtifact: src-artifact
 git:
-  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-    to: /
-    stageDependencies:
-      setup:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
       - '**/*'
 shell:
+  install:
+  - git clone --depth 1 --branch v{{ $version }}  {{ $.SOURCE_REPO }}/virt-what.git /src/virt-what
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make autoconf
   setup:
-    - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/virt-what.git src
-    - cd /src
-    - autoreconf -fi
-    - autoconf
-    - LDFLAGS="-static" ./configure
-    - make
-    - strip ./virt-what-cpuid-helper
-    - mv ./virt-what /virt-what && mv ./virt-what-cpuid-helper /virt-what-cpuid-helper
-    - chmod +x /virt-what-cpuid-helper /virt-what  /install /uninstall
+  - cd /src
+  - autoreconf -fi
+  - autoconf
+  - LDFLAGS="-static" ./configure
+  - make
+  - strip ./virt-what-cpuid-helper
+  - mv ./virt-what /virt-what && mv ./virt-what-cpuid-helper /virt-what-cpuid-helper
+  - mv /src/scripts/* /
+  - chmod +x /virt-what-cpuid-helper /virt-what  /install /uninstall
