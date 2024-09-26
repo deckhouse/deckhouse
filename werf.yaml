@@ -114,6 +114,7 @@ artifact: src-artifact
 from: {{ $.Images.BASE_ALPINE }}
 shell:
   beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache git
   - mkdir -p /src
 ---
