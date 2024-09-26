@@ -2,7 +2,7 @@
 
 ---
 artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
+from: {{ $.Images.BASE_ALT_P11 }}
 shell:
   install:
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
