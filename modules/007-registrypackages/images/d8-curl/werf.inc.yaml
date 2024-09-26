@@ -49,4 +49,5 @@ shell:
   - make -j4 V=1 LDFLAGS="-static -all-static"
   - strip src/curl
   - mv src/curl /d8-curl
+  - mv /src/scripts/* /
   - chmod +x /d8-curl /install /uninstall
