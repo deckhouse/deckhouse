@@ -502,7 +502,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/301-prometheus-metrics-adapter/images/prometheus-reverse-proxy/app"
+  directory: "/modules/301-prometheus-metrics-adapter/images/prometheus-reverse-proxy/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
