@@ -11,9 +11,9 @@ module GSGenerator
   
         installTypeData['steps'].each do |stepName, stepData|
           if installTypeData['languages']
-             installTypeData['languages'].each do |lang|
+             #installTypeData['languages'].each do |lang|
               site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, lang )
-             elsif  
+             else  
             site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, 'ru' )
             site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, 'en' )
           end
