@@ -34,7 +34,7 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_ALT }}
 shell:
   beforeInstall:
-  {{- include "altlinux packages proxy" . | nindent 2 }}
+  {{- include "alt packages proxy" . | nindent 2 }}
   -  apt-get update && apt-get install yodl make autconf -y
   install:
   - cd /src
