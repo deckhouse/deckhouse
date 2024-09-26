@@ -7,28 +7,41 @@
 # and https://github.com/cilium/hubble/blob/v1.16.0/Dockerfile
 # #####################################################################
 ---
-artifact: {{ $.ModuleName }}/hubble-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: src-artifact
 git:
-- add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
       - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $hubbleVersion }} {{ $.SOURCE_REPO }}/cilium/hubble.git /src/hubble
+  - cd /src/hubble
+  - find /patches -name '*.patch' | xargs git apply --verbose
+---
+artifact: {{ $.ModuleName }}/hubble-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make git bash binutils
   install:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - mkdir -p /go/src/github.com/cilium/hubble
-  - git clone --depth 1 --branch {{ $hubbleVersion }} {{ $.SOURCE_REPO }}/cilium/hubble.git /go/src/github.com/cilium/hubble
-  - cd /go/src/github.com/cilium/hubble
-  - find /patches -name '*.patch' | xargs git apply --verbose
+  - cd /src/hubble
   - go mod tidy && go mod vendor && go mod verify
   - make clean && make hubble
-  - cp /go/src/github.com/cilium/hubble/hubble /hubble
+  - cp /src/hubble/hubble /hubble
   - strip /hubble
   - /hubble completion bash > /bash_completion
 ---

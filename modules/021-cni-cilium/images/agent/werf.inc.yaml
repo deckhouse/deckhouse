@@ -65,8 +65,8 @@
 # #####################################################################
 # Binaries artifact for distroless agent (based on Ubuntu)
 ---
-artifact: {{ $.ModuleName }}/agent-binaries-artifact
-fromImage: {{ $.ModuleName }}/base-cilium-dev
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
   to: /
@@ -75,7 +75,14 @@ git:
   stageDependencies:
     install:
     - binary_replace.sh
+---
+artifact: {{ $.ModuleName }}/agent-binaries-artifact
+fromImage: {{ $.ModuleName }}/base-cilium-dev
 import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 - artifact: {{ $.ModuleName }}/llvm-artifact
   add: /usr/local/bin/
   to: /usr/local/bin

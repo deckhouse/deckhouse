@@ -31,6 +31,7 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
   - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
   - ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
   - apt-get update -y
