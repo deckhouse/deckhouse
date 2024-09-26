@@ -29,7 +29,7 @@ import:
 shell:
   beforeInstall:
 {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache gcc make bash g++ bison
+  - apk add --no-cache linux-headers coreutils gcc make musl-dev libcap-dev libcap-static git bison asciidoctor tini-static
   install:
   - echo "{{ $version }}" > version.txt
   - cd /src
