@@ -54,5 +54,6 @@ shell:
   - mkdir -p /go/src/github.com/docker/
   - cd /src/distribution
   - make
-  - cp bin/registry /
+  - mv bin/registry /
+  - mv /src/scripts/* /
   - chmod +x /auth_server /registry /install /uninstall
