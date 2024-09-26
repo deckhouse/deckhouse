@@ -52,7 +52,7 @@ mount:
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
-  - apt-get update && apt-get install libseccomp-dev
+  - apt-get update && apt-get install libseccomp-dev -y
   install:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src/containerd
