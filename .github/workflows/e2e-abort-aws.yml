@@ -75,7 +75,7 @@ jobs:
   # <template: e2e_run_job_template>
   run_containerd_1_26:
     name: "destroy cluster: AWS, Containerd, Kubernetes 1.26"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.26' && github.event.inputs.layout == 'WithoutNAT' }}
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && github.event.inputs.k8s_version == '1.26' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
       PROVIDER: AWS
       CRI: Containerd
@@ -353,7 +353,7 @@ jobs:
   # <template: e2e_run_job_template>
   run_containerd_1_27:
     name: "destroy cluster: AWS, Containerd, Kubernetes 1.27"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.27' && github.event.inputs.layout == 'WithoutNAT' }}
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && github.event.inputs.k8s_version == '1.27' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
       PROVIDER: AWS
       CRI: Containerd
@@ -631,7 +631,7 @@ jobs:
   # <template: e2e_run_job_template>
   run_containerd_1_28:
     name: "destroy cluster: AWS, Containerd, Kubernetes 1.28"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.28' && github.event.inputs.layout == 'WithoutNAT' }}
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && github.event.inputs.k8s_version == '1.28' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
       PROVIDER: AWS
       CRI: Containerd
@@ -909,7 +909,7 @@ jobs:
   # <template: e2e_run_job_template>
   run_containerd_1_29:
     name: "destroy cluster: AWS, Containerd, Kubernetes 1.29"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.29' && github.event.inputs.layout == 'WithoutNAT' }}
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && github.event.inputs.k8s_version == '1.29' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
       PROVIDER: AWS
       CRI: Containerd
@@ -1187,7 +1187,7 @@ jobs:
   # <template: e2e_run_job_template>
   run_containerd_1_30:
     name: "destroy cluster: AWS, Containerd, Kubernetes 1.30"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.30' && github.event.inputs.layout == 'WithoutNAT' }}
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && github.event.inputs.k8s_version == '1.30' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
       PROVIDER: AWS
       CRI: Containerd
@@ -1465,7 +1465,7 @@ jobs:
   # <template: e2e_run_job_template>
   run_containerd_automatic:
     name: "destroy cluster: AWS, Containerd, Kubernetes Automatic"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == 'Automatic' && github.event.inputs.layout == 'WithoutNAT' }}
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && github.event.inputs.k8s_version == 'Automatic' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
       PROVIDER: AWS
       CRI: Containerd

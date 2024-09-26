@@ -46,6 +46,13 @@ const labels = {
   'e2e/use/k8s/1.30': { type: 'e2e-use', ver: '1.30' },
   'e2e/use/k8s/automatic': { type: 'e2e-use', ver: 'Automatic' },
 
+  // E2E: edition
+  'e2e/use/edition/ce': { type: 'e2e-edition', edition: 'CE' },
+  'e2e/use/edition/ee': { type: 'e2e-edition', edition: 'EE' },
+  'e2e/use/edition/be': { type: 'e2e-edition', edition: 'BE' },
+  'e2e/use/edition/se': { type: 'e2e-edition', edition: 'SE' },
+  'e2e/use/edition/fe': { type: 'e2e-edition', edition: 'FE' },
+
   // Allow running workflows for external PRs.
   'status/ok-to-test': { type: 'ok-to-test' },
 
