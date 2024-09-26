@@ -23,6 +23,7 @@ shell:
   install:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
+    - go mod tidy
     - go build -ldflags='-extldflags "-static" -s -w -X github.com/{{ $.ImageName }}/{{ $.ImageName }}/coremain.GitCommit=v1.11.3' -o /{{ $.ImageName }}
     - chown 64535:64535 /{{ $.ImageName }}
     - chmod 0700 /{{ $.ImageName }}
