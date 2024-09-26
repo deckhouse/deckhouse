@@ -3,9 +3,7 @@ artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromArtifact: src-artifact
 shell:
   install:
-    - mkdir -p /src
-    - cd /src
-    - git clone --depth 1 -b v1.11.3 {{ $.SOURCE_REPO }}/{{ $.ImageName }}/{{ $.ImageName }}.git .
+    - git clone --depth 1 -b v1.11.3 {{ $.SOURCE_REPO }}/{{ $.ImageName }}/{{ $.ImageName }}.git /src
 ---
 artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
