@@ -40,7 +40,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make autoconf automake clang libtool gettext-dev binutils g++ openssl openssl-dev libssh2-dev libgcrypt ssl_client libssh2-static python3 libcrypto1.1 openssl-libs-static zstd-libs   nghttp2-dev zlib-static libgcc clang-libs gettext-libs  
+  - apk add --no-cache make autoconf automake clang libtool gettext-dev binutils g++ openssl openssl-dev libssh2-dev libgcrypt ssl_client libssh2-static libcrypto1.1 openssl-libs-static zlib-static libgcc clang-libs gettext-libs  
   install:
   - export CC=clang
   - cd /src/curl
