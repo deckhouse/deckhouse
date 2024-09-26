@@ -15,5 +15,5 @@ spec:
     targetPort: https
   selector:
     app.kubernetes.io/name: prometheus
-    prometheus: main
+    prometheus: cpp
 {{- end }}

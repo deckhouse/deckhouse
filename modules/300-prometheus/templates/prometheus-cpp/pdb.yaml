@@ -10,4 +10,4 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: prometheus-cpp
-      prometheus-cpp: main
+      prometheus: cpp
