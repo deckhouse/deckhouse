@@ -6,7 +6,6 @@ shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y iptables iptables-nft
-  - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
   - |
