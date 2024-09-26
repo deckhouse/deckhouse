@@ -38,7 +38,7 @@ import:
 shell:
   install:
   - export GOPROXY={{ $.GOPROXY }}
-  - go install github.com/go-task/task/v3/cmd/task@latest
+  - go install github.com/go-task/task/v3/cmd/task@v3.39.2
   - cd /src/deckhouse-cli
   - task build:dist:linux:amd64
   - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/d8 /d8
