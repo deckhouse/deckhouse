@@ -45,7 +45,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make
+  - apk add --no-cache make git
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=auto
   - cd /src/docker_auth/auth_server
