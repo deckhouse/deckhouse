@@ -101,18 +101,6 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	}
 
 	dc := dependency.NewDependencyContainer()
-	// create a default policy, it'll be filled in with relevant settings from the deckhouse moduleConfig, see runDeckhouseConfigObserver method
-	embeddedDeckhousePolicy := helpers.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
-		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
-			Mode: "Auto",
-		},
-		ReleaseChannel: "Stable",
-	})
-	ds := &helpers.DeckhouseSettings{ReleaseChannel: ""}
-	ds.Update.DisruptionApprovalMode = "Auto"
-	ds.Update.Mode = "Auto"
-	dsContainer := helpers.NewDeckhouseSettingsContainer(ds)
-
 	scheme := runtime.NewScheme()
 
 	for _, add := range []func(s *runtime.Scheme) error{corev1.AddToScheme, coordv1.AddToScheme, v1alpha1.AddToScheme, appsv1.AddToScheme} {
@@ -188,6 +176,15 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 			return nil, err
 		}
 	}
+
+	// create a default policy, it'll be filled in with relevant settings from the deckhouse moduleConfig, see runDeckhouseConfigObserver method
+	embeddedDeckhousePolicy := helpers.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
+		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			Mode: "Auto",
+		},
+		ReleaseChannel: "Stable",
+	})
+	dsContainer := helpers.NewDeckhouseSettingsContainer(nil)
 
 	err = deckhouse_release.NewDeckhouseReleaseController(ctx, mgr, dc, mm, dsContainer, metricStorage)
 	if err != nil {
