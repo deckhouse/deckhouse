@@ -1,4 +1,4 @@
-{{- $version := "4.4" }}
+{{- $version := "4.6" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromArtifact: src-artifact
@@ -19,13 +19,17 @@ shell:
   - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/chrony/chrony.git /src/chrony
 ---
 artifact: {{ .ModuleName }}/build-chrony-static-artifact
-from: {{ .Images.BASE_ALPINE_DEV }}
+from: {{ .Images.BASE_ALPINE }}
+fromCacheVersion: 20240926-1
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/chrony
   to: /src
   before: install
 shell:
+  beforeInstall:
+{{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache gcc
   install:
   - echo "{{ $version }}" > version.txt
   - cd /src
@@ -37,7 +41,7 @@ shell:
   - chmod +x /opt/chrony-static/sbin/chronyd
 ---
 artifact: {{ .ModuleName }}/build-entrypoint-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/config-builder
