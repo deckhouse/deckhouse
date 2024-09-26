@@ -587,6 +587,9 @@ installTypes:
     name:
       en: RED virtualization
       ru: РЕД виртуализация
+    description:
+      ru: <a href="https://redos.red-soft.ru/product/red-virtualizatsiya/">РЕД виртуализация</a> – система управления виртуализацией серверов и рабочих станций.
+      en: <a href="https://redos.red-soft.ru/product/red-virtualizatsiya/">РЕД виртуализация</a> – система управления виртуализацией серверов и рабочих станций.   
     steps:
       step2:
         name:
