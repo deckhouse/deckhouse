@@ -42,5 +42,7 @@ shell:
   setup:
   - cd /src
   - go build -ldflags="-s -w" -o loki cmd/loki/main.go
-  - chown 64535:64535 /loki/
-  - chmod 0700 /loki/loki
+  - ls
+  - pwd
+  - chown 64535:64535 loki/
+  - chmod 0700 loki/loki
