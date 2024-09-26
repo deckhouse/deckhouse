@@ -20,20 +20,29 @@ docker:
     mke2fs: {{ $version }}
     fsck: {{ $version }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_ALPINE_DEV }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+fromArtifact: src-artifact
 git:
-  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-    to: /
-    stageDependencies:
-      setup:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
       - '**/*'
 shell:
-  setup:
-    - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/ext2/e2fsprogs.git src
+  install:
+  - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/ext2/e2fsprogs.git /src
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_ALPINE }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make
+  install:
     - cd /src
     - CFLAGS='-static' LDFLAGS="-static" ./configure
     - make
     - strip ./misc/mke2fs && strip ./misc/fsck
     - mv ./misc/mke2fs /mke2fs && mv ./misc/fsck /fsck
+    - mv /src/scripts/* /
     - chmod +x /mke2fs /fsck  /install /uninstall
