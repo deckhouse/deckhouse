@@ -47,7 +47,7 @@ mount:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-    - apk add --no-cache make gettext-dev autoconf automake libtool clang g++ linux-headers
+  - apk add --no-cache make gettext-dev autoconf automake libtool clang g++ linux-headers
   install:
     - export PKG_CONFIG_PATH=/opt/deckhouse/bin/.libs/pkgconfig
     - cd /src/libmnl
