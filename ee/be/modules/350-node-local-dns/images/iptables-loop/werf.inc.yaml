@@ -45,7 +45,6 @@ shell:
         /usr/bin/inotifywait \
         " -o /relocate
   - |
-      set -x
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
         rm -f "/relocate/sbin/${cmd}"
         ln -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"

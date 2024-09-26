@@ -1,107 +1,135 @@
 ---
-{{ $grafanaVersion := "10.4.5" }}
+{{ $grafanaVersion := "10.4.9" }}
 {{ $bundledPlugins := "petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
-from: {{ $.Images.BASE_ALPINE_DEV }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: src-artifact
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  includePaths:
+  - '**/*.patch'
+  stageDependencies:
+    install:
+    - '**/*.patch'
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/entrypoint
+  to: /src/entrypoint
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  - '**/*.txt'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/grafana_home_dashboard.json
+  to: /src/grafana_home_dashboard.json
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/web
+  to: /src/img
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
-  - mkdir -p /usr/src/app
-  - cd /usr/src/app
-  - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana.git .
-  - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana-deps.git /grafana-deps
-  - rm -rf .yarn
-  - mv /grafana-deps/.yarn .
-  - mv /grafana-deps/package.json .
-  - mv /grafana-deps/yarn.lock .
+  - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ .SOURCE_REPO }}/grafana/grafana.git /src/grafana
+  - cd /src/grafana
+  - git apply /patches/*.patch --verbose
+  - git clone --depth 1 {{ .SOURCE_REPO }}/grafana/grafana-plugins.git /src/grafana-plugins
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-js-builder
-from: {{ $.Images.BASE_NODE_18_ALPINE }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-js-builder
+from: {{ .Images.BASE_NODE_18_ALPINE }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
-  add: /usr/src/app
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/grafana
   to: /usr/src/app
   before: install
 shell:
   install:
+  {{- include "node packages proxy" . | nindent 2 }}
   - cd /usr/src/app
   - yarn install
   - export NODE_ENV=production NODE_OPTIONS="--max_old_space_size=8000"
   - yarn build
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
-from: {{ $.Images.BASE_GOLANG_22_BULLSEYE }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-go-builder
+from: {{ .Images.BASE_GOLANG_22_BULLSEYE }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
-  add: /usr/src/app
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/grafana
   to: /usr/src/app
   before: install
 shell:
   beforeInstall:
-  - apt-get update
+  {{- include "debian packages proxy" . | nindent 2 }}
   - apt-get -y --no-install-recommends install gcc musl musl-tools
   install:
-  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
   - cd /usr/src/app
   - go install github.com/google/wire/cmd/wire@v0.6.0
   - /go/bin/wire gen -tags oss ./pkg/server
   - go build -ldflags -w -ldflags "-X main.version={{ $grafanaVersion }} -linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana ./pkg/cmd/grafana
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
-git:
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/entrypoint
   to: /app
-  stageDependencies:
-    install:
-    - '**/*'
+  before: install
 shell:
   install:
   - cd /app
-  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go mod tidy
+  - go test ./... -v
   - go build -ldflags="-s -w" -o entrypoint main.go
   - chown -R 64535:64535 /app/
   - chmod 0700 /app/entrypoint
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
-from: {{ $.Images.BASE_UBUNTU_DEV }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-grafana-distr
+from: {{ .Images.BASE_UBUNTU_DEV }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-go-builder
   add: /usr/src/app/bin/linux-amd64/grafana
   to: /usr/share/grafana/bin/grafana
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-js-builder
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-js-builder
   add: /usr/src/app/public
   to: /usr/share/grafana/public
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-js-builder
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-js-builder
   add: /usr/src/app/tools
   to: /usr/share/grafana/tools
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
-  add: /usr/src/app/conf
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/grafana/conf
   to: /usr/share/grafana/conf
   before: install
-git:
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/grafana_home_dashboard.json
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/grafana_home_dashboard.json
   to: /usr/share/grafana/public/dashboards/grafana_home_dashboard.json
-  stageDependencies:
-    install:
-    - '**/*'
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/web
+  before: install
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/img
   to: /img
-  stageDependencies:
-    install:
-    - '**/*'
+  before: install
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/grafana-plugins
+  to: /grafana-plugins
+  before: install
 shell:
-  install:
-  - git clone --depth 1 {{ $.SOURCE_REPO }}/grafana/grafana-plugins.git /grafana-plugins
+  install:  
   - |
     export PATH="/usr/share/grafana/bin:$PATH" \
     GF_PATHS_CONFIG="/etc/grafana/grafana.ini" \
@@ -140,36 +168,36 @@ shell:
   - chown -R 64535:64535 /var/log/grafana
   - chmod 0700 ./bin/grafana
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ $.Images.BASE_ALT }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+from: {{ .Images.BASE_ALT_P11 }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /
   to: /
   includePaths:
   - usr/lib
   - usr/lib64
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint
   add: /app/entrypoint
   to: /usr/local/bin/entrypoint
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-grafana-distr
   add: /usr/share/grafana/
   to: /usr/share/grafana
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-grafana-distr
   add: /etc/grafana/
   to: /etc/grafana
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-grafana-distr
   add: /var/lib/grafana/
   to: /var/lib/grafana
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-grafana-distr
   add: /var/log/grafana/
   to: /var/log/grafana
   before: install
