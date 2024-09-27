@@ -299,6 +299,7 @@ properties:
                   Resource requests settings for pods.
                 properties:
                   cpu:
+                    x-examples: ["1", "1000m"]
                     oneOf:
                       - type: string
                         pattern: "^[0-9]+m?$"
@@ -320,6 +321,7 @@ properties:
                   Configuring CPU and memory limits.
                 properties:
                   cpu:
+                    x-examples: ["1", "1000m"]
                     oneOf:
                       - type: string
                         pattern: "^[0-9]+m?$"
