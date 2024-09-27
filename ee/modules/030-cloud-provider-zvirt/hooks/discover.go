@@ -143,17 +143,11 @@ func handleDiscoveryDataVolumeTypes(
 	input *go_hook.HookInput,
 	storageDomains []cloudDataV1.ZvirtStorageDomain,
 ) {
-	var defaultSCName string
-
 	storageClassStorageDomain := make(map[string]string, len(storageDomains))
 
 	for _, domain := range storageDomains {
 		if !domain.IsEnabled {
 			continue
-		}
-
-		if domain.IsDefault {
-			defaultSCName = getStorageClassName(domain.Name)
 		}
 
 		storageClassStorageDomain[getStorageClassName(domain.Name)] = domain.Name
@@ -197,7 +191,7 @@ func handleDiscoveryDataVolumeTypes(
 
 	input.LogEntry.Infof("Found zvirt storage classes using StorageClass snapshots, StorageDomain discovery data: %v", storageClasses)
 
-	setStorageClassesValues(input, storageClasses, defaultSCName)
+	setStorageClassesValues(input, storageClasses)
 }
 
 // Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
@@ -221,11 +215,7 @@ func getStorageClassName(value string) string {
 	return strings.Trim(value, "-.")
 }
 
-func setStorageClassesValues(
-	input *go_hook.HookInput,
-	storageClasses []storageClass,
-	_ string,
-) {
+func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageClass) {
 	input.Values.Set("cloudProviderZvirt.internal.storageClasses", storageClasses)
 }
 
