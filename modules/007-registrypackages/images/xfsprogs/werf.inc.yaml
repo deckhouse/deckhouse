@@ -41,7 +41,7 @@ import:
 shell:
   beforeInstall:
   {{- include "ubuntu packages proxy" . | nindent 2 }}
-  - apt-get update && apt-get install -y make libinih-dev libblkid-dev gettext liburcu-dev libtool
+  - apt-get update && apt-get install -y make libinih-dev libblkid-dev gettext liburcu-dev libtool libicu-dev pkg-config
   install:
     - cd /src/xfsprogs-dev
     - libtoolize -c -i -f
