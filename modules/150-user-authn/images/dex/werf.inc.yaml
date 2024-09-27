@@ -30,9 +30,10 @@ mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
-  install:
-    {{- include "alpine packages proxy" . | nindent 2 }}
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 4 }}
     - apk add --no-cache build-base
+  install:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64
     - cd src/
     - go mod tidy
