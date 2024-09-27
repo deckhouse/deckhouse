@@ -80,8 +80,8 @@ artifact: {{ $.ModuleName }}/agent-binaries-artifact
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src
-  to: /src
+  add: /binary_replace.sh
+  to: /binary_replace.sh
   before: install
 - artifact: {{ $.ModuleName }}/llvm-artifact
   add: /usr/local/bin/
