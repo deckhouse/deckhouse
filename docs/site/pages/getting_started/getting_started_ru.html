@@ -57,22 +57,29 @@ toc: false
         {%- for provider in site.data.getting_started.data.installTypes %}
         {%- if provider[1].type == 'cloud' %}{% continue %}{% endif %}
         {%- if provider[1].wip == true %}
-        <a
+        {% if current_language == 'ru' in platform.language %}
+      <div class="platform-button">
+       <img src="{{ platform.iconPath }}" alt="{{ platform.name[current_language] }}">
+       <p>{{ platform.name[current_language] }}</p>
+      </div>
+         <a
           class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
         {%- else %}
         <a class="button button_default button_card"
           href="/gs/{{ provider[0] }}/step2.html">{% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}<span class="name">{{ provider[1].name[page.lang] }}</span></a>
         {%- endif %}
         {% endfor %}
-        {% for platform in platforms %}
-  {% if current_language == 'ru' or current_language in platform.language %}
+      </div>
+    </div>
+  </div>
+</div>
+
+
+  {% if current_language == 'ru' in platform.language %}
     <div class="platform-button">
       <img src="{{ platform.iconPath }}" alt="{{ platform.name[current_language] }}">
       <p>{{ platform.name[current_language] }}</p>
     </div>
   {% endif %}
 {% endfor %}
-      </div>
-    </div>
-  </div>
-</div>
+
