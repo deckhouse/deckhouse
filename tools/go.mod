@@ -6,7 +6,7 @@ toolchain go1.23.1
 
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
-	github.com/deckhouse/deckhouse v0.0.0
+	github.com/deckhouse/deckhouse v0.0.0-00010101000000-000000000000
 	github.com/golangci/golangci-lint v1.40.1
 	github.com/iancoleman/strcase v0.2.0
 	github.com/tidwall/gjson v1.14.4
@@ -122,6 +122,7 @@ require (
 	github.com/nishanths/exhaustive v0.1.0 // indirect
 	github.com/nishanths/predeclared v0.2.1 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
+	github.com/onsi/ginkgo/v2 v2.19.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/phayes/checkstyle v0.0.0-20170904204023-bfd46e6a821d // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -148,7 +149,7 @@ require (
 	github.com/spf13/cobra v1.8.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/spf13/viper v1.8.1 // indirect
+	github.com/spf13/viper v1.10.0 // indirect
 	github.com/ssgreg/nlreturn/v2 v2.1.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
@@ -180,7 +181,7 @@ require (
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/ini.v1 v1.62.0 // indirect
+	gopkg.in/ini.v1 v1.66.2 // indirect
 	helm.sh/helm/v3 v3.14.2 // indirect
 	honnef.co/go/tools v0.1.4 // indirect
 	k8s.io/api v0.29.8 // indirect

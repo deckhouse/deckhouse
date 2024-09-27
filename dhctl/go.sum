@@ -68,8 +68,8 @@ github.com/docker/cli v24.0.6+incompatible h1:fF+XCQCgJjjQNIMjzaSmiKJSCcfcXb3TWT
 github.com/docker/cli v24.0.6+incompatible/go.mod h1:JLrzqnKDaYBop7H2jaqPtU4hHvMKP+vjCwu2uszcLI8=
 github.com/docker/distribution v2.8.3+incompatible h1:AtKxIZ36LoNK51+Z6RpzLpddBirtxJnzDrHLEKxTAYk=
 github.com/docker/distribution v2.8.3+incompatible/go.mod h1:J2gT2udsDAN96Uj4KfcMRqY0/ypR+oyYUYmja8H+y+w=
-github.com/docker/docker v24.0.9+incompatible h1:HPGzNmwfLZWdxHqK9/II92pyi1EpYKsAqcl4G0Of9v0=
-github.com/docker/docker v24.0.9+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
+github.com/docker/docker v27.1.1+incompatible h1:hO/M4MtV36kzKldqnA37IWhebRA+LnqqcqDja6kVaKY=
+github.com/docker/docker v27.1.1+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/docker/docker-credential-helpers v0.7.0 h1:xtCHsjxogADNZcdv1pKUHXryefjlVRqWqIhk/uXJp0A=
 github.com/docker/docker-credential-helpers v0.7.0/go.mod h1:rETQfLdHNT3foU5kuNkFR1R1V12OJRRO5lzt2D1b5X0=
 github.com/docker/go-units v0.4.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
@@ -621,8 +621,8 @@ k8s.io/apiextensions-apiserver v0.28.4 h1:AZpKY/7wQ8n+ZYDtNHbAJBb+N4AXXJvyZx6ww6
 k8s.io/apiextensions-apiserver v0.28.4/go.mod h1:pgQIZ1U8eJSMQcENew/0ShUTlePcSGFq6dxSxf2mwPM=
 k8s.io/apimachinery v0.29.8 h1:uBHc9WuKiTHClIspJqtR84WNpG0aOGn45HWqxgXkk8Y=
 k8s.io/apimachinery v0.29.8/go.mod h1:i3FJVwhvSp/6n8Fl4K97PJEP8C+MM+aoDq4+ZJBf70Y=
-k8s.io/cli-runtime v0.28.4 h1:IW3aqSNFXiGDllJF4KVYM90YX4cXPGxuCxCVqCD8X+Q=
-k8s.io/cli-runtime v0.28.4/go.mod h1:MLGRB7LWTIYyYR3d/DOgtUC8ihsAPA3P8K8FDNIqJ0k=
+k8s.io/cli-runtime v0.29.0 h1:q2kC3cex4rOBLfPOnMSzV2BIrrQlx97gxHJs21KxKS4=
+k8s.io/cli-runtime v0.29.0/go.mod h1:VKudXp3X7wR45L+nER85YUzOQIru28HQpXr0mTdeCrk=
 k8s.io/client-go v0.29.8 h1:QMRKcIzqE/qawknXcsi51GdIAYN8UP39S/M5KnFu/J0=
 k8s.io/client-go v0.29.8/go.mod h1:ZzrAAVrqO2jVXMb8My/jTke8n0a/mIynnA3y/1y1UB0=
 k8s.io/component-base v0.28.4 h1:c/iQLWPdUgI90O+T9TeECg8o7N3YJTiuz2sKxILYcYo=
