@@ -59,8 +59,6 @@ toc: false
         {%- if provider[1].languages %}
           {%- unless provider[1].languages contains "ru" %} {%- continue %} {%- endunless %}
         {%- endif %}
-        {%- if provider[1].languages and provider[1].languages contains 'ru' %}
-        {%- endif %}
         {%- if provider[1].wip == true %}
         <a
           class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
