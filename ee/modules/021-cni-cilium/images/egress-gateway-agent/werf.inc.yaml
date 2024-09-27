@@ -1,31 +1,9 @@
-image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
-import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /egress-gateway-agent
-    to: /egress-gateway-agent
-    before: setup
-docker:
-  ENTRYPOINT: ["/egress-gateway-agent"]
 ---
-{{ $discovererAbsPath := "/deckhouse/ee/modules/021-cni-cilium/images/egress-gateway-agent" }}
-  {{ $discovererRelPath := printf "%s/modules/021-cni-cilium/images/egress-gateway-agent" .ModulePath }}
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
-shell:
-  install:
-    - cd {{ $discovererAbsPath }}
-    - export GOPROXY={{ $.GOPROXY }}
-    - go mod download
-  setup:
-    - cd {{ $discovererAbsPath }}
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /egress-gateway-agent cmd/main.go
-    - chown 64535:64535 /egress-gateway-agent
-    - chmod 0755 /egress-gateway-agent
-
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: src-artifact
 git:
-  - add: /{{ $discovererRelPath }}
-    to:  {{ $discovererAbsPath }}
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
+    to:  /src
     excludePaths:
       - "**/*.md"
       - "**/*.yaml"
@@ -36,6 +14,37 @@ git:
         - go.sum
       setup:
         - "**/*.go"
+shell:
+  install:
+  - cd /src
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
+shell:
+  install:
+    - cd /src
+    - export GOPROXY={{ $.GOPROXY }}
+    - go mod download
+  setup:
+    - cd /src
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /egress-gateway-agent cmd/main.go
+    - chown 64535:64535 /egress-gateway-agent
+    - chmod 0755 /egress-gateway-agent
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /egress-gateway-agent
+    to: /egress-gateway-agent
+    before: setup
+docker:
+  ENTRYPOINT: ["/egress-gateway-agent"]
