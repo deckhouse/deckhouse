@@ -32,7 +32,7 @@ mount:
 shell:
   beforeInstall:
     {{- include "alpine packages proxy" . | nindent 2 }}
-    - apk add --no-cache musl-dev gcc
+    - apk add --no-cache musl-dev gcc g++
   install:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64
     - cd src/
