@@ -3,7 +3,7 @@ artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/150-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/web/
-  to: /src/web/
+  to: /src/web
   stageDependencies:
     install:
     - '**/*'
@@ -24,7 +24,7 @@ from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 import:
   - artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
     add: /src/dex/
-    to: /src/
+    to: /src
     before: install
 mount:
   - fromPath: ~/go-pkg-cache
@@ -46,11 +46,11 @@ fromImage: common/distroless
 import:
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/dex
-    to: /usr/local/bin/
+    to: /usr/local/bin
     before: setup
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src/web/
-    to: /web/
+    to: /web
     before: setup
 docker:
   ENTRYPOINT: ["dex", "serve", "/etc/dex/config.docker.yaml"]
