@@ -1,14 +1,9 @@
 ---
 artifact: {{ .ModuleName }}/metallb-src-artifact
-from: src-artifact
+fromArtifact: src-artifact
 shell:
   beforeInstall:
-  - git clone -b v0.13.12 {{ $.SOURCE_REPO }}/metallb/metallb.git /src
-  - cd /src
-  - git config --global user.email "builder@deckhouse.io"
-  # https://github.com/metallb/metallb/pull/2004
-  # Remove cherry-pick when this commit is included in the release
-  - git cherry-pick 667ab7e93d1e6465d5b6d343b73b3c7b1edd5015
+  - git clone -b v0.14.8 {{ $.SOURCE_REPO }}/metallb/metallb.git /src
 ---
 artifact: {{ .ModuleName }}/metallb-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
