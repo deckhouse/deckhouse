@@ -57,7 +57,8 @@ toc: false
         {%- for provider in site.data.getting_started.data.installTypes %}
         {%- if provider[1].type == 'cloud' %}{% continue %}{% endif %}
         {%- if provider[1].languages %}
-  {%- if provider[1].languages contains 'ru' and page.lang != 'ru' %}
+  {%- if provider[1].languages contains 'ru' %}
+  {%- else %}
     {% continue %}
   {%- endif %}
 {%- endif %}
