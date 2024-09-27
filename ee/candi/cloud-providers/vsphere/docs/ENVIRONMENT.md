@@ -124,6 +124,10 @@ Deckhouse creates virtual machine disks of the `eagerZeroedThick` type, however,
 You can read more in the [documentation](https://github.com/hashicorp/terraform-provider-vsphere/blob/main/website/docs/r/virtual_machine.html.markdown#virtual-disk-provisioning-policies).
 {% endalert %}
 
+{% alert %}
+Deckhouse uses the `ens192` interface as the default interface for virtual machines in vSphere. Therefore, when using static IP addresses in `mainNetwork`, you must create an interface named `ens192` in the OS image as the default interface.
+{% endalert %}
+
 ## Infrastructure
 
 ### Networking
