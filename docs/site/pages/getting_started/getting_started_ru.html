@@ -56,14 +56,10 @@ toc: false
       <div class="button-group">
         {%- for provider in site.data.getting_started.data.installTypes %}
         {%- if provider[1].type == 'cloud' %}{% continue %}{% endif %}
+        {%- if page.lang == 'en' and provider[1].language contains 'ru' %}
+        {%- continue %}
+        {%- endif %}
         {%- if provider[1].wip == true %}
-        {% if current_language == 'ru' in platform.language %}
-        <div class="platform-button">
-          <img src="{{ platform.iconPath }}" alt="{{ platform.name[current_language] }}">
-          <p>{{ platform.name[current_language] }}</p>
-        </div>
-        {% endif %}
-       {% endfor %}
         <a
           class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
         {%- else %}
@@ -75,13 +71,3 @@ toc: false
     </div>
   </div>
 </div>
-
-
-  {% if current_language == 'ru' in platform.language %}
-    <div class="platform-button">
-      <img src="{{ platform.iconPath }}" alt="{{ platform.name[current_language] }}">
-      <p>{{ platform.name[current_language] }}</p>
-    </div>
-  {% endif %}
-{% endfor %}
-
