@@ -23,16 +23,16 @@ shell:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd src/
     - go mod tidy
-    - go build -ldflags="-s -w" -o basic-auth-proxy ./cmd/main.go
-    - chown 64535:64535 basic-auth-proxy
-    - chmod 0700 basic-auth-proxy
+    - go build -ldflags="-w -s" -o self-signed-generator main.go
+    - chown 64535:64535 self-signed-generator
+    - chmod 0700 self-signed-generator
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-    add: /src/basic-auth-proxy
-    to: /basic-auth-proxy
+    add: /src/self-signed-generator
+    to: /self-signed-generator
     before: setup
 docker:
-  ENTRYPOINT: ["/basic-auth-proxy"]
+  ENTRYPOINT: ["/self-signed-generator"]
