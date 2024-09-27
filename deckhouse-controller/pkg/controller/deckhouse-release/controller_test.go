@@ -26,6 +26,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 	"time"
 
@@ -50,10 +51,14 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
-var golden bool
+var (
+	golden     bool
+	mDelimiter *regexp.Regexp
+)
 
 func init() {
 	flag.BoolVar(&golden, "golden", false, "generate golden files")
+	mDelimiter = regexp.MustCompile("(?m)^---$")
 }
 
 var embeddedMUP = &v1alpha1.ModuleUpdatePolicySpec{
@@ -94,11 +99,14 @@ type ControllerTestSuite struct {
 	ctr        *deckhouseReleaseReconciler
 
 	testDataFileName string
+	backupTZ         *time.Location
 }
 
 func (suite *ControllerTestSuite) SetupSuite() {
 	flag.Parse()
 	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
+	suite.backupTZ = time.Local
+	time.Local = dependency.TestTimeZone
 }
 
 func (suite *ControllerTestSuite) SetupSubTest() {
@@ -110,19 +118,29 @@ func (suite *ControllerTestSuite) SetupSubTest() {
 		}, nil)
 }
 
+func (suite *ControllerTestSuite) TearDownSuite() {
+	time.Local = suite.backupTZ
+}
+
 func (suite *ControllerTestSuite) TearDownSubTest() {
 	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
-	got := suite.fetchResults()
+	gotB := suite.fetchResults()
 
 	if golden {
-		err := os.WriteFile(goldenFile, got, 0666)
+		err := os.WriteFile(goldenFile, gotB, 0o666)
 		require.NoError(suite.T(), err)
 	} else {
-		exp, err := os.ReadFile(goldenFile)
+		got := singleDocToManifests(gotB)
+		expB, err := os.ReadFile(goldenFile)
 		require.NoError(suite.T(), err)
-		assert.YAMLEq(suite.T(), string(exp), string(got))
+		exp := singleDocToManifests(expB)
+		assert.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
+		for i := range got {
+			assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
+		}
 	}
 }
+
 func (suite *ControllerTestSuite) setupController(
 	filename string,
 	initValues string,
@@ -453,8 +471,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 
-		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.26 is available. Release will be applied at: Friday, 01-Jan-21 14:30:00 UTC")
-		require.Contains(suite.T(), httpBody, `"version":"1.26"`)
+		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.26.0 is available. Release will be applied at: Friday, 01-Jan-21 14:30:00 UTC")
+		require.Contains(suite.T(), httpBody, `"version":"1.26.0"`)
 		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
 	})
 
@@ -493,8 +511,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 
-		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.36 is available. Release will be applied at: Monday, 11-Nov-22 23:23:23 UTC")
-		require.Contains(suite.T(), httpBody, `"version":"1.36"`)
+		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.36.0 is available. Release will be applied at: Monday, 11-Nov-22 23:23:23 UTC")
+		require.Contains(suite.T(), httpBody, `"version":"1.36.0"`)
 		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
 	})
 
@@ -526,9 +544,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Notification: bearer token auth", func() {
-		var (
-			headerValue string
-		)
+		var headerValue string
 		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 			headerValue = r.Header.Get("Authorization")
 		}))
@@ -566,6 +582,33 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Patch release notification", func() {
+		var httpBody string
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			data, _ := io.ReadAll(r.Body)
+			httpBody = string(data)
+		}))
+		defer svr.Close()
+
+		ds := &helpers.DeckhouseSettings{
+			ReleaseChannel: embeddedMUP.ReleaseChannel,
+		}
+		ds.Update.Mode = embeddedMUP.Update.Mode
+		ds.Update.Windows = embeddedMUP.Update.Windows
+		ds.Update.NotificationConfig.WebhookURL = svr.URL
+		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: 2 * time.Hour}
+		ds.Update.NotificationConfig.ReleaseType = updater.ReleaseTypeAll
+
+		suite.setupControllerSettings("patch-release-notification.yaml", initValues, ds)
+		dr := suite.getDeckhouseRelease("v1.26.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+
+		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.25.1 is available. Release will be applied at: Friday, 01-Jan-21 15:30:00 UTC")
+		require.Contains(suite.T(), httpBody, `"version":"1.25.1"`)
+		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
 	})
 
 	suite.Run("Release with apply-now annotation out of window", func() {
@@ -781,6 +824,17 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	}
 
 	return result.Bytes()
+}
+
+func singleDocToManifests(doc []byte) (result []string) {
+	split := mDelimiter.Split(string(doc), -1)
+
+	for i := range split {
+		if split[i] != "" {
+			result = append(result, split[i])
+		}
+	}
+	return
 }
 
 func (suite *ControllerTestSuite) getDeckhouseRelease(name string) *v1alpha1.DeckhouseRelease {

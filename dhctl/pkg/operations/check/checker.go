@@ -22,12 +22,12 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
@@ -53,9 +53,9 @@ func NewChecker(params *Params) *Checker {
 	}
 
 	// FIXME(dhctl-for-commander): commander uuid currently optional, make it required later
-	//if params.CommanderUUID == uuid.Nil {
+	// if params.CommanderUUID == uuid.Nil {
 	//	panic("CommanderUUID required for check operation in commander mode!")
-	//}
+	// }
 
 	return &Checker{
 		Params: params,
@@ -198,7 +198,7 @@ func (c *Checker) GetKubeClient() (*client.KubernetesClient, error) {
 		return c.KubeClient, nil
 	}
 
-	kubeCl, err := operations.ConnectToKubernetesAPI(c.SSHClient)
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(c.SSHClient))
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 	}

@@ -4,6 +4,9 @@
 
 | Table of contents |
 |---|
+| **Api Version And Kind** |
+| [helm_lib_kind_exists](#helm_lib_kind_exists) |
+| [helm_lib_get_api_version_by_kind](#helm_lib_get_api_version_by_kind) |
 | **Enable Ds Eviction** |
 | [helm_lib_prevent_ds_eviction_annotation](#helm_lib_prevent_ds_eviction_annotation) |
 | **Envs For Proxy** |
@@ -105,6 +108,37 @@
 | [helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha](#helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha) |
 | [helm_lib_deployment_strategy_and_replicas_for_ha](#helm_lib_deployment_strategy_and_replicas_for_ha) |
 
+## Api Version And Kind
+
+### helm_lib_kind_exists
+
+ returns true if the specified resource kind (case-insensitive) is represented in the cluster 
+
+#### Usage
+
+`{{ include "helm_lib_kind_exists" (list . "<kind-name>") }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  Kind name portion 
+
+
+### helm_lib_get_api_version_by_kind
+
+ returns current apiVersion string, based on available helm capabilities, for the provided kind (not all kinds are supported) 
+
+#### Usage
+
+`{{ include "helm_lib_get_api_version_by_kind" (list . "<kind-name>") }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  Kind name portion 
+
 ## Enable Ds Eviction
 
 ### helm_lib_prevent_ds_eviction_annotation
@@ -122,7 +156,7 @@
 ### helm_lib_envs_for_proxy
 
  Add HTTP_PROXY, HTTPS_PROXY and NO_PROXY environment variables for container 
- depends on [proxy settings](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-proxy) 
+ depends on [proxy settings](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-modules-proxy) 
 
 #### Usage
 
@@ -290,7 +324,7 @@ list:
 
 ### helm_lib_module_https_copy_custom_certificate
 
- Renders secret with [custom certificate](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-customcertificate) 
+ Renders secret with [custom certificate](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-customcertificate) 
  in passed namespace with passed prefix 
 
 #### Usage
@@ -1000,7 +1034,7 @@ list:
 #### Arguments
 
 list:
--  VPA resource configuration [example](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement) 
+-  VPA resource configuration [example](https://deckhouse.io/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement) 
 -  Ephemeral storage requests 
 
 
@@ -1014,7 +1048,7 @@ list:
 
 #### Arguments
 
--  VPA resource configuration [example](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement) 
+-  VPA resource configuration [example](https://deckhouse.io/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement) 
 
 
 ### helm_lib_resources_management_vpa_spec
@@ -1032,7 +1066,7 @@ list:
 -  Target Kind 
 -  Target Name 
 -  Target container name 
--  VPA resource configuration [example](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement) 
+-  VPA resource configuration [example](https://deckhouse.io/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement) 
 
 
 ### helm_lib_resources_management_cpu_units_to_millicores

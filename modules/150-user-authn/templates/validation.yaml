@@ -1,13 +1,7 @@
-{{- if semverCompare ">= 1.26" .Values.global.discovery.kubernetesVersion }}
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 {{- $policyName := "system-users.deckhouse.io" }}
 ---
-{{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
-apiVersion: admissionregistration.k8s.io/v1
-{{- else if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
-apiVersion: admissionregistration.k8s.io/v1beta1
-{{- else }}
-apiVersion: admissionregistration.k8s.io/v1alpha1
-{{- end }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
 metadata:
   name: {{ $policyName }}
@@ -22,14 +16,10 @@ spec:
         resources:   ["users"]
   validations:
     - expression: '!( request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
-        && !object.spec.email.matches("^[\\w\\-\\.]+@(?:[\\w-]+\\.)+[\\w-]{2,}$") )'
+        && !object.spec.email.matches("^[\\w\\+\\-\\.]+@(?:[\\w-]+\\.)+[\\w-]{2,}$") )'
       reason: Forbidden
 ---
-{{- if semverCompare ">= 1.28" .Values.global.discovery.kubernetesVersion }}
-apiVersion: admissionregistration.k8s.io/v1beta1
-{{- else }}
-apiVersion: admissionregistration.k8s.io/v1alpha1
-{{- end }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   name: {{ $policyName }}

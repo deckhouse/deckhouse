@@ -125,6 +125,14 @@ func NewUpdater[R Release](logger logger.Logger, notificationConfig *Notificatio
 // for patch, we check fewer conditions, then for minor release
 // - Canary settings
 func (du *Updater[R]) checkPatchReleaseConditions(predictedRelease *R) bool {
+	// check: Notification
+	if du.notificationConfig != nil && du.notificationConfig.ReleaseType == ReleaseTypeAll {
+		passed := du.checkReleaseNotification(predictedRelease, nil)
+		if !passed {
+			return false
+		}
+	}
+
 	release := *predictedRelease
 	// check: canary settings
 	if release.GetApplyAfter() != nil && !release.GetApplyNow() {
@@ -178,9 +186,9 @@ func (du *Updater[R]) checkReleaseNotification(predictedRelease *R, updateWindow
 	predictedReleaseVersion := release.GetVersion()
 	if du.notificationConfig.WebhookURL != "" {
 		data := WebhookData{
-			Version:       fmt.Sprintf("%d.%d", predictedReleaseVersion.Major(), predictedReleaseVersion.Minor()),
-			Requirements:  release.GetRequirements(),
-			ChangelogLink: release.GetChangelogLink(),
+			Version:       predictedReleaseVersion.String(),
+			Requirements:  (*predictedRelease).GetRequirements(),
+			ChangelogLink: (*predictedRelease).GetChangelogLink(),
 			ApplyTime:     releaseApplyTime.Format(time.RFC3339),
 		}
 		du.webhookDataSource.Fill(&data, *predictedRelease, releaseApplyTime)

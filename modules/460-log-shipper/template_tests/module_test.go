@@ -121,10 +121,10 @@ memory: 64Mi
 - containerName: vector-reloader
   maxAllowed:
     cpu: 20m
-    memory: 25Mi
+    memory: 15Mi
   minAllowed:
     cpu: 10m
-    memory: 25Mi
+    memory: 15Mi
 - containerName: kube-rbac-proxy
   maxAllowed:
     cpu: 20m

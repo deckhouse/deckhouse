@@ -101,18 +101,6 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	}
 
 	dc := dependency.NewDependencyContainer()
-	// create a default policy, it'll be filled in with relevant settings from the deckhouse moduleConfig, see runDeckhouseConfigObserver method
-	embeddedDeckhousePolicy := helpers.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
-		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
-			Mode: "Auto",
-		},
-		ReleaseChannel: "Stable",
-	})
-	ds := &helpers.DeckhouseSettings{ReleaseChannel: ""}
-	ds.Update.DisruptionApprovalMode = "Auto"
-	ds.Update.Mode = "Auto"
-	dsContainer := helpers.NewDeckhouseSettingsContainer(ds)
-
 	scheme := runtime.NewScheme()
 
 	for _, add := range []func(s *runtime.Scheme) error{corev1.AddToScheme, coordv1.AddToScheme, v1alpha1.AddToScheme, appsv1.AddToScheme} {
@@ -188,6 +176,15 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 			return nil, err
 		}
 	}
+
+	// create a default policy, it'll be filled in with relevant settings from the deckhouse moduleConfig, see runDeckhouseConfigObserver method
+	embeddedDeckhousePolicy := helpers.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
+		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			Mode: "Auto",
+		},
+		ReleaseChannel: "Stable",
+	})
+	dsContainer := helpers.NewDeckhouseSettingsContainer(nil)
 
 	err = deckhouse_release.NewDeckhouseReleaseController(ctx, mgr, dc, mm, dsContainer, metricStorage)
 	if err != nil {
@@ -347,7 +344,6 @@ func (dml *DeckhouseController) InitModulesAndConfigsStatuses() error {
 			err := dml.updateModuleStatus(module.Name)
 			if err != nil {
 				log.Errorf("Error occurred during the module %q status update: %s", module.Name, err)
-				return err
 			}
 		}
 
@@ -360,7 +356,6 @@ func (dml *DeckhouseController) InitModulesAndConfigsStatuses() error {
 			err := dml.updateModuleConfigStatus(config.Name)
 			if err != nil {
 				log.Errorf("Error occurred during the module config %q status update: %s", config.Name, err)
-				return err
 			}
 		}
 		return nil
@@ -399,28 +394,24 @@ func (dml *DeckhouseController) runEventLoop(moduleEventCh <-chan events.ModuleE
 			err := dml.handleModuleRegistration(mod)
 			if err != nil {
 				log.Errorf("Error occurred during the module %q registration: %s", mod.GetBasicModule().GetName(), err)
-				continue
 			}
 
 		case events.ModuleEnabled:
 			err := dml.handleEnabledModule(mod, true)
 			if err != nil {
 				log.Errorf("Error occurred during the module %q turning on: %s", mod.GetBasicModule().GetName(), err)
-				continue
 			}
 
 		case events.ModuleDisabled:
 			err := dml.handleEnabledModule(mod, false)
 			if err != nil {
 				log.Errorf("Error occurred during the module %q turning off: %s", mod.GetBasicModule().GetName(), err)
-				continue
 			}
 
 		case events.ModuleStateChanged:
 			err := dml.updateModuleStatus(event.ModuleName)
 			if err != nil {
 				log.Errorf("Error occurred during the module %q status update: %s", event.ModuleName, err)
-				continue
 			}
 		}
 	}

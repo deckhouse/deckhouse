@@ -41,9 +41,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -77,7 +75,8 @@ type deckhouseReleaseReconciler struct {
 }
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
-	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metric_storage.MetricStorage) error {
+	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metric_storage.MetricStorage,
+) error {
 	lg := log.WithField("component", "DeckhouseRelease")
 
 	r := &deckhouseReleaseReconciler{
@@ -109,54 +108,29 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		return err
 	}
 
+	lg.Info("Controller started")
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.DeckhouseRelease{}).
-		WithEventFilter(predicate.And(
-			predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}),
-			releasePhasePredicate{},
-		)).
+		WithEventFilter(logWrapper{lg, newEventFilter()}).
 		Complete(ctr)
 }
 
-type releasePhasePredicate struct{}
+func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
+	r.logger.Debugf("%s release processing started", req.Name)
+	defer func() { r.logger.Debugf("%s release processing complete: %+v", req.Name, result) }()
 
-func (rp releasePhasePredicate) Create(ev event.CreateEvent) bool {
-	switch ev.Object.(*v1alpha1.DeckhouseRelease).Status.Phase {
-	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended, v1alpha1.PhaseDeployed:
-		return false
-	}
-	return true
-}
-
-// Delete returns true if the Delete event should be processed
-func (rp releasePhasePredicate) Delete(_ event.DeleteEvent) bool {
-	return false
-}
-
-// Update returns true if the Update event should be processed
-func (rp releasePhasePredicate) Update(ev event.UpdateEvent) bool {
-	switch ev.ObjectNew.(*v1alpha1.DeckhouseRelease).Status.Phase {
-	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended, v1alpha1.PhaseDeployed:
-		return false
-	}
-	return true
-}
-
-// Generic returns true if the Generic event should be processed
-func (rp releasePhasePredicate) Generic(_ event.GenericEvent) bool {
-	return true
-}
-
-func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	if r.updateSettings.Get().ReleaseChannel == "" {
+		r.logger.Debug("release channel not set")
 		return ctrl.Result{}, nil
 	}
 
 	r.metricStorage.GroupedVault.ExpireGroupMetrics(metricReleasesGroup)
 
 	release := new(v1alpha1.DeckhouseRelease)
-	err := r.client.Get(ctx, req.NamespacedName, release)
+	err = r.client.Get(ctx, req.NamespacedName, release)
 	if err != nil {
+		r.logger.Debug("get release: %s", err.Error())
 		// The DeckhouseRelease resource may no longer exist, in which case we stop
 		// processing.
 		if apierrors.IsNotFound(err) {
@@ -167,6 +141,7 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	if !release.DeletionTimestamp.IsZero() {
+		r.logger.Debug("release deletion timestamp: %s", release.DeletionTimestamp.String())
 		return ctrl.Result{}, nil
 	}
 
@@ -188,6 +163,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 		return ctrl.Result{Requeue: true}, nil // process to the next phase
 
 	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended:
+		r.logger.Debug("release phase: %s", dr.Status.Phase)
 		return ctrl.Result{}, nil
 
 	case v1alpha1.PhaseDeployed:
@@ -304,7 +280,6 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		r.logger, r.client, r.dc, dus, releaseData, r.metricStorage, podReady,
 		clusterBootstrapping, imagesRegistry, r.moduleManager.GetEnabledModuleNames(),
 	)
-
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("initializing deckhouse updater: %w", err)
 	}
@@ -335,6 +310,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	deckhouseUpdater.SetReleases(pointerReleases)
 
 	if deckhouseUpdater.ReleasesCount() == 0 {
+		r.logger.Debug("releases count is zero")
 		return ctrl.Result{}, nil
 	}
 
@@ -343,6 +319,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	// has already Deployed the latest release
 	if deckhouseUpdater.LastReleaseDeployed() {
+		r.logger.Debug("latest release is deployed")
 		return ctrl.Result{}, nil
 	}
 
@@ -361,6 +338,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	if rel := deckhouseUpdater.GetPredictedRelease(); rel != nil {
 		if rel.GetName() != dr.GetName() {
 			// don't requeue releases other than predicted one
+			r.logger.Debugf("processing wrong release (current: %s, predicted: %s)", dr.Name, rel.Name)
 			return ctrl.Result{}, nil
 		}
 	}
@@ -386,7 +364,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	if err != nil {
 		if errors.Is(err, updater.ErrNotReadyForDeploy) || errors.Is(err, updater.ErrRequirementsNotMet) {
-			//TODO: create custom error type with additional fields like reason end requeueAfter
+			// TODO: create custom error type with additional fields like reason end requeueAfter
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("apply predicted release: %w", err)
@@ -395,45 +373,36 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 }
 
-func (r *deckhouseReleaseReconciler) getDeckhousePods(ctx context.Context) ([]corev1.Pod, error) {
+func (r *deckhouseReleaseReconciler) getDeckhouseLatestPod(ctx context.Context) (*corev1.Pod, error) {
 	var pods corev1.PodList
 	err := r.client.List(
 		ctx,
 		&pods,
 		client.InNamespace("d8-system"),
-		client.MatchingLabels{"app": "deckhouse"},
+		client.MatchingLabels{"app": "deckhouse", "leader": "true"},
 	)
-
 	if err != nil {
 		return nil, fmt.Errorf("list deckhouse pods: %w", err)
 	}
 
-	filtered := make([]corev1.Pod, 0)
+	var latestPod *corev1.Pod
+
 	for _, pod := range pods.Items {
-		if pod.Status.Phase == corev1.PodFailed {
+		if pod.Status.Phase != corev1.PodRunning {
 			continue
 		}
 
-		filtered = append(filtered, pod)
-	}
-
-	var image, imageID string
-
-	for _, pod := range filtered {
-		// init image and imageID for comparison images/imageIDs across all pods if there are more than one pod in the snapshot
-		if len(image)+len(imageID) == 0 &&
-			len(pod.Spec.Containers[0].Image) != 0 &&
-			len(pod.Status.ContainerStatuses[0].ImageID) != 0 {
-			image, imageID = pod.Spec.Containers[0].Image, pod.Status.ContainerStatuses[0].ImageID
+		if latestPod == nil {
+			latestPod = &pod
 			continue
 		}
 
-		if image != pod.Spec.Containers[0].Image || imageID != pod.Status.ContainerStatuses[0].ImageID {
-			return nil, fmt.Errorf("deckhouse pods run different images")
+		if pod.Status.StartTime != nil && latestPod.Status.StartTime != nil && pod.Status.StartTime.After(latestPod.Status.StartTime.Time) {
+			latestPod = &pod
 		}
 	}
 
-	return filtered, nil
+	return latestPod, nil
 }
 
 func (r *deckhouseReleaseReconciler) getClusterUUID(ctx context.Context) string {
@@ -452,27 +421,39 @@ func (r *deckhouseReleaseReconciler) getClusterUUID(ctx context.Context) string 
 	return uuid.Must(uuid.NewV4()).String()
 }
 
-func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, pods []corev1.Pod) error {
-	for _, pod := range pods {
-		if pod.Spec.Containers[0].Image == "" && pod.Status.ContainerStatuses[0].ImageID == "" {
-			// pod is restarting or something like that, try more in 15 seconds
-			return nil
-		}
-
-		if pod.Spec.Containers[0].Image == "" || pod.Status.ContainerStatuses[0].ImageID == "" {
-			r.logger.Debug("Deckhouse pod is not ready. Try to update later")
-			return nil
-		}
+func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *corev1.Pod) error {
+	if len(leaderPod.Spec.Containers) == 0 || len(leaderPod.Status.ContainerStatuses) == 0 {
+		r.logger.Debug("Deckhouse pod has no containers")
+		return nil
 	}
 
-	imageID := pods[0].Status.ContainerStatuses[0].ImageID
+	deckhouseContainerIndex := getDeckhouseContainerIndex(leaderPod.Spec.Containers)
+	deckhouseContainerStatusIndex := getDeckhouseContainerStatusIndex(leaderPod.Status.ContainerStatuses)
+
+	if deckhouseContainerIndex == -1 {
+		r.logger.Warnf("Pod %s does not contain a deckhouse container", leaderPod.Name)
+		return nil
+	}
+
+	image := leaderPod.Spec.Containers[deckhouseContainerIndex].Image
+	imageID := leaderPod.Status.ContainerStatuses[deckhouseContainerStatusIndex].ImageID
+
+	if image == "" || imageID == "" {
+		// pod is restarting or something like that, try more in 15 seconds
+		return nil
+	}
+
+	if deckhouseContainerStatusIndex == -1 {
+		r.logger.Warnf("Pod %s does not contain a deckhouse container status", leaderPod.Name)
+		return nil
+	}
+
 	idSplitIndex := strings.LastIndex(imageID, "@")
 	if idSplitIndex == -1 {
 		return fmt.Errorf("image hash not found: %s", imageID)
 	}
 	imageHash := imageID[idSplitIndex+1:]
 
-	image := pods[0].Spec.Containers[0].Image
 	imageRepoTag, err := gcr.NewTag(image)
 	if err != nil {
 		return fmt.Errorf("incorrect image: %s", image)
@@ -538,7 +519,7 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, pods []corev
 		ctx,
 		&appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: pods[0].Namespace,
+				Namespace: leaderPod.Namespace,
 				Name:      "deckhouse",
 			},
 		},
@@ -586,18 +567,18 @@ func (r *deckhouseReleaseReconciler) updateByImageHashLoop(ctx context.Context) 
 			return
 		}
 
-		deckhousePods, err := r.getDeckhousePods(ctx)
+		deckhouseLeaderPod, err := r.getDeckhouseLatestPod(ctx)
 		if err != nil {
 			r.logger.Warnf("Error getting deckhouse pods: %s", err)
 			return
 		}
 
-		if len(deckhousePods) == 0 {
-			r.logger.Warn("Deckhouse pods not found. Skipping update")
+		if deckhouseLeaderPod == nil {
+			r.logger.Debug("Deckhouse pods not found. Skipping update")
 			return
 		}
 
-		err = r.tagUpdate(ctx, deckhousePods)
+		err = r.tagUpdate(ctx, deckhouseLeaderPod)
 		if err != nil {
 			r.logger.Errorf("deckhouse image tag update failed: %s", err)
 		}
@@ -641,6 +622,26 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 
 func (r *deckhouseReleaseReconciler) newUpdaterKubeAPI() *d8updater.KubeAPI {
 	return d8updater.NewKubeAPI(r.client, r.dc, "")
+}
+
+func getDeckhouseContainerIndex(containers []corev1.Container) int {
+	for i := range containers {
+		if containers[i].Name == "deckhouse" {
+			return i
+		}
+	}
+
+	return -1
+}
+
+func getDeckhouseContainerStatusIndex(statuses []corev1.ContainerStatus) int {
+	for i := range statuses {
+		if statuses[i].Name == "deckhouse" {
+			return i
+		}
+	}
+
+	return -1
 }
 
 func getReleaseData(dr *v1alpha1.DeckhouseRelease) updater.DeckhouseReleaseData {

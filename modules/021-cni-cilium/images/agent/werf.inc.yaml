@@ -56,6 +56,7 @@
 # iptables and dependencies
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/xtables*" }}
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/arptables* /sbin/ebtables* /sbin/ip6tables* /sbin/iptables*" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/iptables-wrapper" }}
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/iptables-xml" }}
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/nfnl_osf" }}
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/lib64/iptables/*" }}
@@ -96,12 +97,10 @@ import:
   add: /iptables
   to: /iptables
   before: install
-- artifact: {{ $.ModuleName }}/cilium-artifact
-  add: /go/src/github.com/cilium/cilium/images/runtime/orig/
-  to: /go/src/github.com/cilium/cilium/images/runtime
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /usr/sbin/iptables-wrapper
   before: install
-  includePaths:
-  - iptables-wrapper-installer.sh
 - artifact: {{ $.ModuleName }}/cilium-artifact
   add: /tmp/install
   to: /
@@ -144,12 +143,10 @@ import:
   before: setup
 shell:
   install:
-  # from runtime
   - yes | cp -r --remove-destination -f iptables/* /
   - rm -rf /iptables
-  - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
-  - cd /go/src/github.com/cilium/cilium/images/runtime
-  - ./iptables-wrapper-installer.sh --no-sanity-check
+  - chown root:root /usr/sbin/iptables-wrapper
+  - chmod 755 /usr/sbin/iptables-wrapper
   beforeSetup:
   # common relocate
   - chmod +x /binary_replace.sh
@@ -162,8 +159,8 @@ shell:
   # additional relocate from runtime
   - |
     for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-      rm -f "/relocate/usr/sbin/${cmd}"
-      ln -f -s /usr/sbin/iptables-wrapper "/relocate/usr/sbin/${cmd}"
+      rm -f "/relocate/sbin/${cmd}"
+      ln -f -s /usr/sbin/iptables-wrapper "/relocate/sbin/${cmd}"
     done
     # broken symlinks are not imported from the artifact
     touch /usr/sbin/iptables-wrapper

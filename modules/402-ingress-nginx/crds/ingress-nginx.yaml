@@ -168,6 +168,10 @@ spec:
                         Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
                       additionalProperties:
                         type: string
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        The LoadBalancer class (it is passed to the `spec.loadBalancerClass` parameter of the provisioned service of the LoadBalancer type).
                     behindL7Proxy:
                       type: boolean
                       description: |
@@ -210,6 +214,10 @@ spec:
                       additionalProperties:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        The LoadBalancer class (it is passed to the `spec.loadBalancerClass` parameter of the provisioned service of the LoadBalancer type).
                 hostPort:
                   type: object
                   description: |
@@ -687,7 +695,7 @@ spec:
                   description: |
                     Enables the annotation validation feature.
 
-                    Requires a controller of 1.9 version.
+                    Requires a controller of 1.9 version or higher.
                 nodeSelector:
                   type: object
                   additionalProperties:
@@ -752,6 +760,10 @@ spec:
                         Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
                       additionalProperties:
                         type: string
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        The LoadBalancer class (it is passed to the `spec.loadBalancerClass` parameter of the provisioned service of the LoadBalancer type).
                     behindL7Proxy:
                       type: boolean
                       description: |
@@ -794,6 +806,10 @@ spec:
                       additionalProperties:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        The LoadBalancer class (it is passed to the `spec.loadBalancerClass` parameter of the provisioned service of the LoadBalancer type).
                 loadBalancerWithSSLPassthrough:
                   type: object
                   x-doc-required: false
@@ -822,6 +838,10 @@ spec:
                       additionalProperties:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        The LoadBalancer class (it is passed to the `spec.loadBalancerClass` parameter of the provisioned service of the LoadBalancer type).
                 hostPort:
                   type: object
                   description: |
@@ -1207,8 +1227,8 @@ spec:
                       enum: ['HostWithFailover']
                     hostWithFailover: {}
               x-kubernetes-validations:
-                - message: .spec.controllerVersion should be explicitly set to 1.9 for .spec.annotationValidationEnabled to make effect
-                  rule: 'self.annotationValidationEnabled == true ? self.controllerVersion == ''1.9'': true'
+                - message: .spec.controllerVersion should be set to 1.9 or higher for .spec.annotationValidationEnabled to make effect
+                  rule: 'self.annotationValidationEnabled == true ? (self.controllerVersion == ''1.9'' || self.controllerVersion == ''1.10'') : true'
                 - message: .spec.controllerVersion should be explicitly set to 1.10 for .spec.enableHTTP3 to make effect
                   rule: 'self.enableHTTP3 == true ? self.controllerVersion == ''1.10'': true'
       additionalPrinterColumns:

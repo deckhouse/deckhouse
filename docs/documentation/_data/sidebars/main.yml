@@ -1353,6 +1353,7 @@ entries:
               url: /modules/450-keepalived/faq.html
         - title: l2-load-balancer
           d8Revision: ee
+          featureStatus: deprecated
           folders:
             - title:
                 en: Description

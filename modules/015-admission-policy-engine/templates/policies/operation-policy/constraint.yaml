@@ -30,6 +30,12 @@
   {{- if hasKey $cr.spec.policies "priorityClassNames" }}
     {{- include "priority_class_policy" (list $context $cr) }}
   {{- end }}
+  {{- if hasKey $cr.spec.policies "ingressClassNames" }}
+    {{- include "ingress_class_policy" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "storageClassNames" }}
+    {{- include "storage_class_policy" (list $context $cr) }}
+  {{- end }}
   {{- if hasKey $cr.spec.policies "checkHostNetworkDNSPolicy" }}
     {{- include "dns_policy" (list $context $cr) }}
   {{- end }}
@@ -249,6 +255,47 @@ spec:
       {{- $cr.spec.policies.priorityClassNames | toYaml | nindent 6 }}
 {{- end }}
 
+{{- define "ingress_class_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8IngressClass
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: ["networking.k8s.io"]
+        kinds: ["Ingress"]
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    ingressClassNames:
+      {{- $cr.spec.policies.ingressClassNames | toYaml | nindent 6 }}
+{{- end }}
+
+{{- define "storage_class_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8StorageClass
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["PersistentVolumeClaim"]
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    storageClassNames:
+      {{- $cr.spec.policies.storageClassNames | toYaml | nindent 6 }}
+{{- end }}
 
 {{- define "dns_policy" }}
   {{- $context := index . 0 }}

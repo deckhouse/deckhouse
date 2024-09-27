@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime/pprof"
 	"runtime/trace"
 	"strings"
@@ -279,22 +280,26 @@ func restoreTerminal() func() {
 }
 
 func initGlobalVars() {
-	// get current path
-	pwd, err := os.Getwd()
+	// get current location of called binary
+	dhctlPath, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", os.Getpid()))
 	if err != nil {
 		panic(err)
 	}
+	dhctlPath = filepath.Dir(dhctlPath)
+	if dhctlPath == "/" {
+		dhctlPath = "" // All our paths are already absolute by themselves
+	}
 
 	// set path to ssh and terraform binaries
-	if err := os.Setenv("PATH", fmt.Sprintf("%s/bin:%s", pwd, os.Getenv("PATH"))); err != nil {
+	if err = os.Setenv("PATH", fmt.Sprintf("%s/bin:%s", dhctlPath, os.Getenv("PATH"))); err != nil {
 		panic(err)
 	}
 
 	// set relative path to config and template files
-	config.InitGlobalVars(pwd)
-	commands.InitGlobalVars(pwd)
-	app.InitGlobalVars(pwd)
-	terraform.InitGlobalVars(pwd)
-	manifests.InitGlobalVars(pwd)
-	template.InitGlobalVars(pwd)
+	config.InitGlobalVars(dhctlPath)
+	commands.InitGlobalVars(dhctlPath)
+	app.InitGlobalVars(dhctlPath)
+	terraform.InitGlobalVars(dhctlPath)
+	manifests.InitGlobalVars(dhctlPath)
+	template.InitGlobalVars(dhctlPath)
 }

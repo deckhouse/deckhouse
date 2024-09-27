@@ -473,7 +473,35 @@ func TestValidateGrafanaDashboardFile(t *testing.T) {
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "isNone": true,
+          "selected": false,
+          "text": "None",
+          "value": ""
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus_datasource_uid"
+        },
+        "definition": "metric_name",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "dashboard_variable",
+        "options": [],
+        "query": {
+          "query": "metric_name",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
   },
   "time": {
     "from": "now-6h",
@@ -486,22 +514,27 @@ func TestValidateGrafanaDashboardFile(t *testing.T) {
   "version": 1,
   "weekStart": ""
 }`
-	expected := &Messages{[]Message{
-		NewError("dashboard.json", "deprecated interval", "Panel Single Panel contains deprecated interval: 'interval_rv', consider using '$__rate_interval'"),
-		NewError("dashboard.json", "legacy alert rule", "Panel Single Panel contains legacy alert rule: 'Alert Rule Inside Single Panel', consider using external alertmanager"),
-		NewError("dashboard.json", "legacy datasource uid", "Panel Single Panel contains legacy datasource uid: 'prometheus_datasource_uid', consider resaving dashboard using newer version of Grafana"),
-		NewError("dashboard.json", "hardcoded datasource uid", "Panel Single Panel contains hardcoded datasource uid: 'prometheus_datasource_uid', consider using grafana variable of type 'Datasource'"),
-		NewError("dashboard.json", "deprecated panel type", "Panel Plugin Single Panel is of deprecated type: 'graph', consider using 'timeseries'"),
-		NewError("dashboard.json", "deprecated interval", "Panel Plugin Single Panel contains deprecated interval: 'interval_rv', consider using '$__rate_interval'"),
-		NewError("dashboard.json", "legacy datasource uid", "Panel Plugin Single Panel contains legacy datasource uid: 'prometheus_datasource_uid', consider resaving dashboard using newer version of Grafana"),
-		NewError("dashboard.json", "deprecated interval", "Panel Panel Inside Row contains deprecated interval: 'interval_sx3', consider using '$__rate_interval'"),
-		NewError("dashboard.json", "legacy alert rule", "Panel Panel Inside Row contains legacy alert rule: 'Panel Inside Row Alert Rule', consider using external alertmanager"),
-		NewError("dashboard.json", "legacy datasource uid", "Panel Panel Inside Row contains legacy datasource uid: 'prometheus_datasource_uid', consider resaving dashboard using newer version of Grafana"),
-		NewError("dashboard.json", "hardcoded datasource uid", "Panel Panel Inside Row contains hardcoded datasource uid: 'prometheus_datasource_uid', consider using grafana variable of type 'Datasource'"),
-		NewError("dashboard.json", "deprecated panel type", "Panel Plugin Panel Inside Row is of deprecated type: 'flant-statusmap-panel', consider using 'state-timeline'"),
-		NewError("dashboard.json", "deprecated interval", "Panel Plugin Panel Inside Row contains deprecated interval: 'interval_sx4', consider using '$__rate_interval'"),
-		NewError("dashboard.json", "legacy datasource uid", "Panel Plugin Panel Inside Row contains legacy datasource uid: 'prometheus_datasource_uid', consider resaving dashboard using newer version of Grafana"),
-	}}
+	expected := &Messages{
+		messages: []Message{
+			NewError("dashboard.json", "deprecated interval", "Panel Single Panel contains deprecated interval: 'interval_rv', consider using '$__rate_interval'"),
+			NewError("dashboard.json", "legacy alert rule", "Panel Single Panel contains legacy alert rule: 'Alert Rule Inside Single Panel', consider using external alertmanager"),
+			NewError("dashboard.json", "legacy datasource uid", "Panel Single Panel contains legacy datasource uid: 'prometheus_datasource_uid', consider resaving dashboard using newer version of Grafana"),
+			NewError("dashboard.json", "hardcoded datasource uid", "Panel Single Panel contains hardcoded datasource uid: 'prometheus_datasource_uid', consider using grafana variable of type 'Datasource'"),
+			NewError("dashboard.json", "deprecated panel type", "Panel Plugin Single Panel is of deprecated type: 'graph', consider using 'timeseries'"),
+			NewError("dashboard.json", "deprecated interval", "Panel Plugin Single Panel contains deprecated interval: 'interval_rv', consider using '$__rate_interval'"),
+			NewError("dashboard.json", "legacy datasource uid", "Panel Plugin Single Panel contains legacy datasource uid: 'prometheus_datasource_uid', consider resaving dashboard using newer version of Grafana"),
+			NewError("dashboard.json", "non-recommended prometheus datasource uid", "Panel Plugin Single Panel datasource must be one of: '$ds_prometheus', '${ds_prometheus}' instead of 'prometheus_datasource_uid'"),
+			NewError("dashboard.json", "deprecated interval", "Panel Panel Inside Row contains deprecated interval: 'interval_sx3', consider using '$__rate_interval'"),
+			NewError("dashboard.json", "legacy alert rule", "Panel Panel Inside Row contains legacy alert rule: 'Panel Inside Row Alert Rule', consider using external alertmanager"),
+			NewError("dashboard.json", "legacy datasource uid", "Panel Panel Inside Row contains legacy datasource uid: 'prometheus_datasource_uid', consider resaving dashboard using newer version of Grafana"),
+			NewError("dashboard.json", "hardcoded datasource uid", "Panel Panel Inside Row contains hardcoded datasource uid: 'prometheus_datasource_uid', consider using grafana variable of type 'Datasource'"),
+			NewError("dashboard.json", "deprecated panel type", "Panel Plugin Panel Inside Row is of deprecated type: 'flant-statusmap-panel', consider using 'state-timeline'"),
+			NewError("dashboard.json", "deprecated interval", "Panel Plugin Panel Inside Row contains deprecated interval: 'interval_sx4', consider using '$__rate_interval'"),
+			NewError("dashboard.json", "legacy datasource uid", "Panel Plugin Panel Inside Row contains legacy datasource uid: 'prometheus_datasource_uid', consider resaving dashboard using newer version of Grafana"),
+			NewError("dashboard.json", "non-recommended prometheus datasource uid", "Panel Plugin Panel Inside Row datasource must be one of: '$ds_prometheus', '${ds_prometheus}' instead of 'prometheus_datasource_uid'"),
+			NewError("dashboard.json", "non-recommended prometheus datasource query variable", "Dashboard variable 'dashboard_variable' must use one of: '$ds_prometheus', '${ds_prometheus}' as it's datasource"),
+			NewError("dashboard.json", "missing prometheus datasource variable", "Dashboard must contain prometheus variable with query type: 'prometheus' and name: 'ds_prometheus'"),
+		}}
 
 	actual := validateGrafanaDashboardFile("dashboard.json", []byte(in))
 	if !reflect.DeepEqual(actual, expected) {

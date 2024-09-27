@@ -700,7 +700,7 @@ check_e2e_labels:
         path: ${{ steps.setup.outputs.tmp-dir-path}}
 
     - name: Cleanup bootstrapped cluster
-      if: ${{ success() }}
+      if: ${{ success() || cancelled() }}
       id: cleanup_cluster
       env:
         PROVIDER: {!{ $ctx.providerName }!}

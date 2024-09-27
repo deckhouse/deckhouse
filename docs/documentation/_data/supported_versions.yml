@@ -9,9 +9,14 @@ osDistributions:
     url: https://astralinux.ru/products/astra-linux-special-edition/
     ru_support: 'true'
     en_support: 'false'
+    note_content:
+      ru: 'В версии <b>1.8</b> рекомендуется использовать ядро <b>linux-image-6.1-debug</b>'
   centos:
     name: CentOS
     url: https://www.centos.org/download/
+    note_content:
+      ru: 'CentOS Linux 8 не поддерживается разработчиками с 31 мая 2024 года.<br>CentOS Linux 7 не поддерживается разработчиками с 30 июня 2024 года.'
+      en: 'CentOS Linux 8 end of life is May 31, 2024.<br>CentOS Linux 7 end of life is June 30, 2024.'
   debian:
     name: Debian
     url: https://www.debian.org/download
@@ -31,7 +36,8 @@ osDistributions:
     url: https://rosa.ru
     ru_support: 'true'
     en_support: 'false'
-    additional_notes: 'true'
+    note_content:
+      ru: 'Невозможна работа модуля runtime-audit-engine (из-за отсутствия поддержки ядром BPF Type Format (BTF)). Для <strong>РОСА «КОБАЛЬТ» Сервер</strong> рекомендуется установка ядра не ниже версии <b>5.15.33</b> (пакет <b>kernel-ml</b>).'
 
 k8s_statuses:
   end-of-life:

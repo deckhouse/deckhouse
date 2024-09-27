@@ -67,8 +67,12 @@ spec:
                       description: "Список проб, которые необходимы (например, `readinessProbe`)."
                     maxRevisionHistoryLimit:
                       description: "Максимальное значение для истории ревизий."
-                    priorityClassName:
+                    priorityClassNames:
                       description: "Список возможных классов приоритета."
+                    ingressClassNames:
+                      description: "Список возможных классов ингресса."
+                    storageClassNames:
+                      description: "Список возможных классов хранилища."
                     imagePullPolicy:
                       description: "Требуемая политика скачивания образов для контейнеров."
                     checkHostNetworkDNSPolicy:
