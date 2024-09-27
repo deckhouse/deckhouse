@@ -9,7 +9,7 @@ git:
     - '**/*'
 shell:
   install:
-    - git clone ${SOURCE_REPO}/mintel/dex-k8s-authenticator.git /src/
+    - git clone {{ .SOURCE_REPO }}/mintel/dex-k8s-authenticator.git /src/
     - cd /src/mintel/dex-k8s-authenticator
     - git checkout 378a39dd93bed9f56a5a1b1a799a208c61ead83f
     - git apply /patches/*.patch --verbose

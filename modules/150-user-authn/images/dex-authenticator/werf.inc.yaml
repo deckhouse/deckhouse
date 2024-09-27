@@ -14,7 +14,7 @@ git:
     - '**/*'
 shell:
   install:
-    - git clone --depth 1 --branch v7.5.1 ${SOURCE_REPO}/oauth2-proxy/oauth2-proxy.git /src/oauth2-proxy
+    - git clone --depth 1 --branch v7.5.1 {{ .SOURCE_REPO }}/oauth2-proxy/oauth2-proxy.git /src/oauth2-proxy
     - cd /src/oauth2-proxy
     - git apply /patches/*.patch --verbose
     - rm -rf docs
