@@ -3,10 +3,10 @@ RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 {{- $featureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," }}
-{{- if semverCompare "> 1.26" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare ">= 1.27" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "ValidatingAdmissionPolicy=true" | join "," }}
 {{- end }}
-{{- if semverCompare "> 1.26" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare ">= 1.27" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "AdmissionWebhookMatchConditions=true" | join "," }}
 {{- end }}
 {{- if semverCompare "= 1.27" .clusterConfiguration.kubernetesVersion }}
@@ -82,14 +82,14 @@ apiServer:
     feature-gates: {{ $featureGates | quote }}
 {{- if semverCompare ">= 1.28" .clusterConfiguration.kubernetesVersion }}
     runtime-config: "admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true"
-{{- else if semverCompare "> 1.26" .clusterConfiguration.kubernetesVersion }}
+{{- else if semverCompare ">= 1.27" .clusterConfiguration.kubernetesVersion }}
     runtime-config: "admissionregistration.k8s.io/v1alpha1=true"
 {{- end }}
 {{- if hasKey . "arguments" }}
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
     default-unreachable-toleration-seconds: {{ .arguments.defaultUnreachableTolerationSeconds | quote }}
   {{- end }}
-  {{- if and (hasKey .arguments "podEvictionTimeout") (semverCompare "> 1.26" .clusterConfiguration.kubernetesVersion) }}
+  {{- if and (hasKey .arguments "podEvictionTimeout") (semverCompare ">= 1.27" .clusterConfiguration.kubernetesVersion) }}
     default-not-ready-toleration-seconds: "{{ .arguments.podEvictionTimeout }}"
     default-unreachable-toleration-seconds: "{{ .arguments.podEvictionTimeout }}"
   {{- end }}
