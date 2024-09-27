@@ -16,9 +16,8 @@ artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: src-artifact
 shell:
   install:
-  - mkdir -p /cilium/proxy
-  - git clone {{ $.SOURCE_REPO }}/cilium/proxy.git /cilium/proxy
-  - cd /cilium/proxy
+  - git clone {{ $.SOURCE_REPO }}/cilium/proxy.git /src/proxy
+  - cd /src/proxy
   - git checkout {{ $ciliumProxyRev }}
 ---
 artifact: {{ $.ModuleName }}/cilium-envoy-artifact
@@ -49,11 +48,11 @@ shell:
   - echo 'Defaults env_keep += "BAZEL_BUILD_OPTS PKG_BUILD V DEBUG DESTDIR"' >> /etc/sudoers
   - groupadd -f -g 1337 cilium && useradd -m -g cilium -u 1337 cilium
   - chmod -R a+w /tmp
-  - chown -R 1337:1337 /cilium/proxy
+  - chown -R 1337:1337 /src/proxy
   beforeSetup:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - cd /cilium/proxy
+  - cd /src/proxy
   - sudo -u cilium PATH=${PATH} make -C proxylib all
   - sudo -u cilium PATH=${PATH} mkdir -p /tmp/install/usr/lib
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
@@ -70,7 +69,7 @@ shell:
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch"
   - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
   #
-  - cd /cilium/proxy
+  - cd /src/proxy
   - sudo -u cilium echo "{{ $ciliumProxyRev }}" >SOURCE_VERSION
   - sudo -u cilium sed -i "s,https://github.com,{{ $.SOURCE_REPO }}," WORKSPACE
   - sudo -u cilium sed -i 's/$(SUDO) apt info clang-17 || $(call add_clang_apt_source,$(shell lsb_release -cs))/rpm -q clang17.0/' Makefile
