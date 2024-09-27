@@ -138,14 +138,16 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	// upgrade project`s resources
 	m.log.Info("upgrading resources for the project", "project", project.Name, "projectTemplate", projectTemplate.Name)
 	if err = m.helmClient.Upgrade(ctx, project, projectTemplate); err != nil {
-		cond = m.makeCondition(v1alpha2.ConditionTypeProjectResourcesUpgraded, v1alpha2.ConditionTypeFalse, err.Error())
-		if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, projectTemplate.Generation, cond); statusErr != nil {
-			m.log.Error(statusErr, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
-			return ctrl.Result{Requeue: true}, nil
+		// to avoid helm flaky errors
+		m.log.Info("failed to upgrade the project template, try again", "project", project.Name, "projectTemplate", projectTemplate.Name)
+		if secondTry := m.helmClient.Upgrade(ctx, project, projectTemplate); secondTry != nil {
+			cond = m.makeCondition(v1alpha2.ConditionTypeProjectResourcesUpgraded, v1alpha2.ConditionTypeFalse, err.Error())
+			if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, projectTemplate.Generation, cond); statusErr != nil {
+				m.log.Error(statusErr, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
+				return ctrl.Result{Requeue: true}, nil
+			}
+			return ctrl.Result{}, nil
 		}
-		// TODO: come up with a better solution to handle helm errors
-		// requeue to avoid helm fluky errors
-		return ctrl.Result{RequeueAfter: 2 * time.Minute}, nil
 	}
 
 	// set deployed status
