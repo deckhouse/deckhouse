@@ -1,24 +1,20 @@
 module GSGenerator
   class GSGenerator < Jekyll::Generator
     safe true
-  
+
     def generate(site)
       site.data['getting_started']['data']['installTypes'].each do |installTypeKey, installTypeData|
-        
+
         next unless installTypeData['steps']
 
         puts "Processing %s... (%s)" % [installTypeKey, installTypeData['name']]
 
         installTypeData['steps'].each do |stepName, stepData|
-            if installTypeData['languages']
-              installTypeData['languages'].each do |lang|
-                site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, lang)
-              end
-              else
-              site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, 'ru')
-              site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, 'en')
-            end
+          languages = installTypeData['languages'] ? installTypeData['languages'] : ['ru', 'en']
+          languages.each do |lang|
+            site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, lang)
           end
+        end
       end
     end
   end
