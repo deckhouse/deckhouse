@@ -145,7 +145,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 		}
 		// TODO: come up with a better solution to handle helm errors
 		// requeue to avoid helm fluky errors
-		return ctrl.Result{RequeueAfter: 1 * time.Minute}, nil
+		return ctrl.Result{RequeueAfter: 2 * time.Minute}, nil
 	}
 
 	// set deployed status
@@ -194,6 +194,7 @@ func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha2.Project) 
 func (m *Manager) Delete(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error) {
 	// delete resources
 	if err := m.helmClient.Delete(ctx, project.Name); err != nil {
+		// TODO: add error to the project`s status
 		m.log.Error(err, "failed to delete the project", "project", project.Name)
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -204,6 +205,6 @@ func (m *Manager) Delete(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	m.log.Info("successfully deleted project", "project", project.Name)
+	m.log.Info("successfully deleted the project", "project", project.Name)
 	return ctrl.Result{}, nil
 }
