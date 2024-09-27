@@ -325,7 +325,8 @@ spec:
     # поле request_id должно присутствовать в сообщении
     syslog.message_id: "{{ request_id }}"
 ```
-##  Логи в CEF формате
+
+## Логи в CEF формате
 
 Существует способ формировать логи в формате CEF, используя `codec: CEF`, с переопределением `cef.name` и `cef.severity` по значениям из поля `message` (лога приложения) в формате JSON.
 
@@ -351,7 +352,9 @@ spec:
       verifyHostname: true
     topic: logs
 ```
+
 Так же можно вручную задать свои значения:
+
 ```yaml
 extraLabels:
   cef.name: 'TestName'

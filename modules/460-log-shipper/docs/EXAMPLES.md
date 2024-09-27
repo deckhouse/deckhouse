@@ -325,6 +325,7 @@ spec:
     # the request_id field should be present in the log message
     syslog.message_id: "{{ request_id }}"
 ```
+
 ## Logs in CEF Format
 
 There is a way to format logs in CEF format using `codec: CEF`, with overriding `cef.name` and `cef.severity` based on values from the `message` field (application log) in JSON format.
@@ -351,7 +352,9 @@ spec:
       verifyHostname: true
     topic: logs
 ```
+
 You can also manually set your own values:
+
 ```yaml
 extraLabels:
   cef.name: 'TestName'
