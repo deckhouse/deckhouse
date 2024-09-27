@@ -81,10 +81,6 @@ apiServer:
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
     default-unreachable-toleration-seconds: {{ .arguments.defaultUnreachableTolerationSeconds | quote }}
   {{- end }}
-  {{- if and (hasKey .arguments "podEvictionTimeout") (semverCompare ">= 1.27" .clusterConfiguration.kubernetesVersion) }}
-    default-not-ready-toleration-seconds: "{{ .arguments.podEvictionTimeout }}"
-    default-unreachable-toleration-seconds: "{{ .arguments.podEvictionTimeout }}"
-  {{- end }}
 {{- end }}
 {{- if hasKey . "apiserver" }}
   {{- if hasKey .apiserver "etcdServers" }}
@@ -168,9 +164,6 @@ controllerManager:
   {{- if hasKey .arguments "nodeMonitorPeriod" }}
     node-monitor-period: "{{ .arguments.nodeMonitorPeriod }}s"
     node-monitor-grace-period: "{{ .arguments.nodeMonitorGracePeriod }}s"
-  {{- end }}
-  {{- if and (hasKey .arguments "podEvictionTimeout") (semverCompare "= 1.27" .clusterConfiguration.kubernetesVersion) }}
-    pod-eviction-timeout: "{{ .arguments.podEvictionTimeout }}s"
   {{- end }}
 {{- end }}
 scheduler:
