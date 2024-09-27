@@ -2,6 +2,10 @@
 
 ## List of required vSphere resources
 
+{% alert %}
+Deckhouse uses the `ens192` interface as the default interface for virtual machines in vSphere. Therefore, when using static IP addresses in `mainNetwork`, you must create an interface named `ens192` in the OS image as the default interface.
+{% endalert %}
+
 * **User** with required set of [permissions](#creating-and-assigning-a-role).
 * **Network** with DHCP server and access to the Internet
 * **Datacenter** with a tag in [`k8s-region`](#creating-tags-and-tag-categories) category.
