@@ -132,8 +132,8 @@ shell:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y glibc-utils
 ---
-artifact: jq
-from: {{ $.Images.BASE_ALPINE_DEV }}
+artifact: jq-src-artifact
+fromArtifact: src-artifact
 git:
 - url: {{ .SOURCE_REPO }}/jqlang/jq
   add: /
@@ -142,19 +142,24 @@ git:
   stageDependencies:
     install:
     - "**/*"
-ansible:
+---
+artifact: jq
+from: {{ $.Images.BASE_ALPINE }}
+import:
+- artifact: jq-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache git make autoconf pkgconf automake libtool build-base g++
   install:
-  - shell: |
-      cd /src
-      autoreconf -fi
-      ./configure \
-        --prefix=/usr \
-        --sysconfdir=/etc \
-        --mandir=/usr/share/man \
-        --localstatedir=/var \
-        --disable-docs
-      make LDFLAGS=-all-static
-      make prefix=/usr install
+  - cd /src
+  - autoreconf -fi
+  - ./configure --prefix=/usr --sysconfdir=/etc --mandir=/usr/share/man --localstatedir=/var --disable-docs
+  - make LDFLAGS=-all-static
+  - make prefix=/usr install
 
 ---
 artifact: yq4-artifact
@@ -295,7 +300,7 @@ import:
   to: /etc/ssl
   before: setup
 
-- artifact: registrypackages/d8-curl-artifact-8-2-1
+- artifact: registrypackages/d8-curl-artifact-8-9-1
   add: /d8-curl
   to: /usr/bin/curl
   before: setup
