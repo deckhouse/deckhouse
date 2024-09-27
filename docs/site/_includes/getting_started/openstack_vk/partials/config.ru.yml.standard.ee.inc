@@ -105,7 +105,11 @@ kind: OpenStackClusterConfiguration
 layout: Standard
 standard:
   # [<en>] Network name for external communication.
+  # [<en>] When using SDN Neutron, the default name `ext-net`.
+  # [<en>] When using SDN Sprut, the default name `internet`.
   # [<ru>] Имя сети для внешнего взаимодействия.
+  # [<ru>] При использовании SDN Neutron имя по-умолчанию `ext-net`.
+  # [<ru>] При использовании SDN Sprut имя по-умолчанию `internet`.
   externalNetworkName: *!CHANGE_EXT_NET*
   # [<en>] Addressing for the internal network of the cluster nodes.
   # [<ru>] Адресация для внутренней сети узлов кластера.
