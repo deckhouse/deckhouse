@@ -4,7 +4,7 @@
 # Build BPFTOOL binaries (based on base-cilium-dev)
 # Original IMAGE_TAG of BPFTOOL is d3093f6aeefef8270306011109be623a7e80ad1b
 # Corresponding commit 3f125f524cdf74e20c1ac73855042a9254747855 (https://github.com/cilium/image-tools/tree/3f125f524cdf74e20c1ac73855042a9254747855)
-# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile#L9
+# Based on https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/Dockerfile#L9
 # and https://github.com/cilium/image-tools/blob/3f125f524cdf74e20c1ac73855042a9254747855/images/bpftool/Dockerfile
 # and https://github.com/cilium/image-tools/blob/3f125f524cdf74e20c1ac73855042a9254747855/images/bpftool/checkout-linux.sh
 # and https://github.com/cilium/image-tools/blob/3f125f524cdf74e20c1ac73855042a9254747855/images/bpftool/build-bpftool-native.sh
@@ -14,17 +14,26 @@
 # Corresponding commit is 063fa0d879d9560b85b6134c48ece08e672fa057 (https://github.com/cilium/image-tools/tree/063fa0d879d9560b85b6134c48ece08e672fa057)
 # #####################################################################
 ---
-artifact: {{ $.ModuleName }}/bpftool-artifact
-from: {{ $.Images.BASE_ALT_DEV_CILIUM }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: src-artifact
 shell:
-  beforeInstall:
+  install:
   - git clone {{ $.SOURCE_REPO }}/bpf/bpf-next.git /src/linux
   - cd /src/linux
   - git checkout {{ $bpftoolRev }}
-  install:
+---
+artifact: {{ $.ModuleName }}/bpftool-artifact
+fromImage: {{ $.ModuleName }}/base-cilium-dev
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
   - update-alternatives --install /usr/bin/python python /usr/bin/python2 1
-  - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 2
-  setup:
+  - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 2
+  install:
   - cd /src/linux/tools/bpf/bpftool
   - make -j "$(getconf _NPROCESSORS_ONLN)"
   - strip bpftool
