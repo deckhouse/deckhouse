@@ -108,17 +108,6 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 			if !moduleEnabled {
 				break
 			}
-
-			settings, settingsExists, err := unstructured.NestedMap(mc.UnstructuredContent(), "spec", "settings")
-			if err != nil {
-				return err
-			}
-
-			// simple bridge does not have any settings
-			if (!settingsExists || len(settings) == 0) && mc.GetName() != "cni-simple-bridge" {
-				break
-			}
-
 			input.LogEntry.Infof("Module config for %s found, skipping migration", mc.GetName())
 			return removeD8CniSecret(input, kubeCl, d8cniSecret)
 		}
@@ -192,8 +181,6 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 		switch ciliumConfig.MasqueradeMode {
 		case "Netfilter", "BPF":
 			ciliumSettings["masqueradeMode"] = ciliumConfig.MasqueradeMode
-		case "":
-			ciliumSettings["masqueradeMode"] = "BPF"
 		default:
 			return fmt.Errorf("unknown cilium masquerade mode %s", ciliumConfig.MasqueradeMode)
 		}
@@ -209,7 +196,7 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 	}
 
 	// create ModuleConfig
-	err = upToDateMC(kubeCl, cniModuleConfig)
+	err = createMC(kubeCl, cniModuleConfig)
 	if err != nil {
 		return err
 	}
@@ -230,15 +217,11 @@ func removeD8CniSecret(input *go_hook.HookInput, kubeCl k8s.Client, secret *v1.S
 }
 
 // create Module Config
-func upToDateMC(kubeCl k8s.Client, mc *config.ModuleConfig) error {
+func createMC(kubeCl k8s.Client, mc *config.ModuleConfig) error {
 	obj, err := sdk.ToUnstructured(mc)
 	if err != nil {
 		return err
 	}
 	_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Create(context.TODO(), obj, metav1.CreateOptions{})
-	if errors.IsAlreadyExists(err) {
-		_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Update(context.TODO(), obj, metav1.UpdateOptions{})
-		return err
-	}
 	return err
 }
