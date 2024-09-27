@@ -40,7 +40,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get update && apt-get install yodl make autoconf automake build-essential -y
+  - apt-get update && apt-get install yodl make autoconf automake glibc-devel-static build-essential -y
   install:
   - cd /src/socat
   - autoconf
