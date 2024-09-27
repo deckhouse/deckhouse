@@ -24,24 +24,20 @@ toc: false
       <h3>Облачная платформа</h3>
       <div class="button-group">
         {%- for provider in site.data.getting_started.data.installTypes %}
-        {%- if provider.type != 'cloud' %}{% continue %}{% endif %}
-        {%- if provider.wip == true %}
+        {%- if provider[1].type != 'cloud' %}{% continue %}{% endif %}
+        {%- if provider[1].wip == true %}
         <a
-          class="button button_default button_card button_disabled">{{ provider.name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
+          class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
         {%- else %}
         <a class="button button_default button_card" href="/gs/{{ provider[0] }}/step2.html">
-          {% if provider.iconPath %}
-            <div class="icon">
-              <img src="/{{provider.iconPath}}" alt="{{ provider.name[page.lang] }} icon"/>
-            </div>
-          {% endif %}
-          <span class="name">{{ provider.name[page.lang] }}</span>
-          {% if provider.extraIcons %}
-            <div class="footer">
-              {%- for extraIcon in provider.extraIcons %}
-              <img src="/{{extraIcon[1]}}" alt=""/>
-              {% endfor %}
-            </div>
+          {% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}
+          <span class="name">{{ provider[1].name[page.lang] }}</span>
+          {% if provider[1].extraIcons %}
+          <div class="footer">
+            {%- for extraIcon in provider[1].extraIcons %}
+            <img src="/{{extraIcon[1]}}" alt=""/>
+            {% endfor %}
+          </div>
           {% endif %}
         </a>
         {%- endif %}
@@ -61,7 +57,7 @@ toc: false
         {%- for provider in site.data.getting_started.data.installTypes %}
         {%- if provider.type == 'cloud' %}{% continue %}{% endif %}
 
-        {%- if provider.languages and provider.languages contains 'ru' and page.lang == 'en' %}
+        {%- if provider.languages and provider.languages contains 'ru' and page.lang != 'ru' %}
           {%- continue %}
         {%- endif %}
         
