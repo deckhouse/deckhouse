@@ -36,6 +36,11 @@ from: {{ $.Images.BASE_ALT_P11 }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+import:
+- image: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+  add: /usr/local/go
+  to: /usr/local/go
+  before: install
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
@@ -69,8 +74,8 @@ shell:
     libcxxabi-devel \
   install:
   # Install Go
-  - curl -sfL https://go.dev/dl/go{{ $goVersion }}.linux-amd64.tar.gz -o go.tar.gz
-  - rm -rf /usr/local/go && tar -C /usr/local -xzf go.tar.gz && rm go.tar.gz
+  #- curl -sfL https://go.dev/dl/go{{ $goVersion }}.linux-amd64.tar.gz -o go.tar.gz
+  #- rm -rf /usr/local/go && tar -C /usr/local -xzf go.tar.gz && rm go.tar.gz
   - export GOROOT=/usr/local/go GOPATH=/go
   - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
