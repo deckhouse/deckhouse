@@ -10,9 +10,6 @@ module GSGenerator
         puts "Processing %s... (%s)" % [installTypeKey, installTypeData['name']]
 
         installTypeData['steps'].each do |stepName, stepData|
-          if installTypeKey == 'red'
-            site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, 'ru')
-          else
             if installTypeData['languages']
               installTypeData['languages'].each do |lang|
                 site.pages << GSPage.new(site, site.data['getting_started']['data']['global'], installTypeKey, installTypeData, stepName, lang)
