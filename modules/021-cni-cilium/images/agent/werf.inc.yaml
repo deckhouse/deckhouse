@@ -69,19 +69,22 @@ artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
-  to: /
+  to: /src
   includePaths:
   - binary_replace.sh
   stageDependencies:
     install:
     - binary_replace.sh
+shell:
+  install:
+  - cd /src
 ---
 artifact: {{ $.ModuleName }}/agent-binaries-artifact
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /binary_replace.sh
-  to: /binary_replace.sh
+  add: /src
+  to: /src
   before: install
 - artifact: {{ $.ModuleName }}/llvm-artifact
   add: /usr/local/bin/
@@ -159,13 +162,13 @@ shell:
   - chmod 755 /usr/sbin/iptables-wrapper
   beforeSetup:
   # common relocate
-  - chmod +x /binary_replace.sh
+  - chmod +x /src/binary_replace.sh
   - mkdir -p /relocate
   # copy base binaries and deps from ALT
   - ln -snf /usr/share/zoneinfo/Etc/UTC /etc/localtime
-  - /binary_replace.sh -i "{{ $binariesFromALT }}" -o /relocate
+  - /src/binary_replace.sh -i "{{ $binariesFromALT }}" -o /relocate
   # copy self built binaries and deps
-  - /binary_replace.sh -i "{{ $selfBuiltBinaries }}" -o /relocate
+  - /src/binary_replace.sh -i "{{ $selfBuiltBinaries }}" -o /relocate
   # additional relocate from runtime
   - |
     for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do

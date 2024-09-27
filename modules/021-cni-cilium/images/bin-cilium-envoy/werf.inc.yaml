@@ -16,16 +16,16 @@ artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: src-artifact
 shell:
   install:
-  - git clone {{ $.SOURCE_REPO }}/cilium/proxy.git /cilium/proxy
-  - cd /cilium/proxy
+  - git clone {{ $.SOURCE_REPO }}/cilium/proxy.git /src/proxy
+  - cd /src/proxy
   - git checkout {{ $ciliumProxyRev }}
 ---
 artifact: {{ $.ModuleName }}/cilium-envoy-artifact
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /cilium
-  to: /cilium
+  add: /src
+  to: /src
   before: install
 mount:
 - fromPath: ~/go-pkg-cache
@@ -42,6 +42,7 @@ shell:
   - update-alternatives --install /usr/bin/python python /usr/bin/python3 1
   - apt-get autoclean && apt-get clean
   install:
+  - mkdir -p /cilium && mv /src/proxy /cilium/
   - sed -i "s/# root ALL=(ALL:ALL) ALL/root ALL=(ALL:ALL) ALL/" /etc/sudoers
   - echo 'Defaults env_keep += "GOPROXY GOPATH GOROOT GOOS GOARCH GO_VERSION CGO_ENABLED"' >> /etc/sudoers
   - echo 'Defaults env_keep += "TARGETARCH ARCH BAZEL_VERSION USE_BAZEL_VERSION BAZEL_OUTPUT_BASE"' >> /etc/sudoers
