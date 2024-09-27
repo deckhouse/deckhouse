@@ -38,11 +38,11 @@ fromImage: common/distroless
 import:
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/dex-k8s-authenticator
-    to: /usr/local/bin/
+    to: /usr/local/bin
     before: setup
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
     add: /etc/nsswitch.conf
-    to: /etc/
+    to: /etc
     before: setup
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/html
