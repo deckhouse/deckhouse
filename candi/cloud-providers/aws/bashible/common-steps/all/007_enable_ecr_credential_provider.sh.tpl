@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if semverCompare ">1.26" .kubernetesVersion }}
+{{- if semverCompare ">=1.27" .kubernetesVersion }}
 # if config was changed we should restart kubelet
 bb-event-on 'bb-sync-file-changed' 'bb-flag-set kubelet-need-restart'
 
