@@ -79,7 +79,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// set template label and delete sync require annotation
+	// set template label, finalizer and delete sync require annotation
 	m.log.Info("preparing the project", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
 	if err := m.prepareProject(ctx, project); err != nil {
 		m.log.Error(err, "failed to prepare project")
@@ -148,20 +148,11 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 		return ctrl.Result{RequeueAfter: 1 * time.Minute}, nil
 	}
 
-	// update conditions
-	cond = m.makeCondition(v1alpha2.ConditionTypeProjectResourcesUpgraded, v1alpha2.ConditionTypeTrue, "")
-
 	// set deployed status
 	m.log.Info("setting deployed status for the project", "project", project.Name, "projectTemplate", projectTemplate.Name)
+	cond = m.makeCondition(v1alpha2.ConditionTypeProjectResourcesUpgraded, v1alpha2.ConditionTypeTrue, "")
 	if err = m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateDeployed, projectTemplate.Generation, cond); err != nil {
 		m.log.Error(err, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	// set finalizer
-	m.log.Info("setting finalizer for the project", "project", project.Name, "projectTemplate", projectTemplate.Name)
-	if err = m.setFinalizer(ctx, project); err != nil {
-		m.log.Error(err, "failed to set the project finalizer")
 		return ctrl.Result{Requeue: true}, nil
 	}
 
