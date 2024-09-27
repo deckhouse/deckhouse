@@ -16,11 +16,11 @@ shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
-  - cd controller
+  - cd /src/controller
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /controller
   - chown 64535:64535 /controller
   - chmod 0700 /controller
-  - cd ../speaker
+  - cd /src/speaker
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /speaker
   - chown 64535:64535 /speaker
   - chmod 0755 /speaker
