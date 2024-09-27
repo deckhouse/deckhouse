@@ -3,6 +3,7 @@
 {{- $protocVersion := "22.3" }}
 {{- $bazelVersions := "3.7.0 3.7.1 3.7.2 6.3.2" }}
 #
+{{- $github := "https://github.com" }}
 {{- if $.DistroPackagesProxy }}
   {{- $github := "http://dev-registry-cse.deckhouse.ru:8081/repository/github-com" }}
 {{- else }}
