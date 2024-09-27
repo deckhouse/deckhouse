@@ -4,45 +4,33 @@ approved: false
 kind: DeckhouseRelease
 metadata:
   creationTimestamp: null
-  name: v1.25.0
+  name: v1.26.2
   resourceVersion: "999"
 spec:
-  version: v1.25.0
+  version: v1.26.2
 status:
-  approved: false
+  approved: true
   message: ""
   phase: Deployed
-  transitionTime: null
+  transitionTime: "2021-12-08T08:34:01Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
+  annotations:
+    release.deckhouse.io/isUpdating: "false"
+    release.deckhouse.io/notified: "true"
   creationTimestamp: null
-  name: v1.25.1
+  name: v1.27.0
   resourceVersion: "1001"
 spec:
-  version: v1.25.1
+  version: v1.27.0
 status:
   approved: false
   message: Waiting for manual approval
   phase: Pending
   transitionTime: "2019-10-17T15:33:00Z"
----
-apiVersion: deckhouse.io/v1alpha1
-approved: false
-kind: DeckhouseRelease
-metadata:
-  creationTimestamp: null
-  name: v1.26.0
-  resourceVersion: "999"
-spec:
-  version: v1.26.0
-status:
-  approved: false
-  message: ""
-  phase: Pending
-  transitionTime: null
 ---
 apiVersion: v1
 kind: Pod
@@ -55,7 +43,7 @@ metadata:
   resourceVersion: "999"
 spec:
   containers:
-  - image: dev-registry.deckhouse.io/sys/deckhouse-oss:v1.2.3
+  - image: dev-registry.deckhouse.io/sys/deckhouse-oss:1.26.2
     name: deckhouse
     resources: {}
 status:
@@ -84,7 +72,7 @@ spec:
       creationTimestamp: null
     spec:
       containers:
-      - image: my.registry.com/deckhouse:v1.25.0
+      - image: my.registry.com/deckhouse:v1.26.2
         name: deckhouse
         resources: {}
 status: {}

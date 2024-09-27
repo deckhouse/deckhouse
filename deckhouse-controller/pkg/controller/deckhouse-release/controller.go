@@ -187,7 +187,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 }
 
 func (r *deckhouseReleaseReconciler) patchManualRelease(dr *v1alpha1.DeckhouseRelease) error {
-	if r.updateSettings.Get().Update.Mode != "Manual" {
+	if r.updateSettings.Get().Update.Mode != updater.ModeManual.String() {
 		return nil
 	}
 
