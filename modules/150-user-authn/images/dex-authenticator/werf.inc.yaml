@@ -50,11 +50,11 @@ fromImage: common/distroless
 import:
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/oauth2-proxy/oauth2-proxy
-    to: /usr/local/bin/
+    to: /usr/local/bin/oauth2-proxy
     before: setup
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/url-exec-prober/url-exec-prober
-    to: /usr/local/bin/
+    to: /usr/local/bin/url-exec-prober
     before: setup
 docker:
   ENTRYPOINT: [ "--upstream=http://0.0.0.0:8080/", "--http-address=0.0.0.0:4180" ]
