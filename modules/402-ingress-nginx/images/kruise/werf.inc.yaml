@@ -1,25 +1,33 @@
 {{- $version := "1.4.0" }}
-
 ---
-artifact: kruise
-from: {{ $.Images.BASE_GOLANG_20_BULLSEYE }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromArtifact: src-artifact
 git:
-  - add: /{{ $.ModulePath }}modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}
-    to: /
+  - add: /{{ $.ModulePath }}modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
     stageDependencies:
-      setup:
+      install:
         - '**/*'
-    includePaths:
-      - patches
+shell:
+  install:
+    - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/openkruise/kruise.git /src
+    - cd /src
+    - git apply /patches/*.patch --verbose
+---
+artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
   setup:
     - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-    - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/openkruise/kruise.git
-    - cd kruise
-    - find /patches -name '*.patch' -exec git apply {} \;
+    - cd /src
     - go mod tidy
     - go mod vendor
     - go build -a -mod=vendor -o /tmp/manager main.go
@@ -29,7 +37,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
- - artifact: kruise
+ - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
    add: /tmp/manager
    to: /manager
    before: setup
