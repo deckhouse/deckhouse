@@ -57,9 +57,10 @@ toc: false
         {%- for provider in site.data.getting_started.data.installTypes %}
         {%- if provider[1].type == 'cloud' %}{% continue %}{% endif %}
         {%- if provider[1].languages %}
-          {%- unless provider[1].languages contains 'ru' %} {%- continue %} {%- endunless %}
-        {%- endif %}
-        {%- if provider[1].wip == true %}
+  {%- if provider[1].languages contains 'ru' and page.lang != 'ru' %}
+    {% continue %}
+  {%- endif %}
+{%- endif %}
         <a
           class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
         {%- else %}
