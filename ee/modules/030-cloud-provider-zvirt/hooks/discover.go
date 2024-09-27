@@ -87,18 +87,12 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 			return nil
 		}
 
-		var defaultSCName string
-
 		storageClassesSnapshots := input.Snapshots["storage_classes"]
 
 		storageClasses := make([]storageClass, 0, len(storageClassesSnapshots))
 
 		for _, storageClassSnapshot := range storageClassesSnapshots {
 			sc := storageClassSnapshot.(*storage.StorageClass)
-
-			if sc.Annotations["storageclass.kubernetes.io/is-default-class"] == "true" {
-				defaultSCName = sc.Name
-			}
 
 			allowVolumeExpansion := true
 			if sc.AllowVolumeExpansion != nil {
@@ -112,7 +106,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 		}
 		input.LogEntry.Infof("Found zvirt storage classes using StorageClass snapshots: %v", storageClasses)
 
-		setStorageClassesValues(input, storageClasses, defaultSCName)
+		setStorageClassesValues(input, storageClasses)
 
 		return nil
 	}
