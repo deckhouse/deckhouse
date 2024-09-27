@@ -439,7 +439,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/150-user-authn/images/basic-auth-proxy/app"
+  directory: "/modules/150-user-authn/images/basic-auth-proxy/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -448,7 +448,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/150-user-authn/images/dex-authenticator/url-exec-prober"
+  directory: "/modules/150-user-authn/images/dex-authenticator/src/url-exec-prober"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
