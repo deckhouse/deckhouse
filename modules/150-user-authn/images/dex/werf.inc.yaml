@@ -38,14 +38,14 @@ shell:
     - cd src/
     - go mod tidy
     - go build -ldflags '-s -w' -ldflags "-linkmode external -extldflags -static" -tags netgo ./cmd/dex
-    - chown 64535:64535 dex/dex
-    - chmod 0700 dex/dex
+    - chown 64535:64535 dex
+    - chmod 0700 dex
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-    add: /src/dex/dex
+    add: /src/dex
     to: /usr/local/bin/
     before: setup
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
