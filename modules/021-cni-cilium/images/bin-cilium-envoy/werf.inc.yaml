@@ -18,7 +18,7 @@ shell:
   install:
   - mkdir -p /cilium/proxy
   - git clone {{ $.SOURCE_REPO }}/cilium/proxy.git /cilium/proxy
-  - cd /src/cilium/proxy
+  - cd /cilium/proxy
   - git checkout {{ $ciliumProxyRev }}
 ---
 artifact: {{ $.ModuleName }}/cilium-envoy-artifact
