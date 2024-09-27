@@ -43,7 +43,7 @@ shell:
   {{- include "ubuntu packages proxy" . | nindent 2 }}
   - apt-get update && apt-get install -y make libinih-dev libblkid-dev gettext liburcu-dev libtool
   install:
-    - cd /src/
+    - cd /src/xfsprogs-dev
     - libtoolize -c -i -f
     - cp -f include/install-sh .
     - aclocal -I m4 &&	autoconf
