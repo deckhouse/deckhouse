@@ -63,7 +63,7 @@ func init() {
 
 var embeddedMUP = &v1alpha1.ModuleUpdatePolicySpec{
 	Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
-		Mode: "Auto",
+		Mode: updater.ModeAuto.String(),
 	},
 	ReleaseChannel: "Stable",
 }
@@ -127,7 +127,7 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 	gotB := suite.fetchResults()
 
 	if golden {
-		err := os.WriteFile(goldenFile, gotB, 0666)
+		err := os.WriteFile(goldenFile, gotB, 0o666)
 		require.NoError(suite.T(), err)
 	} else {
 		got := singleDocToManifests(gotB)
@@ -140,6 +140,7 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 		}
 	}
 }
+
 func (suite *ControllerTestSuite) setupController(
 	filename string,
 	initValues string,
@@ -243,7 +244,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Manual approval mode is set", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = "Manual"
+		mup.Update.Mode = updater.ModeManual.String()
 
 		suite.setupController("manual-approval-mode-is-set.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.26.0")
@@ -253,7 +254,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("After setting manual approve", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = "Manual"
+		mup.Update.Mode = updater.ModeManual.String()
 
 		suite.setupController("after-setting-manual-approve.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.26.0")
@@ -263,7 +264,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Auto deploy Patch release in Manual mode", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = "Manual"
+		mup.Update.Mode = updater.ModeManual.String()
 
 		suite.setupController("auto-deploy-patch-release-in-manual-mode.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.25.1")
@@ -273,7 +274,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Manual approval mode with canary process", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = "Manual"
+		mup.Update.Mode = updater.ModeManual.String()
 		suite.setupController("manual-approval-mode-with-canary-process.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.36.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
@@ -282,7 +283,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("After setting manual approve with canary process", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = "Manual"
+		mup.Update.Mode = updater.ModeManual.String()
 
 		suite.setupController("after-setting-manual-approve-with-canary-process.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.36.0")
@@ -292,7 +293,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Manual mode", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = "Manual"
+		mup.Update.Mode = updater.ModeManual.String()
 
 		suite.setupController("manual-mode.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.27.0")
@@ -302,7 +303,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Second run of the hook in a Manual mode should not change state", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = "Manual"
+		mup.Update.Mode = updater.ModeManual.String()
 
 		suite.setupController("second-run-of-the-hook-in-a-manual-mode-should-not-change-state.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.27.0")
@@ -323,7 +324,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("First Release with manual mode", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = "Manual"
+		mup.Update.Mode = updater.ModeManual.String()
 
 		values, err := sjson.Delete(initValues, "global.clusterIsBootstrapped")
 		require.NoError(suite.T(), err)
@@ -343,7 +344,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Pending Manual release on cluster bootstrap", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = "Manual"
+		mup.Update.Mode = updater.ModeManual.String()
 
 		values, err := sjson.Delete(initValues, "global.clusterIsBootstrapped")
 		require.NoError(suite.T(), err)
@@ -427,7 +428,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		}
 		ds.Update.Mode = embeddedMUP.Update.Mode
 		ds.Update.Windows = embeddedMUP.Update.Windows
-		ds.Update.DisruptionApprovalMode = "Manual"
+		ds.Update.DisruptionApprovalMode = updater.ModeManual.String()
 
 		suite.setupControllerSettings("disruption-release.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.36.0")
@@ -441,7 +442,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		}
 		ds.Update.Mode = embeddedMUP.Update.Mode
 		ds.Update.Windows = embeddedMUP.Update.Windows
-		ds.Update.DisruptionApprovalMode = "Manual"
+		ds.Update.DisruptionApprovalMode = updater.ModeManual.String()
 
 		suite.setupControllerSettings("disruption-release-approved.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.36.0")
@@ -543,9 +544,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Notification: bearer token auth", func() {
-		var (
-			headerValue string
-		)
+		var headerValue string
 		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 			headerValue = r.Header.Get("Authorization")
 		}))
@@ -640,7 +639,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("ApplyNow: Manual approval mode is set", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = "Manual"
+		mup.Update.Mode = updater.ModeManual.String()
 
 		dependency.TestDC.HTTPClient.DoMock.
 			Expect(&http.Request{}).
@@ -657,6 +656,125 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	suite.Run("Applied now postponed release", func() {
 		suite.setupController("applied-now-postponed-release.yaml", initValues, embeddedMUP)
 		dr := suite.getDeckhouseRelease("v1.25.1")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Test auto-mode for postponed release", func() {
+		suite.setupController("auto-mode.yaml", initValues, embeddedMUP)
+		dr := suite.getDeckhouseRelease("v1.27.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Test autoPatch-mode for postponed patch release", func() {
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Mode = updater.ModeAutoPatch.String()
+
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+		suite.setupController("auto-patch-mode.yaml", initValues, mup)
+		dr := suite.getDeckhouseRelease("v1.26.3")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Test autoPatch-mode for postponed minor release", func() {
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Mode = updater.ModeAutoPatch.String()
+
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+		suite.setupController("auto-patch-mode-minor-release.yaml", initValues, mup)
+		dr := suite.getDeckhouseRelease("v1.27.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Test autoPatch-mode for approved minor release", func() {
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Mode = updater.ModeAutoPatch.String()
+
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+		suite.setupController("auto-patch-mode-minor-release-approved.yaml", initValues, mup)
+		dr := suite.getDeckhouseRelease("v1.27.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Test unknown-mode for postponed patch release", func() {
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Mode = "unknown"
+
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+		suite.setupController("unknown-mode.yaml", initValues, mup)
+		dr := suite.getDeckhouseRelease("v1.26.3")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Test unknown-mode for postponed minor release", func() {
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Mode = "unknown"
+
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+		suite.setupController("unknown-mode-minor-release.yaml", initValues, mup)
+		dr := suite.getDeckhouseRelease("v1.27.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Test manual-mode for approved minor release", func() {
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Mode = updater.ModeManual.String()
+
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+		suite.setupController("manual-mode-with-approved.yaml", initValues, mup)
+		dr := suite.getDeckhouseRelease("v1.27.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("ApplyNow: AutoPatch mode is set", func() {
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Mode = updater.ModeAutoPatch.String()
+
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+		suite.setupController("apply-now-autopatch-mode-is-set.yaml", initValues, mup)
+		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})

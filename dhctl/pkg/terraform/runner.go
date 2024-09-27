@@ -323,7 +323,7 @@ func (r *Runner) getHook() InfraActionHook {
 func (r *Runner) runBeforeActionAndWaitReady() error {
 	hook := r.getHook()
 
-	runPostAction, err := hook.BeforeAction()
+	runPostAction, err := hook.BeforeAction(r)
 	if err != nil {
 		return err
 	}
@@ -333,7 +333,7 @@ func (r *Runner) runBeforeActionAndWaitReady() error {
 		resErr = multierror.Append(resErr, err)
 
 		if runPostAction {
-			err := hook.AfterAction()
+			err := hook.AfterAction(r)
 			if err != nil {
 				resErr = multierror.Append(resErr, err)
 			}
@@ -417,7 +417,7 @@ func (r *Runner) Apply() error {
 
 		// yes, do not check err from exec terraform
 		// always run post action if need
-		err = r.getHook().AfterAction()
+		err = r.getHook().AfterAction(r)
 		errRes = multierror.Append(errRes, err)
 
 		return errRes.ErrorOrNil()
@@ -547,7 +547,7 @@ func (r *Runner) Destroy() error {
 
 		// yes, do not check err from exec terraform
 		// always run post action if need
-		err = r.getHook().AfterAction()
+		err = r.getHook().AfterAction(r)
 		errRes = multierror.Append(errRes, err)
 
 		return errRes.ErrorOrNil()

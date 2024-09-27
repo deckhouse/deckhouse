@@ -16,6 +16,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
@@ -59,7 +60,7 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		kubeCl, err := operations.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(sshClient))
+		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(sshClient))
 		if err != nil {
 			return err
 		}

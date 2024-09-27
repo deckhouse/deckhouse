@@ -22,8 +22,8 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{Order: 10},
-	Queue:     "/modules/cni-cilium",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Queue:        "/modules/cni-cilium",
 }, setCiliumMode)
 
 func setCiliumMode(input *go_hook.HookInput) error {
