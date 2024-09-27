@@ -160,6 +160,7 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 			install.Namespace = projectName
 			install.Timeout = c.opts.Timeout
 			install.UseReleaseName = true
+			install.CreateNamespace = true
 			install.Labels = map[string]string{
 				consts.ReleaseHashLabel: hash,
 			}
