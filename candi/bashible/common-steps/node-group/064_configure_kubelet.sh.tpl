@@ -300,9 +300,6 @@ RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 featureGates:
-{{- if semverCompare "=1.27" .kubernetesVersion }}
-  ExpandCSIVolumes: true
-{{- end }}
 {{- if semverCompare ">=1.27" .kubernetesVersion }}
   ValidatingAdmissionPolicy: true
 {{- end }}
