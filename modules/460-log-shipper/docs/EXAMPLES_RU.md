@@ -326,6 +326,41 @@ spec:
     syslog.message_id: "{{ request_id }}"
 ```
 
+## Логи в CEF формате
+
+Существует способ формировать логи в формате CEF, используя `codec: CEF`, с переопределением `cef.name` и `cef.severity` по значениям из поля `message` (лога приложения) в формате JSON.
+
+В примере ниже `app` и `log_level` это ключи содержащие значения для переопределения:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: siem-kafka
+spec:
+  extraLabels:
+    cef.name: '{{ app }}'
+    cef.severity: '{{ log_level }}'
+  type: Kafka
+  kafka:
+    bootstrapServers:
+      - my-cluster-kafka-brokers.kafka:9092
+    encoding:
+      codec: CEF
+    tls:
+      verifyCertificate: false
+      verifyHostname: true
+    topic: logs
+```
+
+Так же можно вручную задать свои значения:
+
+```yaml
+extraLabels:
+  cef.name: 'TestName'
+  cef.severity: '1'
+```
+
 ## Сбор событий Kubernetes
 
 События Kubernetes могут быть собраны log-shipper'ом, если `events-exporter` включен в настройках модуля [extended-monitoring](../340-extended-monitoring/).
