@@ -17,13 +17,18 @@ docker:
   ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}/static
-from: {{ .Images.BASE_JEKYLL }}
+from: {{ .Images.BASE_ALT_P11 }}
 ansible:
   install:
-    - shell: |
-        apk add rsync jq
-        gem update --system 3.2.3
-        gem install bundler -v 2.4.3
+    - name: "Add proxy for packages"
+      shell: |
+{{- if $.DistroPackagesProxy }}
+        sed -i "s|ftp.altlinux.org/pub/distributions/ALTLinux|{{ $.DistroPackagesProxy }}/repository/ALT-Linux-APT-Repository|g" /etc/apt/sources.list.d/alt.list
+{{- end }}
+        apt-get update
+
+    - name: "Add system packages"
+      shell: apt-get install -y rsync jq jekyll
     - name: "Install Dependencies"
       shell: bundle install
       args:
