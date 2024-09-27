@@ -1,8 +1,8 @@
 # #####################################################################
 # Final image of cilium-agent (used in helm-templates)
-# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
-# and https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/install-runtime-deps.sh
-# and https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile (release stage)
+# Based on https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/install-runtime-deps.sh
+# and https://github.com/cilium/cilium/blob/v1.14.14/images/cilium/Dockerfile (release stage)
 ---
 # #####################################################################
 # List of binary files used by agent
@@ -29,6 +29,8 @@
 {{ $binariesFromALT := cat $binariesFromALT "/usr/bin/groups" }}
 # for prepull
 {{ $binariesFromALT := cat $binariesFromALT "/bin/true" }}
+# for cilium-cli sysdump
+{{ $binariesFromALT := cat $binariesFromALT "/bin/tar /usr/bin/timeout /usr/bin/stat /bin/tail" }}
 # for debug
 {{ $binariesFromALT := cat $binariesFromALT "/bin/sleep /bin/ls /usr/bin/curl /usr/bin/ldd /usr/bin/strace /usr/bin/env" }}
 #####################################################################
@@ -63,17 +65,27 @@
 # #####################################################################
 # Binaries artifact for distroless agent (based on Ubuntu)
 ---
-artifact: {{ $.ModuleName }}/agent-binaries-artifact
-from: {{ $.Images.BASE_ALT_DEV_CILIUM }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
-  to: /
+  to: /src
   includePaths:
   - binary_replace.sh
   stageDependencies:
     install:
     - binary_replace.sh
+shell:
+  install:
+  - cd /src
+---
+artifact: {{ $.ModuleName }}/agent-binaries-artifact
+fromImage: {{ $.ModuleName }}/base-cilium-dev
 import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 - artifact: {{ $.ModuleName }}/llvm-artifact
   add: /usr/local/bin/
   to: /usr/local/bin
@@ -120,6 +132,7 @@ import:
   before: install
   includePaths:
   - bin/cilium-envoy
+  - bin/cilium-envoy-starter
   - lib/libcilium.so
 - artifact: {{ $.ModuleName }}/hubble-artifact
   add: /hubble
@@ -143,19 +156,19 @@ import:
   before: setup
 shell:
   install:
-  - yes | cp -r --remove-destination -f iptables/* /
+  - rsync -a --keep-dirlinks iptables/* /
   - rm -rf /iptables
   - chown root:root /usr/sbin/iptables-wrapper
   - chmod 755 /usr/sbin/iptables-wrapper
   beforeSetup:
   # common relocate
-  - chmod +x /binary_replace.sh
+  - chmod +x /src/binary_replace.sh
   - mkdir -p /relocate
   # copy base binaries and deps from ALT
   - ln -snf /usr/share/zoneinfo/Etc/UTC /etc/localtime
-  - /binary_replace.sh -i "{{ $binariesFromALT }}" -o /relocate
+  - /src/binary_replace.sh -i "{{ $binariesFromALT }}" -o /relocate
   # copy self built binaries and deps
-  - /binary_replace.sh -i "{{ $selfBuiltBinaries }}" -o /relocate
+  - /src/binary_replace.sh -i "{{ $selfBuiltBinaries }}" -o /relocate
   # additional relocate from runtime
   - |
     for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
@@ -172,22 +185,22 @@ shell:
   setup:
   # prepare final fs
   - mkdir -p /relocate/usr/sbin
-  - cp -a /relocate/sbin/* /relocate/usr/sbin/ && rm -rf /relocate/sbin
+  - if [ -d "/relocate/sbin" ]; then cp -a /relocate/sbin/* /relocate/usr/sbin/ && rm -rf /relocate/sbin; fi
   - ln -f -s usr/sbin "/relocate/sbin"
   - mkdir -p /relocate/usr/bin
-  - cp -a /relocate/bin/* /relocate/usr/bin/ && rm -rf /relocate/bin
+  - if [ -d "/relocate/bin" ]; then cp -a /relocate/bin/* /relocate/usr/bin/ && rm -rf /relocate/bin; fi
   - ln -f -s usr/bin "/relocate/bin"
   - mkdir -p /relocate/usr/lib
-  - cp -a /relocate/lib/* /relocate/usr/lib/ && rm -rf /relocate/lib
+  - if [ -d "/relocate/lib" ]; then cp -a /relocate/lib/* /relocate/usr/lib/ && rm -rf /relocate/lib; fi
   - ln -f -s usr/lib "/relocate/lib"
   - mkdir -p /relocate/usr/lib32
-  - cp -a /relocate/lib32/* /relocate/usr/lib32/ && rm -rf /relocate/lib32
+  - if [ -d "/relocate/lib32" ]; then cp -a /relocate/lib32/* /relocate/usr/lib32/ && rm -rf /relocate/lib32; fi
   - ln -f -s usr/lib32 "/relocate/lib32"
   - mkdir -p /relocate/usr/lib64
-  - cp -a /relocate/lib64/* /relocate/usr/lib64/ && rm -rf /relocate/lib64
+  - if [ -d "/relocate/lib64" ]; then cp -a /relocate/lib64/* /relocate/usr/lib64/ && rm -rf /relocate/lib64; fi
   - ln -f -s usr/lib64 "/relocate/lib64"
   - mkdir -p /relocate/usr/libx32
-  - cp -a /relocate/libx32/* /relocate/usr/libx32/ && rm -rf /relocate/libx32
+  - if [ -d "/relocate/libx32" ]; then cp -a /relocate/libx32/* /relocate/usr/libx32/ && rm -rf /relocate/libx32; fi
   - ln -f -s usr/libx32 "/relocate/libx32"
   - mkdir -p /relocate/var /relocate/run /relocate/run/lock
   - ln -f -s /run "/relocate/var/run"
@@ -202,6 +215,7 @@ shell:
 # New Main Agent Image (Distroless)
 ---
 image: {{ $.ModuleName }}/agent-distroless
+fromCacheVersion: 10
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/agent-binaries-artifact

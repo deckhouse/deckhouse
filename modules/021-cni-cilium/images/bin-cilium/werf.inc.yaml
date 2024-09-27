@@ -1,18 +1,30 @@
-{{- $ciliumVersion := "1.14.5" }}
+{{- $ciliumVersion := "1.14.14" }}
 ---
 # #####################################################################
 # Build cilium-agent binaries
-# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile (builder stage)
+# Based on https://github.com/cilium/cilium/blob/v1.14.14/images/cilium/Dockerfile (builder stage)
 ---
-artifact: {{ $.ModuleName }}/cilium-artifact
-from: {{ $.Images.BASE_ALT_DEV_CILIUM }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: src-artifact
 git:
-- add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
       - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /src/cilium
+  - cd /src/cilium
+  - find /patches -name '*.patch' | xargs git apply --verbose
+---
+artifact: {{ $.ModuleName }}/cilium-artifact
+fromImage: {{ $.ModuleName }}/base-cilium-dev
 import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 - artifact: {{ $.ModuleName }}/llvm-artifact
   add: /usr/local/bin/
   to: /usr/local/bin
@@ -37,13 +49,9 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - mkdir -p /go/src/github.com/cilium/cilium
-  - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
   install:
-  - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
-  - cd /go/src/github.com/cilium/cilium/images/runtime
-  - mkdir -p orig && cp -a iptables-wrapper-installer.sh orig/
+  - chmod +x /src/cilium/images/runtime/*.sh
+  - cd /src/cilium/images/runtime
   - ./iptables-wrapper-installer.sh --no-sanity-check
   setup:
   - export GOROOT=/usr/local/go GOPATH=/go
@@ -53,8 +61,8 @@ shell:
   - export PATH=${GOROOT}/bin:${GOPATH}/bin:/root/bin:/sbin:/usr/sbin:/usr/local/sbin:/bin:/usr/bin:/usr/local/bin
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - cd /go/src/github.com/cilium/cilium
-  - find /patches -name '*.patch' | xargs git apply --verbose
+  - cd /src/cilium
+  - go mod tidy && go mod vendor && go mod verify
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-bash-completion licenses-all
   - mv LICENSE.all /tmp/install/LICENSE.all
