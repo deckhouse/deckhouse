@@ -26,37 +26,21 @@ import (
 var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: storage_classes ::", func() {
 	const (
 		initValuesString = `
+global:
+  discovery: {}
 cloudProviderYandex:
   internal: {}
-  storageClass:
-    exclude:
-    - .*-hdd
-    - bar
-    default: baz
 `
 
-		initValuesStringA = `
+		initValuesStringExcludeHdd = `
 global:
-  defaultClusterStorageClass: default-cluster-sc
+  discovery: {}
 cloudProviderYandex:
   internal: {}
   storageClass:
     exclude:
     - .*-hdd
     - bar
-    default: baz
-`
-
-		initValuesStringB = `
-global:
-  defaultClusterStorageClass: ""
-cloudProviderYandex:
-  internal: {}
-  storageClass:
-    exclude:
-    - .*-hdd
-    - bar
-    default: baz
 `
 	)
 
@@ -68,25 +52,66 @@ cloudProviderYandex:
 			f.RunHook()
 		})
 
-		It("Should discover storageClasses with DEPRECATED default NOT set", func() {
+		It("Should discover storageClasses with default storageClass set to network-hdd", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cloudProviderYandex.internal.storageClasses").String()).To(MatchJSON(`
 [
   {
+	"name": "network-hdd",
+	"type": "network-hdd",
+  "default": true
+  },
+  {
 	"name": "network-ssd",
-	"type": "network-ssd"
+	"type": "network-ssd",
+  "default": false
   },
   {
 	"name": "network-ssd-nonreplicated",
-	"type": "network-ssd-nonreplicated"
+	"type": "network-ssd-nonreplicated",
+  "default": false
   },
   {
 	"name": "network-ssd-io-m3",
-	"type": "network-ssd-io-m3"
+	"type": "network-ssd-io-m3",
+  "default": false
   }
 ]
 `))
-			Expect(f.ValuesGet("cloudProviderYandex.internal.defaultStorageClass").Exists()).To(BeFalse())
+			Expect(f.ValuesGet("global.discovery.defaultStorageClass").String()).To(Equal("network-hdd"))
+		})
+	})
+
+	b := HookExecutionConfigInit(initValuesStringExcludeHdd, `{}`)
+
+	Context("Empty cluster", func() {
+		BeforeEach(func() {
+			b.BindingContexts.Set(b.GenerateBeforeHelmContext())
+			b.RunHook()
+		})
+
+		It("Should discover storageClasses with default NOT set", func() {
+			Expect(b).To(ExecuteSuccessfully())
+			Expect(b.ValuesGet("cloudProviderYandex.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+	"name": "network-ssd",
+	"type": "network-ssd",
+  "default": false
+  },
+  {
+	"name": "network-ssd-nonreplicated",
+	"type": "network-ssd-nonreplicated",
+  "default": false
+  },
+  {
+	"name": "network-ssd-io-m3",
+	"type": "network-ssd-io-m3",
+  "default": false
+  }
+]
+`))
+			Expect(b.ValuesGet("global.discovery.defaultStorageClass").Exists()).To(BeFalse())
 		})
 	})
 })
