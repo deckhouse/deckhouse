@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if semverCompare ">1.26" .kubernetesVersion }}
+{{- if semverCompare ">=1.27" .kubernetesVersion }}
 bb-rp-install "ecr-credential-provider:{{ index .images.registrypackages (printf "ecrCredentialProvider%s" (.kubernetesVersion | replace "." "")) | toString }}"
 {{- end }}
