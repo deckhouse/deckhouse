@@ -34,6 +34,10 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
+    - name: "Add jekyll user"
+      shell: |
+        groupadd jekyll
+        useradd -g jekyll jekyll
   setup:
     - name: "Create modules.yml"
       shell: |
