@@ -1,17 +1,31 @@
 ---
-artifact: {{ .ModuleName }}/build-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE_DEV }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromArtifact: src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch v0.8.0 {{ $.SOURCE_REPO }}/nginxinc/nginx-prometheus-exporter.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+---
+artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   install:
-  - mkdir /src
   - cd /src
-  - git clone --depth 1 --branch v0.8.0 {{ $.SOURCE_REPO }}/nginxinc/nginx-prometheus-exporter.git .
-  - go mod edit -go 1.20
-  - go get github.com/prometheus/client_golang@v1.17.0
-  - go mod tidy
   - go mod vendor
   - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags '-s -w -X main.version=0.8.0 -X main.gitCommit=f0173677183c840e90a56e48082e36ac687e1a30' -o exporter .
   - chown -R 64535:64535 exporter
@@ -19,8 +33,9 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+fromCacheVersion: 20240926
 import:
-- artifact: {{ .ModuleName }}/build-artifact
+- artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
   add: /src/exporter
   to: /exporter
   before: setup
