@@ -579,8 +579,8 @@ installTypes:
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   red:
-    iconPath: images/icons/platforms/red.png
     languages: ["ru"]
+    iconPath: images/icons/platforms/red.png
     pages_title:
       en: "Deckhouse Kubernetes Platform for RED virtualization"
       ru: "Deckhouse Kubernetes Platform на РЕД виртуализации"
@@ -618,8 +618,8 @@ installTypes:
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md   
   spacevm:
-    iconPath: images/icons/platforms/spacevm.png
     languages: ["ru"]
+    iconPath: images/icons/platforms/spacevm.png
     pages_title:
       en: "Deckhouse Kubernetes Platform for SpaceVM"
       ru: "Deckhouse Kubernetes Platform на SpaceVM"
