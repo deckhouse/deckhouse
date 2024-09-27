@@ -465,6 +465,148 @@ jobs:
           docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
 
 
+      - name: Set release date label for release (CE)
+        if: ${{ needs.detect_editions.outputs.DEPLOY_CE == 'true' }}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          WERF_ENV: CE
+        run: |
+          PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
+          fi
+
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
+          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+
+          echo "⚓️ 📤 [$(date -u)] Add release date label to images."
+          echo "FROM ${SOURCE_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_IMAGE}" -
+          echo "FROM ${SOURCE_INSTALL_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_INSTALL_IMAGE}" -
+          echo "FROM ${SOURCE_RELEASE_VERSION_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_RELEASE_VERSION_IMAGE}" -
+
+          echo "⚓️ 📤 [$(date -u)] Push images with release date label."
+          docker image push ${SOURCE_IMAGE}
+          docker image push ${SOURCE_INSTALL_IMAGE}
+          docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
+      - name: Set release date label for release (EE)
+        if: ${{ needs.detect_editions.outputs.DEPLOY_EE == 'true' }}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          WERF_ENV: EE
+        run: |
+          PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
+          fi
+
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
+          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+
+          echo "⚓️ 📤 [$(date -u)] Add release date label to images."
+          echo "FROM ${SOURCE_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_IMAGE}" -
+          echo "FROM ${SOURCE_INSTALL_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_INSTALL_IMAGE}" -
+          echo "FROM ${SOURCE_RELEASE_VERSION_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_RELEASE_VERSION_IMAGE}" -
+
+          echo "⚓️ 📤 [$(date -u)] Push images with release date label."
+          docker image push ${SOURCE_IMAGE}
+          docker image push ${SOURCE_INSTALL_IMAGE}
+          docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
+      - name: Set release date label for release (FE)
+        if: ${{ needs.detect_editions.outputs.DEPLOY_FE == 'true' }}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          WERF_ENV: FE
+        run: |
+          PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
+          fi
+
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
+          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+
+          echo "⚓️ 📤 [$(date -u)] Add release date label to images."
+          echo "FROM ${SOURCE_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_IMAGE}" -
+          echo "FROM ${SOURCE_INSTALL_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_INSTALL_IMAGE}" -
+          echo "FROM ${SOURCE_RELEASE_VERSION_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_RELEASE_VERSION_IMAGE}" -
+
+          echo "⚓️ 📤 [$(date -u)] Push images with release date label."
+          docker image push ${SOURCE_IMAGE}
+          docker image push ${SOURCE_INSTALL_IMAGE}
+          docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
+      - name: Set release date label for release (BE)
+        if: ${{ needs.detect_editions.outputs.DEPLOY_BE == 'true' }}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          WERF_ENV: BE
+        run: |
+          PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
+          fi
+
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
+          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+
+          echo "⚓️ 📤 [$(date -u)] Add release date label to images."
+          echo "FROM ${SOURCE_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_IMAGE}" -
+          echo "FROM ${SOURCE_INSTALL_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_INSTALL_IMAGE}" -
+          echo "FROM ${SOURCE_RELEASE_VERSION_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_RELEASE_VERSION_IMAGE}" -
+
+          echo "⚓️ 📤 [$(date -u)] Push images with release date label."
+          docker image push ${SOURCE_IMAGE}
+          docker image push ${SOURCE_INSTALL_IMAGE}
+          docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
+      - name: Set release date label for release (SE)
+        if: ${{ needs.detect_editions.outputs.DEPLOY_SE == 'true' }}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          WERF_ENV: SE
+        run: |
+          PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
+          fi
+
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
+          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+
+          echo "⚓️ 📤 [$(date -u)] Add release date label to images."
+          echo "FROM ${SOURCE_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_IMAGE}" -
+          echo "FROM ${SOURCE_INSTALL_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_INSTALL_IMAGE}" -
+          echo "FROM ${SOURCE_RELEASE_VERSION_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_RELEASE_VERSION_IMAGE}" -
+
+          echo "⚓️ 📤 [$(date -u)] Push images with release date label."
+          docker image push ${SOURCE_IMAGE}
+          docker image push ${SOURCE_INSTALL_IMAGE}
+          docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
+
+
 
       - name: Publish release images for CE
         if: ${{ needs.detect_editions.outputs.DEPLOY_CE == 'true' }}

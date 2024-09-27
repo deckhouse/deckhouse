@@ -199,6 +199,37 @@ Jobs for visual control allowed editions when approving deploy to environments.
           docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
       {!{- end }!}
 
+      {!{ range $werfEnv := slice "CE" "EE" "FE" "BE" "SE" }!}
+      - name: Set release date label for release ({!{ $werfEnv }!})
+        if: ${{ needs.detect_editions.outputs.DEPLOY_{!{ $werfEnv }!} == 'true' }}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          WERF_ENV: {!{ $werfEnv }!}
+        run: |
+          PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
+          fi
+
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
+          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+
+          echo "⚓️ 📤 [$(date -u)] Add release date label to images."
+          echo "FROM ${SOURCE_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_IMAGE}" -
+          echo "FROM ${SOURCE_INSTALL_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_INSTALL_IMAGE}" -
+          echo "FROM ${SOURCE_RELEASE_VERSION_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_RELEASE_VERSION_IMAGE}" -
+
+          echo "⚓️ 📤 [$(date -u)] Push images with release date label."
+          docker image push ${SOURCE_IMAGE}
+          docker image push ${SOURCE_INSTALL_IMAGE}
+          docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
+      {!{- end }!}
+
 {!{/*
 Add 'publish' step for each edition to repuplish semver tag images to channel tag:
   - Pull deckhouse images from dev registry.
