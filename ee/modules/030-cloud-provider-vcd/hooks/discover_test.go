@@ -286,6 +286,7 @@ data:
           }
 ]
 `))
+      // TODO: а не должен ли при первом разворачивании кластера назначаться default StorageClass? Или перекрываться global.discovery.defaultStorageClass
 			Expect(d.ValuesGet("cloudProviderVcd.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
 	})
