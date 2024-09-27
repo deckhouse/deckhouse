@@ -31,13 +31,16 @@
 # Corresponding commit is 3e6b0f588d788ac0e69f4d126cfb3c55b1513948 (https://github.com/cilium/image-tools/tree/3e6b0f588d788ac0e69f4d126cfb3c55b1513948)
 # #####################################################################
 ---
+artifact: {{ $.ModuleName }}/golang-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+---
 image: {{ $.ModuleName }}/base-cilium-dev
 from: {{ $.Images.BASE_ALT_P11 }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 import:
-- image: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+- artifact: {{ $.ModuleName }}/golang-artifact
   add: /usr/local/go
   to: /usr/local/go
   before: install
