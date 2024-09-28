@@ -50,7 +50,7 @@ fromImage: common/distroless
 import:
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/oauth2-proxy/oauth2-proxy
-    to: /bin/oauth2-proxy
+    to: /bin/oauth2_proxy
     before: setup
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/url-exec-prober/url-exec-prober
