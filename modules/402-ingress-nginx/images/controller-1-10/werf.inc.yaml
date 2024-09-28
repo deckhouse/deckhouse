@@ -177,6 +177,7 @@ shell:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel iptables iptables-nft nfs-utils conntrack-tools glibc-gconv-modules
   setup:
+  - set -x
   - cp -R /src/rootfs/etc/* /chroot/etc
   - rm -rf /src/rootfs/etc
   - cp -R /usr/lib64 /chroot/usr/lib64
@@ -284,7 +285,7 @@ shell:
   - export PATH="$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin"
   - export LUA_PATH="/usr/local/share/luajit-2.1/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
   - export LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
-  - cp -R /src/rootfs/etc/* //chroot/etc
+  - cp -R /src/rootfs/etc/* /chroot/etc
   - rm -rf /src/rootfs/etc/
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
