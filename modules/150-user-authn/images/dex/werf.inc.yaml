@@ -46,7 +46,7 @@ fromImage: common/distroless
 import:
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/dex/dex
-    to: /usr/local/bin
+    to: /usr/local/bin/dex
     before: setup
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src/web/
