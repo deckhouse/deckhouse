@@ -4,10 +4,10 @@ fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /node-collector
-  to: /node-collector
+  to: /usr/local/bin/node-collector
   before: install
 docker:
-  ENTRYPOINT: ["/node-collector"]
+  ENTRYPOINT: ["/usr/local/bin/node-collector"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromArtifact: src-artifact
