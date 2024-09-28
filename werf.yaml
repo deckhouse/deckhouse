@@ -132,6 +132,19 @@ shell:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y glibc-utils
 ---
+artifact: relocate-artifact-p10
+from: {{ $.Images.BASE_ALT }}
+git:
+  - add: /tools/binary_replace/binary_replace.sh
+    to: /binary_replace.sh
+    stageDependencies:
+      install:
+        - '**/*'
+shell:
+  install:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y glibc-utils
+---
 artifact: jq-src-artifact
 fromArtifact: src-artifact
 git:
