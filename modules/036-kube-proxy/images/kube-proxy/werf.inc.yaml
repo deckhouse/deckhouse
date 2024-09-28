@@ -6,7 +6,7 @@ fromArtifact: relocate-artifact
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y iptables iptables-nft conntrack
+  - apt-get install -y iptables iptables-nft conntrack-tools
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
   - |
