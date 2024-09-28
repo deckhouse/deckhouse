@@ -45,5 +45,5 @@ import:
     to: /iptables-wrapper
     before: setup
 docker:
-  ENTRYPOINT: ["/usr/bin/kube-proxy"]
+  ENTRYPOINT: ["/usr/local/bin/kube-proxy"]
 {{- end }}
