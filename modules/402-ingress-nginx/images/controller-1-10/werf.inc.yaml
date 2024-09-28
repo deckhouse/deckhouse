@@ -179,9 +179,7 @@ shell:
   setup:
   - mkdir -p /chroot/etc
   - cp -R /src/rootfs/etc/* /chroot/etc
-  - ls -lhR /src/rootfs/etc/
   - rm -rf /src/rootfs/etc
-  - ls -lhR /chroot/etc/nginx
   - cp -R /usr/lib64 /chroot/usr/lib64
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
