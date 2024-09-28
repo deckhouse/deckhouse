@@ -13,7 +13,7 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromArtifact: src-artifact
 shell:
   install:
-  - git clone --depth 1 --branch v0.3.1 {{ $.SOURCE_REPO }}/aquasecurity/k8s-node-collector.git /src
+  - git clone --depth 1 --branch v0.0.6 {{ $.SOURCE_REPO }}/aquasecurity/k8s-node-collector.git /src
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
