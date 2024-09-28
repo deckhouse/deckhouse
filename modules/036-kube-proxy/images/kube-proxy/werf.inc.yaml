@@ -1,4 +1,4 @@
-{{- $binaries := "/sbin/xtables-nft-multi /sbin/ip6tables-nft /sbin/ip6tables-nft-restore /sbin/ip6tables-nft-save /sbin/iptables-nft /sbin/iptables-nft-restore /sbin/iptables-nft-save /sbin/xtables-legacy-multi /sbin/iptables /sbin/iptables-restore /sbin/iptables-save /sbin/iptables-legacy /sbin/iptables-legacy-restore /sbin/iptables-legacy-save /sbin/ip6tables /sbin/ip6tables-restore /sbin/ip6tables-save /sbin/ip6tables-legacy /sbin/ip6tables-legacy-restore /sbin/ip6tables-legacy-save /usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so*" }}
+{{- $binaries := "/usr/sbin/xtables-nft-multi /usr/sbin/ip6tables-nft /usr/sbin/ip6tables-nft-restore /usr/sbin/ip6tables-nft-save /usr/sbin/iptables-nft /usr/sbin/iptables-nft-restore /usr/sbin/iptables-nft-save /usr/sbin/xtables-legacy-multi /usr/sbin/iptables /usr/sbin/iptables-restore /usr/sbin/iptables-save /usr/sbin/iptables-legacy /usr/sbin/iptables-legacy-restore /usr/sbin/iptables-legacy-save /usr/sbin/ip6tables /usr/sbin/ip6tables-restore /usr/sbin/ip6tables-save /usr/sbin/ip6tables-legacy /usr/sbin/ip6tables-legacy-restore /usr/sbin/ip6tables-legacy-save /usr/usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so*" }}
 
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
@@ -11,7 +11,7 @@ shell:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
   - |
     for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore ip6tables-nft ip6tables-nft-restore ip6tables-nft-save iptables-nft iptables-nft-restore iptables-nft-save; do
-      ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
+      ln -f -s /iptables-wrapper "/relocate/usr/sbin/${cmd}"
     done
     # broken symlinks are not imported from the artifact
     touch /iptables-wrapper
