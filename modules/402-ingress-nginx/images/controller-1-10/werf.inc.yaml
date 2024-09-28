@@ -178,6 +178,7 @@ shell:
   - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel iptables iptables-nft nfs-utils conntrack-tools glibc-gconv-modules
   setup:
   - set -x
+  - ls -lhR /src/rootfs/etc
   - cp -R /src/rootfs/etc/* /chroot/etc
   - rm -rf /src/rootfs/etc
   - cp -R /usr/lib64 /chroot/usr/lib64
