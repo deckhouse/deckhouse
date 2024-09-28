@@ -118,7 +118,7 @@ import:
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/rootfs/etc
-  to: /etc
+  to: /src/etc
   before: install
 shell:
   install:
@@ -129,6 +129,8 @@ shell:
   - apt-get install -y liblua5.1-devel --download-only
   setup:
   - export SOURCE_REPO={{ $.SOURCE_REPO }}
+  - cp -R /src/etc/* /etc/
+  - rm -rf /src/etc
   - /build.sh
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
