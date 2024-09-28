@@ -178,9 +178,9 @@ shell:
   - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel iptables iptables-nft nfs-utils conntrack-tools glibc-gconv-modules
   setup:
   - set -x
-  - ls -lhR /src/rootfs/etc
   - cp -R /src/rootfs/etc/* /chroot/etc
   - rm -rf /src/rootfs/etc
+  - ls -lhR /chroot/etc/nginx
   - cp -R /usr/lib64 /chroot/usr/lib64
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
