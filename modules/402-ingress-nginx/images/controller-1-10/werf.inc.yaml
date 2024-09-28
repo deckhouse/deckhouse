@@ -277,6 +277,12 @@ import:
   before: setup
 shell:
   setup:
+  - mkdir -p /chroot/lib /chroot/lib64 /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run /chroot/usr/lib64 /chroot/usr/local/modsecurity /chroot/usr/local/share
+  - export PATH="$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin"
+  - export LUA_PATH="/usr/local/share/luajit-2.1/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
+  - export LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
+  - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
+  - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
   - |
     bash -eu -c '
     writeDirs=(
@@ -306,12 +312,6 @@ shell:
       mkdir -p ${dir};
       chown -R www-data:www-data ${dir};
     done'
-  - mkdir -p /chroot/lib /chroot/lib64 /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run /chroot/usr/lib64 /chroot/usr/local/modsecurity /chroot/usr/local/share
-  - export PATH="$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin"
-  - export LUA_PATH="/usr/local/share/luajit-2.1/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
-  - export LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
-  - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
-  - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
   - chown www-data:www-data /usr/bin/nginx
   - chown www-data:www-data /usr/bin/curl
   - chown www-data:www-data /chroot/etc
