@@ -168,13 +168,15 @@ import:
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
   add: /src/rootfs/etc
-  to: /chroot/etc/
+  to: /src/rootfs/etc
   before: install
 shell:
   install:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel iptables iptables-nft nfs-utils conntrack-tools glibc-gconv-modules
   setup:
+  - cp -R /src/rootfs/etc/* /chroot/etc
+  - rm -rf /src/rootfs/etc
   - cp -R /usr/lib64 /chroot/usr/lib64
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
@@ -273,45 +275,17 @@ import:
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/rootfs/etc
-  to: /chroot/etc
+  to: /src/rootfs/etc
   before: setup
 shell:
   setup:
-  - mkdir -p /chroot/lib /chroot/lib64 /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run /chroot/usr/lib64 /chroot/usr/local/modsecurity /chroot/usr/local/share
   - export PATH="$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin"
   - export LUA_PATH="/usr/local/share/luajit-2.1/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
   - export LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
+  - cp -R /src/rootfs/etc/* //chroot/etc
+  - rm -rf /src/rootfs/etc/
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
-  - |
-    bash -eu -c '
-    writeDirs=(
-      /chroot/etc/nginx
-      /chroot/usr/local/nginx
-      /chroot/usr/share
-      /chroot/usr/bin
-      /chroot/etc/ingress-controller
-      /chroot/etc/ingress-controller/ssl
-      /chroot/etc/ingress-controller/auth
-      /chroot/etc/ingress-controller/telemetry
-      /chroot/etc/ingress-controller/geoip
-      /chroot/opt/modsecurity/var/log
-      /chroot/opt/modsecurity/var/upload
-      /chroot/opt/modsecurity/var/audit
-      /chroot/var/log/audit
-      /chroot/var/lib/nginx
-      /chroot/var/log/nginx
-      /chroot/var/lib/nginx/body
-      /chroot/var/lib/nginx/fastcgi
-      /chroot/var/lib/nginx/proxy
-      /chroot/var/lib/nginx/scgi
-      /chroot/var/lib/nginx/uwsgi
-      /chroot/tmp/nginx
-    );
-    for dir in "${writeDirs[@]}"; do
-      mkdir -p ${dir};
-      chown -R www-data:www-data ${dir};
-    done'
   - chown www-data:www-data /usr/bin/nginx
   - chown www-data:www-data /usr/bin/curl
   - chown www-data:www-data /chroot/etc
@@ -355,3 +329,7 @@ docker:
   EXPOSE: ["80", "443"]
   ENTRYPOINT: ["/usr/bin/dumb-init", "--"]
   CMD: ["/nginx-ingress-controller"]
+  ENV:
+    PATH: "$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin"
+    LUA_PATH: "/usr/local/share/luajit-2.1/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
+    LUA_CPATH: "/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
