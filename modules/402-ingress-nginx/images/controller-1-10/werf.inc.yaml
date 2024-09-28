@@ -89,7 +89,7 @@ shell:
   - luarocks-5.1 install lua-iconv-7-3.src.rock
 ---
 artifact: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
-from: {{ .Images.BASE_GOLANG_22_ALPINE }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/ingress-nginx
@@ -277,6 +277,36 @@ import:
   before: setup
 shell:
   setup:
+  - |
+    bash -eu -c '
+    writeDirs=(
+      /chroot/etc/nginx
+      /chroot/usr/local/nginx
+      /chroot/usr/share
+      /chroot/usr/bin
+      /chroot/etc/ingress-controller
+      /chroot/etc/ingress-controller/ssl
+      /chroot/etc/ingress-controller/auth
+      /chroot/etc/ingress-controller/telemetry
+      /chroot/etc/ingress-controller/geoip
+      /chroot/opt/modsecurity/var/log
+      /chroot/opt/modsecurity/var/upload
+      /chroot/opt/modsecurity/var/audit
+      /chroot/var/log/audit
+      /chroot/var/lib/nginx
+      /chroot/var/log/nginx
+      /chroot/var/lib/nginx/body
+      /chroot/var/lib/nginx/fastcgi
+      /chroot/var/lib/nginx/proxy
+      /chroot/var/lib/nginx/scgi
+      /chroot/var/lib/nginx/uwsgi
+      /chroot/tmp/nginx
+    );
+    for dir in "${writeDirs[@]}"; do
+      mkdir -p ${dir};
+      chown -R www-data:www-data ${dir};
+    done'
+  - mkdir -p /chroot/lib /chroot/lib64 /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run /chroot/usr/lib64 /chroot/usr/local/modsecurity /chroot/usr/local/share
   - export PATH="$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin"
   - export LUA_PATH="/usr/local/share/luajit-2.1/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
   - export LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
