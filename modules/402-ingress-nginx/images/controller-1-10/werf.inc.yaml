@@ -179,7 +179,7 @@ shell:
   setup:
   - set -x
   - cp -R /src/rootfs/etc/* /chroot/etc
-  - ls -lhR /chroot/etc
+  - ls -lhR /src/rootfs/etc/
   - rm -rf /src/rootfs/etc
   - ls -lhR /chroot/etc/nginx
   - cp -R /usr/lib64 /chroot/usr/lib64
