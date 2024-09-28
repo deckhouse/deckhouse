@@ -1,4 +1,4 @@
-{{- $binaries := "/usr/sbin/xtables-nft-multi /usr/sbin/ip6tables-nft /usr/sbin/ip6tables-nft-restore /usr/sbin/ip6tables-nft-save /usr/sbin/iptables-nft /usr/sbin/iptables-nft-restore /usr/sbin/iptables-nft-save /usr/sbin/xtables-legacy-multi /usr/sbin/iptables /usr/sbin/iptables-restore /usr/sbin/iptables-save /usr/sbin/iptables-legacy /usr/sbin/iptables-legacy-restore /usr/sbin/iptables-legacy-save /usr/sbin/ip6tables /usr/sbin/ip6tables-restore /usr/sbin/ip6tables-save /usr/sbin/ip6tables-legacy /usr/sbin/ip6tables-legacy-restore /usr/sbin/ip6tables-legacy-save /usr/usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so*" }}
+{{- $binaries := "/usr/sbin/xtables-nft-multi /usr/sbin/ip6tables-nft /usr/sbin/ip6tables-nft-restore /usr/sbin/ip6tables-nft-save /usr/sbin/iptables-nft /usr/sbin/iptables-nft-restore /usr/sbin/iptables-nft-save /usr/sbin/xtables-legacy-multi /usr/sbin/iptables /usr/sbin/iptables-restore /usr/sbin/iptables-save /usr/sbin/iptables-legacy /usr/sbin/iptables-legacy-restore /usr/sbin/iptables-legacy-save /usr/sbin/ip6tables /usr/sbin/ip6tables-restore /usr/sbin/ip6tables-save /usr/sbin/ip6tables-legacy /usr/sbin/ip6tables-legacy-restore /usr/sbin/ip6tables-legacy-save /usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so*" }}
 
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
@@ -6,7 +6,7 @@ fromArtifact: relocate-artifact
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y iptables iptables-nft
+  - apt-get install -y iptables iptables-nft conntrack
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
   - |
