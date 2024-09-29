@@ -167,7 +167,7 @@ import:
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
   add: /usr/share/lua/5.1/protoc.lua
-  to: /usr/local/share/lua/5.1/
+  to: /usr/local/share/lua/5.1/protoc.lua
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
   add: /src/rootfs/etc
