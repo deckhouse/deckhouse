@@ -9,8 +9,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-const manifestDir = "/etc/kubernetes/manifests"
-const manifestFile = "registry-master.yaml"
 const authTemplatePath = "/templates/auth_config/config.yaml.tpl"
 const distributionTemplatePath = "/templates/distribution_config/config.yaml.tpl"
 const staticPodTemplatePath = "/templates/static_pods/system-registry.yaml.tpl"
@@ -29,7 +27,7 @@ func NewServer(kubeClient *kubernetes.Clientset) *Server {
 }
 
 func Run(ctx context.Context, kubeClient *kubernetes.Clientset) error {
-	ctrl.Log.Info("Starting static pod manager")
+	ctrl.Log.Info("Starting static pod manager", "component", "static pod manager")
 
 	apiServer := NewServer(kubeClient)
 	http.HandleFunc("/staticpod/create", apiServer.CreateStaticPodHandler)
@@ -54,21 +52,21 @@ func Run(ctx context.Context, kubeClient *kubernetes.Clientset) error {
 
 func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		ctrl.Log.Error(nil, "HTTP %s method not allowed", r.Method)
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		ctrl.Log.Info("method not allowed", "component", "static pod manager", "endpoint", r.RequestURI, "method", r.Method)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	var data EmbeddedRegistryConfig
 	// Decode request body to struct EmbeddedRegistryConfig and return error if decoding fails
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		ctrl.Log.Error(err, "Error decoding request body")
+		ctrl.Log.Error(err, "Error decoding request body", "component", "static pod manager")
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
 	if err := data.Validate(); err != nil {
-		ctrl.Log.Error(err, "Validation error")
+		ctrl.Log.Error(err, "Validation error", "component", "static pod manager")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -81,7 +79,7 @@ func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 
 	changed, err := ProcessTemplate(authTemplatePath, authConfigPath, data)
 	if err != nil {
-		ctrl.Log.Error(err, "Error processing auth template")
+		ctrl.Log.Error(err, "Error processing auth template", "component", "static pod manager")
 		http.Error(w, "Error processing auth template", http.StatusInternalServerError)
 		return
 	}
@@ -89,7 +87,7 @@ func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 
 	changed, err = ProcessTemplate(distributionTemplatePath, distributionConfigPath, data)
 	if err != nil {
-		ctrl.Log.Error(err, "Error processing distribution template")
+		ctrl.Log.Error(err, "Error processing distribution template", "component", "static pod manager")
 		http.Error(w, "Error processing distribution template", http.StatusInternalServerError)
 		return
 	}
@@ -97,26 +95,26 @@ func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 
 	changed, err = ProcessTemplate(staticPodTemplatePath, staticPodConfigPath, data)
 	if err != nil {
-		ctrl.Log.Error(err, "Error processing static pod template")
+		ctrl.Log.Error(err, "Error processing static pod template", "component", "static pod manager")
 		http.Error(w, "Error processing static pod template", http.StatusInternalServerError)
 		return
 	}
 	anyFileChanged = anyFileChanged || changed
 
 	if anyFileChanged {
-		ctrl.Log.Info("Static pod and configuration created/updated successfully")
+		ctrl.Log.Info("Static pod and configuration created/updated successfully", "component", "static pod manager")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"status": "Static pod and configuration created/updated successfully"})
 	} else {
-		ctrl.Log.Info("No changes in static pod and configuration")
+		ctrl.Log.Info("No changes in static pod and configuration", "component", "static pod manager")
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
 
 func (s *Server) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
-		ctrl.Log.Error(nil, "HTTP %s method not allowed", r.Method)
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		ctrl.Log.Info("method not allowed", "component", "static pod manager", "endpoint", r.RequestURI, "method", r.Method)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -125,7 +123,7 @@ func (s *Server) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 	// Delete the static pod file
 	deleted, err := DeleteFile(staticPodConfigPath)
 	if err != nil {
-		ctrl.Log.Error(err, "Error deleting static pod file")
+		ctrl.Log.Error(err, "Error deleting static pod file", "component", "static pod manager")
 		http.Error(w, "Error deleting static pod file", http.StatusInternalServerError)
 		return
 	}
@@ -134,7 +132,7 @@ func (s *Server) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 	// Delete the auth config file
 	deleted, err = DeleteFile(authConfigPath)
 	if err != nil {
-		ctrl.Log.Error(err, "Error deleting auth config file")
+		ctrl.Log.Error(err, "Error deleting auth config file", "component", "static pod manager")
 		http.Error(w, "Error deleting auth config file", http.StatusInternalServerError)
 		return
 	}
@@ -143,7 +141,7 @@ func (s *Server) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 	// Delete the distribution config file
 	deleted, err = DeleteFile(distributionConfigPath)
 	if err != nil {
-		ctrl.Log.Error(err, "Error deleting distribution config file")
+		ctrl.Log.Error(err, "Error deleting distribution config file", "component", "static pod manager")
 		http.Error(w, "Error deleting distribution config file", http.StatusInternalServerError)
 		return
 	}
@@ -151,11 +149,11 @@ func (s *Server) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 
 	// Return 204 if no file was deleted, otherwise 200
 	if anyFileDeleted {
-		ctrl.Log.Info("Static pod and configuration deleted successfully")
+		ctrl.Log.Info("Static pod and configuration deleted successfully", "component", "static pod manager")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"status": "Static pod and configuration deleted successfully"})
 	} else {
-		ctrl.Log.Info("No static pod and configuration to delete")
+		ctrl.Log.Info("No static pod and configuration to delete", "component", "static pod manager")
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
