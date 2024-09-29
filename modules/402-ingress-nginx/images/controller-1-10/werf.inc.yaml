@@ -111,7 +111,6 @@ shell:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 from: {{ $.Images.BASE_ALT_P11 }}
-fromCacheVersion: "today"
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/ingress-nginx/images/nginx-1.25/rootfs/
