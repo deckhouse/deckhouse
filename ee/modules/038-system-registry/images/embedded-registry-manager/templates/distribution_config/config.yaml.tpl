@@ -24,8 +24,6 @@ http:
   tls:
     certificate: /system_registry_pki/distribution.crt
     key: /system_registry_pki/distribution.key
-#    clientcas:
-#      - /system_registry_pki/ca.crt
 
 {{- if eq .Registry.RegistryMode "Proxy" }}
 proxy:
