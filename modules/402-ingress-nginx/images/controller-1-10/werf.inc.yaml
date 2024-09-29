@@ -308,7 +308,6 @@ shell:
   - ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
   - ln -sf /chroot/var/log/nginx /var/log/nginx
   - touch /chroot/var/log/nginx/access.log
-  - ls -lhR /etc/nginx
   - chown www-data:www-data /chroot/var/log/nginx/access.log
   - echo "" > /chroot/etc/resolv.conf
   - chown -R www-data:www-data /var/log /chroot/var/log /chroot/etc/resolv.conf
