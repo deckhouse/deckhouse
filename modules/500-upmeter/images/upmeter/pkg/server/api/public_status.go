@@ -96,7 +96,8 @@ type ProbeAvailability struct {
 	Availability float64 `json:"availability"`
 
 	// Status is the high-level interpretation of the probe result
-	Status PublicStatus `json:"status"`
+	status PublicStatus
+	Status string `json:"status"`
 }
 
 type PublicStatusHandler struct {
@@ -218,10 +219,12 @@ func (h *PublicStatusHandler) calcStatuses(rng ranges.StepRange, lister entity.R
 			if av < 0 {
 				continue
 			}
+			status := calculateStatus(probeSummaryList)
 			probeAvails = append(probeAvails, ProbeAvailability{
 				Probe:        probeRef.Probe,
 				Availability: av,
-				Status:       calculateStatus(probeSummaryList),
+				status:       status,
+				Status:       status.String(),
 			})
 		}
 
