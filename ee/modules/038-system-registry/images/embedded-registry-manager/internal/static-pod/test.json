@@ -1,0 +1,19 @@
+{
+  "IpAddress": "10.128.0.29",
+  "Registry": {
+      "UserRw": {
+      "Name": "deckhouse-rw",
+      "PasswordHash": "$2a$10$04ObTJVCU3K83q4L8qFGmeF0AhZzbhn4ZwqWA3etnEwq6OSj9x3IS"
+    },
+    "UserRo": {
+      "Name": "deckhouse-ro",
+      "PasswordHash": "$2a$10$sI3dBK8UfU2SohAmpCJ7wuVvKuJr4kibQfHa5Einri.A88GJKbkf6"
+    },
+    "RegistryMode": "Detached"
+  },
+  "Images":
+  {
+    "DockerDistribution": "embedded-registry.d8-system.svc.cluster.local:5001/system/deckhouse@sha256:5a29b2ccc52a776e73d36bc398426150d8f9851f9a354e17e83eeba9c1452c1c",
+    "DockerAuth": "embedded-registry.d8-system.svc.cluster.local:5001/system/deckhouse@sha256:84a6747a22204f916987ed6294de955b8b501097797306f12fa4e9eed8c1d149"
+  }
+}

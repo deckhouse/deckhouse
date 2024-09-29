@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"embeded-registry-manager/internal/controllers"
-	staticpodmanager "embeded-registry-manager/internal/manager"
+	staticpodmanager "embeded-registry-manager/internal/static-pod"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -32,7 +32,7 @@ type managerStatus struct {
 const metricsBindAddressPort = "127.0.0.1:8081"
 
 func main() {
-	ctrl.SetLogger(zap.New(zap.UseDevMode(false)))
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 	status := managerStatus{
 		isLeader:                false,
 		staticPodManagerRunning: false,
