@@ -9,7 +9,7 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- if semverCompare ">= 1.27" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "AdmissionWebhookMatchConditions=true" | join "," }}
 {{- end }}
-{{- if semverCompare "<= 1.28" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare "< 1.28" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" | join "," }}
 {{- end }}
 {{- if semverCompare "< 1.28" .clusterConfiguration.kubernetesVersion }}
