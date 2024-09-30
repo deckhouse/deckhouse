@@ -15,34 +15,21 @@
   if: ${{ steps.check_loop_alerting.outputs.has_credentials == 'true' }}
 {!{- end }!}
   env:
-    CLOUD_LAYOUT_TESTS_MADISON_KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+    LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
     LOOP_CHANEL_ID:
   run: |
     WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-    echo $WORKFLOW_URL
 
     alertData=$(cat <<EOF
     {
-      "labels": {
-{!{ range $k, $v := $ctx.labels }!}
-  {!{- $k | quote | indent 8 -}!}: {!{ $v | quote }!},
-{!{ end }!}
-        "severity_level": 7
-      },
-      "annotations": {
-{!{ range $k, $v := $ctx.annotations }!}
-  {!{- $k | quote | indent 8 -}!}: {!{ $v | quote }!},
-{!{ end }!}
-        "plk_link_url/job": "${WORKFLOW_URL}",
-        "plk_protocol_version": "1",
-        "plk_link_title_en/job": "Github job run"
-      }
+    "channel_id": "${LOOP_CHANEL_ID}",
+    "message": "🛑Daily e2e test failure🛑\n[URL](${WORKFLOW_URL})"
     }
     EOF
     )
 
     for (( iter = 1; iter < 60; iter++ )); do
-      if curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" -H 'Content-Type: application/json' -d "${alertData}"; then
+      if curl -f -L -X POST "https://loop.flant.ru/api/v4/posts" -H "Content-Type: application/json" -H "Authorization: Bearer ${LOOP_TOKEN}" --data ${alertData}; then
         exit 0
       fi
 
