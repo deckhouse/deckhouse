@@ -336,12 +336,12 @@ ansible:
 - modules/*/apis/**/*.go
 - modules/*/requirements/**/*.go
 - modules/*/settings-conversion/**/*.go
-- openapi/conversions/*.go
+- modules/*/openapi/conversions/*.go
 - modules/*/hack
 - global-hooks/**/*.go
 - candi/cloud-providers/*/layouts
 - candi/cloud-providers/*/terraform-modules
-- "**/*pull-crds.sh"
+- "/modules/*/**/*pull-crds.sh"
 - '**/testdata'
 {{- end}}
 
