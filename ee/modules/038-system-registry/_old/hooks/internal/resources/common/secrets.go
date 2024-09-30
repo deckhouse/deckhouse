@@ -5,9 +5,9 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package resources
 
-type SecretData map[string][]byte
+// type SecretData map[string][]byte
 
-type SecretDataKV struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
+// type SecretDataKV struct {
+// 	Key   string `json:"key"`
+// 	Value string `json:"value"`
+// }

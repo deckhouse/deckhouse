@@ -1,10 +1,10 @@
-positive:
-  values:
-    - {}
-  configValues:
-    - {}
-negative:
-  configValues:
-    - { somethingInConfig: yes }
-  values:
-    - { somethingInConfig: yes }
+# positive:
+#   values:
+#     - {}
+#   configValues:
+#     - {}
+# negative:
+#   configValues:
+#     - { somethingInConfig: yes }
+#   values:
+#     - { somethingInConfig: yes }

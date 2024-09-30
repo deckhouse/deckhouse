@@ -1,92 +1,92 @@
-type: object
-properties:
-  imagesOverride:
-    type: object
-    default: {}
-    description: |
-      Images override
-    properties:
-      registryManager:
-        type: string
-        description: |
-          Registry manager img full path
-        x-example:
-          - dev-registry.deckhouse.io/registryManager:latest
-  enableRegistryManager:
-    type: boolean
-    description: |
-      Registry manager enable flag
-    default: false
-  cluster:
-    type: object
-    default: {}
-    description: |
-      Seaweedfs cluster's settings
-    properties:
-      size:
-        type: integer
-        description: |
-          The number of nodes
-        x-examples:
-          - 1
-          - 3
-  registryMode:
-    type: string
-    enum:
-      - Direct
-      - Proxy
-      - Detached
-    default: Direct
-    description: |
-      Registry mode
-    x-example:
-      - registryMode: Proxy
-      - registryMode: Direct
-      - registryMode: Detached
-  upstreamRegistry:
-    type: object
-    x-example:
-      - upstreamRegistry:
-          upstreamRegistryHost: dev-registry.deckhouse.io
-          upstreamRegistryScheme: https
-          upstreamRegistryCa: ""
-          upstreamRegistryPath: sys/deckhouse-oss
-          upstreamRegistryUser: license-token
-          upstreamRegistryPassword: "123456"
-    properties:
-      upstreamRegistryHost:
-        type: string
-        description: |
-          Host of upstream registry
-        x-example:
-          - dev-registry.deckhouse.io
-      upstreamRegistryScheme:
-        type: string
-        description: |
-          Scheme of upstream registry
-        x-example:
-          - https
-      upstreamRegistryCa:
-        type: string
-        description: |
-          CA of upstream registry
-        x-example:
-          - ""
-      upstreamRegistryPath:
-        type: string
-        description: |
-          Path of upstream registry
-        x-example:
-          - sys/deckhouse-oss
-      upstreamRegistryUser:
-        type: string
-        description: |
-          User of upstream registry
-        x-example:
-          - license-token
-      upstreamRegistryPassword:
-        type: string
-        description: |
-          Password of upstream registry
-        x-example:
-          - "123456"
+# type: object
+# properties:
+#   imagesOverride:
+#     type: object
+#     default: {}
+#     description: |
+#       Images override
+#     properties:
+#       registryManager:
+#         type: string
+#         description: |
+#           Registry manager img full path
+#         x-example:
+#           - dev-registry.deckhouse.io/registryManager:latest
+#   enableRegistryManager:
+#     type: boolean
+#     description: |
+#       Registry manager enable flag
+#     default: false
+#   cluster:
+#     type: object
+#     default: {}
+#     description: |
+#       Seaweedfs cluster's settings
+#     properties:
+#       size:
+#         type: integer
+#         description: |
+#           The number of nodes
+#         x-examples:
+#           - 1
+#           - 3
+#   registryMode:
+#     type: string
+#     enum:
+#       - Direct
+#       - Proxy
+#       - Detached
+#     default: Direct
+#     description: |
+#       Registry mode
+#     x-example:
+#       - registryMode: Proxy
+#       - registryMode: Direct
+#       - registryMode: Detached
+#   upstreamRegistry:
+#     type: object
+#     x-example:
+#       - upstreamRegistry:
+#           upstreamRegistryHost: dev-registry.deckhouse.io
+#           upstreamRegistryScheme: https
+#           upstreamRegistryCa: ""
+#           upstreamRegistryPath: sys/deckhouse-oss
+#           upstreamRegistryUser: license-token
+#           upstreamRegistryPassword: "123456"
+#     properties:
+#       upstreamRegistryHost:
+#         type: string
+#         description: |
+#           Host of upstream registry
+#         x-example:
+#           - dev-registry.deckhouse.io
+#       upstreamRegistryScheme:
+#         type: string
+#         description: |
+#           Scheme of upstream registry
+#         x-example:
+#           - https
+#       upstreamRegistryCa:
+#         type: string
+#         description: |
+#           CA of upstream registry
+#         x-example:
+#           - ""
+#       upstreamRegistryPath:
+#         type: string
+#         description: |
+#           Path of upstream registry
+#         x-example:
+#           - sys/deckhouse-oss
+#       upstreamRegistryUser:
+#         type: string
+#         description: |
+#           User of upstream registry
+#         x-example:
+#           - license-token
+#       upstreamRegistryPassword:
+#         type: string
+#         description: |
+#           Password of upstream registry
+#         x-example:
+#           - "123456"

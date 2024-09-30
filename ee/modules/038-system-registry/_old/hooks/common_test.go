@@ -5,14 +5,14 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package hooks
 
-import (
-	"testing"
+// import (
+// 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-)
+// 	. "github.com/onsi/ginkgo"
+// 	. "github.com/onsi/gomega"
+// )
 
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
-}
+// func Test(t *testing.T) {
+// 	RegisterFailHandler(Fail)
+// 	RunSpecs(t, "")
+// }
