@@ -341,7 +341,7 @@ ansible:
 - global-hooks/**/*.go
 - candi/cloud-providers/*/layouts
 - candi/cloud-providers/*/terraform-modules
-- "modules/*/**/*pull-crds.sh"
+- modules/*/**/*pull*crds.sh
 - '**/testdata'
 {{- end}}
 

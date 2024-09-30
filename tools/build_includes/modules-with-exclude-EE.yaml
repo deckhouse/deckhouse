@@ -13,7 +13,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -32,7 +33,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -51,7 +53,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -70,7 +73,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -89,7 +93,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -108,7 +113,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -127,7 +133,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -146,7 +153,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -165,7 +173,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -184,7 +193,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -203,7 +213,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -222,7 +233,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -241,7 +253,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -260,7 +273,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -279,7 +293,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -298,7 +313,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -317,7 +333,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -336,7 +353,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -355,7 +373,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -374,7 +393,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -393,7 +413,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -412,7 +433,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -431,7 +453,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -450,7 +473,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -469,7 +493,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -488,7 +513,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -507,7 +533,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -526,7 +553,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -545,7 +573,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -564,7 +593,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -583,7 +613,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -602,7 +633,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -621,7 +653,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -640,7 +673,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -659,7 +693,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -678,7 +713,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -697,7 +733,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -716,7 +753,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -735,7 +773,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -754,7 +793,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -773,7 +813,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -792,7 +833,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -811,7 +853,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -830,7 +873,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
@@ -849,7 +893,8 @@
     - requirements/**/*.go
     - settings-conversion/**/*.go
     - openapi/conversions/*.go
-    - hack/**/*.go
+    - hack
+    - crds/**/*pull*crds.sh
     - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
