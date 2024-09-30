@@ -139,7 +139,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	m.log.Info("upgrading resources for the project", "project", project.Name, "projectTemplate", projectTemplate.Name)
 	if err = m.helmClient.Upgrade(ctx, project, projectTemplate); err != nil {
 		// to avoid helm flaky errors
-		m.log.Info("failed to upgrade the project template, try again", "project", project.Name, "projectTemplate", projectTemplate.Name)
+		m.log.Info("failed to upgrade the project resources, try again", "project", project.Name, "projectTemplate", projectTemplate.Name)
 		if secondTry := m.helmClient.Upgrade(ctx, project, projectTemplate); secondTry != nil {
 			cond = m.makeCondition(v1alpha2.ConditionTypeProjectResourcesUpgraded, v1alpha2.ConditionTypeFalse, err.Error())
 			if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, projectTemplate.Generation, cond); statusErr != nil {
