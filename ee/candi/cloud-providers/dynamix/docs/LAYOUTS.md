@@ -69,4 +69,3 @@ masterNodeGroup:
     pool: "<pool>"
     externalNetwork: "<external network>"
 ```
-
