@@ -22,9 +22,8 @@ import (
 
 var storageClassesConfig = []storage_class.StorageClass{
 	&storage_class.SimpleStorageClass{
-		Name:    "network-hdd",
-		Type:    "network-hdd",
-		Default: true,
+		Name: "network-hdd",
+		Type: "network-hdd",
 	},
 	&storage_class.SimpleStorageClass{
 		Name: "network-ssd",

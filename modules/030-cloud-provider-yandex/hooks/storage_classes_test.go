@@ -58,27 +58,22 @@ cloudProviderYandex:
 [
   {
 	"name": "network-hdd",
-	"type": "network-hdd",
-  "default": true
+	"type": "network-hdd"
   },
   {
 	"name": "network-ssd",
-	"type": "network-ssd",
-  "default": false
+	"type": "network-ssd"
   },
   {
 	"name": "network-ssd-nonreplicated",
-	"type": "network-ssd-nonreplicated",
-  "default": false
+	"type": "network-ssd-nonreplicated"
   },
   {
 	"name": "network-ssd-io-m3",
-	"type": "network-ssd-io-m3",
-  "default": false
+	"type": "network-ssd-io-m3"
   }
 ]
 `))
-			Expect(f.ValuesGet("global.discovery.defaultStorageClass").String()).To(Equal("network-hdd"))
 		})
 	})
 
@@ -96,22 +91,18 @@ cloudProviderYandex:
 [
   {
 	"name": "network-ssd",
-	"type": "network-ssd",
-  "default": false
+	"type": "network-ssd"
   },
   {
 	"name": "network-ssd-nonreplicated",
-	"type": "network-ssd-nonreplicated",
-  "default": false
+	"type": "network-ssd-nonreplicated"
   },
   {
 	"name": "network-ssd-io-m3",
-	"type": "network-ssd-io-m3",
-  "default": false
+	"type": "network-ssd-io-m3"
   }
 ]
 `))
-			Expect(b.ValuesGet("global.discovery.defaultStorageClass").Exists()).To(BeFalse())
 		})
 	})
 })

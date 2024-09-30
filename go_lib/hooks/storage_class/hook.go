@@ -27,31 +27,15 @@ import (
 
 type StorageClass interface {
 	GetName() string
-	IsDefault() bool
 }
 
 type SimpleStorageClass struct {
-	Type    string `json:"type"`
-	Name    string `json:"name"`
-	Default bool   `json:"default" default:"false"`
+	Type string `json:"type"`
+	Name string `json:"name"`
 }
 
 func (sc *SimpleStorageClass) GetName() string {
 	return sc.Name
-}
-
-func (sc *SimpleStorageClass) IsDefault() bool {
-	return sc.Default
-}
-
-func getDefaultStorageClassName(storageClasses []StorageClass) string {
-	for _, sc := range storageClasses {
-		if sc.IsDefault() {
-			return sc.GetName()
-		}
-	}
-
-	return ""
 }
 
 func storageClasses(input *go_hook.HookInput, pathFunc func(path string) string, storageClassesConfig []StorageClass) error {
@@ -69,12 +53,6 @@ func storageClasses(input *go_hook.HookInput, pathFunc func(path string) string,
 	}
 
 	input.Values.Set(pathFunc("internal.storageClasses"), storageClassesFiltered)
-
-	defaultStorageClass := getDefaultStorageClassName(storageClassesFiltered)
-
-	if defaultStorageClass != "" && input.Values.Get("global.discovery.defaultStorageClass").String() == "" {
-		input.Values.Set("global.discovery.defaultStorageClass", defaultStorageClass)
-	}
 
 	return nil
 }
