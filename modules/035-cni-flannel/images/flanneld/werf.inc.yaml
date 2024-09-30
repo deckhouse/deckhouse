@@ -48,7 +48,7 @@ shell:
   - make dist/flanneld
   - cp dist/flanneld /
   - chown 64535:64535 /entrypoint /flanneld
-  - chmod 700 /entrypoint /flanneld
+  - chmod 755 /entrypoint /flanneld
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
