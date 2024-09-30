@@ -10,9 +10,6 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
     {{- $featureGates = list $featureGates "AdmissionWebhookMatchConditions=true" | join "," }}
 {{- end }}
 {{- if semverCompare "< 1.28" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" | join "," }}
-{{- end }}
-{{- if semverCompare "< 1.28" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "EndpointSliceTerminatingCondition=true" | join "," }}
     {{- $featureGates = list $featureGates "InTreePluginRBDUnregister=true" | join "," }}
 {{- end }}
