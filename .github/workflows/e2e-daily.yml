@@ -3742,9 +3742,9 @@ jobs:
       id: check_loop_alerting
       if: always()
       env:
-        KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+        LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
       run: |
-        if [[ -n $KEY ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
+        if [[ -n $LOOP_TOKEN ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
     - name: Send loop alert on fail
       if: ${{ steps.check_loop_alerting.outputs.has_credentials == 'true' }}
       env:
