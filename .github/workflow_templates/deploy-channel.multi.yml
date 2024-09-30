@@ -219,15 +219,19 @@ Jobs for visual control allowed editions when approving deploy to environments.
           SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
           SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
 
-          echo "⚓️ 📤 [$(date -u)] Add release date label to images."
-          echo "FROM ${SOURCE_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_IMAGE}" -
-          echo "FROM ${SOURCE_INSTALL_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_INSTALL_IMAGE}" -
-          echo "FROM ${SOURCE_RELEASE_VERSION_IMAGE}" | docker build --label io.deckhouse.released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_RELEASE_VERSION_IMAGE}" -
+          if [[ ! $(docker inspect localhost:5000/registry:latest -f '{{index .Config.Labels "io.deckhouse.${DEPLOY_CHANNEL}-released"}}') ]]; then
+            echo "⚓️ 🏷 [$(date -u)] Add release date label to images."
+            echo "FROM ${SOURCE_IMAGE}" | docker build --label io.deckhouse.${DEPLOY_CHANNEL}-released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_IMAGE}" -
+            echo "FROM ${SOURCE_INSTALL_IMAGE}" | docker build --label io.deckhouse.${DEPLOY_CHANNEL}-released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_INSTALL_IMAGE}" -
+            echo "FROM ${SOURCE_RELEASE_VERSION_IMAGE}" | docker build --label io.deckhouse.${DEPLOY_CHANNEL}-released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "${SOURCE_RELEASE_VERSION_IMAGE}" -
 
-          echo "⚓️ 📤 [$(date -u)] Push images with release date label."
-          docker image push ${SOURCE_IMAGE}
-          docker image push ${SOURCE_INSTALL_IMAGE}
-          docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
+            echo "⚓️ 📤 [$(date -u)] Push images with release date label."
+            docker image push ${SOURCE_IMAGE}
+            docker image push ${SOURCE_INSTALL_IMAGE}
+            docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
+          else
+            echo "⚓️ 🏷 [$(date -u)] Release date label already present. Skipping."
+          fi;
       {!{- end }!}
 
 {!{/*
