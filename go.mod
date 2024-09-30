@@ -2,7 +2,7 @@ module github.com/deckhouse/deckhouse
 
 go 1.22.4
 
-toolchain go1.22.7
+toolchain go1.23.1
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
@@ -13,7 +13,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.13.0
-	github.com/flant/addon-operator v1.4.4-0.20240930100725-f3e72cd237c2
+	github.com/flant/addon-operator v1.4.4-0.20240930130603-0ca92c2808d3
 	github.com/flant/kube-client v1.2.0
 	github.com/flant/shell-operator v1.4.12
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
