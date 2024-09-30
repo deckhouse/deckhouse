@@ -74,6 +74,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/021-cni-cilium/hooks/ee
+  to: /deckhouse/modules/021-cni-cilium/hooks/ee
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/021-cni-cilium/templates/egress-gateway-agent
   to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-agent
   stageDependencies:
@@ -199,8 +204,18 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/150-user-authn
-  to: /deckhouse/modules/150-user-authn
+- add: /ee/modules/150-user-authn/hooks/common_test.go
+  to: /deckhouse/modules/150-user-authn/hooks/common_test.go
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/150-user-authn/hooks/custom_logo.go
+  to: /deckhouse/modules/150-user-authn/hooks/custom_logo.go
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/150-user-authn/hooks/custom_logo_test.go
+  to: /deckhouse/modules/150-user-authn/hooks/custom_logo_test.go
   stageDependencies:
     setup:
         - '**/*.go'

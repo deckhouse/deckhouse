@@ -701,24 +701,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/modules/150-user-authn
-  to: /deckhouse/modules/150-user-authn
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - capi
-    - hooks/**/*.go
-    - hooks/*.go
-    - template_tests
-    - apis/**/*.go
-    - requirements/**/*.go
-    - settings-conversion/**/*.go
-    - hack/**/*.go
-    - api/**/*.go
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
 - add: /ee/modules/160-multitenancy-manager
   to: /deckhouse/modules/160-multitenancy-manager
   excludePaths:

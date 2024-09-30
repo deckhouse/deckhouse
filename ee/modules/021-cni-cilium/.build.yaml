@@ -1,3 +1,4 @@
 crds/*
+hooks/*
 templates/*
 monitoring/prometheus-rules/*
