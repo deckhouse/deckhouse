@@ -269,24 +269,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/modules/021-cni-cilium/images/egress-gateway-agent
-  to: /deckhouse/modules/021-cni-cilium/images/egress-gateway-agent
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - capi
-    - hooks/**/*.go
-    - hooks/*.go
-    - template_tests
-    - apis/**/*.go
-    - requirements/**/*.go
-    - settings-conversion/**/*.go
-    - hack/**/*.go
-    - api/**/*.go
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
 - add: /ee/modules/021-cni-cilium/templates/egress-gateway-agent
   to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-agent
   excludePaths:
@@ -703,6 +685,24 @@
     - .build.yaml
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - capi
+    - hooks/**/*.go
+    - hooks/*.go
+    - template_tests
+    - apis/**/*.go
+    - requirements/**/*.go
+    - settings-conversion/**/*.go
+    - hack/**/*.go
+    - api/**/*.go
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/150-user-authn
+  to: /deckhouse/modules/150-user-authn
   excludePaths:
     - docs
     - README.md
