@@ -302,7 +302,7 @@ properties:
                     x-examples: ["1", "1000m"]
                     oneOf:
                       - type: string
-                        pattern: '^(["].*["]|[0-9]+m)$'
+                        pattern: '^(["][0-9]+["]|[0-9]+m)$'
                     default: '100m'
                     description: |
                       Configuring CPU requests.
@@ -323,7 +323,7 @@ properties:
                     x-examples: ["1", "1000m"]
                     oneOf:
                       - type: string
-                        pattern: '^(["].*["]|[0-9]+m)$'
+                        pattern: '^(["][0-9]+["]|[0-9]+m)$'
                     default: '2000m'
                     description: |
                       Configuring CPU limits.
