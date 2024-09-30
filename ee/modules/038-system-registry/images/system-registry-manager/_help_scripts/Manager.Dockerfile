@@ -1,7 +1,7 @@
 FROM --platform=$BUILDPLATFORM golang:1.22-bookworm AS builder
 
-ENV MANAGER_PATH_FROM=./ee/modules/038-system-registry/images/embedded-registry-manager \
-    MANAGER_PATH_TO=/deckhouse/ee/modules/038-system-registry/images/embedded-registry-manager \
+ENV MANAGER_PATH_FROM=./ee/modules/038-system-registry/images/system-registry-manager/app \
+    MANAGER_PATH_TO=/deckhouse/ee/modules/038-system-registry/images/system-registry-manager/app \
     GO_LIB_PATH_FROM=./go_lib/system-registry-manager \
     GO_LIB_PATH_TO=/deckhouse/go_lib/system-registry-manager
 
