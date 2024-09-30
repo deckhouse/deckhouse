@@ -5,10 +5,15 @@
     - docs
     - README.md
     - images
+    - capi
     - hooks/**/*.go
     - hooks/*.go
-    - hack
     - template_tests
+    - apis/**/*.go
+    - requirements/**/*.go
+    - settings-conversion/**/*.go
+    - hack/**/*.go
+    - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
@@ -18,10 +23,15 @@
     - docs
     - README.md
     - images
+    - capi
     - hooks/**/*.go
     - hooks/*.go
-    - hack
     - template_tests
+    - apis/**/*.go
+    - requirements/**/*.go
+    - settings-conversion/**/*.go
+    - hack/**/*.go
+    - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
@@ -31,10 +41,15 @@
     - docs
     - README.md
     - images
+    - capi
     - hooks/**/*.go
     - hooks/*.go
-    - hack
     - template_tests
+    - apis/**/*.go
+    - requirements/**/*.go
+    - settings-conversion/**/*.go
+    - hack/**/*.go
+    - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
@@ -44,10 +59,15 @@
     - docs
     - README.md
     - images
+    - capi
     - hooks/**/*.go
     - hooks/*.go
-    - hack
     - template_tests
+    - apis/**/*.go
+    - requirements/**/*.go
+    - settings-conversion/**/*.go
+    - hack/**/*.go
+    - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
@@ -57,10 +77,15 @@
     - docs
     - README.md
     - images
+    - capi
     - hooks/**/*.go
     - hooks/*.go
-    - hack
     - template_tests
+    - apis/**/*.go
+    - requirements/**/*.go
+    - settings-conversion/**/*.go
+    - hack/**/*.go
+    - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
@@ -70,10 +95,15 @@
     - docs
     - README.md
     - images
+    - capi
     - hooks/**/*.go
     - hooks/*.go
-    - hack
     - template_tests
+    - apis/**/*.go
+    - requirements/**/*.go
+    - settings-conversion/**/*.go
+    - hack/**/*.go
+    - api/**/*.go
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
