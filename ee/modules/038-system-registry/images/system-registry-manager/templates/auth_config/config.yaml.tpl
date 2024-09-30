@@ -1,21 +1,25 @@
 server:
-  addr: "{{ .hostIP }}:5051"
+  addr: "{{ .IpAddress }}:5051"
+  certificate: "/system_registry_pki/auth.crt"
+  key: "/system_registry_pki/auth.key"
 token:
   issuer: "Registry server"
   expiration: 900
-  certificate: "/system_registry_pki/token.crt"
-  key: "/system_registry_pki/token.key"
+  certificate: "/system_registry_pki/auth.crt"
+  key: "/system_registry_pki/auth.key"
+
 users:
   # Password is specified as a BCrypt hash. Use htpasswd -nB USERNAME to generate.
-  "pusher":
-    password: '$2y$05$d9Ko2sN9YKSgeu9oxfPiAeopkPTaD65RWQiZtaZ2.hnNnLyFObRne'  # pusher
-  "puller":
-    password: '$2y$05$wVbhDuuhL/TAVj4xMt3lbeCAYWxP1JJNZJdDS/Elk7Ohf7yhT5wNq'  # puller
+  {{ quote .Registry.UserRw.Name }}:
+    password: {{ quote .Registry.UserRw.PasswordHash }}
+  {{ quote .Registry.UserRo.Name }}:
+    password: {{ quote .Registry.UserRo.PasswordHash }}
+
 acl:
-  - match: { account: "pusher" }
+  - match: { account: {{ quote .Registry.UserRw.Name }} }
     actions: [ "*" ]
-    comment: "Pusher has full access to everything."
-  - match: {account: "/.+/"}  # Match all accounts.
+    comment: "has full access"
+  - match: { account: {{ quote .Registry.UserRo.Name }} }
     actions: ["pull"]
-    comment: "readonly access to all accounts"
+    comment: "has readonly access"
   # Access is denied by default.
