@@ -1728,42 +1728,6 @@ alerts:
         There is no prometheus-longterm target in Prometheus.
       severity: "7"
       markupFormat: markdown
-    - name: D8PrometheusMadisonErrorSendingAlerts
-      sourceFile: ee/be/modules/600-flant-integration/monitoring/prometheus-rules/sending-alerts.yaml
-      moduleUrl: 600-flant-integration
-      module: flant-integration
-      edition: be
-      description: Prometheus is unable to deliver 100% alerts.
-      summary: |
-        Prometheus is unable to deliver 100% alerts.
-      severity: "5"
-      markupFormat: default
-    - name: D8PrometheusMadisonErrorSendingAlerts
-      sourceFile: ee/be/modules/600-flant-integration/monitoring/prometheus-rules/sending-alerts.yaml
-      moduleUrl: 600-flant-integration
-      module: flant-integration
-      edition: be
-      description: |
-        Prometheus is unable to deliver 100% alerts through one or more madison-proxies.
-
-        You need to check the `madison-proxy` logs: `kubectl -n d8-monitoring logs -f -l app=madison-proxy`
-      summary: |
-        Prometheus is unable to deliver 100% alerts through one or more madison-proxies.
-      severity: "6"
-      markupFormat: markdown
-    - name: D8PrometheusMadisonErrorSendingAlertsToBackend
-      sourceFile: ee/be/modules/600-flant-integration/monitoring/prometheus-rules/sending-alerts.yaml
-      moduleUrl: 600-flant-integration
-      module: flant-integration
-      edition: be
-      description: |
-        Prometheus is unable to deliver {{ $value | humanizePercentage }} alerts to the {{ $labels.madison_backend }} Madison backend using the {{ $labels.pod }} `madison-proxy`.
-
-        You need to check the `madison-proxy` logs: `kubectl -n d8-monitoring logs -f {{ $labels.pod }}`
-      summary: |
-        Prometheus is unable to deliver {{ $value | humanizePercentage }} alerts to the {{ $labels.madison_backend }} Madison backend using the {{ $labels.pod }} madison-proxy.
-      severity: undefined
-      markupFormat: markdown
     - name: D8PrometheusOperatorPodIsNotReady
       sourceFile: modules/200-operator-prometheus/monitoring/prometheus-rules/operator.yaml
       moduleUrl: 200-operator-prometheus
