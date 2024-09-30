@@ -32,7 +32,7 @@ func Run(ctx context.Context, kubeClient *kubernetes.Clientset) error {
 	apiServer := NewServer(kubeClient)
 	http.HandleFunc("/staticpod/create", apiServer.CreateStaticPodHandler)
 	http.HandleFunc("/staticpod/delete", apiServer.DeleteStaticPodHandler)
-	server := &http.Server{Addr: "0.0.0.0:4576"}
+	server := &http.Server{Addr: "127.0.0.1:4576"}
 
 	go func() {
 		<-ctx.Done()
