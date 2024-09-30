@@ -109,9 +109,6 @@ spec:
           subPath: {{ .templateName }}
           readOnly: true
         {{- end }}
-        - mountPath: /pki
-          name: pki
-          readOnly: true
         - mountPath: /etc/kubernetes
           name: etc-kubernetes
         - mountPath: /root/.kube/
@@ -169,9 +166,6 @@ spec:
       # dnsPolicy: ClusterFirstWithHostNet
       priorityClassName: system-cluster-critical
       volumes:
-      - name: pki
-        secret:
-          secretName: system-registry-manager-pki
       - name: configs
         secret:
           secretName: system-registry-manager-configs

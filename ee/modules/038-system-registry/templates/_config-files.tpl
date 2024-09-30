@@ -9,8 +9,6 @@ files:
 secrets:
  - templateName: system-registry-manager-configs
    annotationNameForCheckSum: manager-configs/CheckSum
- - templateName: system-registry-manager-pki
-   annotationNameForCheckSum: manager-pki/CheckSum
 {{- end }}
 
 
@@ -33,11 +31,6 @@ cluster:
   size:  1
   {{- end }}
 
-etcd:
-  addresses:
-  {{- range $etcd_addresses := $.Values.systemRegistry.internal.etcd.addresses }}
-  - {{ $etcd_addresses }}
-  {{- end }}
 registry:
   registryMode: {{ $.Values.systemRegistry.registryMode }}
   upstreamRegistry:
@@ -71,23 +64,5 @@ data:
   {{- $configFilesInfo := (include "config-files-info" $ ) | fromYaml }}
   {{- range $configFilesInfo.files }}
   "{{ .templateName }}": {{ include .templateName $  | b64enc }}
-  {{- end }}
-{{- end }}
-
-
-##########################################
-#   secret system-registry-manager-pki   #
-##########################################
-{{- define "system-registry-manager-pki"  }}
-apiVersion: v1
-kind: Secret
-metadata:
-  name: system-registry-manager-pki
-  namespace: d8-system
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "d8-system-registry")) | nindent 2 }}
-type: Opaque
-data:
-  {{- range $.Values.systemRegistry.internal.pki.data }}
-  {{ .key }}: {{ .value }}
   {{- end }}
 {{- end }}
