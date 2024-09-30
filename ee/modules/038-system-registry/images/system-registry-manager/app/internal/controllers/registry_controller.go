@@ -165,7 +165,7 @@ func (r *RegistryReconciler) checkAndDeployComponents() error {
 		if podIP != "" {
 			//	r.Recorder.Event(&pod, corev1.EventTypeNormal, "PodReconciled", fmt.Sprintf("Pod %s reconciled successfully", pod.Name))
 
-			apiURL := fmt.Sprintf("http://%s:4576", podIP)
+			apiURL := fmt.Sprintf("https://%s:4577", podIP)
 			if err := r.createStaticPod(apiURL, pod.Spec.NodeName); err != nil {
 				ctrl.Log.Error(err, "Failed to create static pod")
 			}

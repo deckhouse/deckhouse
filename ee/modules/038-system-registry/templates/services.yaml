@@ -14,10 +14,14 @@ spec:
   type: ClusterIP
   clusterIP: None
   ports:
-  - name: http
+  - name: http-healthz
     protocol: TCP
     targetPort: 8097
     port: 8097
+  - name: https-api
+    protocol: TCP
+    targetPort: 4577
+    port: 4577
   selector:
     app: system-registry-manager
 ---
