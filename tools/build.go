@@ -56,6 +56,7 @@ var defaultModulesExcludes = []string{
 	"apis/**/*.go",
 	"requirements/**/*.go",
 	"settings-conversion/**/*.go",
+	"openapi/conversions/*.go",
 	"hack/**/*.go",
 	"api/**/*.go",
 	".namespace",
