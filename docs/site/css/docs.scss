@@ -322,6 +322,10 @@
 .layout-sidebar {
   display: flex;
   gap: 64px;
+
+  @media screen and (width < 1500px) {
+    gap: 54px;
+  }
 }
 
 .layout-sidebar__wrap {
@@ -909,7 +913,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs .resources__prop_description code,
 .docs code.resources__attrs_content {
-    background: transparent;
     color: #00122C;
 }
 
