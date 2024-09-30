@@ -150,7 +150,7 @@ properties:
                 properties:
                   cpu:
                     description: |
-                      Настройка запроса CPU (CPU requests). Пример указания параметра - "1", "1000m".
+                      Настройка запроса CPU (CPU requests).
                   memory:
                     description: |
                       Настройка запроса памяти (memory requests).
@@ -160,7 +160,7 @@ properties:
                 properties:
                   cpu:
                     description: |
-                      Настройка ограничений использования CPU (CPU limits). Пример указания параметра - "1", "1000m".
+                      Настройка ограничений использования CPU (CPU limits).
                   memory:
                     description: |
                       Настройка ограничений использования памяти (memory limits).
