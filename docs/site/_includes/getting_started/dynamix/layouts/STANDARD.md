@@ -3,5 +3,6 @@
 
 In this scheme, an internal cluster network is created with a gateway to the public network; the nodes do not have public IP addresses. Note that the floating IP is assigned to the master node.
 
-> **Caution!**
-> If the provider does not support SecurityGroups, all applications running on nodes with floating IPs assigned will be available at a public IP. For example, kube-apiserver on master nodes will be available on port 6443. To avoid this, we recommend using the SimpleWithInternalNetwork placement strategy.
+{% alert level="warning" %}
+If the provider does not support SecurityGroups, all applications running on nodes with floating IPs assigned will be available at a public IP. For example, kube-apiserver on master nodes will be available on port 6443. To avoid this, we recommend using the `SimpleWithInternalNetwork` placement strategy.
+{% endalert %}
