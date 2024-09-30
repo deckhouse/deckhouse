@@ -8,7 +8,7 @@
     KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
   run: |
     if [[ -n $KEY ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
-- name: Send alert on fail
+- name: Send loop alert on fail
 {!{- if coll.Has $ctx "if" }!}
   if: ${{ steps.check_loop_alerting.outputs.has_credentials == 'true' && ( {!{- $ctx.if -}!} ) }}
 {!{- else }!}
@@ -16,7 +16,7 @@
 {!{- end }!}
   env:
     LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
-    LOOP_CHANEL_ID:
+    LOOP_CHANEL_ID: ki5qkj79jinoxqi6m5er8t644a # dev-deskhouse-ci
   run: |
     WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
 
