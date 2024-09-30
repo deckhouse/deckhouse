@@ -143,7 +143,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 
 				m.Registry.Data = RegistryData{
 					Address: fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
-					Path:    "/system/deckhouse",
+					Path:    m.Registry.Data.Path,
 					// These parameters are filled in in the method `PrepareAfterGlobalCacheInit`:
 					// Scheme:       "",
 					// DockerCfg:    "",
