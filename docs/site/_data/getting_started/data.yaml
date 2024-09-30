@@ -590,7 +590,7 @@ installTypes:
       ru: РЕД виртуализация
     description:
       ru: <a href="https://redos.red-soft.ru/product/red-virtualizatsiya/">РЕД виртуализация</a> – система управления виртуализацией серверов и рабочих станций. Базируется на гипервизоре KVM (kernel-based virtual machine) и открытой платформе управления виртуальной инфраструктурой.
-      en: <a href="https://redos.red-soft.ru/product/red-virtualizatsiya/">РЕД виртуализация</a> – система управления виртуализацией серверов и рабочих станций.   
+      en: <a href="https://redos.red-soft.ru/product/red-virtualizatsiya/">РЕД виртуализация</a> – система управления виртуализацией серверов и рабочих станций.
     steps:
       step2:
         name:
@@ -616,7 +616,7 @@ installTypes:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
-        template: getting_started/global/STEP_FINISH.md   
+        template: getting_started/global/STEP_FINISH.md
   spacevm:
     languages: ["ru"]
     iconPath: images/icons/platforms/spacevm.png
@@ -629,7 +629,7 @@ installTypes:
       ru: SpaceVM
     description:
       ru: <a href="https://spacevm.ru/">Облачная платформа на SpaceVM</a> – инструмент серверной виртуализации для эффективного управления ИТ-инфраструктурой. Представляет собой комплексную платформу для развертывания полноценного частного облака в корпоративной среде с необходимыми дополнительными инструментами для автоматизации и оркестрации работы облачных сервисов.
-      en: <a href="https://spacevm.ru/">Облачная платформа на SpaceVM</a> – инструмент серверной виртуализации для эффективного управления ИТ-инфраструктурой.  
+      en: <a href="https://spacevm.ru/">Облачная платформа на SpaceVM</a> – инструмент серверной виртуализации для эффективного управления ИТ-инфраструктурой.
     steps:
       step2:
         name:
