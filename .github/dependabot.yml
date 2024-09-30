@@ -160,7 +160,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/038-system-registry/images/embedded-registry-manager"
+  directory: "/ee/modules/038-system-registry/images/old-system-registry-manager/manager"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -169,7 +169,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/038-system-registry/images/system-registry-manager/manager"
+  directory: "/ee/modules/038-system-registry/images/system-registry-manager/app"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

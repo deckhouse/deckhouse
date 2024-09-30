@@ -434,10 +434,11 @@ var DefaultImagesDigests = map[string]interface{}{
 		"agent": "imageHash-staticRoutingManager-agent",
 	},
 	"systemRegistry": map[string]interface{}{
-		"dockerAuth":            "imageHash-systemRegistry-dockerAuth",
-		"dockerDistribution":    "imageHash-systemRegistry-dockerDistribution",
-		"seaweedfs":             "imageHash-systemRegistry-seaweedfs",
-		"systemRegistryManager": "imageHash-systemRegistry-systemRegistryManager",
+		"dockerAuth":               "imageHash-systemRegistry-dockerAuth",
+		"dockerDistribution":       "imageHash-systemRegistry-dockerDistribution",
+		"oldSystemRegistryManager": "imageHash-systemRegistry-oldSystemRegistryManager",
+		"seaweedfs":                "imageHash-systemRegistry-seaweedfs",
+		"systemRegistryManager":    "imageHash-systemRegistry-systemRegistryManager",
 	},
 	"terraformManager": map[string]interface{}{
 		"baseTerraformManager":      "imageHash-terraformManager-baseTerraformManager",
