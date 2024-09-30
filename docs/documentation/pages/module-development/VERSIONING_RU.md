@@ -37,7 +37,119 @@ lang: ru
 
 В зависимости от этапа жизненного цикла модуля и канала обновлений, из которого была установлена версия модуля, общая стабильность может быть определена в соответствии со следующей таблицей:
 
-![Module_Stability](../../images/module-development/module_stability.png)
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Стадии модулей</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 1em;
+            text-align: left;
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #000;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+            text-align: center;
+        }
+        .header-row {
+            background-color: #e0e0e0;
+            font-weight: bold;
+        }
+        .sub-header {
+            background-color: #f9f9f9;
+        }
+        .pink {
+            background-color: #ffe6e6;
+        }
+        .light-pink {
+            background-color: #ffe0e0;
+        }
+        .yellow {
+            background-color: #ffebcc;
+        }
+        .light-yellow {
+            background-color: #fff2cc;
+        }
+        .green {
+            background-color: #d9ead3;
+        }
+        .grey {
+            background-color: #eeeeee;
+        }
+        .medium-green {
+            background-color: #89AC76;
+        }
+        .dark-green {
+            background-color: #44944A;
+        }
+    </style>
+</head>
+<body>
+
+<table>
+    <thead>
+        <tr class="header-row">
+            <th rowspan="2">Этап</th>
+            <th colspan="5" style="text-align:center;">Каналы обновлений</th>
+        </tr>
+        <tr class="sub-header">
+            <th>Alfa</th>
+            <th>Beta</th>
+            <th>EarlyAccess</th>
+            <th>Stable</th>
+            <th>RockSolid</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Experimental (Экспериментальный)</strong></td>
+            <td class="pink">Эксперименты и проверка функционала</td>
+            <td class="pink">Эксперименты и проверка функционала</td>
+            <td class="pink">Эксперименты и проверка функционала</td>
+            <td class="yellow">Эксперименты и проверка функционала. Точечное использование в окружениях, приравненных к продуктивным опытными пользователями</td>
+            <td class="yellow">Эксперименты и проверка функционала. Точечное использование в окружениях, приравненных к продуктивным опытными пользователями</td>
+        </tr>
+        <tr>
+            <td><strong>Preview (Предварительный)</strong></td>
+            <td class="pink">Эксперименты и проверка функционала</td>
+            <td class="yellow">Окружения разработки, пилоты, не критические продуктивные окружения</td>
+            <td class="yellow">Окружения разработки, пилоты, не критические продуктивные окружения</td>
+            <td class="green">Продуктивные окружения и приравненные к ним</td>
+            <td class="green">Продуктивные окружения и приравненные к ним</td>
+        </tr>
+        <tr>
+            <td><strong>GA (Общедоступный)</strong></td>
+            <td class="pink">Эксперименты и проверка функционала</td>
+            <td class="yellow">Окружения разработки, пилоты, не критические продуктивные окружения</td>
+            <td class="green">Окружения разработки, пилоты, не критические продуктивные окружения</td>
+            <td class="medium-green">Продуктивные окружения и приравненные к ним</td>
+            <td class="dark-green">Критические продуктивные окружения и приравненные к ним</td>
+        </tr>
+        <tr>
+            <td><strong>Deprecated (Выведен из использования)</strong></td>
+            <td class="grey">Необходимо выводить из использования</td>
+            <td class="grey">Необходимо выводить из использования</td>
+            <td class="grey">Необходимо выводить из использования</td>
+            <td class="grey">Необходимо выводить из использования</td>
+            <td class="grey">Необходимо выводить из использования</td>
+        </tr>
+    </tbody>
+</table>
+
+</body>
+</html>
+
+**Этап Experimental** — функционал может быть изменен или удален. Совместимость с будущими версиями не гарантируется.
+
+**Этап Preview** — функционал может изменяться, но основные функции сохранятся. Совместимость с будущими версиями обеспечивается, но могут потребоваться дополнительные действия по миграции.
 
 Выводы:
 - Модуль на стадии `Experimental` в канале `Stable` не рекомендуется использовать в production-средах.
