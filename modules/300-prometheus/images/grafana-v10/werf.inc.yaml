@@ -2,9 +2,8 @@
 {{ $grafanaVersion := "10.4.9" }}
 {{ $bundledPlugins := "petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel" }}
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: src-artifact
-final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
@@ -42,11 +41,10 @@ shell:
   - git apply /patches/*.patch --verbose
   - git clone --depth 1 {{ .SOURCE_REPO }}/grafana/grafana-plugins.git /src/grafana-plugins
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-js-builder
+artifact: {{ .ModuleName }}/{{ .ImageName }}-js-builder
 from: {{ .Images.BASE_NODE_18_ALPINE }}
-final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/grafana
   to: /src
   before: install
@@ -58,14 +56,13 @@ shell:
   - export NODE_ENV=production NODE_OPTIONS="--max_old_space_size=8000"
   - yarn build
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-go-builder
+artifact: {{ .ModuleName }}/{{ .ImageName }}-go-builder
 from: {{ .Images.BASE_GOLANG_22_BULLSEYE }}
-final: false
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/grafana
   to: /usr/src/app
   before: install
@@ -80,14 +77,13 @@ shell:
   - /go/bin/wire gen -tags oss ./pkg/server
   - go build -ldflags -w -ldflags "-X main.version={{ $grafanaVersion }} -linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana ./pkg/cmd/grafana
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint
+artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
-final: false
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/entrypoint
   to: /app
   before: install
@@ -101,35 +97,34 @@ shell:
   - chown -R 64535:64535 /app/
   - chmod 0700 /app/entrypoint
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-grafana-distr
+artifact: {{ .ModuleName }}/{{ .ImageName }}-grafana-distr
 from: {{ .Images.BASE_ALT_P11 }}
-final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-go-builder
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-go-builder
   add: /usr/src/app/bin/linux-amd64/grafana
   to: /usr/share/grafana/bin/grafana
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-js-builder
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-js-builder
   add: /src/public
   to: /usr/share/grafana/public
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-js-builder
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-js-builder
   add: /src/tools
   to: /usr/share/grafana/tools
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/grafana/conf
   to: /usr/share/grafana/conf
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/grafana_home_dashboard.json
   to: /usr/share/grafana/public/dashboards/grafana_home_dashboard.json
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/img
   to: /img
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/grafana-plugins
   to: /grafana-plugins
   before: install
@@ -173,37 +168,36 @@ shell:
   - chown -R 64535:64535 /var/log/grafana
   - chmod 0700 ./bin/grafana
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
 from: {{ .Images.BASE_ALT_P11 }}
-final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /
   to: /
   includePaths:
   - usr/lib
   - usr/lib64
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint
   add: /app/entrypoint
   to: /usr/local/bin/entrypoint
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-grafana-distr
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-grafana-distr
   add: /usr/share/grafana/
   to: /usr/share/grafana
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-grafana-distr
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-grafana-distr
   add: /etc/grafana/
   to: /etc/grafana
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-grafana-distr
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-grafana-distr
   add: /var/lib/grafana/
   to: /var/lib/grafana
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-grafana-distr
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-grafana-distr
   add: /var/log/grafana/
   to: /var/log/grafana
   before: install
