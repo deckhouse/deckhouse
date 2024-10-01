@@ -42,7 +42,7 @@ shell:
   - git clone --depth 1 {{ .SOURCE_REPO }}/grafana/grafana-plugins.git /src/grafana-plugins
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-js-builder
-from: {{ .Images.BASE_NODE_18_ALPINE }}
+from: {{ .Images.BASE_NODE_20_ALPINE }}
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/grafana
@@ -98,7 +98,7 @@ shell:
   - chmod 0700 /app/entrypoint
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-grafana-distr
-from: {{ .Images.BASE_UBUNTU_DEV }}
+from: {{ .Images.BASE_ALT_P11 }}
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-go-builder
   add: /usr/src/app/bin/linux-amd64/grafana
