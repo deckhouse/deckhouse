@@ -32,7 +32,6 @@ cloudProviderGcp:
     exclude:
     - .*standard.*
     - bar
-    default: pd-ssd-replicated
 `
 
 		initValuesWithDefaultClusterStorageClass = `
@@ -44,7 +43,6 @@ cloudProviderGcp:
     exclude:
     - .*standard.*
     - bar
-    default: pd-ssd-replicated
 `
 
 		initValuesWithEmptyDefaultClusterStorageClass = `
@@ -56,7 +54,6 @@ cloudProviderGcp:
     exclude:
     - .*standard.*
     - bar
-    default: pd-ssd-replicated
 `
 	)
 
@@ -68,7 +65,7 @@ cloudProviderGcp:
 			f.RunHook()
 		})
 
-		It("Should discover storageClasses with DEPRECATED default NOT set", func() {
+		It("Should discover storageClasses", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cloudProviderGcp.internal.storageClasses").String()).To(MatchJSON(`
 [
@@ -94,7 +91,6 @@ cloudProviderGcp:
   }
 ]
 `))
-			Expect(f.ValuesGet("cloudProviderGcp.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
 
 	})

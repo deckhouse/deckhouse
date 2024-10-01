@@ -27,8 +27,6 @@ import (
 )
 
 var _ = Describe("Modules :: common :: hooks :: storage_classes ::", func() {
-	const defaultSCPath = "cloudProviderFake.internal.defaultStorageClass"
-
 	assertStorageClassesInValues := func(f *HookExecutionConfig, mustInValues ...string) {
 		raw := f.ValuesGet("cloudProviderFake.internal.storageClasses").String()
 
@@ -66,56 +64,6 @@ var _ = Describe("Modules :: common :: hooks :: storage_classes ::", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
 				assertStorageClassesInValues(f, "first-hdd", "second-hdd", "third-ssd")
-			})
-
-			It("Should not set default class", func() {
-				Expect(f).To(ExecuteSuccessfully())
-
-				Expect(f.ValuesGet(defaultSCPath).Exists()).To(BeFalse())
-			})
-		})
-
-		Context("DEPRECATED: Set default storage class into values", func() {
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("cloudProviderFake.storageClass", []byte(`{"default": "first-hdd"}`))
-
-				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-				f.RunHook()
-			})
-
-			It("Should discover all supported storage classes", func() {
-				Expect(f).To(ExecuteSuccessfully())
-
-				assertStorageClassesInValues(f, "first-hdd", "second-hdd", "third-ssd")
-			})
-
-			It("DEPRECATED: Should set default class", func() {
-				Expect(f).To(ExecuteSuccessfully())
-
-				// Expect(f.ValuesGet(defaultSCPath).String()).To(Equal("first-hdd"))
-				// changed because cloudProvider's storageClass.default was deprecated in favor of `global.defaultClusterStorageClass`
-				Expect(f.ValuesGet(defaultSCPath).Exists()).To(BeFalse())
-			})
-
-			Context("Remove default storage class from values", func() {
-				BeforeEach(func() {
-					f.ValuesSetFromYaml("cloudProviderFake.storageClass", []byte(`{"storageClass": {}}`))
-
-					f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-					f.RunHook()
-				})
-
-				It("Should discover all supported storage classes", func() {
-					Expect(f).To(ExecuteSuccessfully())
-
-					assertStorageClassesInValues(f, "first-hdd", "second-hdd", "third-ssd")
-				})
-
-				It("Should not set default class", func() {
-					Expect(f).To(ExecuteSuccessfully())
-
-					Expect(f.ValuesGet(defaultSCPath).Exists()).To(BeFalse())
-				})
 			})
 		})
 
@@ -170,14 +118,6 @@ var _ = Describe("Modules :: common :: hooks :: storage_classes ::", func() {
 				assertStorageClassesInValues(f, "third-ssd")
 			})
 
-			It("DEPRECATED: Should set default class", func() {
-				Expect(f).To(ExecuteSuccessfully())
-
-				// Expect(f.ValuesGet(defaultSCPath).String()).To(Equal("third-ssd"))
-				// changed because cloudProvider's storageClass.default was deprecated in favor of `global.defaultClusterStorageClass`
-				Expect(f.ValuesGet(defaultSCPath).Exists()).To(BeFalse())
-			})
-
 			Context("Remove excluding", func() {
 				BeforeEach(func() {
 					f.ValuesSetFromYaml("cloudProviderFake.storageClass", []byte(`{"default": "third-ssd"}`))
@@ -190,14 +130,6 @@ var _ = Describe("Modules :: common :: hooks :: storage_classes ::", func() {
 					Expect(f).To(ExecuteSuccessfully())
 
 					assertStorageClassesInValues(f, "first-hdd", "second-hdd", "third-ssd")
-				})
-
-				It("Should set default class", func() {
-					Expect(f).To(ExecuteSuccessfully())
-
-					// Expect(f.ValuesGet(defaultSCPath).String()).To(Equal("third-ssd"))
-					// changed because cloudProvider's storageClass.default was deprecated in favor of `global.defaultClusterStorageClass`
-					Expect(f.ValuesGet(defaultSCPath).Exists()).To(BeFalse())
 				})
 			})
 		})

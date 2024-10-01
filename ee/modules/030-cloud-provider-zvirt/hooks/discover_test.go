@@ -79,63 +79,6 @@ allowVolumeExpansion: false
 volumeBindingMode: WaitForFirstConsumer
 `
 
-	storageClassesWithDefault := `
----
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: default
-  labels:
-    app.kubernetes.io/managed-by: Helm
-    heritage: deckhouse
-    module: cloud-provider-zvirt
-  annotations:
-    meta.helm.sh/release-name: cloud-provider-Zvirt
-    meta.helm.sh/release-namespace: d8-system
-    storageclass.kubernetes.io/is-default-class: 'true'
-provisioner: named-disk.csi.cloud-director.vmware.com
-parameters:
-  storageDomain: "SAS"
-reclaimPolicy: Delete
-allowVolumeExpansion: false
-volumeBindingMode: WaitForFirstConsumer
----
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  annotations:
-    meta.helm.sh/release-name: local-path-provisioner
-    meta.helm.sh/release-namespace: d8-system
-  creationTimestamp: "2022-11-24T16:33:07Z"
-  labels:
-    app: local-path-provisioner
-    app.kubernetes.io/managed-by: Helm
-    heritage: deckhouse
-    module: local-path-provisioner
-  name: localpath-system
-provisioner: deckhouse.io/localpath-system
-reclaimPolicy: Retain
-volumeBindingMode: WaitForFirstConsumer
----
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: hdd
-  labels:
-    app.kubernetes.io/managed-by: Helm
-    heritage: deckhouse
-    module: cloud-provider-zvirt
-  annotations:
-    meta.helm.sh/release-name: cloud-provider-Zvirt
-    meta.helm.sh/release-namespace: d8-system
-provisioner: named-disk.csi.cloud-director.vmware.com
-parameters:
-  storageDomain: "HDD"
-reclaimPolicy: Delete
-allowVolumeExpansion: false
-volumeBindingMode: WaitForFirstConsumer
-`
-
 	manualStorageClasses := `---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -229,33 +172,6 @@ data:
           }
 ]
 `))
-			Expect(b.ValuesGet("cloudProviderZvirt.internal.defaultStorageClass").Exists()).To(BeFalse())
-		})
-	})
-
-	Context("Cluster has only storage classes with default", func() {
-		BeforeEach(func() {
-			b.BindingContexts.Set(b.KubeStateSet(storageClassesWithDefault))
-			b.RunHook()
-		})
-
-		It("Should discover all volumeTypes only for storage classes where deployed by cloud-provider-Zvirt module and no default", func() {
-			Expect(b).To(ExecuteSuccessfully())
-			Expect(b.ValuesGet("cloudProviderZvirt.internal.storageClasses").String()).To(MatchJSON(`
-[
-         {
-            "name": "default",
-            "storageDomain": "SAS",
-            "allowVolumeExpansion": false
-          },
-          {
-            "name": "hdd",
-            "storageDomain": "HDD",
-            "allowVolumeExpansion": false
-          }
-]
-`))
-			Expect(b.ValuesGet("cloudProviderZvirt.internal.defaultStorageClass").Exists()).Should(BeFalse())
 		})
 	})
 
@@ -295,34 +211,6 @@ data:
           }
 ]
 `))
-			Expect(d.ValuesGet("cloudProviderZvirt.internal.defaultStorageClass").Exists()).To(BeFalse())
-		})
-	})
-
-	e := HookExecutionConfigInit(initValues, `{}`)
-	Context("Provider data is successfully discovered", func() {
-		BeforeEach(func() {
-			e.BindingContexts.Set(e.KubeStateSet(state))
-			e.RunHook()
-		})
-
-		It("Should discover all enabled volumeTypes and no default", func() {
-			Expect(e).To(ExecuteSuccessfully())
-			Expect(e.ValuesGet("cloudProviderZvirt.internal.storageClasses").String()).To(MatchJSON(`
-[
-          {
-            "name": "d1",
-            "storageDomain": "D1",
-            "allowVolumeExpansion": true
-          },
-          {
-            "name": "d3",
-            "storageDomain": "D3",
-            "allowVolumeExpansion": true
-          }
-]
-`))
-			Expect(e.ValuesGet("cloudProviderZvirt.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
 	})
 
@@ -333,7 +221,6 @@ cloudProviderZvirt:
     exclude:
     - d3*
     - bar
-    default: d1
 `
 
 	f := HookExecutionConfigInit(initValues, `{}`)

@@ -40,7 +40,6 @@ cloudProviderAws:
     exclude:
     - sc\d+
     - bar
-    default: other-bar
 `
 		initValuesExcludeAllString = `
 cloudProviderAws:
@@ -67,7 +66,6 @@ cloudProviderAws:
     exclude:
     - sc\d+
     - bar
-    default: other-bar
 `
 
 		initValuesWithEmptyDefaultClusterStorageClass = `
@@ -87,7 +85,6 @@ cloudProviderAws:
     exclude:
     - sc\d+
     - bar
-    default: other-bar
 `
 
 		storageClass = `
@@ -113,7 +110,7 @@ parameters:
 			f.RunHook()
 		})
 
-		It("Should discover storageClasses with DEPRECATED default NOT set", func() {
+		It("Should discover storageClasses", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cloudProviderAws.internal.storageClasses").String()).To(MatchJSON(`
 [
@@ -138,7 +135,6 @@ parameters:
   }
 ]
 `))
-			Expect(f.ValuesGet("cloudProviderAws.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
 
 	})
@@ -154,8 +150,6 @@ parameters:
 		It("Should discover no storageClasses with no default is set", func() {
 			Expect(fb).To(ExecuteSuccessfully())
 			Expect(fb.ValuesGet("cloudProviderAws.internal.storageClasses").String()).To(MatchJSON(`[]`))
-			Expect(fb.ValuesGet("cloudProviderAws.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
-
 	})
 })

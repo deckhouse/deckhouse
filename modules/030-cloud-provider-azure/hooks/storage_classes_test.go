@@ -43,7 +43,6 @@ cloudProviderAzure:
     - sc\d+
     - bar
     - managed-standard-large
-    default: other-bar
 `
 		initValuesExcludeAllString = `
 cloudProviderAzure:
@@ -73,7 +72,6 @@ cloudProviderAzure:
     - sc\d+
     - bar
     - managed-standard-large
-    default: other-bar
 `
 
 		initValuesWithEmptyDefaultClusterStorageClass = `
@@ -96,7 +94,6 @@ cloudProviderAzure:
     - sc\d+
     - bar
     - managed-standard-large
-    default: other-bar
 `
 	)
 
@@ -108,7 +105,7 @@ cloudProviderAzure:
 			f.RunHook()
 		})
 
-		It("Should discover storageClasses with DEPRECATED default NOT set", func() {
+		It("Should discover storageClasses", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cloudProviderAzure.internal.storageClasses").String()).To(MatchJSON(`
 [
@@ -143,9 +140,7 @@ cloudProviderAzure:
   }
 ]
 `))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
-
 	})
 
 	fb := HookExecutionConfigInit(initValuesExcludeAllString, `{}`)
@@ -156,10 +151,9 @@ cloudProviderAzure:
 			fb.RunHook()
 		})
 
-		It("Should discover no storageClasses with no default is set", func() {
+		It("Should discover no storageClasses", func() {
 			Expect(fb).To(ExecuteSuccessfully())
 			Expect(fb.ValuesGet("cloudProviderAzure.internal.storageClasses").String()).To(MatchJSON(`[]`))
-			Expect(fb.ValuesGet("cloudProviderAzure.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
 	})
 })

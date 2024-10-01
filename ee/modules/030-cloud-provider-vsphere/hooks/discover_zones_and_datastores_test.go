@@ -149,20 +149,19 @@ cloudProviderVsphere:
   }
 ]
 `))
-			Expect(f.ValuesGet("cloudProviderVsphere.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
 
 	})
 
 	b := HookExecutionConfigInit(initValuesStringB, `{}`)
 
-	Context("Cluster has minimal cloudProviderVsphere configuration with excluded storage classes and default specified", func() {
+	Context("Cluster has minimal cloudProviderVsphere configuration with excluded storage classes", func() {
 		BeforeEach(func() {
 			b.BindingContexts.Set(b.GenerateBeforeHelmContext())
 			b.RunHook()
 		})
 
-		It("Should discover volumeTypes without excluded and DEPRECATED default NOT set", func() {
+		It("Should discover volumeTypes without excluded", func() {
 			Expect(b).To(ExecuteSuccessfully())
 			Expect(b.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`
 [
@@ -177,7 +176,6 @@ cloudProviderVsphere:
   }
 ]
 `))
-			Expect(b.ValuesGet("cloudProviderVsphere.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
 	})
 })
