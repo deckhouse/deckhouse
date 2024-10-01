@@ -156,7 +156,7 @@ kind: IngressNginxController
 metadata:
   name: second
 spec:
-  controllerVersion: "1.6"
+  controllerVersion: "1.9"
   ingressClass: "test"
 `))
 			err := createNs(d8IngressNginxNamespace)
@@ -242,7 +242,7 @@ kind: IngressNginxController
 metadata:
   name: second
 spec:
-  controllerVersion: "1.6"
+  controllerVersion: "1.9"
   ingressClass: "test"
 `))
 			err := createNs(d8IngressNginxNamespace)
