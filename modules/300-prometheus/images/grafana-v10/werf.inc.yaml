@@ -43,6 +43,19 @@ shell:
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-js-builder
 from: {{ .Images.BASE_NODE_18_ALPINE }}
+mount:
+- from: tmp_dir
+  to: /src/node_modules
+- from: tmp_dir
+  to: /root/.npm
+- from: tmp_dir
+  to: /root/.cache
+- from: tmp_dir
+  to: /root/.yarn
+- from: tmp_dir
+  to: /src/.yarn/.cache
+- from: tmp_dir
+  to: /src/.yarn/cache
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/grafana
@@ -55,7 +68,6 @@ shell:
   - yarn install
   - export NODE_ENV=production NODE_OPTIONS="--max_old_space_size=8000"
   - yarn build
-  - rm -r /src/node_modules /root/.npm
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-go-builder
 from: {{ .Images.BASE_GOLANG_22_BULLSEYE }}
@@ -130,7 +142,7 @@ import:
   to: /grafana-plugins
   before: install
 shell:
-  install:  
+  install:
   - |
     export PATH="/usr/share/grafana/bin:$PATH" \
     GF_PATHS_CONFIG="/etc/grafana/grafana.ini" \
