@@ -1,9 +1,10 @@
+
+// rw password BU84m2rBGkq7zjrjuxpC
 {
-  "IpAddress": "10.128.0.29",
   "Registry": {
       "UserRw": {
       "Name": "deckhouse-rw",
-      "PasswordHash": "$2a$10$04ObTJVCU3K83q4L8qFGmeF0AhZzbhn4ZwqWA3etnEwq6OSj9x3IS"
+      "PasswordHash": "$2y$10$pecrsL1WUzsQ4JN4eL.PS.9rSvA9fUSMBHLDfo9hJNyPNEBTVnHT2"
     },
     "UserRo": {
       "Name": "deckhouse-ro",
