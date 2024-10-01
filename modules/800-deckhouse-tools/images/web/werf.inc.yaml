@@ -32,6 +32,10 @@ import:
   add: /task
   to: /task
   before: install
+- artifact: jq-artifact
+  add: /jq
+  to: /jq
+  before: install
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/deckhouse-cli
   to: /src
@@ -57,7 +61,7 @@ shell:
   - /task build:dist:all
   - mkdir -p /app/files/d8-cli
   - mv dist/{{ .CandiVersionMap.d8.d8CliVersion }}/* /app/files/d8-cli
-  - jq '[.[] | .version="{{ .CandiVersionMap.d8.d8CliVersion }}"]' /static/tools.json > /app/tools.json
+  - /jq '[.[] | .version="{{ .CandiVersionMap.d8.d8CliVersion }}"]' /static/tools.json > /app/tools.json
   - mv /static/robots.txt /app
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
