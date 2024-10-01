@@ -1,41 +1,56 @@
-{{ $memcachedExporterVersion := "0.14.1" }}
+{{ $memcachedExporterVersion := "0.14.4" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder
-from: {{ $.Images.BASE_GOLANG_21_BULLSEYE_DEV }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: src-artifact
+shell:
+  install:
+  - cd /src
+  - git clone --depth 1 --branch v{{ $memcachedExporterVersion }} {{ .SOURCE_REPO }}/prometheus/memcached_exporter.git .
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-builder
+from: {{ .Images.BASE_GOLANG_23_BULLSEYE }}
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  {{- include "debian packages proxy" . | nindent 2 }}
+  - apt-get -y --no-install-recommends install gcc musl musl-tools make
+  install:
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
+  - cd /src
+  - make build
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+fromArtifact: relocate-artifact
 shell:
   install:
-    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
-    - git clone --depth 1 --branch v{{ $memcachedExporterVersion }} {{ $.SOURCE_REPO }}/prometheus/memcached_exporter.git /src
-    - cd /src
-    - make build
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y memcached
+  - /binary_replace.sh -i "/usr/bin/memcached" -o /relocate
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
-shell:
-  install:
-    - apt-get install memcached
-    - /binary_replace.sh -i "/usr/bin/memcached" -o /relocate
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter
+image: {{ .ModuleName }}/{{ .ImageName }}-exporter
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder
-    add: /src/memcached_exporter
-    to: /usr/bin/memcached_exporter
-    before: install
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-builder
+  add: /src/memcached_exporter
+  to: /usr/bin/memcached_exporter
+  before: install
 docker:
   EXPOSE:
-    - "9150"
+  - "9150"
   ENTRYPOINT:
-    - "/usr/bin/memcached_exporter"
+  - "/usr/bin/memcached_exporter"
