@@ -857,17 +857,6 @@ entries:
             en: Other modules
             ru: Другие модули
           folders:
-            - title: flant-integration
-              d8Revision: ee
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/600-flant-integration/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/600-flant-integration/configuration.html
             - title: operator-prometheus
               folders:
                 - title:

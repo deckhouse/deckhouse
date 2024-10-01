@@ -56,7 +56,6 @@
 500-okmeter/                    @nabokihms @vladimirGuryanov @lazovskiy @kolashtov
 500-operator-trivy/             @miklezzzz @yalosev
 502-delivery/                   @shvgn
-600-flant-integration/          @RomanenkoDenys @name212 @nabokihms
 600-namespace-configurator/     @yalosev @miklezzzz
 650-runtime-audit-engine/       @RomanenkoDenys @name212 @nabokihms
 810-documentation/              @z9r5 @nabokihms

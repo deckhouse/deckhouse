@@ -162,11 +162,6 @@ defaults:
     values:
       d8Revision: ee
   - scope:
-      path: "*/600-flant-integration"
-      type: "pages"
-    values:
-      d8Revision: ee
-  - scope:
       path: "*/650-runtime-audit-engine"
       type: "pages"
     values:

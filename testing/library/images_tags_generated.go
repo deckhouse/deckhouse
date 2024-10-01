@@ -231,11 +231,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"extendedMonitoringExporter": "imageHash-extendedMonitoring-extendedMonitoringExporter",
 		"imageAvailabilityExporter":  "imageHash-extendedMonitoring-imageAvailabilityExporter",
 	},
-	"flantIntegration": map[string]interface{}{
-		"flantPricing": "imageHash-flantIntegration-flantPricing",
-		"grafanaAgent": "imageHash-flantIntegration-grafanaAgent",
-		"madisonProxy": "imageHash-flantIntegration-madisonProxy",
-	},
 	"ingressNginx": map[string]interface{}{
 		"controller110":         "imageHash-ingressNginx-controller110",
 		"controller16":          "imageHash-ingressNginx-controller16",

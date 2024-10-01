@@ -1384,42 +1384,6 @@ alerts:
         There is no prometheus-longterm target in Prometheus.
       severity: "7"
       markupFormat: markdown
-    - name: D8PrometheusMadisonErrorSendingAlerts
-      sourceFile: ee/be/modules/600-flant-integration/monitoring/prometheus-rules/sending-alerts.yaml
-      moduleUrl: 600-flant-integration
-      module: flant-integration
-      edition: be
-      description: Prometheus is unable to deliver 100% alerts.
-      summary: |
-        Prometheus is unable to deliver 100% alerts.
-      severity: "5"
-      markupFormat: default
-    - name: D8PrometheusMadisonErrorSendingAlerts
-      sourceFile: ee/be/modules/600-flant-integration/monitoring/prometheus-rules/sending-alerts.yaml
-      moduleUrl: 600-flant-integration
-      module: flant-integration
-      edition: be
-      description: |
-        Prometheus is unable to deliver 100% alerts through one or more madison-proxies.
-
-        You need to check the `madison-proxy` logs: `kubectl -n d8-monitoring logs -f -l app=madison-proxy`
-      summary: |
-        Prometheus is unable to deliver 100% alerts through one or more madison-proxies.
-      severity: "6"
-      markupFormat: markdown
-    - name: D8PrometheusMadisonErrorSendingAlertsToBackend
-      sourceFile: ee/be/modules/600-flant-integration/monitoring/prometheus-rules/sending-alerts.yaml
-      moduleUrl: 600-flant-integration
-      module: flant-integration
-      edition: be
-      description: |
-        Prometheus is unable to deliver {{ $value | humanizePercentage }} alerts to the {{ $labels.madison_backend }} Madison backend using the {{ $labels.pod }} `madison-proxy`.
-
-        You need to check the `madison-proxy` logs: `kubectl -n d8-monitoring logs -f {{ $labels.pod }}`
-      summary: |
-        Prometheus is unable to deliver {{ $value | humanizePercentage }} alerts to the {{ $labels.madison_backend }} Madison backend using the {{ $labels.pod }} madison-proxy.
-      severity: undefined
-      markupFormat: markdown
     - name: D8PrometheusOperatorPodIsNotReady
       sourceFile: modules/200-operator-prometheus/monitoring/prometheus-rules/operator.yaml
       moduleUrl: 200-operator-prometheus
@@ -2074,37 +2038,6 @@ alerts:
       summary: |
         The {{$labels.pod}} Pod has detected unavailable PSI subsystem. Check logs for additional information: kubectl -n d8-cloud-instance-manager logs {{$labels.pod}} Possible actions to resolve the problem: * Upgrade kernel to version 4.20 or higher. * Enable Pressure Stall Information. * Disable early oom.
       severity: "8"
-      markupFormat: markdown
-    - name: FlantPricingNotSendingSamples
-      sourceFile: ee/be/modules/600-flant-integration/monitoring/prometheus-rules/grafana-agent.yaml
-      moduleUrl: 600-flant-integration
-      module: flant-integration
-      edition: be
-      description: |
-        Succeeded samples metric of the Grafana Agent is not increasing.
-
-        To get more details, check logs of the following containers:
-        - `kubectl -n d8-flant-integration logs -l app=pricing -c grafana-agent`
-        - `kubectl -n d8-flant-integration logs -l app=pricing -c pricing`
-      summary: |
-        Flant-pricing cluster metrics are not being delivered
-      severity: "6"
-      markupFormat: markdown
-    - name: FlantPricingSucceededSamplesMetricIsAbsent
-      sourceFile: ee/be/modules/600-flant-integration/monitoring/prometheus-rules/grafana-agent.yaml
-      moduleUrl: 600-flant-integration
-      module: flant-integration
-      edition: be
-      description: |
-        There are no succeeded samples metric from the Grafana Agent.
-
-        To get more details:
-
-        Check pods state: `kubectl -n d8-flant-integration get pod -l app=pricing`
-        or logs: `kubectl -n d8-flant-integration logs -l app=pricing -c grafana-agent`
-      summary: |
-        Crucial metrics are missing.
-      severity: "6"
       markupFormat: markdown
     - name: GrafanaDashboardAlertRulesDeprecated
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
@@ -3049,7 +2982,6 @@ modules-having-alerts:
     - cni-cilium
     - control-plane-manager
     - documentation
-    - flant-integration
     - flow-schema
     - ingress-nginx
     - istio
