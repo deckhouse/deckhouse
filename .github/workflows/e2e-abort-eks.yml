@@ -73,6 +73,38 @@ jobs:
 
 
   # <template: e2e_run_job_template>
+    # <template: check_e2e_labels_job>
+    check_e2e_labels:
+      name: Check e2e labels
+      runs-on: ubuntu-latest
+      outputs:
+
+        run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
+        run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
+        run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
+        run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
+        run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
+        run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
+        run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+        multimaster: ${{ steps.check.outputs.multimaster }}
+      steps:
+
+        # <template: checkout_step>
+        - name: Checkout sources
+          uses: actions/checkout@v3.5.2
+
+        # </template: checkout_step>
+        - name: Check e2e labels
+          id: check
+          uses: actions/github-script@v6.4.1
+          with:
+            script: |
+              const provider = 'eks';
+              const kubernetesDefaultVersion = '1.27';
+
+              const ci = require('./.github/scripts/js/ci');
+              return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
+    # </template: check_e2e_labels_job>
   run_containerd_1_26:
     name: "destroy cluster: EKS, Containerd, Kubernetes 1.26"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.26' && github.event.inputs.layout == 'WithoutNAT' }}
@@ -177,6 +209,7 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
+          MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
           TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
@@ -204,12 +237,20 @@ jobs:
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
 
+          if [ "${MULTIMASTER}" == true ] ; then
+            MASTERS_COUNT=3
+          else
+            MASTERS_COUNT=1
+          fi
+          echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -234,6 +275,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
+          MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
@@ -355,6 +397,38 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
+    # <template: check_e2e_labels_job>
+    check_e2e_labels:
+      name: Check e2e labels
+      runs-on: ubuntu-latest
+      outputs:
+
+        run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
+        run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
+        run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
+        run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
+        run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
+        run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
+        run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+        multimaster: ${{ steps.check.outputs.multimaster }}
+      steps:
+
+        # <template: checkout_step>
+        - name: Checkout sources
+          uses: actions/checkout@v3.5.2
+
+        # </template: checkout_step>
+        - name: Check e2e labels
+          id: check
+          uses: actions/github-script@v6.4.1
+          with:
+            script: |
+              const provider = 'eks';
+              const kubernetesDefaultVersion = '1.27';
+
+              const ci = require('./.github/scripts/js/ci');
+              return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
+    # </template: check_e2e_labels_job>
   run_containerd_1_27:
     name: "destroy cluster: EKS, Containerd, Kubernetes 1.27"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.27' && github.event.inputs.layout == 'WithoutNAT' }}
@@ -459,6 +533,7 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
+          MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
           TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
@@ -486,12 +561,20 @@ jobs:
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
 
+          if [ "${MULTIMASTER}" == true ] ; then
+            MASTERS_COUNT=3
+          else
+            MASTERS_COUNT=1
+          fi
+          echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -516,6 +599,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
+          MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
@@ -637,6 +721,38 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
+    # <template: check_e2e_labels_job>
+    check_e2e_labels:
+      name: Check e2e labels
+      runs-on: ubuntu-latest
+      outputs:
+
+        run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
+        run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
+        run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
+        run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
+        run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
+        run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
+        run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+        multimaster: ${{ steps.check.outputs.multimaster }}
+      steps:
+
+        # <template: checkout_step>
+        - name: Checkout sources
+          uses: actions/checkout@v3.5.2
+
+        # </template: checkout_step>
+        - name: Check e2e labels
+          id: check
+          uses: actions/github-script@v6.4.1
+          with:
+            script: |
+              const provider = 'eks';
+              const kubernetesDefaultVersion = '1.27';
+
+              const ci = require('./.github/scripts/js/ci');
+              return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
+    # </template: check_e2e_labels_job>
   run_containerd_1_28:
     name: "destroy cluster: EKS, Containerd, Kubernetes 1.28"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.28' && github.event.inputs.layout == 'WithoutNAT' }}
@@ -741,6 +857,7 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
+          MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
           TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
@@ -768,12 +885,20 @@ jobs:
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
 
+          if [ "${MULTIMASTER}" == true ] ; then
+            MASTERS_COUNT=3
+          else
+            MASTERS_COUNT=1
+          fi
+          echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -798,6 +923,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
+          MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
@@ -919,6 +1045,38 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
+    # <template: check_e2e_labels_job>
+    check_e2e_labels:
+      name: Check e2e labels
+      runs-on: ubuntu-latest
+      outputs:
+
+        run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
+        run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
+        run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
+        run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
+        run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
+        run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
+        run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+        multimaster: ${{ steps.check.outputs.multimaster }}
+      steps:
+
+        # <template: checkout_step>
+        - name: Checkout sources
+          uses: actions/checkout@v3.5.2
+
+        # </template: checkout_step>
+        - name: Check e2e labels
+          id: check
+          uses: actions/github-script@v6.4.1
+          with:
+            script: |
+              const provider = 'eks';
+              const kubernetesDefaultVersion = '1.27';
+
+              const ci = require('./.github/scripts/js/ci');
+              return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
+    # </template: check_e2e_labels_job>
   run_containerd_1_29:
     name: "destroy cluster: EKS, Containerd, Kubernetes 1.29"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.29' && github.event.inputs.layout == 'WithoutNAT' }}
@@ -1023,6 +1181,7 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
+          MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
           TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
@@ -1050,12 +1209,20 @@ jobs:
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
 
+          if [ "${MULTIMASTER}" == true ] ; then
+            MASTERS_COUNT=3
+          else
+            MASTERS_COUNT=1
+          fi
+          echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -1080,6 +1247,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
+          MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
@@ -1201,6 +1369,38 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
+    # <template: check_e2e_labels_job>
+    check_e2e_labels:
+      name: Check e2e labels
+      runs-on: ubuntu-latest
+      outputs:
+
+        run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
+        run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
+        run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
+        run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
+        run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
+        run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
+        run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+        multimaster: ${{ steps.check.outputs.multimaster }}
+      steps:
+
+        # <template: checkout_step>
+        - name: Checkout sources
+          uses: actions/checkout@v3.5.2
+
+        # </template: checkout_step>
+        - name: Check e2e labels
+          id: check
+          uses: actions/github-script@v6.4.1
+          with:
+            script: |
+              const provider = 'eks';
+              const kubernetesDefaultVersion = '1.27';
+
+              const ci = require('./.github/scripts/js/ci');
+              return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
+    # </template: check_e2e_labels_job>
   run_containerd_1_30:
     name: "destroy cluster: EKS, Containerd, Kubernetes 1.30"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.30' && github.event.inputs.layout == 'WithoutNAT' }}
@@ -1305,6 +1505,7 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
+          MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
           TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
@@ -1332,12 +1533,20 @@ jobs:
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
 
+          if [ "${MULTIMASTER}" == true ] ; then
+            MASTERS_COUNT=3
+          else
+            MASTERS_COUNT=1
+          fi
+          echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -1362,6 +1571,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
+          MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
@@ -1483,6 +1693,38 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
+    # <template: check_e2e_labels_job>
+    check_e2e_labels:
+      name: Check e2e labels
+      runs-on: ubuntu-latest
+      outputs:
+
+        run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
+        run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
+        run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
+        run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
+        run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
+        run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
+        run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+        multimaster: ${{ steps.check.outputs.multimaster }}
+      steps:
+
+        # <template: checkout_step>
+        - name: Checkout sources
+          uses: actions/checkout@v3.5.2
+
+        # </template: checkout_step>
+        - name: Check e2e labels
+          id: check
+          uses: actions/github-script@v6.4.1
+          with:
+            script: |
+              const provider = 'eks';
+              const kubernetesDefaultVersion = '1.27';
+
+              const ci = require('./.github/scripts/js/ci');
+              return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
+    # </template: check_e2e_labels_job>
   run_containerd_1_31:
     name: "destroy cluster: EKS, Containerd, Kubernetes 1.31"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.31' && github.event.inputs.layout == 'WithoutNAT' }}
@@ -1587,6 +1829,7 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
+          MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
           TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
@@ -1614,12 +1857,20 @@ jobs:
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
 
+          if [ "${MULTIMASTER}" == true ] ; then
+            MASTERS_COUNT=3
+          else
+            MASTERS_COUNT=1
+          fi
+          echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -1644,6 +1895,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
+          MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
@@ -1668,6 +1920,7 @@ jobs:
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTERS_COUNT=${MASTERS_COUNT}
           "
 
           ls -lh $(pwd)/testing
@@ -1764,6 +2017,38 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
+    # <template: check_e2e_labels_job>
+    check_e2e_labels:
+      name: Check e2e labels
+      runs-on: ubuntu-latest
+      outputs:
+
+        run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
+        run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
+        run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
+        run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
+        run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
+        run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
+        run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+        multimaster: ${{ steps.check.outputs.multimaster }}
+      steps:
+
+        # <template: checkout_step>
+        - name: Checkout sources
+          uses: actions/checkout@v3.5.2
+
+        # </template: checkout_step>
+        - name: Check e2e labels
+          id: check
+          uses: actions/github-script@v6.4.1
+          with:
+            script: |
+              const provider = 'eks';
+              const kubernetesDefaultVersion = '1.27';
+
+              const ci = require('./.github/scripts/js/ci');
+              return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
+    # </template: check_e2e_labels_job>
   run_containerd_automatic:
     name: "destroy cluster: EKS, Containerd, Kubernetes Automatic"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == 'Automatic' && github.event.inputs.layout == 'WithoutNAT' }}
@@ -1868,6 +2153,7 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
+          MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
           TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
@@ -1895,12 +2181,20 @@ jobs:
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
 
+          if [ "${MULTIMASTER}" == true ] ; then
+            MASTERS_COUNT=3
+          else
+            MASTERS_COUNT=1
+          fi
+          echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -1925,6 +2219,7 @@ jobs:
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
+          MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
