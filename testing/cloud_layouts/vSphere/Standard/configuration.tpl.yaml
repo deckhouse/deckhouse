@@ -35,7 +35,7 @@ internalNetworkNames:
 internalNetworkCIDR: 172.16.25.0/24
 baseResourcePool: kubernetes-stage/cloud-layout-tests
 masterNodeGroup:
-  replicas: 1
+  replicas: ${MASTERS_COUNT}
   instanceClass:
     numCPUs: 4
     memory: 8192
@@ -52,6 +52,16 @@ provider:
   username: dvadm@vsphere.local
   password: '${VSPHERE_PASSWORD}'
   insecure: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+  settings:
+    highAvailability: false
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
