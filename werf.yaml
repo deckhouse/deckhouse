@@ -212,7 +212,29 @@ shell:
   - cd /tini/
   - export CFLAGS="-DPR_SET_CHILD_SUBREAPER=36 -DPR_GET_CHILD_SUBREAPER=37"
   - cmake . && make
-
+---
+artifact: task-src-artifact
+fromArtifact: src-artifact
+shell:
+  install:
+    - git clone --depth 1 --branch v3.39.2 {{ $.SOURCE_REPO }}/go-task/task.git /src
+---
+artifact: task-artifact
+from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
+import:
+  - artifact: task-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - export GOPROXY={{ $.GOPROXY }}
+    - cd /src
+    - CGO_ENABLED=0 go install -v ./cmd/task
+    - mv /go/bin/task /
 ---
 {{- define "base components imports" }}
 - artifact: tini-artifact
