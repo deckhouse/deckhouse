@@ -56,14 +56,9 @@ from: {{ .Images.BASE_JEKYLL }}
 ansible:
   install:
     - shell: |
-        apk add rsync
-        gem update --system 3.2.3
-        gem install bundler -v 2.4.3
-    - name: "Install Dependencies"
-      shell: bundle install
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/site/
+        echo "Ruby: $(ruby --version)"
+        echo "Gem: $(gem --version)"
+        bundle --version
   setup:
     - name: "Build static files"
       shell: |
