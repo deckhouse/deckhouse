@@ -61,35 +61,6 @@ type ModuleConfigSpec struct {
 	Enabled  *bool          `json:"enabled,omitempty"`
 }
 
-// computeModuleEnabledStatuses loops over a InitConfiguration.deckhouse.configOverrides structure,
-// figuring out which ModuleConfig's should be enabled or disabled.
-// Returns a mapping of module name and a if it should be enabled or not.
-func computeModuleEnabledStatuses(configOverrides map[string]any) map[string]bool {
-	modulesEnabledStatuses := make(map[string]bool)
-	for key, override := range configOverrides {
-		moduleName := strings.TrimSuffix(key, "Enabled")
-		overrideIsEnableProperty := key != moduleName
-
-		if overrideIsEnableProperty {
-			enabled, isBool := override.(bool)
-			if isBool {
-				modulesEnabledStatuses[moduleName] = enabled
-			} else {
-				// Avoid enabling module if it's config is malformed
-				modulesEnabledStatuses[moduleName] = false
-			}
-			continue
-		}
-
-		if _, enableStatusAlreadyDefined := modulesEnabledStatuses[moduleName]; !enableStatusAlreadyDefined {
-			// Enabling module by default if it has no %moduleName%Enabled property, skipping otherwise
-			modulesEnabledStatuses[moduleName] = true
-		}
-	}
-
-	return modulesEnabledStatuses
-}
-
 func buildModuleConfig(
 	schemasStore *SchemaStore,
 	moduleName string,

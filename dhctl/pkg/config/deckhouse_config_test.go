@@ -153,7 +153,7 @@ spec:
 		require.Equal(t, iCfg.Bundle, "Minimal")
 	})
 
-	t.Run("Prohibit use of configOverrides", func(t *testing.T) {
+	t.Run("Forbid to use configOverrides", func(t *testing.T) {
 		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
 			"configOverrides": `
 configOverrides:
