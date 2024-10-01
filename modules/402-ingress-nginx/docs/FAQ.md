@@ -264,7 +264,7 @@ kubectl label ingress test-site -n development ingress.deckhouse.io/discard-metr
 
 ## How do I correctly drain a node running an IngressNginxController's pods?
 
-There are two ways of draining such a node correctly - either by annotating the node (the annotations will be deleted once the node is drained):
+There are two ways of draining such a node correctly - either by annotating the node (the annotation will be deleted once the node is drained):
 
 ```shell
 kubectl annotate node <node_name> update.node.deckhouse.io/draining=user

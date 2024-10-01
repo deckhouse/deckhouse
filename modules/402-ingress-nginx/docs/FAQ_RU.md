@@ -262,9 +262,9 @@ kubectl label ns review-1 ingress.deckhouse.io/discard-metrics=true
 kubectl label ingress test-site -n development ingress.deckhouse.io/discard-metrics=true
 ```
 
-## Как корректно вывести из эксплуатации (drain) узел за запущенным IngressNginxController?
+## Как корректно вывести из эксплуатации (drain) узел с запущенным IngressNginxController?
 
-Доступа два способа вывода такого узла из эксплуатации - или с помощью аннотации узла (аннотация будет удалена после завершения операции):
+Доступно два способа вывода такого узла из эксплуатации - или с помощью аннотации узла (аннотация будет удалена после завершения операции):
 
 ```shell
 kubectl annotate node <node_name> update.node.deckhouse.io/draining=user
