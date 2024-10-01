@@ -42,7 +42,7 @@ shell:
   - git clone --depth 1 {{ .SOURCE_REPO }}/grafana/grafana-plugins.git /src/grafana-plugins
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-js-builder
-from: {{ .Images.BASE_NODE_20_ALPINE }}
+from: {{ .Images.BASE_NODE_18_ALPINE }}
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/grafana
