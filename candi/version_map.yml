@@ -57,7 +57,7 @@ k8s:
       livenessprobe: v2.11.0
   '1.28':
     status: available
-    patch: 13
+    patch: 14
     bashible: *bashible
     clusterAutoscalerPatch: 3
     ccm:
@@ -78,7 +78,7 @@ k8s:
       livenessprobe: v2.11.0
   '1.29':
     status: available
-    patch: 8
+    patch: 9
     bashible: *bashible
     clusterAutoscalerPatch: 1
     ccm:
@@ -99,7 +99,7 @@ k8s:
       livenessprobe: v2.12.0
   '1.30':
     status: preview
-    patch: 4
+    patch: 5
     bashible: *bashible
     clusterAutoscalerPatch: 1
     ccm:
