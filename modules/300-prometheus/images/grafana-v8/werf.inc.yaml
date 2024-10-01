@@ -42,19 +42,6 @@ shell:
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-js-builder
 from: {{ .Images.BASE_NODE_16_ALPINE }}
-mount:
-- from: tmp_dir
-  to: /src/node_modules
-- from: tmp_dir
-  to: /root/.npm
-- from: tmp_dir
-  to: /root/.cache
-- from: tmp_dir
-  to: /root/.yarn
-- from: tmp_dir
-  to: /src/.yarn/.cache
-- from: tmp_dir
-  to: /src/.yarn/cache
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/grafana
