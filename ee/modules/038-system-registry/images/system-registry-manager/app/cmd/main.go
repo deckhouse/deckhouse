@@ -3,23 +3,26 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"k8s.io/client-go/tools/clientcmd"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"syscall"
+	"time"
+
+	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"syscall"
-	"time"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"embeded-registry-manager/internal/controllers"
 	staticpodmanager "embeded-registry-manager/internal/static-pod"
+	http_client "embeded-registry-manager/internal/utils/http_client"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -55,6 +58,13 @@ func main() {
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		ctrl.Log.Error(err, "Unable to create kubernetes client")
+		os.Exit(1)
+	}
+
+	// Create http client
+	HttpClient, err := http_client.NewDefaulHttpClient()
+	if err != nil {
+		ctrl.Log.Error(err, "Unable to create http client")
 		os.Exit(1)
 	}
 
@@ -135,6 +145,7 @@ func main() {
 		Scheme:     mgr.GetScheme(),
 		KubeClient: kubeClient,
 		Recorder:   mgr.GetEventRecorderFor("embedded-registry-controller"),
+		HttpClient: HttpClient,
 	}).SetupWithManager(mgr, ctx); err != nil {
 		ctrl.Log.Error(err, "Unable to create controller:")
 		os.Exit(1)

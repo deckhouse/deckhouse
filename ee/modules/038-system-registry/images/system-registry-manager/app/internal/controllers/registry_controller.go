@@ -2,8 +2,12 @@ package controllers
 
 import (
 	"context"
+	http_client "embeded-registry-manager/internal/utils/http_client"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -11,13 +15,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
-	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"time"
 )
 
 type EmbeddedRegistry struct {
@@ -46,6 +48,7 @@ type RegistryReconciler struct {
 	KubeClient       *kubernetes.Clientset
 	Recorder         record.EventRecorder
 	EmbeddedRegistry EmbeddedRegistry
+	HttpClient       *http_client.Client
 }
 
 func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -178,16 +181,11 @@ func (r *RegistryReconciler) checkAndDeployComponents() error {
 }
 
 func (r *RegistryReconciler) createStaticPod(apiURL string, nodeName string) error {
-	resp, err := http.Post(fmt.Sprintf("%s/staticpod/create", apiURL), "application/json", nil)
+	respBody, err := r.HttpClient.Send(http.MethodPost, fmt.Sprintf("%s/staticpod/create", apiURL), nil)
 	if err != nil {
 		return fmt.Errorf("failed to create static pod: %w", err)
 	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read response: %w", err)
-	}
-	ctrl.Log.Info("Create static pod response:", "Node", nodeName, "response", string(body))
+	ctrl.Log.Info("Create static pod response:", "Node", nodeName, "response", string(respBody))
 	return nil
 }
 
