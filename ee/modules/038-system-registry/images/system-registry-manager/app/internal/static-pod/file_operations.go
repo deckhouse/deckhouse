@@ -15,9 +15,16 @@ import (
 
 // EmbeddedRegistryConfig represents the configuration for the registry
 type EmbeddedRegistryConfig struct {
-	IpAddress string
-	Registry  RegistryDetails
-	Images    Images
+	IpAddress    string
+	Registry     RegistryDetails
+	Images       Images
+	ConfigHashes ConfigHashes
+}
+
+// ConfigHashes holds the hash of the configuration files
+type ConfigHashes struct {
+	AuthTemplateHash         string
+	DistributionTemplateHash string
 }
 
 // RegistryDetails holds detailed configuration of the registry
@@ -49,31 +56,44 @@ type Images struct {
 }
 
 // processTemplate processes the given template file and saves the rendered result to the specified path
-func (config *EmbeddedRegistryConfig) processTemplate(templatePath, outputPath string) (bool, error) {
-
+func (config *EmbeddedRegistryConfig) processTemplate(templatePath, outputPath string, hashField *string) (bool, error) {
+	// Read the template file content
 	templateContent, err := readTemplate(templatePath)
 	if err != nil {
-		return false, fmt.Errorf("error reading template file %s: %v", templatePath, err)
+		return false, fmt.Errorf("failed to read template file %s: %v", templatePath, err)
 	}
 
+	// Render the template with the given configuration
 	renderedContent, err := renderTemplate(templateContent, config)
 	if err != nil {
-		return false, fmt.Errorf("error rendering template %s: %v", templatePath, err)
+		return false, fmt.Errorf("failed to render template %s: %v", templatePath, err)
 	}
 
-	// Check if the file already exists and if its content is the same as the new one
+	// Compute the hash of the rendered content
+	hash, err := computeHash(renderedContent)
+	if err != nil {
+		return false, fmt.Errorf("failed to compute hash for template %s: %v", templatePath, err)
+	}
+
+	// Update the hashField if provided
+	if hashField != nil {
+		*hashField = hash
+	}
+
+	// Compare the existing file's content with the new rendered content
 	isSame, err := compareFileHash(outputPath, renderedContent)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to compare file hash for %s: %v", outputPath, err)
 	}
 
+	// If the content is the same, no need to overwrite the file
 	if isSame {
-		// No need to overwrite the file if it hasn't changed
 		return false, nil
 	}
 
+	// Save the new content to the file
 	if err := saveToFile(renderedContent, outputPath); err != nil {
-		return false, fmt.Errorf("error saving file %s: %v", templatePath, err)
+		return false, fmt.Errorf("failed to save file %s: %v", outputPath, err)
 	}
 
 	return true, nil

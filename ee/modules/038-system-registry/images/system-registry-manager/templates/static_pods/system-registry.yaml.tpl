@@ -4,6 +4,9 @@ metadata:
   labels:
     component: system-registry
     tier: control-plane
+  annotations:
+    authConfigHash: {{ quote .ConfigHashes.AuthTemplateHash }}
+    distributionConfigHash: {{ quote .ConfigHashes.DistributionTemplateHash }}
   name: system-registry
   namespace: d8-system
 spec:

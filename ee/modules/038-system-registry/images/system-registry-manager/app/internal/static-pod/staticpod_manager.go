@@ -86,7 +86,7 @@ func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 
 	anyFileChanged := false
 
-	changed, err := data.processTemplate(authTemplatePath, authConfigPath)
+	changed, err := data.processTemplate(authTemplatePath, authConfigPath, &data.ConfigHashes.AuthTemplateHash)
 	if err != nil {
 		ctrl.Log.Error(err, "Error processing auth template", "component", "static pod manager")
 		http.Error(w, "Error processing auth template", http.StatusInternalServerError)
@@ -94,7 +94,7 @@ func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	anyFileChanged = anyFileChanged || changed
 
-	changed, err = data.processTemplate(distributionTemplatePath, distributionConfigPath)
+	changed, err = data.processTemplate(distributionTemplatePath, distributionConfigPath, &data.ConfigHashes.DistributionTemplateHash)
 	if err != nil {
 		ctrl.Log.Error(err, "Error processing distribution template", "component", "static pod manager")
 		http.Error(w, "Error processing distribution template", http.StatusInternalServerError)
@@ -102,7 +102,7 @@ func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	anyFileChanged = anyFileChanged || changed
 
-	changed, err = data.processTemplate(staticPodTemplatePath, staticPodConfigPath)
+	changed, err = data.processTemplate(staticPodTemplatePath, staticPodConfigPath, nil)
 	if err != nil {
 		ctrl.Log.Error(err, "Error processing static pod template", "component", "static pod manager")
 		http.Error(w, "Error processing static pod template", http.StatusInternalServerError)
