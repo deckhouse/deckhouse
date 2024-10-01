@@ -10,7 +10,7 @@ require (
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/alessio/shellescape v1.4.1
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7
-	github.com/flant/addon-operator v0.0.0-20240912090534-6c66f0e01f1d
+	github.com/flant/addon-operator v0.0.0-20240926075341-260d7b5374e1
 	github.com/flant/kube-client v1.1.0
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/go-openapi/spec v0.19.8

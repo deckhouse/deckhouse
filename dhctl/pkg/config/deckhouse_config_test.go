@@ -256,7 +256,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: operator-prometheus-crd
+  name: registrypackages
 spec:
   enabled: true
 `,
@@ -276,7 +276,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: operator-prometheus-crd
+  name: registrypackages
 spec:
   enabled: true
   version: 1

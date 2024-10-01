@@ -35,7 +35,7 @@ var _ = Describe("Module :: log-shipper :: helm template :: log-shipper ", func(
 
 	BeforeEach(func() {
 		hec.ValuesSet("global.discovery.kubernetesVersion", "1.27.0")
-		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler-crd"})
+		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler"})
 	})
 	Context("With Static mode set", func() {
 		BeforeEach(func() {

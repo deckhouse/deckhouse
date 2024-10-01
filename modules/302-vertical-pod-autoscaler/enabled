@@ -18,15 +18,9 @@ source /deckhouse/shell_lib.sh
 
 function __main__() {
   enabled::disable_module_if_cluster_is_not_bootstraped
-  enabled::disable_module_in_kubernetes_versions_less_than 1.11.0
 
   if values::array_has global.enabledModules "prometheus" && values::array_has global.enabledModules "prometheus-metrics-adapter"; then
-    if values::array_has global.enabledModules "vertical-pod-autoscaler-crd" ; then
-      echo "true" > $MODULE_ENABLED_RESULT
-    else
-      echo "You must enable the vertical-pod-autoscaler-crd module for the module to work."
-      exit 1
-    fi
+    echo "true" > $MODULE_ENABLED_RESULT
   else
     echo "false" > $MODULE_ENABLED_RESULT
   fi
