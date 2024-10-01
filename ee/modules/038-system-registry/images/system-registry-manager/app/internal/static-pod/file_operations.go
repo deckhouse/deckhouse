@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -70,10 +69,7 @@ func (config *EmbeddedRegistryConfig) processTemplate(templatePath, outputPath s
 	}
 
 	// Compute the hash of the rendered content
-	hash, err := computeHash(renderedContent)
-	if err != nil {
-		return false, fmt.Errorf("failed to compute hash for template %s: %v", templatePath, err)
-	}
+	hash := computeHash(renderedContent)
 
 	// Update the hashField if provided
 	if hashField != nil {
@@ -215,43 +211,34 @@ func (config *EmbeddedRegistryConfig) validate() error {
 	return nil
 }
 
+// fillHostIpAddress fills the IpAddress struct field with the HOST_IP environment variable
 func (config *EmbeddedRegistryConfig) fillHostIpAddress() (string, error) {
-	hostIP := os.Getenv("HOST_IP")
-	if hostIP == "" {
-		return "", fmt.Errorf("HOST_IP environment variable is not set")
+	if hostIP := os.Getenv("HOST_IP"); hostIP != "" {
+		return hostIP, nil
 	}
-	return hostIP, nil
+	return "", fmt.Errorf("HOST_IP environment variable is not set")
 }
 
 // computeHash computes the SHA-256 hash of the given content.
-func computeHash(content string) (string, error) {
-	hash := sha256.New()
-	_, err := hash.Write([]byte(content))
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(hash.Sum(nil)), nil
+func computeHash(content string) string {
+	hash := sha256.Sum256([]byte(content))
+	return hex.EncodeToString(hash[:])
 }
 
-// compareFileHash reads the file at the given path and compares its hash with the provided hash.
+// compareFileHash reads the file at the given path and compares its hash with the provided new content.
 func compareFileHash(path, newContent string) (bool, error) {
-	currentContent, err := ioutil.ReadFile(path)
+	currentContent, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
-		// If the file doesn't exist, treat it as different
+		// File doesn't exist, so consider it different
 		return false, nil
 	} else if err != nil {
 		return false, err
 	}
 
-	currentHash, err := computeHash(string(currentContent))
-	if err != nil {
-		return false, err
-	}
+	// Compute hashes for both the current file content and new content
+	currentHash := computeHash(string(currentContent))
+	newHash := computeHash(newContent)
 
-	newHash, err := computeHash(newContent)
-	if err != nil {
-		return false, err
-	}
-
+	// Return whether the hashes match
 	return currentHash == newHash, nil
 }
