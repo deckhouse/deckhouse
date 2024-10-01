@@ -48,21 +48,21 @@ type Images struct {
 	DockerAuth         string
 }
 
-// ProcessTemplate processes the given template file and saves the rendered result to the specified path
-func ProcessTemplate(templatePath, outputPath string, data EmbeddedRegistryConfig) (bool, error) {
+// processTemplate processes the given template file and saves the rendered result to the specified path
+func (config *EmbeddedRegistryConfig) processTemplate(templatePath, outputPath string) (bool, error) {
 
-	templateContent, err := ReadTemplate(templatePath)
+	templateContent, err := readTemplate(templatePath)
 	if err != nil {
 		return false, fmt.Errorf("error reading template file %s: %v", templatePath, err)
 	}
 
-	renderedContent, err := RenderTemplate(templateContent, data)
+	renderedContent, err := renderTemplate(templateContent, config)
 	if err != nil {
 		return false, fmt.Errorf("error rendering template %s: %v", templatePath, err)
 	}
 
 	// Check if the file already exists and if its content is the same as the new one
-	isSame, err := CompareFileHash(outputPath, renderedContent)
+	isSame, err := compareFileHash(outputPath, renderedContent)
 	if err != nil {
 		return false, err
 	}
@@ -72,7 +72,7 @@ func ProcessTemplate(templatePath, outputPath string, data EmbeddedRegistryConfi
 		return false, nil
 	}
 
-	if err := SaveToFile(renderedContent, outputPath); err != nil {
+	if err := saveToFile(renderedContent, outputPath); err != nil {
 		return false, fmt.Errorf("error saving file %s: %v", templatePath, err)
 	}
 
@@ -80,7 +80,7 @@ func ProcessTemplate(templatePath, outputPath string, data EmbeddedRegistryConfi
 }
 
 // ReadTemplate reads the template content from the given file path
-func ReadTemplate(path string) (string, error) {
+func readTemplate(path string) (string, error) {
 	contentBytes, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
@@ -89,7 +89,7 @@ func ReadTemplate(path string) (string, error) {
 }
 
 // RenderTemplate renders the provided template content with the given data
-func RenderTemplate(templateContent string, data interface{}) (string, error) {
+func renderTemplate(templateContent string, data interface{}) (string, error) {
 	funcMap := template.FuncMap{
 		"quote":      func(s string) string { return strconv.Quote(s) },
 		"trimSuffix": strings.TrimSuffix,
@@ -110,7 +110,7 @@ func RenderTemplate(templateContent string, data interface{}) (string, error) {
 }
 
 // SaveToFile saves the rendered content to the specified file path
-func SaveToFile(content string, path string) error {
+func saveToFile(content string, path string) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("error creating directory %s: %v", dir, err)
@@ -123,8 +123,8 @@ func SaveToFile(content string, path string) error {
 	return nil
 }
 
-// DeleteFile deletes the file at the specified path
-func DeleteFile(path string) (bool, error) {
+// deleteFile deletes the file at the specified path
+func deleteFile(path string) (bool, error) {
 
 	// Check if the file exists
 	if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -137,7 +137,7 @@ func DeleteFile(path string) (bool, error) {
 	return true, nil
 }
 
-func (config *EmbeddedRegistryConfig) Validate() error {
+func (config *EmbeddedRegistryConfig) validate() error {
 	var missingFields []string
 
 	// ip address to bind to
@@ -195,8 +195,16 @@ func (config *EmbeddedRegistryConfig) Validate() error {
 	return nil
 }
 
-// ComputeHash computes the SHA-256 hash of the given content.
-func ComputeHash(content string) (string, error) {
+func (config *EmbeddedRegistryConfig) fillHostIpAddress() (string, error) {
+	hostIP := os.Getenv("HOST_IP")
+	if hostIP == "" {
+		return "", fmt.Errorf("HOST_IP environment variable is not set")
+	}
+	return hostIP, nil
+}
+
+// computeHash computes the SHA-256 hash of the given content.
+func computeHash(content string) (string, error) {
 	hash := sha256.New()
 	_, err := hash.Write([]byte(content))
 	if err != nil {
@@ -205,8 +213,8 @@ func ComputeHash(content string) (string, error) {
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-// CompareFileHash reads the file at the given path and compares its hash with the provided hash.
-func CompareFileHash(path, newContent string) (bool, error) {
+// compareFileHash reads the file at the given path and compares its hash with the provided hash.
+func compareFileHash(path, newContent string) (bool, error) {
 	currentContent, err := ioutil.ReadFile(path)
 	if os.IsNotExist(err) {
 		// If the file doesn't exist, treat it as different
@@ -215,12 +223,12 @@ func CompareFileHash(path, newContent string) (bool, error) {
 		return false, err
 	}
 
-	currentHash, err := ComputeHash(string(currentContent))
+	currentHash, err := computeHash(string(currentContent))
 	if err != nil {
 		return false, err
 	}
 
-	newHash, err := ComputeHash(newContent)
+	newHash, err := computeHash(newContent)
 	if err != nil {
 		return false, err
 	}

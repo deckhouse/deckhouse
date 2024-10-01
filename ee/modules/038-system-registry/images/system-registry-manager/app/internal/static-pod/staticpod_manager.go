@@ -65,7 +65,16 @@ func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := data.Validate(); err != nil {
+	// Fill the host IP address from the HOST_IP environment variable
+	hostIpAddress, err := data.fillHostIpAddress()
+	if err != nil {
+		ctrl.Log.Error(err, "Error getting IP address")
+		http.Error(w, "Internal server error: fillHostIpAddress", http.StatusInternalServerError)
+		return
+	}
+	data.IpAddress = hostIpAddress
+
+	if err := data.validate(); err != nil {
 		ctrl.Log.Error(err, "Validation error", "component", "static pod manager")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -77,7 +86,7 @@ func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 
 	anyFileChanged := false
 
-	changed, err := ProcessTemplate(authTemplatePath, authConfigPath, data)
+	changed, err := data.processTemplate(authTemplatePath, authConfigPath)
 	if err != nil {
 		ctrl.Log.Error(err, "Error processing auth template", "component", "static pod manager")
 		http.Error(w, "Error processing auth template", http.StatusInternalServerError)
@@ -85,7 +94,7 @@ func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	anyFileChanged = anyFileChanged || changed
 
-	changed, err = ProcessTemplate(distributionTemplatePath, distributionConfigPath, data)
+	changed, err = data.processTemplate(distributionTemplatePath, distributionConfigPath)
 	if err != nil {
 		ctrl.Log.Error(err, "Error processing distribution template", "component", "static pod manager")
 		http.Error(w, "Error processing distribution template", http.StatusInternalServerError)
@@ -93,7 +102,7 @@ func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	anyFileChanged = anyFileChanged || changed
 
-	changed, err = ProcessTemplate(staticPodTemplatePath, staticPodConfigPath, data)
+	changed, err = data.processTemplate(staticPodTemplatePath, staticPodConfigPath)
 	if err != nil {
 		ctrl.Log.Error(err, "Error processing static pod template", "component", "static pod manager")
 		http.Error(w, "Error processing static pod template", http.StatusInternalServerError)
@@ -121,7 +130,7 @@ func (s *Server) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 	anyFileDeleted := false
 
 	// Delete the static pod file
-	deleted, err := DeleteFile(staticPodConfigPath)
+	deleted, err := deleteFile(staticPodConfigPath)
 	if err != nil {
 		ctrl.Log.Error(err, "Error deleting static pod file", "component", "static pod manager")
 		http.Error(w, "Error deleting static pod file", http.StatusInternalServerError)
@@ -130,7 +139,7 @@ func (s *Server) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 	anyFileDeleted = anyFileDeleted || deleted
 
 	// Delete the auth config file
-	deleted, err = DeleteFile(authConfigPath)
+	deleted, err = deleteFile(authConfigPath)
 	if err != nil {
 		ctrl.Log.Error(err, "Error deleting auth config file", "component", "static pod manager")
 		http.Error(w, "Error deleting auth config file", http.StatusInternalServerError)
@@ -139,7 +148,7 @@ func (s *Server) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 	anyFileDeleted = anyFileDeleted || deleted
 
 	// Delete the distribution config file
-	deleted, err = DeleteFile(distributionConfigPath)
+	deleted, err = deleteFile(distributionConfigPath)
 	if err != nil {
 		ctrl.Log.Error(err, "Error deleting distribution config file", "component", "static pod manager")
 		http.Error(w, "Error deleting distribution config file", http.StatusInternalServerError)
