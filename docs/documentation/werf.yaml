@@ -37,26 +37,16 @@ import:
 ---
 image: static-pages
 from: {{ .Images.BASE_JEKYLL }}
-fromCacheVersion: 20210713
 docker:
   ENV:
     LANG: en_US.UTF-8
     LC_ALL: en_US.UTF-8
 ansible:
   install:
-    - name: "Install tools"
-      shell: |
-        apk add rsync jq
-        wget https://github.com/mikefarah/yq/releases/download/{{ .YQ4_VERSION }}/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
-    - name: "Update system rubygems and install gem bundler"
-      shell: |
-        gem update --system 3.2.3
-        gem install bundler -v 2.4.3
-    - name: "Install dependencies"
-      shell: bundle install
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
+    - shell: |
+        echo "Ruby: $(ruby --version)"
+        echo "Gem: $(gem --version)"
+        bundle --version
   setup:
     - name: "Get modules data"
       shell: |
