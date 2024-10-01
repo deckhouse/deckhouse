@@ -28,7 +28,7 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 token="${LOOP_TOKEN}"
-channel_id="cytizu5t1bd9d8ns7cxzh938zy"
+channel_id="${LOOP_CHANNEL_ID}"
 server_url="https://loop.flant.ru"
 message="Deckhouse image scanning completed.\\nReports available in attached files."
 fail_message="Deckhouse image scanning failure, check logs"
