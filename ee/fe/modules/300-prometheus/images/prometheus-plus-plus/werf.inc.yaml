@@ -36,7 +36,7 @@ shell:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 PROMETHEUS_VERSION=v2.45.2
   - git clone -b "${PROMETHEUS_VERSION}" --single-branch {{ $.SOURCE_REPO }}/prometheus/prometheus-deps
   - mkdir /prometheus && cd /prometheus
-  - git clone -b "balalaika_relabeler_head_status" --single-branch fox.flant.com/okmeter/okmeter-prometheus prometheus
+  - git clone -b "balalaika_relabeler_head_status" --single-branch https://fox.flant.com/okmeter/okmeter-prometheus.git prometheus
   - cd /prometheus/prometheus/web/ui
   - mv /prometheus-deps/* .
   - npm run build
