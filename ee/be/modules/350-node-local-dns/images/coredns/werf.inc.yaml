@@ -64,7 +64,7 @@ import:
   before: setup
 - image: common/iptables-wrapper
   add: /iptables-wrapper
-  to: /sbin/iptables-wrapper
+  to: /iptables-wrapper
   before: setup
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/coredns
