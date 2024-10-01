@@ -261,3 +261,18 @@ Example of disabling statistics (metrics) collection for all `test-site` Ingress
 ```shell
 kubectl label ingress test-site -n development ingress.deckhouse.io/discard-metrics=true
 ```
+
+## How do I correctly drain a node running an IngressNginxController's pods?
+
+There are two ways of draining such a node correctly - either by annotating the node (the annotation will be deleted once the node is drained):
+
+```shell
+kubectl annotate node <node_name> update.node.deckhouse.io/draining=user
+```
+
+or by using kubectl drain functionality (it's worth mentioning that --force flag is required despite having --ignore-daemonsets flag set, as IngressNginxControllers
+are backed by Advanced DaemonSets):
+
+```shell
+kubectl drain <node_name> --delete-emptydir-data --ignore-daemonsets --force
+```
