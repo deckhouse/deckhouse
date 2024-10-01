@@ -1,20 +1,28 @@
-Index: pkg/util/fieldindex/register.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/util/fieldindex/register.go b/pkg/util/fieldindex/register.go
---- a/pkg/util/fieldindex/register.go	(revision f41e27d4bfb63f0aa0addb35889bae3d43aede56)
-+++ b/pkg/util/fieldindex/register.go	(date 1680215160399)
-@@ -23,7 +23,6 @@
- 	"sigs.k8s.io/controller-runtime/pkg/client"
-
+index 39ea11b3..820770e3 100644
+--- a/pkg/util/fieldindex/register.go
++++ b/pkg/util/fieldindex/register.go
+@@ -21,7 +21,6 @@ import (
+ 	"sync"
+ 
  	appsv1alpha1 "github.com/openkruise/kruise/apis/apps/v1alpha1"
 -	utildiscovery "github.com/openkruise/kruise/pkg/util/discovery"
+ 
  	batchv1 "k8s.io/api/batch/v1"
  	v1 "k8s.io/api/core/v1"
- 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-@@ -70,18 +69,6 @@
+@@ -65,11 +64,6 @@ func RegisterFieldIndexes(c cache.Cache) error {
+ 		if err = c.IndexField(context.TODO(), &v1.PersistentVolumeClaim{}, IndexNameForOwnerRefUID, ownerIndexFunc); err != nil {
+ 			return
+ 		}
+-		// ImagePullJob ownerReference
+-		if err = c.IndexField(context.TODO(), &appsv1alpha1.ImagePullJob{}, IndexNameForOwnerRefUID, ownerIndexFunc); err != nil {
+-			return
+-		}
+-
+ 		// pod name
+ 		if err = indexPodNodeName(c); err != nil {
+ 			return
+@@ -78,24 +72,6 @@ func RegisterFieldIndexes(c cache.Cache) error {
  		if err = indexJob(c); err != nil {
  			return
  		}
@@ -27,6 +35,12 @@ diff --git a/pkg/util/fieldindex/register.go b/pkg/util/fieldindex/register.go
 -		// imagepulljob active
 -		if utildiscovery.DiscoverObject(&appsv1alpha1.ImagePullJob{}) {
 -			if err = indexImagePullJobActive(c); err != nil {
+-				return
+-			}
+-		}
+-		// sidecar spec namespaces
+-		if utildiscovery.DiscoverObject(&appsv1alpha1.SidecarSet{}) {
+-			if err = indexSidecarSet(c); err != nil {
 -				return
 -			}
 -		}
