@@ -45,7 +45,7 @@ clusterConfiguration:
   cloud:
     provider: OpenStack
 highAvailability: true
-enabledModules: ["operator-prometheus-crd","cert-manager","vertical-pod-autoscaler-crd","cni-cilium"]
+enabledModules: ["operator-prometheus","cert-manager","vertical-pod-autoscaler","cni-cilium"]
 modules:
   publicDomainTemplate: "%s.example.com"
   placement:

@@ -339,6 +339,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Value: "4223",
 		},
 		{
+			Name:  "ADDON_OPERATOR_CRD_EXTRA_LABELS",
+			Value: "heritage=deckhouse",
+		},
+		{
 			Name:  "HELM3LIB",
 			Value: "yes",
 		},
