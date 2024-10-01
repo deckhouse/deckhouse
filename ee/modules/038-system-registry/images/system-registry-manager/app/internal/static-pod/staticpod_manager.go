@@ -7,6 +7,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sync"
 )
 
 const authTemplatePath = "/templates/auth_config/config.yaml.tpl"
@@ -17,7 +18,8 @@ const distributionConfigPath = "/etc/kubernetes/system-registry/distribution_con
 const staticPodConfigPath = "/etc/kubernetes/manifests/system-registry.yaml"
 
 type Server struct {
-	KubeClient *kubernetes.Clientset
+	KubeClient   *kubernetes.Clientset
+	requestMutex sync.Mutex
 }
 
 func NewServer(kubeClient *kubernetes.Clientset) *Server {
@@ -56,6 +58,10 @@ func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	// Lock the requestMutex to prevent concurrent requests and release it after the request is processed
+	s.requestMutex.Lock()
+	defer s.requestMutex.Unlock()
 
 	var data EmbeddedRegistryConfig
 	// Decode request body to struct EmbeddedRegistryConfig and return error if decoding fails
@@ -126,6 +132,10 @@ func (s *Server) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	// Lock the requestMutex to prevent concurrent requests and release it after the request is processed
+	s.requestMutex.Lock()
+	defer s.requestMutex.Unlock()
 
 	anyFileDeleted := false
 
