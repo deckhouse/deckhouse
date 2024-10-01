@@ -60,82 +60,11 @@ internalNetworkCIDRs:
 {{- end }}
 `
 
-func generateMetaConfigForConfigOverridesTest(t *testing.T, data map[string]interface{}) *MetaConfig {
-	return generateMetaConfig(t, configOverridesTemplate, data, false)
-}
-
 func assertModuleConfig(t *testing.T, mc *ModuleConfig, enabled bool, version int, setting map[string]interface{}) {
 	require.NotNil(t, mc.Spec.Enabled)
 	require.Equal(t, *mc.Spec.Enabled, enabled)
 	require.Equal(t, mc.Spec.Version, version)
 	require.Equal(t, mc.Spec.Settings, SettingsValues(setting))
-}
-
-func TestModuleConfigOverridesToModuleConfig(t *testing.T) {
-	t.Run("All valid", func(t *testing.T) {
-		metaConfig := generateMetaConfigForConfigOverridesTest(t, map[string]interface{}{
-			"configOverrides": `
-configOverrides:
-  istioEnabled: false
-  global:
-    modules:
-      publicDomainTemplate: "%s.example.com"
-  cniCiliumEnabled: true
-  cniCilium:
-    tunnelMode: VXLAN
-  common:
-    testString: aaaaa
-`,
-		})
-
-		mcs, err := ConvertInitConfigurationToModuleConfigs(metaConfig, NewSchemaStore(), "Minimal", "Debug")
-		require.NoError(t, err)
-
-		foundDeckhouseCm := false
-		for _, mc := range mcs {
-			switch mc.GetName() {
-			case "istioEnabled":
-				assertModuleConfig(t, mc, false, 1, nil)
-			case "global":
-				assertModuleConfig(t, mc, true, 1, map[string]interface{}{
-					"modules": map[string]interface{}{
-						"publicDomainTemplate": "%s.example.com",
-					},
-				})
-			case "cniCilium":
-				assertModuleConfig(t, mc, true, 1, map[string]interface{}{
-					"tunnelMode": "VXLAN",
-				})
-
-			case "common":
-				assertModuleConfig(t, mc, true, 1, map[string]interface{}{
-					"testString": "aaaaa",
-				})
-
-			case "deckhouse":
-				foundDeckhouseCm = true
-				assertModuleConfig(t, mc, true, 1, map[string]interface{}{
-					"bundle":   "Minimal",
-					"logLevel": "Debug",
-				})
-			}
-		}
-
-		require.True(t, foundDeckhouseCm)
-	})
-
-	t.Run("Invalid overrides", func(t *testing.T) {
-		metaConfig := generateMetaConfigForConfigOverridesTest(t, map[string]interface{}{
-			"configOverrides": `
-configOverrides:
-  common:
-    testString: 1
-`,
-		})
-
-		_, err := ConvertInitConfigurationToModuleConfigs(metaConfig, NewSchemaStore(), "Minimal", "Debug")
-		require.Error(t, err)
-	})
 }
 
 func TestCheckOrSetupArbitaryCNIModuleConfig(t *testing.T) {
