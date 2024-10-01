@@ -19,7 +19,7 @@ shell:
   - find /patches -name '*.patch' | xargs git apply --verbose
 ---
 artifact: {{ $.ModuleName }}/cilium-artifact
-fromArtifact: {{ $.ModuleName }}/base-cilium-dev
+fromImage: {{ $.ModuleName }}/base-cilium-dev
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src

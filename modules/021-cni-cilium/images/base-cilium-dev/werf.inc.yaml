@@ -34,8 +34,9 @@
 artifact: {{ $.ModuleName }}/golang-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 ---
-artifact: {{ $.ModuleName }}/base-cilium-dev
+image: {{ $.ModuleName }}/base-cilium-dev
 from: {{ $.Images.BASE_ALT_P11 }}
+final: false
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -107,3 +108,10 @@ shell:
       chmod +x "/usr/local/bin/${long_binary_name}"
       USE_BAZEL_VERSION="${bazel_version}" bazel version # to extract all binaries properly
     done
+docker:
+  ENV:
+    GOROOT: "/usr/local/go"
+    GOPATH: "/go"
+    PATH: "${PATH}:${GOROOT}/bin:${GOPATH}/bin"
+    GOOS: "linux"
+    GOARCH: "amd64"

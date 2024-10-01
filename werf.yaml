@@ -1039,7 +1039,9 @@ dependencies:
   {{- range $ImageYamlMainfest := regexSplit "\n?---[ \t]*\n" (include "module_image_template" $ctx) -1 }}
     {{- $ImageManifest := $ImageYamlMainfest | fromYaml }}
     {{- if $ImageManifest.image }}
-      {{- $ModulesImagesDigestList = append $ModulesImagesDigestList $ImageManifest.image }}
+      {{- if ne $ImageManifest.final false }}
+        {{- $ModulesImagesDigestList = append $ModulesImagesDigestList $ImageManifest.image }}
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}
