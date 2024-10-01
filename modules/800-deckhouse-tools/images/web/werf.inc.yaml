@@ -32,8 +32,8 @@ import:
   add: /task
   to: /task
   before: install
-- artifact: jq-artifact
-  add: /jq
+- artifact: jq
+  add: /usr/bin/jq
   to: /jq
   before: install
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
