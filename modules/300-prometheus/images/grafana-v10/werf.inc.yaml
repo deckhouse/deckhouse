@@ -46,15 +46,16 @@ from: {{ .Images.BASE_NODE_18_ALPINE }}
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/grafana
-  to: /usr/src/app
+  to: /src
   before: install
 shell:
   install:
   {{- include "node packages proxy" . | nindent 2 }}
-  - cd /usr/src/app
+  - cd /src
   - yarn install
   - export NODE_ENV=production NODE_OPTIONS="--max_old_space_size=8000"
   - yarn build
+  - rm -r /src/node_modules /root/.npm
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-go-builder
 from: {{ .Images.BASE_GOLANG_22_BULLSEYE }}
@@ -105,11 +106,11 @@ import:
   to: /usr/share/grafana/bin/grafana
   before: install
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-js-builder
-  add: /usr/src/app/public
+  add: /src/public
   to: /usr/share/grafana/public
   before: install
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-js-builder
-  add: /usr/src/app/tools
+  add: /src/tools
   to: /usr/share/grafana/tools
   before: install
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
