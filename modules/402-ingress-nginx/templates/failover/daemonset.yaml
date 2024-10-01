@@ -181,6 +181,7 @@ spec:
         ports:
         - containerPort: 4208
           name: https-metrics
+          hostPort: 4208
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}

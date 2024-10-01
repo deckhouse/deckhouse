@@ -1,0 +1,78 @@
+diff --git a/apis/apps/v1alpha1/daemonset_types.go b/apis/apps/v1alpha1/daemonset_types.go
+index 9adc4575..4a4ea6f7 100644
+--- a/apis/apps/v1alpha1/daemonset_types.go
++++ b/apis/apps/v1alpha1/daemonset_types.go
+@@ -225,6 +225,9 @@ type DaemonSetStatus struct {
+ 
+ 	// DaemonSetHash is the controller-revision-hash, which represents the latest version of the DaemonSet.
+ 	DaemonSetHash string `json:"daemonSetHash"`
++
++	// LabeSelector is serialized label selector in string form.
++	LabelSelector string `json:"labelSelector"`
+ }
+ 
+ // +genclient
+diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
+index 8d6d450c..f24db0a7 100644
+--- a/pkg/controller/daemonset/daemonset_controller.go
++++ b/pkg/controller/daemonset/daemonset_controller.go
+@@ -515,6 +515,12 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
+ }
+ 
+ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ctx context.Context, ds *appsv1alpha1.DaemonSet, nodeList []*corev1.Node, hash string, updateObservedGen bool) error {
++	labelSelector, err := metav1.LabelSelectorAsMap(ds.Spec.Selector)
++	if err != nil {
++		return fmt.Errorf("couldn't convert label selector to map for DaemonSet %q: %v", ds.Name, err)
++	}
++
++	labelSelectorString := labels.SelectorFromSet(labelSelector).String()
+ 	nodeToDaemonPods, err := dsc.getNodesToDaemonPods(ctx, ds)
+ 	if err != nil {
+ 		return fmt.Errorf("couldn't get node to daemon pod mapping for DaemonSet %q: %v", ds.Name, err)
+@@ -558,7 +564,7 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ctx context.Context, ds *ap
+ 	}
+ 	numberUnavailable := desiredNumberScheduled - numberAvailable
+ 
+-	err = dsc.storeDaemonSetStatus(ctx, ds, desiredNumberScheduled, currentNumberScheduled, numberMisscheduled, numberReady, updatedNumberScheduled, numberAvailable, numberUnavailable, updateObservedGen, hash)
++	err = dsc.storeDaemonSetStatus(ctx, ds, desiredNumberScheduled, currentNumberScheduled, numberMisscheduled, numberReady, updatedNumberScheduled, numberAvailable, numberUnavailable, updateObservedGen, hash, labelSelectorString)
+ 	if err != nil {
+ 		return fmt.Errorf("error storing status for DaemonSet %v: %v", ds.Name, err)
+ 	}
+@@ -662,18 +668,7 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetReplicas(ds *appsv1alpha1.DaemonSe
+ 	})
+ }
+ 
+-func (dsc *ReconcileDaemonSet) storeDaemonSetStatus(
+-	ctx context.Context,
+-	ds *appsv1alpha1.DaemonSet,
+-	desiredNumberScheduled,
+-	currentNumberScheduled,
+-	numberMisscheduled,
+-	numberReady,
+-	updatedNumberScheduled,
+-	numberAvailable,
+-	numberUnavailable int,
+-	updateObservedGen bool,
+-	hash string) error {
++func (dsc *ReconcileDaemonSet) storeDaemonSetStatus(ctx context.Context, ds *appsv1alpha1.DaemonSet, desiredNumberScheduled, currentNumberScheduled, numberMisscheduled, numberReady, updatedNumberScheduled, numberAvailable, numberUnavailable int, updateObservedGen bool, hash, labelSelector string) error {
+ 	if int(ds.Status.DesiredNumberScheduled) == desiredNumberScheduled &&
+ 		int(ds.Status.CurrentNumberScheduled) == currentNumberScheduled &&
+ 		int(ds.Status.NumberMisscheduled) == numberMisscheduled &&
+@@ -682,7 +677,8 @@ func (dsc *ReconcileDaemonSet) storeDaemonSetStatus(
+ 		int(ds.Status.NumberAvailable) == numberAvailable &&
+ 		int(ds.Status.NumberUnavailable) == numberUnavailable &&
+ 		ds.Status.ObservedGeneration >= ds.Generation &&
+-		ds.Status.DaemonSetHash == hash {
++		ds.Status.DaemonSetHash == hash &&
++		ds.Status.LabelSelector == labelSelector {
+ 		return nil
+ 	}
+ 
+@@ -701,6 +697,7 @@ func (dsc *ReconcileDaemonSet) storeDaemonSetStatus(
+ 		toUpdate.Status.NumberAvailable = int32(numberAvailable)
+ 		toUpdate.Status.NumberUnavailable = int32(numberUnavailable)
+ 		toUpdate.Status.DaemonSetHash = hash
++		toUpdate.Status.LabelSelector = labelSelector
+ 
+ 		if _, updateErr = dsClient.UpdateStatus(ctx, toUpdate, metav1.UpdateOptions{}); updateErr == nil {
+ 			klog.InfoS("Updated DaemonSet status", "daemonSet", klog.KObj(ds), "status", kruiseutil.DumpJSON(toUpdate.Status))
