@@ -299,10 +299,8 @@ properties:
                   Resource requests settings for pods.
                 properties:
                   cpu:
-                    oneOf:
-                      - type: string
-                        pattern: "^[0-9]+m?$"
-                      - type: number
+                    type: string
+                    pattern: '^[0-9]+m?$'
                     default: '100m'
                     description: |
                       Configuring CPU requests.
@@ -320,10 +318,8 @@ properties:
                   Configuring CPU and memory limits.
                 properties:
                   cpu:
-                    oneOf:
-                      - type: string
-                        pattern: "^[0-9]+m?$"
-                      - type: number
+                    type: string
+                    pattern: '^[0-9]+m?$'
                     default: '2000m'
                     description: |
                       Configuring CPU limits.
@@ -632,10 +628,8 @@ properties:
                   Resource requests settings for pods.
                 properties:
                   cpu:
-                    oneOf:
-                    - type: string
-                      pattern: "^[0-9]+m?$"
-                    - type: number
+                    type: string
+                    pattern: "^[0-9]+m?$"
                     description: |
                       Configuring CPU requests.
                   memory:
@@ -651,10 +645,8 @@ properties:
                   Configuring CPU and memory limits.
                 properties:
                   cpu:
-                    oneOf:
-                    - type: string
-                      pattern: "^[0-9]+m?$"
-                    - type: number
+                    type: string
+                    attern: "^[0-9]+m?$"
                     description: |
                       Configuring CPU limits.
                   memory:
