@@ -48,6 +48,9 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  {{- include "debian packages proxy" . | nindent 2 }}
+  - apt-get install -y libbtrfs-dev
   install:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src
