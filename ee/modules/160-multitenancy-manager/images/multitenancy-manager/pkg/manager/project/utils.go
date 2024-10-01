@@ -162,18 +162,6 @@ func (m *Manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Pro
 	})
 }
 
-func (m *Manager) setFinalizer(ctx context.Context, project *v1alpha2.Project) error {
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
-			return err
-		}
-		if !controllerutil.ContainsFinalizer(project, consts.ProjectFinalizer) {
-			controllerutil.AddFinalizer(project, consts.ProjectFinalizer)
-		}
-		return m.client.Update(ctx, project)
-	})
-}
-
 func (m *Manager) removeFinalizer(ctx context.Context, project *v1alpha2.Project) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
@@ -198,6 +186,9 @@ func (m *Manager) prepareProject(ctx context.Context, project *v1alpha2.Project)
 		project.Labels[consts.ProjectTemplateLabel] = project.Spec.ProjectTemplateName
 		if project.Annotations != nil {
 			delete(project.Annotations, consts.ProjectRequireSyncAnnotation)
+		}
+		if !controllerutil.ContainsFinalizer(project, consts.ProjectFinalizer) {
+			controllerutil.AddFinalizer(project, consts.ProjectFinalizer)
 		}
 		return m.client.Update(ctx, project)
 	})
