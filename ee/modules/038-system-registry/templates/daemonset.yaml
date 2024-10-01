@@ -184,8 +184,8 @@ spec:
           protocol: TCP
           containerPort: 4577
         volumeMounts:
-          - name: kube-rbac-proxy-ca
-            mountPath: /etc/kube-rbac-proxy
+        - name: kube-rbac-proxy-ca
+          mountPath: /etc/kube-rbac-proxy
 {{- range $name, $imageDigest := $images }}
       - name: image-holder-{{ $name | kebabcase }}
         image: "{{ $.Values.global.modulesImages.registry.base }}@{{ $imageDigest }}"
@@ -201,10 +201,10 @@ spec:
       # dnsPolicy: ClusterFirstWithHostNet
       priorityClassName: system-cluster-critical
       volumes:
-        - name: kube-rbac-proxy-ca
-          configMap:
-            defaultMode: 420
-            name: kube-rbac-proxy-ca.crt
+      - name: kube-rbac-proxy-ca
+        configMap:
+          defaultMode: 420
+          name: kube-rbac-proxy-ca.crt
       - name: configs
         secret:
           secretName: system-registry-manager-configs
