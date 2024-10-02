@@ -9,13 +9,11 @@ storage:
     enabled: true
   redirect:
     disable: true
-  cache:
-    blobdescriptor: inmemory
 
 http:
   addr: {{ .IpAddress }}:5001
   prefix: /
-  secret: asecretforlocaldevelopment
+  secret: {{ quote .Registry.HttpSecret }}
   debug:
     addr: "127.0.0.1:5002"
     prometheus:

@@ -10,7 +10,8 @@
       "Name": "deckhouse-ro",
       "PasswordHash": "$2a$10$sI3dBK8UfU2SohAmpCJ7wuVvKuJr4kibQfHa5Einri.A88GJKbkf6"
     },
-    "RegistryMode": "Detached"
+    "RegistryMode": "Detached",
+    "HttpSecret": "Theigh5reu9akook8nahgh8veeNgi0Ph"
   },
   "Images":
   {

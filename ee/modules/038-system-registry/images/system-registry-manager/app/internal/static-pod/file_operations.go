@@ -32,6 +32,7 @@ type RegistryDetails struct {
 	UserRo           User
 	RegistryMode     string
 	UpstreamRegistry UpstreamRegistry
+	HttpSecret       string
 }
 
 // User represents a user with a name and a password hash
@@ -193,6 +194,11 @@ func (config *EmbeddedRegistryConfig) validate() error {
 		if config.Registry.UpstreamRegistry.Password == "" {
 			missingFields = append(missingFields, "UpstreamRegistry.Password")
 		}
+	}
+
+	// Registry http secret
+	if config.Registry.HttpSecret == "" {
+		missingFields = append(missingFields, "Registry.HttpSecret")
 	}
 
 	// Images
