@@ -24,9 +24,11 @@
     {{- end }}
   {{- else }}
     {{- /* Annotate first StorageClass in list as default in case there is `global.discovery.defaultStorageClass` and */ -}}
-    {{- /* `global.defaultClusterStorageClass` NOT defined */ -}}
-    {{- if and (not $context.Values.global.defaultClusterStorageClass) (eq $sc_index 0) }}
-      {{- $_ := set $annotations "storageclass.kubernetes.io/is-default-class" "true" }}
+    {{- /* `global.defaultClusterStorageClass` NOT defined/empty */ -}}
+    {{- if (eq $sc_index 0) }}
+      {{- if or (not (hasKey $context.Values.global "defaultClusterStorageClass")) (and (hasKey $context.Values.global "defaultClusterStorageClass") (not $context.Values.global.defaultClusterStorageClass)) }}
+        {{- $_ := set $annotations "storageclass.kubernetes.io/is-default-class" "true" }}
+      {{- end }}
     {{- end }}
   {{- end }}
 
