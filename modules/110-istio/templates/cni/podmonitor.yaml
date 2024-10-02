@@ -1,3 +1,4 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
 {{- if eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -28,4 +29,5 @@ spec:
   namespaceSelector:
     matchNames:
       - d8-{{ .Chart.Name }}
+{{- end }}
 {{- end }}
