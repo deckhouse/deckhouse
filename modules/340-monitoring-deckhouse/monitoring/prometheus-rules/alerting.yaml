@@ -103,3 +103,18 @@
         If you are ready to deploy this release, run: `kubectl annotate DeckhouseRelease {{ $labels.name }} release.deckhouse.io/disruption-approved=true`.
       summary: |
         Deckhouse release disruption approval required.
+  - alert: ModuleReleaseIsWaitingManualApproval
+    expr: max by (name) (d8_module_release_waiting_manual) >= 1
+    labels:
+      severity_level: "6"
+      d8_module: $labels.name
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      description: |
+        Module release is waiting for manual approval.
+
+        Please run `kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"` for confirmation.
+      summary: |
+        Module release is waiting for manual approval.

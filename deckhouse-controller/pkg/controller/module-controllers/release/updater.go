@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
+	"github.com/flant/shell-operator/pkg/metric_storage"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,10 +38,14 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
+const (
+	metricReleasesGroup = "d8_module_releases"
+)
+
 func newModuleUpdater(logger logger.Logger, nConfig *updater.NotificationConfig, mode string,
-	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string) *updater.Updater[*v1alpha1.ModuleRelease] {
+	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string, metricStorage *metric_storage.MetricStorage) *updater.Updater[*v1alpha1.ModuleRelease] {
 	return updater.NewUpdater[*v1alpha1.ModuleRelease](logger, nConfig, mode,
-		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(),
+		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(metricStorage),
 		newSettings(), newWebhookDataSource(logger), enabledModules)
 }
 
@@ -217,14 +222,22 @@ func (k *kubeAPI) updateModuleReleaseDownloadStatistic(ctx context.Context, rele
 	return k.client.Status().Update(ctx, release)
 }
 
-type metricsUpdater struct{}
+type metricsUpdater struct {
+	metricStorage *metric_storage.MetricStorage
+}
 
-func (m *metricsUpdater) ReleaseBlocked(_, _ string) {}
+func newMetricsUpdater(metricStorage *metric_storage.MetricStorage) *metricsUpdater {
+	return &metricsUpdater{
+		metricStorage: metricStorage,
+	}
+}
 
-func (m *metricsUpdater) WaitingManual(_ string, _ float64) {}
+func (m *metricsUpdater) ReleaseBlocked(_, _ string) {
 
-func newMetricsUpdater() *metricsUpdater {
-	return &metricsUpdater{}
+}
+
+func (m *metricsUpdater) WaitingManual(name string, _ float64) {
+	m.metricStorage.CounterAdd("d8_module_release_waiting_manual", 1, map[string]string{"name": name})
 }
 
 type settings struct{}
