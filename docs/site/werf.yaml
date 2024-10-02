@@ -1,15 +1,14 @@
+{{- $_ := set . "Env" (.Env | default "EE") }}
 {{- $_ := set . "UsePrebuildJekyllImage" true }}
 {{- $_ := set . "Mode" "production" }}
-{{- $_ := set . "Edition" "FE" }}
-{{- if $.Env -}}
-  {{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "EE") (eq $.Env "FE") -}}
-    {{- $_ := set . "Edition" $.Env }}
-  {{- else }}
-    {{- $_ := set . "Mode" $.Env }}
-  {{- end }}
+{{- $_ := set . "Edition" "EE" }}
+{{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "EE") -}}
+  {{- $_ := set . "Edition" $.Env }}
+{{- else if eq $.Env "FE"  }}
+  {{- $_ := set . "Edition" "EE" }}
+{{- else }}
+  {{- $_ := set . "Mode" $.Env }}
 {{- end }}
-
----
 project: deckhouse-web
 configVersion: 1
 cleanup:
@@ -28,12 +27,12 @@ gitWorktree:
   forceShallowClone: true
 ---
 # Base Images
-{{ $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
+{{- $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
   {{- range $k, $v := .Images }}
-    {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
+    {{- $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
     {{- if or (eq $.Mode "development") (eq $.Mode "module") (eq $.Mode "local") }}
       {{- if or ( ne $k "BASE_JEKYLL" ) ( and (not $.UsePrebuildJekyllImage ) ( eq $k "BASE_JEKYLL" ) )}}
-        {{ $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
+        {{- $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
       {{- end }}
     {{- end }}
     {{- if ne $k "REGISTRY_PATH" }}
