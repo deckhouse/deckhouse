@@ -182,14 +182,14 @@ func (du *Updater[R]) checkMinorReleaseConditions(release R, updateWindows updat
 	passed := du.checkReleaseRequirements(release)
 	if !passed {
 		du.metricsUpdater.ReleaseBlocked(release.GetName(), "requirement")
-		return fmt.Errorf("release %s requirements are not met", release.GetName())
+		return fmt.Errorf("release %s requirements are not met: %w", release.GetName(), ErrDeployConditionsNotMet)
 	}
 
 	// check: release disruptions (hard lock)
 	passed = du.checkReleaseDisruptions(release)
 	if !passed {
 		du.metricsUpdater.ReleaseBlocked(release.GetName(), "disruption")
-		return fmt.Errorf("release %s disruption approval required", release.GetName())
+		return fmt.Errorf("release %s disruption approval required: %w", release.GetName(), ErrDeployConditionsNotMet)
 	}
 
 	resultDeployTime, delayReason, err := du.calculateMinorResultDeployTime(release, updateWindows)
@@ -221,7 +221,7 @@ func (du *Updater[R]) checkMinorReleaseConditions(release R, updateWindows updat
 		if err != nil {
 			return fmt.Errorf("update status: %w", err)
 		}
-		return ErrRequirementsNotMet
+		return ErrDeployConditionsNotMet
 	}
 
 	return nil
@@ -374,10 +374,10 @@ func (du *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTim
 //   - Manual approving
 //   - Release requirements
 //
-// In addition to the regular error, ErrRequirementsNotMet or NotReadyForDeployError is returned as appropriate.
+// In addition to the regular error, ErrDeployConditionsNotMet or NotReadyForDeployError is returned as appropriate.
 func (du *Updater[R]) ApplyPredictedRelease(updateWindows update.Windows) (err error) {
 	if du.predictedReleaseIndex == -1 {
-		return ErrRequirementsNotMet // has no predicted release
+		return ErrDeployConditionsNotMet // has no predicted release
 	}
 
 	var (
