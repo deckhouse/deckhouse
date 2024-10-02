@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-var ErrRequirementsNotMet = errors.New("release requirements not met")
+var ErrDeployConditionsNotMet = errors.New("deploy conditions not met")
 
 type NotReadyForDeployError struct {
 	message    string
