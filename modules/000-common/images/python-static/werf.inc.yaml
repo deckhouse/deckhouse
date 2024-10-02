@@ -1,23 +1,48 @@
 {{- $PythonVersion := "v3.11.10" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: src-artifact
 git:
-- add: /{{ $.ModulePath }}modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/Setup.local
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src/Setup.local
   to: /Setup.local
   stageDependencies:
     install:
     - '**/*'
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  includePaths:
+  - '**/*.patch'
+  stageDependencies:
+    install:
+    - '**/*.patch'
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-whl
+  add: /src
+  to: /src/Lib/ensurepip/_bundled
+  before: setup
 shell:
   install:
-  - git clone -b {{ $PythonVersion }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/python/cpython.git /src
+  - git clone -b {{ $PythonVersion }} --single-branch --depth=1 {{ .SOURCE_REPO }}/python/cpython.git /src
   - cd /src
+  - git apply /patches/*.patch --verbose
   - mv /Setup.local Modules/Setup.local
+  - rm ./Lib/ensurepip/_bundled/setuptools-65.5.0-py3-none-any.whl
 ---
-artifact: {{ .ModuleName }}/build-python-static-artifact
+artifact: {{ .ModuleName }}/{{ .ImageName }}-whl
+from: {{ .Images.BASE_ALT_P11 }}
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y pip
+  install:
+  {{- include "pypi proxy" . | nindent 2 }}
+  - mkdir -p /src
+  - pip download setuptools==75.1.0 -d /src
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_UBUNTU }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -34,10 +59,10 @@ shell:
   - chmod 0700 /opt/python-static/bin/python3
   - chmod 0700 /opt/python-static/bin/pip3
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/build-python-static-artifact
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /opt/python-static
   to: /opt/python-static
   before: setup
