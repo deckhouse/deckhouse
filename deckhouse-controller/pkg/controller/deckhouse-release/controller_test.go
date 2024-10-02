@@ -38,6 +38,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -145,9 +146,10 @@ func (suite *ControllerTestSuite) setupController(
 	filename string,
 	initValues string,
 	mup *v1alpha1.ModuleUpdatePolicySpec,
+	options ...reconcilerOption,
 ) {
 	suite.testDataFileName = filename
-	suite.ctr, suite.kubeClient = setupFakeController(suite.T(), filename, initValues, mup)
+	suite.ctr, suite.kubeClient = setupFakeController(suite.T(), filename, initValues, mup, options...)
 }
 
 func (suite *ControllerTestSuite) setupControllerSettings(
@@ -197,6 +199,16 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Loop until deploy: canary", func() {
+		dc := newDependencyContainer(suite.T())
+
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Windows = update.Windows{{From: "8:00", To: "23:00", Days: []string{"Mon", "Tue"}}}
+
+		suite.setupController("loop-until-deploy-canary.yaml", initValues, mup, withDependencyContainer(dc))
+		suite.loopUntilDeploy(dc, "v1.26.0")
 	})
 
 	suite.Run("Update in day window", func() {
@@ -780,6 +792,20 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 }
 
+func newDependencyContainer(t *testing.T) *dependency.MockedContainer {
+	t.Helper()
+
+	dc := dependency.NewMockedContainer()
+	dc.CRClient = cr.NewClientMock(t)
+	dc.HTTPClient.DoMock.
+		Expect(&http.Request{}).
+		Return(&http.Response{
+			StatusCode: http.StatusOK,
+		}, nil)
+
+	return dc
+}
+
 func (suite *ControllerTestSuite) fetchResults() []byte {
 	result := bytes.NewBuffer(nil)
 
@@ -843,6 +869,37 @@ func (suite *ControllerTestSuite) getDeckhouseRelease(name string) *v1alpha1.Dec
 	require.NoError(suite.T(), err)
 
 	return &release
+}
+
+func (suite *ControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer, releaseName string) {
+	const maxIterations = 3
+	suite.T().Helper()
+
+	var (
+		result = ctrl.Result{Requeue: true}
+		err    error
+		i      int
+	)
+
+	for result.Requeue || result.RequeueAfter > 0 {
+		dc.GetFakeClock().Advance(result.RequeueAfter)
+
+		dr := suite.getDeckhouseRelease(releaseName)
+		if dr.Status.Phase == v1alpha1.PhaseDeployed {
+			suite.T().Log("Deployed")
+			return
+		}
+
+		result, err = suite.ctr.createOrUpdateReconcile(context.TODO(), dr)
+		require.NoError(suite.T(), err)
+
+		i++
+		if i > maxIterations {
+			suite.T().Fatal("Too many iterations")
+		}
+	}
+
+	suite.T().Fatal("Loop was broken")
 }
 
 type stubModulesManager struct{}
