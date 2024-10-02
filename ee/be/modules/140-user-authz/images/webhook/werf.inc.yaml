@@ -37,6 +37,6 @@ shell:
   - cd /src
   - go test ./...
   - go build -ldflags="-s -w" -o /user-authz-webhook main.go
-  - go build -ldflags="-s -w" -o /healthcheck ./cmd/healthcheck/main
+  - go build -ldflags="-s -w" -o /healthcheck ./cmd/healthcheck/main.go
   - chown -R 64535:64535 /user-authz-webhook /healthcheck
   - chmod 0755 /user-authz-webhook /healthcheck
