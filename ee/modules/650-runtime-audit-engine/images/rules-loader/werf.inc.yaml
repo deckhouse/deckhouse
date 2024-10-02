@@ -58,6 +58,10 @@ import:
   - usr/bin/
   - usr/share/
   before: install
+- artifact: {{ $.ModuleName }}/falco-falcoctl-artifact
+  add: /src/falcoctl
+  to: /usr/bin/falcoctl
+  before: install
 docker:
   ENV:
     SHELL_OPERATOR_HOOKS_DIR: "/hooks"
