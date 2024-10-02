@@ -23,5 +23,26 @@ positive:
           static:
             requests:
               memory: "2G"
+    - sidecar:
+        resourcesManagement:
+          static:
+            limits:
+              cpu: 2000m
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 128Mi
   values:
     - {}
+negative:
+  configValues:
+  #Bad cpu limit value
+    - sidecar:
+        resourcesManagement:
+          static:
+            limits:
+              cpu: 1
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 128Mi

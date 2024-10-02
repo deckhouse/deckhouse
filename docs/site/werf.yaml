@@ -1,3 +1,14 @@
+{{- $_ := set . "UsePrebuildJekyllImage" true }}
+{{- $_ := set . "Mode" "production" }}
+{{- $_ := set . "Edition" "FE" }}
+{{- if $.Env -}}
+  {{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "EE") (eq $.Env "FE") -}}
+    {{- $_ := set . "Edition" $.Env }}
+  {{- else }}
+    {{- $_ := set . "Mode" $.Env }}
+  {{- end }}
+{{- end }}
+
 ---
 project: deckhouse-web
 configVersion: 1
@@ -20,8 +31,10 @@ gitWorktree:
 {{ $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
   {{- range $k, $v := .Images }}
     {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
-    {{- if or (eq $.Env "development") (eq $.Env "module") (eq $.Env "local") }}
-      {{ $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
+    {{- if or (eq $.Mode "development") (eq $.Mode "module") (eq $.Mode "local") }}
+      {{- if or ( ne $k "BASE_JEKYLL" ) ( and (not $.UsePrebuildJekyllImage ) ( eq $k "BASE_JEKYLL" ) )}}
+        {{ $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
+      {{- end }}
     {{- end }}
     {{- if ne $k "REGISTRY_PATH" }}
       {{- $_ := set $.Images $k $baseImagePath }}
@@ -56,14 +69,9 @@ from: {{ .Images.BASE_JEKYLL }}
 ansible:
   install:
     - shell: |
-        apk add rsync
-        gem update --system 3.2.3
-        gem install bundler -v 2.4.3
-    - name: "Install Dependencies"
-      shell: bundle install
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/site/
+        echo "Ruby: $(ruby --version)"
+        echo "Gem: $(gem --version)"
+        bundle --version
   setup:
     - name: "Build static files"
       shell: |

@@ -339,6 +339,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Value: "4223",
 		},
 		{
+			Name:  "ADDON_OPERATOR_CRD_EXTRA_LABELS",
+			Value: "heritage=deckhouse",
+		},
+		{
 			Name:  "HELM3LIB",
 			Value: "yes",
 		},
@@ -631,6 +635,17 @@ func SecretMasterDevicePath(nodeName string, devicePath []byte) *apiv1.Secret {
 		"d8-system",
 		map[string][]byte{
 			nodeName: devicePath,
+		},
+		map[string]string{},
+	)
+}
+
+func SecretConvergeState(state []byte) *apiv1.Secret {
+	return generateSecret(
+		"d8-dhctl-converge-state",
+		"d8-system",
+		map[string][]byte{
+			"state.json": state,
 		},
 		map[string]string{},
 	)

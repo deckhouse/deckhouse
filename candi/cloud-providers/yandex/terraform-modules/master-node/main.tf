@@ -62,9 +62,10 @@ resource "yandex_vpc_address" "addr" {
     zone_id = local.internal_subnet.zone
   }
 
-  lifecycle {
-    create_before_destroy = true
-  }
+#   If we specify this flag and change the zone_id, terraform will exit with an error.
+#   lifecycle {
+#     create_before_destroy = true
+#   }
 }
 
 locals {

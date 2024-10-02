@@ -61,8 +61,8 @@ function __main__() {
 
     for module_image in $(jq -rc '.value | to_entries[]' <<<"$module"); do
       IMAGE_NAME=$(jq -rc '.key' <<< "$module_image")
-      if [[ "$IMAGE_NAME" == "trivy" ]]; then 
-        continue 
+      if [[ "$IMAGE_NAME" == "trivy" ]]; then
+        continue
       fi
       echo "----------------------------------------------"
       echo "👾 Image: $IMAGE_NAME"

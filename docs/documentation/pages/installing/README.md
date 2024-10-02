@@ -37,8 +37,6 @@ The YAML installation config contains multiple resource configurations (manifest
 
   This resource contains the parameters Deckhouse needs to start or run smoothly, such as the [placement-related parameters for Deckhouse components](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), the [storageClass](../deckhouse-configure-global.html#parameters-storageclass) used, the [container registry](configuration.html#initconfiguration-deckhouse-registrydockercfg) credentials, the [DNS naming template](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate), and more.
 
-  **Caution!** The [configOverrides](configuration.html#initconfiguration-deckhouse-configoverrides) parameter is deprecated and will be removed. Use the [ModuleConfig](../#configuring-the-module) in the installation config to set parameters for **built-in** Deckhouse modules. For other modules, use [installation resource file](#installation-resource-config).  
-
 - [ClusterConfiguration](configuration.html#clusterconfiguration) — general cluster parameters, such as network parameters, CRI parameters, control plane version, etc.
   
   > The `ClusterConfiguration` resource is only required if a Kubernetes cluster has to be pre-deployed when installing Deckhouse. That is, `ClusterConfiguration` is not required if Deckhouse is installed into an existing Kubernetes cluster.
@@ -79,10 +77,6 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   releaseChannel: Stable
-  configOverrides:
-    global:
-      modules:
-        publicDomainTemplate: "%s.example.com"
 ---
 apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration

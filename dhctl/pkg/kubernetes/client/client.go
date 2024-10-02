@@ -75,6 +75,19 @@ func (k *KubernetesClient) WithNodeInterface(client node.Interface) *KubernetesC
 	return k
 }
 
+func (k *KubernetesClient) NodeInterfaceAsSSHClient() *ssh.Client {
+	if k.NodeInterface == nil {
+		return nil
+	}
+
+	cl, ok := k.NodeInterface.(*ssh.NodeInterfaceWrapper)
+	if !ok {
+		return nil
+	}
+
+	return cl.Client()
+}
+
 // Init initializes kubernetes client
 func (k *KubernetesClient) Init(params *KubernetesInitParams) error {
 	kubeClient := klient.New()

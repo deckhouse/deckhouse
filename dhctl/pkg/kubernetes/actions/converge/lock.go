@@ -31,10 +31,11 @@ import (
 )
 
 type InLockRunner struct {
-	lockConfig *client.LeaseLockConfig
-	forceLock  bool
-	fullUnlock bool
-	kubeCl     *client.KubernetesClient
+	lockConfig     *client.LeaseLockConfig
+	forceLock      bool
+	fullUnlock     bool
+	kubeCl         *client.KubernetesClient
+	unlockConverge func(fullUnlock bool)
 }
 
 func NewInLockRunner(kubeCl *client.KubernetesClient, identity string) *InLockRunner {
@@ -62,7 +63,7 @@ func (r *InLockRunner) WithFullUnlock(f bool) *InLockRunner {
 	return r
 }
 
-func (r *InLockRunner) Run(action func() error) error {
+func (r *InLockRunner) Run() error {
 	unlockConverge, err := lockLease(r.kubeCl, r.lockConfig, r.forceLock)
 	if err != nil {
 		return err
@@ -72,7 +73,13 @@ func (r *InLockRunner) Run(action func() error) error {
 		unlockConverge(true)
 	})
 
-	return action()
+	r.unlockConverge = unlockConverge
+
+	return nil
+}
+
+func (r *InLockRunner) Stop() {
+	r.unlockConverge(true)
 }
 
 func LockConvergeFromLocal(kubeCl *client.KubernetesClient, identity string) (func(bool), error) {

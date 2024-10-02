@@ -79,7 +79,7 @@ properties:
         description: |
           The maximum total number of streams for the Loki instance.
 
-          Each stream has unique labels. The number of streams is the number of unique label sets. E. g. '{job="my-app", instance="kube-node-1", namespace="production", pod_name="backend-79dbf6fcb7-v5gs7", app="backend"}'.
+          Each stream has unique labels. The number of streams is the number of unique label sets. E. g. `{job="my-app", instance="kube-node-1", namespace="production", pod_name="backend-79dbf6fcb7-v5gs7", app="backend"}`.
 
           0 means unlimited.
         default: 0

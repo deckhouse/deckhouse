@@ -19,17 +19,11 @@ docker:
 artifact: {{ .ModuleName }}/{{ .ImageName }}/static
 from: {{ .Images.BASE_JEKYLL }}
 ansible:
-  install:
-    - shell: |
-        apk add rsync jq
-        gem update --system 3.2.3
-        gem install bundler -v 2.4.3
-    - name: "Install Dependencies"
-      shell: bundle install
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
   setup:
+    - shell: |
+        echo "Ruby: $(ruby --version)"
+        echo "Gem: $(gem --version)"
+        bundle --version
     - name: "Create modules.yml"
       shell: |
         export MODULES_DIR=/comparison
@@ -40,12 +34,7 @@ ansible:
         chdir: /srv/jekyll-data/documentation/
     - name: "{{ .Env }} version. Merging modules of different releases..."
       shell: |
-        cp -rf /src/be/modules /src >& /dev/null
-        cp -rf /src/se/modules /src >& /dev/null
-        cp -rf /src/ee/modules /src >& /dev/null
-        cp -rf /src/fe/modules /src >& /dev/null
-        cp /src/modules/010-prometheus-crd/crds/*.yaml /src/modules/300-prometheus/crds
-        rm -rf /src/modules/010-prometheus-crd
+        for dir in {be,se,ee,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
       args:
         executable: /bin/bash
     - name: "Preparing modules structure"
@@ -172,7 +161,6 @@ ansible:
     - shell: |
         cp -Rf /app/_site/site/assets /app/_site/documentation/
         cp -Rf /app/_site/site/images /app/_site/documentation/
-        cp -Rf /app/_site/site/includes /app/_site/documentation/
         cp -Rf /app/_site/site/ru/includes /app/_site/documentation/ru
         cp -Rf /app/_site/site/en/includes /app/_site/documentation/en
         cp -Rf /app/_site/site/ru /app/_site/documentation/
