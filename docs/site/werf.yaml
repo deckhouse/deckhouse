@@ -1,6 +1,6 @@
 {{- $_ := set . "UsePrebuildJekyllImage" true }}
 {{- $_ := set . "Mode" "production" }}
-{{- $_ := set . "Edition" "EE" }}
+{{- $_ := set . "Edition" "FE" }}
 {{- if $.Env -}}
   {{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "EE") (eq $.Env "FE") -}}
     {{- $_ := set . "Edition" $.Env }}
@@ -72,7 +72,6 @@ ansible:
         echo "Ruby: $(ruby --version)"
         echo "Gem: $(gem --version)"
         bundle --version
-        echo "Build mode: {{ $.Mode }}"
   setup:
     - name: "Build static files"
       shell: |
