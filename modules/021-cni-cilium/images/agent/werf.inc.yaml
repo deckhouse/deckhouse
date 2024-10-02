@@ -55,6 +55,8 @@
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/pause" }}
 # from /jq
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/jq" }}
+# for check and cleaning unnecessary iptables
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/check-n-cleaning-iptables.sh" }}
 # iptables and dependencies
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/xtables*" }}
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/arptables* /sbin/ebtables* /sbin/ip6tables* /sbin/iptables*" }}
@@ -72,9 +74,10 @@ git:
   to: /
   includePaths:
   - binary_replace.sh
+  - check-n-cleaning-iptables.sh
   stageDependencies:
     install:
-    - binary_replace.sh
+    - "**/*.sh"
 import:
 - artifact: {{ $.ModuleName }}/llvm-artifact
   add: /usr/local/bin/
@@ -150,7 +153,10 @@ shell:
   - rm -rf /iptables
   - chown root:root /usr/sbin/iptables-wrapper
   - chmod 755 /usr/sbin/iptables-wrapper
+  #
+  - chmod +x /check-n-cleaning-iptables.sh
   beforeSetup:
+
   # common relocate
   - chmod +x /binary_replace.sh
   - mkdir -p /relocate
