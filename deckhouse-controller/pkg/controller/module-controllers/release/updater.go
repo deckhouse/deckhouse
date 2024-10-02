@@ -38,9 +38,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
-func newModuleUpdater(logger logger.Logger, nConfig *updater.NotificationConfig, mode string,
-	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string, metricStorage *metric_storage.MetricStorage) *updater.Updater[*v1alpha1.ModuleRelease] {
-	return updater.NewUpdater[*v1alpha1.ModuleRelease](logger, nConfig, mode,
+func newModuleUpdater(dc dependency.Container, logger logger.Logger, nConfig *updater.NotificationConfig, mode string,
+	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string, metricStorage *metric_storage.MetricStorage,
+) *updater.Updater[*v1alpha1.ModuleRelease] {
+	return updater.NewUpdater[*v1alpha1.ModuleRelease](dc, logger, nConfig, mode,
 		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(metricStorage),
 		newSettings(), newWebhookDataSource(logger), enabledModules)
 }
@@ -71,7 +72,8 @@ func (s *webhookDataSource) Fill(output *updater.WebhookData, release *v1alpha1.
 }
 
 func newKubeAPI(ctx context.Context, logger logger.Logger, client client.Client, downloadedModulesDir string, symlinksDir string,
-	moduleManager moduleManager, dc dependency.Container) *kubeAPI {
+	moduleManager moduleManager, dc dependency.Container,
+) *kubeAPI {
 	return &kubeAPI{
 		ctx:                  ctx,
 		logger:               logger,
@@ -84,9 +86,8 @@ func newKubeAPI(ctx context.Context, logger logger.Logger, client client.Client,
 }
 
 type kubeAPI struct {
-	//TODO: remove
-	ctx context.Context
-	// d8ClientSet        versioned.Interface
+	// TODO: move context from struct field to arguments
+	ctx                  context.Context
 	logger               logger.Logger
 	client               client.Client
 	downloadedModulesDir string
@@ -211,7 +212,8 @@ func (k *kubeAPI) SaveReleaseData(ctx context.Context, release *v1alpha1.ModuleR
 }
 
 func (k *kubeAPI) updateModuleReleaseDownloadStatistic(ctx context.Context, release *v1alpha1.ModuleRelease,
-	ds *downloader.DownloadStatistic) error {
+	ds *downloader.DownloadStatistic,
+) error {
 	release.Status.Size = ds.Size
 	release.Status.PullDuration = metav1.Duration{Duration: ds.PullDuration}
 
@@ -229,7 +231,6 @@ func newMetricsUpdater(metricStorage *metric_storage.MetricStorage) *metricsUpda
 }
 
 func (m *metricsUpdater) ReleaseBlocked(_, _ string) {
-
 }
 
 func (m *metricsUpdater) WaitingManual(name string, _ float64) {

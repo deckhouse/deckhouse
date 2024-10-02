@@ -426,7 +426,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		}
 	} else {
 		// get all policies regardless of their labels
-		var policies = new(v1alpha1.ModuleUpdatePolicyList)
+		policies := new(v1alpha1.ModuleUpdatePolicyList)
 		err = c.client.List(ctx, policies)
 		if err != nil {
 			return ctrl.Result{Requeue: true}, err
@@ -462,7 +462,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	}
 
 	k8 := newKubeAPI(ctx, c.logger, c.client, c.downloadedModulesDir, c.symlinksDir, c.moduleManager, c.dc)
-	releaseUpdater := newModuleUpdater(c.logger, nConfig, policy.Spec.Update.Mode, k8, c.moduleManager.GetEnabledModuleNames(), c.metricStorage)
+	releaseUpdater := newModuleUpdater(c.dc, c.logger, nConfig, policy.Spec.Update.Mode, k8, c.moduleManager.GetEnabledModuleNames(), c.metricStorage)
 
 	otherReleases := new(v1alpha1.ModuleReleaseList)
 	err = c.client.List(ctx, otherReleases, client.MatchingLabels{"module": moduleName})
@@ -514,13 +514,8 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	if releaseUpdater.PredictedReleaseIsPatch() {
 		// patch release does not respect update windows or ManualMode
 		err = releaseUpdater.ApplyPredictedRelease(nil)
-		if errors.Is(err, updater.ErrNotReadyForDeploy) {
-			//TODO: create custom error type with additional fields like reason end requeueAfter
-			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-		}
-
 		if err != nil {
-			return ctrl.Result{RequeueAfter: defaultCheckInterval}, fmt.Errorf("apply predicted release: %w", err)
+			return c.wrapApplyReleaseError(err)
 		}
 
 		modulesChangedReason = "a new module release found"
@@ -533,16 +528,27 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	}
 
 	err = releaseUpdater.ApplyPredictedRelease(windows)
-	if errors.Is(err, updater.ErrNotReadyForDeploy) {
-		//TODO: create custom error type with additional fields like reason end requeueAfter
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-	}
 	if err != nil {
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, fmt.Errorf("apply predicted release: %w", err)
+		return c.wrapApplyReleaseError(err)
 	}
 
 	modulesChangedReason = "a new module release found"
 	return c.cleanUpModuleReleases(ctx, mr)
+}
+
+func (c *moduleReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result, error) {
+	var notReadyErr *updater.NotReadyForDeployError
+	if errors.As(err, &notReadyErr) {
+		c.logger.Infof("%s: retry after %s", err.Error(), notReadyErr.RetryDelay())
+		return ctrl.Result{Requeue: true, RequeueAfter: notReadyErr.RetryDelay()}, nil
+	}
+
+	if errors.Is(err, updater.ErrRequirementsNotMet) {
+		c.logger.Infoln(err.Error())
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	return ctrl.Result{RequeueAfter: defaultCheckInterval}, fmt.Errorf("apply predicted release: %w", err)
 }
 
 // getReleasePolicy checks if any update policy matches the module release and if it's so - returns the policy and its release channel.
@@ -1061,7 +1067,8 @@ type moduleManager interface {
 }
 
 func (c *moduleReleaseReconciler) updateModuleReleaseDownloadStatistic(ctx context.Context, release *v1alpha1.ModuleRelease,
-	ds *downloader.DownloadStatistic) (*v1alpha1.ModuleRelease, error) {
+	ds *downloader.DownloadStatistic,
+) (*v1alpha1.ModuleRelease, error) {
 	release.Status.Size = ds.Size
 	release.Status.PullDuration = metav1.Duration{Duration: ds.PullDuration}
 
@@ -1190,5 +1197,5 @@ func (c *moduleReleaseReconciler) cleanUpModuleReleases(ctx context.Context, mr 
 		}
 	}
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 }
