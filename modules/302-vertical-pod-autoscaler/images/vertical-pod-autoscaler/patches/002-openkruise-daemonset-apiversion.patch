@@ -11,10 +11,10 @@ index dcbd11ee2..7f7ea6a39 100644
 +			return getParentOfWellKnownController(informer, controllerKey)
 +		}
  	}
-
+ 
  	groupKind, err := controllerKey.groupKind()
 @@ -240,6 +242,9 @@ func (c *ControllerKeyWithAPIVersion) groupKind() (schema.GroupKind, error) {
-
+ 
  func (f *controllerFetcher) isWellKnown(key *ControllerKeyWithAPIVersion) bool {
  	kind := wellKnownController(key.ControllerKey.Kind)
 +	if kind == daemonSet && key.ApiVersion == "apps.kruise.io/v1alpha1" {
@@ -36,5 +36,5 @@ index f7cb73bd0..7d96a62ec 100644
 +			return getLabelSelector(informer, vpa.Spec.TargetRef.Kind, vpa.Namespace, vpa.Spec.TargetRef.Name)
 +		}
  	}
-
+ 
  	// not on a list of known controllers, use scale sub-resource
