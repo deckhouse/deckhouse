@@ -154,10 +154,9 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 	releases, err := action.NewHistory(c.conf).Run(projectName)
 	if err != nil {
 		if errors.Is(err, driver.ErrReleaseNotFound) {
-			c.log.Info("release not found, installing it", "release", projectName, "namespace", projectName)
+			c.log.Info("the release not found, installing it", "release", projectName, "namespace", projectName)
 			install := action.NewInstall(c.conf)
 			install.ReleaseName = projectName
-			install.Namespace = projectName
 			install.Timeout = c.opts.Timeout
 			install.UseReleaseName = true
 			install.Labels = map[string]string{
@@ -165,33 +164,32 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 			}
 			install.PostRenderer = post
 			if _, err = install.RunWithContext(ctx, ch, values); err != nil {
-				c.log.Error(err, "failed to install release", "release", projectName, "namespace", projectName)
-				return fmt.Errorf("failed to install release: %w", err)
+				c.log.Error(err, "failed to install the release", "release", projectName, "namespace", projectName)
+				return fmt.Errorf("failed to install the release: %w", err)
 			}
-			c.log.Info("release installed", "release", projectName, "namespace", projectName)
+			c.log.Info("the release installed", "release", projectName, "namespace", projectName)
 			return nil
 		}
-		c.log.Error(err, "failed to retrieve history for release", "release", projectName, "namespace", projectName)
-		return fmt.Errorf("failed to retrieve history for release: %w", err)
+		c.log.Error(err, "failed to retrieve history for the release", "release", projectName, "namespace", projectName)
+		return fmt.Errorf("failed to retrieve history for the release: %w", err)
 	}
 
 	releaseutil.Reverse(releases, releaseutil.SortByRevision)
 	if releaseHash, ok := releases[0].Labels[consts.ReleaseHashLabel]; ok {
 		if releaseHash == hash && releases[0].Info.Status == release.StatusDeployed {
-			c.log.Info("release is up to date", "release", projectName, "namespace", projectName)
+			c.log.Info("the release is up to date", "release", projectName, "namespace", projectName)
 			return nil
 		}
 	}
 
 	if releases[0].Info.Status.IsPending() {
 		if err = c.rollbackLatestRelease(releases); err != nil {
-			c.log.Error(err, "failed to rollback latest release", "release", projectName, "namespace", projectName)
-			return fmt.Errorf("failed to rollback latest release: %w", err)
+			c.log.Error(err, "failed to rollback the latest release", "release", projectName, "namespace", projectName)
+			return fmt.Errorf("failed to rollback the latest release: %w", err)
 		}
 	}
 
 	upgrade := action.NewUpgrade(c.conf)
-	upgrade.Namespace = projectName
 	upgrade.Install = true
 	upgrade.MaxHistory = int(c.opts.HistoryMax)
 	upgrade.Timeout = c.opts.Timeout
@@ -201,11 +199,11 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 	upgrade.PostRenderer = post
 
 	if _, err = upgrade.RunWithContext(ctx, projectName, ch, values); err != nil {
-		c.log.Error(err, "failed to upgrade release", "release", projectName, "namespace", projectName)
-		return fmt.Errorf("failed to upgrade release: %s", err)
+		c.log.Error(err, "failed to upgrade the release", "release", projectName, "namespace", projectName)
+		return fmt.Errorf("failed to upgrade the release: %s", err)
 	}
 
-	c.log.Info("release upgraded", "release", projectName, "namespace", projectName)
+	c.log.Info("the release upgraded", "release", projectName, "namespace", projectName)
 	return nil
 }
 
@@ -278,9 +276,9 @@ func (c *Client) Delete(_ context.Context, releaseName string) error {
 	uninstall.IgnoreNotFound = true
 
 	if _, err := uninstall.Run(releaseName); err != nil {
-		c.log.Error(err, "failed to delete release", "release", releaseName)
-		return fmt.Errorf("failed to uninstall %s: %v", releaseName, err)
+		c.log.Error(err, "failed to delete the release", "release", releaseName)
+		return fmt.Errorf("failed to uninstall the %s release: %v", releaseName, err)
 	}
-	c.log.Info("release deleted", "release", releaseName)
+	c.log.Info("the release deleted", "release", releaseName)
 	return nil
 }
