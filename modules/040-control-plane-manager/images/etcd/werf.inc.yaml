@@ -1,9 +1,16 @@
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromArtifact: src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   beforeInstall:
   - git clone -b v3.5.16 --depth 1 {{ $.SOURCE_REPO }}/etcd-io/etcd.git /src
+  - cd /src && git apply /patches/*.patch
   - rm -rf /src/tools
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}

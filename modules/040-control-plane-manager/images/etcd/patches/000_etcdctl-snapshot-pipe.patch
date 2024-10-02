@@ -1,0 +1,142 @@
+Subject: [PATCH] feature: support for piping snapshot to stdout
+---
+Index: etcdctl/ctlv3/command/snapshot_command.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/etcdctl/ctlv3/command/snapshot_command.go b/etcdctl/ctlv3/command/snapshot_command.go
+--- a/etcdctl/ctlv3/command/snapshot_command.go	(revision f20bbadd404b57c776d1e8876cefd1ac29b03fb5)
++++ b/etcdctl/ctlv3/command/snapshot_command.go	(date 1727874859931)
+@@ -20,11 +20,12 @@
+ 	"os"
+ 
+ 	"github.com/spf13/cobra"
++	"go.uber.org/zap"
++
+ 	"go.etcd.io/etcd/client/pkg/v3/logutil"
+ 	snapshot "go.etcd.io/etcd/client/v3/snapshot"
+ 	"go.etcd.io/etcd/etcdutl/v3/etcdutl"
+ 	"go.etcd.io/etcd/pkg/v3/cobrautl"
+-	"go.uber.org/zap"
+ )
+ 
+ const (
+@@ -45,6 +46,14 @@
+ 	initialMmapSize     uint64
+ )
+ 
++func NewSnapshotPipeCommand() *cobra.Command {
++	return &cobra.Command{
++		Use:   "pipe",
++		Short: "Streams an etcd node backend snapshot to stdout",
++		Run:   snapshotPipeCommandFunc,
++	}
++}
++
+ // NewSnapshotCommand returns the cobra command for "snapshot".
+ func NewSnapshotCommand() *cobra.Command {
+ 	cmd := &cobra.Command{
+@@ -54,6 +63,7 @@
+ 	cmd.AddCommand(NewSnapshotSaveCommand())
+ 	cmd.AddCommand(NewSnapshotRestoreCommand())
+ 	cmd.AddCommand(newSnapshotStatusCommand())
++	cmd.AddCommand(NewSnapshotPipeCommand())
+ 	return cmd
+ }
+ 
+@@ -78,6 +88,27 @@
+ 	}
+ }
+ 
++func snapshotPipeCommandFunc(cmd *cobra.Command, args []string) {
++
++	lg, err := logutil.CreateDefaultZapLogger(zap.InfoLevel)
++	if err != nil {
++		cobrautl.ExitWithError(cobrautl.ExitError, err)
++	}
++	cfg := mustClientCfgFromCmd(cmd)
++
++	// if user does not specify "--command-timeout" flag, there will be no timeout for snapshot pipe command
++	ctx, cancel := context.WithCancel(context.Background())
++	if isCommandTimeoutFlagSet(cmd) {
++		ctx, cancel = commandCtx(cmd)
++	}
++	defer cancel()
++
++	err = snapshot.Pipe(ctx, lg, *cfg, os.Stdout)
++	if err != nil {
++		cobrautl.ExitWithError(cobrautl.ExitInterrupted, err)
++	}
++}
++
+ func NewSnapshotRestoreCommand() *cobra.Command {
+ 	cmd := &cobra.Command{
+ 		Use:   "restore <filename> [options]",
+Index: client/v3/snapshot/v3_snapshot.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/client/v3/snapshot/v3_snapshot.go b/client/v3/snapshot/v3_snapshot.go
+--- a/client/v3/snapshot/v3_snapshot.go	(revision f20bbadd404b57c776d1e8876cefd1ac29b03fb5)
++++ b/client/v3/snapshot/v3_snapshot.go	(date 1727874821225)
+@@ -23,9 +23,10 @@
+ 	"time"
+ 
+ 	"github.com/dustin/go-humanize"
++	"go.uber.org/zap"
++
+ 	"go.etcd.io/etcd/client/pkg/v3/fileutil"
+ 	"go.etcd.io/etcd/client/v3"
+-	"go.uber.org/zap"
+ )
+ 
+ // hasChecksum returns "true" if the file size "n"
+@@ -97,3 +98,46 @@
+ 	lg.Info("saved", zap.String("path", dbPath))
+ 	return nil
+ }
++
++// Pipe fetches snapshot from remote etcd server and pipes data
++// into the stream. If the context "ctx" is canceled or timed out,
++// snapshot save stream will error out (e.g. context.Canceled,
++// context.DeadlineExceeded). Make sure to specify only one endpoint
++// in client configuration. Snapshot API must be requested to a
++// selected node, and saved snapshot is the point-in-time state of
++// the selected node.
++func Pipe(ctx context.Context, lg *zap.Logger, cfg clientv3.Config, dst io.Writer) error {
++	cfg.Logger = lg.Named("client")
++	if len(cfg.Endpoints) != 1 {
++		return fmt.Errorf("snapshot must be requested to one selected node, not multiple %v", cfg.Endpoints)
++	}
++	cli, err := clientv3.New(cfg)
++	if err != nil {
++		return err
++	}
++	defer cli.Close()
++
++	now := time.Now()
++	var rd io.ReadCloser
++	rd, err = cli.Snapshot(ctx)
++	if err != nil {
++		return err
++	}
++	lg.Info("fetching snapshot", zap.String("endpoint", cfg.Endpoints[0]))
++	var size int64
++	size, err = io.Copy(dst, rd)
++	if err != nil {
++		return err
++	}
++	if !hasChecksum(size) {
++		return fmt.Errorf("sha256 checksum not found [bytes: %d]", size)
++	}
++
++	lg.Info("fetched snapshot",
++		zap.String("endpoint", cfg.Endpoints[0]),
++		zap.String("size", humanize.Bytes(uint64(size))),
++		zap.String("took", humanize.Time(now)),
++	)
++
++	return nil
++}
