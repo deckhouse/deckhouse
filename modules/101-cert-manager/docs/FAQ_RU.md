@@ -58,6 +58,72 @@ default            example-com                     13m
 * selfsigned
 * selfsigned-no-trust
 
+Если требуется поддержка других типов сертификатов, то вы можете добавить их самостоятельно.
+
+## Как добавить дополнительный `ClusterIssuer`?
+
+### В каких случаях требуется дополнительный `ClusterIssuer`
+
+В стандартной поставке присутствуют два `ClusterIssuer`, которые издают сертификаты из доверенного публичного удостоверяющего центра LetsEncrypt - `letsencrypt` и `letsencrypt-staging`.
+Чтобы издать сертификаты на доменное имя через LetsEncrypt, сервис требует осуществить подтверждение владения доменом. 
+Cert-manager поддерживает несколько методов для подтверждения владения доменом при использовании ACME (Automated Certificate Management Environment):
+* `HTTP-01` -  метод подразумевает, что cert-manager создаст временный Pod в кластере, который будет слушать на определенном URL для подтверждения владения доменом. Для его работы необходимо иметь возможность направлять внешний трафик на этот Pod, обычно через Ingress.
+* `DNS-01` -  метод подразумевает, что cert-manager делает запись TXT запись в DNS для подтверждения владения доменом. У cert-manager есть встроенная поддержка популярных провайдеров DNS: AWS Route53, Google Cloud DNS, Cloudflare, и другие.
+
+`ClusterIssuers` присутствующие в поставке используют метод `HTTP-01`.
+
+Таким образом дополнительный `ClusterIssuer` может потребоваться в следующих случаях:
+1. Требуется издание сертификатов в удостоверяющем центре, отличным от LetsEncrypt (в т.ч. в приватном). Поддерживаемые УЦ доступны [в документации cert-manager](https://cert-manager.io/docs/configuration/)
+2. Требуется создание сертификата через LetsEncrypt, но через метод `DNS-01`
+3. Требуется издание wildcard сертификатов (доступно только через метод `DNS-01`)
+
+### Как добавить дополнительный `ClusterIssuer` использующий LetsEncrypt и метод подтверждения `DNS-01`
+
+Для подтверждения владения доменом через LetsEncrypt с помощью метода `DNS-01` требуется настроить возможность создания TXT-записей в публичном DNS. 
+
+У `сert-manager` есть поддержка механизмов для создания TXT-записей в некоторых популярных DNS: AzureDNS, Cloudflare, Google Cloud DNS, и другие. Полный перечень доступен [в документации cert-manager](https://cert-manager.io/docs/configuration/acme/dns01/)
+
+Пример использования AWS Route53 доступен в разделе [`Как защитить учетные данные cert-manager`](#как-защитить-учетные-данные-cert-manager)
+
+
+Использование сторонних DNS-провайдеров реализуется через метод `webhook`. 
+При использовании данного метода требуется разместить сервис, который будет обрабатывать хук и осуществлять создание TXT записи в DNS-провайдере.
+
+В качестве примера рассмотрим использование сервиса Yandex Cloud DNS
+
+Для обработки webhook предварительно разместим в кластере сервис `Yandex Cloud DNS ACME webhook` согласно [официальной документации](https://github.com/yandex-cloud/cert-manager-webhook-yandex)
+
+Далее создадим ресурс `ClusterIssuer`
+```yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: clusterissuer
+  namespace: default
+spec:
+  acme:
+    # You must replace this email address with your own.
+    # Let's Encrypt will use this to contact you about expiring
+    # certificates, and issues related to your account.
+    email: your@email.com
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      # Secret resource that will be used to store the account's private key.
+      name: secret-ref
+    solvers:
+      - dns01:
+          webhook:
+            config:
+              # The ID of the folder where dns-zone located in
+              folder: <your folder ID>
+              # This is the secret used to access the service account
+              serviceAccountSecretRef:
+                name: cert-manager-secret
+                key: iamkey.json
+            groupName: acme.cloud.yandex.com
+            solverName: yandex-cloud-dns
+```
+
 ## Работает ли старая аннотация TLS-acme?
 
 Да, работает! Специальный компонент (`cert-manager-ingress-shim`) видит эти аннотации и на их основании автоматически создает ресурсы `Certificate` (в тех же namespace, что и Ingress-ресурсы с аннотациями).
