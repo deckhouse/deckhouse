@@ -597,6 +597,149 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/fe/modules/300-prometheus/templates/ingress.yaml
+  to: /deckhouse/modules/300-prometheus/templates/ingress.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/fe/modules/300-prometheus/templates/pdb.yaml
+  to: /deckhouse/modules/300-prometheus/templates/pdb.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/fe/modules/300-prometheus/templates/prometheus-token.yaml
+  to: /deckhouse/modules/300-prometheus/templates/prometheus-token.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/fe/modules/300-prometheus/templates/prometheus.yaml
+  to: /deckhouse/modules/300-prometheus/templates/prometheus.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/fe/modules/300-prometheus/templates/rbac-for-us.yaml
+  to: /deckhouse/modules/300-prometheus/templates/rbac-for-us.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/fe/modules/300-prometheus/templates/rbac-to-us.yaml
+  to: /deckhouse/modules/300-prometheus/templates/rbac-to-us.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/fe/modules/300-prometheus/templates/remote-write-secrets.yaml
+  to: /deckhouse/modules/300-prometheus/templates/remote-write-secrets.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/fe/modules/300-prometheus/templates/scrape-interval-configmap.yaml
+  to: /deckhouse/modules/300-prometheus/templates/scrape-interval-configmap.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/fe/modules/300-prometheus/templates/service-affinitive.yaml
+  to: /deckhouse/modules/300-prometheus/templates/service-affinitive.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/fe/modules/300-prometheus/templates/service.yaml
+  to: /deckhouse/modules/300-prometheus/templates/service.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/fe/modules/300-prometheus/templates/servicemonitor.yaml
+  to: /deckhouse/modules/300-prometheus/templates/servicemonitor.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/fe/modules/340-monitoring-applications
   to: /deckhouse/modules/340-monitoring-applications
   excludePaths:
