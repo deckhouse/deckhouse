@@ -1,0 +1,40 @@
+diff --git a/vertical-pod-autoscaler/pkg/recommender/input/controller_fetcher/controller_fetcher.go b/vertical-pod-autoscaler/pkg/recommender/input/controller_fetcher/controller_fetcher.go
+index dcbd11ee2..7f7ea6a39 100644
+--- a/vertical-pod-autoscaler/pkg/recommender/input/controller_fetcher/controller_fetcher.go
++++ b/vertical-pod-autoscaler/pkg/recommender/input/controller_fetcher/controller_fetcher.go
+@@ -203,7 +203,9 @@ func (f *controllerFetcher) getParentOfController(controllerKey ControllerKeyWit
+ 	kind := wellKnownController(controllerKey.Kind)
+ 	informer, exists := f.informersMap[kind]
+ 	if exists {
+-		return getParentOfWellKnownController(informer, controllerKey)
++		if kind != daemonSet || (kind == daemonSet && controllerKey.ApiVersion != "apps.kruise.io/v1alpha1") {
++			return getParentOfWellKnownController(informer, controllerKey)
++		}
+ 	}
+ 
+ 	groupKind, err := controllerKey.groupKind()
+@@ -240,6 +242,9 @@ func (c *ControllerKeyWithAPIVersion) groupKind() (schema.GroupKind, error) {
+ 
+ func (f *controllerFetcher) isWellKnown(key *ControllerKeyWithAPIVersion) bool {
+ 	kind := wellKnownController(key.ControllerKey.Kind)
++	if kind == daemonSet && key.ApiVersion == "apps.kruise.io/v1alpha1" {
++		return false
++	}
+ 	_, exists := f.informersMap[kind]
+ 	return exists
+ }
+diff --git a/vertical-pod-autoscaler/pkg/target/fetcher.go b/vertical-pod-autoscaler/pkg/target/fetcher.go
+index f7cb73bd0..7d96a62ec 100644
+--- a/vertical-pod-autoscaler/pkg/target/fetcher.go
++++ b/vertical-pod-autoscaler/pkg/target/fetcher.go
+@@ -123,7 +123,9 @@ func (f *vpaTargetSelectorFetcher) Fetch(vpa *vpa_types.VerticalPodAutoscaler) (
+ 	kind := wellKnownController(vpa.Spec.TargetRef.Kind)
+ 	informer, exists := f.informersMap[kind]
+ 	if exists {
+-		return getLabelSelector(informer, vpa.Spec.TargetRef.Kind, vpa.Namespace, vpa.Spec.TargetRef.Name)
++		if kind != daemonSet || (kind == daemonSet && vpa.Spec.TargetRef.APIVersion != "apps.kruise.io/v1alpha1") {
++			return getLabelSelector(informer, vpa.Spec.TargetRef.Kind, vpa.Namespace, vpa.Spec.TargetRef.Name)
++		}
+ 	}
+ 
+ 	// not on a list of known controllers, use scale sub-resource
