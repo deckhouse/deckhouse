@@ -38,7 +38,7 @@ fromImage: common/distroless
 import:
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/dex-k8s-authenticator
-    to: /usr/local/bin
+    to: /dex-k8s-authenticator
     before: setup
   - artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
     add: /etc/nsswitch.conf
@@ -53,4 +53,5 @@ import:
     to: /app/templates
     before: setup
 docker:
-  ENTRYPOINT: [ "--upstream=http://0.0.0.0:8080/", "--http-address=0.0.0.0:4180" ]
+  WORKDIR: /app
+  ENTRYPOINT: [ "/dex-k8s-authenticator" ]
