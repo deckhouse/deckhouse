@@ -18,12 +18,27 @@ type EmbeddedRegistryConfig struct {
 	Registry     RegistryDetails
 	Images       Images
 	ConfigHashes ConfigHashes
+	Pki          *Pki
+}
+
+// Pki holds the configuration for the PKI
+type Pki struct {
+	CaCert           string
+	AuthCert         string
+	AuthKey          string
+	DistributionCert string
+	DistributionKey  string
 }
 
 // ConfigHashes holds the hash of the configuration files
 type ConfigHashes struct {
 	AuthTemplateHash         string
 	DistributionTemplateHash string
+	CaCertHash               string
+	AuthCertHash             string
+	AuthKeyHash              string
+	DistributionCertHash     string
+	DistributionKeyHash      string
 }
 
 // RegistryDetails holds detailed configuration of the registry
@@ -129,11 +144,11 @@ func renderTemplate(templateContent string, data interface{}) (string, error) {
 // SaveToFile saves the rendered content to the specified file path
 func saveToFile(content string, path string) error {
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("error creating directory %s: %v", dir, err)
 	}
 
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
 		return fmt.Errorf("error writing to file %s: %v", path, err)
 	}
 
@@ -157,12 +172,12 @@ func deleteFile(path string) (bool, error) {
 func (config *EmbeddedRegistryConfig) validate() error {
 	var missingFields []string
 
-	// ip address to bind to
+	// Validate IP address
 	if config.IpAddress == "" {
 		missingFields = append(missingFields, "IpAddress")
 	}
 
-	// Check rw and ro users
+	// Validate registry users
 	if config.Registry.UserRw.Name == "" {
 		missingFields = append(missingFields, "UserRw.Name")
 	}
@@ -176,12 +191,11 @@ func (config *EmbeddedRegistryConfig) validate() error {
 		missingFields = append(missingFields, "UserRo.PasswordHash")
 	}
 
-	// check registry mode, if Proxy, check upstream registry
+	// Validate registry mode and upstream registry
 	if config.Registry.RegistryMode == "" {
 		missingFields = append(missingFields, "RegistryMode")
 	}
 	if config.Registry.RegistryMode == "Proxy" {
-
 		if config.Registry.UpstreamRegistry.Scheme == "" {
 			missingFields = append(missingFields, "UpstreamRegistry.Scheme")
 		}
@@ -196,12 +210,12 @@ func (config *EmbeddedRegistryConfig) validate() error {
 		}
 	}
 
-	// Registry http secret
+	// Validate registry http secret
 	if config.Registry.HttpSecret == "" {
 		missingFields = append(missingFields, "Registry.HttpSecret")
 	}
 
-	// Images
+	// Validate images
 	if config.Images.DockerDistribution == "" {
 		missingFields = append(missingFields, "Images.DockerDistribution")
 	}
@@ -209,9 +223,28 @@ func (config *EmbeddedRegistryConfig) validate() error {
 		missingFields = append(missingFields, "Images.DockerAuth")
 	}
 
+	// Validate PKI if present
+	if config.Pki != nil {
+		if config.Pki.CaCert == "" {
+			missingFields = append(missingFields, "Pki.CaCert")
+		}
+		if config.Pki.AuthCert == "" {
+			missingFields = append(missingFields, "Pki.AuthCert")
+		}
+		if config.Pki.AuthKey == "" {
+			missingFields = append(missingFields, "Pki.AuthKey")
+		}
+		if config.Pki.DistributionCert == "" {
+			missingFields = append(missingFields, "Pki.DistributionCert")
+		}
+		if config.Pki.DistributionKey == "" {
+			missingFields = append(missingFields, "Pki.DistributionKey")
+		}
+	}
+
 	// If there are missing fields, return an error
 	if len(missingFields) > 0 {
-		return fmt.Errorf("error, missing required fields: %s", strings.Join(missingFields, ", "))
+		return fmt.Errorf("validation error, missing fields: %s", strings.Join(missingFields, ", "))
 	}
 
 	return nil
@@ -247,4 +280,65 @@ func compareFileHash(path, newContent string) (bool, error) {
 
 	// Return whether the hashes match
 	return currentHash == newHash, nil
+}
+
+// savePkiFiles saves the PKI-related files to the specified directory and updates hashes in ConfigHashes if they change
+func (pki *Pki) savePkiFiles(basePath string, configHashes *ConfigHashes) (bool, error) {
+	anyFileChanged := false
+
+	// Define paths for each PKI file and corresponding hash field in ConfigHashes
+	fileMap := map[string]struct {
+		content   string
+		hashField *string
+	}{
+		"ca.crt":           {pki.CaCert, &configHashes.CaCertHash},
+		"auth.crt":         {pki.AuthCert, &configHashes.AuthCertHash},
+		"auth.key":         {pki.AuthKey, &configHashes.AuthKeyHash},
+		"distribution.crt": {pki.DistributionCert, &configHashes.DistributionCertHash},
+		"distribution.key": {pki.DistributionKey, &configHashes.DistributionKeyHash},
+	}
+
+	// Iterate over the PKI files and process them
+	for filename, fileData := range fileMap {
+		path := filepath.Join(basePath, filename)
+
+		// Process each template and check if it has changed
+		changed, err := processTemplateForFile(path, fileData.content, fileData.hashField)
+		if err != nil {
+			return false, fmt.Errorf("failed to process PKI file %s: %v", path, err)
+		}
+
+		anyFileChanged = anyFileChanged || changed
+	}
+
+	return anyFileChanged, nil
+}
+
+// processTemplateForFile processes the content, compares it with the existing file, and updates the hash field
+func processTemplateForFile(outputPath, content string, hashField *string) (bool, error) {
+	// Compute the hash of the new content
+	hash := computeHash(content)
+
+	// Update the hash field if provided
+	if hashField != nil {
+		*hashField = hash
+	}
+
+	// Compare the existing file content with the new content
+	isSame, err := compareFileHash(outputPath, content)
+	if err != nil {
+		return false, fmt.Errorf("failed to compare file content for %s: %v", outputPath, err)
+	}
+
+	// If the content is the same, no need to overwrite the file
+	if isSame {
+		return false, nil
+	}
+
+	// Save the new content to the file
+	if err := saveToFile(content, outputPath); err != nil {
+		return false, fmt.Errorf("failed to save file %s: %v", outputPath, err)
+	}
+
+	return true, nil
 }
