@@ -361,16 +361,26 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	}
 
 	err = deckhouseUpdater.ApplyPredictedRelease(windows)
-
 	if err != nil {
-		if errors.Is(err, updater.ErrNotReadyForDeploy) || errors.Is(err, updater.ErrRequirementsNotMet) {
-			// TODO: create custom error type with additional fields like reason end requeueAfter
-			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-		}
-		return ctrl.Result{}, fmt.Errorf("apply predicted release: %w", err)
+		return r.wrapApplyReleaseError(err)
 	}
 
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+}
+
+func (r *deckhouseReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result, error) {
+	var notReadyErr *updater.NotReadyForDeployError
+	if errors.As(err, &notReadyErr) {
+		r.logger.Infof("%s: retry after %s", err.Error(), notReadyErr.RetryDelay())
+		return ctrl.Result{Requeue: true, RequeueAfter: notReadyErr.RetryDelay()}, nil
+	}
+
+	if errors.Is(err, updater.ErrRequirementsNotMet) {
+		r.logger.Infoln(err.Error())
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	return ctrl.Result{RequeueAfter: defaultCheckInterval}, fmt.Errorf("apply predicted release: %w", err)
 }
 
 func (r *deckhouseReleaseReconciler) getDeckhouseLatestPod(ctx context.Context) (*corev1.Pod, error) {
