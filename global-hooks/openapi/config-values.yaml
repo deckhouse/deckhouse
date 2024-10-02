@@ -14,9 +14,10 @@ properties:
     type: string
     default: null
     description: |
-      The storage class to use as default for entire cluster.
-        * If defined, all newly created PVCs will use this storage class.
-        * This parameter is applied during module activation.
+      The name of the StorageClass that will be annotated as default in the cluster.
+        * If the value is omitted, the current default StorageClass will be kept, if it exists in the cluster.
+          Otherwise, the first StorageClass created by the cloud-provider module will be used (if any cloud-provider module is used).
+        * Use this parameter to change the default StorageClass in the cluster, since manually adding default-annotations to StorageClasses is prohibited.
   highAvailability:
     type: boolean
     description: |
