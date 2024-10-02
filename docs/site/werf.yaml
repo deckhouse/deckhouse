@@ -8,6 +8,7 @@
     {{- $_ := set . "Mode" $.Env }}
   {{- end }}
 {{- end }}
+
 ---
 project: deckhouse-web
 configVersion: 1
@@ -45,7 +46,7 @@ from: {{ .Images.BASE_ALPINE }}
 shell:
   install: apk add jq curl
 ---
-{{- if eq $.Mode "production" }}
+{{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 artifact: site-external-artifacts
 fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
 fromImage: site-tools
@@ -98,7 +99,7 @@ git:
   stageDependencies:
     install: ['Gemfile','Gemfile.lock']
     setup: '**/*'
-{{- if eq $.Mode "production" }}
+{{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 import:
   - artifact: site-external-artifacts
     add: /data/topnav.json
