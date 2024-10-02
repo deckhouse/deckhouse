@@ -43,7 +43,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/be/modules/140-user-authz/images/webhook"
+  directory: "/ee/be/modules/140-user-authz/images/webhook/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
