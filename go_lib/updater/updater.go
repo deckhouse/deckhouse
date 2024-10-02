@@ -194,7 +194,7 @@ func (du *Updater[R]) checkMinorReleaseConditions(release R, updateWindows updat
 
 	resultDeployTime, delayReason, err := du.calculateMinorResultDeployTime(release, updateWindows)
 	if err != nil {
-		du.logger.Errorf("Calculate minor result deploy time: %s", err.Error())
+		return fmt.Errorf("calculate minor result deploy time: %w", err)
 	}
 
 	// check: Notification
