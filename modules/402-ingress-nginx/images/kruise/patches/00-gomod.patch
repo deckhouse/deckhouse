@@ -1,0 +1,48 @@
+diff --git a/go.mod b/go.mod
+index 4f3e7cd..dcd028f 100644
+--- a/go.mod
++++ b/go.mod
+@@ -7,7 +7,7 @@ require (
+ 	github.com/appscode/jsonpatch v1.0.1
+ 	github.com/codegangsta/negroni v1.0.0
+ 	github.com/docker/distribution v2.8.2+incompatible
+-	github.com/docker/docker v26.1.4+incompatible
++	github.com/docker/docker v26.1.5+incompatible
+ 	github.com/evanphx/json-patch v5.6.0+incompatible
+ 	github.com/fsnotify/fsnotify v1.7.0
+ 	github.com/go-bindata/go-bindata v3.1.2+incompatible
+@@ -38,7 +38,7 @@ require (
+ 	k8s.io/klog/v2 v2.120.1
+ 	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9
+ 	k8s.io/kubelet v0.28.9
+-	k8s.io/kubernetes v1.28.9
++	k8s.io/kubernetes v1.28.12
+ 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
+ 	sigs.k8s.io/controller-runtime v0.16.6
+ )
+diff --git a/go.sum b/go.sum
+index 4a919f6..89fa38c 100644
+--- a/go.sum
++++ b/go.sum
+@@ -58,8 +58,8 @@ github.com/docker/cli v24.0.0+incompatible h1:0+1VshNwBQzQAx9lOl+OYCTCEAD8fKs/qe
+ github.com/docker/cli v24.0.0+incompatible/go.mod h1:JLrzqnKDaYBop7H2jaqPtU4hHvMKP+vjCwu2uszcLI8=
+ github.com/docker/distribution v2.8.2+incompatible h1:T3de5rq0dB1j30rp0sA2rER+m322EBzniBPB6ZIzuh8=
+ github.com/docker/distribution v2.8.2+incompatible/go.mod h1:J2gT2udsDAN96Uj4KfcMRqY0/ypR+oyYUYmja8H+y+w=
+-github.com/docker/docker v26.1.4+incompatible h1:vuTpXDuoga+Z38m1OZHzl7NKisKWaWlhjQk7IDPSLsU=
+-github.com/docker/docker v26.1.4+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
++github.com/docker/docker v26.1.5+incompatible h1:NEAxTwEjxV6VbBMBoGG3zPqbiJosIApZjxlbrG9q3/g=
++github.com/docker/docker v26.1.5+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
+ github.com/docker/docker-credential-helpers v0.7.0 h1:xtCHsjxogADNZcdv1pKUHXryefjlVRqWqIhk/uXJp0A=
+ github.com/docker/docker-credential-helpers v0.7.0/go.mod h1:rETQfLdHNT3foU5kuNkFR1R1V12OJRRO5lzt2D1b5X0=
+ github.com/docker/go-connections v0.4.0 h1:El9xVISelRB7BuFusrZozjnkIM5YnzCViNKohAFqRJQ=
+@@ -567,8 +567,8 @@ k8s.io/kube-scheduler v0.28.9 h1:rRFkTBiPIpcCdyI7/E2HVyzWehmSW1eI/rWyKTVrKfk=
+ k8s.io/kube-scheduler v0.28.9/go.mod h1:9xnBlTE/B2EwfiUZ/uh2zBEVViRhGG+ojLiMvyxXCe8=
+ k8s.io/kubelet v0.28.9 h1:76v00fFLeniz27kXhGGUIxONdwa9LKcD2Jd5cXYAZko=
+ k8s.io/kubelet v0.28.9/go.mod h1:46P39DFjI+E59nU2OgpatyS3oWy58ClulKO6riZ/97o=
+-k8s.io/kubernetes v1.28.9 h1:I4sYGQJOuxEo4/QWoY7M8kDB7O0HcH266t6o6mR6ogg=
+-k8s.io/kubernetes v1.28.9/go.mod h1:chlmcCDBnOA/y+572cw8dO0Rci1wiA8bm5+zhPdFLCk=
++k8s.io/kubernetes v1.28.12 h1:DtWB8ZjoYiN/PXD4qDXFppf9IouVUavn6r3S+3NMUkU=
++k8s.io/kubernetes v1.28.12/go.mod h1:chlmcCDBnOA/y+572cw8dO0Rci1wiA8bm5+zhPdFLCk=
+ k8s.io/mount-utils v0.28.9 h1:RWt7xIrTzoKYKmMZ9Lh/rkZ9zreCUdpzhFe8jJXXuNQ=
+ k8s.io/mount-utils v0.28.9/go.mod h1:ZxAFXgKzcAyi3VTd2pKFlZFswl9Q/cveJ5aptdjQOuc=
+ k8s.io/utils v0.0.0-20230726121419-3b25d923346b h1:sgn3ZU783SCgtaSJjpcVVlRqd6GSnlTLKgpAAttJvpI=
