@@ -7,6 +7,11 @@ metadata:
   annotations:
     authConfigHash: {{ quote .ConfigHashes.AuthTemplateHash }}
     distributionConfigHash: {{ quote .ConfigHashes.DistributionTemplateHash }}
+    caCertHash: {{ quote .ConfigHashes.CaCertHash }}
+    authCertHash: {{ quote .ConfigHashes.AuthCertHash }}
+    authKeyHash: {{ quote .ConfigHashes.AuthKeyHash }}
+    distributionCertHash: {{ quote .ConfigHashes.DistributionCertHash }}
+    distributionKeyHash: {{ quote .ConfigHashes.DistributionKeyHash }}
   name: system-registry
   namespace: d8-system
 spec:
