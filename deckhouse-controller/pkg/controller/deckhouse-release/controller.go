@@ -375,7 +375,7 @@ func (r *deckhouseReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Resu
 		return ctrl.Result{Requeue: true, RequeueAfter: notReadyErr.RetryDelay()}, nil
 	}
 
-	if errors.Is(err, updater.ErrRequirementsNotMet) {
+	if errors.Is(err, updater.ErrDeployConditionsNotMet) {
 		r.logger.Infoln(err.Error())
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
