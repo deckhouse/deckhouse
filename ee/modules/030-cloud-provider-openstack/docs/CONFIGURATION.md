@@ -29,4 +29,7 @@ A list of OpenStack services required for Deckhouse Kubernetes Platform to work 
 
 &#8432;  If you need to order a Load Balancer.
 
+In case of using public clouds, API addresses and ports can be found in the official documentation of the service:
+* [VK Cloud](https://cloud.vk.com/docs/en/tools-for-using-services/api/rest-api/endpoints)
+
 {% include module-settings.liquid %}
