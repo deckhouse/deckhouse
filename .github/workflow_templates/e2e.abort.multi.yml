@@ -102,6 +102,8 @@ jobs:
     steps:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
 
+{!{ tmpl.Exec "check_e2e_labels_job" $ctx | strings.Indent 2 }!}
+
 {!{/* Jobs for each CRI and Kubernetes version */}!}
 {!{/* Note: it is sufficient to have one workflow 'e2e-abort.yaml' with one 'destroy' job and use provider, cri, k8s_version and layout from inputs. Still there are jobs for each CRI and Kubernetes version for similarity with e2e.multi.yaml */}!}
 {!{- $lastCommentNeeds := slice "started_at" -}!}
