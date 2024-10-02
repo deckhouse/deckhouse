@@ -71,6 +71,7 @@ ansible:
         echo "Ruby: $(ruby --version)"
         echo "Gem: $(gem --version)"
         bundle --version
+        echo "Build mode: {{ $.Mode }}"
   setup:
     - name: "Build static files"
       shell: |
