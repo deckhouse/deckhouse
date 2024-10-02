@@ -213,7 +213,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Update in day window", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Windows = update.Windows{{From: "8:00", To: "23:00", Days: []string{"Fri", "Sun"}}}
+		mup.Update.Windows = update.Windows{{From: "8:00", To: "23:00", Days: []string{"Fri", "Sun", "Thu"}}}
 
 		suite.setupController("update-in-day-window.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.26.0")
