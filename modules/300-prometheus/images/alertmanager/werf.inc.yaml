@@ -4,10 +4,10 @@ fromImage: common/distroless
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/alertmanager
-  to: /alertmanager
+  to: /bin/alertmanager
   before: setup
 docker:
-  ENTRYPOINT: ["/alertmanager"]
+  ENTRYPOINT: ["/bin/alertmanager"]
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: src-artifact
