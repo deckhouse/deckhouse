@@ -1215,5 +1215,5 @@ func (r *moduleReleaseReconciler) cleanUpModuleReleases(ctx context.Context, mr 
 		}
 	}
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 }
