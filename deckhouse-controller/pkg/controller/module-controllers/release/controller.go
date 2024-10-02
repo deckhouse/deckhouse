@@ -534,7 +534,9 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 }
 
 func (r *moduleReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result, error) {
+	var result ctrl.Result
 	var notReadyErr *updater.NotReadyForDeployError
+
 	if errors.As(err, &notReadyErr) {
 		r.logger.Infoln(err.Error())
 		// TODO: requeue all releases if deckhouse update settings is changed
@@ -546,7 +548,7 @@ func (r *moduleReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result,
 		return ctrl.Result{Requeue: true, RequeueAfter: notReadyErr.RetryDelay()}, nil
 	}
 
-	return ctrl.Result{}, fmt.Errorf("apply predicted release: %w", err)
+	return result, fmt.Errorf("apply predicted release: %w", err)
 }
 
 // getReleasePolicy checks if any update policy matches the module release and if it's so - returns the policy and its release channel.
