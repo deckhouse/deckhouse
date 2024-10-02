@@ -73,38 +73,38 @@ jobs:
 
 
   # <template: e2e_run_job_template>
-    # <template: check_e2e_labels_job>
-    check_e2e_labels:
-      name: Check e2e labels
-      runs-on: ubuntu-latest
-      outputs:
+  # <template: check_e2e_labels_job>
+  check_e2e_labels:
+    name: Check e2e labels
+    runs-on: ubuntu-latest
+    outputs:
 
-        run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
-        run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
-        run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
-        run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
-        run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
-        run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
-        run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
-        multimaster: ${{ steps.check.outputs.multimaster }}
-      steps:
+      run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
+      run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
+      run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
+      run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
+      run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
+      run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
+      run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+      multimaster: ${{ steps.check.outputs.multimaster }}
+    steps:
 
-        # <template: checkout_step>
-        - name: Checkout sources
-          uses: actions/checkout@v3.5.2
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
 
-        # </template: checkout_step>
-        - name: Check e2e labels
-          id: check
-          uses: actions/github-script@v6.4.1
-          with:
-            script: |
-              const provider = 'gcp';
-              const kubernetesDefaultVersion = '1.27';
+      # </template: checkout_step>
+      - name: Check e2e labels
+        id: check
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            const provider = 'gcp';
+            const kubernetesDefaultVersion = '1.27';
 
-              const ci = require('./.github/scripts/js/ci');
-              return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
-    # </template: check_e2e_labels_job>
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
+  # </template: check_e2e_labels_job>
   run_containerd_1_26:
     name: "destroy cluster: GCP, Containerd, Kubernetes 1.26"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.26' && github.event.inputs.layout == 'WithoutNAT' }}
@@ -393,38 +393,38 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-    # <template: check_e2e_labels_job>
-    check_e2e_labels:
-      name: Check e2e labels
-      runs-on: ubuntu-latest
-      outputs:
+  # <template: check_e2e_labels_job>
+  check_e2e_labels:
+    name: Check e2e labels
+    runs-on: ubuntu-latest
+    outputs:
 
-        run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
-        run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
-        run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
-        run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
-        run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
-        run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
-        run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
-        multimaster: ${{ steps.check.outputs.multimaster }}
-      steps:
+      run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
+      run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
+      run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
+      run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
+      run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
+      run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
+      run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+      multimaster: ${{ steps.check.outputs.multimaster }}
+    steps:
 
-        # <template: checkout_step>
-        - name: Checkout sources
-          uses: actions/checkout@v3.5.2
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
 
-        # </template: checkout_step>
-        - name: Check e2e labels
-          id: check
-          uses: actions/github-script@v6.4.1
-          with:
-            script: |
-              const provider = 'gcp';
-              const kubernetesDefaultVersion = '1.27';
+      # </template: checkout_step>
+      - name: Check e2e labels
+        id: check
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            const provider = 'gcp';
+            const kubernetesDefaultVersion = '1.27';
 
-              const ci = require('./.github/scripts/js/ci');
-              return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
-    # </template: check_e2e_labels_job>
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
+  # </template: check_e2e_labels_job>
   run_containerd_1_27:
     name: "destroy cluster: GCP, Containerd, Kubernetes 1.27"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.27' && github.event.inputs.layout == 'WithoutNAT' }}
@@ -713,38 +713,38 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-    # <template: check_e2e_labels_job>
-    check_e2e_labels:
-      name: Check e2e labels
-      runs-on: ubuntu-latest
-      outputs:
+  # <template: check_e2e_labels_job>
+  check_e2e_labels:
+    name: Check e2e labels
+    runs-on: ubuntu-latest
+    outputs:
 
-        run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
-        run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
-        run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
-        run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
-        run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
-        run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
-        run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
-        multimaster: ${{ steps.check.outputs.multimaster }}
-      steps:
+      run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
+      run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
+      run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
+      run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
+      run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
+      run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
+      run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+      multimaster: ${{ steps.check.outputs.multimaster }}
+    steps:
 
-        # <template: checkout_step>
-        - name: Checkout sources
-          uses: actions/checkout@v3.5.2
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
 
-        # </template: checkout_step>
-        - name: Check e2e labels
-          id: check
-          uses: actions/github-script@v6.4.1
-          with:
-            script: |
-              const provider = 'gcp';
-              const kubernetesDefaultVersion = '1.27';
+      # </template: checkout_step>
+      - name: Check e2e labels
+        id: check
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            const provider = 'gcp';
+            const kubernetesDefaultVersion = '1.27';
 
-              const ci = require('./.github/scripts/js/ci');
-              return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
-    # </template: check_e2e_labels_job>
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
+  # </template: check_e2e_labels_job>
   run_containerd_1_28:
     name: "destroy cluster: GCP, Containerd, Kubernetes 1.28"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.28' && github.event.inputs.layout == 'WithoutNAT' }}
@@ -1033,38 +1033,38 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-    # <template: check_e2e_labels_job>
-    check_e2e_labels:
-      name: Check e2e labels
-      runs-on: ubuntu-latest
-      outputs:
+  # <template: check_e2e_labels_job>
+  check_e2e_labels:
+    name: Check e2e labels
+    runs-on: ubuntu-latest
+    outputs:
 
-        run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
-        run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
-        run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
-        run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
-        run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
-        run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
-        run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
-        multimaster: ${{ steps.check.outputs.multimaster }}
-      steps:
+      run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
+      run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
+      run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
+      run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
+      run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
+      run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
+      run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+      multimaster: ${{ steps.check.outputs.multimaster }}
+    steps:
 
-        # <template: checkout_step>
-        - name: Checkout sources
-          uses: actions/checkout@v3.5.2
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
 
-        # </template: checkout_step>
-        - name: Check e2e labels
-          id: check
-          uses: actions/github-script@v6.4.1
-          with:
-            script: |
-              const provider = 'gcp';
-              const kubernetesDefaultVersion = '1.27';
+      # </template: checkout_step>
+      - name: Check e2e labels
+        id: check
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            const provider = 'gcp';
+            const kubernetesDefaultVersion = '1.27';
 
-              const ci = require('./.github/scripts/js/ci');
-              return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
-    # </template: check_e2e_labels_job>
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
+  # </template: check_e2e_labels_job>
   run_containerd_1_29:
     name: "destroy cluster: GCP, Containerd, Kubernetes 1.29"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.29' && github.event.inputs.layout == 'WithoutNAT' }}
@@ -1353,38 +1353,38 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-    # <template: check_e2e_labels_job>
-    check_e2e_labels:
-      name: Check e2e labels
-      runs-on: ubuntu-latest
-      outputs:
+  # <template: check_e2e_labels_job>
+  check_e2e_labels:
+    name: Check e2e labels
+    runs-on: ubuntu-latest
+    outputs:
 
-        run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
-        run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
-        run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
-        run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
-        run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
-        run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
-        run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
-        multimaster: ${{ steps.check.outputs.multimaster }}
-      steps:
+      run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
+      run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
+      run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
+      run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
+      run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
+      run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
+      run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+      multimaster: ${{ steps.check.outputs.multimaster }}
+    steps:
 
-        # <template: checkout_step>
-        - name: Checkout sources
-          uses: actions/checkout@v3.5.2
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
 
-        # </template: checkout_step>
-        - name: Check e2e labels
-          id: check
-          uses: actions/github-script@v6.4.1
-          with:
-            script: |
-              const provider = 'gcp';
-              const kubernetesDefaultVersion = '1.27';
+      # </template: checkout_step>
+      - name: Check e2e labels
+        id: check
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            const provider = 'gcp';
+            const kubernetesDefaultVersion = '1.27';
 
-              const ci = require('./.github/scripts/js/ci');
-              return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
-    # </template: check_e2e_labels_job>
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
+  # </template: check_e2e_labels_job>
   run_containerd_1_30:
     name: "destroy cluster: GCP, Containerd, Kubernetes 1.30"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.30' && github.event.inputs.layout == 'WithoutNAT' }}
@@ -1673,38 +1673,38 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-    # <template: check_e2e_labels_job>
-    check_e2e_labels:
-      name: Check e2e labels
-      runs-on: ubuntu-latest
-      outputs:
+  # <template: check_e2e_labels_job>
+  check_e2e_labels:
+    name: Check e2e labels
+    runs-on: ubuntu-latest
+    outputs:
 
-        run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
-        run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
-        run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
-        run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
-        run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
-        run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
-        run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
-        multimaster: ${{ steps.check.outputs.multimaster }}
-      steps:
+      run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
+      run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
+      run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
+      run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
+      run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
+      run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
+      run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+      multimaster: ${{ steps.check.outputs.multimaster }}
+    steps:
 
-        # <template: checkout_step>
-        - name: Checkout sources
-          uses: actions/checkout@v3.5.2
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
 
-        # </template: checkout_step>
-        - name: Check e2e labels
-          id: check
-          uses: actions/github-script@v6.4.1
-          with:
-            script: |
-              const provider = 'gcp';
-              const kubernetesDefaultVersion = '1.27';
+      # </template: checkout_step>
+      - name: Check e2e labels
+        id: check
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            const provider = 'gcp';
+            const kubernetesDefaultVersion = '1.27';
 
-              const ci = require('./.github/scripts/js/ci');
-              return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
-    # </template: check_e2e_labels_job>
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
+  # </template: check_e2e_labels_job>
   run_containerd_1_31:
     name: "destroy cluster: GCP, Containerd, Kubernetes 1.31"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.31' && github.event.inputs.layout == 'WithoutNAT' }}
@@ -1993,38 +1993,38 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-    # <template: check_e2e_labels_job>
-    check_e2e_labels:
-      name: Check e2e labels
-      runs-on: ubuntu-latest
-      outputs:
+  # <template: check_e2e_labels_job>
+  check_e2e_labels:
+    name: Check e2e labels
+    runs-on: ubuntu-latest
+    outputs:
 
-        run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
-        run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
-        run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
-        run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
-        run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
-        run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
-        run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
-        multimaster: ${{ steps.check.outputs.multimaster }}
-      steps:
+      run_containerd_1_26: ${{ steps.check.outputs.run_containerd_1_26 }}
+      run_containerd_1_27: ${{ steps.check.outputs.run_containerd_1_27 }}
+      run_containerd_1_28: ${{ steps.check.outputs.run_containerd_1_28 }}
+      run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
+      run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
+      run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
+      run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+      multimaster: ${{ steps.check.outputs.multimaster }}
+    steps:
 
-        # <template: checkout_step>
-        - name: Checkout sources
-          uses: actions/checkout@v3.5.2
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
 
-        # </template: checkout_step>
-        - name: Check e2e labels
-          id: check
-          uses: actions/github-script@v6.4.1
-          with:
-            script: |
-              const provider = 'gcp';
-              const kubernetesDefaultVersion = '1.27';
+      # </template: checkout_step>
+      - name: Check e2e labels
+        id: check
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            const provider = 'gcp';
+            const kubernetesDefaultVersion = '1.27';
 
-              const ci = require('./.github/scripts/js/ci');
-              return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
-    # </template: check_e2e_labels_job>
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
+  # </template: check_e2e_labels_job>
   run_containerd_automatic:
     name: "destroy cluster: GCP, Containerd, Kubernetes Automatic"
     if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == 'Automatic' && github.event.inputs.layout == 'WithoutNAT' }}
