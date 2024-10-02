@@ -1,8 +1,11 @@
-{{- if ne $.Env "development" -}}
-{{- $_ := set . "Env" "EE" }}
+{{- $_ := set . "UsePrebuildJekyllImage" true }}
+{{- $_ := set . "Mode" "production" }}
+{{- $_ := set . "Edition" "EE" }}
+{{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "EE") (eq $.Env "FE") -}}
+  {{- $_ := set . "Edition" $.Env }}
+{{- else }}
+  {{- $_ := set . "Mode" $.Env }}
 {{- end }}
-
-{{- $_ := set . "YQ4_VERSION" "v4.9.6" }}
 
 ---
 project: deckhouse-web
@@ -12,8 +15,10 @@ configVersion: 1
 {{ $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
   {{- range $k, $v := .Images }}
     {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
-    {{- if or (eq $.Env "development") (eq $.Env "module") }}
-      {{ $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
+    {{- if or (eq $.Mode "development") (eq $.Mode "module") (eq $.Mode "local") }}
+      {{- if or ( ne $k "BASE_JEKYLL" ) ( and (not $.UsePrebuildJekyllImage ) ( eq $k "BASE_JEKYLL" ) )}}
+        {{ $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
+      {{- end }}
     {{- end }}
     {{- if ne $k "REGISTRY_PATH" }}
       {{- $_ := set $.Images $k $baseImagePath }}
@@ -55,7 +60,7 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
-    - name: "{{ .Env }} version. Merging modules of different releases"
+    - name: "Edition: {{ .Edition }}. Merging modules of different editions"
       shell: |
         for dir in {be,se,ee,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
       args:
@@ -140,7 +145,7 @@ ansible:
         chdir: /srv/jekyll-data/documentation/_data/
     - shell: |
         mkdir -m 777 -p /app/_site/
-        {{- if eq $.Env "development" }}
+        {{- if eq $.Mode "development" }}
         JEKYLL_ENV=development jekyll build -d /app/_site/ --profile -t
         {{- else }}
         JEKYLL_ENV=production jekyll build -d /app/_site/
