@@ -1,5 +1,14 @@
-{{ $_ := set . "Env" (.Env | default "FE") }}
+{{- $_ := set . "Env" (.Env | default "EE") }}
 
+{{- $_ := set . "Mode" "production" }}
+{{- $_ := set . "Edition" "EE" }}
+{{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "EE") -}}
+  {{- $_ := set . "Edition" $.Env }}
+{{- else if eq $.Env "FE"  }}
+  {{- $_ := set . "Edition" "EE" }}
+{{- else }}
+  {{- $_ := set . "Mode" $.Env }}
+{{- end }}
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/nginx-static
 import:
@@ -32,7 +41,7 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
-    - name: "{{ .Env }} version. Merging modules of different releases..."
+    - name: "Edition: {{ .Edition }}. Merging modules of different editions"
       shell: |
         for dir in {be,se,ee,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
       args:
@@ -141,7 +150,7 @@ ansible:
         dest: /srv/jekyll-data/site/_includes/footer.html
     - name: "Creating additional config..."
       shell: |
-        echo -e "\nd8Revision: {{ .Env }}" >> /tmp/_config_additional.yml
+        echo -e "\nd8Revision: {{ .Edition }}" >> /tmp/_config_additional.yml
       args:
         executable: /bin/bash
     - name: "Generating static files of the documentation part..."
