@@ -53,7 +53,7 @@ shell:
   - cmake -DCMAKE_BUILD_TYPE=release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_DRIVER=OFF -DCPACK_GENERATOR=TGZ -DBUILD_BPF=OFF -DBUILD_FALCO_MODERN_BPF=ON -DBUILD_WARNINGS_AS_ERRORS=OFF -DFALCO_VERSION={{ $falcoVersion }} -DUSE_BUNDLED_DEPS=ON /src/falco
   - make package -j4
   - mkdir -p /falco-package
-  - tar -zxvf falco-{{ $falcoVersion }}-x86_64.tar.gz --strip-components 1 -C /falco-package
+  - tar -zxvf falco-*-x86_64.tar.gz --strip-components 1 -C /falco-package
   # cleanup to reduce artifact size
   - make clean
   # build plugins
