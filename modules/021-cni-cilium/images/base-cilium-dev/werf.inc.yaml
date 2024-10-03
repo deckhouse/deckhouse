@@ -7,6 +7,11 @@
 {{- if $.DistroPackagesProxy }}
   {{- $source = printf "http://%s/repository/github-com" $.DistroPackagesProxy }}
 {{- end }}
+  {{- $sourceraw := "https://raw.githubusercontent.com" }}
+  {{- if $.DistroPackagesProxy }}
+  {{- $sourceraw = printf "http://%s/repository/githubusercontent" $.DistroPackagesProxy }}
+  {{- end }}
+
 ---
 # #####################################################################
 # BASE_DEV image for build binaries of all cilium components (based on Ubuntu)
@@ -95,7 +100,7 @@ shell:
   # Install multiversion bazel
   - bazel_versions=({{ $bazelVersions }})
   # install bazel wrapper script in the path, it automatically recognises `.bazelversion` and `USE_BAZEL_VERSIONS`, if neither are set it picks latest
-  - curl --fail --show-error --silent --location "{{ $source }}/bazelbuild/bazel/blob/${bazel_versions[-1]}/scripts/packages/bazel.sh?raw=true" --output /usr/local/bin/bazel
+  - curl --fail --show-error --silent --location "{{ $sourceraw }}/bazelbuild/bazel/blob/${bazel_versions[-1]}/scripts/packages/bazel.sh" --output /usr/local/bin/bazel
   - chmod +x /usr/local/bin/bazel
   - |
     for bazel_version in ${bazel_versions[@]} ; do
