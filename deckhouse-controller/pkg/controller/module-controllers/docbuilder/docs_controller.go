@@ -185,6 +185,13 @@ func (mdr *moduleDocumentationReconciler) Reconcile(ctx context.Context, req ctr
 			}
 		}
 
+		controllerutil.RemoveFinalizer(md, documentationExistsFinalizer)
+		if err := mdr.client.Update(ctx, md); err != nil {
+			mdr.logger.Errorf("update finalizer: %v", err)
+
+			return res, err
+		}
+
 		return res, nil
 	}
 
