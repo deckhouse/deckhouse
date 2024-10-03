@@ -20,6 +20,19 @@ This module is responsible for providing a network between multiple nodes in a c
       * 7 (needs new kernel from [repository](http://elrepo.org))
       * 8 (needs new kernel from [repository](http://elrepo.org))
 
+## Note on `Service` with `NodePort` type and `LoadBalancer`
+The module allows [selection of operation mode](./configuration.html#parameters-bpflbmode), which affects the behavior of `Service` with `NodePort` or `LoadBalancer` type:
+* `SNAT` - traffic from the client to the pod (and back) passes through NAT, and accordingly the sender's address is lost.
+* `DSR` - traffic from the client to the pod passes with the sender's address preserved, and back - according to the routing rules (bypassing the balancer). This mode saves network traffic and reduces delays, but only works for TCP traffic.
+* `Hybrid` - TCP traffic is processed in DSR mode, and UDP traffic is processed in SNAT mode.
+
+When creating a `Service` with the type `NodePort` and `LoadBalancer`, you should also consider the `externalTrafficPolicy` parameter, which is directly related to the Cilium operating mode:
+* `externalTrafficPolicy: Cluster` (default value) - all incoming traffic to `NodePort` or `LoadBalancer` will be accepted by any node in the cluster, regardless of which pod the target application is on. If the target pod is not on the same node, the traffic will be redirected to the desired node.
+The further behavior depends on the module settings:
+  * If the module is used in `SNAT` mode, the original client IP will not be saved, as it will be changed to the node IP.
+  * When using the module in `DSR` or `Hybrid` mode, the original IP is preserved, but the node processing the request must have an interface on which the sender's IP address will be available to form a response (i.e. if traffic comes from an interface with a "white" IP, then the end node processing the request must also have an interface with a "white" IP)
+* `externalTrafficPolicy: Local` - incoming traffic will be accepted only by those nodes on which the target pod is running. If the target pod is not running on a specific node, all traffic to this node will be discarded.
+
 ## A note about CiliumClusterwideNetworkPolicies
 
 1. Make sure that you deploy initial set of CiliumClusterwideNetworkPolicies with `policyAuditMode` configuration options set to `true`.
