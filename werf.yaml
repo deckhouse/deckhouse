@@ -30,8 +30,8 @@ cleanup:
 {{- define "ubuntu packages proxy" }}
   # Replace ubuntu repos with our proxy
   {{- if $.DistroPackagesProxy }}
-- sed -i 's|http://archive.ubuntu.com|http://{{ $.DistroPackagesProxy }}/repository/archive-ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources
-- sed -i 's|http://security.ubuntu.com|http://{{ $.DistroPackagesProxy }}/repository/security-ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources
+- sed -i 's|http://archive.ubuntu.com|http://{{ $.DistroPackagesProxy }}/repository/archive-ubuntu|g' /etc/apt/sources.list
+- sed -i 's|http://security.ubuntu.com|http://{{ $.DistroPackagesProxy }}/repository/security-ubuntu|g' /etc/apt/sources.list
   {{- end }}
 - export DEBIAN_FRONTEND=noninteractive
 - apt-get update
