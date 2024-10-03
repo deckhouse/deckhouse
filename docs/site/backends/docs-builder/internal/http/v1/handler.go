@@ -40,9 +40,13 @@ func NewHandler(docsService *docs.Service) *DocsBuilderHandler {
 
 	r.HandleFunc("/readyz", h.handleReadyZ)
 	r.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = io.WriteString(w, "OK") })
+
 	r.HandleFunc("/loadDocArchive/{moduleName}/{version}", h.handleUpload).Methods(http.MethodPost)
 	r.HandleFunc("/build", h.handleBuild).Methods(http.MethodPost)
-	// r.Handle("/doc/{moduleName}", h.newDeleteHandler()).Methods(http.MethodDelete)
+
+	r.HandleFunc("/api/v1/doc/{moduleName}/{version}", h.handleUpload).Methods(http.MethodPost)
+	r.HandleFunc("/api/v1/doc/{moduleName}", h.handleDelete).Methods(http.MethodDelete)
+	r.HandleFunc("/api/v1/build", h.handleBuild).Methods(http.MethodPost)
 
 	return h
 }
@@ -57,53 +61,57 @@ func (h *DocsBuilderHandler) handleReadyZ(w http.ResponseWriter, _ *http.Request
 	http.Error(w, "Waiting for first build", http.StatusInternalServerError)
 }
 
-// func (h *DocsBuilderHandler) newLoadHandler() *loadHandler {
-// 	return &loadHandler{baseDir: h.baseDir, channelMappingEditor: h.m}
-// }
-
-// func (h *DocsBuilderHandler) newBuildHandler() *buildHandler {
-// 	return &buildHandler{
-// 		src:                  h.baseDir,
-// 		dst:                  h.destDir,
-// 		wasCalled:            &h.isReady,
-// 		channelMappingEditor: h.m,
-// 	}
-// }
-
-// func (h *DocsBuilderHandler) newDeleteHandler() *deleteHandler {
-// 	return &deleteHandler{baseDir: h.baseDir, channelMappingEditor: h.m}
-// }
-
-func (h *DocsBuilderHandler) handleUpload(writer http.ResponseWriter, request *http.Request) {
-	channelsStr := request.URL.Query().Get("channels")
+func (h *DocsBuilderHandler) handleUpload(w http.ResponseWriter, r *http.Request) {
+	channelsStr := r.URL.Query().Get("channels")
 	channels := []string{"stable"}
 	if len(channelsStr) != 0 {
 		channels = strings.Split(channelsStr, ",")
 	}
 
-	pathVars := mux.Vars(request)
+	pathVars := mux.Vars(r)
 	moduleName := pathVars["moduleName"]
 	version := pathVars["version"]
 
 	klog.Infof("loading %s %s: %s", moduleName, version, channels)
 
-	err := h.docsService.Upload(request.Body, moduleName, version, channels)
+	err := h.docsService.Upload(r.Body, moduleName, version, channels)
 	if err != nil {
 		klog.Error(err)
-		http.Error(writer, "Internal server error", http.StatusInternalServerError)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	writer.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusCreated)
 }
 
-func (h *DocsBuilderHandler) handleBuild(writer http.ResponseWriter, request *http.Request) {
+func (h *DocsBuilderHandler) handleBuild(w http.ResponseWriter, r *http.Request) {
 	err := h.docsService.Build()
 	if err != nil {
 		klog.Error(err)
-		http.Error(writer, "Internal server error", http.StatusInternalServerError)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	writer.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *DocsBuilderHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
+	channelsStr := r.URL.Query().Get("channels")
+	channels := []string{"stable"}
+	if len(channelsStr) != 0 {
+		channels = strings.Split(channelsStr, ",")
+	}
+
+	pathVars := mux.Vars(r)
+	moduleName := pathVars["moduleName"]
+
+	klog.Infof("deleting %s: %s", moduleName, channels)
+	err := h.docsService.Delete(moduleName, channels)
+	if err != nil {
+		klog.Error(err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
