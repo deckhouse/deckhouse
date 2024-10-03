@@ -28,4 +28,5 @@ A list of OpenStack services required for Deckhouse Kubernetes Platform to work 
 | Load Balancing (Octavia) &#8432;  | v2          |
 
 &#8432;  If you need to order a Load Balancer.
+
 {% include module-settings.liquid %}
