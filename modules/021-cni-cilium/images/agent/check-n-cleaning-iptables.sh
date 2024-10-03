@@ -16,11 +16,39 @@
 
 set -Eeuo pipefail
 
+function is_current_iptables_mode_eq_nft() {
+  nft_kubelet_rules=$( (iptables-nft-save -t mangle || true; ip6tables-nft-save -t mangle || true) 2>/dev/null | grep -E '^:(KUBE-IPTABLES-HINT|KUBE-KUBELET-CANARY)' | wc -l)
+  if [ "${nft_kubelet_rules}" -ne 0 ]; then
+      mode=nft
+  else
+      legacy_kubelet_rules=$( (iptables-legacy-save || true; ip6tables-legacy-save || true) 2>/dev/null | grep -E '^:(KUBE-IPTABLES-HINT|KUBE-KUBELET-CANARY)' | wc -l)
+      if [ "${legacy_kubelet_rules}" -ne 0 ]; then
+          mode=legacy
+      else
+          num_legacy_lines=$( (iptables-legacy-save || true; ip6tables-legacy-save || true) 2>/dev/null | grep '^-' | wc -l)
+          num_nft_lines=$( (iptables-nft-save || true; ip6tables-nft-save || true) 2>/dev/null | grep '^-' | wc -l)
+          if [ "${num_legacy_lines}" -gt "${num_nft_lines}" ]; then
+              mode=legacy
+          else
+              mode=nft
+          fi
+      fi
+  fi
+
+  echo "### Current iptables mode is "${mode}
+
+  if [[ "${mode}" = "nft" ]] ; then
+    return 0
+  fi
+  return 1
+}
+
 function are_there_cilium_rules_in_legacy_iptables() {
   if iptables-legacy-save | grep -E "cilium|CILIUM" 2>&1 >/dev/null; then
     echo "### There are cilium rules in iptables-legacy"
     return 0
   fi
+  echo "### There are no cilium rules in iptables-legacy"
   return 1
 }
 
@@ -49,13 +77,6 @@ function delete_legacy_iptables() {
     modprobe -r "ip6table${x}"
   done
   echo "### iptables-legacy have been deleted"
-}
-
-function is_current_iptables_mode_eq_nft() {
-  if [[ -v CURRENT_IPTABLES_MODE ]] && [[ "${CURRENT_IPTABLES_MODE}" = "nft" ]] ; then
-    return 0
-  fi
-  return 1
 }
 
 if is_current_iptables_mode_eq_nft && are_there_cilium_rules_in_legacy_iptables; then
