@@ -60,7 +60,7 @@
 }
 
 .breadcrumbs__item:hover > a {
-    color: #0066FF;
+    color: #0064FF;
 }
 
 .breadcrumbs__item_parent > a:after {
@@ -86,7 +86,7 @@
 }
 
 .channel-menu:hover > a {
-    color: #0066FF;
+    color: #0064FF;
 }
 
 .channel-menu > a:after {
@@ -253,7 +253,7 @@
 }
 
 .search__results a {
-    color: #4075FF;
+    color: #0064FF;
     text-decoration: none;
 }
 
@@ -322,6 +322,10 @@
 .layout-sidebar {
   display: flex;
   gap: 64px;
+
+  @media screen and (width < 1500px) {
+    gap: 54px;
+  }
 }
 
 .layout-sidebar__wrap {
@@ -370,6 +374,7 @@
 .sidebar__container {
   overflow-x: hidden;
   overflow-y: auto;
+  font-size: 16px;
 }
 
 .layout-sidebar__content {
@@ -415,11 +420,11 @@
 }
 
 .sidebar__item > a:hover {
-    color: #0066FF;
+    color: #0064FF;
 }
 
 .sidebar__item.active > a {
-    color: #0066FF;
+    color: #0064FF;
 }
 
 .sidebar__item_parent > a {
@@ -545,11 +550,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .sidebar__submenu-item > a:hover {
-    color: #0066FF;
+    color: #0064FF;
 }
 
 .sidebar__submenu-item.active > a {
-    color: #0066FF;
+    color: #0064FF;
 }
 
 .sidebar__submenu-item_parent > a::before {
@@ -575,7 +580,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 #toc a {
-    color: #0066FF;
+    color: #0064FF;
     text-decoration: none;
 }
 
@@ -693,13 +698,14 @@ a.comparison-table__module-proprietaryOkmeter::after {
     font-weight: normal;
     font-style: normal;
     font-stretch: normal;
-    //color: #00122c;
-    color: $color-text-secondary;
+    color: #00122c;
 }
 
 .docs p {
-    font-size: 16px;
-    line-height: 1.5;
+    font-size: 14px;
+    font-weight: 500;
+    //line-height: 1.5;
+    line-height: 24px;
     letter-spacing: -0.3px;
 }
 
@@ -708,7 +714,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs ul, .docs ol {
-    font-size: 15px;
+    font-size: 14px;
     line-height: 1.5;
     letter-spacing: -0.3px;
     padding: 0;
@@ -906,7 +912,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs .resources__prop_description code,
 .docs code.resources__attrs_content {
-    background: transparent;
     color: #00122C;
 }
 
@@ -959,12 +964,13 @@ a.comparison-table__module-proprietaryOkmeter::after {
     font-stretch: normal;
     line-height: normal;
     letter-spacing: -0.4px;
-    color: #0066FF;
+    //color: #0066FF;
+    color: #00122c;
 }
 
 .docs h4 {
     font-size: 18px;
-    font-weight: 500;
+    font-weight: 600;
     font-style: normal;
     font-stretch: normal;
     line-height: normal;
@@ -979,7 +985,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     font-stretch: normal;
     line-height: normal;
     letter-spacing: -0.3px;
-    color: #0066FF;
+    color: #00122c;
 }
 
 .docs h6 {
@@ -993,7 +999,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs a {
-    color: #0066FF;
+    color: #0064FF;
     text-decoration: none;
 }
 
@@ -1026,7 +1032,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs__information.warning a {
-    color: #0066FF ;
+    color: #0064FF ;
 }
 
 .docs__information.active {
@@ -1060,8 +1066,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs code {
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 22px;
     padding: 2px 4px;
-    font-size: 90%;
     background: #eef2ff;
     white-space: normal;
     border-radius: 4px;
