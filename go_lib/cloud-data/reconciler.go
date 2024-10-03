@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"sync"
 	"syscall"
 	"time"
 
@@ -57,6 +58,7 @@ type Reconciler struct {
 	k8sDynamicClient dynamic.Interface
 	k8sClient        *kubernetes.Clientset
 	probe            bool
+	probeLock        sync.RWMutex
 }
 
 func NewReconciler(
@@ -155,6 +157,8 @@ func (c *Reconciler) registerMetrics() {
 }
 
 func (c *Reconciler) setProbe(probe bool) {
+	c.probeLock.Lock()
+	defer c.probeLock.Unlock()
 	c.probe = probe
 }
 
@@ -186,6 +190,8 @@ func (c *Reconciler) getHTTPServer() *http.Server {
 	router := http.NewServeMux()
 	router.Handle("/metrics", promhttp.Handler())
 	router.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		c.probeLock.RLock()
+		defer c.probeLock.RUnlock()
 		if c.probe {
 			_, _ = w.Write([]byte("ok"))
 			return
@@ -483,6 +489,7 @@ func (c *Reconciler) orphanedDisksReconcile(ctx context.Context) {
 	if err != nil {
 		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
 		c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+		c.setProbe(false)
 	}
 }
 
