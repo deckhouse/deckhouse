@@ -27,7 +27,7 @@ import (
 )
 
 type DeckhouseUpdateSettings struct {
-	NotificationConfig     *NotificationConfig
+	NotificationConfig     NotificationConfig
 	DisruptionApprovalMode string
 	Mode                   string
 	ClusterUUID            string
@@ -71,7 +71,7 @@ func (a *Auth) Fill(req *http.Request) {
 	}
 }
 
-func sendWebhookNotification(config *NotificationConfig, data WebhookData) error {
+func sendWebhookNotification(config NotificationConfig, data WebhookData) error {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: config.SkipTLSVerify},
 	}
