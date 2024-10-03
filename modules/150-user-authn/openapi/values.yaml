@@ -250,6 +250,7 @@ properties:
                 email: mail
                 groups: roles
                 preferred_username: name
+              claimMappingOverride: true
           - id: bitbucket
             displayName: bitbucket
             type: BitbucketCloud
