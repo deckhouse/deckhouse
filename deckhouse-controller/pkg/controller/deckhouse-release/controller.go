@@ -269,8 +269,16 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	podReady := r.isDeckhousePodReady()
 	us := r.updateSettings.Get()
+	var (
+		nConf                *updater.NotificationConfig
+		zeroNotificationConf = updater.NotificationConfig{}
+	)
+	if us.Update.NotificationConfig != zeroNotificationConf {
+		nConf = &us.Update.NotificationConfig
+	}
+
 	dus := &updater.DeckhouseUpdateSettings{
-		NotificationConfig:     &us.Update.NotificationConfig,
+		NotificationConfig:     nConf,
 		DisruptionApprovalMode: us.Update.DisruptionApprovalMode,
 		Mode:                   us.Update.Mode,
 		ClusterUUID:            r.clusterUUID,
@@ -372,7 +380,12 @@ func (r *deckhouseReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Resu
 	var notReadyErr *updater.NotReadyForDeployError
 	if errors.As(err, &notReadyErr) {
 		r.logger.Infof("%s: retry after %s", err.Error(), notReadyErr.RetryDelay())
-		return ctrl.Result{Requeue: true, RequeueAfter: notReadyErr.RetryDelay()}, nil
+		// TODO: requeue all releases if
+		// requeueAfter := notReadyErr.RetryDelay()
+		// if requeueAfter == 0 {
+		// requeueAfter = defaultCheckInterval
+		// }
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
 	if errors.Is(err, updater.ErrDeployConditionsNotMet) {
