@@ -38,10 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
-const (
-	metricReleasesGroup = "d8_module_releases"
-)
-
 func newModuleUpdater(logger logger.Logger, nConfig *updater.NotificationConfig, mode string,
 	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string, metricStorage *metric_storage.MetricStorage) *updater.Updater[*v1alpha1.ModuleRelease] {
 	return updater.NewUpdater[*v1alpha1.ModuleRelease](logger, nConfig, mode,
@@ -237,7 +233,7 @@ func (m *metricsUpdater) ReleaseBlocked(_, _ string) {
 }
 
 func (m *metricsUpdater) WaitingManual(name string, _ float64) {
-	m.metricStorage.CounterAdd("d8_module_release_waiting_manual", 1, map[string]string{"name": name})
+	m.metricStorage.GaugeSet("d8_module_release_waiting_manual", 1, map[string]string{"name": name})
 }
 
 type settings struct{}
