@@ -13,7 +13,7 @@ ARG istio_version=1.19.7
 ARG SIDECAR=envoy
 
 RUN apt-get update && \
-  apt-get install --no-install-recommends -y \
+  apt-get install -y \
   ca-certificates \
   curl \
   iptables \
