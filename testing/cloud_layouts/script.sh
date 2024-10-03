@@ -346,7 +346,7 @@ function prepare_environment() {
         CRI="$CRI" \
         DEV_BRANCH="$DEV_BRANCH" \
         PREFIX="$PREFIX" \
-        MASTERS_COUNT="$MASTERS_COUNT"
+        MASTERS_COUNT="$MASTERS_COUNT" \
         DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
         VCD_SERVER="$LAYOUT_VCD_SERVER" \
         VCD_USERNAME="$LAYOUT_VCD_USERNAME" \
