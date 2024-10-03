@@ -21,7 +21,7 @@ cleanup:
 {{- define "debian packages proxy" }}
 # Replace debian repos with our proxy
   {{- if $.DistroPackagesProxy }}
-- sed -i "s|http://deb.debian.org|http://{{ $.DistroPackagesProxy }}/repository|g" /etc/apt/sources.list.d/debian.sources
+- sed -i "s|http://deb.debian.org|http://{{ $.DistroPackagesProxy }}/repository|g" /etc/apt/sources.list
   {{- end }}
 - export DEBIAN_FRONTEND=noninteractive
 - apt-get update
