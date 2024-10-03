@@ -299,6 +299,8 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 		if err != nil {
 			return time.Time{}, 0, fmt.Errorf("patch release %s apply after: %w", release.GetName(), err)
 		}
+
+		return releaseApplyTime, notificationDelayReason, nil
 	}
 
 	if statusMessage != "" {
@@ -802,9 +804,9 @@ func (du *Updater[R]) postponeDeploy(reason deployDelayReason, applyTime time.Ti
 	case manualApprovalRequiredReason:
 		message += fmt.Sprintf("release is waiting for manual approval")
 	case outOfWindowReason:
-		message += fmt.Sprintf("release is waiting for the update window: %s", applyTime.Format(time.RFC822))
+		message += fmt.Sprintf("release is waiting for the update window untill %s", applyTime.Format(time.RFC822))
 	case notificationDelayReason:
-		message += fmt.Sprintf("release is postponed by notification ")
+		message += fmt.Sprintf("release is postponed by notification untill %s", applyTime.Format(time.RFC822))
 
 	default:
 		panic(fmt.Errorf("invalid reason: %d", reason))
