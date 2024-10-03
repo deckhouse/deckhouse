@@ -1000,26 +1000,26 @@ func (c *moduleReleaseReconciler) createModuleSymlink(moduleName, moduleVersion 
 	return nil
 }
 
-func (c *moduleReleaseReconciler) parseNotificationConfig(ctx context.Context) (*updater.NotificationConfig, error) {
+func (c *moduleReleaseReconciler) parseNotificationConfig(ctx context.Context) (updater.NotificationConfig, error) {
 	var secret corev1.Secret
 	err := c.client.Get(ctx, types.NamespacedName{Name: "deckhouse-discovery", Namespace: "d8-system"}, &secret)
 	if err != nil {
-		return nil, fmt.Errorf("get secret: %w", err)
+		return updater.NotificationConfig{}, fmt.Errorf("get secret: %w", err)
 	}
 
 	// TODO: remove this dependency
 	jsonSettings, ok := secret.Data["updateSettings.json"]
 	if !ok {
-		return new(updater.NotificationConfig), nil
+		return updater.NotificationConfig{}, nil
 	}
 
 	var settings struct {
-		NotificationConfig *updater.NotificationConfig `json:"notification"`
+		NotificationConfig updater.NotificationConfig `json:"notification"`
 	}
 
 	err = json.Unmarshal(jsonSettings, &settings)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal json: %w", err)
+		return updater.NotificationConfig{}, fmt.Errorf("unmarshal json: %w", err)
 	}
 
 	return settings.NotificationConfig, nil

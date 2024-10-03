@@ -269,16 +269,8 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	podReady := r.isDeckhousePodReady()
 	us := r.updateSettings.Get()
-	var (
-		nConf                *updater.NotificationConfig
-		zeroNotificationConf = updater.NotificationConfig{}
-	)
-	if us.Update.NotificationConfig != zeroNotificationConf {
-		nConf = &us.Update.NotificationConfig
-	}
-
 	dus := &updater.DeckhouseUpdateSettings{
-		NotificationConfig:     nConf,
+		NotificationConfig:     us.Update.NotificationConfig,
 		DisruptionApprovalMode: us.Update.DisruptionApprovalMode,
 		Mode:                   us.Update.Mode,
 		ClusterUUID:            r.clusterUUID,
