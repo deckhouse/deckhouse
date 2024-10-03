@@ -16,73 +16,35 @@ package docs
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
-
-	"github.com/gorilla/mux"
-	"k8s.io/klog/v2"
 )
 
-func newDeleteHandler(baseDir string, channelMappingEditor *channelMappingEditor) *deleteHandler {
-	return &deleteHandler{baseDir: baseDir, channelMappingEditor: channelMappingEditor}
-}
-
-type deleteHandler struct {
-	baseDir string
-
-	channelMappingEditor *channelMappingEditor
-}
-
-func (d *deleteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	channelsStr := r.URL.Query().Get("channels")
-	channels := []string{"stable"}
-	if len(channelsStr) != 0 {
-		channels = strings.Split(channelsStr, ",")
-	}
-
-	pathVars := mux.Vars(r)
-	moduleName := pathVars["moduleName"]
-
-	klog.Infof("deleting %s: %s", moduleName, channels)
-	err := d.delete(moduleName, channels)
-	if err != nil {
-		klog.Error(err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	err = d.removeFromChannelMapping(moduleName)
-	if err != nil {
-		klog.Error(err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (d *deleteHandler) delete(moduleName string, channels []string) error {
+func (svc *Service) Delete(moduleName string, channels []string) error {
 	for _, channel := range channels {
-		path := filepath.Join(d.baseDir, "content/modules", moduleName, channel)
+		path := filepath.Join(svc.baseDir, "content/modules", moduleName, channel)
 		err := os.RemoveAll(path)
 		if err != nil {
 			return fmt.Errorf("remove %s: %w", path, err)
 		}
 
-		path = filepath.Join(d.baseDir, "data/modules", moduleName, channel)
+		path = filepath.Join(svc.baseDir, "data/modules", moduleName, channel)
 		err = os.RemoveAll(path)
 		if err != nil {
 			return fmt.Errorf("remove %s: %w", path, err)
 		}
 	}
 
+	err := svc.removeFromChannelMapping(moduleName)
+	if err != nil {
+		return fmt.Errorf("remove from channel mapping:%w", err)
+	}
+
 	return nil
 }
 
-func (d *deleteHandler) removeFromChannelMapping(moduleName string) error {
-	return d.channelMappingEditor.edit(func(m channelMapping) {
+func (svc *Service) removeFromChannelMapping(moduleName string) error {
+	return svc.channelMappingEditor.edit(func(m channelMapping) {
 		delete(m, moduleName)
 	})
 }
