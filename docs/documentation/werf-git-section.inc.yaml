@@ -171,13 +171,6 @@
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml''*/docs/internal/']
 {{- end }}
 # CRDs
-- add: /candi/openapi
-  to: /src/modules/040-node-manager/crds
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-  includePaths: ['*node_group.yaml']
 - add: /candi/cloud-providers/aws/openapi
   to: /src/modules/030-cloud-provider-aws/crds
   owner: jekyll
