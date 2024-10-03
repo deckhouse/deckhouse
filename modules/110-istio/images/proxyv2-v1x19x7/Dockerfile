@@ -18,7 +18,7 @@ RUN apt-get update && \
   curl \
   iptables \
   iproute2 \
-  iputils-ping \
+  iputils \
   knot-dnsutils \
   netcat \
   tcpdump \
