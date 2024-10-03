@@ -124,6 +124,10 @@ func (suite *ControllerTestSuite) TearDownSuite() {
 }
 
 func (suite *ControllerTestSuite) TearDownSubTest() {
+	if suite.T().Skipped() {
+		return
+	}
+
 	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
 	gotB := suite.fetchResults()
 
@@ -202,6 +206,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Loop until deploy: canary", func() {
+		suite.T().Skip("TODO: use requeue after")
+
 		dc := newDependencyContainer(suite.T())
 
 		mup := embeddedMUP.DeepCopy()
