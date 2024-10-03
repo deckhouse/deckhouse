@@ -82,7 +82,7 @@ func main() {
 	}
 
 	// register project webhook
-	projectwebhook.Register(runtimeManager)
+	projectwebhook.Register(runtimeManager, helmClient)
 
 	// register template webhook
 	templatewebhook.Register(runtimeManager, serviceAccount)
