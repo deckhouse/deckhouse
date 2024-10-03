@@ -46,7 +46,7 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-{{- if or (eq .Env "BE") (eq .Env "SE") (eq .Env "EE") (eq .Env "FE") (eq .Env "development") }}
+{{- if or (eq .Edition "BE") (eq .Edition "SE") (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
 - add: /ee/be/modules
   to: /srv/jekyll-data/documentation/_data/bundles/raw/be
   owner: jekyll
@@ -63,7 +63,7 @@
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/']
 {{- end }}
-{{- if or (eq .Env "SE") (eq .Env "EE") (eq .Env "FE") (eq .Env "development") }}
+{{- if or (eq .Edition "SE") (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
 - add: /ee/se/modules
   to: /srv/jekyll-data/documentation/_data/bundles/raw/se
   owner: jekyll
@@ -80,7 +80,7 @@
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/']
 {{- end }}
-{{- if or (eq .Env "EE") (eq .Env "FE") (eq .Env "development") }}
+{{- if or (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
 - add: /ee/modules
   to: /srv/jekyll-data/documentation/_data/bundles/raw/ee
   owner: jekyll
@@ -153,7 +153,7 @@
   stageDependencies:
     setup: ['**/*']
 {{- end }}
-{{- if or (eq .Env "FE") (eq .Env "development")  }}
+{{- if or (eq .Edition "FE") (eq .Mode "development")  }}
 - add: /ee/fe/modules
   to: /srv/jekyll-data/documentation/_data/bundles/raw/fe
   owner: jekyll
@@ -171,13 +171,6 @@
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml''*/docs/internal/']
 {{- end }}
 # CRDs
-- add: /candi/openapi
-  to: /src/modules/040-node-manager/crds
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-  includePaths: ['*node_group.yaml']
 - add: /candi/cloud-providers/aws/openapi
   to: /src/modules/030-cloud-provider-aws/crds
   owner: jekyll

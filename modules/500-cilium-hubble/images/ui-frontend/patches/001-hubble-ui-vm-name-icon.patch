@@ -5,7 +5,7 @@ index 79f2ac2..829b3b0 100644
 @@ -46,6 +46,13 @@ export const extractLogo = (ep: ServiceCard): Logo => {
      };
    }
- 
+
 +  if (ep.isD8VirtualMachine) {
 +    return {
 +      id: 'virtualmachine',
@@ -29,65 +29,65 @@ index 2b87f16..820f41f 100644
  export const redis = 'icons/logos/redis-logo.svg';
  export const rabbitmq = 'icons/logos/rabbitmq-logo.svg';
 diff --git a/src/domain/labels.ts b/src/domain/labels.ts
-index 72e5201..01b1c66 100644
+index b4947533..2ebc8ac7 100644
 --- a/src/domain/labels.ts
 +++ b/src/domain/labels.ts
-@@ -9,6 +9,7 @@ export interface LabelsProps {
+@@ -13,6 +13,7 @@ export interface LabelsProps {
    isInit: boolean;
    isHealth: boolean;
    isPrometheusApp: boolean;
 +  isD8VirtualMachine: boolean;
-   isKubeApiServer: boolean;
+   isIngress: boolean;
    appName?: string;
    clusterName?: string;
-@@ -28,6 +29,7 @@ export enum ReservedLabel {
+@@ -33,6 +34,7 @@ export enum ReservedLabel {
  export enum SpecialLabel {
    KubeDNS = 'k8s:k8s-app=kube-dns',
    PrometheusApp = 'k8s:app=prometheus',
 +  D8VirtualMachine = 'k8s:kubevirt.internal.virtualization.deckhouse.io=virt-launcher',
- }
- 
- export class Labels {
-@@ -89,6 +91,7 @@ export class Labels {
-         'name',
-         'functionname',
-         'k8s-app',
-+        'vm.kubevirt.internal.virtualization.deckhouse.io/name',
-       ])
-     );
-   }
-@@ -172,6 +175,7 @@ export class Labels {
+   Networks = 'cni:com.isovalent.v1alpha1.network.attachment',
+   CNPName = 'k8s:io.cilium.k8s.policy.name',
+   CNPUID = 'k8s:io.cilium.k8s.policy.uid',
+@@ -57,6 +59,7 @@ export class Labels {
+     'app',
+     'name',
+     'functionname',
++    'vm.kubevirt.internal.virtualization.deckhouse.io/name',
+     'k8s-app',
+   ]);
+
+@@ -352,6 +355,7 @@ export class Labels {
        isKubeDNS: false,
        isHealth: false,
        isPrometheusApp: false,
 +      isD8VirtualMachine: false,
-       isKubeApiServer: false,
+       isIngress: false,
        appName: undefined,
        clusterName: undefined,
-@@ -190,6 +194,8 @@ export class Labels {
-         !!props.isRemoteNode || nkey === ReservedLabel.RemoteNode;
-       props.isPrometheusApp =
-         !!props.isPrometheusApp || nkey === SpecialLabel.PrometheusApp;
+@@ -371,6 +375,8 @@ export class Labels {
+       props.isRemoteNode =
+         !!props.isRemoteNode || Labels.isReserved(kv, ReservedLabel.RemoteNode, false);
+       props.isPrometheusApp = !!props.isPrometheusApp || kv.key === SpecialLabel.PrometheusApp;
 +      props.isD8VirtualMachine =
-+        !!props.isD8VirtualMachine || `${kv.key}=${kv.value}` === SpecialLabel.D8VirtualMachine;
-       props.isKubeApiServer =
-         !!props.isKubeApiServer || nkey === ReservedLabel.KubeApiServer;
-     });
++        !!props.isD8VirtualMachine || Labels.isSpecial(kv,  SpecialLabel.D8VirtualMachine);
+
+       if (!props.appName) {
+         props.appName = Labels.getAppNameFromLabel(kv) || void 0;
 diff --git a/src/domain/service-map/card.ts b/src/domain/service-map/card.ts
-index 7618fd4..46538f4 100644
+index 7551e29e..b3411e6c 100644
 --- a/src/domain/service-map/card.ts
 +++ b/src/domain/service-map/card.ts
-@@ -204,6 +204,10 @@ export class ServiceCard extends AbstractCard {
+@@ -315,6 +315,10 @@ export class ServiceCard extends AbstractCard {
+   public get isPrometheusApp(): boolean {
      return this.labelsProps.isPrometheusApp;
    }
- 
++
 +  public get isD8VirtualMachine(): boolean {
 +    return this.labelsProps.isD8VirtualMachine;
 +  }
-+
-   public get isKubeApiServer(): boolean {
-     return this.labelsProps.isKubeApiServer;
-   }
+ }
+
+ export default ServiceCard;
 diff --git a/server/public/icons/logos/virtualmachine-logo.svg b/server/public/icons/logos/virtualmachine-logo.svg
 new file mode 100644
 index 0000000..e4a253a

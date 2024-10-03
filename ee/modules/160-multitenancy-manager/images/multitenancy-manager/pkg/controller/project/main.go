@@ -66,8 +66,10 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, log logr.
 			predicate.GenerationChangedPredicate{},
 			customPredicate[client.Object]{log: log})).
 		Watches(&v1.Namespace{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
-			if _, ok := object.GetLabels()[consts.ProjectTemplateLabel]; ok {
-				return nil
+			if labels := object.GetLabels(); labels != nil {
+				if _, ok := labels[consts.ProjectTemplateLabel]; ok {
+					return nil
+				}
 			}
 			if strings.HasPrefix(object.GetName(), consts.KubernetesNamespacePrefix) || strings.HasPrefix(object.GetName(), consts.DeckhouseNamespacePrefix) {
 				return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: consts.DeckhouseProjectName}}}

@@ -55,7 +55,7 @@ func main() {
 
 	// setup logger
 	log := ctrl.Log.WithName("multitenancy-manager")
-	ctrllog.SetLogger(zap.New(zap.Level(zapcore.Level(-4)), zap.UseDevMode(true)))
+	ctrllog.SetLogger(zap.New(zap.Level(zapcore.Level(-4)), zap.StacktraceLevel(zapcore.PanicLevel)))
 
 	log.Info(fmt.Sprintf("starting multitenancy-manager with %v allow orphan namespaces option", allowOrphanNamespaces))
 
@@ -82,7 +82,7 @@ func main() {
 	}
 
 	// register project webhook
-	projectwebhook.Register(runtimeManager)
+	projectwebhook.Register(runtimeManager, helmClient)
 
 	// register template webhook
 	templatewebhook.Register(runtimeManager, serviceAccount)

@@ -164,6 +164,14 @@ properties:
           It gets from kube-system/extension-apiserver-authentication config map
         x-examples:
         - "extention\nCA\nMultiline"
+      apiVersions:
+        type: array
+        items:
+          type: string
+        description: |
+          List of GVKs installed from the modules' crds directories.
+        x-examples:
+        - ["deckhouse.io/v1alpha1/NodeGroup", "deckhouse.io/v1beta1/NodeGroup", "monitoring.coreos.com/v1/PrometheusRule"]
   modulesImages:
     additionalProperties: true
     type: object
