@@ -355,6 +355,8 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 		if err != nil {
 			return time.Time{}, 0, fmt.Errorf("patch release %s apply after: %w", release.GetName(), err)
 		}
+
+		return releaseApplyTime, notificationDelayReason, nil
 	}
 
 	return releaseApplyTime, reason, nil
