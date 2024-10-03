@@ -63,7 +63,7 @@ func (r *InLockRunner) WithFullUnlock(f bool) *InLockRunner {
 	return r
 }
 
-func (r *InLockRunner) Run() error {
+func (r *InLockRunner) Run(action func() error) error {
 	unlockConverge, err := lockLease(r.kubeCl, r.lockConfig, r.forceLock)
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func (r *InLockRunner) Run() error {
 
 	r.unlockConverge = unlockConverge
 
-	return nil
+	return action()
 }
 
 func (r *InLockRunner) Stop() {
