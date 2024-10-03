@@ -3,11 +3,9 @@
 {{- $protocVersion := "22.3" }}
 {{- $bazelVersions := "3.7.0 3.7.1 3.7.2 6.3.2" }}
 #
-{{- $github := "https://github.com" }}
+{{- $source := "https://github.com" }}
 {{- if $.DistroPackagesProxy }}
-  {{- $github := "http://dev-registry-cse.deckhouse.ru:8081/repository/github-com" }}
-{{- else }}
-  {{- $github := "https://github.com" }}
+  {{- $source = printf "http://%s" $.DistroPackagesProxy }}
 {{- end }}
 ---
 # #####################################################################
@@ -86,7 +84,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - go version
   # Install protoc and plugins
-  - curl --fail --show-error --silent --location "{{ $github }}/protocolbuffers/protobuf/releases/download/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" --output /tmp/protoc.zip
+  - curl --fail --show-error --silent --location "{{ $source }}/protocolbuffers/protobuf/releases/download/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" --output /tmp/protoc.zip
   - unzip /tmp/protoc.zip -x readme.txt -d /usr/local && rm /tmp/protoc.zip
   - chmod o+rx /usr/local/bin/protoc && chmod o+rX -R /usr/local/include/google/
   # 8ba23be9613c672d40ae261d2a1335d639bdd59b == tag: cmd/protoc-gen-go-grpc/v1.3.0
@@ -97,14 +95,14 @@ shell:
   # Install multiversion bazel
   - bazel_versions=({{ $bazelVersions }})
   # install bazel wrapper script in the path, it automatically recognises `.bazelversion` and `USE_BAZEL_VERSIONS`, if neither are set it picks latest
-  - curl --fail --show-error --silent --location "{{ $github }}/bazelbuild/bazel/blob/${bazel_versions[-1]}/scripts/packages/bazel.sh?raw=true" --output /usr/local/bin/bazel
+  - curl --fail --show-error --silent --location "{{ $source }}/bazelbuild/bazel/blob/${bazel_versions[-1]}/scripts/packages/bazel.sh?raw=true" --output /usr/local/bin/bazel
   - chmod +x /usr/local/bin/bazel
   - |
     for bazel_version in ${bazel_versions[@]} ; do
       # instead of using installer script, download binaries directly, as installer script doesn't append version suffix,
       # so for multiple versions to be usable files will need to moved around, which would be more tedious
       long_binary_name="bazel-${bazel_version}-linux-x86_64"
-      curl --fail --show-error --silent --location {{ $github }}/bazelbuild/bazel/releases/download/${bazel_version}/${long_binary_name} --output "/usr/local/bin/${long_binary_name}"
+      curl --fail --show-error --silent --location {{ $source }}/bazelbuild/bazel/releases/download/${bazel_version}/${long_binary_name} --output "/usr/local/bin/${long_binary_name}"
       chmod +x "/usr/local/bin/${long_binary_name}"
       USE_BAZEL_VERSION="${bazel_version}" bazel version # to extract all binaries properly
     done
