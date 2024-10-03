@@ -48,6 +48,7 @@ func (svc *Service) Build() error {
 	}
 
 	svc.isReady.Store(true)
+
 	return nil
 }
 

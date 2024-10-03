@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -131,26 +132,63 @@ func (mdr *moduleDocumentationReconciler) enqueueLeaseMapFunc(ctx context.Contex
 	return res
 }
 
+const documentationExistsFinalizer = "modules.deckhouse.io/documentation-exists"
+
 func (mdr *moduleDocumentationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	var md v1alpha1.ModuleDocumentation
-	err := mdr.client.Get(ctx, req.NamespacedName, &md)
+	res := ctrl.Result{}
+
+	var md = new(v1alpha1.ModuleDocumentation)
+
+	err := mdr.client.Get(ctx, req.NamespacedName, md)
 	if err != nil {
 		// The ModuleSource resource may no longer exist, in which case we stop
 		// processing.
 		if apierrors.IsNotFound(err) {
 			// if source is not exists anymore - drop the checksum cache
-			return ctrl.Result{}, nil
+			return res, nil
 		}
 
-		return ctrl.Result{Requeue: true}, err
+		return res, err
 	}
 
-	if !md.DeletionTimestamp.IsZero() {
+	if md.DeletionTimestamp.IsZero() {
+		// TODO: make good finalizer
+		if !controllerutil.ContainsFinalizer(md, documentationExistsFinalizer) {
+			controllerutil.AddFinalizer(md, documentationExistsFinalizer)
+			if err := mdr.client.Update(ctx, md); err != nil {
+				mdr.logger.Errorf("update finalizer: %v", err)
+
+				return res, err
+			}
+		}
+	} else {
 		// TODO: probably we have to delete documentation but we don't have such http handler atm
-		return ctrl.Result{}, nil
+		if !controllerutil.ContainsFinalizer(md, documentationExistsFinalizer) {
+			return res, nil
+		}
+
+		addrs, err := mdr.getDocsBuilderAddresses(ctx)
+		if err != nil {
+			return res, fmt.Errorf("get docs builder addresses: %w", err)
+		}
+
+		if len(addrs) == 0 {
+			// no endpoints for doc builder
+			return res, nil
+		}
+
+		for _, addr := range addrs {
+			err := mdr.deleteDocumentation(ctx, addr, md.Name)
+			// TODO: change state of resource
+			if err != nil {
+				return res, fmt.Errorf("delete documentation: %w", err)
+			}
+		}
+
+		return res, nil
 	}
 
-	return mdr.createOrUpdateReconcile(ctx, &md)
+	return mdr.createOrUpdateReconcile(ctx, md)
 }
 
 func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.ModuleDocumentation) (ctrl.Result, error) {
@@ -331,8 +369,8 @@ func (mdr *moduleDocumentationReconciler) buildDocumentation(ctx context.Context
 	return nil
 }
 
-func (mdr *moduleDocumentationReconciler) deleteDocumentation(ctx context.Context, docsArchive io.Reader, baseAddr, moduleName string) error {
-	err := mdr.docsBuilder.DeleteDocumentation(ctx, baseAddr, moduleName, docsArchive)
+func (mdr *moduleDocumentationReconciler) deleteDocumentation(ctx context.Context, baseAddr, moduleName string) error {
+	err := mdr.docsBuilder.DeleteDocumentation(ctx, baseAddr, moduleName)
 	if err != nil {
 		return fmt.Errorf("delete documentation: %w", err)
 	}
