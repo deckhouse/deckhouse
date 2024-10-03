@@ -40,7 +40,7 @@ func main() {
 		isLeader:                false,
 		staticPodManagerRunning: false,
 	}
-	ctrl.Log.Info("Starting embedded registry manager")
+	ctrl.Log.Info("Starting embedded registry manager", "component", "main")
 
 	// Try to load in-cluster configuration
 	cfg, err := rest.InClusterConfig()
@@ -151,7 +151,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctrl.Log.Info("Starting manager")
+	ctrl.Log.Info("Starting manager", "component", "main")
 	if err := mgr.Start(ctx); err != nil {
 		ctrl.Log.Error(err, "Unable to start manager:")
 		os.Exit(1)

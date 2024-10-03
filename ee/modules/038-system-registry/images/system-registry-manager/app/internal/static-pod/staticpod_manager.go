@@ -38,13 +38,13 @@ func Run(ctx context.Context, kubeClient *kubernetes.Clientset) error {
 
 	go func() {
 		<-ctx.Done()
-		ctrl.Log.Info("Shutting down API server")
+		ctrl.Log.Info("Shutting down API server", "component,", "static pod manager")
 		if err := server.Shutdown(ctx); err != nil {
 			ctrl.Log.Error(err, "Error shutting down API server")
 		}
 	}()
 
-	ctrl.Log.Info("Starting API server on :4576")
+	ctrl.Log.Info("Starting API server on :4576", "component", "static pod manager")
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("failed to start API server: %w", err)
 	}
@@ -87,7 +87,7 @@ func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	ctrl.Log.Info("Received request to create static pod from: %s, data: %v", r.RemoteAddr, data)
+	ctrl.Log.Info("Received request to create static pod from: %s, data: %v", r.RemoteAddr, data, "component", "static pod manager")
 
 	anyFileChanged := false
 

@@ -54,7 +54,7 @@ type RegistryReconciler struct {
 func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
-	log.Log.Info("Reconciling Registry", "name", req.Name)
+	log.Log.Info("Reconciling Registry", "name", req.Name, "component", "registry-controller")
 	return ctrl.Result{}, nil
 
 	err := r.checkAndDeployComponents()
@@ -153,17 +153,17 @@ func (r *RegistryReconciler) checkAndDeployComponents() error {
 			}
 		}
 
-		ctrl.Log.Info("masterNodes:", "name", node.Name, "NodeReady", isReady)
+		ctrl.Log.Info("masterNodes:", "name", node.Name, "NodeReady", isReady, "component", "registry-controller")
 	}
 
 	for _, pod := range r.EmbeddedRegistry.RegistryPods {
 		ctrl.Log.Info("EmbeddedRegistryPods:", "name", pod.Name, "Phase", pod.Status.Phase,
-			"node", pod.Spec.NodeName)
+			"node", pod.Spec.NodeName, "component", "registry-controller")
 	}
 
 	for _, pod := range r.EmbeddedRegistry.RegistryManagerPods {
 		ctrl.Log.Info("RegistryManagerPod:", "name", pod.Name, "Phase", pod.Status.Phase,
-			"node", pod.Spec.NodeName)
+			"node", pod.Spec.NodeName, "component", "registry-controller")
 		podIP := pod.Status.PodIP
 		if podIP != "" {
 			//	r.Recorder.Event(&pod, corev1.EventTypeNormal, "PodReconciled", fmt.Sprintf("Pod %s reconciled successfully", pod.Name))
@@ -185,7 +185,7 @@ func (r *RegistryReconciler) createStaticPod(apiURL string, nodeName string) err
 	if err != nil {
 		return fmt.Errorf("failed to create static pod: %w", err)
 	}
-	ctrl.Log.Info("Create static pod response:", "Node", nodeName, "response", string(respBody))
+	ctrl.Log.Info("Create static pod response:", "Node", nodeName, "response", string(respBody), "component", "registry-controller")
 	return nil
 }
 
@@ -212,22 +212,22 @@ func manageDockerRegistry() {
 		ctrl.Log.Error(err, "Error reading response")
 		return
 	}
-	ctrl.Log.Info("Docker Registry status:", "status", string(body))
+	ctrl.Log.Info("Docker Registry status:", "status", string(body), "component", "registry-controller")
 }
 
 func manageDockerDistribution() {
 	// Пример логики управления Docker Distribution
-	ctrl.Log.Info("Managing Docker Distribution")
+	ctrl.Log.Info("Managing Docker Distribution", "component", "registry-controller")
 }
 
 func manageDockerAuth() {
 	// Пример логики управления Docker Auth
-	ctrl.Log.Info("Managing Docker Auth")
+	ctrl.Log.Info("Managing Docker Auth", "component", "registry-controller")
 }
 
 func (r *RegistryReconciler) handleMasterNodeAdd(obj interface{}) {
 	node := obj.(*corev1.Node)
-	ctrl.Log.Info("Node added", "name", node.Name, "namespace", node.Namespace)
+	ctrl.Log.Info("Node added", "name", node.Name, "namespace", node.Namespace, "component", "registry-controller")
 }
 
 func (r *RegistryReconciler) handleMasterNodeUpdate(oldObj, newObj interface{}) {
@@ -238,12 +238,12 @@ func (r *RegistryReconciler) handleMasterNodeUpdate(oldObj, newObj interface{}) 
 	newReady := getNodeConditionStatus(newNode, corev1.NodeReady)
 
 	if oldReady != newReady {
-		log.Log.Info("Node readiness changed", "name", newNode.Name, "oldReady", oldReady, "newReady", newReady)
+		log.Log.Info("Node readiness changed", "name", newNode.Name, "oldReady", oldReady, "newReady", newReady, "component", "registry-controller")
 	}
 }
 func (r *RegistryReconciler) handleMasterNodeDelete(obj interface{}) {
 	node := obj.(*corev1.Node)
-	log.Log.Info("Node deleted", "name", node.Name, "namespace", node.Namespace)
+	log.Log.Info("Node deleted", "name", node.Name, "namespace", node.Namespace, "component", "registry-controller")
 	// Ваш код для обработки удаления узла
 }
 
