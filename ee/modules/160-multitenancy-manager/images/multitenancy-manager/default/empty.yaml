@@ -6,6 +6,7 @@ metadata:
   labels:
     heritage: deckhouse
 spec:
+  description: This is an empty template, create a new one based on this.
   parametersSchema:
     openAPIV3Schema:
       type: object

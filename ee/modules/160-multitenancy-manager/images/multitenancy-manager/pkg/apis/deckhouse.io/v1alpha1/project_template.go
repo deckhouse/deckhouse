@@ -74,6 +74,9 @@ func (p *ProjectTemplate) DeepCopyInto(newObj *ProjectTemplate) {
 }
 
 type ProjectTemplateSpec struct {
+	// Description of the Template
+	Description string `json:"description,omitempty"`
+
 	// ParametersSchema specification for template values (`values`) in TemplateValues.
 	ParametersSchema ParametersSchema `json:"parametersSchema,omitempty" yaml:"parametersSchema,omitempty"`
 
@@ -84,6 +87,7 @@ type ProjectTemplateSpec struct {
 
 func (p *ProjectTemplateSpec) DeepCopyInto(newObj *ProjectTemplateSpec) {
 	*newObj = *p
+	newObj.Description = p.Description
 	newObj.ResourcesTemplate = p.ResourcesTemplate
 	p.ParametersSchema.DeepCopyInto(&newObj.ParametersSchema)
 }
