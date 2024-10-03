@@ -1056,6 +1056,8 @@ dependencies:
   {{- $_ := set $ctx "TF" $Root.TF }}
   {{- $_ := set $ctx "SOURCE_REPO" $Root.SOURCE_REPO }}
   {{- $_ := set $ctx "GOPROXY" $Root.GOPROXY }}
+  {{- $_ := set $ctx "DistroPackagesProxy" $Root.DistroPackagesProxy }}
+  {{- $_ := set $ctx "CargoProxy" $Root.CargoProxy }}
 ---
 {{ include "module_image_template" $ctx }}
   {{- range $ImageYamlMainfest := regexSplit "\n?---[ \t]*\n" (include "module_image_template" $ctx) -1 }}
