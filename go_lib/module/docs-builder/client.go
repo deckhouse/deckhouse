@@ -34,7 +34,7 @@ type Client struct {
 
 func (c *Client) SendDocumentation(ctx context.Context, baseAddr string, moduleName, moduleVersion string, docsArchive io.Reader) error {
 	// TODO: deal with RESTfull handler naming
-	url := fmt.Sprintf("%s/loadDocArchive/%s/%s", baseAddr, moduleName, moduleVersion)
+	url := fmt.Sprintf("%s/api/v1/doc/%s/%s", baseAddr, moduleName, moduleVersion)
 	response, statusCode, err := c.httpPost(ctx, url, docsArchive)
 	if err != nil {
 		return fmt.Errorf("POST %q: %w", url, err)
@@ -47,9 +47,9 @@ func (c *Client) SendDocumentation(ctx context.Context, baseAddr string, moduleN
 	return nil
 }
 
-func (c *Client) DeleteDocumentation(ctx context.Context, baseAddr string, moduleName string, docsArchive io.Reader) error {
-	url := fmt.Sprintf("%s/doc/%s", baseAddr, moduleName)
-	response, statusCode, err := c.httpDelete(ctx, url, docsArchive)
+func (c *Client) DeleteDocumentation(ctx context.Context, baseAddr string, moduleName string) error {
+	url := fmt.Sprintf("%s/api/v1/doc/%s", baseAddr, moduleName)
+	response, statusCode, err := c.httpDelete(ctx, url, nil)
 	if err != nil {
 		return fmt.Errorf("DELETE %q: %w", url, err)
 	}
@@ -62,7 +62,7 @@ func (c *Client) DeleteDocumentation(ctx context.Context, baseAddr string, modul
 }
 
 func (c *Client) BuildDocumentation(ctx context.Context, docsBuilderBasePath string) error {
-	url := fmt.Sprintf("%s/build", docsBuilderBasePath)
+	url := fmt.Sprintf("%s/api/v1/build", docsBuilderBasePath)
 	response, statusCode, err := c.httpPost(ctx, url, nil)
 	if err != nil {
 		return fmt.Errorf("POST %q: %w", url, err)
