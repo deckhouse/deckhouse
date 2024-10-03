@@ -5,7 +5,7 @@
 #
 {{- $source := "https://github.com" }}
 {{- if $.DistroPackagesProxy }}
-  {{- $source = printf "http://%s" $.DistroPackagesProxy }}
+  {{- $source = printf "http://%s/repository/github-com" $.DistroPackagesProxy }}
 {{- end }}
 ---
 # #####################################################################
