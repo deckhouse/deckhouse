@@ -624,7 +624,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 
-		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.25.1 is available. Release will be applied at: Friday, 01-Jan-21 15:30:00 UTC")
+		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.25.1 is available. Release will be applied at: Thursday, 17-Oct-19 17:33:00 UTC")
 		require.Contains(suite.T(), httpBody, `"version":"1.25.1"`)
 		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
 	})
