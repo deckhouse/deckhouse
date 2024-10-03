@@ -22,20 +22,61 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func newHandler(highAvailability bool) *mux.Router {
-	var isReady atomic.Bool
+type DocsBuilderHandler struct {
+	http.Handler
 
-	if !highAvailability {
-		isReady.Store(true)
+	baseDir string
+	destDir string
+	isReady atomic.Bool
+	m       *channelMappingEditor
+}
+
+func newHandler(highAvailability bool) *DocsBuilderHandler {
+	r := mux.NewRouter()
+
+	var h = &DocsBuilderHandler{
+		Handler: r,
+		baseDir: src,
+		destDir: dst,
+		m:       newChannelMappingEditor(src),
 	}
 
-	channelMappingEditor := newChannelMappingEditor(src)
+	if !highAvailability {
+		h.isReady.Store(true)
+	}
 
-	r := mux.NewRouter()
-	r.Handle("/readyz", newReadinessHandler(&isReady))
+	r.HandleFunc("/readyz", h.handleReadyZ)
 	r.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = io.WriteString(w, "OK") })
-	r.Handle("/loadDocArchive/{moduleName}/{version}", newLoadHandler(src, channelMappingEditor)).Methods(http.MethodPost)
-	r.Handle("/build", newBuildHandler(src, dst, &isReady, channelMappingEditor)).Methods(http.MethodPost)
+	r.Handle("/loadDocArchive/{moduleName}/{version}", h.newLoadHandler()).Methods(http.MethodPost)
+	r.Handle("/build", h.newBuildHandler()).Methods(http.MethodPost)
+	r.Handle("/doc/{moduleName}", h.newDeleteHandler()).Methods(http.MethodDelete)
 
-	return r
+	return h
+}
+
+func (h *DocsBuilderHandler) handleReadyZ(w http.ResponseWriter, _ *http.Request) {
+	if h.isReady.Load() {
+		_, _ = io.WriteString(w, "ok")
+
+		return
+	}
+
+	http.Error(w, "Waiting for first build", http.StatusInternalServerError)
+}
+
+func (h *DocsBuilderHandler) newLoadHandler() *loadHandler {
+	return &loadHandler{baseDir: src, channelMappingEditor: h.m}
+}
+
+func (h *DocsBuilderHandler) newBuildHandler() *buildHandler {
+	return &buildHandler{
+		src:                  h.baseDir,
+		dst:                  h.destDir,
+		wasCalled:            &h.isReady,
+		channelMappingEditor: h.m,
+	}
+}
+
+func (h *DocsBuilderHandler) newDeleteHandler() *deleteHandler {
+	return &deleteHandler{baseDir: h.baseDir, channelMappingEditor: h.m}
 }
