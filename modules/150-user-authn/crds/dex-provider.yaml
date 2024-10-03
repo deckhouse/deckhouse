@@ -269,6 +269,13 @@ spec:
                           default: preferred_username
                           description: |
                             The [claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims) to use as the user preferred username.
+                    claimMappingOverride:
+                      type: boolean
+                      description: |
+                        If enabled, the claim mapping will override the standard OIDC claims.
+
+                        By default, the claim mapping will be used only if the standard OIDC claims are not present, e.g., if there is no `email` claim in the id_token, the `claimMapping.email` will be used.
+                      default: false
                     scopes:
                       type: array
                       default: ["openid", "profile", "email", "groups", "offline_access"]
