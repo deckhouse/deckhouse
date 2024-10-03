@@ -201,7 +201,7 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 			continue
 		}
 
-		err = mdr.buildDocumentation(pr, addr, moduleName, md.Spec.Version)
+		err = mdr.buildDocumentation(ctx, pr, addr, moduleName, md.Spec.Version)
 		if err != nil {
 			cond.Type = v1alpha1.TypeError
 			cond.Message = err.Error()
@@ -317,13 +317,27 @@ func (mdr *moduleDocumentationReconciler) getDocumentationFromModuleDir(modulePa
 	return nil
 }
 
-func (mdr *moduleDocumentationReconciler) buildDocumentation(docsArchive io.Reader, baseAddr, moduleName, moduleVersion string) error {
-	err := mdr.docsBuilder.SendDocumentation(baseAddr, moduleName, moduleVersion, docsArchive)
+func (mdr *moduleDocumentationReconciler) buildDocumentation(ctx context.Context, docsArchive io.Reader, baseAddr, moduleName, moduleVersion string) error {
+	err := mdr.docsBuilder.SendDocumentation(ctx, baseAddr, moduleName, moduleVersion, docsArchive)
 	if err != nil {
 		return fmt.Errorf("send documentation: %w", err)
 	}
 
-	err = mdr.docsBuilder.BuildDocumentation(baseAddr)
+	err = mdr.docsBuilder.BuildDocumentation(ctx, baseAddr)
+	if err != nil {
+		return fmt.Errorf("build documentation: %w", err)
+	}
+
+	return nil
+}
+
+func (mdr *moduleDocumentationReconciler) deleteDocumentation(ctx context.Context, docsArchive io.Reader, baseAddr, moduleName string) error {
+	err := mdr.docsBuilder.DeleteDocumentation(ctx, baseAddr, moduleName, docsArchive)
+	if err != nil {
+		return fmt.Errorf("delete documentation: %w", err)
+	}
+
+	err = mdr.docsBuilder.BuildDocumentation(ctx, baseAddr)
 	if err != nil {
 		return fmt.Errorf("build documentation: %w", err)
 	}
