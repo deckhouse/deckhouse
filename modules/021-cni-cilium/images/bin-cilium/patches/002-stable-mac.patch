@@ -5,7 +5,7 @@ index f55612181d..3aad3ee0ea 100644
 @@ -50,6 +50,12 @@ type DaemonConfigurationStatus struct {
  	// Configured compatibility mode for --egress-multi-home-ip-rule-compat
  	EgressMultiHomeIPRuleCompat bool `json:"egress-multi-home-ip-rule-compat,omitempty"`
- 
+
 +	// MAC address for host side veth interface
 +	EndpointInterfaceHostMAC string `json:"endpointInterfaceHostMAC,omitempty"`
 +
@@ -14,7 +14,7 @@ index f55612181d..3aad3ee0ea 100644
 +
  	// Immutable configuration (read-only)
  	Immutable ConfigurationMap `json:"immutable,omitempty"`
- 
+
 diff --git a/api/v1/openapi.yaml b/api/v1/openapi.yaml
 index a93f7d34fa..04b88002b9 100644
 --- a/api/v1/openapi.yaml
@@ -94,7 +94,7 @@ index 7edac7e95b..94a57d21b5 100644
 +		epHostMAC, err = mac.GenerateRandMAC()
 +	}
  	if err != nil {
- 		return nil, nil, fmt.Errorf("unable to generate rnd mac addr: %s", err)
+ 		return nil, nil, fmt.Errorf("unable to generate rnd mac addr: %w", err)
  	}
 -	epLXCMAC, err = mac.GenerateRandMAC()
 +	if ep.Mac != "" {
@@ -103,7 +103,7 @@ index 7edac7e95b..94a57d21b5 100644
 +		epLXCMAC, err = mac.GenerateRandMAC()
 +	}
  	if err != nil {
- 		return nil, nil, fmt.Errorf("unable to generate rnd mac addr: %s", err)
+ 		return nil, nil, fmt.Errorf("unable to generate rnd mac addr: %w", err)
  	}
 diff --git a/pkg/defaults/defaults.go b/pkg/defaults/defaults.go
 index 1258c1af89..400058a1b1 100644
@@ -112,7 +112,7 @@ index 1258c1af89..400058a1b1 100644
 @@ -330,6 +330,12 @@ const (
  	// LoopbackIPv4 is the default address for service loopback
  	LoopbackIPv4 = "169.254.42.1"
- 
+
 +	// EndpointInterfaceHostMAC is set to empty to enable auto generation (default mode)
 +	EndpointInterfaceHostMAC = ""
 +
@@ -129,7 +129,7 @@ index b3ffe32d05..0f4c854a2e 100644
 @@ -1039,6 +1039,12 @@ const (
  	// EndpointStatusState enables CiliumEndpoint.Status.State
  	EndpointStatusState = "state"
- 
+
 +	// EndpointInterfaceHostMAC defines MAC address for host side veth interface
 +	EndpointInterfaceHostMAC = "endpoint-interface-host-mac"
 +
@@ -142,7 +142,7 @@ index b3ffe32d05..0f4c854a2e 100644
 @@ -1954,6 +1960,12 @@ type DaemonConfig struct {
  	// LocalRouterIPv6 is the link-local IPv6 address used for Cilium's router device
  	LocalRouterIPv6 string
- 
+
 +	// EndpointInterfaceHostMAC defines MAC address for host side veth interface
 +	EndpointInterfaceHostMAC string
 +
@@ -151,7 +151,7 @@ index b3ffe32d05..0f4c854a2e 100644
 +
  	// EnableEndpointRoutes enables use of per endpoint routes
  	EnableEndpointRoutes bool
- 
+
 @@ -2434,6 +2446,8 @@ var (
  		KVStoreOpt:                   make(map[string]string),
  		LogOpt:                       make(map[string]string),
@@ -181,5 +181,5 @@ index 217981d3a1..c6e227d1c9 100644
 +		Mac:                   conf.EndpointInterfaceMAC,
 +		HostMac:               conf.EndpointInterfaceHostMAC,
  	}
- 
+
  	if conf.IpamMode == ipamOption.IPAMDelegatedPlugin {

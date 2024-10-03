@@ -79,7 +79,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// set template label and delete sync require annotation
+	// set template label, finalizer and delete sync require annotation
 	m.log.Info("preparing the project", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
 	if err := m.prepareProject(ctx, project); err != nil {
 		m.log.Error(err, "failed to prepare project")
@@ -138,30 +138,23 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	// upgrade project`s resources
 	m.log.Info("upgrading resources for the project", "project", project.Name, "projectTemplate", projectTemplate.Name)
 	if err = m.helmClient.Upgrade(ctx, project, projectTemplate); err != nil {
-		cond = m.makeCondition(v1alpha2.ConditionTypeProjectResourcesUpgraded, v1alpha2.ConditionTypeFalse, err.Error())
-		if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, projectTemplate.Generation, cond); statusErr != nil {
-			m.log.Error(statusErr, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
-			return ctrl.Result{Requeue: true}, nil
+		// to avoid helm flaky errors
+		m.log.Info("failed to upgrade the project resources, try again", "project", project.Name, "projectTemplate", projectTemplate.Name)
+		if secondTry := m.helmClient.Upgrade(ctx, project, projectTemplate); secondTry != nil {
+			cond = m.makeCondition(v1alpha2.ConditionTypeProjectResourcesUpgraded, v1alpha2.ConditionTypeFalse, err.Error())
+			if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, projectTemplate.Generation, cond); statusErr != nil {
+				m.log.Error(statusErr, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
+				return ctrl.Result{Requeue: true}, nil
+			}
+			return ctrl.Result{}, nil
 		}
-		// TODO: come up with a better solution to handle helm errors
-		// requeue to avoid helm fluky errors
-		return ctrl.Result{RequeueAfter: 1 * time.Minute}, nil
 	}
-
-	// update conditions
-	cond = m.makeCondition(v1alpha2.ConditionTypeProjectResourcesUpgraded, v1alpha2.ConditionTypeTrue, "")
 
 	// set deployed status
 	m.log.Info("setting deployed status for the project", "project", project.Name, "projectTemplate", projectTemplate.Name)
+	cond = m.makeCondition(v1alpha2.ConditionTypeProjectResourcesUpgraded, v1alpha2.ConditionTypeTrue, "")
 	if err = m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateDeployed, projectTemplate.Generation, cond); err != nil {
 		m.log.Error(err, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	// set finalizer
-	m.log.Info("setting finalizer for the project", "project", project.Name, "projectTemplate", projectTemplate.Name)
-	if err = m.setFinalizer(ctx, project); err != nil {
-		m.log.Error(err, "failed to set the project finalizer")
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -203,6 +196,7 @@ func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha2.Project) 
 func (m *Manager) Delete(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error) {
 	// delete resources
 	if err := m.helmClient.Delete(ctx, project.Name); err != nil {
+		// TODO: add error to the project`s status
 		m.log.Error(err, "failed to delete the project", "project", project.Name)
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -213,6 +207,6 @@ func (m *Manager) Delete(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	m.log.Info("successfully deleted project", "project", project.Name)
+	m.log.Info("successfully deleted the project", "project", project.Name)
 	return ctrl.Result{}, nil
 }

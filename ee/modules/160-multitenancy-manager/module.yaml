@@ -1,0 +1,5 @@
+name: multitenancy-manager
+weight: 160
+
+requirements:
+  bootstrapped: true

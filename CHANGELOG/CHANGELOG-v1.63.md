@@ -44,6 +44,7 @@
 ## Fixes
 
 
+ - **[candi]** fix resize partition step [#9960](https://github.com/deckhouse/deckhouse/pull/9960)
  - **[candi]** Add PVC disks to ignore_changes lifecycle for CloudPermanent nodes at VMware Cloud Director. [#9781](https://github.com/deckhouse/deckhouse/pull/9781)
  - **[candi]** Fix for bootstrap or upgrade an existing cluster installed in AWS using the "Standard" layout. [#9545](https://github.com/deckhouse/deckhouse/pull/9545)
  - **[candi]** Fix catch exit codes in cloud-providers bootstrap-network scripts. [#9448](https://github.com/deckhouse/deckhouse/pull/9448)

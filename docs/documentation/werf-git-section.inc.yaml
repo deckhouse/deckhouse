@@ -46,7 +46,7 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-{{- if or (eq .Env "BE") (eq .Env "SE") (eq .Env "EE") (eq .Env "FE") (eq .Env "development") }}
+{{- if or (eq .Edition "BE") (eq .Edition "SE") (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
 - add: /ee/be/modules
   to: /srv/jekyll-data/documentation/_data/bundles/raw/be
   owner: jekyll
@@ -63,7 +63,7 @@
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/']
 {{- end }}
-{{- if or (eq .Env "SE") (eq .Env "EE") (eq .Env "FE") (eq .Env "development") }}
+{{- if or (eq .Edition "SE") (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
 - add: /ee/se/modules
   to: /srv/jekyll-data/documentation/_data/bundles/raw/se
   owner: jekyll
@@ -80,7 +80,7 @@
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/']
 {{- end }}
-{{- if or (eq .Env "EE") (eq .Env "FE") (eq .Env "development") }}
+{{- if or (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
 - add: /ee/modules
   to: /srv/jekyll-data/documentation/_data/bundles/raw/ee
   owner: jekyll
@@ -153,7 +153,7 @@
   stageDependencies:
     setup: ['**/*']
 {{- end }}
-{{- if or (eq .Env "FE") (eq .Env "development")  }}
+{{- if or (eq .Edition "FE") (eq .Mode "development")  }}
 - add: /ee/fe/modules
   to: /srv/jekyll-data/documentation/_data/bundles/raw/fe
   owner: jekyll
@@ -171,12 +171,6 @@
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml''*/docs/internal/']
 {{- end }}
 # CRDs
-- add: /modules/010-user-authn-crd/crds
-  to: /src/modules/150-user-authn/crds
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
 - add: /candi/openapi
   to: /src/modules/040-node-manager/crds
   owner: jekyll
@@ -296,20 +290,6 @@
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /modules/010-prometheus-crd/crds
-  to: /src/modules/010-prometheus-crd/crds
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-- add: /modules/010-vertical-pod-autoscaler-crd/crds
-  to: /src/modules/302-vertical-pod-autoscaler/crds
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-  excludePaths:
-  - verticalpodautoscalercheckpoint.yaml
 - add: /candi/version_map.yml
   to: /srv/jekyll-data/documentation/_data/version_map.yml
   owner: jekyll

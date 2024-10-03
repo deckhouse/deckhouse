@@ -1,5 +1,5 @@
 # The main part of the manifest can be found in the file daemonset-agent.yaml.tpl
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -14,6 +14,6 @@ spec:
   {{- end }}
 {{- end }}
 ---
-{{ $agent_daemonset_generation := include "agent_daemonset_template" (list . "undefined") | sha256sum }}
+{{ $agent_daemonset_generation := include "agent_daemonset_template" (list . "undefined" ) | sha256sum }}
 
-{{- include "agent_daemonset_template" (list . $agent_daemonset_generation) }}
+{{- include "agent_daemonset_template" (list . $agent_daemonset_generation ) }}

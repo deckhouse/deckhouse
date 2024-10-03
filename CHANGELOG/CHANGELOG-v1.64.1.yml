@@ -1,0 +1,123 @@
+candi:
+  features:
+    - summary: >-
+        Stricter permissions (0700/0600) applied to kubelet configuration and PKI files to improve
+        security.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9868
+    - summary: >-
+        Add support for Astra Linux 1.8. Support for Astra Linux 1.8 ensures compatibility with the
+        latest OS version, providing updated packages and configurations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9296
+  fixes:
+    - summary: fix resize partition step
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9950
+    - summary: reboot static node with a delay on cleanup
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9911
+ci:
+  fixes:
+    - summary: Replace deprecated --report-path command with --build-report-path.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9700
+    - summary: Upgrade actions/{download,upload}-artifact.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9590
+cloud-provider-aws:
+  fixes:
+    - summary: Canceling migration from d8-cni-configuration secret to proper CNI module configs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9900
+cloud-provider-azure:
+  fixes:
+    - summary: Canceling migration from d8-cni-configuration secret to proper CNI module configs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9900
+cloud-provider-gcp:
+  fixes:
+    - summary: Canceling migration from d8-cni-configuration secret to proper CNI module configs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9900
+cloud-provider-openstack:
+  fixes:
+    - summary: Canceling migration from d8-cni-configuration secret to proper CNI module configs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9900
+    - summary: Create one server group for all masters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9806
+cloud-provider-vcd:
+  fixes:
+    - summary: Canceling migration from d8-cni-configuration secret to proper CNI module configs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9900
+cloud-provider-vsphere:
+  fixes:
+    - summary: Canceling migration from d8-cni-configuration secret to proper CNI module configs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9900
+cloud-provider-yandex:
+  fixes:
+    - summary: Canceling migration from d8-cni-configuration secret to proper CNI module configs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9900
+cloud-provider-zvirt:
+  fixes:
+    - summary: Canceling migration from d8-cni-configuration secret to proper CNI module configs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9900
+cni-cilium:
+  fixes:
+    - summary: Canceling migration from d8-cni-configuration secret to proper CNI module configs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9900
+    - summary: iptables-wrapper fix for cilium pods.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9856
+      impact: The cilium pods will be restarted.
+cni-flannel:
+  fixes:
+    - summary: Canceling migration from d8-cni-configuration secret to proper CNI module configs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9900
+common:
+  fixes:
+    - summary: Canceling migration from d8-cni-configuration secret to proper CNI module configs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9900
+control-plane-manager:
+  features:
+    - summary: >-
+        Stricter permissions (0700/0600) applied to kubelet configuration and PKI files to improve
+        security.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9868
+deckhouse:
+  fixes:
+    - summary: Fix rbacv2 hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9862
+deckhouse-controller:
+  fixes:
+    - summary: Fixed a bug related to the fact that the state of the release object was not updated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9838
+deckhouse-tools:
+  fixes:
+    - summary: Fix custom certs copying.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9840
+dhctl:
+  fixes:
+    - summary: Canceling migration from d8-cni-configuration secret to proper CNI module configs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9900
+docs:
+  fixes:
+    - summary: Add CEF format example in docs log-shipper
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9875
+    - summary: Add info about OS requirements for static `mainNetwork` pool.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9830
+    - summary: >-
+        The instructions for switching from EE redaction to CE and from CE to EE for releases 1.64
+        and 1.63 have been refactored.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9792
+    - summary: Added a warning about choosing the subnet dimension in Yandex Cloud.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9763
+global-hooks:
+  fixes:
+    - summary: Canceling migration from d8-cni-configuration secret to proper CNI module configs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9900
+go_lib:
+  fixes:
+    - summary: Canceling migration from d8-cni-configuration secret to proper CNI module configs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9900
+multitenancy-manager:
+  fixes:
+    - summary: Fix 'namespace not found' problem.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9891
+    - summary: Add verify namespace object for messageExpression in ValidatingAdmissionPolicy
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9849
+user-authn:
+  fixes:
+    - summary: Allow system-users with + symbol in email.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9846
+

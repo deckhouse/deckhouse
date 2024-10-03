@@ -45,7 +45,7 @@ clusterConfiguration:
   cloud:
     provider: OpenStack
 highAvailability: true
-enabledModules: ["operator-prometheus-crd","cert-manager","vertical-pod-autoscaler-crd","cni-cilium"]
+enabledModules: ["operator-prometheus","cert-manager","vertical-pod-autoscaler","cni-cilium"]
 modules:
   publicDomainTemplate: "%s.example.com"
   placement:
@@ -573,7 +573,7 @@ static:
     cpu: 11m
     memory: 22Mi
   limits:
-    cpu: 33
+    cpu: "33"
     memory: 44Gi
 `)
 			f.HelmRender()
@@ -589,7 +589,7 @@ requests:
   memory: 22Mi
   ephemeral-storage: 50Mi
 limits:
-  cpu: 33
+  cpu: "33"
   memory: 44Gi
 `))
 			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x19x7")
