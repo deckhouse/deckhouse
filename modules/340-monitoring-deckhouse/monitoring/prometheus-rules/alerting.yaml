@@ -107,7 +107,6 @@
     expr: max by (name) (d8_module_release_waiting_manual) >= 1
     labels:
       severity_level: "6"
-      d8_module: $labels.name
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
