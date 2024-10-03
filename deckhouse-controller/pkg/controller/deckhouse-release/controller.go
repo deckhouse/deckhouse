@@ -371,12 +371,13 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 func (r *deckhouseReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result, error) {
 	var notReadyErr *updater.NotReadyForDeployError
 	if errors.As(err, &notReadyErr) {
-		r.logger.Infof("%s: retry after %s", err.Error(), notReadyErr.RetryDelay())
-		// TODO: requeue all releases if
+		r.logger.Infoln(err.Error())
+		// TODO: requeue all releases if deckhouse update settings is changed
 		// requeueAfter := notReadyErr.RetryDelay()
 		// if requeueAfter == 0 {
 		// requeueAfter = defaultCheckInterval
 		// }
+		// r.logger.Infof("%s: retry after %s", err.Error(), requeueAfter)
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
