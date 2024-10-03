@@ -78,7 +78,7 @@ type Updater[R Release] struct {
 	deckhouseIsBootstrapping bool
 
 	releaseData        DeckhouseReleaseData
-	notificationConfig *NotificationConfig
+	notificationConfig NotificationConfig
 
 	kubeAPI           KubeAPI[R]
 	metricsUpdater    MetricsUpdater
@@ -88,7 +88,7 @@ type Updater[R Release] struct {
 	enabledModules set.Set
 }
 
-func NewUpdater[R Release](dc dependency.Container, logger logger.Logger, notificationConfig *NotificationConfig, mode string,
+func NewUpdater[R Release](dc dependency.Container, logger logger.Logger, notificationConfig NotificationConfig, mode string,
 	data DeckhouseReleaseData, podIsReady, isBootstrapping bool, kubeAPI KubeAPI[R], metricsUpdater MetricsUpdater,
 	settings Settings, webhookDataSource WebhookDataSource[R], enabledModules []string,
 ) *Updater[R] {
@@ -125,7 +125,7 @@ func (du *Updater[R]) checkPatchReleaseConditions(release R) error {
 	}
 
 	// check: Notification
-	if du.notificationConfig != nil && du.notificationConfig.ReleaseType == ReleaseTypeAll {
+	if du.notificationConfig != (NotificationConfig{}) && du.notificationConfig.ReleaseType == ReleaseTypeAll {
 		err = du.sendReleaseNotification(release, applyTime)
 		if err != nil {
 			return fmt.Errorf("send release notification: %w", err)
@@ -198,7 +198,7 @@ func (du *Updater[R]) checkMinorReleaseConditions(release R, updateWindows updat
 	}
 
 	// check: Notification
-	if du.notificationConfig != nil {
+	if du.notificationConfig != (NotificationConfig{}) {
 		err = du.sendReleaseNotification(release, resultDeployTime)
 		if err != nil {
 			return fmt.Errorf("send release notification: %w", err)
@@ -235,6 +235,7 @@ const (
 	canaryDelayReason
 	manualApprovalRequiredReason
 	outOfWindowReason
+	notificationDelayReason
 )
 
 func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows update.Windows) (releaseApplyTime time.Time, reason deployDelayReason, err error) {
@@ -269,7 +270,6 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 	}
 
 	if !du.releaseData.Notified &&
-		du.notificationConfig != nil &&
 		du.notificationConfig.MinimalNotificationTime.Duration > 0 {
 		minApplyTime := du.now.Add(du.notificationConfig.MinimalNotificationTime.Duration)
 		if minApplyTime.Before(releaseApplyTime) {
@@ -333,7 +333,6 @@ func (du *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTim
 	}
 
 	if !du.releaseData.Notified &&
-		du.notificationConfig != nil &&
 		du.notificationConfig.MinimalNotificationTime.Duration > 0 {
 		minApplyTime := du.now.Add(du.notificationConfig.MinimalNotificationTime.Duration)
 		if minApplyTime.Before(releaseApplyTime) {
@@ -356,6 +355,8 @@ func (du *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTim
 		if err != nil {
 			return time.Time{}, 0, fmt.Errorf("patch release %s apply after: %w", release.GetName(), err)
 		}
+
+		return releaseApplyTime, notificationDelayReason, nil
 	}
 
 	if statusMessage != "" {
@@ -802,6 +803,9 @@ func (du *Updater[R]) postponeDeploy(reason deployDelayReason, applyTime time.Ti
 		message += fmt.Sprintf("release is waiting for manual approval")
 	case outOfWindowReason:
 		message += fmt.Sprintf("release is waiting for the update window: %s", applyTime.Format(time.RFC822))
+	case notificationDelayReason:
+		message += fmt.Sprintf("release is postponed by notification ")
+
 	default:
 		panic(fmt.Errorf("invalid reason: %d", reason))
 	}
