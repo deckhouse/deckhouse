@@ -29,7 +29,7 @@
     )
 
     for (( iter = 1; iter < 60; iter++ )); do
-      if curl -f -L -X POST "https://loop.flant.ru/api/v4/posts" -H "Content-Type: application/json" -H "Authorization: Bearer ${LOOP_TOKEN}" --data ${alertData}; then
+      if curl -f -L -X POST "https://loop.flant.ru/api/v4/posts" -H "Content-Type: application/json" -H "Authorization: Bearer ${LOOP_TOKEN}" --data "${alertData}"; then
         exit 0
       fi
 
