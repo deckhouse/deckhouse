@@ -19,7 +19,7 @@ RUN apt-get update && \
   iptables \
   iproute2 \
   iputils \
-  knot-dnsutils \
+  knot-utils \
   netcat \
   tcpdump \
   conntrack \
