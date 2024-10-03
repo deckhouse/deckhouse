@@ -12,16 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package docs
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
-	"sync/atomic"
 
 	"github.com/spf13/fsync"
 	"k8s.io/klog/v2"
@@ -29,65 +26,36 @@ import (
 	"github.com/flant/docs-builder/pkg/hugo"
 )
 
-var assembleErrorRegexp = regexp.MustCompile(`error building site: assemble: (\x1b\[1;36m)?"(?P<path>.+):(?P<line>\d+):(?P<column>\d+)"(\x1b\[0m)?:`)
-
-func newBuildHandler(src, dst string, wasCalled *atomic.Bool, channelMappingEditor *channelMappingEditor) *buildHandler {
-	return &buildHandler{
-		src:                  src,
-		dst:                  dst,
-		wasCalled:            wasCalled,
-		channelMappingEditor: channelMappingEditor,
-	}
-}
-
-type buildHandler struct {
-	src                  string
-	dst                  string
-	wasCalled            *atomic.Bool
-	channelMappingEditor *channelMappingEditor
-}
-
-func (b *buildHandler) ServeHTTP(writer http.ResponseWriter, _ *http.Request) {
-	err := b.build()
-	if err != nil {
-		klog.Error(err)
-		http.Error(writer, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	writer.WriteHeader(http.StatusOK)
-}
-
-func (b *buildHandler) build() error {
-	err := b.buildHugo()
+func (svc *Service) Build() error {
+	err := svc.buildHugo()
 	if err != nil {
 		return fmt.Errorf("hugo build: %w", err)
 	}
 
 	for _, lang := range []string{"ru", "en"} {
-		glob := filepath.Join(b.dst, "public", lang, "modules/*")
+		glob := filepath.Join(svc.destDir, "public", lang, "modules/*")
 		err = removeGlob(glob)
 		if err != nil {
-			return fmt.Errorf("clear %s: %w", b.dst, err)
+			return fmt.Errorf("clear %s: %w", svc.destDir, err)
 		}
 
-		oldLocation := filepath.Join(b.src, "public", lang, "modules")
-		newLocation := filepath.Join(b.dst, "public", lang, "modules")
+		oldLocation := filepath.Join(svc.baseDir, "public", lang, "modules")
+		newLocation := filepath.Join(svc.destDir, "public", lang, "modules")
 		err = fsync.Sync(newLocation, oldLocation)
 		if err != nil {
 			return fmt.Errorf("move %s to %s: %w", oldLocation, newLocation, err)
 		}
 	}
 
-	b.wasCalled.Store(true)
+	svc.isReady.Store(true)
 	return nil
 }
 
-func (b *buildHandler) buildHugo() error {
+func (svc *Service) buildHugo() error {
 	flags := hugo.Flags{
 		LogLevel: "debug",
-		Source:   b.src,
-		CfgDir:   filepath.Join(b.src, "config"),
+		Source:   svc.baseDir,
+		CfgDir:   filepath.Join(svc.baseDir, "config"),
 	}
 
 	for {
@@ -104,7 +72,7 @@ func (b *buildHandler) buildHugo() error {
 			}
 
 			moduleName, channel := parseModulePath(modulePath)
-			err = b.removeModuleFromChannelMapping(moduleName, channel)
+			err = svc.removeModuleFromChannelMapping(moduleName, channel)
 			if err != nil {
 				return fmt.Errorf("remove module from channel mapping: %w", err)
 			}
@@ -117,8 +85,8 @@ func (b *buildHandler) buildHugo() error {
 	}
 }
 
-func (b *buildHandler) removeModuleFromChannelMapping(moduleName, channel string) error {
-	return b.channelMappingEditor.edit(func(m channelMapping) {
+func (svc *Service) removeModuleFromChannelMapping(moduleName, channel string) error {
+	return svc.channelMappingEditor.edit(func(m channelMapping) {
 		delete(m[moduleName]["channels"], channel)
 	})
 }

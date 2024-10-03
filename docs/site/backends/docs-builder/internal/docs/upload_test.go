@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package docs
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestLoadHandlerGetLocalPath(t *testing.T) {
 	tests := []struct {
@@ -49,17 +51,17 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 		},
 		{
 			"docs/install.md",
-			"/app/hugo/content/moduleName/stable/install.md",
+			"/app/hugo/content/modules/moduleName/stable/install.md",
 			true,
 		},
 		{
 			"docs/README_RU.md",
-			"/app/hugo/content/moduleName/stable/README.ru.md",
+			"/app/hugo/content/modules/moduleName/stable/README.ru.md",
 			true,
 		},
 		{
 			"docs",
-			"/app/hugo/content/moduleName/stable",
+			"/app/hugo/content/modules/moduleName/stable",
 			true,
 		},
 		{
@@ -98,11 +100,12 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 			true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.fileName, func(t *testing.T) {
-			u := newLoadHandler("/app/hugo/", nil)
+			var svc = NewService("/app/hugo/", "", false)
 
-			got, ok := u.getLocalPath("moduleName", "stable", tt.fileName)
+			got, ok := svc.getLocalPath("moduleName", "stable", tt.fileName)
 			if got != tt.want || ok != tt.wantOK {
 				t.Errorf("getLocalPath() = %v, want %v", got, tt.want)
 			}
