@@ -1,9 +1,9 @@
 # Based on https://github.com/istio/istio/blob/1.19.7/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.19.7/pilot/docker/Dockerfile.proxyv2
-ARG BASE_UBUNTU
+ARG BASE_ALT
 FROM docker.io/istio/proxyv2:1.19.7@sha256:680eac0faff1835f994ba9047750d7cfe989e868324a933a38d6a6cb80779b33 as artifact
 
-FROM $BASE_UBUNTU
+FROM $BASE_ALT
 WORKDIR /
 
 # https://hub.docker.com/layers/istio/proxyv2/1.19.7/images/sha256-680eac0faff1835f994ba9047750d7cfe989e868324a933a38d6a6cb80779b33?context=explore
