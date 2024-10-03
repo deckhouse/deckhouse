@@ -100,7 +100,7 @@ shell:
   # Install multiversion bazel
   - bazel_versions=({{ $bazelVersions }})
   # install bazel wrapper script in the path, it automatically recognises `.bazelversion` and `USE_BAZEL_VERSIONS`, if neither are set it picks latest
-  - curl --fail --show-error --silent --location "{{ $sourceraw }}/bazelbuild/bazel/blob/${bazel_versions[-1]}/scripts/packages/bazel.sh" --output /usr/local/bin/bazel
+  - curl --fail --show-error --silent --location "{{ $sourceraw }}/bazelbuild/bazel/refs/tags/${bazel_versions[-1]}/scripts/packages/bazel.sh" --output /usr/local/bin/bazel
   - chmod +x /usr/local/bin/bazel
   - |
     for bazel_version in ${bazel_versions[@]} ; do
