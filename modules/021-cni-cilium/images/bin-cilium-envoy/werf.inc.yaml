@@ -13,7 +13,7 @@
 # #####################################################################
 ---
 artifact: {{ $.ModuleName }}/cilium-envoy-artifact
-fromImage: {{ $.ModuleName }}/base-cilium-dev
+fromArtifact: {{ $.ModuleName }}/base-cilium-dev
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -43,6 +43,8 @@ shell:
   - git checkout {{ $ciliumProxyRev }}
   - chown -R 1337:1337 /cilium/proxy
   beforeSetup:
+  - export GOROOT=/usr/local/go GOPATH=/go
+  - export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${GOROOT}/bin:${GOPATH}/bin
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /cilium/proxy
@@ -50,6 +52,10 @@ shell:
   - sudo -u cilium PATH=${PATH} mkdir -p /tmp/install/usr/lib
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
   setup:
+  - export GOROOT=/usr/local/go GOPATH=/go
+  - export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${GOROOT}/bin:${GOPATH}/bin
+  - export GOOS=linux GOARCH=amd64
+  #
   - mkdir -p /tmp/bazel-cache
   - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache
   - chown -R 1337:1337 /tmp/bazel-cache

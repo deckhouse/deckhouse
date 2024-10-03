@@ -15,7 +15,7 @@
 # #####################################################################
 ---
 artifact: {{ $.ModuleName }}/bpftool-artifact
-fromImage: {{ $.ModuleName }}/base-cilium-dev
+fromArtifact: {{ $.ModuleName }}/base-cilium-dev
 shell:
   beforeInstall:
   - git clone {{ $.SOURCE_REPO }}/bpf/bpf-next.git /src/linux

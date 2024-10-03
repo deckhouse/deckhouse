@@ -24,7 +24,7 @@
 # Corresponding commit is 3e6b0f588d788ac0e69f4d126cfb3c55b1513948 (https://github.com/cilium/image-tools/tree/3e6b0f588d788ac0e69f4d126cfb3c55b1513948)
 # #####################################################################
 ---
-image: {{ $.ModuleName }}/base-cilium-dev
+artifact: {{ $.ModuleName }}/base-cilium-dev
 from: {{ $.Images.BASE_ALT_P11 }}
 mount:
 - fromPath: ~/go-pkg-cache
@@ -91,10 +91,4 @@ shell:
       chmod +x "/usr/local/bin/${long_binary_name}"
       USE_BAZEL_VERSION="${bazel_version}" bazel version # to extract all binaries properly
     done
-docker:
-  ENV:
-    GOROOT: "/usr/local/go"
-    GOPATH: "/go"
-    PATH: "${PATH}:${GOROOT}/bin:${GOPATH}/bin"
-    GOOS: "linux"
-    GOARCH: "amd64"
+

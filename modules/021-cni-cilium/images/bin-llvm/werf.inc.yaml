@@ -13,7 +13,7 @@
 # #####################################################################
 ---
 artifact: {{ $.ModuleName }}/llvm-artifact
-fromImage: {{ $.ModuleName }}/base-cilium-dev
+fromArtifact: {{ $.ModuleName }}/base-cilium-dev
 shell:
   beforeInstall:
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
