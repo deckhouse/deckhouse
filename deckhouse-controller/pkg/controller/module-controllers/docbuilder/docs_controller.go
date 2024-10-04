@@ -147,70 +147,67 @@ func (mdr *moduleDocumentationReconciler) Reconcile(ctx context.Context, req ctr
 		return res, client.IgnoreNotFound(err)
 	}
 
-	if md.DeletionTimestamp.IsZero() {
-		if !controllerutil.ContainsFinalizer(md, documentationExistsFinalizer) {
-			controllerutil.AddFinalizer(md, documentationExistsFinalizer)
-			if err := mdr.client.Update(ctx, md); err != nil {
-				mdr.logger.Errorf("update finalizer: %v", err)
-
-				return res, err
-			}
-		}
-	} else {
+	if !md.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(md, documentationExistsFinalizer) {
 			return res, nil
 		}
 
-		// get addresses from cluster, not status, because them more actual
-		addrs, err := mdr.getDocsBuilderAddresses(ctx)
-		if err != nil {
-			return res, fmt.Errorf("get docs builder addresses: %w", err)
-		}
-
-		if len(addrs) == 0 {
-			// no endpoints for doc builder
-			return res, nil
-		}
-
-		now := metav1.NewTime(mdr.dc.GetClock().Now().UTC())
-
-		for _, addr := range addrs {
-			err := mdr.deleteDocumentation(ctx, addr, md.Name)
-			if err == nil {
-				continue
-			}
-
-			delErr := fmt.Errorf("delete documentation: %w", err)
-
-			_, idx := md.GetConditionByAddress(addr)
-			if idx < 0 {
-				continue
-			}
-
-			md.Status.Conditions[idx].Type = v1alpha1.TypeError
-			md.Status.Conditions[idx].Message = delErr.Error()
-			md.Status.Conditions[idx].LastTransitionTime = now
-
-			if err := mdr.client.Status().Update(ctx, md); err != nil {
-				mdr.logger.Errorf("update status when delete documentation: %v", err)
-
-				return res, fmt.Errorf("update status when delete documentation: %w", errors.Join(delErr, err))
-			}
-
-			return res, delErr
-		}
-
-		controllerutil.RemoveFinalizer(md, documentationExistsFinalizer)
-		if err := mdr.client.Update(ctx, md); err != nil {
-			mdr.logger.Errorf("update finalizer: %v", err)
-
-			return res, fmt.Errorf("update finalizer: %w", err)
-		}
-
-		return res, nil
+		return mdr.deleteReconcile(ctx, md)
 	}
 
 	return mdr.createOrUpdateReconcile(ctx, md)
+}
+
+func (mdr *moduleDocumentationReconciler) deleteReconcile(ctx context.Context, md *v1alpha1.ModuleDocumentation) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
+	// get addresses from cluster, not status, because them more actual
+	addrs, err := mdr.getDocsBuilderAddresses(ctx)
+	if err != nil {
+		return res, fmt.Errorf("get docs builder addresses: %w", err)
+	}
+
+	if len(addrs) == 0 {
+		// no endpoints for doc builder
+		return res, nil
+	}
+
+	now := metav1.NewTime(mdr.dc.GetClock().Now().UTC())
+
+	for _, addr := range addrs {
+		err := mdr.deleteDocumentation(ctx, addr, md.Name)
+		if err == nil {
+			continue
+		}
+
+		delErr := fmt.Errorf("delete documentation: %w", err)
+
+		_, idx := md.GetConditionByAddress(addr)
+		if idx < 0 {
+			continue
+		}
+
+		md.Status.Conditions[idx].Type = v1alpha1.TypeError
+		md.Status.Conditions[idx].Message = delErr.Error()
+		md.Status.Conditions[idx].LastTransitionTime = now
+
+		if err := mdr.client.Status().Update(ctx, md); err != nil {
+			mdr.logger.Errorf("update status when delete documentation: %v", err)
+
+			return res, fmt.Errorf("update status when delete documentation: %w", errors.Join(delErr, err))
+		}
+
+		return res, delErr
+	}
+
+	controllerutil.RemoveFinalizer(md, documentationExistsFinalizer)
+	if err := mdr.client.Update(ctx, md); err != nil {
+		mdr.logger.Errorf("update finalizer: %v", err)
+
+		return res, fmt.Errorf("update finalizer: %w", err)
+	}
+
+	return res, nil
 }
 
 func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.ModuleDocumentation) (ctrl.Result, error) {
@@ -242,7 +239,11 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 
 	for _, addr := range addrs {
 		cond, condIdx := md.GetConditionByAddress(addr)
-		if !(condIdx < 0) && cond.Version == md.Spec.Version && cond.Checksum == md.Spec.Checksum && cond.Type == v1alpha1.TypeRendered {
+		// TODO: add function for compare
+		if condIdx >= 0 &&
+			cond.Version == md.Spec.Version &&
+			cond.Checksum == md.Spec.Checksum &&
+			cond.Type == v1alpha1.TypeRendered {
 			// documentation is rendered for this builder
 			mdCopy.Status.Conditions = append(mdCopy.Status.Conditions, cond)
 			rendered++
@@ -294,6 +295,15 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 
 	if mdCopy.Status.RenderResult != v1alpha1.ResultRendered {
 		return ctrl.Result{RequeueAfter: defaultDocumentationCheckInterval}, nil
+	}
+
+	if !controllerutil.ContainsFinalizer(md, documentationExistsFinalizer) {
+		controllerutil.AddFinalizer(md, documentationExistsFinalizer)
+		if err := mdr.client.Update(ctx, md); err != nil {
+			mdr.logger.Errorf("update finalizer: %v", err)
+
+			return res, err
+		}
 	}
 
 	return res, nil
