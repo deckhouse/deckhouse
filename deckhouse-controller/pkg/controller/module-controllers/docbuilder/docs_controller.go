@@ -297,9 +297,9 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 		return ctrl.Result{RequeueAfter: defaultDocumentationCheckInterval}, nil
 	}
 
-	if !controllerutil.ContainsFinalizer(md, documentationExistsFinalizer) {
-		controllerutil.AddFinalizer(md, documentationExistsFinalizer)
-		if err := mdr.client.Update(ctx, md); err != nil {
+	if !controllerutil.ContainsFinalizer(mdCopy, documentationExistsFinalizer) {
+		controllerutil.AddFinalizer(mdCopy, documentationExistsFinalizer)
+		if err := mdr.client.Update(ctx, mdCopy); err != nil {
 			mdr.logger.Errorf("update finalizer: %v", err)
 
 			return res, err
