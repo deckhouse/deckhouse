@@ -59,9 +59,6 @@ shell:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache automake autoconf libtool build-base git
   install:
-  - cd /src/shell-operator
-  - go mod tidy
-  setup:
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 GOOS=linux
   - cd /src/jq
   - autoreconf -fi
@@ -74,6 +71,7 @@ shell:
   - chown -R 64535:64535 /jq
   - chmod 700 /jq/jq
   - cd /src/shell-operator
+  - go mod tidy
   - CGO_CFLAGS="-I/libjq/include" CGO_LDFLAGS="-L/libjq/lib" go build -ldflags="-linkmode external -extldflags '-static' -s -w -X 'github.com/flant/shell-operator/pkg/app.Version={{ $shellOperatorVersion }}'" -tags use_libjq -o shell-operator ./cmd/shell-operator
   - mkdir -p /shell-operator
   - cp -r shell_lib.sh frameworks shell-operator /shell-operator
