@@ -53,5 +53,6 @@ shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y python3 python3-module-pip-run
+  {{- include "pypi proxy" . | nindent 2 }}
   install:
   - pip3 install -r /requirements.txt
