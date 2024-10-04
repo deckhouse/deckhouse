@@ -1,11 +1,16 @@
 {{ $memcachedExporterVersion := "0.14.4" }}
+{{- $source := "https://github.com" }}
+{{- if $.DistroPackagesProxy }}
+  {{- $source = printf "http://%s/repository/github-com" $.DistroPackagesProxy }}
+{{- end }}
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: src-artifact
 shell:
   install:
+  - git clone --depth 1 --branch v{{ $memcachedExporterVersion }} {{ .SOURCE_REPO }}/prometheus/memcached_exporter.git /src
   - cd /src
-  - git clone --depth 1 --branch v{{ $memcachedExporterVersion }} {{ .SOURCE_REPO }}/prometheus/memcached_exporter.git .
+  - sed -i 's|https://github.com|{{ $source }}|g' ./Makefile.common
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-builder
 from: {{ .Images.BASE_GOLANG_23_BULLSEYE }}
