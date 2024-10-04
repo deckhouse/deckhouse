@@ -56,6 +56,17 @@ function _enable_kubelet_service() {
   bb-flag-set kubelet-need-restart
 }
 
+virtualization_level="0"
+virtualization_check_file="/sys/devices/virtual/dmi/id/product_sku"
+if [ -f "$virtualization_check_file" ]; then
+  read -n 1 first_char < "$virtualization_check_file"
+
+  if [[ "$first_char" =~ ^[0-9]$ ]]; then
+        virtualization_level="$first_char"
+  fi
+fi
+echo "result: $virtualization_level"
+
 # Generate kubelet unit
 bb-sync-file /etc/systemd/system/kubelet.service.d/10-deckhouse.conf - << EOF
 [Service]
@@ -70,6 +81,7 @@ ExecStart=/opt/deckhouse/bin/d8-kubelet-forker /opt/deckhouse/bin/kubelet \\
 {{- end }}
     --node-labels=node.deckhouse.io/group={{ .nodeGroup.name }} \\
     --node-labels=node.deckhouse.io/type={{ .nodeGroup.nodeType }} \\
+    --node-labels=node.deckhouse.io/dvp-nesting-level=${virtualization_level} \\
     --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf \\
     --config=/var/lib/kubelet/config.yaml \\
     --kubeconfig=/etc/kubernetes/kubelet.conf \\

@@ -1,3 +1,4 @@
+{{- $baseVXLANPort := 4298 }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -60,7 +61,8 @@ data:
     {{- fail (printf "unknown mode %s" .Values.cniCilium.internal.mode) }}
   {{- end }}
 
-  tunnel-port: {{ .Values.cniCilium.internal.tunnelPortVXLAN | quote }}
+  {{ $tunnelPort := add $baseVXLANPort .Values.global.discovery.dvpNestingLevel }}
+  tunnel-port: {{ $tunnelPort | quote }}
 
   {{- if has "virtualization" .Values.global.enabledModules }}
   enable-ip-masq-agent: "true"
