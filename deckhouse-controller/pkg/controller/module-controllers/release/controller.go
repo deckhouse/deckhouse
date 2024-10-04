@@ -186,7 +186,7 @@ func (c *moduleReleaseReconciler) deleteReconcile(ctx context.Context, mr *v1alp
 
 	// deleted release
 	// also cleanup the filesystem
-	modulePath := path.Join(c.downloadedModulesDir, mr.Spec.ModuleName, "v"+mr.Spec.Version.String())
+	modulePath := path.Join(c.downloadedModulesDir, mr.GetModuleName(), "v"+mr.Spec.Version.String())
 
 	err := os.RemoveAll(modulePath)
 	if err != nil {
@@ -195,39 +195,42 @@ func (c *moduleReleaseReconciler) deleteReconcile(ctx context.Context, mr *v1alp
 
 	if mr.Status.Phase == v1alpha1.PhaseDeployed {
 		extenders.DeleteConstraints(mr.GetModuleName())
-		symlinkPath := filepath.Join(c.downloadedModulesDir, "modules", fmt.Sprintf("%d-%s", mr.Spec.Weight, mr.Spec.ModuleName))
+		symlinkPath := filepath.Join(c.downloadedModulesDir, "modules", fmt.Sprintf("%d-%s", mr.Spec.Weight, mr.GetModuleName()))
 		err := os.RemoveAll(symlinkPath)
 		if err != nil {
-			return ctrl.Result{Requeue: true}, err
+			return res, err
 		}
 		// TODO(yalosev): we have to disable module here somehow.
 		// otherwise, hooks from file system will fail
 
 		// restart controller for completely remove module
 		// TODO: we need another solution for remove module from modulemanager
+
 		c.emitRestart("a module release was removed")
 	}
 
 	if !controllerutil.ContainsFinalizer(mr, fsReleaseFinalizer) {
-		return ctrl.Result{}, nil
+		return res, nil
 	}
 
 	controllerutil.RemoveFinalizer(mr, fsReleaseFinalizer)
 	err = c.client.Update(ctx, mr)
 	if err != nil {
-		return ctrl.Result{Requeue: true}, err
+		return res, err
 	}
 
-	return ctrl.Result{}, nil
+	return res, nil
 }
 
 func (c *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
 	switch mr.Status.Phase {
 	case "":
 		mr.Status.Phase = v1alpha1.PhasePending
 		mr.Status.TransitionTime = metav1.NewTime(c.dc.GetClock().Now().UTC())
-		if e := c.client.Status().Update(ctx, mr); e != nil {
-			return ctrl.Result{Requeue: true}, e
+		if err := c.client.Status().Update(ctx, mr); err != nil {
+			return res, err
 		}
 
 		return ctrl.Result{Requeue: true}, nil // process to the next phase
@@ -237,11 +240,11 @@ func (c *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, m
 			// update labels
 			addLabels(mr, map[string]string{"status": strings.ToLower(mr.Status.Phase)})
 			if err := c.client.Update(ctx, mr); err != nil {
-				return ctrl.Result{Requeue: true}, err
+				return res, err
 			}
 		}
 
-		return ctrl.Result{}, nil
+		return res, nil
 
 	case v1alpha1.PhaseDeployed:
 		return c.reconcileDeployedRelease(ctx, mr)
@@ -250,7 +253,7 @@ func (c *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, m
 	// if ModulePullOverride is set, don't process pending release, to avoid fs override
 	exists, err := c.isModulePullOverrideExists(ctx, mr.GetModuleSource(), mr.Spec.ModuleName)
 	if err != nil {
-		return ctrl.Result{Requeue: true}, err
+		return res, err
 	}
 
 	if exists {
@@ -1115,11 +1118,13 @@ func createOrUpdateModuleDocumentationCR(
 					Checksum: moduleChecksum,
 				},
 			}
+
 			err = client.Create(ctx, &md)
 			if err != nil {
 				return err
 			}
 		}
+
 		return err
 	}
 

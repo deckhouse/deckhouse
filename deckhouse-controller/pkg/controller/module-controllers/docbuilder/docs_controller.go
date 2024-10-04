@@ -52,6 +52,8 @@ import (
 	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
 )
 
+const defaultDocumentationCheckInterval = 10 * time.Second
+
 type moduleDocumentationReconciler struct {
 	client               client.Client
 	downloadedModulesDir string
@@ -291,7 +293,7 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 	}
 
 	if mdCopy.Status.RenderResult != v1alpha1.ResultRendered {
-		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+		return ctrl.Result{RequeueAfter: defaultDocumentationCheckInterval}, nil
 	}
 
 	return res, nil
