@@ -329,6 +329,41 @@ entries:
                   url: /modules/030-cloud-provider-vsphere/examples.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-vsphere/faq.html
+            - title: Dynamix
+              d8Revision: ee
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/030-cloud-provider-dynamix/
+                - title:
+                    en: Installation
+                    ru: Установка
+                  folders:
+                    - title:
+                        en: Preparing environment
+                        ru: Подготовка окружения
+                      url: /modules/030-cloud-provider-dynamix/environment.html
+                    - title:
+                        en: Layouts
+                        ru: Схемы размещения
+                      url: /modules/030-cloud-provider-dynamix/layouts.html
+                    - title:
+                        en: Provider configuration
+                        ru: Настройка провайдера
+                      url: /modules/030-cloud-provider-dynamix/cluster_configuration.html
+                - title:
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/030-cloud-provider-dynamix/configuration.html
+                    - title: Custom Resources
+                      url: /modules/030-cloud-provider-dynamix/cr.html
+                - title: FAQ
+                  url: /modules/030-cloud-provider-dynamix/faq.html
             - title: VMware Cloud Director
               d8Revision: ee
               featureStatus: experimental
