@@ -144,6 +144,8 @@ func NewModuleReleaseController(
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.ModuleRelease{}).
+		// for reconcile documentation if accidently removed
+		Owns(&v1alpha1.ModuleDocumentation{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
 		Complete(ctr)
 }
@@ -180,13 +182,15 @@ func (c *moduleReleaseReconciler) restartLoop(ctx context.Context) {
 
 // only ModuleRelease with active finalizer can get here, we have to remove the module on filesystem and remove the finalizer
 func (c *moduleReleaseReconciler) deleteReconcile(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
 	// deleted release
 	// also cleanup the filesystem
 	modulePath := path.Join(c.downloadedModulesDir, mr.Spec.ModuleName, "v"+mr.Spec.Version.String())
 
 	err := os.RemoveAll(modulePath)
 	if err != nil {
-		return ctrl.Result{Requeue: true}, err
+		return res, err
 	}
 
 	if mr.Status.Phase == v1alpha1.PhaseDeployed {
@@ -586,17 +590,15 @@ func (c *moduleReleaseReconciler) getReleasePolicy(sourceName, moduleName string
 }
 
 func (c *moduleReleaseReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
 	// Get the ModuleRelease resource with this name
 	mr := new(v1alpha1.ModuleRelease)
 	err := c.client.Get(ctx, types.NamespacedName{Name: request.Name}, mr)
 	if err != nil {
 		// The ModuleRelease resource may no longer exist, in which case we stop
 		// processing.
-		if apierrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-
-		return ctrl.Result{Requeue: true}, err
+		return res, client.IgnoreNotFound(err)
 	}
 
 	if !mr.DeletionTimestamp.IsZero() {
