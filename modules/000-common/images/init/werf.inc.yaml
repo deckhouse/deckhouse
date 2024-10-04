@@ -9,7 +9,7 @@ import:
   before: setup
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_ALPINE }}
+from: {{ .Images.BASE_ALT_P11 }}
 git:
 - add: /tools/dev_images/additional_tools/alt/binary_replace.sh
   to: /binary_replace.sh
@@ -17,8 +17,6 @@ git:
     install:
     - '**/*'
 shell:
-  beforeInstall:
-  - apk add --no-cache bash
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
   
