@@ -37,7 +37,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -101,7 +101,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 	ctr, err := controller.New("deckhouse-release", mgr, controller.Options{
 		MaxConcurrentReconciles: 1,
 		CacheSyncTimeout:        3 * time.Minute,
-		NeedLeaderElection:      pointer.Bool(false),
+		NeedLeaderElection:      ptr.To(false),
 		Reconciler:              r,
 	})
 	if err != nil {

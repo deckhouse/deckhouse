@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -80,7 +80,7 @@ func ParseConnectionConfig(
 		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
 			})
 			continue
@@ -122,7 +122,7 @@ func ParseConnectionConfig(
 
 		if len(errMessages) != 0 {
 			errs.Append(ErrKindValidationFailed, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Group:    gvk.Group,
 				Version:  gvk.Version,
 				Kind:     gvk.Kind,

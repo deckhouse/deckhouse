@@ -30,7 +30,7 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 //go:generate go run ./build.go --edition all
@@ -361,8 +361,8 @@ func (e *executor) executeEdition(editionName string) {
 		bi := ed.BuildIncludes
 		if bi == nil {
 			bi = &buildIncludes{
-				SkipCandi:   pointer.Bool(false),
-				SkipModules: pointer.Bool(false),
+				SkipCandi:   ptr.To(false),
+				SkipModules: ptr.To(false),
 			}
 		}
 

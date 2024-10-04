@@ -23,7 +23,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
@@ -34,9 +34,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "ingressControllers",
 			ApiVersion:                   "deckhouse.io/v1",
 			Kind:                         "IngressNginxController",
-			WaitForSynchronization:       pointer.Bool(true),
-			ExecuteHookOnEvents:          pointer.Bool(true),
-			ExecuteHookOnSynchronization: pointer.Bool(true),
+			WaitForSynchronization:       ptr.To(true),
+			ExecuteHookOnEvents:          ptr.To(true),
+			ExecuteHookOnSynchronization: ptr.To(true),
 			FilterFunc:                   applySpecControllerFilter,
 		},
 	},

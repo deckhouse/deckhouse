@@ -24,7 +24,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 )
 
@@ -60,7 +60,7 @@ func RegisterHook(params *HookParams) bool {
 						MatchNames: []string{secretNs},
 					},
 				},
-				ExecuteHookOnEvents: pointer.Bool(false),
+				ExecuteHookOnEvents: ptr.To(false),
 				FilterFunc:          providerConfigurationSecretFilter,
 			},
 			{
@@ -75,7 +75,7 @@ func RegisterHook(params *HookParams) bool {
 						MatchNames: []string{"d8-system"},
 					},
 				},
-				ExecuteHookOnEvents: pointer.Bool(false),
+				ExecuteHookOnEvents: ptr.To(false),
 				FilterFunc:          installDataCMFilter,
 			},
 		},

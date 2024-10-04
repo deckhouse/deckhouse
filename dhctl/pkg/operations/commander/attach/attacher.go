@@ -22,7 +22,7 @@ import (
 	"os"
 
 	"github.com/google/uuid"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
@@ -99,7 +99,7 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 		return nil, fmt.Errorf("unable to scan cluster: %w", err)
 	}
 
-	if pointer.BoolDeref(i.Params.ScanOnly, true) {
+	if ptr.Deref(i.Params.ScanOnly, true) {
 		if err = i.PhasedExecutionContext.CompletePhaseAndPipeline(stateCache, PhaseData{
 			ScanResult: scanResult,
 		}); err != nil {

@@ -22,7 +22,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 	v1alpha1 "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks/internal/apis"
@@ -112,7 +112,7 @@ func (sp *securityPolicy) preprocesSecurityPolicy() {
 		}
 	}
 	if sp.Spec.Policies.AutomountServiceAccountToken == nil {
-		sp.Spec.Policies.AutomountServiceAccountToken = pointer.Bool(true)
+		sp.Spec.Policies.AutomountServiceAccountToken = ptr.To(true)
 	}
 
 	// 'Unmasked' procMount doesn't require a constraint

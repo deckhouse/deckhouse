@@ -20,7 +20,7 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -49,7 +49,7 @@ var _ = Describe("Modules :: prometheus :: hooks :: metrics_storage_retention ::
 				Name:   "d8_prometheus_storage_retention_days",
 				Group:  "prometheus_disk_hook",
 				Action: "set",
-				Value:  pointer.Float64(14.0),
+				Value:  ptr.To(14.0),
 				Labels: map[string]string{
 					"prometheus": "main",
 				},
@@ -59,7 +59,7 @@ var _ = Describe("Modules :: prometheus :: hooks :: metrics_storage_retention ::
 				Name:   "d8_prometheus_storage_retention_days",
 				Group:  "prometheus_disk_hook",
 				Action: "set",
-				Value:  pointer.Float64(300.0),
+				Value:  ptr.To(300.0),
 				Labels: map[string]string{
 					"prometheus": "longterm",
 				},

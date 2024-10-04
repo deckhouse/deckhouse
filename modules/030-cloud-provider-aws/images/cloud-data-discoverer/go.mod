@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go v1.44.228
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.9.0
-	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
+	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
 )
 
 require (

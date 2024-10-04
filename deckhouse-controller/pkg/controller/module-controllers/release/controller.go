@@ -44,7 +44,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -135,7 +135,7 @@ func NewModuleReleaseController(
 	ctr, err := controller.New("module-release", mgr, controller.Options{
 		MaxConcurrentReconciles: 3,
 		CacheSyncTimeout:        3 * time.Minute,
-		NeedLeaderElection:      pointer.Bool(false),
+		NeedLeaderElection:      ptr.To(false),
 		Reconciler:              c,
 	})
 	if err != nil {
@@ -338,7 +338,7 @@ func (c *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 		Kind:       v1alpha1.ModuleReleaseGVK.Kind,
 		Name:       mr.GetName(),
 		UID:        mr.GetUID(),
-		Controller: pointer.Bool(true),
+		Controller: ptr.To(true),
 	}
 
 	err = createOrUpdateModuleDocumentationCR(ctx, c.client, mr.GetModuleName(), moduleVersion, checksum, modulePath, mr.GetModuleSource(), ownerRef)

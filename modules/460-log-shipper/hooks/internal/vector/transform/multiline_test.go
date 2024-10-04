@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
@@ -35,16 +35,16 @@ func Test_processMultilineRegex(t *testing.T) {
 		{
 			name: "notRegex",
 			parserRegex: &v1alpha1.ParserRegex{
-				NotRegex: pointer.String("^notRegex"),
+				NotRegex: ptr.To("^notRegex"),
 			},
-			want: pointer.String("matched, err = match(.message, r'^notRegex');\nif err != null {\n    true;\n} else {\n    !matched;\n}"),
+			want: ptr.To("matched, err = match(.message, r'^notRegex');\nif err != null {\n    true;\n} else {\n    !matched;\n}"),
 		},
 		{
 			name: "regex",
 			parserRegex: &v1alpha1.ParserRegex{
-				Regex: pointer.String("^regex"),
+				Regex: ptr.To("^regex"),
 			},
-			want: pointer.String("matched, err = match(.message, r'^regex');\nif err != null {\n    false;\n} else {\n    matched;\n}"),
+			want: ptr.To("matched, err = match(.message, r'^regex');\nif err != null {\n    false;\n} else {\n    matched;\n}"),
 		},
 		{
 			name:        "nil",
@@ -59,8 +59,8 @@ func Test_processMultilineRegex(t *testing.T) {
 		{
 			name: "not::nil::regex::and::notRegex",
 			parserRegex: &v1alpha1.ParserRegex{
-				Regex:    pointer.String("^regex"),
-				NotRegex: pointer.String("^notRegex"),
+				Regex:    ptr.To("^regex"),
+				NotRegex: ptr.To("^notRegex"),
 			},
 			wantErr: "must be set one of regex or notRegex",
 		},
@@ -94,10 +94,10 @@ func Test_processCustomMultiLIneTransform(t *testing.T) {
 			name: "not::nil::startsWhen::and::endsWhen",
 			multilineCustomConfig: v1alpha1.MultilineParserCustom{
 				StartsWhen: &v1alpha1.ParserRegex{
-					Regex: pointer.String("startsWhen"),
+					Regex: ptr.To("startsWhen"),
 				},
 				EndsWhen: &v1alpha1.ParserRegex{
-					NotRegex: pointer.String("endsWhen"),
+					NotRegex: ptr.To("endsWhen"),
 				},
 			},
 			wantErr: "provide one of endsWhen or startsWhen in multilineParser.custom",
@@ -106,7 +106,7 @@ func Test_processCustomMultiLIneTransform(t *testing.T) {
 			name: "not::nil::startsWhen",
 			multilineCustomConfig: v1alpha1.MultilineParserCustom{
 				StartsWhen: &v1alpha1.ParserRegex{
-					Regex: pointer.String("startsWhen"),
+					Regex: ptr.To("startsWhen"),
 				},
 			},
 			expected: map[string]interface{}{
@@ -117,7 +117,7 @@ func Test_processCustomMultiLIneTransform(t *testing.T) {
 			name: "not::nil::endsWhen",
 			multilineCustomConfig: v1alpha1.MultilineParserCustom{
 				EndsWhen: &v1alpha1.ParserRegex{
-					NotRegex: pointer.String("endsWhen"),
+					NotRegex: ptr.To("endsWhen"),
 				},
 			},
 			expected: map[string]interface{}{

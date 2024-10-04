@@ -20,7 +20,7 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -130,7 +130,7 @@ spec:
 					"name": "test-1",
 					"url":  "http://test1-example.com/abc",
 				},
-				Value: pointer.Float64(1.0),
+				Value: ptr.To(1.0),
 				Group: "deckhouse_exported_domains",
 			}))
 			Expect(ops[2]).To(BeEquivalentTo(operation.MetricOperation{
@@ -141,7 +141,7 @@ spec:
 					"name": "test-2",
 					"url":  "http://test1-example.com%2Fabc/abc",
 				},
-				Value: pointer.Float64(1.0),
+				Value: ptr.To(1.0),
 				Group: "deckhouse_exported_domains",
 			}))
 			Expect(ops[3]).To(BeEquivalentTo(operation.MetricOperation{
@@ -152,7 +152,7 @@ spec:
 					"name": "test 3",
 					"url":  "http://test3-example.com/abc/def",
 				},
-				Value: pointer.Float64(1.0),
+				Value: ptr.To(1.0),
 				Group: "deckhouse_exported_domains",
 			}))
 			Expect(ops[4]).To(BeEquivalentTo(operation.MetricOperation{
@@ -163,7 +163,7 @@ spec:
 					"name": "test@4",
 					"url":  "https://test4-example.com",
 				},
-				Value: pointer.Float64(1.0),
+				Value: ptr.To(1.0),
 				Group: "deckhouse_exported_domains",
 			}))
 		})

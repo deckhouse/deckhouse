@@ -19,7 +19,7 @@ package hooks
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -101,7 +101,7 @@ status:
 		ok := false
 		for _, m := range metrics {
 			if m.Name == name {
-				Expect(m.Value).To(Equal(pointer.Float64(expected)))
+				Expect(m.Value).To(Equal(ptr.To(expected)))
 				Expect(m.Labels).To(HaveKey("node_group_name"))
 				Expect(m.Labels["node_group_name"]).To(Equal("worker"))
 

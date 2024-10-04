@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -369,7 +369,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 			Name:   istioPodMetadataMetricName,
 			Group:  metadataExporterMetricsGroup,
 			Action: "set",
-			Value:  pointer.Float64(1.0),
+			Value:  ptr.To(1.0),
 			Labels: map[string]string{
 				"namespace":            nsName,
 				"dataplane_pod":        podName,

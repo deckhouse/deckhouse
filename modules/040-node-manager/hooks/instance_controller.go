@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8stypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/clusterapi"
 	mcmv1alpha1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
@@ -313,8 +313,8 @@ func newInstance(machine *machineForInstance, ng *nodeGroupForInstance) *d8v1alp
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion:         "deckhouse.io/v1",
-					BlockOwnerDeletion: pointer.Bool(false),
-					Controller:         pointer.Bool(false),
+					BlockOwnerDeletion: ptr.To(false),
+					Controller:         ptr.To(false),
 					Kind:               "NodeGroup",
 					Name:               ng.Name,
 					UID:                ng.UID,

@@ -25,7 +25,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/tidwall/gjson"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/scheduler"
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
@@ -53,8 +53,8 @@ var _ = sdk.RegisterFunc(
 				ApiVersion:                   "v1",
 				Kind:                         "Node",
 				FilterFunc:                   snapshot.NewNode,
-				ExecuteHookOnSynchronization: pointer.Bool(false),
-				WaitForSynchronization:       pointer.Bool(false),
+				ExecuteHookOnSynchronization: ptr.To(false),
+				WaitForSynchronization:       ptr.To(false),
 			},
 			{
 				Name:              "statefulsets",
@@ -64,9 +64,9 @@ var _ = sdk.RegisterFunc(
 				LabelSelector:     labelSelector,
 				FilterFunc:        snapshot.NewStatefulSet,
 
-				ExecuteHookOnEvents:          pointer.Bool(false),
-				ExecuteHookOnSynchronization: pointer.Bool(false),
-				WaitForSynchronization:       pointer.Bool(false),
+				ExecuteHookOnEvents:          ptr.To(false),
+				ExecuteHookOnSynchronization: ptr.To(false),
+				WaitForSynchronization:       ptr.To(false),
 			},
 			{
 				Name:              "pods",
@@ -76,9 +76,9 @@ var _ = sdk.RegisterFunc(
 				LabelSelector:     labelSelector,
 				FilterFunc:        snapshot.NewPod,
 
-				ExecuteHookOnEvents:          pointer.Bool(false),
-				ExecuteHookOnSynchronization: pointer.Bool(false),
-				WaitForSynchronization:       pointer.Bool(false),
+				ExecuteHookOnEvents:          ptr.To(false),
+				ExecuteHookOnSynchronization: ptr.To(false),
+				WaitForSynchronization:       ptr.To(false),
 			},
 			{
 				Name:              "pdb",
@@ -88,17 +88,17 @@ var _ = sdk.RegisterFunc(
 				LabelSelector:     labelSelector,
 				FilterFunc:        snapshot.NewDisruption,
 
-				ExecuteHookOnEvents:          pointer.Bool(false),
-				ExecuteHookOnSynchronization: pointer.Bool(false),
-				WaitForSynchronization:       pointer.Bool(false),
+				ExecuteHookOnEvents:          ptr.To(false),
+				ExecuteHookOnSynchronization: ptr.To(false),
+				WaitForSynchronization:       ptr.To(false),
 			},
 			{
 				Name:                         "default_sc",
 				ApiVersion:                   "storage.k8s.io/v1",
 				Kind:                         "StorageClass",
 				FilterFunc:                   snapshot.NewStorageClass,
-				ExecuteHookOnSynchronization: pointer.Bool(false),
-				WaitForSynchronization:       pointer.Bool(false),
+				ExecuteHookOnSynchronization: ptr.To(false),
+				WaitForSynchronization:       ptr.To(false),
 			},
 			{
 				Name:              "pvc",
@@ -108,7 +108,7 @@ var _ = sdk.RegisterFunc(
 				LabelSelector:     labelSelector,
 				FilterFunc:        snapshot.NewPvcTermination,
 
-				ExecuteHookOnSynchronization: pointer.Bool(false),
+				ExecuteHookOnSynchronization: ptr.To(false),
 			},
 		},
 	},
