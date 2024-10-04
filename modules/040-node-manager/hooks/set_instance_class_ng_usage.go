@@ -175,13 +175,13 @@ type usedInstanceClass struct {
 }
 
 type usedInstanceClassWithConsumers struct {
-	UsedInstanceClass usedInstanceClass
+	UsedInstanceClass  usedInstanceClass
 	NodeGroupConsumers []string
 }
 
 type ngUsedInstanceClass struct {
 	UsedInstanceClass usedInstanceClass
-	NodeGroupName string
+	NodeGroupName     string
 }
 
 func applyUsedInstanceClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
