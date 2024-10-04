@@ -1018,8 +1018,8 @@ k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 h1:aVUu9fTY98ivBPKR9Y5w/A
 k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00/go.mod h1:AsvuZPBlUDVuCdzJ87iajxtXuR9oktsTctW/R9wwouA=
 k8s.io/kubectl v0.29.0 h1:Oqi48gXjikDhrBF67AYuZRTcJV4lg2l42GmvsP7FmYI=
 k8s.io/kubectl v0.29.0/go.mod h1:0jMjGWIcMIQzmUaMgAzhSELv5WtHo2a8pq67DtviAJs=
-k8s.io/utils v0.0.0-20230726121419-3b25d923346b h1:sgn3ZU783SCgtaSJjpcVVlRqd6GSnlTLKgpAAttJvpI=
-k8s.io/utils v0.0.0-20230726121419-3b25d923346b/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
+k8s.io/utils v0.0.0-20240921022957-49e7df575cb6 h1:MDF6h2H/h4tbzmtIKTuctcwZmY0tY9mD9fNT47QO6HI=
+k8s.io/utils v0.0.0-20240921022957-49e7df575cb6/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
 oras.land/oras-go v1.2.6 h1:z8cmxQXBU8yZ4mkytWqXfo6tZcamPwjsuxYU81xJ8Lk=
 oras.land/oras-go v1.2.6/go.mod h1:OVPc1PegSEe/K8YiLfosrlqlqTN9PUyFvOw5Y9gwrT8=
 sigs.k8s.io/controller-runtime v0.16.3 h1:2TuvuokmfXvDUamSx1SuAOO3eTyye+47mJCigwG62c4=

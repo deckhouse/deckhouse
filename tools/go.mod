@@ -13,11 +13,7 @@ require (
 	github.com/yuin/goldmark v1.4.13
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.29.8
-	k8s.io/apiextensions-apiserver v0.29.0
-	k8s.io/apimachinery v0.29.8
-	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
-	sigs.k8s.io/yaml v1.4.0
+	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
 )
 
 require (
@@ -126,7 +122,6 @@ require (
 	github.com/nishanths/exhaustive v0.1.0 // indirect
 	github.com/nishanths/predeclared v0.2.1 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
-	github.com/onsi/ginkgo/v2 v2.13.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/phayes/checkstyle v0.0.0-20170904204023-bfd46e6a821d // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -188,6 +183,9 @@ require (
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	helm.sh/helm/v3 v3.14.2 // indirect
 	honnef.co/go/tools v0.1.4 // indirect
+	k8s.io/api v0.29.8 // indirect
+	k8s.io/apiextensions-apiserver v0.29.0 // indirect
+	k8s.io/apimachinery v0.29.8 // indirect
 	k8s.io/client-go v0.29.8 // indirect
 	k8s.io/klog/v2 v2.110.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
@@ -197,6 +195,7 @@ require (
 	mvdan.cc/unparam v0.0.0-20210104141923-aac4ce9116a7 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
+	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
 replace (
