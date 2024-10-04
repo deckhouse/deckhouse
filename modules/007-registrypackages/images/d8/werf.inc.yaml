@@ -35,15 +35,18 @@ import:
   add: /src
   to: /src
   before: install
+- artifact: task-artifact
+  add: /task
+  to: /task
+  before: install
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
   - apt-get update && apt-get install libbtrfs-dev -y
   install:
   - export GOPROXY={{ $.GOPROXY }}
-  - go install github.com/go-task/task/v3/cmd/task@v3.39.2
   - cd /src/deckhouse-cli
-  - task build:dist:linux:amd64
+  - /task build:dist:linux:amd64
   - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/d8 /d8
   - mv /src/scripts/* /
   - chmod +x /d8 /install /uninstall
