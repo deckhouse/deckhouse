@@ -31,7 +31,7 @@ shell:
   - git clone --depth 1 --branch tag-{{ $version }}  {{ $.SOURCE_REPO }}/socat.git /src/socat
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_ALT }}
+from: {{ $.Images.BASE_ALT_P11 }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
