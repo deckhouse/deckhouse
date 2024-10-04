@@ -1,9 +1,9 @@
-ARG BASE_ALPINE
+ARG BASE_DISTROLESS
 
 # original kiali
 FROM quay.io/kiali/kiali:v1.67.2@sha256:92fec2b44580519b922d37747114865df4cc4cd51a2fe8342f090c8941e6905d as artifact
 
-FROM $BASE_ALPINE
+FROM $BASE_DISTROLESS
 # get all from original kiali
 COPY --from=artifact /opt/kiali/ /opt/kiali/
 
