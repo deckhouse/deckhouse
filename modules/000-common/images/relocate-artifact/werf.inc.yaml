@@ -11,3 +11,4 @@ shell:
   install:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y glibc-utils
+  - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
