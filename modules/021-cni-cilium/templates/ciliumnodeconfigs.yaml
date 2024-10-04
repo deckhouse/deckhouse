@@ -1,0 +1,17 @@
+{{- if has "virtualization" .Values.global.enabledModules }}
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumNodeConfig
+metadata:
+  name: single-cluster-route-for-vm-nodes
+  namespace: d8-{{ .Chart.Name }}
+  {{ include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  nodeSelector:
+    matchExpressions:
+      - key: node.deckhouse.io/dvp-nesting-level
+        operator: NotIn
+        values: ["0"]
+  defaults:
+    single-cluster-route: "true"
+{{- end }}
