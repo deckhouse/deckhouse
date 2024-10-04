@@ -113,6 +113,8 @@ Inlet `HostWithFailover` подходит для кластеров с одни�
 
 При выделении узлов под мониторинг важно, чтобы на них были быстрые диски. Для этого можно привязать `storageClass` на быстрых дисках ко всем компонентам Deckhouse (глобальный параметр [storageClass](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass)) или выделить отдельный `storageClass` только для компонентов мониторинга (параметры [storageClass](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-storageclass) и [longtermStorageClass](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-longtermstorageclass) модуля `prometheus`).
 
+Если кластер изначально создается с узлами под определенный вид нагрузки (системные узлы, узлы под мониторинг), то для модулей использующих тома постоянного хранилища(например prometheus), рекомендуется сразу явно указывать соответствующий [nodeSelector](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-nodeselector) в ModuleConfig.
+
 ### Системные узлы
 
 {% alert %}

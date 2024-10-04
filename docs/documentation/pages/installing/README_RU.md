@@ -60,6 +60,8 @@ YAML-файл конфигурации установки содержит па�
 
 - `ModuleConfig` — набор ресурсов, содержащих параметры конфигурации [встроенных модулей Deckhouse](../).
 
+Если кластер изначально создается с узлами под определенный вид нагрузки (системные узлы, узлы под мониторинг), то для модулей использующих тома постоянного хранилища(например prometheus), рекомендуется сразу явно указывать соответствующий [nodeSelector](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-nodeselector) в ModuleConfig.
+
 {% offtopic title="Пример файла конфигурации установки..." %}
 
 ```yaml
@@ -125,6 +127,18 @@ spec:
   enabled: true
   settings:
     allowedBundles: ["ubuntu-lts"]
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  version: 2
+  enabled: true
+  # В случае использование выделенных monitoring узлов: 
+  # settings:
+  #   nodeSelector:
+  #     node.deckhouse.io/group: monitoring
 ```
 
 {% endofftopic %}
