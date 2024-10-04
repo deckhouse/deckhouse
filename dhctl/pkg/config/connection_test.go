@@ -77,6 +77,9 @@ func TestParseConnectionConfig(t *testing.T) {
 							Passphrase: "test",
 						},
 					},
+					SSHBastionHost: "158.160.111.65",
+					SSHBastionPort: pointer.Int32(22),
+					SSHBastionUser: "ubuntu",
 				},
 				SSHHosts: []SSHHost{
 					{
@@ -206,6 +209,9 @@ sshAgentPrivateKeys:
 - key: |
     %s
   passphrase: test
+sshBastionHost: 158.160.111.65
+sshBastionPort: 22
+sshBastionUser: ubuntu
 ---
 apiVersion: dhctl.deckhouse.io/v1
 kind: SSHHost
