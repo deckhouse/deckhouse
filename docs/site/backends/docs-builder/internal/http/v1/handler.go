@@ -39,7 +39,7 @@ func NewHandler(docsService *docs.Service) *DocsBuilderHandler {
 	}
 
 	r.HandleFunc("/readyz", h.handleReadyZ)
-	r.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = io.WriteString(w, "OK") })
+	r.HandleFunc("/healthz", h.handleHealthZ)
 
 	r.HandleFunc("/loadDocArchive/{moduleName}/{version}", h.handleUpload).Methods(http.MethodPost)
 	r.HandleFunc("/build", h.handleBuild).Methods(http.MethodPost)
@@ -53,12 +53,18 @@ func NewHandler(docsService *docs.Service) *DocsBuilderHandler {
 
 func (h *DocsBuilderHandler) handleReadyZ(w http.ResponseWriter, _ *http.Request) {
 	if h.docsService.IsReady() {
+		w.WriteHeader(http.StatusOK)
 		_, _ = io.WriteString(w, "ok")
 
 		return
 	}
 
 	http.Error(w, "Waiting for first build", http.StatusInternalServerError)
+}
+
+func (h *DocsBuilderHandler) handleHealthZ(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.WriteString(w, "ok")
 }
 
 func (h *DocsBuilderHandler) handleUpload(w http.ResponseWriter, r *http.Request) {

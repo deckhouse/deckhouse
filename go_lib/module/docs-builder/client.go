@@ -33,9 +33,8 @@ type Client struct {
 }
 
 func (c *Client) SendDocumentation(ctx context.Context, baseAddr string, moduleName, moduleVersion string, docsArchive io.Reader) error {
-	// TODO: deal with RESTfull handler naming
 	url := fmt.Sprintf("%s/api/v1/doc/%s/%s", baseAddr, moduleName, moduleVersion)
-	response, statusCode, err := c.httpPost(ctx, url, docsArchive)
+	response, statusCode, err := c.sendRequest(ctx, http.MethodPost, url, docsArchive)
 	if err != nil {
 		return fmt.Errorf("POST %q: %w", url, err)
 	}
@@ -49,7 +48,7 @@ func (c *Client) SendDocumentation(ctx context.Context, baseAddr string, moduleN
 
 func (c *Client) DeleteDocumentation(ctx context.Context, baseAddr string, moduleName string) error {
 	url := fmt.Sprintf("%s/api/v1/doc/%s", baseAddr, moduleName)
-	response, statusCode, err := c.httpDelete(ctx, url, nil)
+	response, statusCode, err := c.sendRequest(ctx, http.MethodDelete, url, nil)
 	if err != nil {
 		return fmt.Errorf("DELETE %q: %w", url, err)
 	}
@@ -63,7 +62,7 @@ func (c *Client) DeleteDocumentation(ctx context.Context, baseAddr string, modul
 
 func (c *Client) BuildDocumentation(ctx context.Context, docsBuilderBasePath string) error {
 	url := fmt.Sprintf("%s/api/v1/build", docsBuilderBasePath)
-	response, statusCode, err := c.httpPost(ctx, url, nil)
+	response, statusCode, err := c.sendRequest(ctx, http.MethodPost, url, nil)
 	if err != nil {
 		return fmt.Errorf("POST %q: %w", url, err)
 	}
@@ -80,7 +79,7 @@ func (c *Client) CheckBuilderHealth(ctx context.Context, baseAddr string) error 
 	defer cancel()
 
 	url := fmt.Sprintf("%s/healthz", baseAddr)
-	response, statusCode, err := c.httpGet(ctx, url)
+	response, statusCode, err := c.sendRequest(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return fmt.Errorf("GET %q: %w", url, err)
 	}
@@ -92,8 +91,8 @@ func (c *Client) CheckBuilderHealth(ctx context.Context, baseAddr string) error 
 	return nil
 }
 
-func (c *Client) httpPost(ctx context.Context, url string, body io.Reader) ([]byte, int, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
+func (c *Client) sendRequest(ctx context.Context, method string, url string, body io.Reader) ([]byte, int, error) {
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -104,48 +103,6 @@ func (c *Client) httpPost(ctx context.Context, url string, body io.Reader) ([]by
 	}
 	defer res.Body.Close()
 
-	dataBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, res.StatusCode, err
-	}
-
-	return dataBytes, res.StatusCode, nil
-}
-
-func (c *Client) httpGet(ctx context.Context, url string) ([]byte, int, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	res, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer res.Body.Close()
-
-	dataBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, res.StatusCode, err
-	}
-
-	return dataBytes, res.StatusCode, nil
-}
-
-// TODO: repeateble code
-func (c *Client) httpDelete(ctx context.Context, url string, body io.Reader) ([]byte, int, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, body)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	res, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer res.Body.Close()
-
-	// TODO: replace readall with custom struct parse
 	dataBytes, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, res.StatusCode, err
