@@ -1,3 +1,4 @@
+
 ---
 title: "How to start module in the DKP cluster?"
 permalink: en/module-development/run/
@@ -96,7 +97,7 @@ module-two-v1.2.0          Superseded   deckhouse       48d
 module-two-v1.2.1          Superseded   deckhouse       48d              
 module-two-v1.2.3          Deployed     deckhouse       48d              
 module-two-v1.2.4          Superseded   deckhouse       44d              
-module-two-v1.2.5          Pending      deckhouse       44d              Waiting for manual approval
+module-two-v1.2.5          Pending      deckhouse       44d              Waiting for the 'release.deckhouse.io/approved: \"true\"' annotation
 
 ```
 
@@ -116,17 +117,17 @@ kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 Follow these steps to deploy a module from a different module source:
 1. Find out what [update policy](#module-update-policy) is used for the module:
 
-   ```shell
+```shell
    kubectl get mr
-   ```
+```
 
    Look up the `UPDATE POLICY` for the module releases.
 
 2. Before dropping this update policy, make sure there are no releases awaiting to be deployed (in Pending state) that fall under the policy being dropped or modified (or the _labelSelector_ used by the policy no longer matches your module):
 
-   ```shell
+```shell
    kubectl delete mup <POLICY_NAME>
-   ```
+```
 
 3. Create a new [ModuleSource](#module-source) resource.
 
@@ -134,9 +135,9 @@ Follow these steps to deploy a module from a different module source:
 
 5. Confirm that new _ModuleReleases_ for a module are created from a new _ModuleSource_ according to the update policy.
 
-   ```shell
+```shell
    kubectl get mr
-   ```
+```
 
 ## Module update policy
 
@@ -183,35 +184,35 @@ spec:
 
 - Apply the policy to all _ModuleSource_ `deckhouse` modules:
 
-  ```yaml
+```yaml
   moduleReleaseSelector:
     labelSelector:
       matchLabels:
         source: deckhouse
-  ```
+```
 
 - Apply the policy to the `deckhouse-admin` module independently of _ModuleSource_:
 
-  ```yaml
+```yaml
   moduleReleaseSelector:
     labelSelector:
       matchLabels:
         module: deckhouse-admin
-  ```
+```
 
 - Apply the policy to the `deckhouse-admin` module from the `deckhouse` _ModuleSource_:
   
-  ```yaml
+```yaml
   moduleReleaseSelector:
     labelSelector:
       matchLabels:
         module: deckhouse-admin
         source: deckhouse
-  ```
+```
 
 - Apply the policy only to the `deckhouse-admin` and `secrets-store-integration` modules in the `deckhouse` _ModuleSource_:
   
-  ```yaml
+```yaml
   moduleReleaseSelector:
     labelSelector:
       matchExpressions:
@@ -222,11 +223,11 @@ spec:
         - secrets-store-integration
       matchLabels:
         source: deckhouse
-  ```
+```
 
 - Apply the policy to all `deckhouse` _ModuleSource_ modules except for `deckhouse-admin`:
 
-  ```yaml
+```yaml
   moduleReleaseSelector:
     labelSelector:
       matchExpressions:
@@ -236,7 +237,7 @@ spec:
         - deckhouse-admin
       matchLabels:
         source: deckhouse
-  ```
+```
 
 ## Enabling the module
 
@@ -265,15 +266,15 @@ If the module is not in the list, check that [module source](#module-source) is 
 You can enable the module similarly to built-in DKP modules using any of the following methods:
 - Run the command below (specify the name of the module):
 
-  ```shell
+```shell
   kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
-  ```
+```
 
 - Create a `ModuleConfig` resource containing the `enabled: true` parameter and module settings..
 
  Below is an example of a [ModuleConfig](../../cr.html#moduleconfig) that enables and configures the `module-1` module in the cluster:
 
-  ```yaml
+```yaml
   apiVersion: deckhouse.io/v1alpha1
   kind: ModuleConfig
   metadata:
@@ -283,26 +284,26 @@ You can enable the module similarly to built-in DKP modules using any of the fol
     settings:
       parameter: value
     version: 1
-  ```
+```
 
 ### Troubleshooting
 
 If there were errors while enabling a module in the cluster, you can learn about them as follows:
 - View the DKP log:
 
-  ```shell
+```shell
   kubectl -n d8-system logs -l app=deckhouse
-  ```
+```
 
 - View the `ModuleConfig` resource of the module:
 
   Here is an example of the error message for `module-1`:
 
-  ```shell
+```shell
   $ kubectl get moduleconfig module-1
   NAME        ENABLED   VERSION   AGE   MESSAGE
   module-1    true                7s    Ignored: unknown module name
-  ```
+```
 
 Similar to [_DeckhouseRelease_](../../cr.html#deckhouserelease) (a DKP release resource), modules have a [_ModuleRelease_](../../cr.html#modulerelease) resource. DKP creates _ModuleRelease_ resources based on what is stored in the container registry. When troubleshooting module issues, check the module releases available in the cluster as well:
 
@@ -315,7 +316,7 @@ Output example:
 ```shell
 $ kubectl get mr
 NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAGE
-module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for manual approval
+module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for the 'release.deckhouse.io/approved: "true"' annotation
 ```
 
 The example output above illustrates _ModuleRelease_ message when the update mode ([update.mode](../../cr.html#moduleupdatepolicy-v1alpha1-spec-update-mode) of the _ModuleUpdatePolicy_ resource is set to `Manual`. In this case, you must manually confirm the installation of the new module version by adding the `modules.deckhouse.io/approved="true"` annotation to the release:

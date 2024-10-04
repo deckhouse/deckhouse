@@ -1,3 +1,4 @@
+
 ---
 title: "Запуск модуля в кластере"
 permalink: ru/module-development/run/
@@ -97,7 +98,7 @@ module-two-v1.2.0          Superseded   deckhouse       48d
 module-two-v1.2.1          Superseded   deckhouse       48d              
 module-two-v1.2.3          Deployed     deckhouse       48d              
 module-two-v1.2.4          Superseded   deckhouse       44d              
-module-two-v1.2.5          Pending      deckhouse       44d              Waiting for manual approval
+module-two-v1.2.5          Pending      deckhouse       44d              Waiting for the 'release.deckhouse.io/approved: \"true\"' annotation
 
 ```
 
@@ -117,17 +118,17 @@ kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 Если необходимо развернуть модуль из другого источника модулей, выполните следующие шаги:
 1. Определите, под какую [политику обновлений](#политика-обновления-модуля) подпадает модуль:
 
-   ```shell
+```shell
    kubectl get mr
-   ```
+```
 
    Проверьте `UPDATE POLICY` для релизов модуля.
 
 2. Прежде чем удалить эту политику обновления, убедитесь, что нет ожидающих развертывания (в состоянии Pending) релизов, которые подпадают под удаляемую или изменяемую политику (или _labelSelector_, используемый политикой, больше не соответствует вашему модулю):
 
-   ```shell
+```shell
    kubectl delete mup <POLICY_NAME>
-   ```
+```
 
 3. Создайте новый [ресурс ModuleSource](#источник-модулей).
 
@@ -135,9 +136,9 @@ kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 
 5. Проверьте, что новые _ModuleRelease_ для модуля создаются из нового _ModuleSource_ в соответствии с политикой обновления.
 
-   ```shell
+```shell
    kubectl get mr
-   ```
+```
 
 ## Политика обновления модуля
 
@@ -184,35 +185,35 @@ spec:
 
 - Применить политику ко всем модулям _ModuleSource_ `deckhouse`:
 
-  ```yaml
+```yaml
   moduleReleaseSelector:
     labelSelector:
       matchLabels:
         source: deckhouse
-  ```
+```
 
 - Применить политику к модулю `deckhouse-admin` независимо от _ModuleSource_:
 
-  ```yaml
+```yaml
   moduleReleaseSelector:
     labelSelector:
       matchLabels:
         module: deckhouse-admin
-  ```
+```
 
 - Применить политику к модулю `deckhouse-admin` из _ModuleSource_ `deckhouse`:
 
-  ```yaml
+```yaml
   moduleReleaseSelector:
     labelSelector:
       matchLabels:
         module: deckhouse-admin
         source: deckhouse
-  ```
+```
 
 - Применить политику только к модулям `deckhouse-admin` и `secrets-store-integration` в _ModuleSource_ `deckhouse`:
 
-  ```yaml
+```yaml
   moduleReleaseSelector:
     labelSelector:
       matchExpressions:
@@ -223,11 +224,11 @@ spec:
         - secrets-store-integration
       matchLabels:
         source: deckhouse
-  ```
+```
 
 - Применить политику ко всем модулям _ModuleSource_ `deckhouse`, кроме `deckhouse-admin`:
 
-  ```yaml
+```yaml
   moduleReleaseSelector:
     labelSelector:
       matchExpressions:
@@ -237,7 +238,7 @@ spec:
         - deckhouse-admin
       matchLabels:
         source: deckhouse
-  ```
+```
 
 ## Включение модуля в кластере
 
@@ -266,15 +267,15 @@ module-test                           900      Disabled   example
 Включить модуль можно аналогично встроенному модулю DKP любым из следующих способов:
 - Выполнить следующую команду (укажите имя модуля):
 
-  ```shell
+```shell
   kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
-  ```
+```
 
 - Создать ресурс `ModuleConfig` с параметром `enabled: true` и настройками модуля.
 
   Пример [ModuleConfig](../../cr.html#moduleconfig), для включения и настройки модуля `module-1` в кластере:
 
-  ```yaml
+```yaml
   apiVersion: deckhouse.io/v1alpha1
   kind: ModuleConfig
   metadata:
@@ -284,26 +285,26 @@ module-test                           900      Disabled   example
     settings:
       parameter: value
     version: 1
-  ```
+```
 
 ### Если что-то пошло не так
 
 Если при включении модуля в кластере возникли ошибки, то получить информацию о них можно следующими способами:
 - Посмотреть журнал DKP:
 
-  ```shell
+```shell
   kubectl -n d8-system logs -l app=deckhouse
-  ```
+```
 
 - Посмотреть ресурс `ModuleConfig` модуля:
 
   Пример вывода информации об ошибке модуля `module-1`:
 
-  ```shell
+```shell
   $ kubectl get moduleconfig module-1
   NAME        ENABLED   VERSION   AGE   MESSAGE
   module-1    true                7s    Ignored: unknown module name
-  ```
+```
 
 По аналогии [с _DeckhouseRelease_](../../cr.html#deckhouserelease) (ресурсом релиза DKP) у модулей есть аналогичный ресурс — [_ModuleRelease_](../../cr.html#modulerelease). DKP создает ресурсы _ModuleRelease_ исходя из того, что хранится в container registry. При поиске проблем с модулем проверьте также доступные в кластере релизы модуля:
 
@@ -316,7 +317,7 @@ kubectl get mr
 ```shell
 $ kubectl get mr
 NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAGE
-module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for manual approval
+module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for the 'release.deckhouse.io/approved: "true"' annotation
 ```
 
 В примере вывода показан _ModuleRelease_, когда режим обновления (параметр [update.mode](../../cr.html#moduleupdatepolicy-v1alpha1-spec-update-mode) ресурса _ModuleUpdatePolicy_ установлен в `Manual`. В этом случае необходимо вручную подтвердить установку новой версии модуля, установив на релиз аннотацию `modules.deckhouse.io/approved="true"`:
