@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/flant/docs-builder/internal/docs"
-	"github.com/gorilla/mux"
 	"k8s.io/klog/v2"
 )
 
@@ -31,7 +30,7 @@ type DocsBuilderHandler struct {
 }
 
 func NewHandler(docsService *docs.Service) *DocsBuilderHandler {
-	r := mux.NewRouter()
+	r := http.NewServeMux()
 
 	var h = &DocsBuilderHandler{
 		Handler:     r,
@@ -41,12 +40,12 @@ func NewHandler(docsService *docs.Service) *DocsBuilderHandler {
 	r.HandleFunc("/readyz", h.handleReadyZ)
 	r.HandleFunc("/healthz", h.handleHealthZ)
 
-	r.HandleFunc("/loadDocArchive/{moduleName}/{version}", h.handleUpload).Methods(http.MethodPost)
-	r.HandleFunc("/build", h.handleBuild).Methods(http.MethodPost)
+	r.HandleFunc("POST /loadDocArchive/{moduleName}/{version}", h.handleUpload)
+	r.HandleFunc("POST /build", h.handleBuild)
 
-	r.HandleFunc("/api/v1/doc/{moduleName}/{version}", h.handleUpload).Methods(http.MethodPost)
-	r.HandleFunc("/api/v1/doc/{moduleName}", h.handleDelete).Methods(http.MethodDelete)
-	r.HandleFunc("/api/v1/build", h.handleBuild).Methods(http.MethodPost)
+	r.HandleFunc("POST /api/v1/doc/{moduleName}/{version}", h.handleUpload)
+	r.HandleFunc("DELETE /api/v1/doc/{moduleName}", h.handleDelete)
+	r.HandleFunc("POST /api/v1/build", h.handleBuild)
 
 	return h
 }
@@ -74,9 +73,8 @@ func (h *DocsBuilderHandler) handleUpload(w http.ResponseWriter, r *http.Request
 		channels = strings.Split(channelsStr, ",")
 	}
 
-	pathVars := mux.Vars(r)
-	moduleName := pathVars["moduleName"]
-	version := pathVars["version"]
+	moduleName := r.PathValue("moduleName")
+	version := r.PathValue("version")
 
 	klog.Infof("loading %s %s: %s", moduleName, version, channels)
 
@@ -108,8 +106,7 @@ func (h *DocsBuilderHandler) handleDelete(w http.ResponseWriter, r *http.Request
 		channels = strings.Split(channelsStr, ",")
 	}
 
-	pathVars := mux.Vars(r)
-	moduleName := pathVars["moduleName"]
+	moduleName := r.PathValue("moduleName")
 
 	klog.Infof("deleting %s: %s", moduleName, channels)
 	err := h.docsService.Delete(moduleName, channels)
