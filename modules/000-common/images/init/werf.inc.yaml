@@ -17,6 +17,9 @@ git:
     install:
     - '**/*'
 shell:
+  beforeInstall:
+  - apt-get update
+  - apt-get install -y netcat
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
   
