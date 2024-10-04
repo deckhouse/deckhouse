@@ -17,6 +17,7 @@ package docbuilder
 import (
 	"archive/tar"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -28,7 +29,6 @@ import (
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	log "github.com/sirupsen/logrus"
 	coordv1 "k8s.io/api/coordination/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -108,19 +108,20 @@ func NewModuleDocumentationController(mgr manager.Manager, dc dependency.Contain
 }
 
 func (mdr *moduleDocumentationReconciler) enqueueLeaseMapFunc(ctx context.Context, _ client.Object) []reconcile.Request {
-	res := make([]reconcile.Request, 0)
+	requests := make([]reconcile.Request, 0)
 
-	err := retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
-		var mdl v1alpha1.ModuleDocumentationList
-		err := mdr.client.List(ctx, &mdl)
+	err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+		var mdl = new(v1alpha1.ModuleDocumentationList)
+
+		err := mdr.client.List(ctx, mdl)
 		if err != nil {
 			return err
 		}
 
-		res = make([]reconcile.Request, 0, len(mdl.Items))
+		requests = make([]reconcile.Request, 0, len(mdl.Items))
 
 		for _, md := range mdl.Items {
-			res = append(res, reconcile.Request{NamespacedName: types.NamespacedName{Name: md.GetName()}})
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: md.GetName()}})
 		}
 
 		return nil
@@ -129,7 +130,7 @@ func (mdr *moduleDocumentationReconciler) enqueueLeaseMapFunc(ctx context.Contex
 		log.Errorf("create mapping for lease failed: %s", err.Error())
 	}
 
-	return res
+	return requests
 }
 
 const documentationExistsFinalizer = "modules.deckhouse.io/documentation-exists"
@@ -141,18 +142,10 @@ func (mdr *moduleDocumentationReconciler) Reconcile(ctx context.Context, req ctr
 
 	err := mdr.client.Get(ctx, req.NamespacedName, md)
 	if err != nil {
-		// The ModuleSource resource may no longer exist, in which case we stop
-		// processing.
-		if apierrors.IsNotFound(err) {
-			// if source is not exists anymore - drop the checksum cache
-			return res, nil
-		}
-
-		return res, err
+		return res, client.IgnoreNotFound(err)
 	}
 
 	if md.DeletionTimestamp.IsZero() {
-		// TODO: make good finalizer
 		if !controllerutil.ContainsFinalizer(md, documentationExistsFinalizer) {
 			controllerutil.AddFinalizer(md, documentationExistsFinalizer)
 			if err := mdr.client.Update(ctx, md); err != nil {
@@ -166,7 +159,7 @@ func (mdr *moduleDocumentationReconciler) Reconcile(ctx context.Context, req ctr
 			return res, nil
 		}
 
-		// TODO: get addresses from status and update them
+		// get addresses from cluster, not status, because them more actual
 		addrs, err := mdr.getDocsBuilderAddresses(ctx)
 		if err != nil {
 			return res, fmt.Errorf("get docs builder addresses: %w", err)
@@ -177,19 +170,39 @@ func (mdr *moduleDocumentationReconciler) Reconcile(ctx context.Context, req ctr
 			return res, nil
 		}
 
+		now := metav1.NewTime(mdr.dc.GetClock().Now().UTC())
+
 		for _, addr := range addrs {
 			err := mdr.deleteDocumentation(ctx, addr, md.Name)
-			// TODO: change state of resource
-			if err != nil {
-				return res, fmt.Errorf("delete documentation: %w", err)
+			if err == nil {
+				continue
 			}
+
+			delErr := fmt.Errorf("delete documentation: %w", err)
+
+			_, idx := md.GetConditionByAddress(addr)
+			if idx < 0 {
+				continue
+			}
+
+			md.Status.Conditions[idx].Type = v1alpha1.TypeError
+			md.Status.Conditions[idx].Message = delErr.Error()
+			md.Status.Conditions[idx].LastTransitionTime = now
+
+			if err := mdr.client.Status().Update(ctx, md); err != nil {
+				mdr.logger.Errorf("update status when delete documentation: %v", err)
+
+				return res, fmt.Errorf("update status when delete documentation: %w", errors.Join(delErr, err))
+			}
+
+			return res, delErr
 		}
 
 		controllerutil.RemoveFinalizer(md, documentationExistsFinalizer)
 		if err := mdr.client.Update(ctx, md); err != nil {
 			mdr.logger.Errorf("update finalizer: %v", err)
 
-			return res, err
+			return res, fmt.Errorf("update finalizer: %w", err)
 		}
 
 		return res, nil
@@ -199,16 +212,18 @@ func (mdr *moduleDocumentationReconciler) Reconcile(ctx context.Context, req ctr
 }
 
 func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.ModuleDocumentation) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
 	moduleName := md.Name
 	mdr.logger.Infof("Updating documentation for %s module", moduleName)
 	addrs, err := mdr.getDocsBuilderAddresses(ctx)
 	if err != nil {
-		return ctrl.Result{Requeue: true}, fmt.Errorf("get docs builder addresses: %w", err)
+		return res, fmt.Errorf("get docs builder addresses: %w", err)
 	}
 
 	if len(addrs) == 0 {
 		// no endpoints for doc builder
-		return ctrl.Result{}, nil
+		return res, nil
 	}
 
 	pr, pw := io.Pipe()
@@ -224,8 +239,8 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 	mdCopy.Status.Conditions = make([]v1alpha1.ModuleDocumentationCondition, 0, len(addrs))
 
 	for _, addr := range addrs {
-		cond, found := md.GetConditionByAddress(addr)
-		if found && cond.Version == md.Spec.Version && cond.Checksum == md.Spec.Checksum && cond.Type == v1alpha1.TypeRendered {
+		cond, condIdx := md.GetConditionByAddress(addr)
+		if !(condIdx < 0) && cond.Version == md.Spec.Version && cond.Checksum == md.Spec.Checksum && cond.Type == v1alpha1.TypeRendered {
 			// documentation is rendered for this builder
 			mdCopy.Status.Conditions = append(mdCopy.Status.Conditions, cond)
 			rendered++
@@ -272,14 +287,14 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 
 	err = mdr.client.Status().Patch(ctx, mdCopy, client.MergeFrom(md))
 	if err != nil {
-		return ctrl.Result{Requeue: true}, err
+		return res, err
 	}
 
 	if mdCopy.Status.RenderResult != v1alpha1.ResultRendered {
-		return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, nil
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
 
-	return ctrl.Result{}, nil
+	return res, nil
 }
 
 func (mdr *moduleDocumentationReconciler) getDocsBuilderAddresses(ctx context.Context) (addresses []string, err error) {
