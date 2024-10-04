@@ -7,5 +7,4 @@ RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o metadata-
 
 FROM $BASE_DISTROLESS
 COPY --from=artifact /src/metadata-exporter /metadata-exporter
-RUN apk add --no-cache curl; find /var/cache/apk/ -type f -delete
 ENTRYPOINT [ "/metadata-exporter" ]
