@@ -45,7 +45,8 @@ data:
     {{- fail (printf "unknown mode %s" .Values.cniCilium.internal.mode) }}
   {{- end }}
 
-  tunnel-port: {{ .Values.cniCilium.internal.tunnelPortVXLAN | quote }}
+  {{ $tunnelPort := add .Values.cniCilium.internal.tunnelPortVXLAN .Values.global.discovery.dvpNestingLevel }}
+  tunnel-port: {{ $tunnelPort | quote }}
 
   {{- if has "virtualization" .Values.global.enabledModules }}
   enable-ip-masq-agent: "true"
