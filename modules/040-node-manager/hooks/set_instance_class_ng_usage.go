@@ -86,7 +86,7 @@ func filterCloudEphemeralNG(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}
 
 	return ngUsedInstanceClass{
-		usedInstanceClass: usedInstanceClass{
+		UsedInstanceClass: usedInstanceClass{
 			Kind: ng.Spec.CloudInstances.ClassReference.Kind,
 			Name: ng.Spec.CloudInstances.ClassReference.Name,
 		},
@@ -136,7 +136,7 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 
 		usedIC := sn.(ngUsedInstanceClass)
 
-		icNodeConsumers[usedIC.usedInstanceClass] = append(icNodeConsumers[usedIC.usedInstanceClass], usedIC.NodeGroupName)
+		icNodeConsumers[usedIC.UsedInstanceClass] = append(icNodeConsumers[usedIC.UsedInstanceClass], usedIC.NodeGroupName)
 	}
 
 	// find instanceClasses which were unbound from NG (or ng deleted)
@@ -145,8 +145,8 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 		icm := sn.(usedInstanceClassWithConsumers)
 
 		// if not found in NGs - remove consumers
-		if _, ok := icNodeConsumers[icm.usedInstanceClass]; !ok {
-			icNodeConsumers[icm.usedInstanceClass] = []string{}
+		if _, ok := icNodeConsumers[icm.UsedInstanceClass]; !ok {
+			icNodeConsumers[icm.UsedInstanceClass] = []string{}
 		}
 	}
 
@@ -175,12 +175,12 @@ type usedInstanceClass struct {
 }
 
 type usedInstanceClassWithConsumers struct {
-	usedInstanceClass
+	UsedInstanceClass usedInstanceClass
 	NodeGroupConsumers []string
 }
 
 type ngUsedInstanceClass struct {
-	usedInstanceClass
+	UsedInstanceClass usedInstanceClass
 	NodeGroupName string
 }
 
@@ -195,7 +195,7 @@ func applyUsedInstanceClassFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	}
 
 	return usedInstanceClassWithConsumers{
-		usedInstanceClass: usedInstanceClass{
+		UsedInstanceClass: usedInstanceClass{
 			Kind: obj.GetKind(),
 			Name: obj.GetName(),
 		},
