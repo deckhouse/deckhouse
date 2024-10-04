@@ -56,6 +56,7 @@ import:
   before: install
 shell:
   beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache automake autoconf libtool build-base git
   install:
   - cd /src/shell-operator
