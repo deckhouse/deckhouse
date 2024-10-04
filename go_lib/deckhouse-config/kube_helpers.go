@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -139,7 +139,7 @@ func SetModuleConfigEnabledFlag(kubeClient k8s.Client, name string, enabled bool
 			Name: name,
 		},
 		Spec: v1alpha1.ModuleConfigSpec{
-			Enabled: pointer.Bool(enabled),
+			Enabled: ptr.To(enabled),
 		},
 	}
 

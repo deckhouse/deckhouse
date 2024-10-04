@@ -20,7 +20,7 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -149,7 +149,7 @@ var _ = Describe("User-authz hooks :: alert_deprecated_car_spec ::", func() {
 				Name:   "d8_deprecated_car_spec",
 				Group:  "d8_deprecated_car_spec",
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"kind": "ClusterAuthorizationRule",
 					"name": "administrators",
@@ -177,7 +177,7 @@ var _ = Describe("User-authz hooks :: alert_deprecated_car_spec ::", func() {
 				Name:   "d8_deprecated_car_spec",
 				Group:  "d8_deprecated_car_spec",
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"kind": "ClusterAuthorizationRule",
 					"name": "administrators2",
@@ -205,7 +205,7 @@ var _ = Describe("User-authz hooks :: alert_deprecated_car_spec ::", func() {
 				Name:   "d8_deprecated_car_spec",
 				Group:  "d8_deprecated_car_spec",
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"kind": "ClusterAuthorizationRule",
 					"name": "administrators",
@@ -215,7 +215,7 @@ var _ = Describe("User-authz hooks :: alert_deprecated_car_spec ::", func() {
 				Name:   "d8_deprecated_car_spec",
 				Group:  "d8_deprecated_car_spec",
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"kind": "ClusterAuthorizationRule",
 					"name": "administrators2",

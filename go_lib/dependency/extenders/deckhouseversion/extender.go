@@ -27,7 +27,7 @@ import (
 	scherror "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/error"
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/versionmatcher"
 )
@@ -119,10 +119,10 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 	}
 	if err := e.versionMatcher.Validate(name); err != nil {
 		e.logger.Errorf("requirements of the '%s' module are not satisfied: current deckhouse version is not suitable: %s", name, err.Error())
-		return pointer.Bool(false), fmt.Errorf("requirements are not satisfied: current deckhouse version is not suitable: %s", err.Error())
+		return ptr.To(false), fmt.Errorf("requirements are not satisfied: current deckhouse version is not suitable: %s", err.Error())
 	}
 	e.logger.Debugf("requirements of the '%s' module are satisfied", name)
-	return pointer.Bool(true), nil
+	return ptr.To(true), nil
 }
 
 func (e *Extender) ValidateBaseVersion(baseVersion string) (string, error) {
