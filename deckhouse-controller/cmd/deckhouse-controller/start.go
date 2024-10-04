@@ -85,14 +85,12 @@ func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator, logg
 	var identity string
 	podName := os.Getenv("DECKHOUSE_POD")
 	if len(podName) == 0 {
-		log.Info("DECKHOUSE_POD env not set or empty")
-		os.Exit(1)
+		log.Fatal("DECKHOUSE_POD env not set or empty")
 	}
 
 	podIP := os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS")
 	if len(podIP) == 0 {
-		log.Info("ADDON_OPERATOR_LISTEN_ADDRESS env not set or empty")
-		os.Exit(1)
+		log.Fatal("ADDON_OPERATOR_LISTEN_ADDRESS env not set or empty")
 	}
 
 	podNs := os.Getenv("ADDON_OPERATOR_NAMESPACE")
@@ -108,7 +106,7 @@ func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator, logg
 		identity = fmt.Sprintf("%s.%s.%s.pod.%s", podName, strings.ReplaceAll(podIP, ".", "-"), podNs, clusterDomain)
 	}
 
-	err := operator.WithLeaderElector(&leaderelection.LeaderElectionConfig{
+	if err := operator.WithLeaderElector(&leaderelection.LeaderElectionConfig{
 		// Create a leaderElectionConfig for leader election
 		Lock: &resourcelock.LeaseLock{
 			LeaseMeta: v1.ObjectMeta{
@@ -134,22 +132,19 @@ func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator, logg
 			OnStoppedLeading: func() {
 				operator.Logger.Info("Restarting because the leadership was handed over")
 				operator.Stop()
-				os.Exit(1)
+				os.Exit(0)
 			},
 		},
 		ReleaseOnCancel: true,
-	})
-	if err != nil {
+	}); err != nil {
 		operator.Logger.Error("run", slog.String("error", err.Error()))
 	}
 
 	go func() {
 		<-ctx.Done()
 		log.Info("Context canceled received")
-		err := syscall.Kill(1, syscall.SIGUSR2)
-		if err != nil {
-			log.Infof("Couldn't shutdown deckhouse: %s\n", err)
-			os.Exit(1)
+		if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
+			log.Fatalf("Couldn't shutdown deckhouse: %s\n", err)
 		}
 	}()
 
@@ -215,7 +210,7 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator, logger *lo
 	// Block main thread by waiting signals from OS.
 	utils_signal.WaitForProcessInterruption(func() {
 		operator.Stop()
-		os.Exit(1)
+		os.Exit(0)
 	})
 
 	return nil
