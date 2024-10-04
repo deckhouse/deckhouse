@@ -1,4 +1,4 @@
-{{- $binaries := "/bin/sh /bin/chown /bin/chmod /bin/ln /bin/ls /bin/cp /bin/rm /bin/mkdir /bin/nc" }}
+{{- $binaries := "/bin/sh /bin/chown /bin/chmod /bin/ls /bin/cp /bin/rm /bin/mkdir /bin/nc" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
