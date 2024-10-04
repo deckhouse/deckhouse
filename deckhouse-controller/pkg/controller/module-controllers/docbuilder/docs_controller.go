@@ -162,11 +162,11 @@ func (mdr *moduleDocumentationReconciler) Reconcile(ctx context.Context, req ctr
 			}
 		}
 	} else {
-		// TODO: probably we have to delete documentation but we don't have such http handler atm
 		if !controllerutil.ContainsFinalizer(md, documentationExistsFinalizer) {
 			return res, nil
 		}
 
+		// TODO: get addresses from status and update them
 		addrs, err := mdr.getDocsBuilderAddresses(ctx)
 		if err != nil {
 			return res, fmt.Errorf("get docs builder addresses: %w", err)
