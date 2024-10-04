@@ -1,0 +1,24 @@
+{{- $binaries := "/bin/sh /bin/chown /bin/chmod /bin/ln /bin/cp /bin/rm /bin/mkdir /bin/nc" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /relocate
+  to: /
+  before: setup
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_ALPINE }}
+git:
+- add: /tools/dev_images/additional_tools/alt/binary_replace.sh
+  to: /binary_replace.sh
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  beforeInstall:
+  - apk add --no-cache bash
+  install:
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+  
