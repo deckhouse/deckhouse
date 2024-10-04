@@ -117,6 +117,7 @@ defaults:
       type: "pages"
     values:
       d8Revision: ee
+      featureStatus: experimental
   - scope:
       path: "*/030-cloud-provider-vcd"
       type: "pages"

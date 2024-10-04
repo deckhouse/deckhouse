@@ -331,6 +331,7 @@ entries:
                   url: /modules/030-cloud-provider-vsphere/faq.html
             - title: Dynamix
               d8Revision: ee
+              featureStatus: experimental
               folders:
                 - title:
                     en: Description
