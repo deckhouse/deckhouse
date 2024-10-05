@@ -182,7 +182,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("loop until deploy: canary", func() {
-			suite.T().Skip("TODO: use requeue after")
+			suite.T().Skip("TODO: requeue all releases after got deckhouse module config update")
 
 			dc := dependency.NewMockedContainer()
 			dc.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
