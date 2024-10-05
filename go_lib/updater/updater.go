@@ -35,7 +35,11 @@ import (
 )
 
 const (
-	waitingManualApprovalMsg = "Waiting for the 'release.deckhouse.io/approved: \"true\"' annotation"
+	cooldownDelayMsg         = "Release is in cooldown"
+	canaryDelayReasonMsg     = "Release is postponed by canary process"
+	waitingManualApprovalMsg = "Release is waiting for the 'release.deckhouse.io/approved: \"true\"' annotation"
+	outOfWindowMsg           = "Release is waiting for the update window"
+	notificationDelayMsg     = "Release is postponed by notification"
 )
 
 const (
@@ -45,6 +49,36 @@ const (
 	PhaseSuspended  = "Suspended"
 	PhaseSkipped    = "Skipped"
 )
+
+type deployDelayReason byte
+
+const (
+	noDelay deployDelayReason = iota
+	cooldownDelayReason
+	canaryDelayReason
+	manualApprovalRequiredReason
+	outOfWindowReason
+	notificationDelayReason
+)
+
+func (r deployDelayReason) String() string {
+	switch r {
+	case noDelay:
+		return "no delay"
+	case cooldownDelayReason:
+		return cooldownDelayMsg
+	case canaryDelayReason:
+		return canaryDelayReasonMsg
+	case manualApprovalRequiredReason:
+		return waitingManualApprovalMsg
+	case outOfWindowReason:
+		return outOfWindowMsg
+	case notificationDelayReason:
+		return notificationDelayMsg
+	}
+
+	return fmt.Sprintf("deployDelayReason(%d)", byte(r))
+}
 
 type UpdateMode string
 
@@ -136,7 +170,7 @@ func (du *Updater[R]) checkPatchReleaseConditions(release R) error {
 		return nil
 	}
 
-	return du.postponeDeploy(reason, applyTime)
+	return du.postponeDeploy(release, reason, applyTime)
 }
 
 func (du *Updater[R]) sendReleaseNotification(release R, releaseApplyTime time.Time) error {
@@ -219,25 +253,11 @@ func (du *Updater[R]) checkMinorReleaseConditions(release R, updateWindows updat
 		return nil
 	}
 
-	return du.postponeDeploy(delayReason, resultDeployTime)
+	return du.postponeDeploy(release, delayReason, resultDeployTime)
 }
 
-type deployDelayReason byte
-
-const (
-	noDelay deployDelayReason = iota
-	cooldownDelayReason
-	canaryDelayReason
-	manualApprovalRequiredReason
-	outOfWindowReason
-	notificationDelayReason
-)
-
 func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows update.Windows) (releaseApplyTime time.Time, reason deployDelayReason, err error) {
-	var (
-		statusMessage string
-		newApplyAfter time.Time
-	)
+	var newApplyAfter time.Time
 	releaseApplyTime = du.now
 
 	if release.GetApplyNow() {
@@ -250,7 +270,6 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 		if du.now.Before(cooldownUntil) {
 			du.logger.Warnf("Release %s in cooldown", release.GetName())
 			releaseApplyTime, reason = *release.GetCooldownUntil(), cooldownDelayReason
-			statusMessage += "Release is in cooldown "
 		}
 	}
 
@@ -260,7 +279,6 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 		if du.now.Before(applyAfter) {
 			du.logger.Warnf("Release %s is postponed by canary process. Waiting", release.GetName())
 			releaseApplyTime, reason = applyAfter, canaryDelayReason
-			statusMessage += "Release is postponed by canary process "
 		}
 	}
 
@@ -276,17 +294,13 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 
 	if !updateWindows.IsAllowed(releaseApplyTime) {
 		releaseApplyTime, reason = updateWindows.NextAllowedTime(releaseApplyTime), outOfWindowReason
-		statusMessage += "Release is waiting for the update window "
 	}
 
 	// check: release is approved in Manual mode
 	if du.mode != ModeAuto && !release.GetManuallyApproved() {
 		du.logger.Infof("Release %s is waiting for manual approval ", release.GetName())
 		du.metricsUpdater.WaitingManual(release.GetName(), float64(du.totalPendingManualReleases))
-		statusMessage, reason = waitingManualApprovalMsg, manualApprovalRequiredReason
-		if releaseApplyTime != du.now {
-			statusMessage += ". After approval the release will be delayed "
-		}
+		reason = manualApprovalRequiredReason
 	}
 
 	if !newApplyAfter.IsZero() {
@@ -294,29 +308,13 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 		if err != nil {
 			return time.Time{}, 0, fmt.Errorf("patch release %s apply after: %w", release.GetName(), err)
 		}
-
-		return releaseApplyTime, notificationDelayReason, nil
-	}
-
-	if statusMessage != "" {
-		if releaseApplyTime != du.now {
-			statusMessage = fmt.Sprintf("%suntil %s", statusMessage, releaseApplyTime.Format(time.RFC822))
-		}
-
-		err := du.updateStatus(release, statusMessage, PhasePending)
-		if err != nil {
-			return time.Time{}, 0, fmt.Errorf("update release %s status: %w", release.GetName(), err)
-		}
 	}
 
 	return releaseApplyTime, reason, nil
 }
 
 func (du *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTime time.Time, reason deployDelayReason, err error) {
-	var (
-		statusMessage string
-		newApplyAfter time.Time
-	)
+	var newApplyAfter time.Time
 	releaseApplyTime = du.now
 
 	if release.GetApplyNow() {
@@ -329,7 +327,6 @@ func (du *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTim
 		if du.now.Before(applyAfter) {
 			du.logger.Warnf("Release %s is postponed by canary process. Waiting", release.GetName())
 			releaseApplyTime, reason = applyAfter, canaryDelayReason
-			statusMessage += "Release is postponed by canary process "
 		}
 	}
 
@@ -346,27 +343,13 @@ func (du *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTim
 	if du.mode == ModeManual && !release.GetManuallyApproved() {
 		du.logger.Infof("Release %s is waiting for manual approval", release.GetName())
 		du.metricsUpdater.WaitingManual(release.GetName(), float64(du.totalPendingManualReleases))
-		statusMessage, reason = waitingManualApprovalMsg, manualApprovalRequiredReason
-		if releaseApplyTime != du.now {
-			statusMessage += ". After approval the release will be delayed "
-		}
+		reason = manualApprovalRequiredReason
 	}
 
 	if !newApplyAfter.IsZero() {
 		err := du.kubeAPI.PatchReleaseApplyAfter(release, newApplyAfter)
 		if err != nil {
 			return time.Time{}, 0, fmt.Errorf("patch release %s apply after: %w", release.GetName(), err)
-		}
-	}
-
-	if statusMessage != "" {
-		if releaseApplyTime != du.now {
-			statusMessage = fmt.Sprintf("%suntil %s", statusMessage, releaseApplyTime.Format(time.RFC822))
-		}
-
-		err := du.updateStatus(release, statusMessage, PhasePending)
-		if err != nil {
-			return time.Time{}, 0, fmt.Errorf("update release %s status: %w", release.GetName(), err)
 		}
 	}
 
@@ -784,35 +767,30 @@ func (du *Updater[R]) GetSkippedPatchReleases() []R {
 // postponeDeploy returns new NotReadyForDeployError if reason not equal to noDelay and nil otherwise.
 // This function returns an interface so that the caller does not have to check the pointer to the structure for nil
 // in order to return a nil error itself
-func (du *Updater[R]) postponeDeploy(reason deployDelayReason, applyTime time.Time) error {
+func (du *Updater[R]) postponeDeploy(release R, reason deployDelayReason, applyTime time.Time) error {
 	if reason == noDelay {
 		return nil
 	}
 
-	var (
-		message    = "not ready for deploy: "
-		retryDelay time.Duration
-	)
+	var retryDelay time.Duration
 
 	if !applyTime.IsZero() {
 		retryDelay = applyTime.Sub(du.now)
 	}
 
-	switch reason {
-	case cooldownDelayReason:
-		message += fmt.Sprintf("release is in cooldown until %s", applyTime.Format(time.RFC822))
-	case canaryDelayReason:
-		message += fmt.Sprintf("release is postponed by canary process untill %s", applyTime.Format(time.RFC822))
-	case manualApprovalRequiredReason:
-		message += fmt.Sprintf("release is waiting for manual approval")
-	case outOfWindowReason:
-		message += fmt.Sprintf("release is waiting for the update window untill %s", applyTime.Format(time.RFC822))
-	case notificationDelayReason:
-		message += fmt.Sprintf("release is postponed by notification untill %s", applyTime.Format(time.RFC822))
-
-	default:
-		panic(fmt.Errorf("invalid reason: %d", reason))
+	statusMessage := reason.String()
+	if reason == manualApprovalRequiredReason && applyTime != du.now {
+		statusMessage += ". After approval the release will be delayed"
 	}
 
-	return &NotReadyForDeployError{message: message, retryDelay: retryDelay}
+	if applyTime != du.now {
+		statusMessage = fmt.Sprintf("%s until %s", statusMessage, applyTime.Format(time.RFC822))
+	}
+
+	err := du.updateStatus(release, statusMessage, PhasePending)
+	if err != nil {
+		return fmt.Errorf("update release %s status: %w", release.GetName(), err)
+	}
+
+	return NewNotReadyForDeployError(statusMessage, retryDelay)
 }

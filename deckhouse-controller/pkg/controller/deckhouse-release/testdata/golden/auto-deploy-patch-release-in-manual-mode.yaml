@@ -25,7 +25,7 @@ spec:
   version: v1.25.1
 status:
   approved: false
-  message: "Waiting for the 'release.deckhouse.io/approved: \"true\"' annotation"
+  message: 'Release is waiting for the ''release.deckhouse.io/approved: "true"'' annotation'
   phase: Pending
   transitionTime: "2019-10-17T15:33:00Z"
 ---
