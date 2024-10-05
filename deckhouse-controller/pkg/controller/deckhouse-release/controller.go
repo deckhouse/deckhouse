@@ -381,11 +381,6 @@ func (r *deckhouseReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Resu
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	if errors.Is(err, updater.ErrDeployConditionsNotMet) {
-		r.logger.Infoln(err.Error())
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-	}
-
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, fmt.Errorf("apply predicted release: %w", err)
 }
 
