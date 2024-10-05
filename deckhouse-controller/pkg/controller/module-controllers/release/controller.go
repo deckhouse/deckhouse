@@ -544,11 +544,6 @@ func (r *moduleReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result,
 		return ctrl.Result{Requeue: true, RequeueAfter: notReadyErr.RetryDelay()}, nil
 	}
 
-	if errors.Is(err, updater.ErrDeployConditionsNotMet) {
-		r.logger.Infoln(err.Error())
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-	}
-
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, fmt.Errorf("apply predicted release: %w", err)
 }
 

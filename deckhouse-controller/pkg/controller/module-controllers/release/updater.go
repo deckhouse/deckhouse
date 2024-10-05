@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"slices"
 	"strconv"
 	"time"
 
@@ -41,8 +42,9 @@ import (
 func newModuleUpdater(dc dependency.Container, logger logger.Logger, nConfig updater.NotificationConfig, mode string,
 	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string, metricStorage *metric_storage.MetricStorage,
 ) *updater.Updater[*v1alpha1.ModuleRelease] {
+	mUpdater := newMetricsUpdater(metricStorage, enabledModules)
 	return updater.NewUpdater[*v1alpha1.ModuleRelease](dc, logger, nConfig, mode,
-		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(metricStorage),
+		updater.DeckhouseReleaseData{}, true, false, kubeAPI, mUpdater,
 		newSettings(), newWebhookDataSource(logger), enabledModules)
 }
 
@@ -221,12 +223,14 @@ func (k *kubeAPI) updateModuleReleaseDownloadStatistic(ctx context.Context, rele
 }
 
 type metricsUpdater struct {
-	metricStorage *metric_storage.MetricStorage
+	metricStorage  *metric_storage.MetricStorage
+	enabledModules []string
 }
 
-func newMetricsUpdater(metricStorage *metric_storage.MetricStorage) *metricsUpdater {
+func newMetricsUpdater(metricStorage *metric_storage.MetricStorage, enabledModules []string) *metricsUpdater {
 	return &metricsUpdater{
-		metricStorage: metricStorage,
+		enabledModules: enabledModules,
+		metricStorage:  metricStorage,
 	}
 }
 
@@ -234,6 +238,10 @@ func (m *metricsUpdater) ReleaseBlocked(_, _ string) {
 }
 
 func (m *metricsUpdater) WaitingManual(name string, _ float64) {
+	if !slices.Contains(m.enabledModules, name) {
+		return
+	}
+
 	m.metricStorage.GaugeSet("d8_module_release_waiting_manual", 1, map[string]string{"name": name})
 }
 

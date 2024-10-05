@@ -17,11 +17,14 @@ limitations under the License.
 package updater
 
 import (
-	"errors"
 	"time"
 )
 
-var ErrDeployConditionsNotMet = errors.New("deploy conditions not met")
+var ErrDeployConditionsNotMet = NewNotReadyForDeployError("deploy conditions not met", 0)
+
+func NewNotReadyForDeployError(message string, retryDelay time.Duration) *NotReadyForDeployError {
+	return &NotReadyForDeployError{message: message, retryDelay: retryDelay}
+}
 
 type NotReadyForDeployError struct {
 	message    string
@@ -29,7 +32,12 @@ type NotReadyForDeployError struct {
 }
 
 func (n *NotReadyForDeployError) Error() string {
-	return n.message
+	message := "not ready for deploy"
+	if n.message != "" {
+		return ": " + n.message
+	}
+
+	return message
 }
 
 func (n *NotReadyForDeployError) RetryDelay() time.Duration {
