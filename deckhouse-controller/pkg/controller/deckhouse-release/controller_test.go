@@ -206,7 +206,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Loop until deploy: canary", func() {
-		suite.T().Skip("TODO: use requeue after")
+		suite.T().Skip("TODO: requeue all releases after got deckhouse module config update")
 
 		dc := newDependencyContainer(suite.T())
 

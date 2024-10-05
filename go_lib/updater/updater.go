@@ -205,15 +205,6 @@ func (du *Updater[R]) checkMinorReleaseConditions(release R, updateWindows updat
 		}
 	}
 
-	if release.GetApplyNow() {
-		return nil
-	}
-
-	err = du.postponeDeploy(delayReason, resultDeployTime)
-	if err != nil {
-		return err
-	}
-
 	// check: Deckhouse pod is ready
 	if !du.deckhousePodIsReady {
 		du.logger.Info("Deckhouse is not ready. Skipping upgrade")
@@ -224,7 +215,11 @@ func (du *Updater[R]) checkMinorReleaseConditions(release R, updateWindows updat
 		return ErrDeployConditionsNotMet
 	}
 
-	return nil
+	if release.GetApplyNow() {
+		return nil
+	}
+
+	return du.postponeDeploy(delayReason, resultDeployTime)
 }
 
 type deployDelayReason byte
@@ -240,8 +235,8 @@ const (
 
 func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows update.Windows) (releaseApplyTime time.Time, reason deployDelayReason, err error) {
 	var (
-		applyTimeChanged bool
-		statusMessage    string
+		statusMessage string
+		newApplyAfter time.Time
 	)
 	releaseApplyTime = du.now
 
@@ -251,11 +246,11 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 
 	// check: release cooldown
 	if release.GetCooldownUntil() != nil {
-		cooldownUntild := *release.GetCooldownUntil()
-		if du.now.Before(cooldownUntild) {
+		cooldownUntil := *release.GetCooldownUntil()
+		if du.now.Before(cooldownUntil) {
 			du.logger.Warnf("Release %s in cooldown", release.GetName())
 			releaseApplyTime, reason = *release.GetCooldownUntil(), cooldownDelayReason
-			statusMessage = fmt.Sprintf("Release is in cooldown until: %s", release.GetCooldownUntil().Format(time.RFC822))
+			statusMessage += "Release is in cooldown "
 		}
 	}
 
@@ -265,7 +260,7 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 		if du.now.Before(applyAfter) {
 			du.logger.Warnf("Release %s is postponed by canary process. Waiting", release.GetName())
 			releaseApplyTime, reason = applyAfter, canaryDelayReason
-			statusMessage = fmt.Sprintf("Release is postponed until: %s", applyAfter.Format(time.RFC822))
+			statusMessage += "Release is postponed by canary process "
 		}
 	}
 
@@ -275,27 +270,27 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 		if minApplyTime.Before(releaseApplyTime) {
 			minApplyTime = releaseApplyTime
 		} else {
-			releaseApplyTime = minApplyTime
-			applyTimeChanged = true
+			releaseApplyTime, newApplyAfter, reason = minApplyTime, minApplyTime, notificationDelayReason
 		}
 	}
 
 	if !updateWindows.IsAllowed(releaseApplyTime) {
-		releaseApplyTime, applyTimeChanged = updateWindows.NextAllowedTime(releaseApplyTime), true
-		statusMessage = fmt.Sprintf("Release is waiting for the update window: %s", releaseApplyTime.Format(time.RFC822))
+		releaseApplyTime, reason = updateWindows.NextAllowedTime(releaseApplyTime), outOfWindowReason
+		statusMessage += "Release is waiting for the update window "
 	}
 
 	// check: release is approved in Manual mode
 	if du.mode != ModeAuto && !release.GetManuallyApproved() {
-		applyTimeChanged = false // skip patch release apply after
-		du.logger.Infof("Release %s is waiting for manual approval", release.GetName())
+		du.logger.Infof("Release %s is waiting for manual approval ", release.GetName())
 		du.metricsUpdater.WaitingManual(release.GetName(), float64(du.totalPendingManualReleases))
 		statusMessage, reason = waitingManualApprovalMsg, manualApprovalRequiredReason
+		if releaseApplyTime != du.now {
+			statusMessage += ". After approval the release will be delayed "
+		}
 	}
 
-	if applyTimeChanged {
-		releaseApplyTime = updateWindows.NextAllowedTime(releaseApplyTime)
-		err := du.kubeAPI.PatchReleaseApplyAfter(release, releaseApplyTime)
+	if !newApplyAfter.IsZero() {
+		err := du.kubeAPI.PatchReleaseApplyAfter(release, newApplyAfter)
 		if err != nil {
 			return time.Time{}, 0, fmt.Errorf("patch release %s apply after: %w", release.GetName(), err)
 		}
@@ -304,6 +299,10 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 	}
 
 	if statusMessage != "" {
+		if releaseApplyTime != du.now {
+			statusMessage = fmt.Sprintf("%suntil %s", statusMessage, releaseApplyTime.Format(time.RFC822))
+		}
+
 		err := du.updateStatus(release, statusMessage, PhasePending)
 		if err != nil {
 			return time.Time{}, 0, fmt.Errorf("update release %s status: %w", release.GetName(), err)
@@ -315,8 +314,8 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 
 func (du *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTime time.Time, reason deployDelayReason, err error) {
 	var (
-		applyTimeChanged bool
-		statusMessage    string
+		statusMessage string
+		newApplyAfter time.Time
 	)
 	releaseApplyTime = du.now
 
@@ -330,7 +329,7 @@ func (du *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTim
 		if du.now.Before(applyAfter) {
 			du.logger.Warnf("Release %s is postponed by canary process. Waiting", release.GetName())
 			releaseApplyTime, reason = applyAfter, canaryDelayReason
-			statusMessage = fmt.Sprintf("Release is postponed until: %s", applyAfter.Format(time.RFC822))
+			statusMessage += "Release is postponed by canary process "
 		}
 	}
 
@@ -340,28 +339,31 @@ func (du *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTim
 		if minApplyTime.Before(releaseApplyTime) {
 			minApplyTime = releaseApplyTime
 		} else {
-			releaseApplyTime = minApplyTime
-			applyTimeChanged = true
+			releaseApplyTime, newApplyAfter, reason = minApplyTime, minApplyTime, notificationDelayReason
 		}
 	}
 
 	if du.mode == ModeManual && !release.GetManuallyApproved() {
-		applyTimeChanged = false // skip patch release apply after
 		du.logger.Infof("Release %s is waiting for manual approval", release.GetName())
 		du.metricsUpdater.WaitingManual(release.GetName(), float64(du.totalPendingManualReleases))
 		statusMessage, reason = waitingManualApprovalMsg, manualApprovalRequiredReason
+		if releaseApplyTime != du.now {
+			statusMessage += ". After approval the release will be delayed "
+		}
 	}
 
-	if applyTimeChanged {
-		err := du.kubeAPI.PatchReleaseApplyAfter(release, releaseApplyTime)
+	if !newApplyAfter.IsZero() {
+		err := du.kubeAPI.PatchReleaseApplyAfter(release, newApplyAfter)
 		if err != nil {
 			return time.Time{}, 0, fmt.Errorf("patch release %s apply after: %w", release.GetName(), err)
 		}
-
-		return releaseApplyTime, notificationDelayReason, nil
 	}
 
 	if statusMessage != "" {
+		if releaseApplyTime != du.now {
+			statusMessage = fmt.Sprintf("%suntil %s", statusMessage, releaseApplyTime.Format(time.RFC822))
+		}
+
 		err := du.updateStatus(release, statusMessage, PhasePending)
 		if err != nil {
 			return time.Time{}, 0, fmt.Errorf("update release %s status: %w", release.GetName(), err)

@@ -25,7 +25,7 @@ spec:
   version: v1.26.0
 status:
   approved: false
-  message: 'Release is waiting for the update window: 21 Oct 19 08:00 UTC'
+  message: Release is waiting for the update window until 21 Oct 19 08:00 UTC
   phase: Pending
   transitionTime: "2019-10-17T15:33:00Z"
 ---
