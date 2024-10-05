@@ -208,6 +208,9 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	deckhousePodTemplate := apiv1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: deckhouseDeployment.Spec.Selector.MatchLabels,
+			Annotations: map[string]string{
+				"kubectl.kubernetes.io/default-container": "deckhouse",
+			},
 		},
 		Spec: apiv1.PodSpec{
 			HostNetwork:        true,
