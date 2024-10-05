@@ -360,7 +360,7 @@ apiVersions:
 
                 If the value specified in `replicas` exceeds the number of elements in the dictionary, the nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5`, then worker-0, worker-2, worker-4 will have the `fast-eu-1a` disk type, while worker-1, worker-3 will have the `fast-eu-1b` disk type.
 
-                > **Caution!** Limits by availability zones works only with specified parameter `zones` (`nodeGroups.instanceClass.zones`). If `zones` not specified, all availability zones will be used.
+                > **Caution!** Limits by availability zones works only with specified parameter `zones` (`nodeGroups.zones`). If `zones` not specified, all availability zones will be used.
 
                 Useful commands:
                 - `openstack availability zone list` — get list of availability zones.
