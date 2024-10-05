@@ -68,7 +68,6 @@ mount:
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get update
   - apt-get install -y git openssl-devel wget clang cmake libelf-devel libbpf-devel bpftool perl-IPC-Cmd gcc12 gcc12-c++ build-essential golang
   - git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
   - rm -f /usr/bin/clang
@@ -77,9 +76,28 @@ shell:
   - ln -s x86_64-alt-linux-gcc-12 /usr/bin/x86_64-alt-linux-gcc
   - ln -s x86_64-alt-linux-g++-12 /usr/bin/x86_64-alt-linux-g++
   install:
+  - cd /src/falco
+  {{- if $.DistroPackagesProxy }}
+  # build in the closed env
+  - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/falcosecurity-libs-repo/CMakeLists.txt
+  - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/cxxopts.cmake
+  - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/njson.cmake
+  - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/driver-repo/CMakeLists.txt
+  - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/yaml-cpp.cmake
+  - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/cpp-httplib.cmake
+  - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/falcoctl.cmake
+  - sed -i "s|https://download.falco.org|http://{{ $.DistroPackagesProxy }}/repository/download-falco-org|g" cmake/modules/rules.cmake
+  {{- end }}
   - mkdir -p /src/falco/build
   - cd /src/falco/build
   - cmake -DCMAKE_BUILD_TYPE=release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_DRIVER=OFF -DCPACK_GENERATOR=TGZ -DBUILD_BPF=OFF -DBUILD_FALCO_MODERN_BPF=ON -DBUILD_WARNINGS_AS_ERRORS=OFF -DFALCO_VERSION={{ $falcoVersion }} -DUSE_BUNDLED_DEPS=ON /src/falco
+  {{- if $.DistroPackagesProxy }}
+  # build in the closed env
+  - |
+    for f in `grep -lari 'URL "https://github.com'`; do
+      sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" $f
+    done
+  {{- end }}
   - make package -j4
   - mkdir -p /falco-package
   - tar -zxvf falco-*-x86_64.tar.gz --strip-components 1 -C /falco-package
