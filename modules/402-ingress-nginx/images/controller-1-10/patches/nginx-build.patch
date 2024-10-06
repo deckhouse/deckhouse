@@ -7,7 +7,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.sh
 --- a/images/nginx-1.25/rootfs/build.sh	(revision f08a1c4fdac2e0ef6053333b24191c50cc51f30c)
-+++ b/images/nginx-1.25/rootfs/build.sh	(date 1728238260933)
++++ b/images/nginx-1.25/rootfs/build.sh	(date 1728240659420)
 @@ -14,6 +14,9 @@
  # See the License for the specific language governing permissions and
  # limitations under the License.
@@ -262,8 +262,8 @@ diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.
 +# remove downloading nginx from cmake and clone it manually
 +# by default cmake download nginx from internet
 +sed -i "26,33d" nginx.cmake
-+cat nginx.cmake
-+git clone -b "release-${NGINX_VERSION}" "${SOURCE_REPO}/nginx/nginx.git" nginx
++NGINX_MINOR_VERSION="$(cut -d '.' -f 1,2 <<< "$NGINX_VERSION")"
++cp -R "${BUILD_PATH}/nginx-${NGINX_MINOR_VERSION}" nginx
 +cd nginx
 +./configure
 +cd ../
