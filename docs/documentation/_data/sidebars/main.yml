@@ -1219,6 +1219,8 @@ entries:
     - title:
         en: Storage
         ru: Хранилище
+        moduleName: delivery
+      featureStatus: deprecated
       folders:
         - title: ceph-csi
           folders:
