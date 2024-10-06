@@ -7,7 +7,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.sh
 --- a/images/nginx-1.25/rootfs/build.sh	(revision f08a1c4fdac2e0ef6053333b24191c50cc51f30c)
-+++ b/images/nginx-1.25/rootfs/build.sh	(date 1728253161128)
++++ b/images/nginx-1.25/rootfs/build.sh	(date 1728253948981)
 @@ -14,6 +14,9 @@
  # See the License for the specific language governing permissions and
  # limitations under the License.
@@ -266,8 +266,8 @@ diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.
 +mv nginx.cmake.tmp nginx.cmake
 +cat nginx.cmake
 +cp -R "${BUILD_PATH}/nginx-$NGINX_VERSION" nginx
++ls -lh nginx
 +cd nginx
-+./configure
 +cd ../
  mkdir -p build
  cd build
