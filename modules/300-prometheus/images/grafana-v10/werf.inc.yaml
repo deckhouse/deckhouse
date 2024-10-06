@@ -33,7 +33,7 @@ shell:
   # we cannot fully implement yarn deps downloading thru proxy, so we need to use prebuild deps repo
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ .SOURCE_REPO }}/grafana/grafana-deps.git /src/grafana-deps
   - cd /src/grafana
-  - rm -rf .yarn
+  - rm -rf .yarn package.json yarn.lock
   - mv /src/grafana-deps/.yarn .
   - mv /src/grafana-deps/package.json .
   - mv /src/grafana-deps/yarn.lock .
@@ -51,13 +51,7 @@ import:
   before: install
 shell:
   install:
-  {{- include "node packages proxy" . | nindent 2 }}
   - cd /src
-  {{- $registry := "" }}
-  {{- if $.DistroPackagesProxy }}
-    {{- $registry = printf "--registry http://%s/repository/npmjs/" $.DistroPackagesProxy }}
-  {{- end }}
-  - yarn install {{ $registry }}
   - export NODE_ENV=production NODE_OPTIONS="--max_old_space_size=8000"
   - yarn build
 ---
