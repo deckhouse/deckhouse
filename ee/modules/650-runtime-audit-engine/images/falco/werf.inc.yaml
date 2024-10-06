@@ -104,7 +104,7 @@ shell:
   # cleanup to reduce artifact size
   - make clean
   # build plugins
-  - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=1
   - cd /src/plugins/plugins/json
   - make
   - cd /src/plugins/plugins/k8saudit
