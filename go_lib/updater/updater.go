@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
@@ -53,31 +54,70 @@ const (
 type deployDelayReason byte
 
 const (
-	noDelay deployDelayReason = iota
-	cooldownDelayReason
+	noDelay             deployDelayReason = 0
+	cooldownDelayReason deployDelayReason = 1 << iota
 	canaryDelayReason
-	manualApprovalRequiredReason
-	outOfWindowReason
 	notificationDelayReason
+	outOfWindowReason
+	manualApprovalRequiredReason
 )
 
 func (r deployDelayReason) String() string {
-	switch r {
-	case noDelay:
+	return r.string(time.Time{})
+}
+
+func (r deployDelayReason) string(applyTime time.Time) string {
+	if r == noDelay {
 		return "no delay"
-	case cooldownDelayReason:
-		return cooldownDelayMsg
-	case canaryDelayReason:
-		return canaryDelayReasonMsg
-	case manualApprovalRequiredReason:
-		return waitingManualApprovalMsg
-	case outOfWindowReason:
-		return outOfWindowMsg
-	case notificationDelayReason:
-		return notificationDelayMsg
 	}
 
-	return fmt.Sprintf("deployDelayReason(%d)", byte(r))
+	var reasons []string
+	if r.contains(cooldownDelayReason) {
+		reasons = append(reasons, cooldownDelayMsg)
+	}
+
+	if r.contains(canaryDelayReason) {
+		reasons = append(reasons, canaryDelayReasonMsg)
+	}
+
+	if r.contains(notificationDelayReason) {
+		reasons = append(reasons, notificationDelayMsg)
+	}
+
+	if r.contains(outOfWindowReason) {
+		reasons = append(reasons, outOfWindowMsg)
+	}
+
+	if r.contains(manualApprovalRequiredReason) {
+		reasons = append(reasons, waitingManualApprovalMsg)
+	}
+
+	if len(reasons) != 0 {
+		str := strings.Join(reasons, ". ")
+		if applyTime.IsZero() {
+			return str
+		}
+
+		if r.contains(manualApprovalRequiredReason) {
+			str += ". After approval the release will be delayed"
+		}
+
+		return fmt.Sprintf("%s until %s", str, applyTime.Format(time.RFC822))
+	}
+
+	return fmt.Sprintf("deployDelayReason(%b)", byte(r))
+}
+
+func (r deployDelayReason) add(flag deployDelayReason) deployDelayReason {
+	return r | flag
+}
+
+func (r deployDelayReason) contains(flag deployDelayReason) bool {
+	if flag == noDelay {
+		return r == noDelay
+	}
+
+	return r&flag != 0
 }
 
 type UpdateMode string
@@ -269,7 +309,7 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 		cooldownUntil := *release.GetCooldownUntil()
 		if du.now.Before(cooldownUntil) {
 			du.logger.Warnf("Release %s in cooldown", release.GetName())
-			releaseApplyTime, reason = *release.GetCooldownUntil(), cooldownDelayReason
+			releaseApplyTime, reason = *release.GetCooldownUntil(), reason.add(cooldownDelayReason)
 		}
 	}
 
@@ -278,7 +318,7 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 		applyAfter := *release.GetApplyAfter()
 		if du.now.Before(applyAfter) {
 			du.logger.Warnf("Release %s is postponed by canary process. Waiting", release.GetName())
-			releaseApplyTime, reason = applyAfter, canaryDelayReason
+			releaseApplyTime, reason = applyAfter, reason.add(canaryDelayReason)
 		}
 	}
 
@@ -288,19 +328,19 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 		if minApplyTime.Before(releaseApplyTime) {
 			minApplyTime = releaseApplyTime
 		} else {
-			releaseApplyTime, newApplyAfter, reason = minApplyTime, minApplyTime, notificationDelayReason
+			releaseApplyTime, newApplyAfter, reason = minApplyTime, minApplyTime, reason.add(notificationDelayReason)
 		}
 	}
 
 	if !updateWindows.IsAllowed(releaseApplyTime) {
-		releaseApplyTime, reason = updateWindows.NextAllowedTime(releaseApplyTime), outOfWindowReason
+		releaseApplyTime, reason = updateWindows.NextAllowedTime(releaseApplyTime), reason.add(outOfWindowReason)
 	}
 
 	// check: release is approved in Manual mode
 	if du.mode != ModeAuto && !release.GetManuallyApproved() {
 		du.logger.Infof("Release %s is waiting for manual approval ", release.GetName())
 		du.metricsUpdater.WaitingManual(release.GetName(), float64(du.totalPendingManualReleases))
-		reason = manualApprovalRequiredReason
+		reason = reason.add(manualApprovalRequiredReason)
 	}
 
 	if !newApplyAfter.IsZero() {
@@ -326,7 +366,7 @@ func (du *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTim
 		applyAfter := *release.GetApplyAfter()
 		if du.now.Before(applyAfter) {
 			du.logger.Warnf("Release %s is postponed by canary process. Waiting", release.GetName())
-			releaseApplyTime, reason = applyAfter, canaryDelayReason
+			releaseApplyTime, reason = applyAfter, reason.add(canaryDelayReason)
 		}
 	}
 
@@ -336,14 +376,14 @@ func (du *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTim
 		if minApplyTime.Before(releaseApplyTime) {
 			minApplyTime = releaseApplyTime
 		} else {
-			releaseApplyTime, newApplyAfter, reason = minApplyTime, minApplyTime, notificationDelayReason
+			releaseApplyTime, newApplyAfter, reason = minApplyTime, minApplyTime, reason.add(notificationDelayReason)
 		}
 	}
 
 	if du.mode == ModeManual && !release.GetManuallyApproved() {
 		du.logger.Infof("Release %s is waiting for manual approval", release.GetName())
 		du.metricsUpdater.WaitingManual(release.GetName(), float64(du.totalPendingManualReleases))
-		reason = manualApprovalRequiredReason
+		reason = reason.add(manualApprovalRequiredReason)
 	}
 
 	if !newApplyAfter.IsZero() {
@@ -764,27 +804,25 @@ func (du *Updater[R]) GetSkippedPatchReleases() []R {
 	return skippedPatches
 }
 
-// postponeDeploy returns new NotReadyForDeployError if reason not equal to noDelay and nil otherwise.
-// This function returns an interface so that the caller does not have to check the pointer to the structure for nil
-// in order to return a nil error itself
+// postponeDeploy update release status and returns new NotReadyForDeployError if reason not equal to noDelay and nil otherwise.
 func (du *Updater[R]) postponeDeploy(release R, reason deployDelayReason, applyTime time.Time) error {
 	if reason == noDelay {
 		return nil
 	}
 
-	var retryDelay time.Duration
+	var (
+		retryDelay    time.Duration
+		statusMessage string
+	)
 
 	if !applyTime.IsZero() {
 		retryDelay = applyTime.Sub(du.now)
 	}
 
-	statusMessage := reason.String()
-	if reason == manualApprovalRequiredReason && applyTime != du.now {
-		statusMessage += ". After approval the release will be delayed"
-	}
-
 	if applyTime != du.now {
-		statusMessage = fmt.Sprintf("%s until %s", statusMessage, applyTime.Format(time.RFC822))
+		statusMessage = reason.string(applyTime)
+	} else {
+		statusMessage = reason.String()
 	}
 
 	err := du.updateStatus(release, statusMessage, PhasePending)
