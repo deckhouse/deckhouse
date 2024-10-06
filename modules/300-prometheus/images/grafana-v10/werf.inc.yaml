@@ -30,28 +30,30 @@ git:
 shell:
   install:
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ .SOURCE_REPO }}/grafana/grafana.git /src/grafana
-  # we cannot fully implement yarn deps downloading thru proxy, so we need to use prebuild deps repo
-  - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ .SOURCE_REPO }}/grafana/grafana-deps.git /src/grafana-deps
   - cd /src/grafana
-  - rm -rf .yarn package.json yarn.lock
-  - mv /src/grafana-deps/.yarn .
-  - mv /src/grafana-deps/package.json .
-  - mv /src/grafana-deps/yarn.lock .
-  - rm -rf /src/grafana-deps
   # this directory contains very long filename tests files and source extractor cannot create file
   - rm -rf pkg/tsdb/azuremonitor/testdata/azuremonitor
   - git clone --depth 1 {{ .SOURCE_REPO }}/grafana/grafana-plugins.git /src/grafana-plugins
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-js-builder
-from: {{ .Images.BASE_NODE_18_ALPINE }}
+from: {{ .Images.BASE_NODE_20_ALPINE }}
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/grafana
   to: /src
   before: install
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make build-base python3
   install:
+  {{- include "node packages proxy" . | nindent 2 }}
   - cd /src
+  {{- $registry := "" }}
+  {{- if $.DistroPackagesProxy }}
+    {{- $registry = printf "--registry http://%s/repository/npmjs/" $.DistroPackagesProxy }}
+  {{- end }}
+  - yarn install --immutable {{ $registry }}
   - export NODE_ENV=production NODE_OPTIONS="--max_old_space_size=8000"
   - yarn build
 ---
