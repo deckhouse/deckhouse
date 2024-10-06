@@ -1219,7 +1219,7 @@ entries:
     - title:
         en: Storage
         ru: Хранилище
-        moduleName: delivery
+        moduleName: ceph-csi
       featureStatus: deprecated
       folders:
         - title: ceph-csi
