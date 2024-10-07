@@ -16,6 +16,9 @@ properties:
 oneOf:
   - properties:
       mode:
+        enum: [Direct]
+  - properties:
+      mode:
         enum: [Detached]
       detached:
         description: |

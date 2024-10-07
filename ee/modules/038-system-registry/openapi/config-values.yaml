@@ -26,6 +26,9 @@ properties:
 oneOf:
   - properties:
       mode:
+        enum: [Direct]
+  - properties:
+      mode:
         enum: [Detached]
       detached:
         type: object
@@ -33,7 +36,7 @@ oneOf:
           Detached mode properties.
         properties:
           storageMode: &storageMode
-            enum: [s3, fs]
+            enum: [S3, Fs]
             description: |
               The type of data storage for the system registry module.
             default: fs
@@ -55,7 +58,6 @@ oneOf:
             type: string
             description: |
               Registry access scheme (HTTP or HTTPS).
-            enum: [http, https]
             default: https
             x-example:
               - https
