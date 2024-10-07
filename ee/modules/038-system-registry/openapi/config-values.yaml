@@ -17,76 +17,73 @@ properties:
     description: |
       Registry manager enable flag
     default: false
-  cluster:
-    type: object
-    default: {}
-    description: |
-      Seaweedfs cluster's settings
-    properties:
-      size:
-        type: integer
-        description: |
-          The number of nodes
-        x-examples:
-          - 1
-          - 3
-  registryMode:
+  mode:
     type: string
-    enum:
-      - Direct
-      - Proxy
-      - Detached
-    default: Direct
     description: |
       Registry mode
-    x-example:
-      - registryMode: Proxy
-      - registryMode: Direct
-      - registryMode: Detached
-  upstreamRegistry:
-    type: object
-    x-example:
-      - upstreamRegistry:
-          upstreamRegistryHost: dev-registry.deckhouse.io
-          upstreamRegistryScheme: https
-          upstreamRegistryCa: ""
-          upstreamRegistryPath: sys/deckhouse-oss
-          upstreamRegistryUser: license-token
-          upstreamRegistryPassword: "123456"
-    properties:
-      upstreamRegistryHost:
-        type: string
+    enum: [Direct, Proxy, Detached]
+    default: Direct
+oneOf:
+  - properties:
+      mode:
+        enum: [Detached]
+      detached:
+        type: object
         description: |
-          Host of upstream registry
-        x-example:
-          - dev-registry.deckhouse.io
-      upstreamRegistryScheme:
-        type: string
+          Detached mode properties.
+        properties:
+          storageMode: &storageMode
+            enum: [s3, fs]
+            description: |
+              The type of data storage for the system registry module.
+            default: fs
+  - properties:
+      mode:
+        enum: [Proxy]
+      proxy:
+        type: object
         description: |
-          Scheme of upstream registry
-        x-example:
-          - https
-      upstreamRegistryCa:
-        type: string
-        description: |
-          CA of upstream registry
-        x-example:
-          - ""
-      upstreamRegistryPath:
-        type: string
-        description: |
-          Path of upstream registry
-        x-example:
-          - sys/deckhouse-oss
-      upstreamRegistryUser:
-        type: string
-        description: |
-          User of upstream registry
-        x-example:
-          - license-token
-      upstreamRegistryPassword:
-        type: string
-        description: |
-          Password of upstream registry
-        x-example:
-          - "123456"
+          Proxy mode properties.
+        properties:
+          host:
+            type: string
+            description: |
+              Host of upstream registry
+            x-example:
+              - dev-registry.deckhouse.io
+          scheme:
+            type: string
+            description: |
+              Registry access scheme (HTTP or HTTPS).
+            enum: [http, https]
+            default: https
+            x-example:
+              - https
+              - http
+          ca:
+            type: string
+            description: |
+              CA of upstream registry
+            default: ""
+            x-example:
+              - ""
+          path:
+            type: string
+            description: |
+              Path of upstream registry
+            x-example:
+              - sys/deckhouse-oss
+          user:
+            type: string
+            description: |
+              User of upstream registry
+            x-example:
+              - license-token
+          password:
+            type: string
+            description: |
+              Password of upstream registry
+            x-example:
+              - "123456"
+          storageMode:
+            <<: *storageMode

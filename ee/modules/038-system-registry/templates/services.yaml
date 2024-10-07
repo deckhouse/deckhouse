@@ -1,6 +1,6 @@
-##### For specific registryMode
-{{- if $.Values.systemRegistry.registryMode }}
-{{- if not (eq $.Values.systemRegistry.registryMode "Direct")  }}
+##### For specific mode
+{{- if $.Values.systemRegistry.mode }}
+{{- if not (eq $.Values.systemRegistry.mode "Direct")  }}
 #####
 
 ---
@@ -41,7 +41,7 @@ spec:
       targetPort: 5001
 
 
-##### For specific registryMode
+##### For specific mode
 {{- end }}
 {{- end }}
 #####

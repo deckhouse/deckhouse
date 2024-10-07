@@ -11,7 +11,6 @@ secrets:
    annotationNameForCheckSum: manager-configs/CheckSum
 {{- end }}
 
-
 ######################################
 #             Config.yaml            #
 ######################################
@@ -24,27 +23,26 @@ manager:
   workerPort: 8097
   leaderElection: {}
 
-cluster:
-  {{- if and (hasKey $.Values "systemRegistry") (hasKey $.Values.systemRegistry "cluster") (hasKey $.Values.systemRegistry.cluster "size") }}
-  size:  {{ $.Values.systemRegistry.cluster.size }}
-  {{- else }}
-  size:  1
-  {{- end }}
-
 registry:
-  registryMode: {{ $.Values.systemRegistry.registryMode }}
-  upstreamRegistry:
-      upstreamRegistryHost: {{ $.Values.systemRegistry.upstreamRegistry.upstreamRegistryHost }}
-      upstreamRegistryScheme: {{ $.Values.systemRegistry.upstreamRegistry.upstreamRegistryScheme }}
-      upstreamRegistryCa: {{ $.Values.systemRegistry.upstreamRegistry.upstreamRegistryCa }}
-      upstreamRegistryPath: {{ $.Values.systemRegistry.upstreamRegistry.upstreamRegistryPath }}
-      upstreamRegistryUser: {{ $.Values.systemRegistry.upstreamRegistry.upstreamRegistryUser }}
-      upstreamRegistryPassword: {{ $.Values.systemRegistry.upstreamRegistry.upstreamRegistryPassword }}
+  mode: {{ $.Values.systemRegistry.mode }}
+  {{- if eq $.Values.systemRegistry.mode "Proxy"  }}
+  proxy:
+    host: {{ $.Values.systemRegistry.proxy.host }}
+    scheme: {{ $.Values.systemRegistry.proxy.scheme }}
+    ca: {{ $.Values.systemRegistry.proxy.ca }}
+    path: {{ $.Values.systemRegistry.proxy.path }}
+    user: {{ $.Values.systemRegistry.proxy.user }}
+    password: {{ $.Values.systemRegistry.proxy.password }}
+    storageMode: {{ $.Values.systemRegistry.proxy.storageMode }}
+  {{- end }}
+  {{- if eq $.Values.systemRegistry.mode "Detached" }}
+  detached:
+    storageMode: {{ $.Values.systemRegistry.detached.storageMode }}
+  {{- end }}
 images:
-  systemRegistry:
-    dockerDistribution: {{ $.Values.global.modulesImages.registry.base }}@{{ $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}
-    dockerAuth: {{ $.Values.global.modulesImages.registry.base }}@{{ $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}
-    seaweedfs: {{ $.Values.global.modulesImages.registry.base }}@{{ $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}
+  dockerDistribution: {{ $.Values.global.modulesImages.registry.base }}@{{ $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}
+  dockerAuth: {{ $.Values.global.modulesImages.registry.base }}@{{ $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}
+  seaweedfs: {{ $.Values.global.modulesImages.registry.base }}@{{ $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}
 {{- end }}
 
 

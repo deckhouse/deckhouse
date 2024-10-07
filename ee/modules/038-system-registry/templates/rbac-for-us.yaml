@@ -1,6 +1,6 @@
-##### For specific registryMode
-{{- if $.Values.systemRegistry.registryMode }}
-{{- if not (eq $.Values.systemRegistry.registryMode "Direct")  }}
+##### For specific mode
+{{- if $.Values.systemRegistry.mode }}
+{{- if not (eq $.Values.systemRegistry.mode "Direct")  }}
 #####
 
 ---
@@ -113,7 +113,7 @@ subjects:
     name: {{ .Chart.Name }}
     namespace: d8-system
 
-##### For specific registryMode
+##### For specific mode
 {{- end }}
 {{- end }}
 #####

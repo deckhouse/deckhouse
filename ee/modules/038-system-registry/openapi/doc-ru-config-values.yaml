@@ -10,33 +10,44 @@ properties:
   enableRegistryManager:
     description: |
       Флаг включения registry manager-а
-  cluster:
-    description: |
-      Параметры seaweedfs кластера
-    properties:
-      size:
-        description: |
-          Кол-во нод
-  registryMode:
+  mode:
     description: |
       Тип регистри
-  upstreamRegistry:
-    properties:
-      upstreamRegistryHost:
+oneOf:
+  - properties:
+      mode:
+        enum: [Detached]
+      detached:
         description: |
-          Host или upstream регистри
-      upstreamRegistryScheme:
+          Параметры для detached режима
+        properties:
+          storageMode: &storageMode
+            description: |
+              Тип хранилища данных
+  - properties:
+      mode:
+        enum: [Proxy]
+      proxy:
         description: |
-          Схема upstream регистри
-      upstreamRegistryCa:
-        description: |
-          CA сертификат upstream регистри
-      upstreamRegistryPath:
-        description: |
-          Путь upstream регистри
-      upstreamRegistryUser:
-        description: |
-          Имя пользователя для upstream регистри
-      upstreamRegistryPassword:
-        description: |
-          Пароль для upstream регистри
+          Параметры для proxy режима
+        properties:
+          host:
+            description: |
+              Host или upstream регистри
+          scheme:
+            description: |
+             Схема upstream регистри
+          ca:
+            description: |
+              CA сертификат upstream регистри
+          path:
+            description: |
+              Путь upstream регистри
+          user:
+            description: |
+              Имя пользователя для upstream регистри
+          password:
+            description: |
+              Пароль для upstream регистри
+          storageMode:
+            <<: *storageMode
