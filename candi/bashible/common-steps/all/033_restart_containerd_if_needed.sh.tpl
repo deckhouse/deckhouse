@@ -16,6 +16,9 @@
 if bb-flag? containerd-need-restart; then
   bb-log-warning "'containerd-need-restart' flag was set, restarting containerd."
   if out=$(containerd config dump 2>&1); then
+    if [[ -f /etc/systemd/system/containerd.service ]] || [[ -f /usr/lib/systemd/system/containerd.service ]] || [[ -f /lib/systemd/system/containerd.service ]]; then
+      systemctl disable --now containerd.service &> /dev/null
+    fi
       systemctl restart containerd-deckhouse.service
   else
       bb-log-error "'containerd config dump' return error: $out"
