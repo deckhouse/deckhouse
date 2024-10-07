@@ -43,6 +43,6 @@ func TestDeployDelayReason(t *testing.T) {
 	reason = reason.add(manualApprovalRequiredReason)
 	require.True(t, reason.contains(manualApprovalRequiredReason))
 	require.True(t, reason.contains(outOfWindowReason))
-	require.Equal(t, "Release is waiting for the update window. Release is waiting for manual approval", reason.String())
-	require.Equal(t, "Release is waiting for the update window. Release is waiting for manual approval. After approval the release will be delayed until 17 Oct 19 15:33 UTC", reason.string(now))
+	require.Equal(t, "Release is waiting for the update window. Release is waiting for the 'release.deckhouse.io/approved: \"true\"' annotation", reason.String())
+	require.Equal(t, "Release is waiting for the update window. Release is waiting for the 'release.deckhouse.io/approved: \"true\"' annotation. After approval the release will be delayed until 17 Oct 19 15:33 UTC", reason.string(now))
 }
