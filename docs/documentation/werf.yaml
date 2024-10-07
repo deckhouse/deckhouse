@@ -28,13 +28,12 @@ configVersion: 1
 ---
 image: web
 from: {{ .Images.BASE_NGINX_ALPINE }}
-ansible:
+shell:
   setup:
-  - name: "Setup /etc/nginx/nginx.conf"
-    copy:
-      content: |
-        {{- .Files.Get ".werf/nginx.conf" | nindent 8 }}
-      dest: /etc/nginx/nginx.conf
+  - |
+      cat <<"EOD" > /etc/nginx/nginx.conf
+      {{- .Files.Get ".werf/nginx.conf" | nindent 6 }}
+      EOD
 import:
 - image: static-pages
   add: /app/_site
@@ -47,114 +46,77 @@ docker:
   ENV:
     LANG: en_US.UTF-8
     LC_ALL: en_US.UTF-8
-ansible:
+shell:
   install:
-    - shell: |
+  - |
         echo "Ruby: $(ruby --version)"
         echo "Gem: $(gem --version)"
         bundle --version
   setup:
-    - name: "Get modules data"
-      shell: |
+  - |
+        cd /srv/jekyll-data/documentation/
+        # "Get modules data"
         ./modules_list.sh 1>_data/modules.yaml
         cat modules_menu_skip  | cut -d\- -f 2-  | jq -nRc '[inputs] | map({"name":.}) | {module_names:.}' > _data/exclude.json
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
-    - name: "Edition: {{ .Edition }}. Merging modules of different editions"
-      shell: |
+      
+        # "Edition: {{ .Edition }}. Merging modules of different editions"
         for dir in {be,se,ee,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
-      args:
-        executable: /bin/bash
-    - name: "Preparing modules structure"
-      shell: |
+        
+        #"Preparing modules structure"
         export MODULES_SRC_DIR=/src/modules
         export MODULES_DST_EN=/srv/jekyll-data/documentation/modules_en
         export MODULES_DST_RU=/srv/jekyll-data/documentation/modules_ru
         bash ./modules_prepare.sh
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
-    - name: "Add permalinks"
-      shell: |
+
+        # "Add permalinks"
         for i in $(find . -regex '.*.md' -print); do
-          grep -q "^---" $i
-          if [ $? -gt 0 ]; then continue; fi
-          cat $i | tr -d '\n' | grep -lv "^---.*permalink: .*---" &> /dev/null
-          if [ $? -eq 0 ]; then
+          if [ $(grep -q "^---" $i) -gt 0 ]; then continue; fi
+          if [ $(cat $i | tr -d '\n' | grep -lv "^---.*permalink: .*---" &> /dev/null) -eq 0 ]; then
             # permalink is absent, add permalink
             PERMALINK="/$(echo $i | sed -E 's#(modules_)(en|ru)/#\2/modules/#' | sed 's#docs/##g'| tr '[:upper:]' '[:lower:]' | sed 's#\.md$#.html#' | sed 's#^\.\/##' | sed 's#readme\.html$##' )"
             sed -i "1apermalink: $PERMALINK" $i
           fi
         done
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
-    - name: "Generate configuration schemas"
-      shell: |
+
+        # "Generate configuration schemas"
         export MODULES_DIR=modules_en
         bash ./modules_generate_configuration.sh
         export MODULES_DIR=modules_ru MODULES_LANG=ru
         bash ./modules_generate_configuration.sh
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation
-    - name: "Generate cluster configuration schemas"
-      shell: |
+
+        # "Generate cluster configuration schemas"
         export MODULES_DIR=modules_en
         bash ./generate_cluster_configuration.sh
         export MODULES_DIR=modules_ru MODULES_LANG=ru
         bash ./generate_cluster_configuration.sh
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation
-    - name: "Generate CR schemas"
-      shell: |
+
+        # "Generate CR schemas"
         export MODULES_DIR=modules_en
         bash ./modules_generate_cr.sh
         export MODULES_DIR=modules_ru
         bash ./modules_generate_cr.sh
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation
-    - name: "Prepare OSS licence info"
-      shell: |
+
+        # "Prepare OSS licence info"
         export MODULES_DIR=/src/modules
         bash ./modules_generate_ossinfo.sh
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
-    - name: "Extract the default Kubernetes version"
-      shell: |
+
+        # "Extract the default Kubernetes version"
         echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
-    - name: "Make the supported OS & K8S version array"
-      shell: |
+
+        # "Make the supported OS & K8S version array"
+        cd _data
         sed '/^bashible:/r version_map_addition.yml' version_map.yml >> supported_versions.yml
-      args:
-        warn: false
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/_data/
-    - name: "Convert editions structure"
-      shell: |
+
+        # "Convert editions structure"
         yq e -j editions-source.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' > editions.json
-      args:
-        warn: false
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/_data/
-    - shell: |
+
+        cd ..
         mkdir -m 777 -p /app/_site/
         {{- if eq $.Mode "development" }}
         JEKYLL_ENV=development jekyll build -d /app/_site/ --profile -t
         {{- else }}
         JEKYLL_ENV=production jekyll build -d /app/_site/
         {{- end }}
-      args:
-        warn: false
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
 git:
 - add: /docs
   to: /srv/jekyll-data

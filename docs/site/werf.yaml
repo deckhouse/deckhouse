@@ -65,21 +65,19 @@ shell:
 ---
 artifact: web-static
 from: {{ .Images.BASE_JEKYLL }}
-ansible:
+shell:
   install:
-    - shell: |
+  - |
         echo "Ruby: $(ruby --version)"
         echo "Gem: $(gem --version)"
         bundle --version
   setup:
-    - name: "Build static files"
-      shell: |
+  - |
+        # "Build static files"
+        cd /srv/jekyll-data/site/
         export JEKYLL_ENV=production
         mkdir -m 777 -p /app/_site/
         jekyll build -d /app/_site/ --config _config.yml
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/site/
 git:
 - add: /docs/site
   to: /srv/jekyll-data/site
@@ -115,22 +113,13 @@ import:
 ---
 artifact: web-backend-srv
 from: {{ .Images.BASE_GOLANG_16_ALPINE }}
-fromCacheVersion: 20210701
-ansible:
+shell:
   install:
-    - name: Download dependencies
-      shell: |
-        go mod tidy
-      args:
-        executable: /bin/sh
-        chdir: /go/src/app
+  - cd /go/src/app
+  - go mod tidy
   setup:
-    - name: Build apis
-      shell: |
-        go build -ldflags "-w -s" -v -o /go/src/app/server /go/src/app/cmd/v-router
-      args:
-        executable: /bin/sh
-        chdir: /go/src/app
+  - cd /go/src/app
+  - go build -ldflags "-w -s" -v -o /go/src/app/server /go/src/app/cmd/v-router
 git:
   - url: https://github.com/flant/web-router.git
     tag: v1.0.14
@@ -144,9 +133,9 @@ image: web-backend
 docker:
   WORKDIR: /app
 from: {{ .Images.BASE_ALPINE }}
-ansible:
+shell:
   install:
-    - shell: apk add curl jq
+  - apk add --no-cache curl jq
 import:
   - artifact: web-backend-srv
     add: /go/src/app/server
@@ -164,13 +153,12 @@ image: web-frontend
 docker:
   WORKDIR: /app
 from: {{ .Images.BASE_NGINX_ALPINE }}
-ansible:
+shell:
   setup:
-  - name: "Copy nginx.conf"
-    copy:
-      content: |
-        {{- .Files.Get ".werf/nginx.conf" | nindent 8 }}
-      dest: /etc/nginx/nginx.conf
+  - |
+      cat <<"EOD" > /etc/nginx/nginx.conf
+      {{- .Files.Get ".werf/nginx.conf" | nindent 6 }}
+      EOD
 import:
 - artifact: web-static
   add: /app/_site
@@ -187,21 +175,13 @@ import:
 # Build scanner, which fetch modules documentation from list of specified registries
 image: registry-modules-watcher-artifact
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}
-ansible:
+shell:
   install:
-    - name: Download dependencies
-      shell: |
-        go mod tidy
-      args:
-        executable: /bin/sh
-        chdir: /go/src/app
+  - /go/src/app
+  - go mod tidy
   setup:
-    - name: Build registry-modules-watcher
-      shell: |
-        go build -ldflags "-w -s" -v -o /go/src/app/registry-modules-watcher /go/src/app/cmd/
-      args:
-        executable: /bin/sh
-        chdir: /go/src/app
+  - /go/src/app
+  - go build -ldflags "-w -s" -v -o /go/src/app/registry-modules-watcher /go/src/app/cmd/
 git:
   - add: /docs/site/backends/registry-modules-watcher
     to: /go/src/app
