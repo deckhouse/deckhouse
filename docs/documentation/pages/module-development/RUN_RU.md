@@ -1,4 +1,3 @@
-
 ---
 title: "Запуск модуля в кластере"
 permalink: ru/module-development/run/
@@ -118,17 +117,17 @@ kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 Если необходимо развернуть модуль из другого источника модулей, выполните следующие шаги:
 1. Определите, под какую [политику обновлений](#политика-обновления-модуля) подпадает модуль:
 
-```shell
+   ```shell
    kubectl get mr
-```
+   ```
 
    Проверьте `UPDATE POLICY` для релизов модуля.
 
 2. Прежде чем удалить эту политику обновления, убедитесь, что нет ожидающих развертывания (в состоянии Pending) релизов, которые подпадают под удаляемую или изменяемую политику (или _labelSelector_, используемый политикой, больше не соответствует вашему модулю):
 
-```shell
+   ```shell
    kubectl delete mup <POLICY_NAME>
-```
+   ```
 
 3. Создайте новый [ресурс ModuleSource](#источник-модулей).
 
@@ -136,9 +135,9 @@ kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 
 5. Проверьте, что новые _ModuleRelease_ для модуля создаются из нового _ModuleSource_ в соответствии с политикой обновления.
 
-```shell
+   ```shell
    kubectl get mr
-```
+   ```
 
 ## Политика обновления модуля
 

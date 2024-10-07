@@ -1,4 +1,3 @@
-
 ---
 title: "How to start module in the DKP cluster?"
 permalink: en/module-development/run/
@@ -117,17 +116,17 @@ kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 Follow these steps to deploy a module from a different module source:
 1. Find out what [update policy](#module-update-policy) is used for the module:
 
-```shell
+   ```shell
    kubectl get mr
-```
+   ```
 
    Look up the `UPDATE POLICY` for the module releases.
 
 2. Before dropping this update policy, make sure there are no releases awaiting to be deployed (in Pending state) that fall under the policy being dropped or modified (or the _labelSelector_ used by the policy no longer matches your module):
 
-```shell
+   ```shell
    kubectl delete mup <POLICY_NAME>
-```
+   ```
 
 3. Create a new [ModuleSource](#module-source) resource.
 
@@ -135,9 +134,9 @@ Follow these steps to deploy a module from a different module source:
 
 5. Confirm that new _ModuleReleases_ for a module are created from a new _ModuleSource_ according to the update policy.
 
-```shell
+   ```shell
    kubectl get mr
-```
+   ```
 
 ## Module update policy
 
