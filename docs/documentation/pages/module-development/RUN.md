@@ -265,7 +265,7 @@ You can enable the module similarly to built-in DKP modules using any of the fol
 - Run the command below (specify the name of the module):
 
   ```shell
-    kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
+  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
   ```
 
 - Create a `ModuleConfig` resource containing the `enabled: true` parameter and module settings..
@@ -290,17 +290,17 @@ If there were errors while enabling a module in the cluster, you can learn about
 - View the DKP log:
 
   ```shell
-    kubectl -n d8-system logs -l app=deckhouse
+  kubectl -n d8-system logs -l app=deckhouse
   ```
 
 - View the `ModuleConfig` resource of the module:
 
   Here is an example of the error message for `module-1`:
 
-  ```shell
-    $ kubectl get moduleconfig module-1
-    NAME        ENABLED   VERSION   AGE   MESSAGE
-    module-1    true                7s    Ignored: unknown module name
+  ```console
+  $ kubectl get moduleconfig module-1
+  NAME        ENABLED   VERSION   AGE   MESSAGE
+  module-1    true                7s    Ignored: unknown module name
   ```
 
 Similar to [_DeckhouseRelease_](../../cr.html#deckhouserelease) (a DKP release resource), modules have a [_ModuleRelease_](../../cr.html#modulerelease) resource. DKP creates _ModuleRelease_ resources based on what is stored in the container registry. When troubleshooting module issues, check the module releases available in the cluster as well:

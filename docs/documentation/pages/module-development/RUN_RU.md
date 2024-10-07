@@ -267,7 +267,7 @@ module-test                           900      Disabled   example
 - Выполнить следующую команду (укажите имя модуля):
 
   ```shell
-    kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
+  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
   ```
 
 - Создать ресурс `ModuleConfig` с параметром `enabled: true` и настройками модуля.
@@ -292,17 +292,17 @@ module-test                           900      Disabled   example
 - Посмотреть журнал DKP:
 
   ```shell
-    kubectl -n d8-system logs -l app=deckhouse
+  kubectl -n d8-system logs -l app=deckhouse
   ```
 
 - Посмотреть ресурс `ModuleConfig` модуля:
 
   Пример вывода информации об ошибке модуля `module-1`:
 
-  ```shell
-    $ kubectl get moduleconfig module-1
-    NAME        ENABLED   VERSION   AGE   MESSAGE
-    module-1    true                7s    Ignored: unknown module name
+  ```console
+  $ kubectl get moduleconfig module-1
+  NAME        ENABLED   VERSION   AGE   MESSAGE
+  module-1    true                7s    Ignored: unknown module name
   ```
 
 По аналогии [с _DeckhouseRelease_](../../cr.html#deckhouserelease) (ресурсом релиза DKP) у модулей есть аналогичный ресурс — [_ModuleRelease_](../../cr.html#modulerelease). DKP создает ресурсы _ModuleRelease_ исходя из того, что хранится в container registry. При поиске проблем с модулем проверьте также доступные в кластере релизы модуля:
@@ -313,7 +313,7 @@ kubectl get mr
 
 Пример вывода:
 
-```shell
+```console
 $ kubectl get mr
 NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAGE
 module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for the 'release.deckhouse.io/approved: "true"' annotation
