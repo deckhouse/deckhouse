@@ -72,8 +72,13 @@ mount:
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y clang cmake build-essential golang make
+  - apt-get install -y git openssl-devel wget clang cmake libelf-devel libbpf-devel bpftool perl-IPC-Cmd gcc12 gcc12-c++ build-essential golang
   - git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
+  - rm -f /usr/bin/clang
+  - ln -s /usr/bin/clang-18 /usr/bin/clang
+  - rm -f /usr/bin/x86_64-alt-linux-gcc /usr/bin/x86_64-alt-linux-g++
+  - ln -s x86_64-alt-linux-gcc-12 /usr/bin/x86_64-alt-linux-gcc
+  - ln -s x86_64-alt-linux-g++-12 /usr/bin/x86_64-alt-linux-g++
   install:
   # build plugins
   - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=1
@@ -82,6 +87,10 @@ shell:
   - cd /src/plugins/k8saudit
   - make
   - cd /src/plugins/k8smeta
+  {{- if $.DistroPackagesProxy }}
+  # build in the closed env
+  - sed -i "s|https://raw.githubusercontent.com|http://{{ $.DistroPackagesProxy }}/repository/githubusercontent|g" test/CMakeLists.txt
+  {{- end }}
   - make
   - cp /src/plugins/json/libjson.so /src/plugins/k8saudit/libk8saudit.so /src/plugins/k8smeta/libk8smeta.so /plugins
 ---
