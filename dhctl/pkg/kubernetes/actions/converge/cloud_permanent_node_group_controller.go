@@ -66,18 +66,18 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		index++
 	}
 
-	go func() error {
-		for candidate := range desiredNodesChannel {
+	for candidate := range desiredNodesChannel {
+		go func() error {
 			log.InfoF("Bootstrap node: %s", candidate)
 			err := BootstrapAdditionalNode(c.client, c.config, index, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
 			if err != nil {
 				return err
 			}
 			nodesToWait = append(nodesToWait, candidate)
-		}
-		close(desiredNodesChannel)
-		return nil
-	}()
+			return nil
+		}()
+	}
+	close(desiredNodesChannel)
 
 	return WaitForNodesListBecomeReady(c.client, nodesToWait, nil)
 }
