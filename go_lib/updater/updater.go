@@ -103,7 +103,7 @@ func (r deployDelayReason) string(applyTime time.Time) string {
 			b.WriteString(". After approval the release will be delayed")
 		}
 
-		b.WriteString("until ")
+		b.WriteString(" until ")
 		b.WriteString(applyTime.Format(time.RFC822))
 
 		return b.String()
