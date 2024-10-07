@@ -184,60 +184,60 @@ spec:
 
 - Применить политику ко всем модулям _ModuleSource_ `deckhouse`:
 
-```yaml
-  moduleReleaseSelector:
-    labelSelector:
-      matchLabels:
-        source: deckhouse
-```
+  ```yaml
+    moduleReleaseSelector:
+      labelSelector:
+        matchLabels:
+          source: deckhouse
+  ```
 
 - Применить политику к модулю `deckhouse-admin` независимо от _ModuleSource_:
 
-```yaml
-  moduleReleaseSelector:
-    labelSelector:
-      matchLabels:
-        module: deckhouse-admin
-```
+  ```yaml
+    moduleReleaseSelector:
+      labelSelector:
+        matchLabels:
+          module: deckhouse-admin
+  ```
 
 - Применить политику к модулю `deckhouse-admin` из _ModuleSource_ `deckhouse`:
 
-```yaml
-  moduleReleaseSelector:
-    labelSelector:
-      matchLabels:
-        module: deckhouse-admin
-        source: deckhouse
-```
+  ```yaml
+    moduleReleaseSelector:
+      labelSelector:
+        matchLabels:
+          module: deckhouse-admin
+          source: deckhouse
+  ```
 
 - Применить политику только к модулям `deckhouse-admin` и `secrets-store-integration` в _ModuleSource_ `deckhouse`:
 
-```yaml
-  moduleReleaseSelector:
-    labelSelector:
-      matchExpressions:
-      - key: module
-        operator: In
-        values:
-        - deckhouse-admin
-        - secrets-store-integration
-      matchLabels:
-        source: deckhouse
-```
+  ```yaml
+    moduleReleaseSelector:
+      labelSelector:
+        matchExpressions:
+        - key: module
+          operator: In
+          values:
+          - deckhouse-admin
+          - secrets-store-integration
+        matchLabels:
+          source: deckhouse
+  ```
 
 - Применить политику ко всем модулям _ModuleSource_ `deckhouse`, кроме `deckhouse-admin`:
 
-```yaml
-  moduleReleaseSelector:
-    labelSelector:
-      matchExpressions:
-      - key: module
-        operator: NotIn
-        values:
-        - deckhouse-admin
-      matchLabels:
-        source: deckhouse
-```
+  ```yaml
+    moduleReleaseSelector:
+      labelSelector:
+        matchExpressions:
+        - key: module
+          operator: NotIn
+          values:
+          - deckhouse-admin
+        matchLabels:
+          source: deckhouse
+  ```
 
 ## Включение модуля в кластере
 
@@ -266,44 +266,44 @@ module-test                           900      Disabled   example
 Включить модуль можно аналогично встроенному модулю DKP любым из следующих способов:
 - Выполнить следующую команду (укажите имя модуля):
 
-```shell
-  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
-```
+  ```shell
+    kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
+  ```
 
 - Создать ресурс `ModuleConfig` с параметром `enabled: true` и настройками модуля.
 
   Пример [ModuleConfig](../../cr.html#moduleconfig), для включения и настройки модуля `module-1` в кластере:
 
-```yaml
-  apiVersion: deckhouse.io/v1alpha1
-  kind: ModuleConfig
-  metadata:
-    name: module-1
-  spec:
-    enabled: true
-    settings:
-      parameter: value
-    version: 1
-```
+  ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: ModuleConfig
+    metadata:
+      name: module-1
+    spec:
+      enabled: true
+      settings:
+        parameter: value
+      version: 1
+  ```
 
 ### Если что-то пошло не так
 
 Если при включении модуля в кластере возникли ошибки, то получить информацию о них можно следующими способами:
 - Посмотреть журнал DKP:
 
-```shell
-  kubectl -n d8-system logs -l app=deckhouse
-```
+  ```shell
+    kubectl -n d8-system logs -l app=deckhouse
+  ```
 
 - Посмотреть ресурс `ModuleConfig` модуля:
 
   Пример вывода информации об ошибке модуля `module-1`:
 
-```shell
-  $ kubectl get moduleconfig module-1
-  NAME        ENABLED   VERSION   AGE   MESSAGE
-  module-1    true                7s    Ignored: unknown module name
-```
+  ```shell
+    $ kubectl get moduleconfig module-1
+    NAME        ENABLED   VERSION   AGE   MESSAGE
+    module-1    true                7s    Ignored: unknown module name
+  ```
 
 По аналогии [с _DeckhouseRelease_](../../cr.html#deckhouserelease) (ресурсом релиза DKP) у модулей есть аналогичный ресурс — [_ModuleRelease_](../../cr.html#modulerelease). DKP создает ресурсы _ModuleRelease_ исходя из того, что хранится в container registry. При поиске проблем с модулем проверьте также доступные в кластере релизы модуля:
 

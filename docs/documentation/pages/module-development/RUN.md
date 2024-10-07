@@ -97,7 +97,6 @@ module-two-v1.2.1          Superseded   deckhouse       48d
 module-two-v1.2.3          Deployed     deckhouse       48d              
 module-two-v1.2.4          Superseded   deckhouse       44d              
 module-two-v1.2.5          Pending      deckhouse       44d              Waiting for the 'release.deckhouse.io/approved: \"true\"' annotation
-
 ```
 
 If there is a module release in `Deployed` status, this module can be [enabled](#enabling-the-module) in the cluster. If a module release is in `Superseded` status, it means that the module release is out of date, and there is a newer release to replace it.
@@ -183,60 +182,60 @@ spec:
 
 - Apply the policy to all _ModuleSource_ `deckhouse` modules:
 
-```yaml
-  moduleReleaseSelector:
-    labelSelector:
-      matchLabels:
-        source: deckhouse
-```
+  ```yaml
+    moduleReleaseSelector:
+      labelSelector:
+        matchLabels:
+          source: deckhouse
+  ```
 
 - Apply the policy to the `deckhouse-admin` module independently of _ModuleSource_:
 
-```yaml
-  moduleReleaseSelector:
-    labelSelector:
-      matchLabels:
-        module: deckhouse-admin
-```
+  ```yaml
+    moduleReleaseSelector:
+      labelSelector:
+        matchLabels:
+          module: deckhouse-admin
+  ```
 
 - Apply the policy to the `deckhouse-admin` module from the `deckhouse` _ModuleSource_:
   
-```yaml
-  moduleReleaseSelector:
-    labelSelector:
-      matchLabels:
-        module: deckhouse-admin
-        source: deckhouse
-```
+  ```yaml
+    moduleReleaseSelector:
+      labelSelector:
+        matchLabels:
+          module: deckhouse-admin
+          source: deckhouse
+  ```
 
 - Apply the policy only to the `deckhouse-admin` and `secrets-store-integration` modules in the `deckhouse` _ModuleSource_:
   
-```yaml
-  moduleReleaseSelector:
-    labelSelector:
-      matchExpressions:
-      - key: module
-        operator: In
-        values:
-        - deckhouse-admin
-        - secrets-store-integration
-      matchLabels:
-        source: deckhouse
-```
+  ```yaml
+    moduleReleaseSelector:
+      labelSelector:
+        matchExpressions:
+        - key: module
+          operator: In
+          values:
+          - deckhouse-admin
+          - secrets-store-integration
+        matchLabels:
+          source: deckhouse
+  ```
 
 - Apply the policy to all `deckhouse` _ModuleSource_ modules except for `deckhouse-admin`:
 
-```yaml
-  moduleReleaseSelector:
-    labelSelector:
-      matchExpressions:
-      - key: module
-        operator: NotIn
-        values:
-        - deckhouse-admin
-      matchLabels:
-        source: deckhouse
-```
+  ```yaml
+    moduleReleaseSelector:
+      labelSelector:
+        matchExpressions:
+        - key: module
+          operator: NotIn
+          values:
+          - deckhouse-admin
+        matchLabels:
+          source: deckhouse
+  ```
 
 ## Enabling the module
 
@@ -265,44 +264,44 @@ If the module is not in the list, check that [module source](#module-source) is 
 You can enable the module similarly to built-in DKP modules using any of the following methods:
 - Run the command below (specify the name of the module):
 
-```shell
-  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
-```
+  ```shell
+    kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
+  ```
 
 - Create a `ModuleConfig` resource containing the `enabled: true` parameter and module settings..
 
- Below is an example of a [ModuleConfig](../../cr.html#moduleconfig) that enables and configures the `module-1` module in the cluster:
+  Below is an example of a [ModuleConfig](../../cr.html#moduleconfig) that enables and configures the `module-1` module in the cluster:
 
-```yaml
-  apiVersion: deckhouse.io/v1alpha1
-  kind: ModuleConfig
-  metadata:
-    name: module-1
-  spec:
-    enabled: true
-    settings:
-      parameter: value
-    version: 1
-```
+  ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: ModuleConfig
+    metadata:
+      name: module-1
+    spec:
+      enabled: true
+      settings:
+        parameter: value
+      version: 1
+  ```
 
 ### Troubleshooting
 
 If there were errors while enabling a module in the cluster, you can learn about them as follows:
 - View the DKP log:
 
-```shell
-  kubectl -n d8-system logs -l app=deckhouse
-```
+  ```shell
+    kubectl -n d8-system logs -l app=deckhouse
+  ```
 
 - View the `ModuleConfig` resource of the module:
 
   Here is an example of the error message for `module-1`:
 
-```shell
-  $ kubectl get moduleconfig module-1
-  NAME        ENABLED   VERSION   AGE   MESSAGE
-  module-1    true                7s    Ignored: unknown module name
-```
+  ```shell
+    $ kubectl get moduleconfig module-1
+    NAME        ENABLED   VERSION   AGE   MESSAGE
+    module-1    true                7s    Ignored: unknown module name
+  ```
 
 Similar to [_DeckhouseRelease_](../../cr.html#deckhouserelease) (a DKP release resource), modules have a [_ModuleRelease_](../../cr.html#modulerelease) resource. DKP creates _ModuleRelease_ resources based on what is stored in the container registry. When troubleshooting module issues, check the module releases available in the cluster as well:
 
