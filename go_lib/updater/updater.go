@@ -348,6 +348,8 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 		du.logger.Infof("Release %s is waiting for manual approval ", release.GetName())
 		du.metricsUpdater.WaitingManual(release.GetName(), 1)
 		reason = reason.add(manualApprovalRequiredReason)
+	} else {
+		du.metricsUpdater.WaitingManual(release.GetName(), 0)
 	}
 
 	if !newApplyAfter.IsZero() {
@@ -393,6 +395,8 @@ func (du *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTim
 		du.logger.Infof("Release %s is waiting for manual approval", release.GetName())
 		du.metricsUpdater.WaitingManual(release.GetName(), 1)
 		reason = reason.add(manualApprovalRequiredReason)
+	} else {
+		du.metricsUpdater.WaitingManual(release.GetName(), 0)
 	}
 
 	if !newApplyAfter.IsZero() {
