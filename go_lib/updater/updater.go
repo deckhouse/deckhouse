@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	waitingManualApprovalMsg = "Waiting for manual approval"
+	waitingManualApprovalMsg = "Waiting for the 'release.deckhouse.io/approved: \"true\"' annotation"
 )
 
 const (
