@@ -17,6 +17,10 @@ import:
   add: /src/falcoctl
   to: /usr/bin/falcoctl
   before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-plugins-artifact
+  add: /plugins
+  to: /usr/share/falco/plugins
+  before: install
 shell:
   beforeInstall:
   - rm -df /lib/modules
@@ -54,6 +58,32 @@ shell:
   - make falcoctl
   - chown 64535:64535 falcoctl
   - chmod 0755 falcoctl
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-plugins-artifact
+from: {{ $.Images.BASE_ALT_P11 }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/plugins
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y clang cmake build-essential golang make
+  - git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
+  install:
+  # build plugins
+  - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=1
+  - cd /src/plugins/json
+  - make
+  - cd /src/plugins/k8saudit
+  - make
+  - cd /src/plugins/k8smeta
+  - make
+  - cp /src/plugins/json/libjson.so /src/plugins/k8saudit/libk8saudit.so /src/plugins/k8smeta/libk8smeta.so /plugins
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_ALT_P11 }}
@@ -101,17 +131,5 @@ shell:
   - make package -j4
   - mkdir -p /falco-package
   - tar -zxvf falco-*-x86_64.tar.gz --strip-components 1 -C /falco-package
-  # cleanup to reduce artifact size
-  - make clean
-  # build plugins
-  - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=1
-  - cd /src/plugins/plugins/json
-  - make
-  - cd /src/plugins/plugins/k8saudit
-  - make
-  - cd /src/plugins/plugins/k8smeta
-  - make
-  - cp /src/plugins/plugins/json/libjson.so /src/plugins/plugins/k8saudit/libk8saudit.so /src/plugins/plugins/k8smeta/libk8smeta.so /falco-package/usr/share/falco/plugins
-  - cd /src/plugins
   # cleanup to reduce artifact size
   - make clean
