@@ -16,6 +16,7 @@ package converge
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -46,19 +47,25 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 
 	var (
 		nodesToWait []string
+		wg          sync.WaitGroup
 	)
 
 	for c.desiredReplicas > count {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, index)
 
 		if _, ok := c.state.State[candidateName]; !ok {
-			err := BootstrapAdditionalNode(c.client, c.config, index, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
-			if err != nil {
-				return err
-			}
-
-			count++
-			nodesToWait = append(nodesToWait, candidateName)
+			wg.Add(1)
+			go func() error {
+				defer wg.Done()
+				log.DebugF(candidateName)
+				err := BootstrapAdditionalNode(c.client, c.config, index, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
+				if err != nil {
+					return err
+				}
+				count++
+				nodesToWait = append(nodesToWait, candidateName)
+				return nil
+			}()
 		}
 		index++
 	}
