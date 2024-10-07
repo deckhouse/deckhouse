@@ -93,16 +93,20 @@ func (r deployDelayReason) string(applyTime time.Time) string {
 	}
 
 	if len(reasons) != 0 {
-		str := strings.Join(reasons, ". ")
+		var b strings.Builder
+		b.WriteString(strings.Join(reasons, ". "))
 		if applyTime.IsZero() {
-			return str
+			return b.String()
 		}
 
 		if r.contains(manualApprovalRequiredReason) {
-			str += ". After approval the release will be delayed"
+			b.WriteString(". After approval the release will be delayed")
 		}
 
-		return fmt.Sprintf("%s until %s", str, applyTime.Format(time.RFC822))
+		b.WriteString("until ")
+		b.WriteString(applyTime.Format(time.RFC822))
+
+		return b.String()
 	}
 
 	return fmt.Sprintf("deployDelayReason(%b)", byte(r))

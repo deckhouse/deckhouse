@@ -379,7 +379,7 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 
 	nConfig, err := r.parseNotificationConfig(ctx)
 	if err != nil {
-		return ctrl.Result{Requeue: true}, fmt.Errorf("parse notification config: %w", err)
+		return ctrl.Result{}, fmt.Errorf("parse notification config: %w", err)
 	}
 
 	policy := new(v1alpha1.ModuleUpdatePolicy)
@@ -544,7 +544,7 @@ func (r *moduleReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result,
 		return ctrl.Result{Requeue: true, RequeueAfter: notReadyErr.RetryDelay()}, nil
 	}
 
-	return ctrl.Result{RequeueAfter: defaultCheckInterval}, fmt.Errorf("apply predicted release: %w", err)
+	return ctrl.Result{}, fmt.Errorf("apply predicted release: %w", err)
 }
 
 // getReleasePolicy checks if any update policy matches the module release and if it's so - returns the policy and its release channel.
@@ -1151,7 +1151,7 @@ func (r *moduleReleaseReconciler) cleanUpModuleReleases(ctx context.Context, mr 
 	var moduleReleasesFromSource v1alpha1.ModuleReleaseList
 	err := r.client.List(ctx, &moduleReleasesFromSource, client.MatchingLabels{"source": mr.GetModuleSource(), "module": mr.GetModuleName()})
 	if err != nil {
-		return ctrl.Result{Requeue: true}, fmt.Errorf("couldn't list module releases to clean up: %w", err)
+		return ctrl.Result{}, fmt.Errorf("couldn't list module releases to clean up: %w", err)
 	}
 
 	type outdatedRelease struct {
@@ -1184,12 +1184,12 @@ func (r *moduleReleaseReconciler) cleanUpModuleReleases(ctx context.Context, mr 
 				}
 				err = r.client.Delete(ctx, releaseObj)
 				if err != nil && !apierrors.IsNotFound(err) {
-					return ctrl.Result{Requeue: true}, fmt.Errorf("couldn't clean up outdated release %q of %s module: %w", releases[i].name, moduleName, err)
+					return ctrl.Result{}, fmt.Errorf("couldn't clean up outdated release %q of %s module: %w", releases[i].name, moduleName, err)
 				}
 				r.logger.Infof("cleaned up outdated release %q of %q module", releases[i].name, moduleName)
 			}
 		}
 	}
 
-	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	return ctrl.Result{}, nil
 }
