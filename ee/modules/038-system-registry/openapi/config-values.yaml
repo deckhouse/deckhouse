@@ -22,6 +22,7 @@ properties:
     description: |
       Registry mode
     enum: [Direct, Proxy, Detached]
+    x-doc-default: Direct
     default: Direct
   detached:
     type: object
