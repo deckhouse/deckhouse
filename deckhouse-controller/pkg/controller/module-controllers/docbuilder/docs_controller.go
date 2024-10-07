@@ -225,12 +225,6 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 		return res, nil
 	}
 
-	pr, pw := io.Pipe()
-	defer pr.Close()
-
-	mdr.logger.Debugf("Getting the %s module's documentation locally", moduleName)
-	fetchModuleErr := mdr.getDocumentationFromModuleDir(md.Spec.Path, pw)
-
 	var rendered int
 	now := metav1.NewTime(mdr.dc.GetClock().Now().UTC())
 
@@ -238,6 +232,12 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 	mdCopy.Status.Conditions = make([]v1alpha1.ModuleDocumentationCondition, 0, len(addrs))
 
 	for _, addr := range addrs {
+		pr, pw := io.Pipe()
+		defer pr.Close()
+
+		mdr.logger.Debugf("Getting the %s module's documentation locally", moduleName)
+		fetchModuleErr := mdr.getDocumentationFromModuleDir(md.Spec.Path, pw)
+
 		cond, condIdx := md.GetConditionByAddress(addr)
 		// TODO: add function for compare
 		if condIdx >= 0 &&
