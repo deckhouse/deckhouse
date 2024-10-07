@@ -1,4 +1,4 @@
-ARG BASE_DISTROLESS
+ARG BASE_ALT
 ARG BASE_ALPINE
 
 # original kiali
@@ -10,7 +10,7 @@ COPY --from=artifact /opt/kiali/ /opt/kiali/
 
 RUN adduser -H -D -u 1000 kiali && chown -R kiali:kiali /opt/kiali/console && chmod -R g=u /opt/kiali/console
 
-FROM $BASE_DISTROLESS
+FROM $BASE_ALT
 # get all from original kiali
 COPY --from=artifact2 /opt/kiali/ /opt/kiali/
 
