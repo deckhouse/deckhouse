@@ -126,7 +126,7 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-dynamix/cr.html#layouts)  о возможных схемах размещения провайдера.
+          [Подробнее](../../../../modules/030-cloud-provider-dynamix/layouts.html)  о возможных схемах размещения провайдера.
       provider:
         type: object
         additionalProperties: false
