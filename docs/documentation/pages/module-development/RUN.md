@@ -183,58 +183,58 @@ spec:
 - Apply the policy to all _ModuleSource_ `deckhouse` modules:
 
   ```yaml
-    moduleReleaseSelector:
-      labelSelector:
-        matchLabels:
-          source: deckhouse
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        source: deckhouse
   ```
 
 - Apply the policy to the `deckhouse-admin` module independently of _ModuleSource_:
 
   ```yaml
-    moduleReleaseSelector:
-      labelSelector:
-        matchLabels:
-          module: deckhouse-admin
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        module: deckhouse-admin
   ```
 
 - Apply the policy to the `deckhouse-admin` module from the `deckhouse` _ModuleSource_:
   
   ```yaml
-    moduleReleaseSelector:
-      labelSelector:
-        matchLabels:
-          module: deckhouse-admin
-          source: deckhouse
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        module: deckhouse-admin
+        source: deckhouse
   ```
 
 - Apply the policy only to the `deckhouse-admin` and `secrets-store-integration` modules in the `deckhouse` _ModuleSource_:
   
   ```yaml
-    moduleReleaseSelector:
-      labelSelector:
-        matchExpressions:
-        - key: module
-          operator: In
-          values:
-          - deckhouse-admin
-          - secrets-store-integration
-        matchLabels:
-          source: deckhouse
+  moduleReleaseSelector:
+    labelSelector:
+      matchExpressions:
+      - key: module
+        operator: In
+        values:
+        - deckhouse-admin
+        - secrets-store-integration
+      matchLabels:
+        source: deckhouse
   ```
 
 - Apply the policy to all `deckhouse` _ModuleSource_ modules except for `deckhouse-admin`:
 
   ```yaml
-    moduleReleaseSelector:
-      labelSelector:
-        matchExpressions:
-        - key: module
-          operator: NotIn
-          values:
-          - deckhouse-admin
-        matchLabels:
-          source: deckhouse
+  moduleReleaseSelector:
+    labelSelector:
+      matchExpressions:
+      - key: module
+        operator: NotIn
+        values:
+        - deckhouse-admin
+      matchLabels:
+        source: deckhouse
   ```
 
 ## Enabling the module
@@ -273,15 +273,15 @@ You can enable the module similarly to built-in DKP modules using any of the fol
   Below is an example of a [ModuleConfig](../../cr.html#moduleconfig) that enables and configures the `module-1` module in the cluster:
 
   ```yaml
-    apiVersion: deckhouse.io/v1alpha1
-    kind: ModuleConfig
-    metadata:
-      name: module-1
-    spec:
-      enabled: true
-      settings:
-        parameter: value
-      version: 1
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: module-1
+  spec:
+    enabled: true
+    settings:
+      parameter: value
+    version: 1
   ```
 
 ### Troubleshooting

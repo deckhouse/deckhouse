@@ -185,58 +185,58 @@ spec:
 - Применить политику ко всем модулям _ModuleSource_ `deckhouse`:
 
   ```yaml
-    moduleReleaseSelector:
-      labelSelector:
-        matchLabels:
-          source: deckhouse
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        source: deckhouse
   ```
 
 - Применить политику к модулю `deckhouse-admin` независимо от _ModuleSource_:
 
   ```yaml
-    moduleReleaseSelector:
-      labelSelector:
-        matchLabels:
-          module: deckhouse-admin
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        module: deckhouse-admin
   ```
 
 - Применить политику к модулю `deckhouse-admin` из _ModuleSource_ `deckhouse`:
 
   ```yaml
-    moduleReleaseSelector:
-      labelSelector:
-        matchLabels:
-          module: deckhouse-admin
-          source: deckhouse
+  moduleReleaseSelector:
+    labelSelector:
+      matchLabels:
+        module: deckhouse-admin
+        source: deckhouse
   ```
 
 - Применить политику только к модулям `deckhouse-admin` и `secrets-store-integration` в _ModuleSource_ `deckhouse`:
 
   ```yaml
-    moduleReleaseSelector:
-      labelSelector:
-        matchExpressions:
-        - key: module
-          operator: In
-          values:
-          - deckhouse-admin
-          - secrets-store-integration
-        matchLabels:
-          source: deckhouse
+  moduleReleaseSelector:
+    labelSelector:
+      matchExpressions:
+      - key: module
+        operator: In
+        values:
+        - deckhouse-admin
+        - secrets-store-integration
+      matchLabels:
+        source: deckhouse
   ```
 
 - Применить политику ко всем модулям _ModuleSource_ `deckhouse`, кроме `deckhouse-admin`:
 
   ```yaml
-    moduleReleaseSelector:
-      labelSelector:
-        matchExpressions:
-        - key: module
-          operator: NotIn
-          values:
-          - deckhouse-admin
-        matchLabels:
-          source: deckhouse
+  moduleReleaseSelector:
+    labelSelector:
+      matchExpressions:
+      - key: module
+        operator: NotIn
+        values:
+        - deckhouse-admin
+      matchLabels:
+        source: deckhouse
   ```
 
 ## Включение модуля в кластере
@@ -275,15 +275,15 @@ module-test                           900      Disabled   example
   Пример [ModuleConfig](../../cr.html#moduleconfig), для включения и настройки модуля `module-1` в кластере:
 
   ```yaml
-    apiVersion: deckhouse.io/v1alpha1
-    kind: ModuleConfig
-    metadata:
-      name: module-1
-    spec:
-      enabled: true
-      settings:
-        parameter: value
-      version: 1
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: module-1
+  spec:
+    enabled: true
+    settings:
+      parameter: value
+    version: 1
   ```
 
 ### Если что-то пошло не так
