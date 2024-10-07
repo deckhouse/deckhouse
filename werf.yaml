@@ -194,7 +194,7 @@ shell:
 {{- end }}
 
 image: common-base
-from: {{ .Images.BASE_ALT }}
+from: {{ .Images.BASE_ALT_P11 }}
 import:
 - artifact: dev-alt-artifact
   add: /
@@ -238,7 +238,7 @@ ansible:
 
 ---
 image: base-for-go
-from: {{ .Images.BASE_ALT_DEV }}
+from: {{ .Images.BASE_ALT_P11 }}
 import:
   {{- include "base components imports" . }}
 ansible:
@@ -272,7 +272,7 @@ ansible:
 
 ---
 artifact: dev-alt-artifact
-from: {{ .Images.BASE_ALT_DEV }}
+from: {{ .Images.BASE_ALT_P11 }}
 shell:
   install:
   - /binary_replace.sh -i "/usr/bin/envsubst" -o /relocate
@@ -604,7 +604,7 @@ shell:
 
 ---
 image: dev/install
-from: {{ .Images.BASE_ALT }}
+from: {{ .Images.BASE_ALT_P11 }}
 git:
 - add: /
   to: /deckhouse
@@ -844,6 +844,7 @@ args:
   BASE_ALPINE_DEV: {{ .Images.BASE_ALPINE_DEV }}
   BASE_ALT: {{ .Images.BASE_ALT }}
   BASE_ALT_DEV: {{ .Images.BASE_ALT_DEV }}
+  BASE_ALT_P11: {{ .Images.BASE_ALT_P11 }}
   BASE_GOLANG_ALPINE: {{ .Images.BASE_GOLANG_ALPINE }}
   BASE_GOLANG_ALPINE_DEV: {{ .Images.BASE_GOLANG_ALPINE_DEV }}
   BASE_GOLANG_16_ALPINE: {{ .Images.BASE_GOLANG_16_ALPINE }}
