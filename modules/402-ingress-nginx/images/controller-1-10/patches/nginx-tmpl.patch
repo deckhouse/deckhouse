@@ -279,4 +279,3 @@ diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.
 
  for dir in "${writeDirs[@]}"; do
    mkdir -p ${dir};
-
