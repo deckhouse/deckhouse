@@ -14,6 +14,10 @@
 
 mkdir -p /etc/kubernetes/manifests
 
+if crictl version >/dev/null 2>/dev/null; then
+  crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+fi
+
 bb-sync-file /etc/kubernetes/manifests/kubernetes-api-proxy.yaml - << EOF
 apiVersion: v1
 kind: Pod
@@ -61,7 +65,3 @@ spec:
   - name: tmp
     emptyDir: {}
 EOF
-
-if crictl version >/dev/null 2>/dev/null; then
-  crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
-fi
