@@ -98,7 +98,8 @@ func (r deployDelayReason) string(applyTime time.Time) string {
 	}
 
 	if len(reasons) != 0 {
-		b.WriteString(strings.Join(reasons, ", "))
+		var b strings.Builder
+		b.WriteString(strings.Join(reasons, ". "))
 		if applyTime.IsZero() {
 			return b.String()
 		}
