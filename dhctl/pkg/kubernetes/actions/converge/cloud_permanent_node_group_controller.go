@@ -50,7 +50,7 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		nodesToWait []string
 	)
 
-	desiredNodesChannel := make(chan string)
+	desiredNodesChannel := make(chan string, 2)
 
 	for c.desiredReplicas > count {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, index)
