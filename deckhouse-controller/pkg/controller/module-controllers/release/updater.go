@@ -237,12 +237,20 @@ func newMetricsUpdater(metricStorage *metric_storage.MetricStorage, enabledModul
 func (m *metricsUpdater) ReleaseBlocked(_, _ string) {
 }
 
-func (m *metricsUpdater) WaitingManual(name string, totalPendingManualReleases float64) {
-	if !slices.Contains(m.enabledModules, name) {
+func (m *metricsUpdater) WaitingManual(release *v1alpha1.ModuleRelease, totalPendingManualReleases float64) {
+	if !slices.Contains(m.enabledModules, release.GetModuleName()) {
 		return
 	}
 
-	m.metricStorage.GaugeSet("d8_module_release_waiting_manual", totalPendingManualReleases, map[string]string{"name": name})
+	m.metricStorage.GaugeSet(
+		"d8_module_release_waiting_manual",
+		totalPendingManualReleases,
+		map[string]string{
+			"name":       release.GetName(),
+			"kind":       "module",
+			"moduleName": release.GetModuleName(),
+			"version":    "v" + release.Spec.Version.String(),
+		})
 }
 
 type settings struct{}
