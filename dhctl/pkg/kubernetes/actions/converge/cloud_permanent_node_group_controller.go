@@ -16,6 +16,8 @@ package converge
 
 import (
 	"fmt"
+	"sync"
+	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -66,14 +68,20 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		index++
 	}
 
-	for candidate := range desiredNodesChannel {
-		go func() {
-			fmt.Printf("Bootstrap node: %s", candidate)
-			BootstrapAdditionalNode(c.client, c.config, index, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
-			nodesToWait = append(nodesToWait, candidate)
-		}()
-	}
-	close(desiredNodesChannel)
+	go func() {
+		wg := sync.WaitGroup{}
+		for candidate := range desiredNodesChannel {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				fmt.Printf("Bootstrap node: %s", candidate)
+				BootstrapAdditionalNode(c.client, c.config, index, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
+
+				nodesToWait = append(nodesToWait, candidate)
+			}()
+		}
+		time.Sleep(1 * time.Second)
+	}()
 
 	return WaitForNodesListBecomeReady(c.client, nodesToWait, nil)
 }
