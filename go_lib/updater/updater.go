@@ -36,11 +36,11 @@ import (
 )
 
 const (
-	cooldownDelayMsg         = "Release is in cooldown"
-	canaryDelayReasonMsg     = "Release is postponed by canary process"
-	waitingManualApprovalMsg = "Release is waiting for the 'release.deckhouse.io/approved: \"true\"' annotation"
-	outOfWindowMsg           = "Release is waiting for the update window"
-	notificationDelayMsg     = "Release is postponed by notification"
+	cooldownDelayMsg         = "in cooldown"
+	canaryDelayReasonMsg     = "postponed by canary process"
+	waitingManualApprovalMsg = "waiting for the 'release.deckhouse.io/approved: \"true\"' annotation"
+	outOfWindowMsg           = "waiting for the update window"
+	notificationDelayMsg     = "postponed by notification"
 )
 
 const (
@@ -71,7 +71,12 @@ func (r deployDelayReason) string(applyTime time.Time) string {
 		return "no delay"
 	}
 
-	var reasons []string
+	var (
+		reasons []string
+		b       strings.Builder
+	)
+	b.WriteString("Release is ")
+
 	if r.contains(cooldownDelayReason) {
 		reasons = append(reasons, cooldownDelayMsg)
 	}
@@ -93,8 +98,7 @@ func (r deployDelayReason) string(applyTime time.Time) string {
 	}
 
 	if len(reasons) != 0 {
-		var b strings.Builder
-		b.WriteString(strings.Join(reasons, ". "))
+		b.WriteString(strings.Join(reasons, ", "))
 		if applyTime.IsZero() {
 			return b.String()
 		}
