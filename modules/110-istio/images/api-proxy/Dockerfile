@@ -6,5 +6,6 @@ COPY main.go go.mod go.sum /src/
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o api-proxy main.go
 
 FROM $BASE_DISTROLESS
+COPY --from=artifact /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=artifact /src/api-proxy /api-proxy
 ENTRYPOINT [ "/api-proxy" ]
