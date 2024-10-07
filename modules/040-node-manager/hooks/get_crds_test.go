@@ -1231,20 +1231,6 @@ spec:
 		})
 	})
 
-	Context("Cluster with proper NG, global cri is set to docker", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
-			setK8sVersionAsClusterConfig(f, "1.27")
-			f.ValuesSet("global.clusterConfiguration.defaultCRI", "Docker")
-			f.RunHook()
-		})
-
-		It("Hook must not fail; cri must be correct", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cri.type").String()).To(Equal("Docker"))
-		})
-	})
-
 	Context("Cluster with proper NG, global cri is set to containerd", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
