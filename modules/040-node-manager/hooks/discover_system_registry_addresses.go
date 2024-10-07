@@ -44,7 +44,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"component": "system-registry",
-					"tier": "control-plane",
+					"tier":      "control-plane",
 				},
 			},
 			NamespaceSelector: &types.NamespaceSelector{
