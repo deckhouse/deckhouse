@@ -94,18 +94,18 @@ func (c *Client) CheckBuilderHealth(ctx context.Context, baseAddr string) error 
 func (c *Client) sendRequest(ctx context.Context, method string, url string, body io.Reader) ([]byte, int, error) {
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("create request: %w", err)
 	}
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("do request: %w", err)
 	}
 	defer res.Body.Close()
 
 	dataBytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, res.StatusCode, err
+		return nil, res.StatusCode, fmt.Errorf("read all: %w", err)
 	}
 
 	return dataBytes, res.StatusCode, nil
