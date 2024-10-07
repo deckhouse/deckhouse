@@ -73,21 +73,22 @@ spec:
               resources:
                 - groupVersionKind:
                     group: autoscaling.k8s.io
-                    kind: "VerticalPodAutoscaler"
-                    version: "v1"
+                    version: v1
+                    kind: VerticalPodAutoscaler
                   labelsFromPath:
                     verticalpodautoscaler: [metadata, name]
                     namespace: [metadata, namespace]
-                    target_api_version: [apiVersion]
-                    target_kind: [spec, targetRef, kind]
-                    target_name: [spec, targetRef, name]
                   metrics:
-                    - name: "annotations"
-                      help: "Kubernetes annotations converted to Prometheus labels."
+                    - name: "maxallowed_cpu"
+                      help: "The maximum allowed CPU allocation for a container according to VerticalPodAutoscaler's resource policy."
                       each:
                         type: Gauge
                         gauge:
-                          path: [metadata, annotations]
+                          path: [spec, resourcePolicy, containerPolicies]
+                          labelsFromPath:
+                            type: [containerName]
+                          valueFrom: [maxAllowed, cpu]
+                          
         livenessProbe:
           httpGet:
             path: /main/healthz
