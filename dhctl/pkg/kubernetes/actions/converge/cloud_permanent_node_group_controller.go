@@ -47,28 +47,38 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 
 	var (
 		nodesToWait []string
-		wg          sync.WaitGroup
 	)
+
+	desiredNodesChannel := make(chan string)
 
 	for c.desiredReplicas > count {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, index)
 
 		if _, ok := c.state.State[candidateName]; !ok {
-			wg.Add(1)
-			go func() error {
-				defer wg.Done()
-				log.DebugF(candidateName)
-				err := BootstrapAdditionalNode(c.client, c.config, index, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
-				if err != nil {
-					return err
-				}
-				count++
-				nodesToWait = append(nodesToWait, candidateName)
-				return nil
-			}()
+
+			select {
+			case desiredNodesChannel <- candidateName:
+				log.InfoF("Add %s to queue", candidateName)
+			default:
+				log.InfoF("No candidate to queue")
+			}
+			count++
 		}
 		index++
 	}
+
+	go func() error {
+		for candidate := range desiredNodesChannel {
+			log.InfoF("Bootstrap node: %s", candidate)
+			err := BootstrapAdditionalNode(c.client, c.config, index, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
+			if err != nil {
+				return err
+			}
+			nodesToWait = append(nodesToWait, candidate)
+		}
+		close(desiredNodesChannel)
+		return nil
+	}()
 
 	return WaitForNodesListBecomeReady(c.client, nodesToWait, nil)
 }
