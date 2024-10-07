@@ -30,7 +30,7 @@ terraform {
 provider "openstack" {
   auth_url = "https://api.selvpc.ru/identity/v3"
   domain_name = "48348"
-  tenant_id = "80625ad45e604fbe86679e63b704f3b8"
+  tenant_id = "ceda80a1b33844adb1cbddd20ee93585"
   user_name = "deckhouse-e2e"
   password = "${OS_PASSWORD}"
   region = var.region
