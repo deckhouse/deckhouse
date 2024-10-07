@@ -41,7 +41,6 @@ const (
 	notManagedCriMaxKubeVersion = "1.24.0"
 	nodeGroupSnapName           = "node_group"
 	criTypeNotManaged           = "NotManaged"
-	criTypeDocker               = "Docker"
 	criTypeContainerd           = "Containerd"
 )
 
@@ -133,11 +132,6 @@ func discoverNodesCRIVersion(input *go_hook.HookInput) error {
 	}
 	defaultCRI := defaultCRIValue.String()
 
-	if defaultCRI == criTypeDocker {
-		requirements.SaveValue(hasNodesWithDocker, true)
-		return nil
-	}
-
 	ngSnap := input.Snapshots[nodeGroupSnapName]
 	ngCRITypeMap := make(map[string]string)
 
@@ -148,10 +142,6 @@ func discoverNodesCRIVersion(input *go_hook.HookInput) error {
 
 	for _, item := range ngSnap {
 		ng := item.(nodeGroupCRIType)
-		if ng.CRIType == criTypeDocker {
-			requirements.SaveValue(hasNodesWithDocker, true)
-			return nil
-		}
 		ngCRITypeMap[ng.Name] = ng.CRIType
 	}
 
