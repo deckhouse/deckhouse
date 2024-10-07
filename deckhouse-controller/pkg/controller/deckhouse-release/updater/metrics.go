@@ -16,7 +16,11 @@ limitations under the License.
 
 package d8updater
 
-import "github.com/flant/shell-operator/pkg/metric_storage"
+import (
+	"github.com/flant/shell-operator/pkg/metric_storage"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+)
 
 const metricReleasesGroup = "d8_releases"
 
@@ -30,8 +34,15 @@ type metricUpdater struct {
 	metricStorage *metric_storage.MetricStorage
 }
 
-func (mu metricUpdater) WaitingManual(name string, totalPendingManualReleases float64) {
-	mu.metricStorage.GroupedVault.GaugeSet(metricReleasesGroup, "d8_release_waiting_manual", totalPendingManualReleases, map[string]string{"name": name})
+func (mu metricUpdater) WaitingManual(release *v1alpha1.DeckhouseRelease, totalPendingManualReleases float64) {
+	mu.metricStorage.GaugeSet(
+		"d8_module_release_waiting_manual",
+		totalPendingManualReleases,
+		map[string]string{
+			"name":    release.GetName(),
+			"kind":    "deckhouse",
+			"version": release.Spec.Version,
+		})
 }
 
 func (mu metricUpdater) ReleaseBlocked(name, reason string) {
