@@ -7,7 +7,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.sh
 --- a/images/nginx-1.25/rootfs/build.sh	(revision f08a1c4fdac2e0ef6053333b24191c50cc51f30c)
-+++ b/images/nginx-1.25/rootfs/build.sh	(date 1728286377979)
++++ b/images/nginx-1.25/rootfs/build.sh	(date 1728291084273)
 @@ -14,6 +14,9 @@
  # See the License for the specific language governing permissions and
  # limitations under the License.
@@ -255,20 +255,21 @@ diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.
 
  cd ${BUILD_PATH}/opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}
  git reset --hard ${OPENTELEMETRY_CONTRIB_COMMIT}
-@@ -530,6 +382,13 @@
+@@ -530,7 +382,14 @@
  mkdir -p ${OTEL_TEMP_INSTALL}
 
  cd ${BUILD_PATH}/opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}/instrumentation/nginx
 +# remove downloading nginx from cmake and clone it manually
 +# by default cmake download nginx from internet
-+sed -e "27d" nginx.cmake | sed -e "27i \ \ SOURCE_DIR ../nginx" > nginx.cmake.tmp
++sed -e "27d" nginx.cmake | sed -e "27i \ \ SOURCE_DIR nginx" > nginx.cmake.tmp
 +rm -f nginx.cmake
 +mv nginx.cmake.tmp nginx.cmake
 +cat nginx.cmake
-+cp -R "${BUILD_PATH}/nginx-$NGINX_VERSION" nginx
  mkdir -p build
++cp -R "${BUILD_PATH}/nginx-$NGINX_VERSION" build/nginx
  cd build
  cmake -DCMAKE_BUILD_TYPE=Release \
+         -G Ninja \
 @@ -614,7 +473,7 @@
    /var/log/nginx \
  );
