@@ -21,7 +21,7 @@ apiVersions:
         type: string
       cri:
         type: string
-        enum: [Docker, Containerd, NotManaged]
+        enum: [Containerd, NotManaged]
       proxy:
         type: object
         properties:
