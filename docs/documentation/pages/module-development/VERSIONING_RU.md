@@ -7,9 +7,9 @@ lang: ru
 Для версионирования модулей используется [семантическое версионирование](https://semver.org/lang/ru/).
 
 При выборе номера версии используйте следующие рекомендации:
-- изменение **patch-версии** (например, c `0.0.1` на `0.0.2`) — исправление дефекта;
-- изменение **Minor-версии** (например, c `0.0.1` на `0.1.0`) — добавление новой функции;
-- изменение **Major-версии** (например, c `0.0.1` на `1.0.0`) — добавление функции, которая кардинально меняет возможности модуля; масштабное изменение интерфейса или завершение крупного этапа работы.
+- изменение **патч-версии** (например, c `0.0.1` на `0.0.2`) — исправление дефекта;
+- изменение **минорной версии** (например, c `0.0.1` на `0.1.0`) — добавление новой функции;
+- изменение **мажорной версии** (например, c `0.0.1` на `1.0.0`) — добавление функции, которая кардинально меняет возможности модуля; масштабное изменение интерфейса или завершение крупного этапа работы.
 
 Перед номером версии в теге git и контейнере registry **всегда** добавляется буква "v". Например: `v0.0.73`, `v1.0.0`.
 
@@ -186,5 +186,5 @@ lang: ru
 Это может понадобиться, например, при переименовании или перемещении параметра в новой версии OpenAPI-спецификации.
 
 При выходе новой версии *CustomResourceDefinition* (CRD) используйте следующие рекомендации:
-* Предыдущим версиям проставлять параметр `deprecated: true`, подробнее в документации [Kubernetes](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#version-deprecation).
-* Версию, в которой данные хранятся внутри etcd ([storage-версия](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#upgrade-existing-objects-to-a-new-stored-version)), менять не ранее чем через два месяца после выхода новой версии.
+* Установите предыдущим версиям CRD параметр `deprecated: true`. Подробнее в документации [Kubernetes](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#version-deprecation).
+* Версию, в которой данные хранятся внутри etcd ([storage-версия](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#upgrade-existing-objects-to-a-new-stored-version)), меняйте не ранее чем через два месяца после выхода новой версии.
