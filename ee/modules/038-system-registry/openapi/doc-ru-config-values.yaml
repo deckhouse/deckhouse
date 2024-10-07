@@ -13,44 +13,34 @@ properties:
   mode:
     description: |
       Тип регистри
-oneOf:
-  - properties:
-      mode:
-        enum: [Direct]
-  - properties:
-      mode:
-        enum: [Detached]
-      detached:
+  detached:
+    description: |
+      Параметры для detached режима
+    properties:
+      storageMode: &storageMode
         description: |
-          Параметры для detached режима
-        properties:
-          storageMode: &storageMode
-            description: |
-              Тип хранилища данных
-  - properties:
-      mode:
-        enum: [Proxy]
-      proxy:
+          Тип хранилища данных
+  proxy:
+    description: |
+      Параметры для proxy режима
+    properties:
+      host:
         description: |
-          Параметры для proxy режима
-        properties:
-          host:
-            description: |
-              Host или upstream регистри
-          scheme:
-            description: |
-             Схема upstream регистри
-          ca:
-            description: |
-              CA сертификат upstream регистри
-          path:
-            description: |
-              Путь upstream регистри
-          user:
-            description: |
-              Имя пользователя для upstream регистри
-          password:
-            description: |
-              Пароль для upstream регистри
-          storageMode:
-            <<: *storageMode
+          Host или upstream регистри
+      scheme:
+        description: |
+          Схема upstream регистри
+      ca:
+        description: |
+          CA сертификат upstream регистри
+      path:
+        description: |
+          Путь upstream регистри
+      user:
+        description: |
+          Имя пользователя для upstream регистри
+      password:
+        description: |
+          Пароль для upstream регистри
+      storageMode:
+        <<: *storageMode

@@ -23,69 +23,79 @@ properties:
       Registry mode
     enum: [Direct, Proxy, Detached]
     default: Direct
-oneOf:
-  - properties:
-      mode:
-        enum: [Direct]
-  - properties:
-      mode:
-        enum: [Detached]
-      detached:
-        type: object
+  detached:
+    type: object
+    description: |
+      Detached mode properties.
+    properties:
+      storageMode: &storageMode
+        enum: [S3, Fs]
         description: |
-          Detached mode properties.
-        properties:
-          storageMode: &storageMode
-            enum: [S3, Fs]
-            description: |
-              The type of data storage for the system registry module.
-            default: fs
-  - properties:
-      mode:
-        enum: [Proxy]
-      proxy:
-        type: object
+          The type of data storage for the system registry module.
+        default: Fs
+  proxy:
+    type: object
+    description: |
+      Proxy mode properties.
+    properties:
+      host:
+        type: string
         description: |
-          Proxy mode properties.
-        properties:
-          host:
-            type: string
-            description: |
-              Host of upstream registry
-            x-example:
-              - dev-registry.deckhouse.io
-          scheme:
-            type: string
-            description: |
-              Registry access scheme (HTTP or HTTPS).
-            default: https
-            x-example:
-              - https
-              - http
-          ca:
-            type: string
-            description: |
-              CA of upstream registry
-            default: ""
-            x-example:
-              - ""
-          path:
-            type: string
-            description: |
-              Path of upstream registry
-            x-example:
-              - sys/deckhouse-oss
-          user:
-            type: string
-            description: |
-              User of upstream registry
-            x-example:
-              - license-token
-          password:
-            type: string
-            description: |
-              Password of upstream registry
-            x-example:
-              - "123456"
-          storageMode:
-            <<: *storageMode
+          Host of upstream registry
+        x-example:
+          - dev-registry.deckhouse.io
+      scheme:
+        type: string
+        description: |
+          Registry access scheme (http or https).
+        x-example:
+          - https
+          - http
+      ca:
+        type: string
+        description: |
+          CA of upstream registry
+        default: ""
+        x-example:
+          - ""
+      path:
+        type: string
+        description: |
+          Path of upstream registry
+        x-example:
+          - sys/deckhouse-oss
+      user:
+        type: string
+        description: |
+          User of upstream registry
+        x-example:
+          - license-token
+      password:
+        type: string
+        description: |
+          Password of upstream registry
+        x-example:
+          - "123456"
+      storageMode:
+        <<: *storageMode
+  oneOf:
+    - required: [mode]
+      properties:
+        mode:
+          enum: [Direct]
+      not:
+        required: [proxy, detached]
+    - required: [mode]
+      properties:
+        mode:
+          enum: [Proxy]
+        proxy: {}
+      not:
+        required: [detached]
+    - required: [mode]
+      properties:
+        mode:
+          enum: [Detached]
+        detached: {}
+      not:
+        required: [proxy]
