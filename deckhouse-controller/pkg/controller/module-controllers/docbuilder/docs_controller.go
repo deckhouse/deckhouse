@@ -348,7 +348,7 @@ func (mdr *moduleDocumentationReconciler) getDocumentationFromModuleDir(modulePa
 		tw := tar.NewWriter(pw)
 		defer tw.Close()
 
-		_ = pw.CloseWithError(filepath.Walk(moduleDir, func(file string, info os.FileInfo, err error) error {
+		err = pw.CloseWithError(filepath.Walk(moduleDir, func(file string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
@@ -384,6 +384,8 @@ func (mdr *moduleDocumentationReconciler) getDocumentationFromModuleDir(modulePa
 
 			return nil
 		}))
+
+		mdr.logger.Error(err)
 	}()
 
 	return nil
