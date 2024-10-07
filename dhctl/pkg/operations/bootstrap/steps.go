@@ -461,18 +461,18 @@ func StartRegistryPackagesProxy(registryCfg config.Registry, clusterDomain strin
 	var client registry.Client
 	var err error
 
-	switch registryCfg.ExtraData.(type) {
+	switch registryCfg.ModeSpecificFields.(type) {
 	case config.ProxyModeRegistryData:
 		client = &registry.DefaultClient{}
 		clientConfigGetter, err = newRegistryClientConfigGetter(
-			registryCfg.ExtraData.(config.ProxyModeRegistryData).UpstreamRegistryData,
+			registryCfg.ModeSpecificFields.(config.ProxyModeRegistryData).UpstreamRegistryData,
 		)
 		if err != nil {
 			return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
 		}
 	case config.DetachedModeRegistryData:
 		unpackedImagesPath, err := mirror.UnpackAndValidateImgBundle(
-			registryCfg.ExtraData.(config.DetachedModeRegistryData).ImagesBundlePath,
+			registryCfg.ModeSpecificFields.(config.DetachedModeRegistryData).ImagesBundlePath,
 		)
 		if err != nil {
 			return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
@@ -674,7 +674,7 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 	defer ctxCancel()
 
 	if cfg.Registry.Mode == "Detached" {
-		registryData, ok := cfg.Registry.ExtraData.(config.DetachedModeRegistryData)
+		registryData, ok := cfg.Registry.ModeSpecificFields.(config.DetachedModeRegistryData)
 		if !ok {
 			return fmt.Errorf("error, incorrect registry extra data, expected detached data type")
 		}

@@ -18,7 +18,6 @@ apiVersions:
           -----BEGIN CERTIFICATE-----
           ...
           -----END CERTIFICATE-----
-        registryMode: Direct
     properties:
       apiVersion:
         type: string
@@ -31,16 +30,34 @@ apiVersions:
         type: object
         description: Initial parameters required to install Deckhouse.
         properties:
-          registryMode:
+          imagesRepo:
+            type: string
+            pattern: '^[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?(\/[0-9a-zA-Z\.\-\_\/]+)?$'
+            description: |
+              Address of a container registry with Deckhouse images.
+
+              Specify it if Deckhouse Enterprise Edition edition or third-party registry (e.g. proxy server in a closed environment) is used.
+
+              The address matches the edition of Deckhouse used. The public container registry address for Deckhouse Enterprise Edition is `registry.deckhouse.io/deckhouse/ee`.
+            minLength: 1
+            default: registry.deckhouse.io/deckhouse/ce
+          registryDockerCfg:
             type: string
             description: |
-              Specifies the mode of accessing the container registry for Deckhouse. This setting affects how container images are fetched and stored during the deployment process:
+              A Base64-encoded string from the Docker client configuration file (in Linux it is usually `$HOME/.docker/config.json`), for accessing a third-party container registry.
 
-              - `Direct` — Deckhouse will directly access the specified registry without any intermediaries.
-              - `Proxy` — Deckhouse will set up the system-registry module, which will act as a caching proxy for the specified registry. This mode helps reduce network traffic and improve image pull speed by caching images locally.
-              - `Detached` — Deckhouse will establish a standalone registry using the system-registry module and initially copy the installation images for the current release. Manual updates of the registry with new images are necessary. Refer to the documentation for detailed setup and maintenance instructions.
-            enum: [Direct, Proxy, Detached]
-            default: Direct
+              For example, to access the container registry `registry.company.my` under the user `user` with the password `P@ssw0rd` it will be `eyJhdXRocyI6eyJyZWdpc3RyeS5jb21wYW55Lm15Ijp7ImF1dGgiOiJkWE5sY2pwUVFITnpkekJ5WkFvPSJ9fX0K` (string `{"auths":{"registry.company.my":{"auth":"dXNlcjpQQHNzdzByZAo="}}}` in Base64).
+            minLength: 1
+            default: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=
+          registryCA:
+            type: string
+            description: |
+              Root CA certificate to validate the container registry’s HTTPS certificate (if self-signed certificates are used).
+          registryScheme:
+            type: string
+            description: Registry access scheme (HTTP or HTTPS).
+            enum: [HTTP, HTTPS]
+            default: HTTPS
           releaseChannel:
             type: string
             deprecated: true
@@ -85,11 +102,76 @@ apiVersions:
               The structure specified in the parameter will be used to create a [global Deckhouse configuration](../deckhouse-configure-global.html) (moduleConfig `global`) and [module settings](../#configuring-the-module) (moduleConfig `<module-name>`).
 
               **Caution!** The module name in **camelCase** is used to enable/disable the module and specify its settings (for example, `userAuthn`) in the `configOverrides` structure. After installing Deckhouse, the moduleConfig resource is used to manage the module with the module name in **snake-case** (for example, `user-authn`).
-        anyOf:
-        - oneOf:
-          - properties:
-              registryMode:
-                enum: [Direct, Proxy]
+
+- apiVersion: deckhouse.io/v2alpha1
+  openAPISpec:
+    type: object
+    description: |
+      Deckhouse and registry configuration to start after installation.
+    additionalProperties: false
+    required: [apiVersion, kind, deckhouse]
+    x-examples:
+      - apiVersion: deckhouse.io/v2alpha1
+        kind: InitConfiguration
+        deckhouse:
+        registry:
+          mode: direct
+          direct:
+            repo: nexus.company.my/deckhouse/ee
+            dockerCfg: eyJhdXRocyI6IHsgIm5leHVzLmNvbXBhbnkubXkiOiB7InVzZXJuYW1lIjoibmV4dXMtdXNlciIsInBhc3N3b3JkIjoibmV4dXMtcEBzc3cwcmQiLCJhdXRoIjoiYm1WNGRYTXRkWE5sY2pwdVpYaDFjeTF3UUhOemR6QnlaQW89In19fQo=
+            scheme: HTTPS
+            ca: |
+              -----BEGIN CERTIFICATE-----
+              ...
+              -----END CERTIFICATE-----
+      - apiVersion: deckhouse.io/v2alpha1
+        kind: InitConfiguration
+        deckhouse:
+        registry:
+          mode: Proxy
+          proxy:
+            repo: nexus.company.my/deckhouse/ee
+            dockerCfg: eyJhdXRocyI6IHsgIm5leHVzLmNvbXBhbnkubXkiOiB7InVzZXJuYW1lIjoibmV4dXMtdXNlciIsInBhc3N3b3JkIjoibmV4dXMtcEBzc3cwcmQiLCJhdXRoIjoiYm1WNGRYTXRkWE5sY2pwdVpYaDFjeTF3UUhOemR6QnlaQW89In19fQo=
+            scheme: HTTPS
+            ca: |
+              -----BEGIN CERTIFICATE-----
+              ...
+              -----END CERTIFICATE-----
+            storageMode: Fs
+      - apiVersion: deckhouse.io/v2alpha1
+        kind: InitConfiguration
+        deckhouse:
+        registry:
+          mode: Detached
+          detached:
+            imagesBundlePath: ~/deckhouse/bundle.tar
+            storageMode: Fs
+    properties:
+      apiVersion:
+        type: string
+        description: Version of the Deckhouse API.
+        enum: [deckhouse.io/v2alpha1]
+      kind:
+        type: string
+        enum: [InitConfiguration]
+      registry:
+        type: object
+        description: Initial parameters required to configure registry.
+        properties:
+          mode:
+            type: string
+            description: |
+              Specifies the mode of accessing the container registry for Deckhouse. This setting affects how container images are fetched and stored during the deployment process:
+
+              - `Direct` — Deckhouse will directly access the specified registry without any intermediaries.
+              - `Proxy` — Deckhouse will set up the system-registry module, which will act as a caching proxy for the specified registry. This mode helps reduce network traffic and improve image pull speed by caching images locally.
+              - `Detached` — Deckhouse will establish a standalone registry using the system-registry module and initially copy the installation images for the current release. Manual updates of the registry with new images are necessary. Refer to the documentation for detailed setup and maintenance instructions.
+            enum: [Direct, Proxy, Detached]
+            default: Direct
+          direct:
+            type: object
+            description: Direct mode properties.
+            properties: &directProperties
               imagesRepo:
                 type: string
                 pattern: '^[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?(\/[0-9a-zA-Z\.\-\_\/]+)?$'
@@ -101,7 +183,7 @@ apiVersions:
                   The address matches the edition of Deckhouse used. The public container registry address for Deckhouse Enterprise Edition is `registry.deckhouse.io/deckhouse/ee`.
                 minLength: 1
                 default: registry.deckhouse.io/deckhouse/ce
-              registryDockerCfg:
+              dockerCfg:
                 type: string
                 description: |
                   A Base64-encoded string from the Docker client configuration file (in Linux it is usually `$HOME/.docker/config.json`), for accessing a third-party container registry.
@@ -109,34 +191,104 @@ apiVersions:
                   For example, to access the container registry `registry.company.my` under the user `user` with the password `P@ssw0rd` it will be `eyJhdXRocyI6eyJyZWdpc3RyeS5jb21wYW55Lm15Ijp7ImF1dGgiOiJkWE5sY2pwUVFITnpkekJ5WkFvPSJ9fX0K` (string `{"auths":{"registry.company.my":{"auth":"dXNlcjpQQHNzdzByZAo="}}}` in Base64).
                 minLength: 1
                 default: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=
-              registryCA:
+              ca:
                 type: string
                 description: |
                   Root CA certificate to validate the container registry’s HTTPS certificate (if self-signed certificates are used).
-              registryScheme:
+              scheme:
                 type: string
                 description: Registry access scheme (HTTP or HTTPS).
                 enum: [HTTP, HTTPS]
                 default: HTTPS
-          - properties:
-              registryMode:
-                enum: [Detached]
+          detached:
+            type: object
+            description: Detached mode properties.
+            properties:
               imagesBundlePath:
                 type: string
                 description: |
                   The path to the image bundle for the Deckhouse Kubernetes Platform distribution. The path can be specified both on the folder and on the tar archive.
-                  
+
                   For more information on how to get it, consult the docs at https://deckhouse.io/documentation/v1/deckhouse-faq.html#manually-uploading-images-to-an-air-gapped-registry
-            required: [imagesBundlePath]
-        - oneOf:
-          - properties:
-              registryMode:
-                enum: [Direct]
-          - properties:
-              registryMode:
-                enum: [Proxy, Detached]
-              registryStorageMode:
+              storageMode: &storageMode
                 enum: [S3, Fs]
                 description: |
                   The type of data storage for the system registry module.
                 default: Fs
+          proxy:
+            type: object
+            description: Proxy mode properties.
+            properties:
+              <<: *directProperties
+              storageMode:
+                <<: *storageMode
+        oneOf:
+          - required: [mode]
+            properties:
+              mode:
+                enum: [Direct]
+              direct: {}
+            not:
+              required: [proxy, detached]
+          - required: [mode]
+            properties:
+              mode:
+                enum: [Proxy]
+              proxy: {}
+            not:
+              required: [detached, direct]
+          - required: [mode]
+            properties:
+              mode:
+                enum: [Detached]
+              detached: {}
+            not:
+              required: [proxy, direct]
+      deckhouse:
+        type: object
+        description: Initial parameters required to install Deckhouse.
+        properties:
+          releaseChannel:
+            type: string
+            deprecated: true
+            description: |
+              Instead of this parameter, use the [releaseChannel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter of the ModuleConfig 'deckhouse'.
+
+              The release channel to use in the cluster.
+            enum: [Alpha, Beta, EarlyAccess, Stable, RockSolid]
+          devBranch:
+            type: string
+            deprecated: true
+            description: |
+              The parameter is used for development needs. Will be replaced with the CLI-tools.
+          bundle:
+            type: string
+            deprecated: true
+            description: |
+              Instead of this parameter, use the [bundle](../modules/002-deckhouse/configuration.html#parameters-bundle) parameter of the ModuleConfig 'deckhouse'.
+
+              The Deckhouse bundle to use in the cluster.
+            enum: [Minimal, Managed, Default]
+            default: Default
+          logLevel:
+            type: string
+            deprecated: true
+            description: |
+              Instead of this parameter, use the [logLevel](../modules/002-deckhouse/configuration.html#parameters-loglevel) parameter of the ModuleConfig 'deckhouse'.
+
+              Deckhouse logging Level.
+            enum: [Debug, Info, Error]
+            default: Info
+          configOverrides:
+            type: object
+            deprecated: true
+            description: |
+              Instead of this parameter, use ModuleConfig resources to configure modules.
+
+              Initial [Deckhouse configuration](/products/kubernetes-platform/documentation/v1/#deckhouse-configuration).
+
+              Specify here Deckhouse configuration parameters with which it should start after installation.
+
+              The structure specified in the parameter will be used to create a [global Deckhouse configuration](../deckhouse-configure-global.html) (moduleConfig `global`) and [module settings](../#configuring-the-module) (moduleConfig `<module-name>`).
+
+              **Caution!** The module name in **camelCase** is used to enable/disable the module and specify its settings (for example, `userAuthn`) in the `configOverrides` structure. After installing Deckhouse, the moduleConfig resource is used to manage the module with the module name in **snake-case** (for example, `user-authn`).

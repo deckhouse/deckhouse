@@ -247,11 +247,11 @@ func (pc *Checker) CheckRegistryCredentials() error {
 
 	var registryData config.RegistryData
 
-	switch pc.metaConfig.Registry.ExtraData.(type) {
+	switch pc.metaConfig.Registry.ModeSpecificFields.(type) {
 	case config.DetachedModeRegistryData:
 		return nil
 	case config.ProxyModeRegistryData:
-		extraData := pc.metaConfig.Registry.ExtraData.(config.ProxyModeRegistryData)
+		extraData := pc.metaConfig.Registry.ModeSpecificFields.(config.ProxyModeRegistryData)
 		registryData = extraData.UpstreamRegistryData
 	default:
 		registryData = pc.metaConfig.Registry.Data

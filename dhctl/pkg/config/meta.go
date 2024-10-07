@@ -39,6 +39,7 @@ type MetaConfig struct {
 	ClusterPrefix        string                 `json:"-"`
 	ClusterDNSAddress    string                 `json:"-"`
 	DeckhouseConfig      DeckhouseClusterConfig `json:"-"`
+	RegistryConfig       RegistryClusterConfig  `json:"-"`
 	MasterNodeGroupSpec  MasterNodeGroupSpec    `json:"-"`
 	TerraNodeGroupSpecs  []TerraNodeGroupSpec   `json:"-"`
 
@@ -61,9 +62,9 @@ type MetaConfig struct {
 type imagesDigests map[string]map[string]interface{}
 
 type Registry struct {
-	Mode      string       `json:"-"`
-	Data      RegistryData `json:"-"`
-	ExtraData interface{}  `json:"-"`
+	Mode               string       `json:"-"`
+	Data               RegistryData `json:"-"`
+	ModeSpecificFields interface{}  `json:"-"`
 }
 
 type RegistryData struct {
@@ -101,68 +102,122 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 	}
 
 	if len(m.InitClusterConfig) > 0 {
-
-		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
+		// Migrate from old to new init config apiVersion
+		var initCfgApiVersion string
+		if err := json.Unmarshal(m.InitClusterConfig["apiVersion"], &initCfgApiVersion); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal apiVersion for init configuration: %v", err)
 		}
 
-		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(
-			strings.TrimSpace(m.DeckhouseConfig.ImagesRepo),
-			"/",
-		)
-
-		if err := validateRegistryDockerCfg(m.DeckhouseConfig.RegistryDockerCfg); err != nil {
-			return nil, err
-		}
-
-		m.Registry.Data.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
-		m.Registry.Mode = m.DeckhouseConfig.RegistryMode
-		m.Registry.Data.CA = m.DeckhouseConfig.RegistryCA
-		m.Registry.Data.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
-
-		parts := strings.SplitN(m.DeckhouseConfig.ImagesRepo, "/", 2)
-		m.Registry.Data.Address = parts[0]
-		if len(parts) == 2 {
-			m.Registry.Data.Path = fmt.Sprintf("/%s", parts[1])
-		}
-
-		if m.DeckhouseConfig.RegistryMode != "" && m.DeckhouseConfig.RegistryMode != "Direct" {
-			m.SystemRegistryConfig.Enable = true
-
-			var clusterDomain string
-			if err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &clusterDomain); err != nil {
-				return nil, fmt.Errorf("unable to unmarshal clusterDomain from cluster configuration: %v", err)
-			}
-
-			switch m.Registry.Mode {
-			case "Proxy":
-				m.Registry.ExtraData = ProxyModeRegistryData{
-					UpstreamRegistryData: m.Registry.Data,
-					RegistryStorageMode:  m.DeckhouseConfig.RegistryStorageMode,
+		if initCfgApiVersion != "deckhouse.io/v2alpha1" {
+			var deckhouseCfgOld DeckhouseClusterConfigOld
+			if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &deckhouseCfgOld); err != nil {
+				return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
+			} else {
+				m.RegistryConfig = RegistryClusterConfig{
+					Mode: "Direct",
+					DirectModeProperties: &RegistryDirectModeProperties{
+						ImagesRepo: deckhouseCfgOld.ImagesRepo,
+						DockerCfg:  deckhouseCfgOld.RegistryDockerCfg,
+						CA:         deckhouseCfgOld.RegistryCA,
+						Scheme:     deckhouseCfgOld.RegistryScheme,
+					},
 				}
+				m.DeckhouseConfig = DeckhouseClusterConfig{
+					ReleaseChannel:  deckhouseCfgOld.ReleaseChannel,
+					DevBranch:       deckhouseCfgOld.DevBranch,
+					Bundle:          deckhouseCfgOld.Bundle,
+					LogLevel:        deckhouseCfgOld.LogLevel,
+					ConfigOverrides: deckhouseCfgOld.ConfigOverrides,
+				}
+			}
+		} else {
+			if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
+				return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
+			}
+			if err := json.Unmarshal(m.InitClusterConfig["registry"], &m.RegistryConfig); err != nil {
+				return nil, fmt.Errorf("unable to unmarshal registry configuration: %v", err)
+			}
+		}
 
-				m.Registry.Data = RegistryData{
+		switch m.RegistryConfig.Mode {
+		case "Direct":
+			properties := m.RegistryConfig.DirectModeProperties
+			if properties == nil {
+				return nil, fmt.Errorf("unable to get the properties of the direct registry mode")
+			}
+			if err := validateRegistryDockerCfg(properties.DockerCfg); err != nil {
+				return nil, err
+			}
+			address, path := getRegistryAddressAndPath(properties.ImagesRepo)
+			m.Registry = Registry{
+				Mode: m.RegistryConfig.Mode,
+				Data: RegistryData{
+					Address:   address,
+					Path:      path,
+					Scheme:    strings.ToLower(properties.Scheme),
+					CA:        properties.CA,
+					DockerCfg: properties.DockerCfg,
+				},
+			}
+		case "Proxy":
+			m.SystemRegistryConfig.Enable = true
+			properties := m.RegistryConfig.ProxyModeProperties
+			if properties == nil {
+				return nil, fmt.Errorf("unable to get the properties of the proxy registry mode")
+			}
+			if err := validateRegistryDockerCfg(properties.DockerCfg); err != nil {
+				return nil, err
+			}
+			clusterDomain, err := m.GetClusterDomain()
+			if err != nil {
+				return nil, err
+			}
+			address, path := getRegistryAddressAndPath(properties.ImagesRepo)
+			m.Registry = Registry{
+				Mode: m.RegistryConfig.Mode,
+				Data: RegistryData{
 					Address: fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
-					Path:    m.Registry.Data.Path,
+					Path:    path,
 					// These parameters are filled in in the method `PrepareAfterGlobalCacheInit`:
 					// Scheme:       "",
 					// DockerCfg:    "",
 					// CA:           "",
-				}
-			case "Detached":
-				m.Registry.ExtraData = DetachedModeRegistryData{
-					ImagesBundlePath:    m.DeckhouseConfig.ImagesBundlePath,
-					RegistryStorageMode: m.DeckhouseConfig.RegistryStorageMode,
-				}
-
-				m.Registry.Data = RegistryData{
+				},
+				ModeSpecificFields: ProxyModeRegistryData{
+					UpstreamRegistryData: RegistryData{
+						Address:   address,
+						Path:      path,
+						Scheme:    strings.ToLower(properties.Scheme),
+						CA:        properties.CA,
+						DockerCfg: properties.DockerCfg,
+					},
+					RegistryStorageMode: properties.StorageMode,
+				},
+			}
+		case "Detached":
+			m.SystemRegistryConfig.Enable = true
+			properties := m.RegistryConfig.DetachedModeProperties
+			if properties == nil {
+				return nil, fmt.Errorf("unable to get the properties of the detached registry mode")
+			}
+			clusterDomain, err := m.GetClusterDomain()
+			if err != nil {
+				return nil, err
+			}
+			m.Registry = Registry{
+				Mode: m.RegistryConfig.Mode,
+				Data: RegistryData{
 					Address: fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
 					Path:    "/system/deckhouse",
 					// These parameters are filled in in the method `PrepareAfterGlobalCacheInit`:
 					// Scheme:       "",
 					// DockerCfg:    "",
 					// CA:           "",
-				}
+				},
+				ModeSpecificFields: DetachedModeRegistryData{
+					ImagesBundlePath:    properties.ImagesBundlePath,
+					RegistryStorageMode: properties.StorageMode,
+				},
 			}
 		}
 	}
@@ -238,7 +293,7 @@ func (m *MetaConfig) PrepareAfterGlobalCacheInit() error {
 	}
 
 	if len(m.InitClusterConfig) > 0 {
-		if m.DeckhouseConfig.RegistryMode != "" && m.DeckhouseConfig.RegistryMode != "Direct" {
+		if m.Registry.Mode != "" && m.Registry.Mode != "Direct" {
 			internalRegistryAccessData, err := getRegistryAccessData()
 			if err != nil {
 				return fmt.Errorf("unable to get internal registry access data: %v", err)
@@ -269,15 +324,15 @@ func (m *MetaConfig) PrepareAfterGlobalCacheInit() error {
 				return fmt.Errorf("cannot marshal docker cfg: %v", err)
 			}
 
-			switch m.Registry.ExtraData.(type) {
+			switch m.Registry.ModeSpecificFields.(type) {
 			case ProxyModeRegistryData:
-				extraData := m.Registry.ExtraData.(ProxyModeRegistryData)
+				extraData := m.Registry.ModeSpecificFields.(ProxyModeRegistryData)
 				extraData.InternalRegistryAccess = *internalRegistryAccessData
-				m.Registry.ExtraData = extraData
+				m.Registry.ModeSpecificFields = extraData
 			case DetachedModeRegistryData:
-				extraData := m.Registry.ExtraData.(DetachedModeRegistryData)
+				extraData := m.Registry.ModeSpecificFields.(DetachedModeRegistryData)
 				extraData.InternalRegistryAccess = *internalRegistryAccessData
-				m.Registry.ExtraData = extraData
+				m.Registry.ModeSpecificFields = extraData
 			}
 
 			m.Registry.Data.DockerCfg = string(base64.StdEncoding.EncodeToString(dockerCfg))
@@ -286,6 +341,20 @@ func (m *MetaConfig) PrepareAfterGlobalCacheInit() error {
 		}
 	}
 	return nil
+}
+
+func getRegistryAddressAndPath(imgRepo string) (string, string) {
+	imgRepo = strings.TrimRight(
+		strings.TrimSpace(imgRepo),
+		"/",
+	)
+	parts := strings.SplitN(imgRepo, "/", 2)
+	address := parts[0]
+	path := ""
+	if len(parts) == 2 {
+		path = fmt.Sprintf("/%s", parts[1])
+	}
+	return address, path
 }
 
 func validateRegistryDockerCfg(cfg string) error {
@@ -326,6 +395,14 @@ func validateRegistryDockerCfg(cfg string) error {
 	}
 
 	return nil
+}
+
+func (m *MetaConfig) GetClusterDomain() (string, error) {
+	var clusterDomain string
+	if err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &clusterDomain); err != nil {
+		return clusterDomain, fmt.Errorf("unable to unmarshal clusterDomain from cluster configuration: %v", err)
+	}
+	return clusterDomain, nil
 }
 
 func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {
@@ -815,20 +892,42 @@ func (r *RegistryData) Auth() (string, error) {
 	return registryAuth, nil
 }
 
+func (r *RegistryData) GetUserNameAndPasswordFromAuth() (string, string, error) {
+	encodedAuth, err := r.Auth()
+	if err != nil {
+		return "", "", err
+	}
+
+	decodedBytes, err := base64.StdEncoding.DecodeString(encodedAuth)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to decode auth: %v", err)
+	}
+
+	decodedAuth := string(decodedBytes)
+	parts := strings.SplitN(decodedAuth, ":", 2)
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("invalid auth format, expected 'username:password'")
+	}
+
+	username := parts[0]
+	password := parts[1]
+	return username, password, nil
+}
+
 func (r Registry) DeepCopy() Registry {
 	var extraDataCopy interface{}
-	switch r.ExtraData.(type) {
+	switch r.ModeSpecificFields.(type) {
 	case ProxyModeRegistryData:
-		extData := r.ExtraData.(ProxyModeRegistryData)
+		extData := r.ModeSpecificFields.(ProxyModeRegistryData)
 		extraDataCopy = extData.DeepCopy()
 	case DetachedModeRegistryData:
-		extData := r.ExtraData.(DetachedModeRegistryData)
+		extData := r.ModeSpecificFields.(DetachedModeRegistryData)
 		extraDataCopy = extData.DeepCopy()
 	}
 	return Registry{
-		Mode:      r.Mode,
-		Data:      r.Data,
-		ExtraData: extraDataCopy,
+		Mode:             r.Mode,
+		Data:             r.Data,
+		ModeSpecificFields: extraDataCopy,
 	}
 }
 
@@ -841,9 +940,9 @@ func (r Registry) ConvertToMap() (map[string]interface{}, error) {
 	}
 	mapData["registryMode"] = r.Mode
 
-	switch r.ExtraData.(type) {
+	switch r.ModeSpecificFields.(type) {
 	case ProxyModeRegistryData:
-		extraData := r.ExtraData.(ProxyModeRegistryData)
+		extraData := r.ModeSpecificFields.(ProxyModeRegistryData)
 		mapData["registryStorageMode"] = extraData.RegistryStorageMode
 		mapData["internalRegistryAccess"] = extraData.InternalRegistryAccess.ConvertToMap()
 		mapData["upstreamRegistry"], err = extraData.UpstreamRegistryData.ConvertToMap()
@@ -851,7 +950,7 @@ func (r Registry) ConvertToMap() (map[string]interface{}, error) {
 			return nil, err
 		}
 	case DetachedModeRegistryData:
-		extraData := r.ExtraData.(DetachedModeRegistryData)
+		extraData := r.ModeSpecificFields.(DetachedModeRegistryData)
 		mapData["registryStorageMode"] = extraData.RegistryStorageMode
 		mapData["internalRegistryAccess"] = extraData.InternalRegistryAccess.ConvertToMap()
 	}

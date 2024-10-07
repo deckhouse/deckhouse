@@ -230,10 +230,6 @@ func TestPrepareRegistry(t *testing.T) {
 			"imagesRepo": "r.example.com/deckhouse/ce/",
 		})
 
-		t.Run("Trim right slash for imagesRepo", func(t *testing.T) {
-			require.Equal(t, cfg.DeckhouseConfig.ImagesRepo, "r.example.com/deckhouse/ce")
-		})
-
 		t.Run("Correct prepare registry object", func(t *testing.T) {
 			expectedRegistry := Registry{
 				Data: RegistryData{
