@@ -139,8 +139,7 @@ type Updater[R Release] struct {
 	logger logger.Logger
 
 	// don't modify releases order, logic is based on this sorted slice
-	releases                   []R
-	totalPendingManualReleases int
+	releases []R
 
 	predictedReleaseIndex       int
 	skippedPatchesIndexes       []int
@@ -339,8 +338,10 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 	// check: release is approved in Manual mode
 	if du.mode != ModeAuto && !release.GetManuallyApproved() {
 		du.logger.Infof("Release %s is waiting for manual approval ", release.GetName())
-		du.metricsUpdater.WaitingManual(release.GetName(), float64(du.totalPendingManualReleases))
+		du.metricsUpdater.WaitingManual(release.GetName(), 1)
 		reason = reason.add(manualApprovalRequiredReason)
+	} else {
+		du.metricsUpdater.WaitingManual(release.GetName(), 0)
 	}
 
 	if !newApplyAfter.IsZero() {
@@ -382,8 +383,10 @@ func (du *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTim
 
 	if du.mode == ModeManual && !release.GetManuallyApproved() {
 		du.logger.Infof("Release %s is waiting for manual approval", release.GetName())
-		du.metricsUpdater.WaitingManual(release.GetName(), float64(du.totalPendingManualReleases))
+		du.metricsUpdater.WaitingManual(release.GetName(), 1)
 		reason = reason.add(manualApprovalRequiredReason)
+	} else {
+		du.metricsUpdater.WaitingManual(release.GetName(), 0)
 	}
 
 	if !newApplyAfter.IsZero() {
