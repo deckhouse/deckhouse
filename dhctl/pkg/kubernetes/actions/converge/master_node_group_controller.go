@@ -117,11 +117,6 @@ func (c *MasterNodeGroupController) Run() error {
 		return fmt.Errorf("failed to replace kube client: %w", err)
 	}
 
-	err = c.run()
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -240,7 +235,7 @@ func (c *MasterNodeGroupController) replaceKubeClient(state map[string][]byte) (
 	if c.lockRunner != nil {
 		c.lockRunner = NewInLockLocalRunner(c.client, "local-converger")
 
-		err := c.lockRunner.Run()
+		err := c.lockRunner.Run(c.run)
 		if err != nil {
 			return fmt.Errorf("failed to start lock runner: %w", err)
 		}
