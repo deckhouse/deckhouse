@@ -36,31 +36,57 @@ type DeckhouseSettings struct {
 	ReleaseChannel string `json:"releaseChannel"`
 }
 
+func DefaultDeckhouseSettings() *DeckhouseSettings {
+	settings := &DeckhouseSettings{
+		ReleaseChannel: "",
+	}
+	settings.Update.Mode = "Auto"
+	settings.Update.DisruptionApprovalMode = "Auto"
+
+	return settings
+}
+
 func NewDeckhouseSettingsContainer(spec *DeckhouseSettings) *DeckhouseSettingsContainer {
-	return &DeckhouseSettingsContainer{spec: spec}
+	return &DeckhouseSettingsContainer{settings: spec, inited: make(chan struct{})}
 }
 
 type DeckhouseSettingsContainer struct {
-	spec *DeckhouseSettings
-	lock sync.Mutex
+	settings *DeckhouseSettings
+	lock     sync.Mutex
+	inited   chan struct{}
 }
 
 func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
+	if settings == nil {
+		panic("argument should be defined")
+	}
+
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.spec.ReleaseChannel = settings.ReleaseChannel
-	c.spec.Update.Mode = settings.Update.Mode
-	c.spec.Update.Windows = settings.Update.Windows
-	c.spec.Update.DisruptionApprovalMode = settings.Update.DisruptionApprovalMode
-	c.spec.Update.NotificationConfig = settings.Update.NotificationConfig
+	if c.settings == nil {
+		c.settings = DefaultDeckhouseSettings()
+		close(c.inited)
+	}
+
+	c.settings.ReleaseChannel = settings.ReleaseChannel
+	c.settings.Update.Mode = settings.Update.Mode
+	c.settings.Update.Windows = settings.Update.Windows
+	c.settings.Update.DisruptionApprovalMode = settings.Update.DisruptionApprovalMode
+	c.settings.Update.NotificationConfig = settings.Update.NotificationConfig
 }
 
 func (c *DeckhouseSettingsContainer) Get() *DeckhouseSettings {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	return c.spec
+	if c.settings == nil {
+		c.lock.Unlock()
+		<-c.inited
+		c.lock.Lock()
+	}
+
+	return c.settings
 }
 
 func NewModuleUpdatePolicySpecContainer(spec *v1alpha1.ModuleUpdatePolicySpec) *ModuleUpdatePolicySpecContainer {

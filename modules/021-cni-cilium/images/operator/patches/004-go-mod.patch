@@ -1,0 +1,28 @@
+diff --git a/go.mod b/go.mod
+index 65963fa3f0..bc90bb419f 100644
+--- a/go.mod
++++ b/go.mod
+@@ -109,7 +109,7 @@ require (
+ 	golang.zx2c4.com/wireguard v0.0.0-20230325221338-052af4a8072b
+ 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20230429144221-925a1e7659e6
+ 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240701130421-f6361c86f094
+-	google.golang.org/grpc v1.64.0
++	google.golang.org/grpc v1.64.1
+ 	google.golang.org/protobuf v1.34.2
+ 	gopkg.in/ini.v1 v1.67.0
+ 	gopkg.in/yaml.v3 v3.0.1
+diff --git a/go.sum b/go.sum
+index 47c4b0c194..f3b650c63f 100644
+--- a/go.sum
++++ b/go.sum
+@@ -1551,8 +1551,8 @@ google.golang.org/grpc v1.36.0/go.mod h1:qjiiYl8FncCW8feJPdyg3v6XW24KsRHe+dy9BAG
+ google.golang.org/grpc v1.36.1/go.mod h1:qjiiYl8FncCW8feJPdyg3v6XW24KsRHe+dy9BAGRRjU=
+ google.golang.org/grpc v1.38.0/go.mod h1:NREThFqKR1f3iQ6oBuvc5LadQuXVGo9rkm5ZGrQdJfM=
+ google.golang.org/grpc v1.48.0/go.mod h1:vN9eftEi1UMyUsIF80+uQXhHjbXYbm0uXoFCACuMGWk=
+-google.golang.org/grpc v1.64.0 h1:KH3VH9y/MgNQg1dE7b3XfVK0GsPSIzJwdF617gUSbvY=
+-google.golang.org/grpc v1.64.0/go.mod h1:oxjF8E3FBnjp+/gVFYdWacaLDx9na1aqy9oovLpxQYg=
++google.golang.org/grpc v1.64.1 h1:LKtvyfbX3UGVPFcGqJ9ItpVWW6oN/2XqTxfAnwRRXiA=
++google.golang.org/grpc v1.64.1/go.mod h1:hiQF4LFZelK2WKaP6W0L92zGHtiQdZxk8CrSdvyjeP0=
+ google.golang.org/protobuf v0.0.0-20200109180630-ec00e32a8dfd/go.mod h1:DFci5gLYBciE7Vtevhsrf46CRTquxDuWsQurQQe4oz8=
+ google.golang.org/protobuf v0.0.0-20200221191635-4d8936d0db64/go.mod h1:kwYJMbMJ01Woi6D6+Kah6886xMZcty6N08ah7+eCXa0=
+ google.golang.org/protobuf v0.0.0-20200228230310-ab0ca4ff8a60/go.mod h1:cfTl7dwQJ+fmap5saPgwCLgHXTUD7jkjRqWcaiX5VyM=

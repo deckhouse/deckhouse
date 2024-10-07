@@ -2369,6 +2369,17 @@ alerts:
         Kubernetes version &quot;{{ $labels.k8s_version }}&quot; has reached End Of Life.
       severity: "4"
       markupFormat: markdown
+    - name: L2LoadBalancerModuleDeprecated
+      sourceFile: ee/modules/381-l2-load-balancer/monitoring/prometheus-rules/services.yaml
+      moduleUrl: 381-l2-load-balancer
+      module: l2-load-balancer
+      edition: ee
+      description: |
+        The L2LoadBalancer module is deprecated and will be removed in a future release. Disable the module and use MetalLB module in L2 mode.
+      summary: |
+        L2LoadBalancer module is deprecated
+      severity: "3"
+      markupFormat: markdown
     - name: L2LoadBalancerOrphanServiceFound
       sourceFile: ee/modules/381-l2-load-balancer/monitoring/prometheus-rules/services.yaml
       moduleUrl: 381-l2-load-balancer
@@ -2406,6 +2417,19 @@ alerts:
       summary: |
         Deprecated ModuleConfig was found.
       severity: "9"
+      markupFormat: markdown
+    - name: ModuleReleaseIsWaitingManualApproval
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module release is waiting for manual approval.
+
+        Please run `kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"` for confirmation.
+      summary: |
+        Module release is waiting for manual approval.
+      severity: "6"
       markupFormat: markdown
     - name: NATInstanceWithDeprecatedAvailabilityZone
       sourceFile: modules/030-cloud-provider-yandex/monitoring/prometheus-rules/deprecated_availability_zone.yaml

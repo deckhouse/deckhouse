@@ -7,7 +7,7 @@ memory: 50Mi
 {{- $capcdImageName := join "" (list "capcdControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
 {{- $capcdImage := include "helm_lib_module_image_no_fail" (list . $capcdImageName) }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -117,7 +117,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "capcd_controller_manager_resources" . | nindent 12 }}
   {{- end }}
       volumes:

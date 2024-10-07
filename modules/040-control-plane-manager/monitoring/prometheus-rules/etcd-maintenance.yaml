@@ -67,7 +67,7 @@
             ....
     - alert: D8EtcdExcessiveDatabaseGrowth
       expr: predict_linear(etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"}[6h], 24*3600) >= scalar(max(d8_etcd_quota_backend_total) * 0.95)
-      for: "10m"
+      for: "30m"
       labels:
         severity_level: "4"
         tier: cluster

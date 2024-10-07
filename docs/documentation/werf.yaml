@@ -1,19 +1,25 @@
-{{- if ne $.Env "development" -}}
-{{- $_ := set . "Env" "EE" }}
+{{- $_ := set . "Env" (.Env | default "EE") }}
+{{- $_ := set . "UsePrebuildJekyllImage" true }}
+{{- $_ := set . "Mode" "production" }}
+{{- $_ := set . "Edition" "EE" }}
+{{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "EE") -}}
+  {{- $_ := set . "Edition" $.Env }}
+{{- else if eq $.Env "FE"  }}
+  {{- $_ := set . "Edition" "EE" }}
+{{- else }}
+  {{- $_ := set . "Mode" $.Env }}
 {{- end }}
-
-{{- $_ := set . "YQ4_VERSION" "v4.9.6" }}
-
----
 project: deckhouse-web
 configVersion: 1
 ---
 # Base Images
-{{ $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
+{{- $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
   {{- range $k, $v := .Images }}
-    {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
-    {{- if or (eq $.Env "development") (eq $.Env "module") }}
-      {{ $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
+    {{- $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
+    {{- if or (eq $.Mode "development") (eq $.Mode "module") (eq $.Mode "local") }}
+      {{- if or ( ne $k "BASE_JEKYLL" ) ( and (not $.UsePrebuildJekyllImage ) ( eq $k "BASE_JEKYLL" ) )}}
+        {{- $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
+      {{- end }}
     {{- end }}
     {{- if ne $k "REGISTRY_PATH" }}
       {{- $_ := set $.Images $k $baseImagePath }}
@@ -37,26 +43,16 @@ import:
 ---
 image: static-pages
 from: {{ .Images.BASE_JEKYLL }}
-fromCacheVersion: 20210713
 docker:
   ENV:
     LANG: en_US.UTF-8
     LC_ALL: en_US.UTF-8
 ansible:
   install:
-    - name: "Install tools"
-      shell: |
-        apk add rsync jq
-        wget https://github.com/mikefarah/yq/releases/download/{{ .YQ4_VERSION }}/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
-    - name: "Update system rubygems and install gem bundler"
-      shell: |
-        gem update --system 3.2.3
-        gem install bundler -v 2.4.3
-    - name: "Install dependencies"
-      shell: bundle install
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
+    - shell: |
+        echo "Ruby: $(ruby --version)"
+        echo "Gem: $(gem --version)"
+        bundle --version
   setup:
     - name: "Get modules data"
       shell: |
@@ -65,14 +61,9 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
-    - name: "{{ .Env }} version. Merging modules of different releases"
+    - name: "Edition: {{ .Edition }}. Merging modules of different editions"
       shell: |
-        cp -rf /src/be/modules /src >& /dev/null
-        cp -rf /src/se/modules /src >& /dev/null
-        cp -rf /src/ee/modules /src >& /dev/null
-        cp -rf /src/fe/modules /src >& /dev/null
-        cp /src/modules/010-prometheus-crd/crds/*.yaml /src/modules/300-prometheus/crds
-        rm -rf /src/modules/010-prometheus-crd
+        for dir in {be,se,ee,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
       args:
         executable: /bin/bash
     - name: "Preparing modules structure"
@@ -155,7 +146,7 @@ ansible:
         chdir: /srv/jekyll-data/documentation/_data/
     - shell: |
         mkdir -m 777 -p /app/_site/
-        {{- if eq $.Env "development" }}
+        {{- if eq $.Mode "development" }}
         JEKYLL_ENV=development jekyll build -d /app/_site/ --profile -t
         {{- else }}
         JEKYLL_ENV=production jekyll build -d /app/_site/

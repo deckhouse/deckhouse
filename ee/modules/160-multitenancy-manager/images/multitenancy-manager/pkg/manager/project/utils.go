@@ -73,16 +73,14 @@ func (m *Manager) ensureVirtualProjects(ctx context.Context) error {
 			Description:         "This is a virtual project",
 		},
 	}
-	if err := m.ensureProject(ctx, defaultProject); err != nil {
-		return err
-	}
-	return nil
+	return m.ensureProject(ctx, defaultProject)
 }
 
 func (m *Manager) ensureProject(ctx context.Context, project *v1alpha2.Project) error {
 	m.log.Info("ensuring the project", "project", project.Name)
 	if err := m.client.Create(ctx, project); err != nil {
 		if apierrors.IsAlreadyExists(err) {
+			m.log.Info("the project already exists, try to update it")
 			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				existingProject := new(v1alpha2.Project)
 				if err = m.client.Get(ctx, types.NamespacedName{Name: project.Name}, existingProject); err != nil {
@@ -94,11 +92,7 @@ func (m *Manager) ensureProject(ctx context.Context, project *v1alpha2.Project) 
 				existingProject.Labels = project.Labels
 				existingProject.Annotations = project.Annotations
 
-				m.log.Info("the project already exists, try to update it")
-				if err = m.client.Update(ctx, existingProject); err != nil {
-					return err
-				}
-				return nil
+				return m.client.Update(ctx, existingProject)
 			})
 			if err != nil {
 				m.log.Error(err, "failed to update the project")
@@ -162,18 +156,6 @@ func (m *Manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Pro
 	})
 }
 
-func (m *Manager) setFinalizer(ctx context.Context, project *v1alpha2.Project) error {
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
-			return err
-		}
-		if !controllerutil.ContainsFinalizer(project, consts.ProjectFinalizer) {
-			controllerutil.AddFinalizer(project, consts.ProjectFinalizer)
-		}
-		return m.client.Update(ctx, project)
-	})
-}
-
 func (m *Manager) removeFinalizer(ctx context.Context, project *v1alpha2.Project) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
@@ -198,6 +180,9 @@ func (m *Manager) prepareProject(ctx context.Context, project *v1alpha2.Project)
 		project.Labels[consts.ProjectTemplateLabel] = project.Spec.ProjectTemplateName
 		if project.Annotations != nil {
 			delete(project.Annotations, consts.ProjectRequireSyncAnnotation)
+		}
+		if !controllerutil.ContainsFinalizer(project, consts.ProjectFinalizer) {
+			controllerutil.AddFinalizer(project, consts.ProjectFinalizer)
 		}
 		return m.client.Update(ctx, project)
 	})

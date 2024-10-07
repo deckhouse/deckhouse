@@ -120,6 +120,7 @@ layout: Standard
 standard:
   # [<en>] Network name for external communication.
   # [<ru>] Имя сети для внешнего взаимодействия.
+  # [<ru>] В SDN Neutron и Sprut по умолчанию создаются сети ext-net и internet соответственно. Вы можете использовать их, или создать другие и указать их в конфигурации.
   externalNetworkName: *!CHANGE_EXT_NET*
   # [<en>] Addressing for the internal network of the cluster nodes.
   # [<ru>] Адресация для внутренней сети узлов кластера.

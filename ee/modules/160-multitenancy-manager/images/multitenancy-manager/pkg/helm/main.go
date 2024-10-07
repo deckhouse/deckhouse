@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package helm
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -25,6 +26,7 @@ import (
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
+	"helm.sh/helm/v3/pkg/engine"
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"helm.sh/helm/v3/pkg/storage/driver"
@@ -138,26 +140,22 @@ func (c *Client) initActionConfig(namespace string) error {
 
 // Upgrade upgrades resources
 func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
-	projectName := project.Name
-	templateName := template.Name
-	values := valuesFromProjectAndTemplate(project, template)
-
-	ch, err := makeChart(c.templates, projectName)
+	ch, err := makeChart(c.templates, project.Name)
 	if err != nil {
-		c.log.Error(err, "failed to make chart", "release", projectName, "namespace", projectName)
+		c.log.Error(err, "failed to make chart", "release", project.Name, "namespace", project.Name)
 		return err
 	}
 
+	values := buildValues(project, template)
 	hash := hashMD5(c.templates, values)
-	post := newPostRenderer(projectName, templateName, c.log)
+	post := newPostRenderer(project.Name, template.Name, c.log)
 
-	releases, err := action.NewHistory(c.conf).Run(projectName)
+	releases, err := action.NewHistory(c.conf).Run(project.Name)
 	if err != nil {
 		if errors.Is(err, driver.ErrReleaseNotFound) {
-			c.log.Info("release not found, installing it", "release", projectName, "namespace", projectName)
+			c.log.Info("the release not found, installing it", "release", project.Name, "namespace", project.Name)
 			install := action.NewInstall(c.conf)
-			install.ReleaseName = projectName
-			install.Namespace = projectName
+			install.ReleaseName = project.Name
 			install.Timeout = c.opts.Timeout
 			install.UseReleaseName = true
 			install.Labels = map[string]string{
@@ -165,33 +163,32 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 			}
 			install.PostRenderer = post
 			if _, err = install.RunWithContext(ctx, ch, values); err != nil {
-				c.log.Error(err, "failed to install release", "release", projectName, "namespace", projectName)
-				return fmt.Errorf("failed to install release: %w", err)
+				c.log.Error(err, "failed to install the release", "release", project.Name, "namespace", project.Name)
+				return fmt.Errorf("failed to install the release: %w", err)
 			}
-			c.log.Info("release installed", "release", projectName, "namespace", projectName)
+			c.log.Info("the release installed", "release", project.Name, "namespace", project.Name)
 			return nil
 		}
-		c.log.Error(err, "failed to retrieve history for release", "release", projectName, "namespace", projectName)
-		return fmt.Errorf("failed to retrieve history for release: %w", err)
+		c.log.Error(err, "failed to retrieve history for the release", "release", project.Name, "namespace", project.Name)
+		return fmt.Errorf("failed to retrieve history for the release: %w", err)
 	}
 
 	releaseutil.Reverse(releases, releaseutil.SortByRevision)
 	if releaseHash, ok := releases[0].Labels[consts.ReleaseHashLabel]; ok {
 		if releaseHash == hash && releases[0].Info.Status == release.StatusDeployed {
-			c.log.Info("release is up to date", "release", projectName, "namespace", projectName)
+			c.log.Info("the release is up to date", "release", project.Name, "namespace", project.Name)
 			return nil
 		}
 	}
 
 	if releases[0].Info.Status.IsPending() {
 		if err = c.rollbackLatestRelease(releases); err != nil {
-			c.log.Error(err, "failed to rollback latest release", "release", projectName, "namespace", projectName)
+			c.log.Error(err, "failed to rollback the latest release", "release", project.Name, "namespace", project.Name)
 			return fmt.Errorf("failed to rollback latest release: %w", err)
 		}
 	}
 
 	upgrade := action.NewUpgrade(c.conf)
-	upgrade.Namespace = projectName
 	upgrade.Install = true
 	upgrade.MaxHistory = int(c.opts.HistoryMax)
 	upgrade.Timeout = c.opts.Timeout
@@ -200,12 +197,12 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 	}
 	upgrade.PostRenderer = post
 
-	if _, err = upgrade.RunWithContext(ctx, projectName, ch, values); err != nil {
-		c.log.Error(err, "failed to upgrade release", "release", projectName, "namespace", projectName)
-		return fmt.Errorf("failed to upgrade release: %s", err)
+	if _, err = upgrade.RunWithContext(ctx, project.Name, ch, values); err != nil {
+		c.log.Error(err, "failed to upgrade the release", "release", project.Name, "namespace", project.Name)
+		return fmt.Errorf("failed to upgrade the release: %s", err)
 	}
 
-	c.log.Info("release upgraded", "release", projectName, "namespace", projectName)
+	c.log.Info("the release upgraded", "release", project.Name, "namespace", project.Name)
 	return nil
 }
 
@@ -229,7 +226,7 @@ func makeChart(templates map[string][]byte, releaseName string) (*chart.Chart, e
 	return ch, nil
 }
 
-func valuesFromProjectAndTemplate(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) map[string]interface{} {
+func buildValues(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) map[string]interface{} {
 	structs.DefaultTagName = "yaml"
 	preparedProject := struct {
 		Name         string                 `json:"projectName" yaml:"projectName"`
@@ -278,9 +275,39 @@ func (c *Client) Delete(_ context.Context, releaseName string) error {
 	uninstall.IgnoreNotFound = true
 
 	if _, err := uninstall.Run(releaseName); err != nil {
-		c.log.Error(err, "failed to delete release", "release", releaseName)
-		return fmt.Errorf("failed to uninstall %s: %v", releaseName, err)
+		c.log.Error(err, "failed to delete the release", "release", releaseName)
+		return fmt.Errorf("failed to uninstall the %s release: %v", releaseName, err)
 	}
-	c.log.Info("release deleted", "release", releaseName)
+	c.log.Info("the release deleted", "release", releaseName)
 	return nil
+}
+
+// ValidateRender tests project render
+func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
+	ch, err := makeChart(c.templates, project.Name)
+	if err != nil {
+		c.log.Error(err, "failed to make chart", "release", project.Name, "namespace", project.Name)
+		return err
+	}
+
+	values, err := chartutil.ToRenderValues(ch, buildValues(project, template), chartutil.ReleaseOptions{
+		Name:      project.Name,
+		Namespace: project.Name,
+	}, nil)
+	if err != nil {
+		return err
+	}
+
+	rendered, err := engine.Render(ch, values)
+	if err != nil {
+		return err
+	}
+
+	buf := bytes.NewBuffer(nil)
+	for _, file := range rendered {
+		buf.WriteString(file)
+	}
+
+	_, err = newPostRenderer(project.Name, template.Name, c.log).Run(buf)
+	return err
 }

@@ -119,6 +119,7 @@ kind: OpenStackClusterConfiguration
 layout: Standard
 standard:
   # [<en>] Network name for external communication.
+  # [<en>] In SDN Neutron and Sprut, ext-net and internet networks are created by default, respectively. You can use them, or create others and specify them in the configuration.
   # [<ru>] Имя сети для внешнего взаимодействия.
   externalNetworkName: *!CHANGE_EXT_NET*
   # [<en>] Addressing for the internal network of the cluster nodes.

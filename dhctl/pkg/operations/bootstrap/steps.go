@@ -540,49 +540,80 @@ func setupRPPTunnel(sshClient *ssh.Client) (func(), error) {
 }
 
 func CheckDHCTLDependencies(nodeInteface node.Interface) error {
+
 	type checkResult struct {
 		name string
 		err  error
 	}
 
-	checkDependency := func(dep string) error {
-		return retry.NewSilentLoop(fmt.Sprintf("Check dependency %s", dep), 30, 5*time.Second).Run(func() error {
+	checkDependency := func(dep string, resultsChan chan checkResult) error {
+		breakPredicate := func(err error) bool {
+			var ee *exec.ExitError
+			if errors.As(err, &ee) {
+				if ee.ExitCode() == 255 {
+					return false
+				}
+			}
+			return true
+		}
+
+		return retry.NewSilentLoop(fmt.Sprintf("Check dependency %s", dep), 30, 5*time.Second).BreakIf(breakPredicate).Run(func() error {
 			output, err := nodeInteface.Command("command", "-v", dep).CombinedOutput()
+
 			if err != nil {
-				e := fmt.Errorf("bashible dependency error: %v - %s",
+				var ee *exec.ExitError
+				if errors.As(err, &ee) {
+					log.DebugF("exit code: %v", ee)
+				}
+				e := fmt.Errorf("bashible dependency %s error: %v - %s",
+					dep,
 					err,
 					string(output),
 				)
-
+				resultsChan <- checkResult{
+					name: dep,
+					err:  e,
+				}
 				log.DebugF("Dependency check error: %v\n", e)
-
 				return e
 			}
-
 			return nil
 		})
 	}
 
 	return log.Process("bootstrap", "Check DHCTL Dependencies", func() error {
-		dependencyArgs := []string{"sudo", "rm", "tar", "mount", "awk", "grep", "cut", "sed", "shopt",
-			"mkdir", "cp", "join", "cat", "ps", "kill"}
+		dependencyCommands := [][]string{
+			{"sudo", "rm", "tar", "mount", "awk"},
+			{"grep", "cut", "sed", "shopt", "mkdir"},
+			{"cp", "join", "cat", "ps", "kill"},
+		}
 
 		resultsChan := make(chan checkResult)
+
+		exceedDependency := errors.New("All dependency checks was exceed")
+
 		go func() {
 			wg := sync.WaitGroup{}
-			for _, args := range dependencyArgs {
-				wg.Add(1)
-				dep := args
-				log.InfoF("Check '%s' dependency\n", dep)
-				go func() {
-					defer wg.Done()
-					err := checkDependency(dep)
-					resultsChan <- checkResult{
-						name: dep,
-						err:  err,
-					}
-				}()
+			for _, deps := range dependencyCommands {
+				for _, dep := range deps {
+					wg.Add(1)
+					dep := dep
+					log.InfoF("Check '%s' dependency\n", dep)
+					go func() {
+						defer wg.Done()
+						err := checkDependency(dep, resultsChan)
 
+						if err != nil {
+							err = errors.Join(exceedDependency, err)
+						}
+
+						resultsChan <- checkResult{
+							name: dep,
+							err:  err,
+						}
+					}()
+				}
+				time.Sleep(1 * time.Second)
 			}
 			log.DebugLn("Wait all dependency checks successful")
 			wg.Wait()
@@ -592,13 +623,18 @@ func CheckDHCTLDependencies(nodeInteface node.Interface) error {
 
 		for res := range resultsChan {
 			if res.err != nil {
-				return fmt.Errorf("Dependency '%s' check failed. Last error %v", res.name, res.err)
+				if errors.Is(res.err, exceedDependency) {
+					return res.err
+				}
+				log.WarnLn(res.err)
+				continue
 			}
-
 			log.Success(fmt.Sprintf("Dependency '%s' check success\n", res.name))
 		}
+
 		log.InfoLn("OK!")
 		return nil
+
 	})
 }
 

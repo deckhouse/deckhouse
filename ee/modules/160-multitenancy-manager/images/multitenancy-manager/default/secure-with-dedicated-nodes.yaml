@@ -6,6 +6,7 @@ metadata:
   labels:
     heritage: deckhouse
 spec:
+  description: Includes all the capabilities of the secure template and additional features.
   parametersSchema:
     openAPIV3Schema:
       type: object

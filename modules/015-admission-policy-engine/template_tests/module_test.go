@@ -37,7 +37,7 @@ const (
 
 	globalValues = `
 deckhouseVersion: test
-enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "operator-prometheus-crd"]
+enabledModules: ["vertical-pod-autoscaler", "prometheus", "operator-prometheus"]
 clusterConfiguration:
   apiVersion: deckhouse.io/v1
   kind: ClusterConfiguration
@@ -189,7 +189,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 
 		Context("enabled operator-trivy module", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd", "prometheus", "operator-prometheus-crd", "operator-trivy"]`)
+				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "prometheus", "operator-prometheus", "operator-trivy"]`)
 				f.ValuesSetFromYaml("admissionPolicyEngine.internal.denyVulnerableImages.webhook", `{"ca": "ca", "crt": "crt", "key": "key"}`)
 				f.ValuesSetFromYaml("admissionPolicyEngine.internal.denyVulnerableImages.dockerConfigJson", `{"auths": {"registry.test.com": {"auth": "dXNlcjpwYXNzd29yZAo="}}}`)
 				f.HelmRender()
