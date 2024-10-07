@@ -37,5 +37,4 @@ spec:
     - name: v1beta1
       served: true
       storage: true
-      deprecated: false
       schema: *schema
