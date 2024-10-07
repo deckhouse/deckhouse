@@ -350,7 +350,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		if err == nil {
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, fmt.Errorf("apply forced release: %w", err)
+		return ctrl.Result{}, fmt.Errorf("apply forced release: %w", err)
 	}
 
 	var windows update.Windows
@@ -382,7 +382,7 @@ func (r *deckhouseReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Resu
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	return ctrl.Result{RequeueAfter: defaultCheckInterval}, fmt.Errorf("apply predicted release: %w", err)
+	return ctrl.Result{}, fmt.Errorf("apply predicted release: %w", err)
 }
 
 func (r *deckhouseReleaseReconciler) getDeckhouseLatestPod(ctx context.Context) (*corev1.Pod, error) {
