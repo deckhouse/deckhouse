@@ -265,7 +265,7 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 			continue
 		}
 
-		err = mdr.buildDocumentation(ctx, b, addr, moduleName, md.Spec.Version)
+		err = mdr.buildDocumentation(ctx, bytes.NewReader(b.Bytes()), addr, moduleName, md.Spec.Version)
 		if err != nil {
 			cond.Type = v1alpha1.TypeError
 			cond.Message = err.Error()
