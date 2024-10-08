@@ -60,6 +60,9 @@ cleanup:
 # use example.com as default because we can fail build without env
 {{- $_ := set . "CLOUD_PROVIDERS_SOURCE_REPO" (env "CLOUD_PROVIDERS_SOURCE_REPO" | default "https://example.com") }}
 
+# source repo with observability private code
+{{- $_ := set . "OBSERVABILITY_SOURCE_REPO" (env "OBSERVABILITY_SOURCE_REPO" | default "https://example.com") }}
+
 # goproxy  settings
 {{- $_ := set . "GOPROXY" (env "GOPROXY") }}
 ---
@@ -840,6 +843,7 @@ args:
   BASE_SCRATCH: {{ .Images.BASE_SCRATCH }}
   SOURCE_REPO: {{ .SOURCE_REPO }}
   CLOUD_PROVIDERS_SOURCE_REPO: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+  OBSERVABILITY_SOURCE_REPO: {{ OBSERVABILITY_SOURCE_REPO }}
   # proxies for various packages
   GOPROXY: {{ .GOPROXY }}
   {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless")) }}
@@ -908,6 +912,7 @@ dependencies:
   {{- $_ := set $ctx "TF" $Root.TF }}
   {{- $_ := set $ctx "SOURCE_REPO" $Root.SOURCE_REPO }}
   {{- $_ := set $ctx "CLOUD_PROVIDERS_SOURCE_REPO" $Root.CLOUD_PROVIDERS_SOURCE_REPO }}
+  {{- $_ := set $ctx "OBSERVABILITY_SOURCE_REPO" $Root.OBSERVABILITY_SOURCE_REPO }}
   {{- $_ := set $ctx "GOPROXY" $Root.GOPROXY }}
 ---
 {{ include "module_image_template" $ctx }}
