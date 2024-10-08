@@ -62,7 +62,7 @@ spec:
 `
 )
 
-var _ = FDescribe("Metallb hooks :: migrate MC to MetalLoadBalancerClass ::", func() {
+var _ = Describe("Metallb hooks :: migrate MC to MetalLoadBalancerClass ::", func() {
 	f := HookExecutionConfigInit(`{"metallb":{"internal":{}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 	f.RegisterCRD("network.deckhouse.io", "v1alpha1", "MetalLoadBalancerClass", false)

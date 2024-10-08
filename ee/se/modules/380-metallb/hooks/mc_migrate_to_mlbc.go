@@ -59,6 +59,7 @@ func migrateMCtoMLBC(input *go_hook.HookInput) error {
 			addressPools = addressPoolsRaw.([]interface{})
 		}
 
+		// Getting address pools from MC
 		addressesSlice := make([]string, 0, 8)
 		for _, addressPool := range addressPools {
 			protocolRaw, ok := addressPool.(map[string]interface{})["protocol"]
@@ -74,6 +75,7 @@ func migrateMCtoMLBC(input *go_hook.HookInput) error {
 			}
 		}
 
+		// Getting nodeSelector and tolerations from MC
 		nodeSelector := make((map[string]interface{}), 8)
 		tolerations := make([]interface{}, 0, 8)
 		if speakerRaw, ok := mc.Spec.Settings["speaker"]; ok {
@@ -86,6 +88,7 @@ func migrateMCtoMLBC(input *go_hook.HookInput) error {
 			}
 		}
 
+		// Create MetalLoadBalancerClass resource in a cluster
 		mlbc := map[string]interface{}{
 			"apiVersion": "network.deckhouse.io/v1alpha1",
 			"kind":       "MetalLoadBalancerClass",
