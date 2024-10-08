@@ -265,16 +265,16 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 			continue
 		}
 
-		docArchive := new(bytes.Buffer)
-		_, err := io.Copy(docArchive, b)
-		if err != nil {
-			cond.Type = v1alpha1.TypeError
-			cond.Message = fmt.Sprintf("Error occurred while fetching the documentation: %s. copying", err)
-			mdCopy.Status.Conditions = append(mdCopy.Status.Conditions, cond)
-			continue
-		}
+		// docArchive := new(bytes.Buffer)
+		// _, err := io.Copy(docArchive, b)
+		// if err != nil {
+		// 	cond.Type = v1alpha1.TypeError
+		// 	cond.Message = fmt.Sprintf("Error occurred while fetching the documentation: %s. copying", err)
+		// 	mdCopy.Status.Conditions = append(mdCopy.Status.Conditions, cond)
+		// 	continue
+		// }
 
-		err = mdr.buildDocumentation(ctx, docArchive, addr, moduleName, md.Spec.Version)
+		err = mdr.buildDocumentation(ctx, b, addr, moduleName, md.Spec.Version)
 		if err != nil {
 			cond.Type = v1alpha1.TypeError
 			cond.Message = err.Error()
