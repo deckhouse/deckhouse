@@ -268,6 +268,10 @@ docs-spellcheck-generate-dictionary: ## Generate a dictionary (run it after addi
 docs-spellcheck-get-typos-list: ## Print out a list of all the terms in all pages that were considered as a typo.
 	@cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- "/app/spell_check.sh" 2>/dev/null | sed "1,/Spell-checking the documentation/ d; /^Possible typos/d" | sort -u
 
+.PHONY: docs-pdf
+docs-pdf: ## Prepare special MD-page for PDF generation.
+	bash tools/pdf_tools/prepare_for_pdf.sh
+
 ##@ Update kubernetes control-plane patchversions
 
 bin/jq-$(JQ_VERSION)/jq:
