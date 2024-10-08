@@ -705,7 +705,7 @@ ENDSSH
   fi
 
   for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker_0@$worker_0_ip" sudo su -c /bin/bash <<ENDSSH; then
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_redos_user_worker@$worker_redos_ip" sudo su -c /bin/bash <<ENDSSH; then
        echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
@@ -719,7 +719,7 @@ ENDSSH
       break
     else
       initial_setup_failed="true"
-      >&2 echo "Initial setup of worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+      >&2 echo "Initial setup of redos worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
       sleep 5
     fi
   done
@@ -728,7 +728,7 @@ ENDSSH
   fi
 
   for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker_1@$worker_1_ip" sudo su -c /bin/bash <<ENDSSH; then
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_opensuse_user_worker@$worker_opensuse_ip" sudo su -c /bin/bash <<ENDSSH; then
        echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
@@ -742,7 +742,30 @@ ENDSSH
       break
     else
       initial_setup_failed="true"
-      >&2 echo "Initial setup of worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+      >&2 echo "Initial setup of opensuse worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+      sleep 5
+    fi
+  done
+  if [[ $initial_setup_failed == "true" ]] ; then
+    return 1
+  fi
+
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_rosa_user_worker@$worker_rosa_ip" sudo su -c /bin/bash <<ENDSSH; then
+       echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
+       chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
+       ip route del default
+       ip route add 10.111.0.0/16 dev lo
+       ip route add 10.222.0.0/16 dev lo
+ENDSSH
+      initial_setup_failed=""
+      break
+    else
+      initial_setup_failed="true"
+      >&2 echo "Initial setup of rosa worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
       sleep 5
     fi
   done
