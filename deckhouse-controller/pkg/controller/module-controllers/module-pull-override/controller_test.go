@@ -168,6 +168,11 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 	moduleDir := filepath.Join(suite.tmpDir, moduleName, downloader.DefaultDevVersion)
 	moduleValues := filepath.Join(moduleDir, "openapi", "values.yaml")
 
+	dc := dependency.NewMockedContainer()
+	dc.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
+		return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}}"}}}, nil
+	}}, nil)
+
 	suite.Run("Ok", func() {
 		d := moduleDirDescriptor{
 			dir:     moduleDir,
@@ -221,7 +226,7 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 
 		time.Sleep(50 * time.Millisecond)
 
-		suite.setupPullOverrideController(string(suite.fetchTestFileData("up-to-date-no-weight.yaml")))
+		suite.setupPullOverrideController(string(suite.fetchTestFileData("up-to-date-no-weight.yaml")), withDependencyContainer(dc))
 		err = suite.ctr.restoreAbsentModulesFromOverrides(context.TODO())
 		require.NoError(suite.T(), err)
 
@@ -585,9 +590,9 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 
 type controllerOption func(*reconciler)
 
-func withEnabledModules(enabledModules []string) controllerOption {
+func withDependencyContainer(dc dependency.Container) controllerOption {
 	return func(r *reconciler) {
-		r.moduleManager.(*stubModulesManager).enabledModules = enabledModules
+		r.dc = dc
 	}
 }
 
