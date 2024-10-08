@@ -48,41 +48,31 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 
 	var (
 		nodesToWait []string
+		wg          sync.WaitGroup
 	)
-
-	desiredNodesChannel := make(chan string, 2)
 
 	for c.desiredReplicas > count {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, index)
 
 		if _, ok := c.state.State[candidateName]; !ok {
+			wg.Add(1)
+			go func(candidateName string, index int) {
+				defer wg.Done()
+				err := BootstrapAdditionalNode(c.client, c.config, index, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
 
-			select {
-			case desiredNodesChannel <- candidateName:
-				log.InfoF("Add %s to queue", candidateName)
-			default:
-				log.InfoF("No candidate to queue")
-			}
-			count++
+				if err != nil {
+					log.ErrorF("fail bootstrap node %s: %s\n", err, candidateName)
+					return
+				}
+
+				count++
+				nodesToWait = append(nodesToWait, candidateName)
+			}(candidateName, index)
 		}
 		index++
 	}
 
-	go func() {
-		wg := sync.WaitGroup{}
-		for candidate := range desiredNodesChannel {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				fmt.Printf("Bootstrap node: %s", candidate)
-				BootstrapAdditionalNode(c.client, c.config, index, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
-
-				nodesToWait = append(nodesToWait, candidate)
-			}()
-		}
-		time.Sleep(1 * time.Second)
-	}()
-
+	wg.Wait()
 	return WaitForNodesListBecomeReady(c.client, nodesToWait, nil)
 }
 
