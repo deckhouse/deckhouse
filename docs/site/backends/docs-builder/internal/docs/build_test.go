@@ -14,7 +14,10 @@
 
 package docs
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+)
 
 func TestAssembleErrorRegexp(t *testing.T) {
 	input := "error building site: assemble: \"/app/hugo/content/modules/moduleName/BROKEN.md:1:1\": EOF looking for end YAML front matter delimiter"
@@ -47,7 +50,7 @@ func TestGetModulePath(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.filePath, func(t *testing.T) {
-			got := getModulePath(test.filePath)
+			got := filepath.Dir(test.filePath)
 			if got != test.expected {
 				t.Error("unexpected result", got)
 			}

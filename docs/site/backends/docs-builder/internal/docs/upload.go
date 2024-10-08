@@ -26,18 +26,9 @@ import (
 )
 
 func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string, channels []string) error {
-	for _, channel := range channels {
-		path := filepath.Join(svc.baseDir, "content/modules", moduleName, channel)
-		err := os.RemoveAll(path)
-		if err != nil {
-			return fmt.Errorf("remove %s: %w", path, err)
-		}
-
-		path = filepath.Join(svc.baseDir, "data/modules", moduleName, channel)
-		err = os.RemoveAll(path)
-		if err != nil {
-			return fmt.Errorf("remove %s: %w", path, err)
-		}
+	err := svc.cleanModulesFiles(moduleName, channels)
+	if err != nil {
+		return fmt.Errorf("clean module files: %w", err)
 	}
 
 	reader := tar.NewReader(body)
@@ -107,7 +98,7 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 		}
 	}
 
-	err := svc.generateChannelMapping(moduleName, version, channels)
+	err = svc.generateChannelMapping(moduleName, version, channels)
 	if err != nil {
 		return fmt.Errorf("generate error mapping: %w", err)
 	}
@@ -140,7 +131,7 @@ func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, 
 	}
 
 	if fileName, ok := strings.CutPrefix(fileName, "docs"); ok {
-		return filepath.Join(svc.baseDir, "content/modules", moduleName, channel, fileName), true
+		return filepath.Join(svc.baseDir, contentDir, moduleName, channel, fileName), true
 	}
 
 	if strings.HasPrefix(fileName, "crds") ||
@@ -151,4 +142,22 @@ func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, 
 	}
 
 	return "", false
+}
+
+func (svc *Service) cleanModulesFiles(moduleName string, channels []string) error {
+	for _, channel := range channels {
+		path := filepath.Join(svc.baseDir, contentDir, moduleName, channel)
+		err := os.RemoveAll(path)
+		if err != nil {
+			return fmt.Errorf("remove content %s: %w", path, err)
+		}
+
+		path = filepath.Join(svc.baseDir, modulesDir, moduleName, channel)
+		err = os.RemoveAll(path)
+		if err != nil {
+			return fmt.Errorf("remove data %s: %w", path, err)
+		}
+	}
+
+	return nil
 }

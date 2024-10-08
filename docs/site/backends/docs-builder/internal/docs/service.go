@@ -26,7 +26,10 @@ import (
 var docConfValuesRegexp = regexp.MustCompile(`^openapi/doc-.*-config-values\.yaml$`)
 var assembleErrorRegexp = regexp.MustCompile(`error building site: assemble: (\x1b\[1;36m)?"(?P<path>.+):(?P<line>\d+):(?P<column>\d+)"(\x1b\[0m)?:`)
 
-const modulesDir = "data/modules/"
+const (
+	modulesDir = "data/modules/"
+	contentDir = "content/modules/"
+)
 
 type Service struct {
 	baseDir              string

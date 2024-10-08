@@ -16,26 +16,15 @@ package docs
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 )
 
 func (svc *Service) Delete(moduleName string, channels []string) error {
-	for _, channel := range channels {
-		path := filepath.Join(svc.baseDir, "content/modules", moduleName, channel)
-		err := os.RemoveAll(path)
-		if err != nil {
-			return fmt.Errorf("remove %s: %w", path, err)
-		}
-
-		path = filepath.Join(svc.baseDir, "data/modules", moduleName, channel)
-		err = os.RemoveAll(path)
-		if err != nil {
-			return fmt.Errorf("remove %s: %w", path, err)
-		}
+	err := svc.cleanModulesFiles(moduleName, channels)
+	if err != nil {
+		return fmt.Errorf("clean module files: %w", err)
 	}
 
-	err := svc.removeFromChannelMapping(moduleName)
+	err = svc.removeFromChannelMapping(moduleName)
 	if err != nil {
 		return fmt.Errorf("remove from channel mapping:%w", err)
 	}

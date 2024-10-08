@@ -66,7 +66,7 @@ func (svc *Service) buildHugo() error {
 		}
 
 		if path, ok := getAssembleErrorPath(err.Error()); ok {
-			modulePath := getModulePath(path)
+			modulePath := filepath.Dir(path)
 			err = os.RemoveAll(modulePath)
 			if err != nil {
 				return fmt.Errorf("remove module: %w", err)
@@ -94,15 +94,11 @@ func (svc *Service) removeModuleFromChannelMapping(moduleName, channel string) e
 
 func getAssembleErrorPath(errorMessage string) (string, bool) {
 	match := assembleErrorRegexp.FindStringSubmatch(errorMessage)
-	if match != nil && len(match) == 6 {
+	if len(match) == 6 {
 		return match[2], true
 	}
 
 	return "", false
-}
-
-func getModulePath(filePath string) string {
-	return filepath.Dir(filePath)
 }
 
 func parseModulePath(modulePath string) (moduleName, channel string) {
