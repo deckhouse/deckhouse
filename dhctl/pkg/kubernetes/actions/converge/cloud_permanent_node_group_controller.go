@@ -17,7 +17,6 @@ package converge
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
