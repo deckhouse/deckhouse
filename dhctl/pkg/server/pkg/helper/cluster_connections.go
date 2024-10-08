@@ -36,7 +36,10 @@ type ClusterConnectionsOptions struct {
 func InitializeClusterConnections(opts ClusterConnectionsOptions) (*client.KubernetesClient, *ssh.Client, func() error, error) {
 	if opts.CommanderMode && opts.ApiServerUrl != "" {
 		kubeCl, cleanup, err := CreateKubeClient(opts.ApiServerUrl, opts.ApiServerOptions)
-		return kubeCl, nil, cleanup, fmt.Errorf("error creating kubernetes client: %w", err)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("error creating kubernetes client: %w", err)
+		}
+		return kubeCl, nil, cleanup, nil
 	} else {
 		var sshClient *ssh.Client
 		var cleanup func() error
