@@ -18,46 +18,46 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: SSHCredentials
 metadata:
-  name: caps-0
+  name: caps-redos
 spec:
   privateSSHKey: '${b64_SSH_KEY}'
-  user: '${WORKER_0_USER}'
+  user: '${WORKER_REDOS_USER}'
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: worker-redos
+spec:
+  address: '${WORKER_REDOS_IP}'
+  credentialsRef:
+    kind: SSHCredentials
+    name: caps-redos
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: SSHCredentials
 metadata:
-  name: caps-rosa-id
+  name: caps-opensuse
+spec:
+  privateSSHKey: '${b64_SSH_KEY}'
+  user: '${WORKER_OPENSUSE_USER}'
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: worker-opensuse
+spec:
+  address: '${WORKER_OPENSUSE_IP}'
+  credentialsRef:
+    kind: SSHCredentials
+    name: caps-opensuse
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SSHCredentials
+metadata:
+  name: caps-rosa
 spec:
   privateSSHKey: '${b64_SSH_KEY}'
   user: '${WORKER_ROSA_USER}'
----
-apiVersion: deckhouse.io/v1alpha1
-kind: StaticInstance
-metadata:
-  name: worker-0
-spec:
-  address: '${WORKER_0_IP}'
-  credentialsRef:
-    kind: SSHCredentials
-    name: caps-0
----
-apiVersion: deckhouse.io/v1alpha1
-kind: SSHCredentials
-metadata:
-  name: caps-1
-spec:
-  privateSSHKey: '${b64_SSH_KEY}'
-  user: '${WORKER_1_USER}'
----
-apiVersion: deckhouse.io/v1alpha1
-kind: StaticInstance
-metadata:
-  name: worker-1
-spec:
-  address: '${WORKER_1_IP}'
-  credentialsRef:
-    kind: SSHCredentials
-    name: caps-1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: StaticInstance
@@ -67,7 +67,7 @@ spec:
   address: '${WORKER_ROSA_IP}'
   credentialsRef:
     kind: SSHCredentials
-    name: caps-rosa-id
+    name: caps-rosa
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -76,7 +76,7 @@ metadata:
 spec:
   nodeType: Static
   staticInstances:
-    count: 2
+    count: 3
   disruptions:
     approvalMode: Manual
   nodeTemplate:

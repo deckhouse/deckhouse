@@ -379,8 +379,9 @@ function prepare_environment() {
     # use different users for different OSs
     ssh_user="astra"
     ssh_user_system="altlinux"
-    ssh_user_worker_0="redos"
-    ssh_user_worker_1="opensuse"
+    ssh_redos_user_worker="redos"
+    ssh_opensuse_user_worker="opensuse"
+    ssh_rosa_user_worker="centos"
     ;;
   esac
 
@@ -551,12 +552,16 @@ function bootstrap_static() {
     >&2 echo "ERROR: can't parse system_ip from terraform.log"
     return 1
   fi
-  if ! worker_0_ip="$(grep -m1 "worker_0_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
-    >&2 echo "ERROR: can't parse worker_0_ip from terraform.log"
+  if ! worker_redos_ip="$(grep -m1 "worker_redos_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
+    >&2 echo "ERROR: can't parse worker_redos_ip from terraform.log"
     return 1
   fi
-  if ! worker_1_ip="$(grep -m1 "worker_1_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
-    >&2 echo "ERROR: can't parse worker_1_ip from terraform.log"
+  if ! worker_opensuse_ip="$(grep -m1 "worker_opensuse_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
+    >&2 echo "ERROR: can't parse worker_opensuse_ip from terraform.log"
+    return 1
+  fi
+  if ! worker_rosa_ip="$(grep -m1 "worker_rosa_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
+        >&2 echo "ERROR: can't parse worker_ip from terraform.log"
     return 1
   fi
   if ! bastion_ip="$(grep -m1 "bastion_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
@@ -596,7 +601,7 @@ function bootstrap_static() {
   done
 
   attempt=0
-  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker_0@$worker_0_ip" /usr/local/bin/is-instance-bootstrapped; do
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_redos_user_worker@$worker_redos_ip" /usr/local/bin/is-instance-bootstrapped; do
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
       >&2 echo "ERROR: worker instance couldn't get bootstrapped"
@@ -607,13 +612,24 @@ function bootstrap_static() {
   done
 
   attempt=0
-  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker_1@$worker_1_ip" /usr/local/bin/is-instance-bootstrapped; do
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_opensuse_user_worker@$worker_opensuse_ip" /usr/local/bin/is-instance-bootstrapped; do
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
       >&2 echo "ERROR: worker instance couldn't get bootstrapped"
       return 1
     fi
     >&2 echo "ERROR: worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
+    sleep 5
+  done
+
+  attempt=0
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_rosa_user_worker@$worker_rosa_ip" /usr/local/bin/is-instance-bootstrapped; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
+      >&2 echo "ERROR: rosa worker instance couldn't get bootstrapped"
+      return 1
+    fi
+    >&2 echo "ERROR: rosa worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
     sleep 5
   done
 
@@ -736,9 +752,11 @@ ENDSSH
 
   # Prepare resources.yaml for starting working node with CAPS
   # shellcheck disable=SC2016
-  env b64_SSH_KEY="$(base64 -w0 "$ssh_private_key_path")" WORKER_0_USER="$ssh_user_worker_0" WORKER_0_IP="$worker_0_ip" \
-      WORKER_1_USER="$ssh_user_worker_1" WORKER_1_IP="$worker_1_ip" \
-      envsubst '${b64_SSH_KEY} ${WORKER_0_USER} ${WORKER_0_IP} ${WORKER_1_USER} ${WORKER_1_IP}' \
+  env b64_SSH_KEY="$(base64 -w0 "$ssh_private_key_path")" \
+      WORKER_REDOS_USER="$ssh_redos_user_worker" WORKER_REDOS_IP="$worker_redos_ip" \
+      WORKER_OPENSUSE_USER="$ssh_opensuse_user_worker" WORKER_OPENSUSE_IP="$worker_opensuse_ip" \
+      WORKER_ROSA_USER="$ssh_rosa_user_worker" WORKER_ROSA_IP="$worker_rosa_ip" \
+      envsubst '${b64_SSH_KEY} ${WORKER_REDOS_USER} ${WORKER_REDOS_IP} ${WORKER_OPENSUSE_USER} ${WORKER_OPENSUSE_IP} ${WORKER_ROSA_USER} ${WORKER_ROSA_IP}' \
       <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
 
   # Bootstrap
@@ -791,7 +809,7 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 kubectl get nodes -o wide
-kubectl get nodes -o json | jq -re '.items | length == 4' >/dev/null
+kubectl get nodes -o json | jq -re '.items | length == 5' >/dev/null
 kubectl get nodes -o json | jq -re '[ .items[].status.conditions[] | select(.type == "Ready") ] | map(.status == "True") | all' >/dev/null
 ENDSSH
       registration_failed=""
