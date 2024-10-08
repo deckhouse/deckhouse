@@ -21,10 +21,12 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"testing"
 	"time"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	"github.com/flant/shell-operator/pkg/metric"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	log "github.com/sirupsen/logrus"
@@ -73,7 +75,8 @@ type ReleaseControllerTestSuite struct {
 	testDataFileName string
 	testMRName       string
 
-	tmpDir string
+	tmpDir        string
+	metricStorage *metric.StorageMock
 }
 
 func (suite *ReleaseControllerTestSuite) SetupSuite() {
@@ -89,7 +92,7 @@ func (suite *ReleaseControllerTestSuite) TearDownSubTest() {
 		return
 	}
 
-	goldenFile := filepath.Join("./testdata/releaseController", "golden", suite.testDataFileName)
+	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
 	gotB := suite.fetchResults()
 
 	if golden {
@@ -114,122 +117,135 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	require.NoError(suite.T(), err)
 	err = os.Setenv("TEST_EXTENDER_KUBERNETES_VERSION", "1.28.0")
 	require.NoError(suite.T(), err)
-	suite.Run("testdata cases", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
+	ctx := context.Background()
+
+	dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
+		return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}}"}}}, nil
+	}}, nil)
+
+	// TODO: test manual approve release metrics
+
+	suite.Run("simple", func() {
+		suite.setupReleaseController(string(suite.fetchTestFileData("simple.yaml")))
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":       "module",
+				"moduleName": "parca",
+				"name":       "parca-v1.4.3",
+				"version":    "v1.4.3",
+			},
+		)
+
+		mr := suite.getModuleRelease(suite.testMRName)
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("with annotation", func() {
+		suite.setupReleaseController(string(suite.fetchTestFileData("with-annotation.yaml")))
+		mr := suite.getModuleRelease(suite.testMRName)
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("deckhouse suitable version", func() {
+		suite.setupReleaseController(string(suite.fetchTestFileData("dVersion-suitable.yaml")))
+		mr := suite.getModuleRelease(suite.testMRName)
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("deckhouse unsuitable version", func() {
+		suite.setupReleaseController(string(suite.fetchTestFileData("dVersion-suitable.yaml")))
+		mr := suite.getModuleRelease(suite.testMRName)
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("kubernetes suitable version", func() {
+		suite.setupReleaseController(string(suite.fetchTestFileData("kVersion-suitable.yaml")))
+		mr := suite.getModuleRelease(suite.testMRName)
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("kubernetes unsuitable version", func() {
+		suite.setupReleaseController(string(suite.fetchTestFileData("kVersion-suitable.yaml")))
+		mr := suite.getModuleRelease(suite.testMRName)
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("deploy with outdated module releases", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
+		suite.setupReleaseController(string(suite.fetchTestFileData("clean-up-outdated-module-releases-when-deploy.yaml")))
+		err := suite.updateModuleReleasesStatuses()
+		require.NoError(suite.T(), err)
+		mr := suite.getModuleRelease("echo-v0.4.54")
+		_, err = suite.ctr.reconcilePendingRelease(ctx, mr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("clean up for a deployed module release with outdated module releases", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
+		suite.setupReleaseController(string(suite.fetchTestFileData("clean-up-outdated-module-releases-for-deployed.yaml")))
+		err := suite.updateModuleReleasesStatuses()
+		require.NoError(suite.T(), err)
+		mr := suite.getModuleRelease("echo-v0.4.54")
+		_, err = suite.ctr.reconcileDeployedRelease(ctx, mr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("loop until deploy: canary", func() {
+		suite.T().Skip("TODO: requeue all releases after got deckhouse module config update")
+
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
 			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}}"}}}, nil
 		}}, nil)
 
-		suite.Run("simple", func() {
-			suite.setupReleaseController(string(suite.fetchTestFileData("simple.yaml")))
+		mup := &v1alpha1.ModuleUpdatePolicySpec{
+			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+				Mode:    "Auto",
+				Windows: update.Windows{{From: "00:00", To: "24:00", Days: []string{"tue"}}},
+			},
+			ReleaseChannel: "Stable",
+		}
+
+		testData := suite.fetchTestFileData("loop-canary.yaml")
+		suite.setupReleaseController(string(testData), withModuleUpdatePolicy(mup), withDependencyContainer(dc))
+
+		var (
+			result = ctrl.Result{Requeue: true}
+			err    error
+			i      int
+		)
+
+		// Setting restartReason field in real code causes the process to reboot.
+		// And at the next startup, Reconcile will be called for existing objects.
+		// Therefore, this condition emulates the behavior in real code.
+		for result.Requeue || result.RequeueAfter > 0 || suite.ctr.restartReason != "" {
+			suite.ctr.restartReason = ""
+			dc.GetFakeClock().Advance(result.RequeueAfter)
+
 			mr := suite.getModuleRelease(suite.testMRName)
-			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
-			require.NoError(suite.T(), err)
-		})
-
-		suite.Run("with annotation", func() {
-			suite.setupReleaseController(string(suite.fetchTestFileData("with-annotation.yaml")))
-			mr := suite.getModuleRelease(suite.testMRName)
-			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
-			require.NoError(suite.T(), err)
-		})
-
-		suite.Run("deckhouse suitable version", func() {
-			suite.setupReleaseController(string(suite.fetchTestFileData("dVersion-suitable.yaml")))
-			mr := suite.getModuleRelease(suite.testMRName)
-			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
-			require.NoError(suite.T(), err)
-		})
-
-		suite.Run("deckhouse unsuitable version", func() {
-			suite.setupReleaseController(string(suite.fetchTestFileData("dVersion-suitable.yaml")))
-			mr := suite.getModuleRelease(suite.testMRName)
-			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
-			require.NoError(suite.T(), err)
-		})
-
-		suite.Run("kubernetes suitable version", func() {
-			suite.setupReleaseController(string(suite.fetchTestFileData("kVersion-suitable.yaml")))
-			mr := suite.getModuleRelease(suite.testMRName)
-			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
-			require.NoError(suite.T(), err)
-		})
-
-		suite.Run("kubernetes unsuitable version", func() {
-			suite.setupReleaseController(string(suite.fetchTestFileData("kVersion-suitable.yaml")))
-			mr := suite.getModuleRelease(suite.testMRName)
-			_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
-			require.NoError(suite.T(), err)
-		})
-
-		suite.Run("deploy with outdated module releases", func() {
-			dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
-			suite.setupReleaseController(string(suite.fetchTestFileData("clean-up-outdated-module-releases-when-deploy.yaml")))
-			err := suite.updateModuleReleasesStatuses()
-			require.NoError(suite.T(), err)
-			mr := suite.getModuleRelease("echo-v0.4.54")
-			_, err = suite.ctr.reconcilePendingRelease(context.TODO(), mr)
-			require.NoError(suite.T(), err)
-		})
-
-		suite.Run("clean up for a deployed module release with outdated module releases", func() {
-			dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
-			suite.setupReleaseController(string(suite.fetchTestFileData("clean-up-outdated-module-releases-for-deployed.yaml")))
-			err := suite.updateModuleReleasesStatuses()
-			require.NoError(suite.T(), err)
-			mr := suite.getModuleRelease("echo-v0.4.54")
-			_, err = suite.ctr.reconcileDeployedRelease(context.TODO(), mr)
-			require.NoError(suite.T(), err)
-		})
-
-		suite.Run("loop until deploy: canary", func() {
-			suite.T().Skip("TODO: requeue all releases after got deckhouse module config update")
-
-			dc := dependency.NewMockedContainer()
-			dc.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}}"}}}, nil
-			}}, nil)
-
-			mup := &v1alpha1.ModuleUpdatePolicySpec{
-				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
-					Mode:    "Auto",
-					Windows: update.Windows{{From: "00:00", To: "24:00", Days: []string{"tue"}}},
-				},
-				ReleaseChannel: "Stable",
+			if mr.Status.Phase == v1alpha1.PhaseDeployed {
+				suite.T().Log("Deployed")
+				return
 			}
 
-			testData := suite.fetchTestFileData("loop-canary.yaml")
-			suite.setupReleaseController(string(testData), withModuleUpdatePolicy(mup), withDependencyContainer(dc))
+			result, err = suite.ctr.createOrUpdateReconcile(ctx, mr)
+			require.NoError(suite.T(), err)
 
-			var (
-				result = ctrl.Result{Requeue: true}
-				err    error
-				i      int
-			)
-
-			// Setting restartReason field in real code causes the process to reboot.
-			// And at the next startup, Reconcile will be called for existing objects.
-			// Therefore, this condition emulates the behavior in real code.
-			for result.Requeue || result.RequeueAfter > 0 || suite.ctr.restartReason != "" {
-				suite.ctr.restartReason = ""
-				dc.GetFakeClock().Advance(result.RequeueAfter)
-
-				mr := suite.getModuleRelease(suite.testMRName)
-				if mr.Status.Phase == v1alpha1.PhaseDeployed {
-					suite.T().Log("Deployed")
-					return
-				}
-
-				result, err = suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
-				require.NoError(suite.T(), err)
-
-				i++
-				if i > maxIterations {
-					suite.T().Fatal("Too many iterations")
-				}
+			i++
+			if i > maxIterations {
+				suite.T().Fatal("Too many iterations")
 			}
+		}
 
-			suite.T().Fatal("Loop was broken")
-		})
+		suite.T().Fatal("Loop was broken")
 	})
 }
 
@@ -263,6 +279,12 @@ func withModuleUpdatePolicy(mup *v1alpha1.ModuleUpdatePolicySpec) reconcilerOpti
 func withDependencyContainer(dc dependency.Container) reconcilerOption {
 	return func(r *moduleReleaseReconciler) {
 		r.dc = dc
+	}
+}
+
+func withEnabledModules(enabledModules []string) reconcilerOption {
+	return func(r *moduleReleaseReconciler) {
+		r.moduleManager.(*stubModulesManager).enabledModules = enabledModules
 	}
 }
 
@@ -305,13 +327,14 @@ type: Opaque
 	_ = corev1.AddToScheme(sc)
 	cl := fake.NewClientBuilder().WithScheme(sc).WithObjects(initObjects...).WithStatusSubresource(&v1alpha1.ModuleSource{}, &v1alpha1.ModuleRelease{}).Build()
 
+	metricStorage := metric.NewStorageMock(suite.T())
 	rec := &moduleReleaseReconciler{
 		client:               cl,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dc:                   dependency.NewDependencyContainer(),
 		logger:               log.New(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
-		moduleManager:        stubModulesManager{},
+		moduleManager:        &stubModulesManager{},
 		delayTimer:           time.NewTimer(3 * time.Second),
 
 		deckhouseEmbeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
@@ -320,6 +343,8 @@ type: Opaque
 			},
 			ReleaseChannel: "Stable",
 		}),
+
+		metricStorage: metricStorage,
 	}
 
 	for _, option := range options {
@@ -328,6 +353,7 @@ type: Opaque
 
 	suite.ctr = rec
 	suite.kubeClient = cl
+	suite.metricStorage = metricStorage
 }
 
 func (suite *ReleaseControllerTestSuite) assembleInitObject(obj string) client.Object {
@@ -369,7 +395,7 @@ func (suite *ReleaseControllerTestSuite) assembleInitObject(obj string) client.O
 }
 
 func (suite *ReleaseControllerTestSuite) fetchTestFileData(filename string) []byte {
-	dir := "./testdata/releaseController"
+	dir := "./testdata"
 	data, err := os.ReadFile(filepath.Join(dir, filename))
 	require.NoError(suite.T(), err)
 
@@ -412,24 +438,26 @@ func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 	return result.Bytes()
 }
 
-type stubModulesManager struct{}
-
-func (s stubModulesManager) DisableModuleHooks(_ string) {
+type stubModulesManager struct {
+	enabledModules []string
 }
 
-func (s stubModulesManager) GetModule(_ string) *addonmodules.BasicModule {
+func (s *stubModulesManager) DisableModuleHooks(_ string) {
+}
+
+func (s *stubModulesManager) GetModule(_ string) *addonmodules.BasicModule {
 	return nil
 }
 
-func (s stubModulesManager) GetEnabledModuleNames() []string {
-	return nil
+func (s *stubModulesManager) GetEnabledModuleNames() []string {
+	return s.enabledModules
 }
 
-func (s stubModulesManager) IsModuleEnabled(_ string) bool {
-	return true
+func (s *stubModulesManager) IsModuleEnabled(moduleName string) bool {
+	return slices.Contains(s.enabledModules, moduleName)
 }
 
-func (s stubModulesManager) RunModuleWithNewOpenAPISchema(_, _, _ string) error {
+func (s *stubModulesManager) RunModuleWithNewOpenAPISchema(_, _, _ string) error {
 	return nil
 }
 

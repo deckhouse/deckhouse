@@ -18,7 +18,6 @@ package deckhouse_release
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -26,7 +25,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"github.com/flant/shell-operator/pkg/metric_storage"
+	"github.com/flant/shell-operator/pkg/metric"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/pkg/releaseutil"
@@ -47,7 +46,7 @@ func setupFakeController(
 	filename, values string,
 	mup *v1alpha1.ModuleUpdatePolicySpec,
 	options ...reconcilerOption,
-) (*deckhouseReleaseReconciler, client.Client) {
+) (*deckhouseReleaseReconciler, client.Client, *metric.StorageMock) {
 	ds := &helpers.DeckhouseSettings{
 		ReleaseChannel: mup.ReleaseChannel,
 	}
@@ -71,7 +70,7 @@ func setupControllerSettings(
 	values string,
 	ds *helpers.DeckhouseSettings,
 	options ...reconcilerOption,
-) (*deckhouseReleaseReconciler, client.Client) {
+) (*deckhouseReleaseReconciler, client.Client, *metric.StorageMock) {
 	yamlDoc := fetchTestFileData(t, filename, values)
 	manifests := releaseutil.SplitManifests(yamlDoc)
 
@@ -92,20 +91,21 @@ func setupControllerSettings(
 		Build()
 	dc := dependency.NewDependencyContainer()
 
+	metricStorage := metric.NewStorageMock(t)
 	rec := &deckhouseReleaseReconciler{
 		client:         cl,
 		dc:             dc,
 		logger:         log.New(),
 		moduleManager:  stubModulesManager{},
 		updateSettings: helpers.NewDeckhouseSettingsContainer(ds),
-		metricStorage:  metric_storage.NewMetricStorage(context.Background(), "", true),
+		metricStorage:  metricStorage,
 	}
 
 	for _, option := range options {
 		option(rec)
 	}
 
-	return rec, cl
+	return rec, cl, metricStorage
 }
 
 func assembleInitObject(t *testing.T, obj string) client.Object {

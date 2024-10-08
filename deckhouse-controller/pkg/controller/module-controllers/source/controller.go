@@ -24,6 +24,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/deckhouse/deckhouse/go_lib/module"
+
+	"github.com/deckhouse/deckhouse/go_lib/module/downloader"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	log "github.com/sirupsen/logrus"
@@ -39,8 +43,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	controllerUtils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
@@ -217,7 +219,7 @@ func (c *moduleSourceReconciler) createOrUpdateReconcile(ctx context.Context, ms
 }
 
 func (c *moduleSourceReconciler) deleteReconcile(ctx context.Context, ms *v1alpha1.ModuleSource) (ctrl.Result, error) {
-	if controllerutil.ContainsFinalizer(ms, "modules.deckhouse.io/release-exists") {
+	if controllerutil.ContainsFinalizer(ms, v1alpha1.SourceReleaseExistFinalizer) {
 		v := ms.GetAnnotations()["modules.deckhouse.io/force-delete"]
 		if v != "true" {
 			// check releases
@@ -238,7 +240,7 @@ func (c *moduleSourceReconciler) deleteReconcile(ctx context.Context, ms *v1alph
 			}
 		}
 
-		controllerutil.RemoveFinalizer(ms, "modules.deckhouse.io/release-exists")
+		controllerutil.RemoveFinalizer(ms, v1alpha1.SourceReleaseExistFinalizer)
 
 		err := c.client.Update(ctx, ms)
 		if err != nil {
@@ -310,10 +312,10 @@ func (c *moduleSourceReconciler) createModuleRelease(ctx context.Context, ms *v1
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s-%s", moduleName, result.ModuleVersion),
 			Labels: map[string]string{
-				"module":                  moduleName,
-				"source":                  ms.Name,
-				"release-checksum":        checksum,
-				release.UpdatePolicyLabel: policyName,
+				"module":                   moduleName,
+				"source":                   ms.Name,
+				"release-checksum":         checksum,
+				v1alpha1.UpdatePolicyLabel: policyName,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -449,7 +451,7 @@ func (c *moduleSourceReconciler) checkAndPropagateRegistrySettings(ctx context.C
 			for _, ref := range ownerReferences {
 				if ref.UID == ms.UID && ref.Name == ms.Name && ref.Kind == "ModuleSource" {
 					// update the values.yaml file in externam-modules/<module_name>/v<module_version/openapi path
-					err = downloader.InjectRegistryToModuleValues(filepath.Join(c.downloadedModulesDir, rl.Spec.ModuleName, fmt.Sprintf("v%s", rl.Spec.Version)), ms)
+					err = module.InjectRegistryToModuleValues(filepath.Join(c.downloadedModulesDir, rl.Spec.ModuleName, fmt.Sprintf("v%s", rl.Spec.Version)), ms)
 					if err != nil {
 						return false, fmt.Errorf("couldn't update module release %s registry settings: %w", rl.Name, err)
 					}
@@ -467,7 +469,7 @@ func (c *moduleSourceReconciler) checkAndPropagateRegistrySettings(ctx context.C
 						rl.ObjectMeta.Annotations = make(map[string]string)
 					}
 
-					rl.ObjectMeta.Annotations[release.RegistrySpecChangedAnnotation] = c.dc.GetClock().Now().UTC().Format(time.RFC3339)
+					rl.ObjectMeta.Annotations[v1alpha1.RegistrySpecChangedAnnotation] = c.dc.GetClock().Now().UTC().Format(time.RFC3339)
 					if err := c.client.Update(ctx, &rl); err != nil {
 						return false, fmt.Errorf("couldn't set RegistrySpecChangedAnnotation to %s the module release: %w", rl.Name, err)
 					}
@@ -487,7 +489,7 @@ func (c *moduleSourceReconciler) checkAndPropagateRegistrySettings(ctx context.C
 
 	for _, mpo := range mposFromSource.Items {
 		// update the values.yaml file in externam-modules/<module_name>/dev/openapi path
-		err = downloader.InjectRegistryToModuleValues(filepath.Join(c.downloadedModulesDir, mpo.Name, "dev"), ms)
+		err = module.InjectRegistryToModuleValues(filepath.Join(c.downloadedModulesDir, mpo.Name, "dev"), ms)
 		if err != nil {
 			return false, fmt.Errorf("couldn't update module pull override %s registry settings: %w", mpo.Name, err)
 		}
@@ -496,7 +498,7 @@ func (c *moduleSourceReconciler) checkAndPropagateRegistrySettings(ctx context.C
 			mpo.ObjectMeta.Annotations = make(map[string]string)
 		}
 
-		mpo.ObjectMeta.Annotations[release.RegistrySpecChangedAnnotation] = c.dc.GetClock().Now().UTC().Format(time.RFC3339)
+		mpo.ObjectMeta.Annotations[v1alpha1.RegistrySpecChangedAnnotation] = c.dc.GetClock().Now().UTC().Format(time.RFC3339)
 		if err := c.client.Update(ctx, &mpo); err != nil {
 			return false, fmt.Errorf("couldn't set RegistrySpecChangedAnnotation to the %s module pull override: %w", mpo.Name, err)
 		}

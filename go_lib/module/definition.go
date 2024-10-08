@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package models
+package module
 
-const (
-	ModuleDefinitionFile = "module.yaml"
-)
+const DefinitionFile = "module.yaml"
 
+// DeckhouseModuleDefinition represent module configuration located in DefinitionFile
+// TODO: rename to Definition because the word "module" will be in the package name, and "Deckhouse" will be in the package import path
 type DeckhouseModuleDefinition struct {
 	Name         string            `yaml:"name"`
 	Weight       uint32            `yaml:"weight,omitempty"`

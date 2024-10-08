@@ -1,8 +1,12 @@
 module tools
 
+<<<<<<< HEAD
 go 1.22.4
 
 toolchain go1.22.8
+=======
+go 1.22.8
+>>>>>>> 59b7214c62 (WIP)
 
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
@@ -13,7 +17,15 @@ require (
 	github.com/yuin/goldmark v1.4.13
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
+<<<<<<< HEAD
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
+=======
+	k8s.io/api v0.29.8
+	k8s.io/apiextensions-apiserver v0.29.0
+	k8s.io/apimachinery v0.29.8
+	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
+	sigs.k8s.io/yaml v1.4.0
+>>>>>>> 59b7214c62 (WIP)
 )
 
 require (
@@ -183,9 +195,12 @@ require (
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	helm.sh/helm/v3 v3.14.2 // indirect
 	honnef.co/go/tools v0.1.4 // indirect
+<<<<<<< HEAD
 	k8s.io/api v0.29.8 // indirect
 	k8s.io/apiextensions-apiserver v0.29.0 // indirect
 	k8s.io/apimachinery v0.29.8 // indirect
+=======
+>>>>>>> 59b7214c62 (WIP)
 	k8s.io/client-go v0.29.8 // indirect
 	k8s.io/klog/v2 v2.110.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
@@ -195,7 +210,10 @@ require (
 	mvdan.cc/unparam v0.0.0-20210104141923-aac4ce9116a7 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
+<<<<<<< HEAD
 	sigs.k8s.io/yaml v1.4.0 // indirect
+=======
+>>>>>>> 59b7214c62 (WIP)
 )
 
 replace (

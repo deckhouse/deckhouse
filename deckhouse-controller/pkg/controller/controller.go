@@ -28,6 +28,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
+	"github.com/flant/shell-operator/pkg/metric"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/go-logr/logr"
 	log "github.com/sirupsen/logrus"
@@ -53,8 +54,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	deckhouse_release "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
+	module_pull_override "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/module-pull-override"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -63,6 +64,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/go_lib/module"
 )
 
 const (
@@ -85,9 +87,9 @@ type DeckhouseController struct {
 	mm         *module_manager.ModuleManager // probably it's better to set it via the interface
 	kubeClient *versioned.Clientset
 
-	metricStorage *metric_storage.MetricStorage
+	metricStorage metric.Storage
 
-	deckhouseModules map[string]*models.DeckhouseModule
+	deckhouseModules map[string]*module.DeckhouseModule
 	// <module-name>: <module-source>
 	sourceModules           map[string]string
 	embeddedDeckhousePolicy *helpers.ModuleUpdatePolicySpecContainer
@@ -203,7 +205,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		return nil, err
 	}
 
-	err = release.NewModulePullOverrideController(mgr, dc, mm, &preflightCountDown)
+	err = module_pull_override.NewController(mgr, dc, mm, &preflightCountDown)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +223,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		mgr:                mgr,
 		preflightCountDown: &preflightCountDown,
 
-		deckhouseModules:        make(map[string]*models.DeckhouseModule),
+		deckhouseModules:        make(map[string]*module.DeckhouseModule),
 		sourceModules:           make(map[string]string),
 		embeddedDeckhousePolicy: embeddedDeckhousePolicy,
 		deckhouseSettings:       dsContainer,
@@ -421,7 +423,7 @@ func (dml *DeckhouseController) updateModuleConfigStatus(configName string) erro
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			metricGroup := fmt.Sprintf("%s_%s", "obsoleteVersion", configName)
-			dml.metricStorage.GroupedVault.ExpireGroupMetrics(metricGroup)
+			dml.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 			moduleConfig, moduleErr := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().Get(dml.ctx, configName, v1.GetOptions{})
 
 			// if module config found
@@ -448,7 +450,7 @@ func (dml *DeckhouseController) updateModuleConfigStatus(configName string) erro
 				converter := conversion.Store().Get(moduleConfig.Name)
 
 				if moduleConfig.Spec.Version > 0 && moduleConfig.Spec.Version < converter.LatestVersion() {
-					dml.metricStorage.GroupedVault.GaugeSet(metricGroup, "module_config_obsolete_version", 1.0, map[string]string{
+					dml.metricStorage.Grouped().GaugeSet(metricGroup, "module_config_obsolete_version", 1.0, map[string]string{
 						"name":    moduleConfig.Name,
 						"version": strconv.Itoa(moduleConfig.Spec.Version),
 						"latest":  strconv.Itoa(converter.LatestVersion()),
@@ -510,13 +512,13 @@ func (dml *DeckhouseController) handleConvergeDone() error {
 	})
 }
 
-func (dml *DeckhouseController) handleModulePurge(m *models.DeckhouseModule) error {
+func (dml *DeckhouseController) handleModulePurge(m *module.DeckhouseModule) error {
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
 		return dml.kubeClient.DeckhouseV1alpha1().Modules().Delete(dml.ctx, m.GetBasicModule().GetName(), v1.DeleteOptions{})
 	})
 }
 
-func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModule) error {
+func (dml *DeckhouseController) handleModuleRegistration(m *module.DeckhouseModule) error {
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			moduleName := m.GetBasicModule().GetName()
@@ -552,7 +554,7 @@ func (dml *DeckhouseController) handleModuleRegistration(m *models.DeckhouseModu
 	})
 }
 
-func (dml *DeckhouseController) handleEnabledModule(m *models.DeckhouseModule, enable bool) error {
+func (dml *DeckhouseController) handleEnabledModule(m *module.DeckhouseModule, enable bool) error {
 	return retry.OnError(retry.DefaultRetry, errors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			module, err := dml.kubeClient.DeckhouseV1alpha1().Modules().Get(dml.ctx, m.GetBasicModule().GetName(), v1.GetOptions{})

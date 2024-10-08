@@ -30,6 +30,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/flant/shell-operator/pkg/metric"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -101,12 +103,14 @@ type ControllerTestSuite struct {
 
 	testDataFileName string
 	backupTZ         *time.Location
+	metricStorage    *metric.StorageMock
 }
 
 func (suite *ControllerTestSuite) SetupSuite() {
 	flag.Parse()
 	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 	suite.backupTZ = time.Local
+	// TODO: remove this
 	time.Local = dependency.TestTimeZone
 }
 
@@ -153,7 +157,7 @@ func (suite *ControllerTestSuite) setupController(
 	options ...reconcilerOption,
 ) {
 	suite.testDataFileName = filename
-	suite.ctr, suite.kubeClient = setupFakeController(suite.T(), filename, initValues, mup, options...)
+	suite.ctr, suite.kubeClient, suite.metricStorage = setupFakeController(suite.T(), filename, initValues, mup, options...)
 }
 
 func (suite *ControllerTestSuite) setupControllerSettings(
@@ -162,7 +166,7 @@ func (suite *ControllerTestSuite) setupControllerSettings(
 	ds *helpers.DeckhouseSettings,
 ) {
 	suite.testDataFileName = filename
-	suite.ctr, suite.kubeClient = setupControllerSettings(suite.T(), filename, initValues, ds)
+	suite.ctr, suite.kubeClient, suite.metricStorage = setupControllerSettings(suite.T(), filename, initValues, ds)
 }
 
 func (suite *ControllerTestSuite) TestCreateReconcile() {
