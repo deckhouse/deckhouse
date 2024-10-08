@@ -1,22 +1,3 @@
-{{/*
-   NOTES:
-   1. This ConfigMap is deprecated, documentation uses ConfigMap/d8-deckhouse-version-info,
-      that is created by 002-deckhouse.
-   2. This resource is left intact to prevent Pod stuck in Terminating state.
-   3. Delete this template the next release after migrating to DeckhouseConfig resources.
-  */}}
-{{- if and .Values.global.modules.publicDomainTemplate  .Values.global.clusterIsBootstrapped }}
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: documentation
-  namespace: d8-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "documentation")) | nindent 2 }}
-data:
-  data.json: >
-    {"channel":"unknown", "version":"unknown", "edition":"unknown"}
-{{- end }}
 ---
 kind: ConfigMap
 apiVersion: v1

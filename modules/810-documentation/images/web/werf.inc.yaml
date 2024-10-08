@@ -23,7 +23,7 @@ import:
   - '*/sitemap*.xml'
   - '*/robots.txt'
 docker:
-  ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
+  ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}/static
 from: {{ .Images.BASE_JEKYLL }}
@@ -189,4 +189,3 @@ git:
   includePaths:
   - modules/**/docs/README.md
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section.inc.yaml" .ModulePath)) . }}
-{{ tpl (.Files.Get (printf "%sdocs/site/werf-docs-builder.inc.yaml" .ModulePath)) (dict "ctx" . "mode" "module") }}
