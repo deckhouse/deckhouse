@@ -104,9 +104,14 @@ func createTarball() *bytes.Buffer {
 			Args: []string{"get", "nodes", "-A", "-o", "json"},
 		},
 		{
-			File: "machines.json",
+			File: "instances.json",
 			Cmd:  "kubectl",
-			Args: []string{"get", "machines", "-A", "-o", "json"},
+			Args: []string{"get", "instances.deckhouse.io", "-o", "json"},
+		},
+		{
+			File: "staticinstances.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "staticinstances.deckhouse.io", "-o", "json"},
 		},
 		{
 			File: "deckhouse-version.json",
