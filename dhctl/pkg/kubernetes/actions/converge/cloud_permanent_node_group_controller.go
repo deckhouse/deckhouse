@@ -50,7 +50,6 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		wg                 sync.WaitGroup
 		indexNodesToCreate []int
 	)
-
 	for c.desiredReplicas > count {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, index)
 		if _, ok := c.state.State[candidateName]; !ok {
@@ -60,7 +59,7 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		index++
 	}
 
-	for indexCandidate := range indexNodesToCreate {
+	for _, indexCandidate := range indexNodesToCreate {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, indexCandidate)
 		wg.Add(1)
 		go func() error {
