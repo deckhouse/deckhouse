@@ -265,15 +265,6 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 			continue
 		}
 
-		// docArchive := new(bytes.Buffer)
-		// _, err := io.Copy(docArchive, b)
-		// if err != nil {
-		// 	cond.Type = v1alpha1.TypeError
-		// 	cond.Message = fmt.Sprintf("Error occurred while fetching the documentation: %s. copying", err)
-		// 	mdCopy.Status.Conditions = append(mdCopy.Status.Conditions, cond)
-		// 	continue
-		// }
-
 		err = mdr.buildDocumentation(ctx, b, addr, moduleName, md.Spec.Version)
 		if err != nil {
 			cond.Type = v1alpha1.TypeError
@@ -401,8 +392,6 @@ func (mdr *moduleDocumentationReconciler) getDocumentationFromModuleDir(modulePa
 }
 
 func (mdr *moduleDocumentationReconciler) buildDocumentation(ctx context.Context, docsArchive io.Reader, baseAddr, moduleName, moduleVersion string) error {
-	defer io.Copy(io.Discard, docsArchive)
-
 	err := mdr.docsBuilder.SendDocumentation(ctx, baseAddr, moduleName, moduleVersion, docsArchive)
 	if err != nil {
 		return fmt.Errorf("send documentation: %w", err)

@@ -47,6 +47,7 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 		if err == io.EOF {
 			break
 		}
+
 		if err != nil {
 			return fmt.Errorf("tar next: %w", err)
 		}
@@ -146,7 +147,7 @@ func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, 
 		fileName == "openapi" ||
 		fileName == "openapi/config-values.yaml" ||
 		docConfValuesRegexp.MatchString(fileName) {
-		return filepath.Join(svc.baseDir, "data/modules", moduleName, channel, fileName), true
+		return filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName), true
 	}
 
 	return "", false

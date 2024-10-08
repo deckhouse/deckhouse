@@ -25,8 +25,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const modulesDir = "data/modules/"
-
 func newChannelMappingEditor(baseDir string) *channelMappingEditor {
 	return &channelMappingEditor{baseDir: baseDir}
 }
