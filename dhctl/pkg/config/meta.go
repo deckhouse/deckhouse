@@ -326,13 +326,13 @@ func (m *MetaConfig) PrepareAfterGlobalCacheInit() error {
 
 			switch m.Registry.ModeSpecificFields.(type) {
 			case ProxyModeRegistryData:
-				extraData := m.Registry.ModeSpecificFields.(ProxyModeRegistryData)
-				extraData.InternalRegistryAccess = *internalRegistryAccessData
-				m.Registry.ModeSpecificFields = extraData
+				modeSpecificFields := m.Registry.ModeSpecificFields.(ProxyModeRegistryData)
+				modeSpecificFields.InternalRegistryAccess = *internalRegistryAccessData
+				m.Registry.ModeSpecificFields = modeSpecificFields
 			case DetachedModeRegistryData:
-				extraData := m.Registry.ModeSpecificFields.(DetachedModeRegistryData)
-				extraData.InternalRegistryAccess = *internalRegistryAccessData
-				m.Registry.ModeSpecificFields = extraData
+				modeSpecificFields := m.Registry.ModeSpecificFields.(DetachedModeRegistryData)
+				modeSpecificFields.InternalRegistryAccess = *internalRegistryAccessData
+				m.Registry.ModeSpecificFields = modeSpecificFields
 			}
 
 			m.Registry.Data.DockerCfg = string(base64.StdEncoding.EncodeToString(dockerCfg))
@@ -915,19 +915,19 @@ func (r *RegistryData) GetUserNameAndPasswordFromAuth() (string, string, error) 
 }
 
 func (r Registry) DeepCopy() Registry {
-	var extraDataCopy interface{}
+	var modeSpecificFieldsCopy interface{}
 	switch r.ModeSpecificFields.(type) {
 	case ProxyModeRegistryData:
-		extData := r.ModeSpecificFields.(ProxyModeRegistryData)
-		extraDataCopy = extData.DeepCopy()
+		modeSpecificFields := r.ModeSpecificFields.(ProxyModeRegistryData)
+		modeSpecificFieldsCopy = modeSpecificFields.DeepCopy()
 	case DetachedModeRegistryData:
-		extData := r.ModeSpecificFields.(DetachedModeRegistryData)
-		extraDataCopy = extData.DeepCopy()
+		modeSpecificFields := r.ModeSpecificFields.(DetachedModeRegistryData)
+		modeSpecificFieldsCopy = modeSpecificFields.DeepCopy()
 	}
 	return Registry{
 		Mode:             r.Mode,
 		Data:             r.Data,
-		ModeSpecificFields: extraDataCopy,
+		ModeSpecificFields: modeSpecificFieldsCopy,
 	}
 }
 
@@ -942,17 +942,17 @@ func (r Registry) ConvertToMap() (map[string]interface{}, error) {
 
 	switch r.ModeSpecificFields.(type) {
 	case ProxyModeRegistryData:
-		extraData := r.ModeSpecificFields.(ProxyModeRegistryData)
-		mapData["registryStorageMode"] = extraData.RegistryStorageMode
-		mapData["internalRegistryAccess"] = extraData.InternalRegistryAccess.ConvertToMap()
-		mapData["upstreamRegistry"], err = extraData.UpstreamRegistryData.ConvertToMap()
+		modeSpecificFields := r.ModeSpecificFields.(ProxyModeRegistryData)
+		mapData["registryStorageMode"] = modeSpecificFields.RegistryStorageMode
+		mapData["internalRegistryAccess"] = modeSpecificFields.InternalRegistryAccess.ConvertToMap()
+		mapData["upstreamRegistry"], err = modeSpecificFields.UpstreamRegistryData.ConvertToMap()
 		if err != nil {
 			return nil, err
 		}
 	case DetachedModeRegistryData:
-		extraData := r.ModeSpecificFields.(DetachedModeRegistryData)
-		mapData["registryStorageMode"] = extraData.RegistryStorageMode
-		mapData["internalRegistryAccess"] = extraData.InternalRegistryAccess.ConvertToMap()
+		modeSpecificFields := r.ModeSpecificFields.(DetachedModeRegistryData)
+		mapData["registryStorageMode"] = modeSpecificFields.RegistryStorageMode
+		mapData["internalRegistryAccess"] = modeSpecificFields.InternalRegistryAccess.ConvertToMap()
 	}
 	return mapData, nil
 }

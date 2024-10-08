@@ -283,29 +283,29 @@ func CheckOrSetupSystemRegistryModuleConfig(cfg *DeckhouseInstaller) error {
 
 	switch cfg.Registry.ModeSpecificFields.(type) {
 	case ProxyModeRegistryData:
-		extraData := cfg.Registry.ModeSpecificFields.(ProxyModeRegistryData)
-		user, password, err := extraData.UpstreamRegistryData.GetUserNameAndPasswordFromAuth()
+		modeSpecificFields := cfg.Registry.ModeSpecificFields.(ProxyModeRegistryData)
+		user, password, err := modeSpecificFields.UpstreamRegistryData.GetUserNameAndPasswordFromAuth()
 		if err != nil {
 			return err
 		}
 		systemRegistryMC.Spec.Settings = SettingsValues{
 			"mode": "Proxy",
 			"proxy": SettingsValues{
-				"storageMode": extraData.RegistryStorageMode,
-				"scheme":      strings.ToLower(extraData.UpstreamRegistryData.Scheme),
-				"host":        extraData.UpstreamRegistryData.Address,
-				"path":        extraData.UpstreamRegistryData.Path,
-				"ca":          extraData.UpstreamRegistryData.CA,
+				"storageMode": modeSpecificFields.RegistryStorageMode,
+				"scheme":      strings.ToLower(modeSpecificFields.UpstreamRegistryData.Scheme),
+				"host":        modeSpecificFields.UpstreamRegistryData.Address,
+				"path":        modeSpecificFields.UpstreamRegistryData.Path,
+				"ca":          modeSpecificFields.UpstreamRegistryData.CA,
 				"user":        user,
 				"password":    password,
 			},
 		}
 	case DetachedModeRegistryData:
-		extraData := cfg.Registry.ModeSpecificFields.(DetachedModeRegistryData)
+		modeSpecificFields := cfg.Registry.ModeSpecificFields.(DetachedModeRegistryData)
 		systemRegistryMC.Spec.Settings = SettingsValues{
 			"mode": "Detached",
 			"detached": SettingsValues{
-				"storageMode": extraData.RegistryStorageMode,
+				"storageMode": modeSpecificFields.RegistryStorageMode,
 			},
 		}
 	default:
