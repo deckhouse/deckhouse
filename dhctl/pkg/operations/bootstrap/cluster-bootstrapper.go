@@ -422,11 +422,11 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			return nil
 		}
 
-		localBootstraper := func(f func() error) error {
+		localBootstraper := func(action func() error) error {
 			if b.CommanderMode {
-				return f()
+				return action()
 			}
-			return converge.NewInLockLocalRunner(kubeCl, "local-bootstraper").Run()
+			return converge.NewInLockLocalRunner(kubeCl, "local-bootstraper").Run(action)
 		}
 
 		err := localBootstraper(func() error {
