@@ -67,6 +67,7 @@ message ConvergeStartOptions {
   string api_server_token = 7;
   bool api_server_insecure_skip_tls_verify = 8;
   string api_server_certificate_authority_data = 9;
+  OperationOptions common_options = 10;
 }
 
 message ConvergeResult {
