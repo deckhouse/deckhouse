@@ -113,7 +113,7 @@ apiVersions:
                     ```
             instanceClass:
               description: |
-                Частичное содержимое полей [DynamixInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-dynamix/cr.html#dynamixinstanceclass).
+                Частичное содержимое полей [DynamixInstanceClass](cr.html#dynamixinstanceclass).
               properties:
                 <<: *instanceClassProperties
       nodeNetworkCIDR:
