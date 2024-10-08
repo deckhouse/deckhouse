@@ -25,13 +25,13 @@ var (
 )
 
 func DefineRepositoryCommand(kpApp *kingpin.Application) {
-	repositoryCmd := kpApp.Command("repository", "Deckhouse repository work.").PreAction(func(context *kingpin.ParseContext) error {
+	repositoryCmd := kpApp.Command("repository", "Deckhouse repository work.").PreAction(func(_ *kingpin.ParseContext) error {
 		kpApp.UsageTemplate(kingpin.DefaultUsageTemplate)
 		return nil
 	})
 
 	repositoryListCmd := repositoryCmd.Command("list", "List in registry").
-		Action(func(c *kingpin.ParseContext) error {
+		Action(func(_ *kingpin.ParseContext) error {
 			fmt.Println("listing releases", listReleases)
 			return nil
 		})
