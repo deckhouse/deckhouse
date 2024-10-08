@@ -72,6 +72,7 @@ spec:
             spec:
               resources:
                 - groupVersionKind:
+                    group: autoscaling.k8s.io
                     kind: VerticalPodAutoscaler
                     version: v1
                   labelsFromPath:
@@ -80,15 +81,16 @@ spec:
                     target_api_version: [spec, targetRef, apiVersion]
                     target_kind: [spec, targetRef, kind]
                     target_name: [spec, targetRef, name]
+                  metricNamePrefix: kube_verticalpodautoscaler
                   metrics:
-                    - name: "verticalpodautoscaler_labels"
+                    - name: "labels_info"
                       help: "VPA container recommendations. Kubernetes labels converted to Prometheus labels"
                       each:
                         type: Info
                         info:
                           labelsFromPath:
                             name: [metadata, name]
-                    - name: "verticalpodautoscaler_min_allowed_memory"
+                    - name: "min_allowed_memory"
                       help: "VPA container minimal allowed memory according to VPA rules"
                       each:
                         type: Gauge
@@ -97,7 +99,7 @@ spec:
                           labelsFromPath:
                             container: [containerName]
                           valueFrom: [minAllowed, memory]
-                    - name: "verticalpodautoscaler_min_allowed_cpu"
+                    - name: "min_allowed_cpu"
                       help: "VPA container minimal allowed cpu according to VPA rules"
                       each:
                         type: Gauge
@@ -106,7 +108,7 @@ spec:
                           labelsFromPath:
                             container: [containerName]
                           valueFrom: [minAllowed, cpu]
-                    - name: "verticalpodautoscaler_max_allowed_memory"
+                    - name: "max_allowed_memory"
                       help: "VPA container maximum allowed memory according to VPA rules"
                       each:
                         type: Gauge
@@ -115,7 +117,7 @@ spec:
                           labelsFromPath:
                             container: [containerName]
                           valueFrom: [maxAllowed, memory]
-                    - name: "verticalpodautoscaler_max_allowed_cpu"
+                    - name: "max_allowed_cpu"
                       help: "VPA container maximum allowed cpu according to VPA rules"
                       each:
                         type: Gauge
@@ -125,7 +127,7 @@ spec:
                             container: [containerName]
                           valueFrom: [maxAllowed, cpu]                                      
                     # Memory Information
-                    - name: "verticalpodautoscaler_status_recommendation_containerrecommendations_target"
+                    - name: "status_recommendation_containerrecommendations_target"
                       help: "VPA container recommendations for memory. Target resources the VerticalPodAutoscaler recommends for the container."
                       each:
                         type: Gauge
@@ -137,7 +139,7 @@ spec:
                       commonLabels:
                         resource: "memory"
                         unit: "byte"
-                    - name: "verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound"
+                    - name: "status_recommendation_containerrecommendations_lowerbound"
                       help: "VPA container recommendations for memory. Minimum resources the container can use before the VerticalPodAutoscaler updater evicts it"
                       each:
                         type: Gauge
@@ -149,7 +151,7 @@ spec:
                       commonLabels:
                         resource: "memory"
                         unit: "byte"
-                    - name: "verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound"
+                    - name: "status_recommendation_containerrecommendations_upperbound"
                       help: "VPA container recommendations for memory. Maximum resources the container can use before the VerticalPodAutoscaler updater evicts it"
                       each:
                         type: Gauge
@@ -161,7 +163,7 @@ spec:
                       commonLabels:
                         resource: "memory"
                         unit: "byte"
-                    - name: "verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget"
+                    - name: "status_recommendation_containerrecommendations_uncappedtarget"
                       help: "VPA container recommendations for memory. Target resources the VerticalPodAutoscaler recommends for the container ignoring bounds"
                       each:
                         type: Gauge
@@ -174,7 +176,7 @@ spec:
                         resource: "memory"
                         unit: "byte"
                     # CPU Information
-                    - name: "verticalpodautoscaler_status_recommendation_containerrecommendations_target"
+                    - name: "status_recommendation_containerrecommendations_target"
                       help: "VPA container recommendations for cpu. Target resources the VerticalPodAutoscaler recommends for the container."
                       each:
                         type: Gauge
@@ -186,7 +188,7 @@ spec:
                       commonLabels:
                         resource: "cpu"
                         unit: "core"
-                    - name: "verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound"
+                    - name: "status_recommendation_containerrecommendations_lowerbound"
                       help: "VPA container recommendations for cpu. Minimum resources the container can use before the VerticalPodAutoscaler updater evicts it"
                       each:
                         type: Gauge
@@ -198,7 +200,7 @@ spec:
                       commonLabels:
                         resource: "cpu"
                         unit: "core"
-                    - name: "verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound"
+                    - name: "status_recommendation_containerrecommendations_upperbound"
                       help: "VPA container recommendations for cpu. Maximum resources the container can use before the VerticalPodAutoscaler updater evicts it"
                       each:
                         type: Gauge
@@ -210,7 +212,7 @@ spec:
                       commonLabels:
                         resource: "cpu"
                         unit: "core"
-                    - name: "verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget"
+                    - name: "status_recommendation_containerrecommendations_uncappedtarget"
                       help: "VPA container recommendations for cpu. Target resources the VerticalPodAutoscaler recommends for the container ignoring bounds"
                       each:
                         type: Gauge
@@ -222,6 +224,13 @@ spec:
                       commonLabels:
                         resource: "cpu"
                         unit: "core"
+                    - name: "spec_updatepolicy_updatemode_info"
+                      help: "VPA update policy accordingto configuration"
+                      each:
+                        type: Info
+                        info:
+                          labelsFromPath:
+                            updatepolicy: [spec, updatePolicy, updateMode]
         livenessProbe:
           httpGet:
             path: /main/healthz

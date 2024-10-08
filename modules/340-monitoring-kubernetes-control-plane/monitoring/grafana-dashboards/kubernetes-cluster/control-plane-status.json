@@ -352,7 +352,7 @@
           "refId": "K"
         },
         {
-          "expr": "count(kube_verticalpodautoscaler_labels)",
+          "expr": "count(kube_verticalpodautoscaler_labels_info)",
           "hide": false,
           "legendFormat": "VPA",
           "refId": "O"
