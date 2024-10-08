@@ -12,6 +12,10 @@ bashible: &bashible
     '7':
     '8':
     '9':
+  opensuse:
+    '15.4':
+    '15.5':
+    '15.6':
 k8s:
   '1.26':
     status: available

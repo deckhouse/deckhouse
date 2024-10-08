@@ -45,6 +45,6 @@ apiVersions:
       sshBastionHost:
         type: string
       sshBastionPort:
-        type: int
+        type: integer
       sshBastionUser:
         type: string

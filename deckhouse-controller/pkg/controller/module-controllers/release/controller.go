@@ -462,7 +462,7 @@ func (c *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	}
 
 	k8 := newKubeAPI(ctx, c.logger, c.client, c.downloadedModulesDir, c.symlinksDir, c.moduleManager, c.dc)
-	releaseUpdater := newModuleUpdater(c.logger, nConfig, policy.Spec.Update.Mode, k8, c.moduleManager.GetEnabledModuleNames())
+	releaseUpdater := newModuleUpdater(c.logger, nConfig, policy.Spec.Update.Mode, k8, c.moduleManager.GetEnabledModuleNames(), c.metricStorage)
 
 	otherReleases := new(v1alpha1.ModuleReleaseList)
 	err = c.client.List(ctx, otherReleases, client.MatchingLabels{"module": moduleName})

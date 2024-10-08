@@ -2418,6 +2418,19 @@ alerts:
         Deprecated ModuleConfig was found.
       severity: "9"
       markupFormat: markdown
+    - name: ModuleReleaseIsWaitingManualApproval
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module release is waiting for manual approval.
+
+        Please run `kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"` for confirmation.
+      summary: |
+        Module release is waiting for manual approval.
+      severity: "6"
+      markupFormat: markdown
     - name: NATInstanceWithDeprecatedAvailabilityZone
       sourceFile: modules/030-cloud-provider-yandex/monitoring/prometheus-rules/deprecated_availability_zone.yaml
       moduleUrl: 030-cloud-provider-yandex
