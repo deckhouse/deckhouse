@@ -46,26 +46,21 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 	index := 0
 
 	var (
-		nodesToWait []string
-		wg          sync.WaitGroup
+		nodesToWait        []string
+		wg                 sync.WaitGroup
+		indexNodesToCreate []int
 	)
-	desiredNodesChannel := make(chan int, c.desiredReplicas)
 
 	for c.desiredReplicas > count {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, index)
 		if _, ok := c.state.State[candidateName]; !ok {
-			select {
-			case desiredNodesChannel <- index:
-				log.InfoF("Add %s to queue \n", candidateName)
-			default:
-				log.InfoF("No candidate to queue")
-			}
+			indexNodesToCreate = append(indexNodesToCreate, index)
 			count++
 		}
 		index++
 	}
 
-	for indexCandidate := range desiredNodesChannel {
+	for indexCandidate := range indexNodesToCreate {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, indexCandidate)
 		wg.Add(1)
 		go func() error {
@@ -76,10 +71,11 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 				return err
 			}
 			nodesToWait = append(nodesToWait, candidateName)
+			log.InfoF("gorutine %s finish\n", candidateName)
 			return nil
 		}()
 	}
-	close(desiredNodesChannel)
+	log.InfoF("debug before wait")
 	wg.Wait()
 	log.InfoF("Will wait ready nodes: %s", nodesToWait)
 	return WaitForNodesListBecomeReady(c.client, nodesToWait, nil)
