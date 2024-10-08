@@ -30,7 +30,6 @@ from: {{ .Images.BASE_JEKYLL }}
 shell:
   setup:
   - |
-        set -x
         echo "Ruby: $(ruby --version)"
         echo "Gem: $(gem --version)"
         bundle --version
@@ -52,8 +51,8 @@ shell:
 
         # "Adding permalinks..."
         for i in $(find . -regex '.*.md' -print); do
-          if [ $(grep -q "^---" $i) -gt 0 ]; then continue; fi
-          if [ $(cat $i | tr -d '\n' | grep -lv "^---.*permalink: .*---" &> /dev/null) -eq 0 ]; then
+          if ! grep -q "^---" "$i"; then continue; fi
+          if cat $i | tr -d '\n' | grep -qv "^---.*permalink: .*---"; then
             # permalink is absent, add permalink
             PERMALINK="/$(echo $i | sed -E 's#(modules_)(en|ru)/#\2/modules/#' | sed 's#docs/##g'| tr '[:upper:]' '[:lower:]' | sed 's#\.md$#.html#' | sed 's#^\.\/##' | sed 's#readme\.html$##' )"
             sed -i "1apermalink: $PERMALINK" $i
