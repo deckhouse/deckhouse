@@ -1,4 +1,5 @@
 type: object
+x-config-version: 2
 required: ["addressPools"]
 properties:
   loadBalancerClass:
@@ -36,7 +37,7 @@ properties:
     type: object
     required: ["nodeSelector"]
     description: |
-      Parameters of the `speaker` component, which announces services and routes application traffic to its node.
+      Parameters of the `speaker` component, which announces services (using `bgp` or `layer2` (LVS) routing protocol) and routes application traffic to its node.
     properties:
       nodeSelector:
         type: object
@@ -73,6 +74,8 @@ properties:
       A list of external BGP routers to use with the module.
 
       Format — a data array similar to that of [MetalLB's](https://metallb.universe.tf/configuration/#bgp-configuration).
+
+      The parameter is optional if only the `layer2` mode is used to announce services.
     items:
       type: object
       required: ["peer-address", "peer-asn", "my-asn"]
@@ -183,6 +186,7 @@ properties:
             The protocol used by the speaker to announce services.
           enum:
           - bgp
+          - layer2
         addresses:
           type: array
           description: |
@@ -266,3 +270,16 @@ x-examples:
   speaker:
     nodeSelector:
       mylabel: "speaker"
+- addressPools:
+  - name: my-pool-l2
+    protocol: layer2
+    addresses:
+      - 192.168.100.1-192.168.100.10
+      - 192.168.101.0/24
+  speaker:
+    nodeSelector:
+      mylabel: "speaker"
+    tolerations:
+      - key: dedicated
+        operator: Equal
+        value: speaker
