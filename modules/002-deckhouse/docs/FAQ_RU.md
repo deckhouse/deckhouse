@@ -64,7 +64,7 @@ kubectl logs job.batch/kube-bench
 * логи Vertical Pod Autoscaler recommender;
 * логи Vertical Pod Autoscaler updater;
 * логи Prometheus;
-* метрики terraform-state-exporter. За исключением значений в `provider` из `providerClusterConfiguration`.
+* метрики terraform-state-exporter. За исключением значений в `provider` из `providerClusterConfiguration`;
 * все горящие уведомления в Prometheus.
 
 ## Как отлаживать проблемы в подах с помощью ephemeral containers?
