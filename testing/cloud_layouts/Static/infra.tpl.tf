@@ -262,7 +262,7 @@ resource "openstack_compute_instance_v2" "worker" {
   flavor_name = var.flavor_name_large
   key_pair = "candi-${PREFIX}-key"
   availability_zone = var.az_zone
-  user_data = "${file("${each.key}-instance-bootstrap.sh")}"
+  user_data = file("${each.key}-instance-bootstrap.sh")
 
   network {
     port = openstack_networking_port_v2.worker_internal_without_security[each.key].id
