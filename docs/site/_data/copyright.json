@@ -14,11 +14,6 @@
       "title": "Cookie Policy",
       "url": "/cookie-policy/",
       "target": ""
-    },
-    {
-      "title": "Technical support regulations",
-      "url": "/regulations-en/",
-      "target": ""
     }
   ],
   "ru": [
@@ -30,17 +25,17 @@
     {
       "title": "Лицензионное соглашение",
       "url": "/license/",
-      "target": "_blank"
+      "target": ""
     },
     {
       "title": "Правила лицензирования",
       "url": "/license-rules/",
-      "target": "_blank"
+      "target": ""
     },
     {
       "title": "Регламент технической поддержки",
       "url": "/regulations/",
-      "target": "_blank"
+      "target": ""
     }
   ]
 }
