@@ -379,7 +379,8 @@ function prepare_environment() {
     # use different users for different OSs
     ssh_user="astra"
     ssh_user_system="altlinux"
-    ssh_user_worker="redos"
+    ssh_user_worker_0="redos"
+    ssh_user_worker_1="opensuse"
     ;;
   esac
 
@@ -550,8 +551,12 @@ function bootstrap_static() {
     >&2 echo "ERROR: can't parse system_ip from terraform.log"
     return 1
   fi
-  if ! worker_ip="$(grep -m1 "worker_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
-    >&2 echo "ERROR: can't parse worker_ip from terraform.log"
+  if ! worker_0_ip="$(grep -m1 "worker_0_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
+    >&2 echo "ERROR: can't parse worker_0_ip from terraform.log"
+    return 1
+  fi
+  if ! worker_1_ip="$(grep -m1 "worker_1_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
+    >&2 echo "ERROR: can't parse worker_1_ip from terraform.log"
     return 1
   fi
   if ! bastion_ip="$(grep -m1 "bastion_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
@@ -591,7 +596,18 @@ function bootstrap_static() {
   done
 
   attempt=0
-  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker@$worker_ip" /usr/local/bin/is-instance-bootstrapped; do
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker_0@$worker_0_ip" /usr/local/bin/is-instance-bootstrapped; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
+      >&2 echo "ERROR: worker instance couldn't get bootstrapped"
+      return 1
+    fi
+    >&2 echo "ERROR: worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
+    sleep 5
+  done
+
+  attempt=0
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker_1@$worker_1_ip" /usr/local/bin/is-instance-bootstrapped; do
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
       >&2 echo "ERROR: worker instance couldn't get bootstrapped"
@@ -673,7 +689,30 @@ ENDSSH
   fi
 
   for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker@$worker_ip" sudo su -c /bin/bash <<ENDSSH; then
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker_0@$worker_0_ip" sudo su -c /bin/bash <<ENDSSH; then
+       echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
+       chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
+       ip route del default
+       ip route add 10.111.0.0/16 dev lo
+       ip route add 10.222.0.0/16 dev lo
+ENDSSH
+      initial_setup_failed=""
+      break
+    else
+      initial_setup_failed="true"
+      >&2 echo "Initial setup of worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+      sleep 5
+    fi
+  done
+  if [[ $initial_setup_failed == "true" ]] ; then
+    return 1
+  fi
+
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker_1@$worker_1_ip" sudo su -c /bin/bash <<ENDSSH; then
        echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
@@ -697,8 +736,9 @@ ENDSSH
 
   # Prepare resources.yaml for starting working node with CAPS
   # shellcheck disable=SC2016
-  env b64_SSH_KEY="$(base64 -w0 "$ssh_private_key_path")" WORKER_USER="$ssh_user_worker" WORKER_IP="$worker_ip" \
-      envsubst '${b64_SSH_KEY} ${WORKER_USER} ${WORKER_IP}' \
+  env b64_SSH_KEY="$(base64 -w0 "$ssh_private_key_path")" WORKER_0_USER="$ssh_user_worker_0" WORKER_0_IP="$worker_0_ip" \
+      WORKER_1_USER="$ssh_user_worker_1" WORKER_1_IP="$worker_1_ip" \
+      envsubst '${b64_SSH_KEY} ${WORKER_0_USER} ${WORKER_0_IP} ${WORKER_1_USER} ${WORKER_1_IP}' \
       <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
 
   # Bootstrap
@@ -751,14 +791,14 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 kubectl get nodes -o wide
-kubectl get nodes -o json | jq -re '.items | length == 3' >/dev/null
+kubectl get nodes -o json | jq -re '.items | length == 4' >/dev/null
 kubectl get nodes -o json | jq -re '[ .items[].status.conditions[] | select(.type == "Ready") ] | map(.status == "True") | all' >/dev/null
 ENDSSH
       registration_failed=""
       break
     else
       registration_failed="true"
-      >&2 echo "Node registration is still in progress (attempt #$i of 10). Sleeping 60 seconds ..."
+      >&2 echo "Node registration is still in progress (attempt #$i of 20). Sleeping 60 seconds ..."
       sleep 60
     fi
   done
