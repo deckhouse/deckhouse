@@ -16,7 +16,6 @@ package converge
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -47,31 +46,37 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 
 	var (
 		nodesToWait []string
-		wg          sync.WaitGroup
 	)
+	desiredNodesChannel := make(chan string, c.desiredReplicas)
 
 	for c.desiredReplicas > count {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, index)
 
 		if _, ok := c.state.State[candidateName]; !ok {
-			wg.Add(1)
-			go func(candidateName string, index int) {
-				defer wg.Done()
-				err := BootstrapAdditionalNode(c.client, c.config, index, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
 
-				if err != nil {
-					log.ErrorF("fail bootstrap node %s: %s\n", err, candidateName)
-					return
-				}
-
-				count++
-				nodesToWait = append(nodesToWait, candidateName)
-			}(candidateName, index)
+			select {
+			case desiredNodesChannel <- candidateName:
+				log.InfoF("Add %s to queue", candidateName)
+			default:
+				log.InfoF("No candidate to queue")
+			}
+			count++
 		}
 		index++
 	}
 
-	wg.Wait()
+	for candidate := range desiredNodesChannel {
+		go func() error {
+			log.InfoF("Bootstrap node: %s", candidate)
+			err := BootstrapAdditionalNode(c.client, c.config, index, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
+			if err != nil {
+				return err
+			}
+			nodesToWait = append(nodesToWait, candidate)
+			return nil
+		}()
+	}
+	close(desiredNodesChannel)
 	return WaitForNodesListBecomeReady(c.client, nodesToWait, nil)
 }
 
