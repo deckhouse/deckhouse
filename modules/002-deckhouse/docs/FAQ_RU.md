@@ -52,6 +52,7 @@ kubectl logs job.batch/kube-bench
 * манифесты controller'ов и подов из всех пространств имен Deckhouse;
 * все объекты `nodegroups`;
 * все объекты `nodes`;
+* все объекты `machines`;
 * все объекты `instances`;
 * все объекты `staticinstances`;
 * данные о текущей версии пода deckhouse;

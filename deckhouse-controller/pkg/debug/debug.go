@@ -104,6 +104,11 @@ func createTarball() *bytes.Buffer {
 			Args: []string{"get", "nodes", "-A", "-o", "json"},
 		},
 		{
+			File: "machines.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "machines.machine.sapcloud.io", "-A", "-o", "json"},
+		},
+		{
 			File: "instances.json",
 			Cmd:  "kubectl",
 			Args: []string{"get", "instances.deckhouse.io", "-o", "json"},

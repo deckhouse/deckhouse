@@ -52,6 +52,7 @@ Data that will be collected:
 * controllers and pods manifests from namespaces owned by Deckhouse
 * `nodegroups` state
 * `nodes` state
+* `machines` state
 * `instances` state
 * `staticinstances` state
 * deckhouse pods version
