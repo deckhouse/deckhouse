@@ -47,36 +47,32 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 
 	var (
 		nodesToWait        []string
+		nodesIndexToCreate []int
 		wg                 sync.WaitGroup
-		indexNodesToCreate []int
 	)
 	for c.desiredReplicas > count {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, index)
 		if _, ok := c.state.State[candidateName]; !ok {
-			indexNodesToCreate = append(indexNodesToCreate, index)
+			nodesIndexToCreate = append(nodesIndexToCreate, index)
 			count++
 		}
 		index++
 	}
 
-	for _, indexCandidate := range indexNodesToCreate {
+	for _, indexCandidate := range nodesIndexToCreate {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, indexCandidate)
 		wg.Add(1)
 		go func() error {
 			defer wg.Done()
-			log.InfoF("Bootstrap node: %s \n", candidateName)
-			err := BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
+			err := ParallelBootstrapAdditionalNodes(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
 			if err != nil {
 				return err
 			}
 			nodesToWait = append(nodesToWait, candidateName)
-			log.InfoF("gorutine %s finish\n", candidateName)
 			return nil
 		}()
 	}
-	log.InfoF("debug before wait")
 	wg.Wait()
-	log.InfoF("Will wait ready nodes: %s", nodesToWait)
 	return WaitForNodesListBecomeReady(c.client, nodesToWait, nil)
 }
 
