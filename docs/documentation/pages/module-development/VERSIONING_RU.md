@@ -41,7 +41,7 @@ lang: ru
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Этапы модулей</title>
+    <title>Статус модуля</title>
     <style>
         body {
             margin: 0;
