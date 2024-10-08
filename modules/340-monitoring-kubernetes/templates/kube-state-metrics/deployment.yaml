@@ -67,6 +67,27 @@ spec:
         - "--metric-labels-allowlist=configmaps=[*],cronjobs=[*],deployments=[*],daemonsets=[*],ingresses=[*],jobs=[*],namespaces=[*],nodes=[*],pods=[*],persistentvolumes=[*],secrets=[*],services=[*],statefulsets=[*],storageclasses=[*]" # TODO(nabokihms): try =*=[*] https://github.com/kubernetes/kube-state-metrics/pull/1823
         - "--metric-denylist=^.*_annotations" # reduce metrics quantity because we do not provide allowed annotations list
         - "--use-apiserver-cache"
+        - --custom-resource-state-config
+        -  |
+            spec:
+              resources:
+                - groupVersionKind:
+                    kind: VerticalPodAutoscaler
+                    version: v1
+                  labelsFromPath:
+                    verticalpodautoscaler: [metadata, name]
+                    namespace: [metadata, namespace]
+                    target_api_version: [spec, targetRef, apiVersion]
+                    target_kind: [spec, targetRef, kind]
+                    target_name: [spec, targetRef, name]
+                  metrics:
+                    - name: "verticalpodautoscaler_labels"
+                      help: "VPA container recommendations. Kubernetes labels converted to Prometheus labels"
+                      each:
+                        type: Info
+                        info:
+                          labelsFromPath:
+                            name: [metadata, name]
         livenessProbe:
           httpGet:
             path: /main/healthz
