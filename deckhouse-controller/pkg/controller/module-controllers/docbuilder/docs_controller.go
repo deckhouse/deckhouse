@@ -239,6 +239,9 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 	mdCopy.Status.Conditions = make([]v1alpha1.ModuleDocumentationCondition, 0, len(addrs))
 
 	b := new(bytes.Buffer)
+
+	defer io.Copy(io.Discard, b)
+
 	_, err = io.Copy(pw, b)
 	if err != nil {
 		return res, fmt.Errorf("read file from pipe: %w", err)
