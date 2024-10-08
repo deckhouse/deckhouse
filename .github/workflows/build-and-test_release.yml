@@ -51,8 +51,6 @@ env:
   # cloud providers source repo should contain creds for repo for ex https://user:password@my-repo.com/group
   CLOUD_PROVIDERS_SOURCE_REPO: "${{secrets.CLOUD_PROVIDERS_SOURCE_REPO}}"
   GOPROXY: "${{secrets.GOPROXY}}"
-  # observability source repo should contain creds for repo for ex https://user:password@my-repo.com/group
-  OBSERVABILITY_SOURCE_REPO: "${{secrets.OBSERVABILITY_SOURCE_REPO}}"
   # </template: git_source_envs>
 
 # Cancel in-progress jobs for the same tag/branch.
