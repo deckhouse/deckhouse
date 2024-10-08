@@ -15,8 +15,12 @@
 package docs
 
 import (
+	"os"
+	"path/filepath"
 	"regexp"
 	"sync/atomic"
+
+	"k8s.io/klog/v2"
 )
 
 var docConfValuesRegexp = regexp.MustCompile(`^openapi/doc-.*-config-values\.yaml$`)
@@ -39,6 +43,10 @@ func NewService(baseDir, destDir string, highAvailability bool) *Service {
 	if !highAvailability {
 		svc.isReady.Store(true)
 	}
+
+	// prepare module directory
+	err := os.MkdirAll(filepath.Join(baseDir, modulesDir), 0700)
+	klog.Error(err)
 
 	return svc
 }

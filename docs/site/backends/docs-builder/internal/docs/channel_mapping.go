@@ -25,6 +25,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const modulesDir = "data/modules/"
+
 func newChannelMappingEditor(baseDir string) *channelMappingEditor {
 	return &channelMappingEditor{baseDir: baseDir}
 }
@@ -45,7 +47,7 @@ func (m *channelMappingEditor) edit(fn func(channelMapping)) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	path := filepath.Join(m.baseDir, "data/modules/channels.yaml")
+	path := filepath.Join(m.baseDir, modulesDir, "channels.yaml")
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		return fmt.Errorf("open %q: %w", path, err)
