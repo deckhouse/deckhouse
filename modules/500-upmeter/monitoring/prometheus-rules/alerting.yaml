@@ -403,11 +403,13 @@
 
     - alert: D8UpmeterSmokeMiniMoreThanOnePVxPVC
       expr: |
-        (
-          kube_persistentvolume_status_phase{phase!="Bound"}
-          + on(persistentvolume) group_left(name)
-          0 * label_replace(kube_persistentvolume_claim_ref{name=~"disk-smoke-mini-.*"}, "persistentvolume", "$1", "volumename", "(.+)")
-        ) > 0
+        count(
+          (
+            kube_persistentvolume_status_phase{phase!="Bound"}
+            + on(persistentvolume) group_left(name)
+            0 * label_replace(kube_persistentvolume_claim_ref{name=~"disk-smoke-mini-.*"}, "persistentvolume", "$1", "volumename", "(.+)")
+          ) > 0
+        )
       for: 1h
       labels:
         severity_level: "9"
@@ -422,6 +424,8 @@
         plk_labels_as_annotations: "volume"
         summary: Unnecessary smoke-mini volumes in cluster
         description: |
+          Count of unnecessary smoke-mini PV: {{ $value }}.
+
           Smoke-mini PVs should be deleted when released. Probably smoke-mini storage class has Retain policy by default,
           or there is CSI/cloud issue.
 
