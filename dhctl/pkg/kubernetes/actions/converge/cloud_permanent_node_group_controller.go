@@ -47,16 +47,14 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 	var (
 		nodesToWait []string
 	)
-	desiredNodesChannel := make(chan string, c.desiredReplicas)
+	desiredNodesChannel := make(chan int, c.desiredReplicas)
 
 	for c.desiredReplicas > count {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, index)
-
 		if _, ok := c.state.State[candidateName]; !ok {
-
 			select {
-			case desiredNodesChannel <- candidateName:
-				log.InfoF("Add %s to queue", candidateName)
+			case desiredNodesChannel <- index:
+				log.InfoF("Add %s to queue \n", candidateName)
 			default:
 				log.InfoF("No candidate to queue")
 			}
@@ -65,14 +63,15 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		index++
 	}
 
-	for candidate := range desiredNodesChannel {
+	for indexCandidate := range desiredNodesChannel {
+		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, indexCandidate)
 		go func() error {
-			log.InfoF("Bootstrap node: %s", candidate)
-			err := BootstrapAdditionalNode(c.client, c.config, index, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
+			log.InfoF("Bootstrap node: %s \n", candidateName)
+			err := BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
 			if err != nil {
 				return err
 			}
-			nodesToWait = append(nodesToWait, candidate)
+			nodesToWait = append(nodesToWait, candidateName)
 			return nil
 		}()
 	}
