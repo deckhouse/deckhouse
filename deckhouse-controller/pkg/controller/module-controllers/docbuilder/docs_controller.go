@@ -227,7 +227,6 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 	}
 
 	b := new(bytes.Buffer)
-	defer io.Copy(io.Discard, b)
 
 	mdr.logger.Debugf("Getting the %s module's documentation locally", moduleName)
 	fetchModuleErr := mdr.getDocumentationFromModuleDir(md.Spec.Path, b)
