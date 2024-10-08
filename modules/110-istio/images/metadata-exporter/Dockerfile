@@ -6,5 +6,6 @@ COPY main.go go.mod go.sum /src/
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o metadata-exporter main.go
 
 FROM $BASE_DISTROLESS
+COPY --from=ghcr.io/tarampampam/curl:8.6.0 /bin/curl /bin/curl
 COPY --from=artifact /src/metadata-exporter /metadata-exporter
 ENTRYPOINT [ "/metadata-exporter" ]
