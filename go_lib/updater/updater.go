@@ -162,7 +162,7 @@ type Updater[R Release] struct {
 	notificationConfig NotificationConfig
 
 	kubeAPI           KubeAPI[R]
-	metricsUpdater    MetricsUpdater[R]
+	metricsUpdater    MetricsUpdater
 	settings          Settings
 	webhookDataSource WebhookDataSource[R]
 
@@ -170,7 +170,7 @@ type Updater[R Release] struct {
 }
 
 func NewUpdater[R Release](dc dependency.Container, logger logger.Logger, notificationConfig NotificationConfig, mode string,
-	data DeckhouseReleaseData, podIsReady, isBootstrapping bool, kubeAPI KubeAPI[R], metricsUpdater MetricsUpdater[R],
+	data DeckhouseReleaseData, podIsReady, isBootstrapping bool, kubeAPI KubeAPI[R], metricsUpdater MetricsUpdater,
 	settings Settings, webhookDataSource WebhookDataSource[R], enabledModules []string,
 ) *Updater[R] {
 	now := dc.GetClock().Now().UTC()
@@ -346,10 +346,8 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 	// check: release is approved in Manual mode
 	if du.mode != ModeAuto && !release.GetManuallyApproved() {
 		du.logger.Infof("Release %s is waiting for manual approval ", release.GetName())
-		du.metricsUpdater.WaitingManual(release, 1)
+		du.metricsUpdater.WaitingManual(release.GetName(), 1)
 		reason = reason.add(manualApprovalRequiredReason)
-	} else {
-		du.metricsUpdater.WaitingManual(release, 0)
 	}
 
 	if !newApplyAfter.IsZero() {
@@ -391,10 +389,8 @@ func (du *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTim
 
 	if du.mode == ModeManual && !release.GetManuallyApproved() {
 		du.logger.Infof("Release %s is waiting for manual approval", release.GetName())
-		du.metricsUpdater.WaitingManual(release, 1)
+		du.metricsUpdater.WaitingManual(release.GetName(), 1)
 		reason = reason.add(manualApprovalRequiredReason)
-	} else {
-		du.metricsUpdater.WaitingManual(release, 0)
 	}
 
 	if !newApplyAfter.IsZero() {

@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"slices"
 	"strconv"
 	"time"
 
@@ -42,9 +41,8 @@ import (
 func newModuleUpdater(dc dependency.Container, logger logger.Logger, nConfig updater.NotificationConfig, mode string,
 	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string, metricStorage *metric_storage.MetricStorage,
 ) *updater.Updater[*v1alpha1.ModuleRelease] {
-	mUpdater := newMetricsUpdater(metricStorage, enabledModules)
 	return updater.NewUpdater[*v1alpha1.ModuleRelease](dc, logger, nConfig, mode,
-		updater.DeckhouseReleaseData{}, true, false, kubeAPI, mUpdater,
+		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(metricStorage),
 		newSettings(), newWebhookDataSource(logger), enabledModules)
 }
 
@@ -223,34 +221,20 @@ func (k *kubeAPI) updateModuleReleaseDownloadStatistic(ctx context.Context, rele
 }
 
 type metricsUpdater struct {
-	metricStorage  *metric_storage.MetricStorage
-	enabledModules []string
+	metricStorage *metric_storage.MetricStorage
 }
 
-func newMetricsUpdater(metricStorage *metric_storage.MetricStorage, enabledModules []string) *metricsUpdater {
+func newMetricsUpdater(metricStorage *metric_storage.MetricStorage) *metricsUpdater {
 	return &metricsUpdater{
-		enabledModules: enabledModules,
-		metricStorage:  metricStorage,
+		metricStorage: metricStorage,
 	}
 }
 
 func (m *metricsUpdater) ReleaseBlocked(_, _ string) {
 }
 
-func (m *metricsUpdater) WaitingManual(release *v1alpha1.ModuleRelease, totalPendingManualReleases float64) {
-	if !slices.Contains(m.enabledModules, release.GetModuleName()) {
-		return
-	}
-
-	m.metricStorage.GaugeSet(
-		"d8_module_release_waiting_manual",
-		totalPendingManualReleases,
-		map[string]string{
-			"name":       release.GetName(),
-			"kind":       "module",
-			"moduleName": release.GetModuleName(),
-			"version":    "v" + release.Spec.Version.String(),
-		})
+func (m *metricsUpdater) WaitingManual(name string, _ float64) {
+	m.metricStorage.GaugeSet("d8_module_release_waiting_manual", 1, map[string]string{"name": name})
 }
 
 type settings struct{}
