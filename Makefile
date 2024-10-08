@@ -288,6 +288,10 @@ docs-spellcheck-get-typos-list: ## Print out a list of all the terms in all page
 	@echo "Please wait a bit. It may take about 20 minutes and there may be no output in the terminal..." && \
 	docker run --rm -v ${PWD}:/spelling --entrypoint /bin/bash -v ${PWD}/tools/docs/spelling:/app ${SPELLCHECKER_IMAGE} -c "/app/spell_check.sh 2>/dev/null | sed '/Spell-checking the documentation/ d; /^Possible typos/d' | sort -u"
 
+.PHONY: docs-pdf
+docs-pdf: ## Prepare special MD-page for PDF generation.
+	bash tools/pdf_tools/prepare_for_pdf.sh
+
 ##@ Update kubernetes control-plane patchversions
 
 bin/jq-$(JQ_VERSION)/jq:
