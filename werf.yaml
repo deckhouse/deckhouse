@@ -909,7 +909,6 @@ dependencies:
   {{- $_ := set $ctx "SOURCE_REPO" $Root.SOURCE_REPO }}
   {{- $_ := set $ctx "CLOUD_PROVIDERS_SOURCE_REPO" $Root.CLOUD_PROVIDERS_SOURCE_REPO }}
   {{- $_ := set $ctx "GOPROXY" $Root.GOPROXY }}
-  {{- $_ := set $ctx "OBSERVABILITY_SOURCE_REPO" $Root.OBSERVABILITY_SOURCE_REPO }}
 ---
 {{ include "module_image_template" $ctx }}
   {{- range $ImageYamlMainfest := regexSplit "\n?---[ \t]*\n" (include "module_image_template" $ctx) -1 }}
