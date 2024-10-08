@@ -63,6 +63,9 @@ cleanup:
 # goproxy  settings
 {{- $_ := set . "GOPROXY" (env "GOPROXY") }}
 
+# source repo with private projects of observability
+{{- $_ := set . "OBSERVABILITY_SOURCE_REPO" (env "OBSERVABILITY_SOURCE_REPO" | default "https://example.com") }}
+
 ---
 artifact: jq
 from: {{ $.Images.BASE_ALPINE_DEV }}
@@ -841,6 +844,7 @@ args:
   BASE_SCRATCH: {{ .Images.BASE_SCRATCH }}
   SOURCE_REPO: {{ .SOURCE_REPO }}
   CLOUD_PROVIDERS_SOURCE_REPO: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+  OBSERVABILITY_SOURCE_REPO: {{ .OBSERVABILITY_SOURCE_REPO }}
   # proxies for various packages
   GOPROXY: {{ .GOPROXY }}
   {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless")) }}
@@ -910,6 +914,7 @@ dependencies:
   {{- $_ := set $ctx "SOURCE_REPO" $Root.SOURCE_REPO }}
   {{- $_ := set $ctx "CLOUD_PROVIDERS_SOURCE_REPO" $Root.CLOUD_PROVIDERS_SOURCE_REPO }}
   {{- $_ := set $ctx "GOPROXY" $Root.GOPROXY }}
+  {{- $_ := set $ctx "OBSERVABILITY_SOURCE_REPO" $Root.OBSERVABILITY_SOURCE_REPO }}
 ---
 {{ include "module_image_template" $ctx }}
   {{- range $ImageYamlMainfest := regexSplit "\n?---[ \t]*\n" (include "module_image_template" $ctx) -1 }}
