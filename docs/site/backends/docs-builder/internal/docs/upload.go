@@ -36,6 +36,7 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 	for {
 		header, err := reader.Next()
 		if err == io.EOF {
+			klog.Infof("EOF reading file")
 			break
 		}
 

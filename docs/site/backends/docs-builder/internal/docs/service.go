@@ -51,7 +51,9 @@ func NewService(baseDir, destDir string, highAvailability bool) *Service {
 
 	// prepare module directory
 	err := os.MkdirAll(filepath.Join(baseDir, modulesDir), 0700)
-	klog.Error(err)
+	if err != nil {
+		klog.Error(err)
+	}
 
 	return svc
 }
