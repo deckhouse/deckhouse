@@ -226,11 +226,11 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 		return res, nil
 	}
 
-	pr, pw := io.Pipe()
-	defer pr.Close()
+	b := new(bytes.Buffer)
+	defer io.Copy(io.Discard, b)
 
 	mdr.logger.Debugf("Getting the %s module's documentation locally", moduleName)
-	fetchModuleErr := mdr.getDocumentationFromModuleDir(md.Spec.Path, pw)
+	fetchModuleErr := mdr.getDocumentationFromModuleDir(md.Spec.Path, b)
 
 	var rendered int
 	now := metav1.NewTime(mdr.dc.GetClock().Now().UTC())
@@ -238,22 +238,7 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 	mdCopy := md.DeepCopy()
 	mdCopy.Status.Conditions = make([]v1alpha1.ModuleDocumentationCondition, 0, len(addrs))
 
-	b := new(bytes.Buffer)
-
-	defer io.Copy(io.Discard, b)
-
-	_, err = io.Copy(pw, b)
-	if err != nil {
-		return res, fmt.Errorf("read file from pipe: %w", err)
-	}
-
 	for _, addr := range addrs {
-		docArchive := new(bytes.Buffer)
-		_, err = io.Copy(b, docArchive)
-		if err != nil {
-			return res, fmt.Errorf("copying docArchive file: %w", err)
-		}
-
 		cond, condIdx := md.GetConditionByAddress(addr)
 		// TODO: add function for compare
 		if condIdx >= 0 &&
@@ -280,7 +265,7 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 			continue
 		}
 
-		err = mdr.buildDocumentation(ctx, docArchive, addr, moduleName, md.Spec.Version)
+		err = mdr.buildDocumentation(ctx, b, addr, moduleName, md.Spec.Version)
 		if err != nil {
 			cond.Type = v1alpha1.TypeError
 			cond.Message = err.Error()
@@ -348,7 +333,7 @@ func (mdr *moduleDocumentationReconciler) getDocsBuilderAddresses(ctx context.Co
 	return
 }
 
-func (mdr *moduleDocumentationReconciler) getDocumentationFromModuleDir(modulePath string, pw *io.PipeWriter) error {
+func (mdr *moduleDocumentationReconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes.Buffer) error {
 	moduleDir := path.Join(mdr.downloadedModulesDir, modulePath) + "/"
 
 	dir, err := os.Stat(moduleDir)
@@ -360,49 +345,48 @@ func (mdr *moduleDocumentationReconciler) getDocumentationFromModuleDir(modulePa
 		return fmt.Errorf("%s isn't a directory", moduleDir)
 	}
 
-	go func() {
-		tw := tar.NewWriter(pw)
-		defer tw.Close()
+	tw := tar.NewWriter(buf)
+	defer tw.Close()
 
-		err = pw.CloseWithError(filepath.Walk(moduleDir, func(file string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
+	err = filepath.Walk(moduleDir, func(file string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 
-			if !module.IsDocsPath(strings.TrimPrefix(file, moduleDir)) {
-				return nil
-			}
-
-			header, err := tar.FileInfoHeader(info, info.Name())
-			if err != nil {
-				return err
-			}
-
-			header.Name = strings.TrimPrefix(file, moduleDir)
-
-			if err := tw.WriteHeader(header); err != nil {
-				return err
-			}
-
-			if info.IsDir() {
-				return nil
-			}
-
-			f, err := os.Open(file)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-
-			if _, err := io.Copy(tw, f); err != nil {
-				return err
-			}
-
+		if !module.IsDocsPath(strings.TrimPrefix(file, moduleDir)) {
 			return nil
-		}))
+		}
 
-		mdr.logger.Error(err)
-	}()
+		header, err := tar.FileInfoHeader(info, info.Name())
+		if err != nil {
+			return err
+		}
+
+		header.Name = strings.TrimPrefix(file, moduleDir)
+
+		if err := tw.WriteHeader(header); err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		f, err := os.Open(file)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		if _, err := io.Copy(tw, f); err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("read to buffer: %w", err)
+	}
 
 	return nil
 }
