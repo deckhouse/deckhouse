@@ -1,4 +1,4 @@
-{% unless page.hide_sidebar %}
+{%- unless page.hide_sidebar or jekyll.environment == "development" %}
 {%- assign sidebar = site.data.sidebars[page.sidebar].entries %}
 
     <div style="display: flex; justify-content: start; padding-top: 12px; padding-bottom: 35px; gap: 25px;">
