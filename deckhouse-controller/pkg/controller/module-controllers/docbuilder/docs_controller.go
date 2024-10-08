@@ -16,6 +16,7 @@ package docbuilder
 
 import (
 	"archive/tar"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -225,18 +226,30 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 		return res, nil
 	}
 
+	pr, pw := io.Pipe()
+	defer pr.Close()
+
+	mdr.logger.Debugf("Getting the %s module's documentation locally", moduleName)
+	fetchModuleErr := mdr.getDocumentationFromModuleDir(md.Spec.Path, pw)
+
 	var rendered int
 	now := metav1.NewTime(mdr.dc.GetClock().Now().UTC())
 
 	mdCopy := md.DeepCopy()
 	mdCopy.Status.Conditions = make([]v1alpha1.ModuleDocumentationCondition, 0, len(addrs))
 
-	for _, addr := range addrs {
-		pr, pw := io.Pipe()
-		defer pr.Close()
+	b := new(bytes.Buffer)
+	_, err = io.Copy(pw, b)
+	if err != nil {
+		return res, fmt.Errorf("read file from pipe: %w", err)
+	}
 
-		mdr.logger.Debugf("Getting the %s module's documentation locally", moduleName)
-		fetchModuleErr := mdr.getDocumentationFromModuleDir(md.Spec.Path, pw)
+	for _, addr := range addrs {
+		docArchive := new(bytes.Buffer)
+		_, err = io.Copy(b, docArchive)
+		if err != nil {
+			return res, fmt.Errorf("copying docArchive file: %w", err)
+		}
 
 		cond, condIdx := md.GetConditionByAddress(addr)
 		// TODO: add function for compare
@@ -264,7 +277,7 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 			continue
 		}
 
-		err = mdr.buildDocumentation(ctx, pr, addr, moduleName, md.Spec.Version)
+		err = mdr.buildDocumentation(ctx, docArchive, addr, moduleName, md.Spec.Version)
 		if err != nil {
 			cond.Type = v1alpha1.TypeError
 			cond.Message = err.Error()
