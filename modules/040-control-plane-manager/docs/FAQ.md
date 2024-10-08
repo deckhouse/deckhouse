@@ -523,7 +523,7 @@ When deciding on the appropriate threshold values, consider resources consumed b
 
 ### What is done automatically
 
-CronJob `kube-system/d8-etcd-backup-*` is automatically started at 00:00 UTC+0. The result is saved in `/var/lib/etcd/etcd-backup.snapshot` on all nodes with `control-plane` in the cluster.
+CronJob `kube-system/d8-etcd-backup-*` is automatically started at 00:00 UTC+0. The result is saved in `/var/lib/etcd/etcd-backup.snapshot` on all nodes with `control-plane` in the cluster (master nodes).
 
 ### How do make etcd backup?
 
