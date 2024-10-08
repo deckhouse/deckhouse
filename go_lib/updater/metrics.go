@@ -14,7 +14,7 @@
 
 package updater
 
-type MetricsUpdater[R Release] interface {
+type MetricsUpdater interface {
 	ReleaseBlocked(name, reason string)
-	WaitingManual(release R, totalPendingManualReleases float64)
+	WaitingManual(name string, totalPendingManualReleases float64)
 }
