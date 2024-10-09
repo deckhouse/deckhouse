@@ -37,10 +37,22 @@ properties:
               Default value is false.
 
               > **Caution!** For security reasons, this mode only works if `https.mode` (global or for a module) is not set to `Disabled`;
+      allowedUserGroups:
+        type: array
+        items:
+          type: string
+        description: |
+          An array of user groups that can access the dashboard.
+
+          This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
+
+          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) one.
       whitelistSourceRanges:
         type: array
         items:
           type: string
+        x-examples:
+          - [ "1.1.1.1/32" ]
         description: |
           The CIDR range for which authentication to access the dashboard is allowed.
       allowScale:
