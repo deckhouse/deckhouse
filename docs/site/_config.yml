@@ -83,6 +83,7 @@ defaults:
       multilang: true
       comparable: true
       lang: en
+      pdf: false
   - scope:
       path: "pages/includes"
       type: "pages"
@@ -133,7 +134,7 @@ defaults:
       path: "*/031-ceph-csi"
       type: "pages"
     values:
-      featureStatus: deprecated    
+      featureStatus: deprecated
   - scope:
       path: "*/381-l2-load-balancer"
       type: "pages"

@@ -40,6 +40,7 @@ permalink: ru/deckhouse-pdf-docs.html
 lang: ru
 sidebar: none
 toc: true
+layout: pdf
 ---
 EOF
 }
