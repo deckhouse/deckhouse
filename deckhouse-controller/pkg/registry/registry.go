@@ -43,35 +43,40 @@ func DefineRegistryCommand(kpApp *kingpin.Application) {
 			return nil
 		})
 
-	repositoryListCmd.Command("releases", "Show releases list.").
-		Action(func(_ *kingpin.ParseContext) error {
-			ctx := context.Background()
+	repositoryListCmd.Command("releases", "Show releases list.")
 
-			fmt.Println("listing releases")
-			dc := dependency.NewDependencyContainer()
+	moduleSource := repositoryListCmd.Flag("source", "Module source name.").String()
+	moduleName := repositoryListCmd.Flag("name", "Module name.").String()
+	moduleChannel := repositoryListCmd.Flag("channel", "Module channel").ExistingFile()
 
-			scheme := runtime.NewScheme()
-			utilruntime.Must(v1alpha1.AddToScheme(scheme))
+	repositoryListCmd.Action(func(_ *kingpin.ParseContext) error {
+		ctx := context.Background()
 
-			restConfig := ctrl.GetConfigOrDie()
-			k8sClient, err := client.New(restConfig, client.Options{
-				Scheme: scheme,
-			})
-			if err != nil {
-				return fmt.Errorf("failed to create client: %w", err)
-			}
+		fmt.Println("listing releases")
+		dc := dependency.NewDependencyContainer()
 
-			// get relevant module source
-			ms := new(v1alpha1.ModuleSource)
-			if err := k8sClient.Get(ctx, types.NamespacedName{Name: "deckhouse"}, ms); err != nil {
-				return fmt.Errorf("get ModuleSource %s got an error: %w", "deckhouse", err)
-			}
+		scheme := runtime.NewScheme()
+		utilruntime.Must(v1alpha1.AddToScheme(scheme))
 
-			svc := NewService(dc, d8env.GetDownloadedModulesDir(), ms, utils.GenerateRegistryOptions(ms))
-			if err := svc.DownloadMetadataFromReleaseChannel("console", "stable", ""); err != nil {
-				fmt.Println("error", err)
-			}
-
-			return nil
+		restConfig := ctrl.GetConfigOrDie()
+		k8sClient, err := client.New(restConfig, client.Options{
+			Scheme: scheme,
 		})
+		if err != nil {
+			return fmt.Errorf("failed to create client: %w", err)
+		}
+
+		// get relevant module source
+		ms := new(v1alpha1.ModuleSource)
+		if err := k8sClient.Get(ctx, types.NamespacedName{Name: *moduleSource}, ms); err != nil {
+			return fmt.Errorf("get ModuleSource %s got an error: %w", moduleSource, err)
+		}
+
+		svc := NewService(dc, d8env.GetDownloadedModulesDir(), ms, utils.GenerateRegistryOptions(ms))
+		if err := svc.DownloadMetadataFromReleaseChannel(*moduleName, *moduleChannel, ""); err != nil {
+			fmt.Println("error", err)
+		}
+
+		return nil
+	})
 }
