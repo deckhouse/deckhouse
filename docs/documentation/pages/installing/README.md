@@ -59,7 +59,7 @@ The YAML installation config contains multiple resource configurations (manifest
 
 - `ModuleConfig` — a set of resources containing [Deckhouse configuration](../) parameters.
 
-If the cluster is initially created with nodes for specific load types (system nodes, nodes for monitoring, etc.), it is recommended to explicitly set the appropriate ‘nodeSelector’ in ModuleConfig parameters for modules that use persistent storage volumes (e.g. for the [prometheus module](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-nodeselector)).
+If the cluster is initially created with nodes allocated for a specific type of workload (system nodes, nodes for monitoring, etc.), it is recommended to explicitly specify the corresponding `nodeSelector` parameter in the module configuration for modules that use persistent storage volumes (for example, for the `prometheus` module). For the `prometheus` module, this parameter is [nodeSelector](../modules/300-prometheus/configuration.html#parameters-nodeselector).
 
 {% offtopic title="An example of the installation config..." %}
 
@@ -134,7 +134,7 @@ metadata:
 spec:
   version: 2
   enabled: true
-  # In the case of using allocated monitoring nodes: 
+  # Specify, in case of using dedicated nodes for monitoring.
   # settings:
   #   nodeSelector:
   #     node.deckhouse.io/group: monitoring
