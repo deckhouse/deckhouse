@@ -14,4 +14,54 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+PATH_TO_PDF_PAGE="docs/documentation/pages/pdf/PDF_CREATION_RU.md"
+PATH_TO_PAGES='docs/documentation/pages/'
+LIST_OF_PAGES=(
+"DECKHOUSE-OVERVIEW_RU.md"
+"installing/README_RU.md"
+"DECKHOUSE_CONFIGURE_RU.md"
+"DECKHOUSE_CONFIGURE_GLOBAL_RU.md"
+"installing/UNINSTALL_RU.md"
+"DECKHOUSE-RELEASE-CHANNELS_RU.md"
+"SUPPORTED_VERSIONS_RU.md"
+"REVISION_COMPARISON_RU.md"
+"SECURITY_SOFTWARE_SETUP_RU.md"
+"NETWORK_SECURITY_SETUP_RU.md"
+"DECKHOUSE-FAQ_RU.md"
+)
+PATH_TO_MODULES="modules"
+MODULES=$(find $PATH_TO_MODULES -name "README_RU.md")
 
+function clean () {
+cat > $1 <<EOF
+---
+title: Документация в PDF
+permalink: ru/deckhouse-pdf-docs.html
+lang: ru
+sidebar: none
+toc: true
+---
+EOF
+}
+
+function getname () {
+  cat $1 | grep 'title: ' | sed -r 's!^[^ ]+!!' | sed -e 's/^[[:space:]0-9-]*//' | sed s/'\"'//g
+}
+
+function gettext() {
+    cat $1 | sed '1,/---/ d' | sed 's/## /### /g'
+}
+
+clean $PATH_TO_PDF_PAGE
+
+for ix in ${!LIST_OF_PAGES[*]}
+do
+  echo "\n## "$(getname $PATH_TO_PAGES${LIST_OF_PAGES[$ix]}) >> $PATH_TO_PDF_PAGE
+  echo "$(gettext $PATH_TO_PAGES${LIST_OF_PAGES[$ix]})" >> $PATH_TO_PDF_PAGE
+done
+
+for file in `find $PATH_TO_MODULES -name "README_RU.md"`
+do
+  echo "\n## "$(getname $file) >> $PATH_TO_PDF_PAGE
+  echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
+done
