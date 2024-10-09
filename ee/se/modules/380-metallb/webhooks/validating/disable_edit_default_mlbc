@@ -9,7 +9,7 @@ function __config__(){
   cat <<EOF
 configVersion: v1
 kubernetesValidating:
-- name: metalloadbalancerclasses-policy.deckhouse.io
+- name: disable_edit_default_mlbc.deckhouse.io
   group: main
   rules:
   - apiGroups:   ["network.deckhouse.io"]
