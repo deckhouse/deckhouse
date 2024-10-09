@@ -77,7 +77,7 @@ type LeasesManager struct {
 
 func (m *LeasesManager) create(ctx context.Context) error {
 	l := m.newLease()
-	l, err := m.leases().Create(ctx, l, metav1.CreateOptions{})
+	_, err := m.leases().Create(ctx, l, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("create: %w", err)
 	}
@@ -85,34 +85,36 @@ func (m *LeasesManager) create(ctx context.Context) error {
 	return nil
 }
 
-func (m *LeasesManager) Run(ctx context.Context) error {
-	if err := m.gc(ctx); err != nil {
-		return fmt.Errorf("first gc: %w", err)
-	}
-
-	if err := m.create(ctx); err != nil {
-		return fmt.Errorf("create leases: %w", err)
-	}
-
-	group, ctx := errgroup.WithContext(ctx)
-
-	group.Go(func() error {
-		err := m.renewLoop(ctx)
-		if err != nil {
-			return fmt.Errorf("renew loop: %w", err)
+func (m *LeasesManager) Run(ctx context.Context) func() error {
+	return func() error {
+		if err := m.gc(ctx); err != nil {
+			return fmt.Errorf("first gc: %w", err)
 		}
-		return nil
-	})
 
-	group.Go(func() error {
-		err := m.garbageCollectionLoop(ctx)
-		if err != nil {
-			return fmt.Errorf("gc loop: %w", err)
+		if err := m.create(ctx); err != nil {
+			return fmt.Errorf("create leases: %w", err)
 		}
-		return nil
-	})
 
-	return group.Wait()
+		group, ctx := errgroup.WithContext(ctx)
+
+		group.Go(func() error {
+			err := m.renewLoop(ctx)
+			if err != nil {
+				return fmt.Errorf("renew loop: %w", err)
+			}
+			return nil
+		})
+
+		group.Go(func() error {
+			err := m.garbageCollectionLoop(ctx)
+			if err != nil {
+				return fmt.Errorf("gc loop: %w", err)
+			}
+			return nil
+		})
+
+		return group.Wait()
+	}
 }
 
 func (m *LeasesManager) renewLoop(ctx context.Context) error {
