@@ -2,7 +2,6 @@ package hooks
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -48,22 +47,16 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleReports(input *go_hook.HookInput, dc dependency.Container) error {
 	sn := input.Snapshots["namespaces"]
 	if len(sn) == 0 {
-		fmt.Println("SKIP")
 		return nil
 	}
 
 	k8sClient := dc.MustGetK8sClient()
-
-	fmt.Println("FOund resources")
 
 	list, err := k8sClient.Dynamic().Resource(schema.GroupVersionResource{
 		Group:    "aquasecurity.github.io",
 		Version:  "v1alpha1",
 		Resource: "sbomreports",
 	}).Namespace(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{})
-
-	fmt.Println("List error: ", err)
-	fmt.Println("List: ", len(list.Items))
 
 	// DeleteCollection does not work here, it gives an error:
 	// 		"the server could not find the requested resource"
