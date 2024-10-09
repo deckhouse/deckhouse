@@ -37,7 +37,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -556,7 +556,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		ds.Update.Mode = embeddedMUP.Update.Mode
 		ds.Update.Windows = embeddedMUP.Update.Windows
 		ds.Update.NotificationConfig.WebhookURL = svr.URL
-		ds.Update.NotificationConfig.Auth = &updater.Auth{Token: pointer.String("the_token")}
+		ds.Update.NotificationConfig.Auth = &updater.Auth{Token: ptr.To("the_token")}
 
 		suite.setupControllerSettings("notification-bearer-token-auth.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.36.0")

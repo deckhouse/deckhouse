@@ -34,7 +34,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -79,7 +79,7 @@ func NewModuleDocumentationController(mgr manager.Manager, dc dependency.Contain
 	ctr, err := controller.New("module-documentation", mgr, controller.Options{
 		MaxConcurrentReconciles: 1, // don't use concurrent reconciles here, because docs-builder doesn't support multiply requests at once
 		CacheSyncTimeout:        15 * time.Minute,
-		NeedLeaderElection:      pointer.Bool(false),
+		NeedLeaderElection:      ptr.To(false),
 		Reconciler:              c,
 	})
 	if err != nil {

@@ -128,7 +128,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			WaitForSynchronization: go_hook.Bool(false),
 		},
 		{
-			Name:       "namespaces",
+			Name:       "namespaces_to_copy_secrets",
 			ApiVersion: "v1",
 			Kind:       "Namespace",
 			LabelSelector: &metav1.LabelSelector{
@@ -154,7 +154,7 @@ func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 		input.LogEntry.Info("No Secrets received, skipping execution")
 		return nil
 	}
-	namespaces, ok := input.Snapshots["namespaces"]
+	namespaces, ok := input.Snapshots["namespaces_to_copy_secrets"]
 	if !ok {
 		input.LogEntry.Info("No Namespaces received, skipping execution")
 		return nil

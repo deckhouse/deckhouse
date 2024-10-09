@@ -19,7 +19,7 @@ package smokemini
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
 )
@@ -38,9 +38,9 @@ var _ = sdk.RegisterFunc(
 				LabelSelector:     labelSelector,
 				FilterFunc:        snapshot.NewStatefulSet,
 
-				ExecuteHookOnEvents:          pointer.Bool(false),
-				ExecuteHookOnSynchronization: pointer.Bool(false),
-				// WaitForSynchronization:       pointer.Bool(false),
+				ExecuteHookOnEvents:          ptr.To(false),
+				ExecuteHookOnSynchronization: ptr.To(false),
+				// WaitForSynchronization:       ptr.To(false),
 			},
 		},
 	},

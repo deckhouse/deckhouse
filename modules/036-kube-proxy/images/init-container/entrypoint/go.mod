@@ -5,12 +5,11 @@ go 1.20
 require (
 	github.com/Masterminds/semver v1.5.0
 	k8s.io/api v0.26.3
-
 	k8s.io/apimachinery v0.26.3
 	k8s.io/client-go v0.26.3
 	k8s.io/component-base v0.26.3
 	k8s.io/kube-proxy v0.26.3
-	k8s.io/utils v0.0.0-20221107191617-1a15be271d1d
+	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
 	sigs.k8s.io/yaml v1.3.0
 )
 

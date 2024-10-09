@@ -30,7 +30,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -82,7 +82,7 @@ func NewModuleSourceController(mgr manager.Manager, dc dependency.Container, emb
 	ctr, err := controller.New("module-source", mgr, controller.Options{
 		MaxConcurrentReconciles: 3,
 		CacheSyncTimeout:        3 * time.Minute,
-		NeedLeaderElection:      pointer.Bool(false),
+		NeedLeaderElection:      ptr.To(false),
 		Reconciler:              c,
 	})
 	if err != nil {
@@ -321,7 +321,7 @@ func (c *moduleSourceReconciler) createModuleRelease(ctx context.Context, ms *v1
 					Kind:       v1alpha1.ModuleSourceGVK.Kind,
 					Name:       ms.Name,
 					UID:        ms.GetUID(),
-					Controller: pointer.Bool(true),
+					Controller: ptr.To(true),
 				},
 			},
 		},

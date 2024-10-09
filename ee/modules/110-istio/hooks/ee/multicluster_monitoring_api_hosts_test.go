@@ -14,7 +14,7 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -138,7 +138,7 @@ var _ = Describe("Istio hooks :: multicluster_monitoring_api_hosts ::", func() {
 				Name:   multiclusterMonitoringMetricName,
 				Group:  multiclusterMonitoringMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "proper-mc",
 					"api_host":          "proper-hostname",
@@ -148,7 +148,7 @@ var _ = Describe("Istio hooks :: multicluster_monitoring_api_hosts ::", func() {
 				Name:   multiclusterMonitoringMetricName,
 				Group:  multiclusterMonitoringMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "improper-mc-bad-code",
 					"api_host":          "improper-hostname-bad-code",
@@ -158,7 +158,7 @@ var _ = Describe("Istio hooks :: multicluster_monitoring_api_hosts ::", func() {
 				Name:   multiclusterMonitoringMetricName,
 				Group:  multiclusterMonitoringMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "improper-mc-bad-json",
 					"api_host":          "improper-hostname-bad-json",
@@ -168,7 +168,7 @@ var _ = Describe("Istio hooks :: multicluster_monitoring_api_hosts ::", func() {
 				Name:   multiclusterMonitoringMetricName,
 				Group:  multiclusterMonitoringMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "improper-mc-wrong-format",
 					"api_host":          "improper-hostname-wrong-format",

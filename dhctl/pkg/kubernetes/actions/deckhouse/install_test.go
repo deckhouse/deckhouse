@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -178,7 +178,7 @@ func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
 		Kind:    config.ModuleConfigKind,
 	})
 	mc1.SetName("global")
-	mc1.Spec.Enabled = pointer.Bool(true)
+	mc1.Spec.Enabled = ptr.To(true)
 	mc1.Spec.Version = 1
 	mc1.Spec.Settings = config.SettingsValues(map[string]interface{}{
 		"ha": true,
@@ -228,7 +228,7 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 		Kind:    config.ModuleConfigKind,
 	})
 	mc1.SetName("global")
-	mc1.Spec.Enabled = pointer.Bool(true)
+	mc1.Spec.Enabled = ptr.To(true)
 	mc1.Spec.Version = 1
 	mc1.Spec.Settings = config.SettingsValues(map[string]interface{}{
 		"ha": true,
@@ -241,7 +241,7 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 		Kind:    config.ModuleConfigKind,
 	})
 	mc2.SetName("deckhouse")
-	mc2.Spec.Enabled = pointer.Bool(true)
+	mc2.Spec.Enabled = ptr.To(true)
 	mc2.Spec.Version = 1
 	mc2.Spec.Settings = config.SettingsValues(map[string]interface{}{
 		"bundle": "Minimal",

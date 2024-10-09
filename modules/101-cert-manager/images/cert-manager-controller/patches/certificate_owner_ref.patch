@@ -341,9 +341,9 @@ index 49a9db3d2..0889a7e7a 100644
 +						}).
 +						WithType(corev1.SecretTypeTLS).
 +						WithOwnerReferences(&applymetav1.OwnerReferenceApplyConfiguration{
-+							APIVersion: pointer.String("cert-manager.io/v1"), Kind: pointer.String("Certificate"),
-+							Name: pointer.String("test"), UID: &expUID,
-+							Controller: pointer.Bool(true), BlockOwnerDeletion: pointer.Bool(true),
++							APIVersion: ptr.To("cert-manager.io/v1"), Kind: ptr.To("Certificate"),
++							Name: ptr.To("test"), UID: &expUID,
++							Controller: ptr.To(true), BlockOwnerDeletion: ptr.To(true),
 +						})
 +
 +					assert.Equal(t, expCnf, gotCnf)
@@ -446,9 +446,9 @@ index 49a9db3d2..0889a7e7a 100644
 +						}).
 +						WithType(corev1.SecretTypeTLS).
 +						WithOwnerReferences(&applymetav1.OwnerReferenceApplyConfiguration{
-+							APIVersion: pointer.String("cert-manager.io/v1"), Kind: pointer.String("Certificate"),
-+							Name: pointer.String("test"), UID: &expUID,
-+							Controller: pointer.Bool(true), BlockOwnerDeletion: pointer.Bool(true),
++							APIVersion: ptr.To("cert-manager.io/v1"), Kind: ptr.To("Certificate"),
++							Name: ptr.To("test"), UID: &expUID,
++							Controller: ptr.To(true), BlockOwnerDeletion: ptr.To(true),
 +						})
 +
 +					assert.Equal(t, expCnf, gotCnf)
