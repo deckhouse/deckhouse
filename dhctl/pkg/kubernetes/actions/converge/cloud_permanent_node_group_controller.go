@@ -90,7 +90,7 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 	// 	err  error
 	// }
 	// resultsСhan := make(chan checkResult, len(nodesIndexToCreate))
-
+	log.InfoF("%v", nodesIndexToCreate)
 	for _, indexCandidate := range nodesIndexToCreate {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, indexCandidate)
 		wg.Add(1)
