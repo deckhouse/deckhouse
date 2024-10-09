@@ -7,6 +7,6 @@
         label_replace(
           kube_verticalpodautoscaler_status_recommendation_containerrecommendations_target
           * on(job, instance, namespace, verticalpodautoscaler) group_left(update_mode)
-          (kube_verticalpodautoscaler_spec_updatepolicy_updatemode_info == 1),
+          (kube_verticalpodautoscaler_spec_updatepolicy_updatemode == 1),
         "controller_type", "$1", "target_kind", "(.*)"),
       "controller_name", "$1", "target_name", "(.*)")
