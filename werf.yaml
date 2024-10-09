@@ -60,7 +60,7 @@ cleanup:
 # use example.com as default because we can fail build without env
 {{- $_ := set . "CLOUD_PROVIDERS_SOURCE_REPO" (env "CLOUD_PROVIDERS_SOURCE_REPO" | default "https://example.com") }}
 
-# source repo with observability private code
+# Source repo with observability private code
 {{- $_ := set . "OBSERVABILITY_SOURCE_REPO" (env "OBSERVABILITY_SOURCE_REPO" | default "https://example.com") }}
 
 # goproxy  settings
@@ -843,7 +843,7 @@ args:
   BASE_SCRATCH: {{ .Images.BASE_SCRATCH }}
   SOURCE_REPO: {{ .SOURCE_REPO }}
   CLOUD_PROVIDERS_SOURCE_REPO: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
-  OBSERVABILITY_SOURCE_REPO: {{ OBSERVABILITY_SOURCE_REPO }}
+  OBSERVABILITY_SOURCE_REPO: {{ .OBSERVABILITY_SOURCE_REPO }}
   # proxies for various packages
   GOPROXY: {{ .GOPROXY }}
   {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless")) }}

@@ -1,6 +1,6 @@
 module github.com/flant/docs-builder
 
-go 1.20
+go 1.22
 
 require (
 	github.com/bep/clocks v0.5.0
@@ -8,7 +8,6 @@ require (
 	github.com/bep/logg v0.2.0
 	github.com/bep/overlayfs v0.6.0
 	github.com/gohugoio/hugo v0.119.0
-	github.com/gorilla/mux v1.8.0
 	github.com/spf13/afero v1.9.5
 	github.com/spf13/fsync v0.9.0
 	golang.org/x/sync v0.3.0
