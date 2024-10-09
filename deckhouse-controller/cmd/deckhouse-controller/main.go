@@ -30,7 +30,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/repository"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/registry"
 	dhctl_commands "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	dhctl_app "github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
@@ -101,7 +101,7 @@ func main() {
 	debug.DefineRequirementsCommands(kpApp)
 
 	// deckhouse-controller repository
-	repository.DefineRepositoryCommand(kpApp)
+	registry.DefineRegistryCommand(kpApp)
 
 	// deckhouse-controller edit subcommands
 	editCmd := kpApp.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
