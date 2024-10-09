@@ -101,16 +101,13 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 			nodesToWait = append(nodesToWait, candidateName)
 		}()
 	}
-	go func() {
-		wg.Wait()
-		// close(resultsСhan)
-	}()
 
 	// for line := range resultsСhan {
 	// 	log.InfoF("\n%s proccess: ", line.name)
 	// 	log.InfoF("%s", line.log)
 	// }
 
+	wg.Wait()
 	return WaitForNodesListBecomeReady(c.client, nodesToWait, nil)
 }
 
