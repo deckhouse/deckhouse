@@ -188,7 +188,7 @@ func (c *Creator) ensureRequiredNamespacesExist() (map[int]struct{}, error) {
 
 				resourcesToSkipInCurrentIteration[i] = struct{}{}
 				knownNamespaces[nsName] = false
-				log.DebugF("Namespace did not found for resource %s\n", res.String())
+				log.DebugF("Namespace was not found for resource %s\n", res.String())
 			}
 			cancel()
 			knownNamespaces[nsName] = true
