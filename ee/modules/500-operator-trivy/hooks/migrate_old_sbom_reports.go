@@ -71,4 +71,6 @@ func handleReports(input *go_hook.HookInput, dc dependency.Container) error {
 			return err
 		}
 	}
+
+	return nil
 }
