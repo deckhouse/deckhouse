@@ -16,7 +16,7 @@ import (
 // SBOM Reports are not compatible with the new operator-trivy version
 // we have to delete all previous versions of reports
 
-// TODO: delete this hook after 1.70 release
+// TODO: delete this hook after the 1.68 release
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/operator-trivy/migrate_old_sbom_reports",
