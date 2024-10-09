@@ -74,14 +74,12 @@ apiVersions:
           > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
         additionalProperties: false
         required: [replicas, instanceClass]
-        x-unsafe-rules: [updateMasterImage]
         properties:
           replicas:
             description: |
               The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
             type: integer
             minimum: 1
-            x-unsafe-rules: [updateReplicas]
           zones:
             description: |
               A limited set of zones in which nodes can be created.
