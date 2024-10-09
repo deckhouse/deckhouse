@@ -23,13 +23,15 @@ import (
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func DefineRegistryCommand(kpApp *kingpin.Application) {
-	repositoryCmd := kpApp.Command("repository", "Deckhouse repository work.").
+	repositoryCmd := kpApp.Command("registry", "Deckhouse repository work.").
 		PreAction(func(_ *kingpin.ParseContext) error {
 			kpApp.UsageTemplate(kingpin.DefaultUsageTemplate)
 			return nil
@@ -48,8 +50,13 @@ func DefineRegistryCommand(kpApp *kingpin.Application) {
 			fmt.Println("listing releases")
 			dc := dependency.NewDependencyContainer()
 
+			scheme := runtime.NewScheme()
+			utilruntime.Must(v1alpha1.AddToScheme(scheme))
+
 			restConfig := ctrl.GetConfigOrDie()
-			k8sClient, err := client.New(restConfig, client.Options{})
+			k8sClient, err := client.New(restConfig, client.Options{
+				Scheme: scheme,
+			})
 			if err != nil {
 				return fmt.Errorf("failed to create client: %w", err)
 			}
