@@ -47,7 +47,7 @@ var (
 	ErrCantReadOrUnmarshalConfig = errors.New("cannot read or unmarshal kubeconfig")
 )
 
-var shouldRecreteKubeConfigErrors = []error{
+var shouldRecreateKubeConfigErrors = []error{
 	ErrClustersFieldEmpty,
 	ErrUsersFieldEmpty,
 	ErrCertDataFieldEmpty,
