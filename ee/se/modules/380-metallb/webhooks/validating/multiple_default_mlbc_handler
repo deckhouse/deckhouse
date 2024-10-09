@@ -9,7 +9,7 @@ function __config__(){
   cat <<EOF
 configVersion: v1
 kubernetesValidating:
-- name: multiple_default_mlbc_handler.deckhouse.io
+- name: multiple_default_mlbc_handler-policy.deckhouse.io
   group: main
   includeSnapshotsFrom: ["mlbc_default"]
   rules:
