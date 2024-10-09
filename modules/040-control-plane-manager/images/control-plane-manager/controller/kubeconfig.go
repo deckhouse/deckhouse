@@ -58,7 +58,7 @@ var shouldRecreateKubeConfigErrors = []error{
 	ErrCantReadOrUnmarshalConfig,
 }
 
-func shouldRecreteKubeConfig(err error) bool {
+func shouldRecreateKubeConfig(err error) bool {
 	for _, e := range shouldRecreteKubeConfigErrors {
 		if errors.Is(err, e) {
 			return true
