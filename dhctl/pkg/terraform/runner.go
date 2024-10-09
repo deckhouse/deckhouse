@@ -601,6 +601,10 @@ func (r *Runner) GetTerraformExecutor() Executor {
 	return r.terraformExecutor
 }
 
+func (r *Runner) GetLog() []string {
+	return r.terraformExecutor.GetStdout()
+}
+
 // Stop interrupts the current runner command and sets
 // a flag to prevent executions of next runner commands.
 func (r *Runner) Stop() {

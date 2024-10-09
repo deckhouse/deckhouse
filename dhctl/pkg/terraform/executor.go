@@ -36,6 +36,7 @@ var terraformLogsMatcher = regexp.MustCompile(`(\s+\[(TRACE|DEBUG|INFO|WARN|ERRO
 type Executor interface {
 	Output(...string) ([]byte, error)
 	Exec(...string) (int, error)
+	GetStdout() []string
 	Stop()
 }
 
@@ -61,11 +62,16 @@ func terraformCmd(args ...string) *exec.Cmd {
 
 // CMDExecutor straightforward cmd executor which provides convenient output and handles quit signal.
 type CMDExecutor struct {
-	cmd *exec.Cmd
+	cmd         *exec.Cmd
+	stdoutSaved []string
 }
 
 func (c *CMDExecutor) Output(args ...string) ([]byte, error) {
 	return terraformCmd(args...).Output()
+}
+
+func (c *CMDExecutor) GetStdout() []string {
+	return c.stdoutSaved
 }
 
 func (c *CMDExecutor) Exec(args ...string) (int, error) {
@@ -122,7 +128,8 @@ func (c *CMDExecutor) Exec(args ...string) (int, error) {
 
 		s := bufio.NewScanner(stdout)
 		for s.Scan() {
-			log.InfoLn(s.Text())
+			c.stdoutSaved = append(c.stdoutSaved, s.Text())
+			// log.InfoLn(s.Text())
 		}
 	}()
 
@@ -176,3 +183,5 @@ func (f *fakeExecutor) Exec(parts ...string) (int, error) {
 	return result.code, result.err
 }
 func (f *fakeExecutor) Stop() {}
+
+func (f *fakeExecutor) GetStdout() []string

@@ -116,13 +116,7 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 				log.InfoF("indexCandidate: %s , first elem: %s\n", indexCandidate, nodesIndexToCreate[0])
 			}
 
-			output := captureStdout(func() {
-				BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
-			})
-
-			if output != "" {
-				log.InfoF("output catch")
-			}
+			BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
 
 			nodesToWait = append(nodesToWait, candidateName)
 		}()
