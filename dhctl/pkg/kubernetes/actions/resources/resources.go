@@ -109,6 +109,7 @@ func (c *Creator) createAll() error {
 
 	log.DebugLn("start ensureRequiredNamespacesExist")
 
+	// resourcesToSkipInCurrentIteration connect with c.resources via resource slice index
 	resourcesToSkipInCurrentIteration, err := c.ensureRequiredNamespacesExist()
 	if err != nil {
 		return err
@@ -145,15 +146,15 @@ func (c *Creator) createAll() error {
 }
 
 func (c *Creator) ensureRequiredNamespacesExist() (map[int]struct{}, error) {
-	// true - known namespace and namespace exists
-	// false - known namespace and namespace not found (for skip checking multiple times one namespace)
+	// true means known existing namespace
+	// false means known namespace that is not yet created (used to skip checking for that namespace for multiple times)
 	knownNamespaces := make(map[string]bool)
-	// we need to skip all resources without exist namespace
-	// because namespace can create in current cycle
-	// or after set state "cluster is bootstrapped" (some namespaces will create by deckhouse after it)
+	// we need to skip all resources without existing namespace
+	// because namespace can possibly be created in current iteration
+	// or after state is set to "cluster is bootstrapped" (some namespaces will be created by the deckhouse after that)
 	resourcesToSkipInCurrentIteration := make(map[int]struct{})
 
-	err := retry.NewLoop("Ensure that required namespaces exist", 10, 10*time.Second).Run(func() error {
+	err := retry.NewSilentLoop("Ensure that required namespaces exist", 10, 10*time.Second).Run(func() error {
 		for i, res := range c.resources {
 			nsName := res.Object.GetNamespace()
 
