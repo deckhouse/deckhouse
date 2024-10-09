@@ -4,16 +4,20 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/utils/pointer"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
+
+// SBOM Reports are not compatible with the new operator-trivy version
+// we have to delete all previous versions of reports
+
+// TODO: delete this hook after 1.70 release
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/operator-trivy/migrate_old_sbom_reports",
@@ -61,6 +65,8 @@ func handleReports(input *go_hook.HookInput, dc dependency.Container) error {
 	fmt.Println("List error: ", err)
 	fmt.Println("List: ", len(list.Items))
 
+	// DeleteCollection does not work here, it gives an error:
+	// 		"the server could not find the requested resource"
 	for _, item := range list.Items {
 		err = k8sClient.Dynamic().Resource(schema.GroupVersionResource{
 			Group:    "aquasecurity.github.io",
