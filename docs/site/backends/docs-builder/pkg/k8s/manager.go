@@ -26,7 +26,7 @@ import (
 	coordinationclientv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	coordination "k8s.io/api/coordination/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -177,9 +177,9 @@ func (m *LeasesManager) newLease() *coordination.Lease {
 			Labels: map[string]string{label: ""},
 		},
 		Spec: coordination.LeaseSpec{
-			HolderIdentity:       pointer.String(address),
+			HolderIdentity:       ptr.To(address),
 			RenewTime:            &now,
-			LeaseDurationSeconds: pointer.Int32(leaseDuration),
+			LeaseDurationSeconds: ptr.To(int32(leaseDuration)),
 		},
 	}
 }
@@ -208,7 +208,7 @@ func (m *LeasesManager) gc(ctx context.Context) error {
 	}
 
 	for _, lease := range list.Items {
-		expireAt := lease.Spec.RenewTime.Add(time.Duration(pointer.Int32Deref(lease.Spec.LeaseDurationSeconds, 0)) * time.Second)
+		expireAt := lease.Spec.RenewTime.Add(time.Duration(ptr.Deref(lease.Spec.LeaseDurationSeconds, 0)) * time.Second)
 
 		if !expireAt.Before(time.Now()) {
 			continue

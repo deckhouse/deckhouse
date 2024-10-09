@@ -41,7 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -125,7 +125,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		Metrics: metrics_server.Options{
 			BindAddress: "0",
 		},
-		GracefulShutdownTimeout: pointer.Duration(10 * time.Second),
+		GracefulShutdownTimeout: ptr.To(10 * time.Second),
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
 				// for ModuleDocumentation controller

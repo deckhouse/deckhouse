@@ -21,7 +21,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // TODO: migrate ns d8-cloud-instance-manager from node-manager helm release to deckhouse helm release
@@ -36,8 +36,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:                   "v1",
 			Kind:                         "Namespace",
 			NameSelector:                 &types.NameSelector{MatchNames: []string{"d8-cloud-instance-manager"}},
-			ExecuteHookOnSynchronization: pointer.Bool(true),
-			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			ExecuteHookOnEvents:          ptr.To(false),
 			FilterFunc:                   filterResource,
 		},
 		{
@@ -50,8 +50,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			NameSelector:                 &types.NameSelector{MatchNames: []string{"kube-rbac-proxy-ca.crt"}},
-			ExecuteHookOnSynchronization: pointer.Bool(true),
-			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			ExecuteHookOnEvents:          ptr.To(false),
 			FilterFunc:                   filterResource,
 		},
 	},
