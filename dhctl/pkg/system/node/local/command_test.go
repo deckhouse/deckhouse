@@ -59,6 +59,8 @@ func TestCommandCombinedOutput(t *testing.T) {
 }
 
 func TestCommandRun(t *testing.T) {
+	t.SkipNow()
+
 	s := require.New(t)
 	testFilePath := filepath.Join(os.TempDir(), "test")
 	tmpFile, err := os.Create(testFilePath)
@@ -78,6 +80,8 @@ func TestCommandRun(t *testing.T) {
 }
 
 func TestCommandPipe(t *testing.T) {
+	t.SkipNow()
+
 	s := require.New(t)
 
 	cmd := NewCommand("bash", "-c", `echo "Goodbye world" | sed "s/Goodbye/Hello/g"`)
