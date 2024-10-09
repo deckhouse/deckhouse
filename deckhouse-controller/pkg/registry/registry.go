@@ -47,7 +47,7 @@ func DefineRegistryCommand(kpApp *kingpin.Application) {
 
 	moduleSource := repositoryListCmd.Flag("source", "Module source name.").String()
 	moduleName := repositoryListCmd.Flag("name", "Module name.").String()
-	moduleChannel := repositoryListCmd.Flag("channel", "Module channel").ExistingFile()
+	moduleChannel := repositoryListCmd.Flag("channel", "Module channel").String()
 
 	repositoryListCmd.Action(func(_ *kingpin.ParseContext) error {
 		ctx := context.Background()
