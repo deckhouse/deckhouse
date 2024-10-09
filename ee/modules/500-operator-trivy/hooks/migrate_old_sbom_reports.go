@@ -44,6 +44,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(handleReports))
 
+var sbomGVR = schema.GroupVersionResource{
+	Group:    "aquasecurity.github.io",
+	Version:  "v1alpha1",
+	Resource: "sbomreports",
+}
+
 func handleReports(input *go_hook.HookInput, dc dependency.Container) error {
 	sn := input.Snapshots["namespaces"]
 	if len(sn) == 0 {
@@ -52,20 +58,12 @@ func handleReports(input *go_hook.HookInput, dc dependency.Container) error {
 
 	k8sClient := dc.MustGetK8sClient()
 
-	list, err := k8sClient.Dynamic().Resource(schema.GroupVersionResource{
-		Group:    "aquasecurity.github.io",
-		Version:  "v1alpha1",
-		Resource: "sbomreports",
-	}).Namespace(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{})
+	list, err := k8sClient.Dynamic().Resource(sbomGVR).Namespace(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{})
 
 	// DeleteCollection does not work here, it gives an error:
 	// 		"the server could not find the requested resource"
 	for _, item := range list.Items {
-		err = k8sClient.Dynamic().Resource(schema.GroupVersionResource{
-			Group:    "aquasecurity.github.io",
-			Version:  "v1alpha1",
-			Resource: "sbomreports",
-		}).Namespace(item.GetNamespace()).Delete(context.Background(), item.GetName(), metav1.DeleteOptions{})
+		err = k8sClient.Dynamic().Resource(sbomGVR).Namespace(item.GetNamespace()).Delete(context.Background(), item.GetName(), metav1.DeleteOptions{})
 		if err != nil {
 			return err
 		}
