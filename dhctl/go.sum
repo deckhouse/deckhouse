@@ -85,8 +85,8 @@ github.com/evanphx/json-patch v5.7.0+incompatible h1:vgGkfT/9f8zE6tvSCe74nfpAVDQ
 github.com/evanphx/json-patch v5.7.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d h1:105gxyaGwCFad8crR9dcMQWvV9Hvulu6hwUh4tWPJnM=
 github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d/go.mod h1:ZZMPRZwes7CROmyNKgQzC3XPs6L/G2EJLHddWejkmf4=
-github.com/flant/addon-operator v0.0.0-20241009103548-3ae6c20a6d12 h1:ETgE8SFuTWst6ilLHnzoE9vZYMm9AVwg6BwLbefzEks=
-github.com/flant/addon-operator v0.0.0-20241009103548-3ae6c20a6d12/go.mod h1:QnmyMNUfnMfBB+zUsU6w3blGDftoRu7BwvLlyh8RDcQ=
+github.com/flant/addon-operator v0.0.0-20241009105750-8d6dbb7e7d53 h1:Vbn1yBiTBDLn7Zd86QEyHo+LrBWngp+4yyDhMMdLsKY=
+github.com/flant/addon-operator v0.0.0-20241009105750-8d6dbb7e7d53/go.mod h1:QnmyMNUfnMfBB+zUsU6w3blGDftoRu7BwvLlyh8RDcQ=
 github.com/flant/go-openapi-validate v0.19.12-flant.0 h1:xk6kvc9fHKMgUdB6J7kbpbLR5vJOUzKAK8p3nrD7mDk=
 github.com/flant/go-openapi-validate v0.19.12-flant.0/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/kube-client v1.2.0 h1:cOjnZgwoJVm4scqsMGcgO6qctJ+Z6wRVTFqvyhoAOiQ=
