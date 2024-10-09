@@ -21,6 +21,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
+  version: 1
   enabled: true
   settings:
     apiserver:
