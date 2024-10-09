@@ -15,7 +15,10 @@
 package converge
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"os"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -41,6 +44,29 @@ func (c *CloudPermanentNodeGroupController) Run() error {
 	return c.NodeGroupController.Run()
 }
 
+func captureOutput(f func()) string {
+	old := os.Stdout
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		fmt.Println("Error creating pipe:", err)
+		return ""
+	}
+
+	os.Stdout = w
+
+	f()
+
+	w.Close()
+	os.Stdout = old
+
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	r.Close()
+
+	return buf.String()
+}
+
 func (c *CloudPermanentNodeGroupController) addNodes() error {
 	count := len(c.state.State)
 	index := 0
@@ -58,21 +84,40 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		}
 		index++
 	}
+	type checkResult struct {
+		name string
+		log  string
+		err  error
+	}
+	resultsСhan := make(chan checkResult, len(nodesIndexToCreate))
 
 	for _, indexCandidate := range nodesIndexToCreate {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, indexCandidate)
 		wg.Add(1)
-		go func() error {
+		go func() {
 			defer wg.Done()
-			err := ParallelBootstrapAdditionalNodes(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
-			if err != nil {
-				return err
+			if indexCandidate == nodesIndexToCreate[0] {
+				BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
+			} else {
+				output := captureOutput(func() {
+					ParallelBootstrapAdditionalNodes(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
+				})
+				resultsСhan <- checkResult{candidateName, output, nil}
 			}
+
 			nodesToWait = append(nodesToWait, candidateName)
-			return nil
 		}()
 	}
-	wg.Wait()
+	go func() {
+		wg.Wait()
+		close(resultsСhan)
+	}()
+
+	for line := range resultsСhan {
+		log.InfoF("\n%s proccess: ", line.name)
+		log.InfoF("%s", line.log)
+	}
+
 	return WaitForNodesListBecomeReady(c.client, nodesToWait, nil)
 }
 

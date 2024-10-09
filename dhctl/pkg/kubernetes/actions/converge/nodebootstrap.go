@@ -114,12 +114,6 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 	return outputs, err
 }
 
-type checkResult struct {
-	name string
-	log  string
-	err  error
-}
-
 func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext) error {
 	nodeName := NodeName(cfg, nodeGroupName, index)
 	//  SilenceBoostrapAdditionalNodes used for parallel bootstrap many nodes
