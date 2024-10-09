@@ -184,4 +184,4 @@ func (f *fakeExecutor) Exec(parts ...string) (int, error) {
 }
 func (f *fakeExecutor) Stop() {}
 
-func (f *fakeExecutor) GetStdout() []string
+func (f *fakeExecutor) GetStdout() []string { return nil }
