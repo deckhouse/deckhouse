@@ -1,6 +1,7 @@
 {{ $trivyServerURL := printf "http://trivy-server.d8-%s.svc.%s:4954" .Chart.Name .Values.global.discovery.clusterDomain | quote }}
 {{ $dbRepository := printf "%s/security/trivy-db" .Values.global.modulesImages.registry.base | quote }}
 {{ $javaDbRepository := printf "%s/security/trivy-java-db" .Values.global.modulesImages.registry.base | quote }}
+{{ $policiesBundleRepository := printf "%s/security/trivy-cheks" .Values.global.modulesImages.registry.base | quote }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -18,6 +19,7 @@ data:
   report.recordFailedChecksOnly: "true"
   node.collector.imageRef: {{ include "helm_lib_module_image" (list . "nodeCollector") }}
   node.collector.imagePullSecret: deckhouse-registry
+  policies.bundle.oci.ref: {{ $policiesBundleRepository }}
   {{- with (include "helm_lib_tolerations" (tuple . "any-node") | fromYaml) }}
   scanJob.tolerations: {{ .tolerations | toJson | quote }}
   {{- end }}
