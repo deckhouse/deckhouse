@@ -96,13 +96,7 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			indexCandidate := indexCandidate
-			if indexCandidate == nodesIndexToCreate[0] {
-				BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
-			} else {
-				log.GetSilentLogger()
-				BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
-			}
+			BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
 
 			nodesToWait = append(nodesToWait, candidateName)
 		}()
