@@ -61,9 +61,14 @@ func handleReports(input *go_hook.HookInput, dc dependency.Container) error {
 	fmt.Println("List error: ", err)
 	fmt.Println("List: ", len(list.Items))
 
-	return k8sClient.Dynamic().Resource(schema.GroupVersionResource{
-		Group:    "aquasecurity.github.io",
-		Version:  "v1alpha1",
-		Resource: "sbomreports",
-	}).Namespace(metav1.NamespaceAll).DeleteCollection(context.Background(), metav1.DeleteOptions{}, metav1.ListOptions{})
+	for _, item := range list.Items {
+		err = k8sClient.Dynamic().Resource(schema.GroupVersionResource{
+			Group:    "aquasecurity.github.io",
+			Version:  "v1alpha1",
+			Resource: "sbomreports",
+		}).Namespace(item.GetNamespace()).Delete(context.Background(), item.GetName(), metav1.DeleteOptions{})
+		if err != nil {
+			return err
+		}
+	}
 }
