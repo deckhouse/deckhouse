@@ -6,44 +6,152 @@ lang: ru
 
 Для версионирования модулей используется [семантическое версионирование](https://semver.org/lang/ru/).
 
-При выборе номера версии руководствуйтесь следующими рекомендациями:
-- изменение **patch-версии** (например, c `0.0.1` на `0.0.2`) — исправление дефекта;
-- изменение **Minor-версии** (например, c `0.0.1` на `0.1.0`) — добавление новой функции;
-- изменение **Major-версии** (например, c `0.0.1` на `1.0.0`) — добавление функции, которая кардинально меняет возможности модуля; масштабное изменение интерфейса или завершение крупного этапа работы.
+При выборе номера версии используйте следующие рекомендации:
+- изменение **патч-версии** (например, c `0.0.1` на `0.0.2`) — исправление дефекта;
+- изменение **минорной версии** (например, c `0.0.1` на `0.1.0`) — добавление новой функции;
+- изменение **мажорной версии** (например, c `0.0.1` на `1.0.0`) — добавление функции, которая кардинально меняет возможности модуля; масштабное изменение интерфейса или завершение крупного этапа работы.
 
-Перед номером версии в теге git и контейнере registry **всегда** добавляется буква "v". Примеры: `v0.0.73`, `v1.0.0`.
+Перед номером версии в теге git и контейнере registry **всегда** добавляется буква "v". Например: `v0.0.73`, `v1.0.0`.
 
 ## Каналы обновлений
 
-Версия модуля при публикации должна *перемещаться* по [каналам обновлений](../../deckhouse-release-channels.html) от менее стабильного к более стабильному: `Alpha` -> `Beta` -> `EarlyAccess` -> `Stable` -> `RockSolid`.
+Каналы обновлений позволяют публиковать версию модуля не для всех пользователей сразу, а для некоторой части пользователей. Вы сами определяете степень стабильности версии модуля, на какой максимальный канал обновлений ее можно опубликовать.
 
-Каналы обновлений позволяют опубликовать версию модуля для ограниченного числа пользователей и получить обратную связь на раннем этапе. Вы сами определяете степень стабильности версии модуля и на какой канал обновлений ее можно опубликовать.
+Важно понимать, что выбор канала обновлений не определяет, насколько стабилен сам модуль. Каналы являются инструментом доставки и определяют степень стабильности конкретного релиза.
 
-Важно понимать, что выбор канала обновлений не определяет, насколько стабилен модуль и на какой стадии жизненного цикла он находится. Каналы являются инструментом доставки и определяют степень стабильности конкретного релиза.
+При публикации новой версии модуля на [канал обновлений](../../deckhouse-release-channels.html) сначала используйте канал обновлений `Alpha`. Далее, если работа версии модуля не вызывает нареканий, публикуйте версию модуля последовательно на другие каналы обновлений, с учетом их стабильности: `Alpha` → `Beta` → `Early Access` → `Stable` → `Rock Solid`. Если версия модуля требует исправления ошибок, то публикация такой версии должна быть остановлена. После выпуска версии с исправлениями, необходимо повторить этап публикации версии начиная с канала обновлений `Alpha`.        
 
-## Стадия жизненного цикла модуля
+## Жизненный цикл модуля
 
-Во время разработки модуль может находиться на следующих стадиях:
+За время своего жизненного цикла модуль может проходить следующие стадии:
 
-**Experimental** — экспериментальная версия. Функциональность модуля может сильно измениться. Совместимость с будущими версиями не гарантируется.
-
-**Preview** — предварительная версия. Функциональность модуля может измениться, но основные возможности сохранятся. Совместимость с будущими версиями обеспечивается, но может потребовать дополнительных действий по миграции.
-
-**General Availability (GA)** — общедоступная версия. Модуль готов к использованию в production-средах.
-
-**Deprecated** — версия модуля устарела.
+- **Experimental** — экспериментальная версия. Функциональность модуля может сильно измениться. Совместимость с будущими версиями не гарантируется.
+- **Preview** — предварительная версия. Функциональность модуля может измениться, но основные возможности сохранятся. Совместимость с будущими версиями обеспечивается, но может потребовать дополнительных действий по миграции.
+- **General Availability (GA)** — общедоступная версия. Модуль готов к использованию в production-средах.
+- **Deprecated** — модуль устарел, развитие модуля и его поддержка прекращены.
 
 ## Как понять, насколько модуль стабилен?
 
-В зависимости от этапа жизненного цикла модуля и канала обновлений, из которого была установлена версия модуля, общая стабильность может быть определена в соответствии со следующей таблицей:
+В зависимости от стадии жизненного цикла модуля и канала обновлений, из которого была установлена версия модуля, общая стабильность может быть определена в соответствии со следующей таблицей:
 
-![Module_Stability](../../images/module-development/module_stability.png)
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Статус модуля</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        table {
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            margin: 20px auto;
+            font-size: 0.7em;
+        }
+        th, td {
+            padding: 6px;
+            border: 1px solid #000;
+            text-align: center;
+            vertical-align: middle;
+            word-wrap: break-word;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .header-row {
+            background-color: #e0e0e0;
+            font-weight: bold;
+        }
+        .sub-header {
+            background-color: #f9f9f9;
+        }
+        .pink {
+            background-color: #ffe6e6;
+        }
+        .yellow {
+            background-color: #ffebcc;
+        }
+        .green {
+            background-color: #d9ead3;
+        }
+        .grey {
+            background-color: #eeeeee;
+        }
+        .medium-green {
+            background-color: #89AC76;
+        }
+        .dark-green {
+            background-color: #44944A;
+        }
+    </style>
+</head>
+<body>
+
+<table>
+    <thead>
+        <tr class="header-row">
+            <th rowspan="2" style="text-align:center; vertical-align: middle;">Стадия жизненного цикла</th>
+            <th colspan="5" style="text-align:center; vertical-align: middle;">Каналы обновлений</th>
+        </tr>
+        <tr class="sub-header">
+            <th style="text-align:center; vertical-align: middle;">Alfa</th>
+            <th style="text-align:center; vertical-align: middle;">Beta</th>
+            <th style="text-align:center; vertical-align: middle;">Early Access</th>
+            <th style="text-align:center; vertical-align: middle;">Stable</th>
+            <th style="text-align:center; vertical-align: middle;">Rock Solid</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="text-align:center; vertical-align: middle;"><strong>Experimental (экспериментальный)</strong></td>
+            <td class="pink" style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
+            <td class="pink" style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
+            <td class="pink" style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
+            <td class="yellow" style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности. Точечное использование опытными пользователями в окружениях, приравненных к продуктивным</td>
+            <td class="yellow" style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности. Точечное использование опытными пользователями в окружениях, приравненных к продуктивным</td>
+        </tr>
+        <tr>
+            <td style="text-align:center; vertical-align: middle;"><strong>Preview (предварительный доступ)</strong></td>
+            <td class="pink" style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
+            <td class="yellow" style="text-align:center; vertical-align: middle;">Окружения разработки, пилотные проекты, малозначимые продуктивные окружения</td>
+            <td class="yellow" style="text-align:center; vertical-align: middle;">Окружения разработки, пилотные проекты, малозначимые продуктивные окружения</td>
+            <td class="green" style="text-align:center; vertical-align: middle;">Продуктивные окружения и приравненные к ним</td>
+            <td class="green" style="text-align:center; vertical-align: middle;">Продуктивные окружения и приравненные к ним</td>
+        </tr>
+        <tr>
+            <td style="text-align:center; vertical-align: middle;"><strong>GA (Общедоступный)</strong></td>
+            <td class="pink" style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
+            <td class="yellow" style="text-align:center; vertical-align: middle;">Окружения разработки, пилотные проекты, малозначимые продуктивные окружения</td>
+            <td class="green" style="text-align:center; vertical-align: middle;">Окружения разработки, пилотные проекты, малозначимые продуктивные окружения</td>
+            <td class="medium-green" style="text-align:center; vertical-align: middle;">Продуктивные окружения и приравненные к ним</td>
+            <td class="dark-green" style="text-align:center; vertical-align: middle;">Критично важные продуктивные окружения и приравненные к ним</td>
+        </tr>
+        <tr>
+            <td style="text-align:center; vertical-align: middle;"><strong>Deprecated (устарел)</strong></td>
+            <td class="grey" style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
+            <td class="grey" style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
+            <td class="grey" style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
+            <td class="grey" style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
+            <td class="grey" style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
+        </tr>
+    </tbody>
+</table>
+
+</body>
+</html>
 
 Выводы:
-- Модуль на стадии `Experimental` в канале `Stable` не рекомендуется использовать в production-средах.
-- Модуль на стадии `GA` в канале `Alpha` также не рекомендуется использовать в production-средах.
-- Для production-сред подходят только модули, находящиеся на стадии `GA`, установленные из каналов `EarlyAccess`, `Stable`, или `RockSolid`.
-- Модули, находящиеся на стадии `Deprecated`, рекомендуется заменить согласно рекомендациям в документации.
+- Модуль в статусе`Experimental` на канале `Stable` рекомендовано использовать в продуктивных средах только ограниченно.
+- Модуль в статусе `General Availability` на канале `Alpha` также не рекомендуется использовать в продуктивных средах.
+- Для продуктивных сред подходят только модули, находящиеся в статусе `General Availability`, установленные из каналов `Early Access`, `Stable`, или `Rock Solid`.
+- Модули, находящиеся в статусе`Deprecated`, рекомендуется заменить.
 
 <!--
 ## Стадии отдельных возможностей модуля @TODO
@@ -71,8 +179,9 @@ lang: ru
 
 Добавлять новые параметры можно без изменения версии.
 
-Для обеспечения возможности автоматической конвертации параметров модуля из одной версии в другую необходимо включить в модуль соответствующие [конверсии](../structure/#conversions). Конверсии могут быть необходимы в случаях, когда в новой версии OpenAPI-спецификации параметр переименовывается или переносится в другое место.
+Для автоматической конвертации параметров модуля из одной версии в другую включите в модуль соответствующие [конверсии](../structure/#conversions).
+Это может понадобиться, например, при переименовании или перемещении параметра в новой версии OpenAPI-спецификации.
 
-Рекомендации, которых стоит придерживаться при выходе новой версии *CustomResourceDefinition* (CRD):
-* Предыдущим версиям проставлять параметр `deprecated: true` (читайте подробнее в документации [Kubernetes](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#version-deprecation)).
-* Версию, в которой данные хранятся внутри etcd ([storage-версия](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#upgrade-existing-objects-to-a-new-stored-version)), менять не ранее чем через два месяца после выхода новой версии.
+При выходе новой версии *CustomResourceDefinition* (CRD) используйте следующие рекомендации:
+* Установите предыдущим версиям CRD параметр `deprecated: true`. Подробнее в документации [Kubernetes](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#version-deprecation).
+* Версию, в которой данные хранятся внутри etcd ([storage-версия](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#upgrade-existing-objects-to-a-new-stored-version)), меняйте не ранее чем через два месяца после выхода новой версии.
