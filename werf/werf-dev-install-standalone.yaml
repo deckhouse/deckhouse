@@ -16,17 +16,17 @@ import:
   add: /deckhouse
   to: /image/deckhouse
   includePaths:
-  - modules/*/openapi/config-values.yaml
-  - global-hooks/openapi/config-values.yaml
+    - modules/*/openapi/config-values.yaml
+    - global-hooks/openapi/config-values.yaml
   before: setup
 - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
   add: /terraform/terraform
   to: /image/bin/terraform
   before: setup
   {{- range $_, $edition := $.Editions }}
-  {{- if $edition.terraformProviders }}
-  {{- range $_, $tfProvider := $edition.terraformProviders }}
-  {{- $tf := index $.TF $tfProvider }}
+    {{- if $edition.terraformProviders }}
+      {{- range $_, $tfProvider := $edition.terraformProviders }}
+        {{- $tf := index $.TF $tfProvider }}
 - artifact: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ $tf.artifactBinary }}
   to: /image/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
@@ -34,9 +34,9 @@ import:
     {{- end }}
   {{- end }}
   {{- if eq $.Env $edition.name }}
-  {{- break -}}
+    {{- break -}}
   {{- end }}
-  {{- end }}
+{{- end }}
 
 - image: images-digests
   add: /images_digests.json
@@ -55,15 +55,16 @@ import:
   to: /image/bin
   before: setup
   includePaths:
-  - ssh
-  - ssh-add
-  - ssh-agent
-  - scp
+    - ssh
+    - ssh-add
+    - ssh-agent
+    - scp
 shell:
   setup:
   - echo '{{- env "CI_COMMIT_TAG" | default "dev" }}' > /image/deckhouse/version
   - cd /image
   - tar -czf /dhctl-{{- env "CI_COMMIT_TAG" | default "dev" }}.x86_64.tar.gz *
+
 ---
 image: dev/install-standalone
 from: {{ .Images.BASE_SCRATCH }}
@@ -72,5 +73,3 @@ import:
   add: /dhctl-{{- env "CI_COMMIT_TAG" | default "dev" }}.x86_64.tar.gz
   to: /
   before: setup
-
----

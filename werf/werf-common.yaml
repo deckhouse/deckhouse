@@ -1,4 +1,3 @@
----
 artifact: jq
 from: {{ $.Images.BASE_ALPINE_DEV }}
 git:
@@ -9,19 +8,19 @@ git:
   stageDependencies:
     install:
     - "**/*"
-ansible:
+shell:
   install:
-  - shell: |
-      cd /src
-      autoreconf -fi
-      ./configure \
-        --prefix=/usr \
-        --sysconfdir=/etc \
-        --mandir=/usr/share/man \
-        --localstatedir=/var \
-        --disable-docs
-      make LDFLAGS=-all-static
-      make prefix=/usr install
+  - |
+    cd /src
+    autoreconf -fi
+    ./configure \
+      --prefix=/usr \
+      --sysconfdir=/etc \
+      --mandir=/usr/share/man \
+      --localstatedir=/var \
+      --disable-docs
+    make LDFLAGS=-all-static
+    make prefix=/usr install
 
 ---
 artifact: yq4-artifact
@@ -67,5 +66,3 @@ shell:
   - cd /tini/
   - export CFLAGS="-DPR_SET_CHILD_SUBREAPER=36 -DPR_GET_CHILD_SUBREAPER=37"
   - cmake . && make
-
----
