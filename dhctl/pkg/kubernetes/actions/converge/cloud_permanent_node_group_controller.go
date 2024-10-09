@@ -90,13 +90,17 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 	// 	err  error
 	// }
 	// resultsСhan := make(chan checkResult, len(nodesIndexToCreate))
+
 	log.InfoF("%v", nodesIndexToCreate)
 	for _, indexCandidate := range nodesIndexToCreate {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, indexCandidate)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
+			log.InfoF("add goroutine for: %s, with index %v", candidateName, indexCandidate)
+			captureOutput(func() {
+				BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
+			})
 
 			nodesToWait = append(nodesToWait, candidateName)
 		}()
