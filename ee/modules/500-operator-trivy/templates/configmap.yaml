@@ -1,7 +1,7 @@
 {{ $trivyServerURL := printf "http://trivy-server.d8-%s.svc.%s:4954" .Chart.Name .Values.global.discovery.clusterDomain | quote }}
 {{ $dbRepository := printf "%s/security/trivy-db" .Values.global.modulesImages.registry.base | quote }}
 {{ $javaDbRepository := printf "%s/security/trivy-java-db" .Values.global.modulesImages.registry.base | quote }}
-{{ $policiesBundleRepository := printf "%s/security/trivy-cheks:0" .Values.global.modulesImages.registry.base | quote }}
+{{ $policiesBundleRepository := printf "%s/security/trivy-checks:0" .Values.global.modulesImages.registry.base | quote }}
 ---
 apiVersion: v1
 kind: ConfigMap
