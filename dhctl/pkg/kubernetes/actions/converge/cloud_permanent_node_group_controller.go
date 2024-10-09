@@ -97,7 +97,10 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		go func() {
 			defer wg.Done()
 			log.InfoF("add goroutine for: %s, with index %v \n", candidateName, indexCandidate)
-			log.InitLogger("silent")
+			// previouslyLogger := log.GetDefaultLogger()
+			if indexCandidate != nodesIndexToCreate[0] {
+				log.InitLogger("silent")
+			}
 
 			// captureOutput(func() {
 			// 	BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
@@ -105,6 +108,7 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 
 			BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
 
+			log.InitLogger("simple")
 			nodesToWait = append(nodesToWait, candidateName)
 		}()
 	}
