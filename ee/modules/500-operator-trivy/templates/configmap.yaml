@@ -1,5 +1,6 @@
 {{ $trivyServerURL := printf "http://trivy-server.d8-%s.svc.%s:4954" .Chart.Name .Values.global.discovery.clusterDomain | quote }}
 {{ $dbRepository := printf "%s/security/trivy-db" .Values.global.modulesImages.registry.base | quote }}
+{{ $javaDbRepository := printf "%s/security/trivy-java-db" .Values.global.modulesImages.registry.base | quote }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -50,6 +51,7 @@ data:
   {{- end }}
   trivy.slow: "true"
   trivy.dbRepository: {{ $dbRepository }}
+  trivy.javaDbRepository: {{ $javaDbRepository }}
   trivy.command: "image"
   trivy.dbRepositoryInsecure: "false"
   trivy.useBuiltinRegoPolicies: "true"
@@ -63,9 +65,6 @@ data:
   trivy.mode: "ClientServer"
   TRIVY_LISTEN: "0.0.0.0:4954"
   TRIVY_CACHE_DIR: "/home/scanner/.cache/trivy"
-  TRIVY_DEBUG: "false"
-  TRIVY_SKIP_DB_UPDATE: "false"
-  TRIVY_DB_REPOSITORY: {{ $dbRepository }}
   {{- if $.Values.global.modulesImages.registry.CA }}
   TRIVY_REGISTRY_CA: | {{ $.Values.global.modulesImages.registry.CA | nindent 4 }}
   {{- end }}
