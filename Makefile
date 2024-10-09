@@ -348,6 +348,9 @@ set-build-envs:
   ifeq ($(DECKHOUSE_REGISTRY_HOST),)
  		export DECKHOUSE_REGISTRY_HOST=registry.deckhouse.io
   endif
+  ifeq ($(OBSERVABILITY_SOURCE_REPO),)
+  	export OBSERVABILITY_SOURCE_REPO=https://example.com
+  endif
 	export WERF_REPO=$(DEV_REGISTRY_PATH)
 	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
 	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
