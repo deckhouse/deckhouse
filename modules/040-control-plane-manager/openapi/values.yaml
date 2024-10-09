@@ -31,6 +31,12 @@ properties:
         items:
           type: string
           pattern: '^[0-9a-zA-Z\.-:\/]+$'
+      mastersNode:
+        type: array
+        items:
+          type: string
+          pattern: '^[0-9a-zA-Z\.-]+$'
+          maxLength: 63
       pkiChecksum:
         type: string
         pattern: '^[0-9a-zA-Z]+$'

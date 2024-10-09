@@ -12,6 +12,10 @@ bashible: &bashible
     '7':
     '8':
     '9':
+  opensuse:
+    '15.4':
+    '15.5':
+    '15.6':
 k8s:
   '1.26':
     status: available
@@ -20,7 +24,7 @@ k8s:
     clusterAutoscalerPatch: 2
     ccm:
       openstack: v1.26.1
-      yandex: v0.26.1
+      yandex: v0.26.2
       aws: v1.26.0
       vsphere: v1.26.0
       azure: v1.26.17
@@ -41,7 +45,7 @@ k8s:
     clusterAutoscalerPatch: 3
     ccm:
       openstack: v1.27.1
-      yandex: v0.27.0
+      yandex: v0.27.1
       aws: v1.27.1
       vsphere: 4e80a0c86d2ae8a1b843b4ba9e5ac31707758912
       azure: v1.27.11
@@ -62,7 +66,7 @@ k8s:
     clusterAutoscalerPatch: 3
     ccm:
       openstack: v1.28.0
-      yandex: v0.27.0
+      yandex: v0.27.1
       aws: v1.28.1
       vsphere: v1.28.0
       azure: v1.28.3
@@ -83,7 +87,7 @@ k8s:
     clusterAutoscalerPatch: 1
     ccm:
       openstack: v1.29.0
-      yandex: v0.29.0
+      yandex: v0.29.2
       aws: v1.29.1
       vsphere: v1.29.0
       azure: v1.29.0
@@ -104,7 +108,7 @@ k8s:
     clusterAutoscalerPatch: 1
     ccm:
       openstack: v1.30.0
-      yandex: v0.29.0
+      yandex: v0.29.2
       aws: v1.30.1
       vsphere: v1.30.1
       azure: v1.30.2

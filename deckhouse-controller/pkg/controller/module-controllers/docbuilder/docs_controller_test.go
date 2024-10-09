@@ -103,10 +103,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
 			switch req.URL.Path {
-			case "/loadDocArchive/testmodule/v1.0.0":
+			case "/api/v1/doc/testmodule/v1.0.0":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
 
-			case "/build":
+			case "/api/v1/build":
 				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
 			}
 			return &http.Response{StatusCode: http.StatusBadRequest}, nil
@@ -126,10 +126,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
 			switch req.URL.Path {
-			case "/loadDocArchive/testmodule/v1.0.0":
+			case "/api/v1/doc/testmodule/v1.0.0":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
 
-			case "/build":
+			case "/api/v1/build":
 				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
 			}
 			return &http.Response{StatusCode: http.StatusBadRequest}, nil
@@ -153,10 +153,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}
 
 			switch req.URL.Path {
-			case "/loadDocArchive/testmodule/v1.0.0":
+			case "/api/v1/doc/testmodule/v1.0.0":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
 
-			case "/build":
+			case "/api/v1/build":
 				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
 			}
 			return &http.Response{StatusCode: http.StatusBadRequest}, nil
@@ -166,8 +166,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		md := suite.getModuleDocumentation("testmodule")
 		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
-		assert.True(suite.T(), res.Requeue)
-		assert.Equal(suite.T(), res.RequeueAfter, 10*time.Second)
+		assert.Equal(suite.T(), res.RequeueAfter, defaultDocumentationCheckInterval)
 		require.NoError(suite.T(), err)
 	})
 
@@ -177,10 +176,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
 			switch req.URL.Path {
-			case "/loadDocArchive/testmodule/v1.1.1":
+			case "/api/v1/doc/testmodule/v1.1.1":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
 
-			case "/build":
+			case "/api/v1/build":
 				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
 			}
 			return &http.Response{StatusCode: http.StatusBadRequest}, nil
@@ -200,10 +199,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
 			switch req.URL.Path {
-			case "/loadDocArchive/testmodule/v1.1.1":
+			case "/api/v1/doc/testmodule/v1.1.1":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
 
-			case "/build":
+			case "/api/v1/build":
 				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
 			}
 			return &http.Response{StatusCode: http.StatusBadRequest}, nil
@@ -223,10 +222,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
 			switch req.URL.Path {
-			case "/loadDocArchive/testmodule/mpo-tag":
+			case "/api/v1/doc/testmodule/mpo-tag":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
 
-			case "/build":
+			case "/api/v1/build":
 				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
 			}
 			return &http.Response{StatusCode: http.StatusBadRequest}, nil
@@ -258,7 +257,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		md := suite.getModuleDocumentation("absentmodule")
 		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
-		assert.True(suite.T(), res.Requeue)
+		assert.Equal(suite.T(), res.RequeueAfter, defaultDocumentationCheckInterval)
 		require.NoError(suite.T(), err)
 	})
 }

@@ -26,4 +26,5 @@ spec:
       debian|ubuntu-lts|astra)  bb-apt-install ca-certificates ;;
       altlinux)                 bb-apt-rpm-install ca-certificates ;;
       centos|redos|rosa)        bb-yum-install ca-certificates ;;
+      opensuse)                 bb-zypper-install ca-certificates ;;
     esac

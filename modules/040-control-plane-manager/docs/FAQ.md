@@ -519,9 +519,23 @@ Both these parameters directly impact the CPU and memory resources consumed by t
 
 When deciding on the appropriate threshold values, consider resources consumed by the control nodes (graphs can help you with this). Note that the lower parameters are, the more resources you may need to allocate to these nodes.
 
-## etc backup and restore
+## etcd backup and restore
 
-### How do make etcd backup?
+### What is done automatically
+
+CronJob `kube-system/d8-etcd-backup-*` is automatically started at 00:00 UTC+0. The result is saved in `/var/lib/etcd/etcd-backup.snapshot` on all nodes with `control-plane` in the cluster (master nodes).
+
+### How to manually backup etcd
+
+#### Using Deckhouse CLI (Deckhouse Kubernetes Platform v1.65+)
+
+Starting with Deckhouse Kubernetes Platform v1.65, a new `d8 backup etcd` tool is available for taking snapshots of etcd state.
+
+```bash
+d8 backup etcd --kubeconfig $KUBECONFIG ./etcd.db
+```
+
+#### Using bash (Deckhouse Kubernetes Platform v1.64 and older)
 
 Login into any control-plane node with `root` user and use next script:
 

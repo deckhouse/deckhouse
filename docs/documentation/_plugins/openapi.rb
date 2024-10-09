@@ -399,7 +399,8 @@ module Jekyll
             ancestorsPathString = ancestors.slice(1, ancestors.length-1).join('.') + '.' if ancestors.length > 1
         end
 
-        linkAnchor = fullPath.join('-').downcase
+        # The replacement with sub is for preserving anchor links for ModuleConfig parameters
+        linkAnchor = fullPath.join('-').downcase.sub(/^parameters-settings-/, 'parameters-')
         pathString = fullPath.slice(1,fullPath.length-1).join('.')
         if resourceName.nil? or resourceName.length < 1
            resourceName = @context.registers[:page]["title"]
@@ -773,6 +774,15 @@ module Jekyll
             result.push('<p><font size="-1">')
             result.push(%Q(#{get_i18n_term("version_of_schema")}: #{configVersion}))
             result.push('</font></p>')
+            if !( get_hash_value(input, 'properties', 'settings' ) )
+               input['properties'] = { "settings" => { "type" => "object", "properties" => input['properties'] } }
+            end
+            if !( get_hash_value(input, 'i18n', 'en', 'properties', 'settings' ) )
+               input['i18n']['en']['properties'] = { "settings" => { "type" => "object", "properties" => input['i18n']['en']['properties'] } }
+            end
+            if !( get_hash_value(input, 'i18n', 'ru', 'properties', 'settings' ) )
+               input['i18n']['ru']['properties'] = { "settings" => { "type" => "object", "properties" => input['i18n']['ru']['properties'] } }
+            end
         end
 
         if input.has_key?('x-doc-examples') or input.has_key?('x-doc-example') or
