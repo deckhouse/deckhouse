@@ -331,6 +331,46 @@ func moduleTemplates(module module) (yamlTemplates, tplTemplates map[string][]by
 	return
 }
 
+func findYAMLFiles(dir string) ([]string, error) {
+	var yamlFiles []string
+   
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	 if err != nil {
+	  return err
+	 }
+   
+	 if !info.IsDir() && (strings.HasSuffix(info.Name(), ".yaml") || strings.HasSuffix(info.Name(), ".yml")) {
+	  yamlFiles = append(yamlFiles, path)
+	 }
+	 return nil
+	})
+   
+	return yamlFiles, err
+   }
+   
+   func processFiles(yamlFiles []string) {
+	for _, file := range yamlFiles {
+	 fmt.Println("Przetwarzam plik:", file)
+	}
+   }
+   
+   func main() {
+	dir := "prometheus-rules"
+   
+	yamlFiles, err := findYAMLFiles(dir)
+	if err != nil {
+	 fmt.Printf("Błąd podczas przeszukiwania katalogów: %v\n", err)
+	 return
+	}
+   
+	if len(yamlFiles) == 0 {
+	 fmt.Println("Nie znaleziono żadnych plików YAML")
+	 return
+	}
+   
+	processFiles(yamlFiles)
+   }
+
 func readUserDefinedValues(moduleName string) (userDefinedValues []byte, err error) {
 	userDefinedValuesPath := filepath.Join(deckhouseRoot, userDefinedValuesPath, moduleName+".yaml")
 

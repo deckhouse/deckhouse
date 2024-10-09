@@ -3,10 +3,18 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          properties:
-            spec:
-              description: Спецификация ServiceWithHealthchecks аналогична спецификации Service за исключением раздела healthcheck
-              properties:
+          description: ServiceWithHealthchecks это схема для servicewithhealthchecks API  
+          spec:
+            properties:
+              allocateLoadBalancerNodePorts:
+                description: |-
+                  allocateLoadBalancerNodePorts определяет, будут ли автоматически выделяться порты узла
+                  выделяться для сервисов с типом LoadBalancer.  По умолчанию это значение равно «true». Это
+                  может быть установлено в «false», если балансировщик нагрузки кластера не полагается на
+                  NodePorts.  Если вызывающая сторона запрашивает конкретные NodePorts (указывая значение
+                  значение), эти запросы будут выполнены, независимо от этого поля.
+                  Это поле может быть установлено только для сервисов с типом LoadBalancer и будет
+                  будет очищено, если тип будет изменен на любой другой.
                 healthcheck:
                   properties:
                     initialDelaySeconds:
@@ -94,9 +102,3 @@ spec:
                                   Имя или номер порта для доступа.
                                   Номер должен находиться в диапазоне от 1 до 65535.
                                   Имя должно быть IANA_SVC_NAME.
-                            type: object
-                        type: object
-                      type: array
-                  type: object
-              type: object
-          type: object
