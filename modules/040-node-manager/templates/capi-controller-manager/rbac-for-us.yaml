@@ -452,6 +452,4 @@ subjects:
     namespace: d8-cloud-instance-manager
   - kind: User
     name: capi-controller-manager
-  - kind: User
-    name: capi-cloud-cluster-controller-manager
 {{- end }}
