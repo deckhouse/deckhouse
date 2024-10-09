@@ -33,7 +33,7 @@ git:
 shell:
   install:
   - export NODE_MAJOR=20
-  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 PROMETHEUS_VERSION=v2.51.0
+  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 PROMETHEUS_VERSION=v.2.51.0
   - git clone -b "${PROMETHEUS_VERSION}" --single-branch {{ $.SOURCE_REPO }}/prometheus/prometheus-deps
   - mkdir /prometheus && cd /prometheus
   - git clone -b "balalaika_relabeler_head_status" --single-branch {{ $.OBSERVABILITY_SOURCE_REPO }}/prometheus-plus-plus prometheus
