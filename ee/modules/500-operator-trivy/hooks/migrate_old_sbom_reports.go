@@ -2,6 +2,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/utils/pointer"
 
@@ -43,10 +44,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleReports(input *go_hook.HookInput, dc dependency.Container) error {
 	sn := input.Snapshots["namespaces"]
 	if len(sn) == 0 {
+		fmt.Println("SKIP")
 		return nil
 	}
 
 	k8sClient := dc.MustGetK8sClient()
+
+	fmt.Println("FOund resources")
+
+	list, err := k8sClient.Dynamic().Resource(schema.GroupVersionResource{
+		Group:    "aquasecurity.github.io",
+		Version:  "v1alpha1",
+		Resource: "sbomreports",
+	}).Namespace(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{})
+
+	fmt.Println("List error: ", err)
+	fmt.Println("List: ", len(list.Items))
 
 	return k8sClient.Dynamic().Resource(schema.GroupVersionResource{
 		Group:    "aquasecurity.github.io",
