@@ -90,7 +90,7 @@ spec:
                         info:
                           labelsFromPath:
                             name: [metadata, name]
-                    - name: "min_allowed_memory"
+                    - name: "spec_resourcepolicy_container_policies_minallowed"
                       help: "VPA container minimal allowed memory according to VPA rules"
                       each:
                         type: Gauge
@@ -99,7 +99,10 @@ spec:
                           labelsFromPath:
                             container: [containerName]
                           valueFrom: [minAllowed, memory]
-                    - name: "min_allowed_cpu"
+                      commonLabels:
+                        resource: "memory"
+                        unit: "byte"
+                    - name: "spec_resourcepolicy_container_policies_minallowed"
                       help: "VPA container minimal allowed cpu according to VPA rules"
                       each:
                         type: Gauge
@@ -108,7 +111,10 @@ spec:
                           labelsFromPath:
                             container: [containerName]
                           valueFrom: [minAllowed, cpu]
-                    - name: "max_allowed_memory"
+                      commonLabels:
+                        resource: "cpu"
+                        unit: "core"
+                    - name: "spec_resourcepolicy_container_policies_maxallowed"
                       help: "VPA container maximum allowed memory according to VPA rules"
                       each:
                         type: Gauge
@@ -117,7 +123,10 @@ spec:
                           labelsFromPath:
                             container: [containerName]
                           valueFrom: [maxAllowed, memory]
-                    - name: "max_allowed_cpu"
+                      commonLabels:
+                        resource: "memory"
+                        unit: "byte"
+                    - name: "spec_resourcepolicy_container_policies_maxallowed"
                       help: "VPA container maximum allowed cpu according to VPA rules"
                       each:
                         type: Gauge
@@ -125,7 +134,10 @@ spec:
                           path: [spec, resourcePolicy, containerPolicies]
                           labelsFromPath:
                             container: [containerName]
-                          valueFrom: [maxAllowed, cpu]                                      
+                          valueFrom: [maxAllowed, cpu]   
+                      commonLabels:
+                        resource: "cpu"
+                        unit: "core"
                     # Memory Information
                     - name: "status_recommendation_containerrecommendations_target"
                       help: "VPA container recommendations for memory. Target resources the VerticalPodAutoscaler recommends for the container."
@@ -224,13 +236,14 @@ spec:
                       commonLabels:
                         resource: "cpu"
                         unit: "core"
-                    - name: "spec_updatepolicy_updatemode_info"
+                    - name: "spec_updatepolicy_updatemode"
                       help: "VPA update policy accordingto configuration"
                       each:
-                        type: Info
-                        info:
-                          labelsFromPath:
-                            updatepolicy: [spec, updatePolicy, updateMode]
+                        type: StateSet
+                        stateSet:
+                          labelName: update_mode
+                          path: [spec, updatePolicy, updateMode]
+                          list: [Auto, Initial, Off, Recreate]
         livenessProbe:
           httpGet:
             path: /main/healthz
