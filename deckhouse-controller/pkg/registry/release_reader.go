@@ -28,7 +28,7 @@ type releaseReader struct {
 	changelogReader *bytes.Buffer
 }
 
-func (rr *releaseReader) untarMetadata(rc io.ReadCloser) error {
+func (rr *releaseReader) untarModuleMetadata(rc io.ReadCloser) error {
 	tr := tar.NewReader(rc)
 	for {
 		hdr, err := tr.Next()
@@ -44,6 +44,36 @@ func (rr *releaseReader) untarMetadata(rc io.ReadCloser) error {
 		}
 
 		switch strings.ToLower(hdr.Name) {
+		case "version.json":
+			_, err = io.Copy(rr.versionReader, tr)
+			if err != nil {
+				return err
+			}
+		case "changelog.yaml", "changelog.yml":
+			_, err = io.Copy(rr.changelogReader, tr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			continue
+		}
+	}
+}
+
+func (rr *releaseReader) untarDeckhouseLayer(rc io.Reader) error {
+	tr := tar.NewReader(rc)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			// end of archive
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+
+		switch hdr.Name {
 		case "version.json":
 			_, err = io.Copy(rr.versionReader, tr)
 			if err != nil {

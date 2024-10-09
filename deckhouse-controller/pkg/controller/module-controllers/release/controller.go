@@ -144,8 +144,6 @@ func NewModuleReleaseController(
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.ModuleRelease{}).
-		// for reconcile documentation if accidentally removed
-		Owns(&v1alpha1.ModuleDocumentation{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
 		Complete(ctr)
 }
@@ -182,55 +180,50 @@ func (c *moduleReleaseReconciler) restartLoop(ctx context.Context) {
 
 // only ModuleRelease with active finalizer can get here, we have to remove the module on filesystem and remove the finalizer
 func (c *moduleReleaseReconciler) deleteReconcile(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
-	res := ctrl.Result{}
-
 	// deleted release
 	// also cleanup the filesystem
-	modulePath := path.Join(c.downloadedModulesDir, mr.GetModuleName(), "v"+mr.Spec.Version.String())
+	modulePath := path.Join(c.downloadedModulesDir, mr.Spec.ModuleName, "v"+mr.Spec.Version.String())
 
 	err := os.RemoveAll(modulePath)
 	if err != nil {
-		return res, err
+		return ctrl.Result{Requeue: true}, err
 	}
 
 	if mr.Status.Phase == v1alpha1.PhaseDeployed {
 		extenders.DeleteConstraints(mr.GetModuleName())
-		symlinkPath := filepath.Join(c.downloadedModulesDir, "modules", fmt.Sprintf("%d-%s", mr.Spec.Weight, mr.GetModuleName()))
+		symlinkPath := filepath.Join(c.downloadedModulesDir, "modules", fmt.Sprintf("%d-%s", mr.Spec.Weight, mr.Spec.ModuleName))
 		err := os.RemoveAll(symlinkPath)
 		if err != nil {
-			return res, err
+			return ctrl.Result{Requeue: true}, err
 		}
 		// TODO(yalosev): we have to disable module here somehow.
 		// otherwise, hooks from file system will fail
 
 		// restart controller for completely remove module
 		// TODO: we need another solution for remove module from modulemanager
-
 		c.emitRestart("a module release was removed")
 	}
 
 	if !controllerutil.ContainsFinalizer(mr, fsReleaseFinalizer) {
-		return res, nil
+		return ctrl.Result{}, nil
 	}
 
 	controllerutil.RemoveFinalizer(mr, fsReleaseFinalizer)
 	err = c.client.Update(ctx, mr)
 	if err != nil {
-		return res, err
+		return ctrl.Result{Requeue: true}, err
 	}
 
-	return res, nil
+	return ctrl.Result{}, nil
 }
 
 func (c *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
-	res := ctrl.Result{}
-
 	switch mr.Status.Phase {
 	case "":
 		mr.Status.Phase = v1alpha1.PhasePending
 		mr.Status.TransitionTime = metav1.NewTime(c.dc.GetClock().Now().UTC())
-		if err := c.client.Status().Update(ctx, mr); err != nil {
-			return res, err
+		if e := c.client.Status().Update(ctx, mr); e != nil {
+			return ctrl.Result{Requeue: true}, e
 		}
 
 		return ctrl.Result{Requeue: true}, nil // process to the next phase
@@ -240,11 +233,11 @@ func (c *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, m
 			// update labels
 			addLabels(mr, map[string]string{"status": strings.ToLower(mr.Status.Phase)})
 			if err := c.client.Update(ctx, mr); err != nil {
-				return res, err
+				return ctrl.Result{Requeue: true}, err
 			}
 		}
 
-		return res, nil
+		return ctrl.Result{}, nil
 
 	case v1alpha1.PhaseDeployed:
 		return c.reconcileDeployedRelease(ctx, mr)
@@ -253,7 +246,7 @@ func (c *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, m
 	// if ModulePullOverride is set, don't process pending release, to avoid fs override
 	exists, err := c.isModulePullOverrideExists(ctx, mr.GetModuleSource(), mr.Spec.ModuleName)
 	if err != nil {
-		return res, err
+		return ctrl.Result{Requeue: true}, err
 	}
 
 	if exists {
@@ -593,15 +586,17 @@ func (c *moduleReleaseReconciler) getReleasePolicy(sourceName, moduleName string
 }
 
 func (c *moduleReleaseReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	res := ctrl.Result{}
-
 	// Get the ModuleRelease resource with this name
 	mr := new(v1alpha1.ModuleRelease)
 	err := c.client.Get(ctx, types.NamespacedName{Name: request.Name}, mr)
 	if err != nil {
 		// The ModuleRelease resource may no longer exist, in which case we stop
 		// processing.
-		return res, client.IgnoreNotFound(err)
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+
+		return ctrl.Result{Requeue: true}, err
 	}
 
 	if !mr.DeletionTimestamp.IsZero() {
@@ -1118,13 +1113,11 @@ func createOrUpdateModuleDocumentationCR(
 					Checksum: moduleChecksum,
 				},
 			}
-
 			err = client.Create(ctx, &md)
 			if err != nil {
 				return err
 			}
 		}
-
 		return err
 	}
 
