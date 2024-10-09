@@ -67,6 +67,21 @@ func captureOutput(f func()) string {
 	return buf.String()
 }
 
+func captureStdout(f func()) string {
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	f()
+
+	w.Close()
+	os.Stdout = old
+
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	return buf.String()
+}
+
 func (c *CloudPermanentNodeGroupController) addNodes() error {
 	count := len(c.state.State)
 	index := 0
@@ -84,11 +99,11 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		}
 		index++
 	}
-	// type checkResult struct {
-	// 	name string
-	// 	log  string
-	// 	err  error
-	// }
+	type checkResult struct {
+		name string
+		log  string
+		err  error
+	}
 	// resultsСhan := make(chan checkResult, len(nodesIndexToCreate))
 
 	for _, indexCandidate := range nodesIndexToCreate {
@@ -96,19 +111,19 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			log.InfoF("add goroutine for: %s, with index %v \n", candidateName, indexCandidate)
-			// previouslyLogger := log.GetDefaultLogger()
+			log.InfoF("add goroutine for: %s", candidateName)
 			if indexCandidate != nodesIndexToCreate[0] {
-				log.InitLogger("silent")
+				log.InfoF("indexCandidate: %s , first elem: %s\n", indexCandidate, nodesIndexToCreate[0])
 			}
 
-			// captureOutput(func() {
-			// 	BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
-			// })
+			output := captureStdout(func() {
+				BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
+			})
 
-			BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
+			if output != "" {
+				log.InfoF("output catch")
+			}
 
-			log.InitLogger("simple")
 			nodesToWait = append(nodesToWait, candidateName)
 		}()
 	}
