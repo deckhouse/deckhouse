@@ -12,28 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package docs
 
 import (
-	"io"
-	"net/http"
-	"sync/atomic"
+	"fmt"
 )
 
-func newReadinessHandler(isReady *atomic.Bool) *readinessHandler {
-	return &readinessHandler{
-		isReady: isReady,
+func (svc *Service) Delete(moduleName string, channels []string) error {
+	err := svc.cleanModulesFiles(moduleName, channels)
+	if err != nil {
+		return fmt.Errorf("clean module files: %w", err)
 	}
+
+	err = svc.removeFromChannelMapping(moduleName)
+	if err != nil {
+		return fmt.Errorf("remove from channel mapping:%w", err)
+	}
+
+	return nil
 }
 
-type readinessHandler struct {
-	isReady *atomic.Bool
-}
-
-func (h *readinessHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if h.isReady.Load() {
-		_, _ = io.WriteString(w, "ok")
-	} else {
-		http.Error(w, "Waiting for first build", http.StatusInternalServerError)
-	}
+func (svc *Service) removeFromChannelMapping(moduleName string) error {
+	return svc.channelMappingEditor.edit(func(m channelMapping) {
+		delete(m, moduleName)
+	})
 }
