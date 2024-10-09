@@ -84,12 +84,12 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		}
 		index++
 	}
-	type checkResult struct {
-		name string
-		log  string
-		err  error
-	}
-	resultsСhan := make(chan checkResult, len(nodesIndexToCreate))
+	// type checkResult struct {
+	// 	name string
+	// 	log  string
+	// 	err  error
+	// }
+	// resultsСhan := make(chan checkResult, len(nodesIndexToCreate))
 
 	for _, indexCandidate := range nodesIndexToCreate {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, indexCandidate)
@@ -99,10 +99,8 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 			if indexCandidate == nodesIndexToCreate[0] {
 				BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
 			} else {
-				output := captureOutput(func() {
-					ParallelBootstrapAdditionalNodes(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
-				})
-				resultsСhan <- checkResult{candidateName, output, nil}
+				log.GetSilentLogger()
+				BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
 			}
 
 			nodesToWait = append(nodesToWait, candidateName)
@@ -110,13 +108,13 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 	}
 	go func() {
 		wg.Wait()
-		close(resultsСhan)
+		// close(resultsСhan)
 	}()
 
-	for line := range resultsСhan {
-		log.InfoF("\n%s proccess: ", line.name)
-		log.InfoF("%s", line.log)
-	}
+	// for line := range resultsСhan {
+	// 	log.InfoF("\n%s proccess: ", line.name)
+	// 	log.InfoF("%s", line.log)
+	// }
 
 	return WaitForNodesListBecomeReady(c.client, nodesToWait, nil)
 }
