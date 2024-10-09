@@ -40,6 +40,23 @@ spec:
 1. В [kubeDns.clusterDomainAliases](configuration.html#параметры) указать:
     - старый clusterDomain;
     - новый clusterDomain.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: kube-dns
+spec:
+  version: 1
+  enabled: true
+  settings:
+    clusterDomainAliases:
+      - <старый clusterDomain>
+      - <новый clusterDomain>
+```
+
 1. Дождаться переката kube-apiserver.
 1. Поменять `clusterDomain` на новый в `dhctl config edit cluster-configuration`.
 

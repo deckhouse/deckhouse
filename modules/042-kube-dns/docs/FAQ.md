@@ -22,6 +22,7 @@ metadata:
   name: control-plane-manager
 spec:
   enabled: true
+  version: 1
   settings:
     apiserver:
       certSANs:
@@ -39,6 +40,23 @@ spec:
 1. In the [kubeDns.clusterDomainAliases](configuration.html#parameters) section, enter:
     - the old clusterDomain.
     - the new clusterDomain.
+
+Example:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: kube-dns
+spec:
+  version: 1
+  enabled: true
+  settings:
+    clusterDomainAliases:
+      - <old clusterDomain>
+      - <new clusterDomain>
+```
+
 1. Wait until kube-apiserver is restarted.
 1. Replace the old `clusterDomain` with the new one in `dhctl config edit cluster-configuration`
 1.
