@@ -26,13 +26,13 @@ for iface in "${ifaces[@]}"; do
   fi
   driver=$(ethtool -i $iface | grep driver | cut -d':' -f2 | tr -d '[:space:]')
   if [[ "$driver" == "vmxnet3" ]]; then
-    tnlsegmentation=$(ethtool -k "$iface" | grep tx-udp_tnl-segmentation | cut -d':' -f2 | tr -d '[:space:]')
+    tnlsegmentation="$(ethtool -k "$iface" | grep tx-udp_tnl-segmentation | cut -d':' -f2 | tr -d '[:space:]')"
     if [[ "$tnlsegmentation" == "on" ]]; then
       ethtool -K $iface tx-udp_tnl-segmentation off
       bb-log-info "disabling tx-udp_tnl-segmentation for interface: ${iface}"
     fi
 
-    csumsegmentation=$(ethtool -k "$iface" | grep tx-udp_tnl-csum-segmentation | cut -d':' -f2 | tr -d '[:space:]' )
+    csumsegmentation="$(ethtool -k "$iface" | grep tx-udp_tnl-csum-segmentation | cut -d':' -f2 | tr -d '[:space:]')"
     if [[ "$csumsegmentation" == "on" ]]; then
       ethtool -K $iface tx-udp_tnl-csum-segmentation off
       bb-log-info "disabling tx-udp_tnl-csum-segmentation for interface: ${iface}"
