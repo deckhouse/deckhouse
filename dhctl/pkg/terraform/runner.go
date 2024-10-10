@@ -229,7 +229,7 @@ func (r *Runner) withTerraformExecutor(t Executor) *Runner {
 	return r
 }
 
-func (r *Runner) WitchCatchingLog(flag bool) *Runner {
+func (r *Runner) WithCatchingLog(flag bool) *Runner {
 	r.changeSettings.CatchLog = flag
 	return r
 }
@@ -605,6 +605,10 @@ func (r *Runner) GetPlanPath() string {
 
 func (r *Runner) GetTerraformExecutor() Executor {
 	return r.terraformExecutor
+}
+
+func (r *Runner) IsCatchLog() bool {
+	return r.changeSettings.CatchLog
 }
 
 func (r *Runner) GetLog() []string {

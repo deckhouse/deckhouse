@@ -111,15 +111,15 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			log.InfoF("add goroutine for: %s", candidateName)
+			log.InfoF("add goroutine for: %s\n", candidateName)
 			if i == 0 {
 				BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
 			} else {
-				logs, _ := ParallelBootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
+				logs, error := ParallelBootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
 				resultsСhan <- checkResult{
 					name: candidateName,
 					log:  logs,
-					err:  nil,
+					err:  error,
 				}
 			}
 
@@ -135,7 +135,7 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 	for candidate := range resultsСhan {
 		candidate := candidate
 		log.InfoF("Log: %s:\n", candidate.name)
-		for line := range candidate.log {
+		for _, line := range candidate.log {
 			log.InfoF("%s", line)
 		}
 	}
