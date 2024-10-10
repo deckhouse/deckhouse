@@ -186,6 +186,7 @@ func (dc *dependencyContainer) GetK8sClient(options ...k8s.Option) (k8s.Client, 
 		if err != nil {
 			return nil, err
 		}
+
 		dc.k8sClient = kc
 	}
 

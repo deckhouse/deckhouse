@@ -161,6 +161,8 @@ func (r *client) ListTags() ([]string, error) {
 		imageOptions = append(imageOptions, remote.WithContext(ctx))
 	}
 
+	// TODO: replace with context
+	// remote.ListWithContext()
 	return remote.List(repo, imageOptions...)
 }
 
