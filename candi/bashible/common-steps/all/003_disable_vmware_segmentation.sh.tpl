@@ -16,6 +16,9 @@
 # The problem is observed when turning on Cilium VXLAN.
 ifaces=( $(ip -json a | jq -r '.[].ifname') )
 for iface in "${ifaces[@]}"; do
+  if [[ "$iface" == "lo" ]]; then
+    continue
+  fi
   driver=$(ethtool -i $iface | grep driver | cut -d':' -f2 | tr -d '[:space:]')
   if [[ "$driver" == "vmxnet3" ]]; then
     tnl-segmentation=$(ethtool -k "$iface" | grep tx-udp_tnl-segmentation | cut -d':' -f2 | tr -d '[:space:]')
