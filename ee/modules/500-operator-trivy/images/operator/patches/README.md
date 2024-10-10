@@ -10,14 +10,6 @@ This [issue](https://github.com/aquasecurity/trivy-operator/issues/695) covers b
 Skip some defseq checks for proper reports result for deckhouse installation.
 
 
-### 003-aws-ecr.patch
-
-In ClientServer mode scan pods can't retrive images from Amazon Elastic Container Registry, because `AWS_REGION` environment variable is absent.
-This patch is fixing this behaviour.
-
-[PR](https://github.com/aquasecurity/trivy-operator/pull/1613)
-
-
 ### 004-scan-job-registry-ca.patch
 
 This patch adds the ability to specify CA for scan jobs via environment variables.
@@ -34,9 +26,3 @@ The first check begins instantly when the operator starts.
 ### 006-new-metrics.patch
 
 This patch adds primaryLink metric for reports.
-
-### 007-delete-historical-sbom.patch
-
-This patch adds sbom reports to reportTTL manager, the current version of operator can mark historical sbom reports to be deleted, but nobody deletes them.
-
-This problem is not relevant for the operator version higher than 0.17.
