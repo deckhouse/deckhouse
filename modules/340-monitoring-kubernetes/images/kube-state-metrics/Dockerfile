@@ -1,6 +1,6 @@
-ARG BASE_GOLANG_20_ALPINE_DEV
+ARG BASE_GOLANG_22_ALPINE_DEV
 ARG BASE_DISTROLESS
-FROM $BASE_GOLANG_20_ALPINE_DEV as artifact
+FROM $BASE_GOLANG_22_ALPINE_DEV as artifact
 ARG GOPROXY
 ARG SOURCE_REPO
 
@@ -12,9 +12,9 @@ ENV GOPROXY=${GOPROXY} \
 
 # Build KSM from sources in case of future patching
 RUN mkdir -p /src/kube-state-metrics && \
-  git clone --depth 1 --branch v2.9.0 ${SOURCE_REPO}/kubernetes/kube-state-metrics/ /src/kube-state-metrics
+  git clone --depth 1 --branch v2.13.0 ${SOURCE_REPO}/kubernetes/kube-state-metrics/ /src/kube-state-metrics
 WORKDIR /src/kube-state-metrics
-RUN go mod edit -go 1.20 \
+RUN go mod edit -go 1.22 \
     && go get golang.org/x/net@v0.17.0 \
     && go get github.com/emicklei/go-restful@v2.16.0+incompatible \
     && go mod tidy \
