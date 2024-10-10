@@ -784,7 +784,11 @@ Adding custom settings causes a restart of the `containerd` service.
 
 Bashible on nodes merges main Deckhouse containerd config with configs from `/etc/containerd/conf.d/*.toml`.
 
+{% endraw %}
+{% alert level="danger" %}
 You can override the values of parameters that are set in `/etc/containerd/deckhouse.toml`, but the work of such configurations will have to be provided independently. It is also better not to affect nodeGroup `master` c control-plane with such configurations.
+{% endalert %}
+{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

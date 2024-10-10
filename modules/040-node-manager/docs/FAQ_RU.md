@@ -791,7 +791,11 @@ Done
 
 Bashible на узлах мержит основной конфиг containerd для Deckhouse с конфигами из `/etc/containerd/conf.d/*.toml`.
 
+{% endraw %}
+{% alert level="danger" %}
 Вы можете переопределять значения параметров которые заданы в `/etc/containerd/deckhouse.toml` но работу таких конфигурации придётся обеспечивать самостоятельно. Также лучше такими конфигами не затрагивать nodeGroup `master` c control-plane.
+{% endalert %}
+{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
