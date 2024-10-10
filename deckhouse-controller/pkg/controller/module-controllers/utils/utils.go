@@ -42,3 +42,23 @@ func GenerateRegistryOptions(ms *v1alpha1.ModuleSource) []cr.Option {
 
 	return opts
 }
+
+// TODO: replace up with this
+//
+// type RegistryConfig struct {
+// 	DockerConfig string
+// 	CA           string
+// 	Scheme       string
+// 	UserAgent    string
+// }
+
+// func GenerateRegistryOptions(ri *RegistryConfig) []cr.Option {
+// 	opts := []cr.Option{
+// 		cr.WithAuth(ri.DockerConfig),
+// 		cr.WithUserAgent(ri.UserAgent),
+// 		cr.WithCA(ri.CA),
+// 		cr.WithInsecureSchema(strings.ToLower(ri.Scheme) == "http"),
+// 	}
+
+// 	return opts
+// }

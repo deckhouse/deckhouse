@@ -20,10 +20,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"path"
-	"regexp"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
@@ -34,7 +32,6 @@ import (
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1 "k8s.io/api/core/v1"
@@ -42,147 +39,56 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-type Service struct {
-	dc        dependency.Container
-	k8sClient client.Client
+func NewKubernetesClient() (client.Client, error) {
+	scheme := runtime.NewScheme()
+
+	utilruntime.Must(v1alpha1.AddToScheme(scheme))
+	utilruntime.Must(corev1.AddToScheme(scheme))
+
+	restConfig := ctrl.GetConfigOrDie()
+	opts := client.Options{
+		Scheme: scheme,
+	}
+
+	k8sClient, err := client.New(restConfig, opts)
+	if err != nil {
+		return nil, fmt.Errorf("create kubernetes client: %w", err)
+	}
+
+	return k8sClient, nil
+}
+
+type DeckhouseService struct {
+	dc dependency.Container
 
 	registry        string
 	registryOptions []cr.Option
 }
 
-func NewService() *Service {
-	scheme := runtime.NewScheme()
-	utilruntime.Must(v1alpha1.AddToScheme(scheme))
-	utilruntime.Must(corev1.AddToScheme(scheme))
+func NewDeckhouseService(registryAddress string, registryConfig *RegistryConfig) *DeckhouseService {
+	return &DeckhouseService{
+		dc:              dependency.NewDependencyContainer(),
+		registry:        registryAddress,
+		registryOptions: GenerateRegistryOptions(registryConfig),
+	}
+}
 
-	restConfig := ctrl.GetConfigOrDie()
-	k8sClient, err := client.New(restConfig, client.Options{
-		Scheme: scheme,
-	})
+func (svc *DeckhouseService) GetDeckhouseRelease(releaseChannel string) (*releaseMetadata, error) {
+	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, "release-channel"), svc.registryOptions...)
 	if err != nil {
-		panic(fmt.Errorf("create kubernetes client: %w", err))
+		return nil, fmt.Errorf("fetch release image error: %v", err)
 	}
 
-	return &Service{
-		dc:        dependency.NewDependencyContainer(),
-		k8sClient: k8sClient,
-	}
-}
-
-func (svc *Service) InitDeckhouseRegistry(ctx context.Context) error {
-	secret := new(corev1.Secret)
-	if err := svc.k8sClient.Get(ctx, types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-registry"}, secret); err != nil {
-		return fmt.Errorf("list ModuleSource got an error: %w", err)
-	}
-
-	drs, err := ParseDeckhouseRegistrySecret(secret.Data)
+	img, err := regCli.Image(strcase.ToKebab(releaseChannel))
 	if err != nil {
-		return fmt.Errorf("parse deckhouse registry secret: %w", err)
+		return nil, fmt.Errorf("fetch image error: %v", err)
 	}
 
-	var discoverySecret corev1.Secret
-	key := types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-discovery"}
-	if err := svc.k8sClient.Get(ctx, key, &discoverySecret); err != nil {
-		return fmt.Errorf("get deckhouse discovery sectret got an error: %w", err)
-	}
-
-	clusterUUID, ok := discoverySecret.Data["clusterUUID"]
-	if !ok {
-		return fmt.Errorf("not found clusterUUID in discovery secret: %w", err)
-	}
-
-	ri := &RegistryInfo{
-		DockerConfig: drs.DockerConfig,
-		Scheme:       drs.Scheme,
-		UserAgent:    string(clusterUUID),
-	}
-
-	svc.registry = drs.ImageRegistry
-	svc.registryOptions = GenerateRegistryOptions(ri)
-
-	return nil
+	return svc.fetchReleaseMetadata(img)
 }
 
-func (svc *Service) InitModuleRegistry(ctx context.Context, moduleSource string) error {
-	ms := new(v1alpha1.ModuleSource)
-	if err := svc.k8sClient.Get(ctx, types.NamespacedName{Name: moduleSource}, ms); err != nil {
-		return fmt.Errorf("get ModuleSource %s got an error: %w", moduleSource, err)
-	}
-
-	ri := &RegistryInfo{
-		DockerConfig: ms.Spec.Registry.DockerCFG,
-		Scheme:       ms.Spec.Registry.Scheme,
-		CA:           ms.Spec.Registry.CA,
-		UserAgent:    "deckhouse-controller/ModuleControllers",
-	}
-
-	svc.registry = ms.Spec.Registry.Repo
-	svc.registryOptions = GenerateRegistryOptions(ri)
-
-	return nil
-}
-
-func (svc *Service) ListModuleSource(ctx context.Context) ([]string, error) {
-	msl := new(v1alpha1.ModuleSourceList)
-	if err := svc.k8sClient.List(ctx, msl); err != nil {
-		return nil, fmt.Errorf("list ModuleSource got an error: %w", err)
-	}
-
-	res := make([]string, 0, len(msl.Items))
-	for _, ms := range msl.Items {
-		res = append(res, ms.GetName())
-	}
-
-	return res, nil
-}
-
-func (svc *Service) ListDeckhouseReleases(ctx context.Context, fullList bool) ([]string, error) {
-	tags, err := svc.ListModuleTags("", fullList)
-	if err != nil {
-		return nil, fmt.Errorf("list versions: %w", err)
-	}
-
-	return tags, nil
-}
-
-var semVerRegex = regexp.MustCompile(`^v?([0-9]+)(\.[0-9]+)?(\.[0-9]+)?` +
-	`(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?` +
-	`(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?$`)
-
-func (svc *Service) ListModules() ([]string, error) {
-	// registry list modules <module-source>
-	ls, err := svc.fetchListFromRegistry(svc.registry)
-	if err != nil {
-		return nil, err
-	}
-
-	return ls, err
-}
-
-func (svc *Service) ListModuleTags(moduleName string, fullList bool) ([]string, error) {
-	// registry list module-release <module-source> <module-name>
-	ls, err := svc.fetchListFromRegistry(svc.registry, moduleName)
-	if err != nil {
-		return nil, err
-	}
-
-	// if we need full tags list, not only semVer
-	if fullList {
-		return ls, nil
-	}
-
-	res := make([]string, 0, 1)
-	for _, v := range ls {
-		if semVerRegex.MatchString(v) {
-			res = append(res, v)
-		}
-	}
-
-	return res, err
-}
-
-func (svc *Service) fetchListFromRegistry(pathParts ...string) ([]string, error) {
-	regCli, err := svc.dc.GetRegistryClient(path.Join(pathParts...), svc.registryOptions...)
+func (svc *DeckhouseService) ListDeckhouseReleases(ctx context.Context, fullList bool) ([]string, error) {
+	regCli, err := svc.dc.GetRegistryClient(svc.registry, svc.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("fetch release image error: %v", err)
 	}
@@ -213,27 +119,7 @@ type releaseMetadata struct {
 	Cooldown *metav1.Time `json:"-"`
 }
 
-func (svc *Service) GetDeckhouseRelease(releaseChannel string) (*releaseMetadata, error) {
-	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, "release-channel"), svc.registryOptions...)
-	if err != nil {
-		return nil, fmt.Errorf("fetch release image error: %v", err)
-	}
-
-	img, err := regCli.Image(strcase.ToKebab(releaseChannel))
-	if err != nil {
-		return nil, fmt.Errorf("fetch image error: %v", err)
-	}
-
-	return svc.fetchReleaseMetadata(img)
-}
-
-type moduleReleaseMetadata struct {
-	Version *semver.Version `json:"version"`
-
-	Changelog map[string]any
-}
-
-func (svc *Service) GetModuleRelease(moduleName, releaseChannel string) (*moduleReleaseMetadata, error) {
+func (svc *DeckhouseService) GetModuleRelease(moduleName, releaseChannel string) (*moduleReleaseMetadata, error) {
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, moduleName, "release"), svc.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("fetch release image error: %v", err)
@@ -256,7 +142,7 @@ func (svc *Service) GetModuleRelease(moduleName, releaseChannel string) (*module
 	return moduleMetadata, nil
 }
 
-func (svc *Service) fetchModuleReleaseMetadata(img v1.Image) (*moduleReleaseMetadata, error) {
+func (svc *DeckhouseService) fetchModuleReleaseMetadata(img v1.Image) (*moduleReleaseMetadata, error) {
 	var meta = new(moduleReleaseMetadata)
 
 	rc := mutate.Extract(img)
@@ -292,7 +178,7 @@ func (svc *Service) fetchModuleReleaseMetadata(img v1.Image) (*moduleReleaseMeta
 	return meta, nil
 }
 
-func (svc *Service) fetchReleaseMetadata(image v1.Image) (*releaseMetadata, error) {
+func (svc *DeckhouseService) fetchReleaseMetadata(image v1.Image) (*releaseMetadata, error) {
 	var meta = new(releaseMetadata)
 
 	layers, err := image.Layers()
@@ -325,7 +211,7 @@ func (svc *Service) fetchReleaseMetadata(image v1.Image) (*releaseMetadata, erro
 		err = rr.untarDeckhouseLayer(rc)
 		if err != nil {
 			rc.Close()
-			fmt.Println("layer is invalid: %s", err)
+			fmt.Printf("layer is invalid: %s\n", err)
 			continue
 		}
 		rc.Close()
@@ -343,7 +229,7 @@ func (svc *Service) fetchReleaseMetadata(image v1.Image) (*releaseMetadata, erro
 		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
 		if err != nil {
 			// if changelog build failed - warn about it but don't fail the release
-			fmt.Println("Unmarshal CHANGELOG yaml failed: %s", err)
+			fmt.Printf("Unmarshal CHANGELOG yaml failed: %s\n", err)
 			meta.Changelog = make(map[string]interface{})
 			return meta, nil
 		}
@@ -358,10 +244,10 @@ func (svc *Service) fetchReleaseMetadata(image v1.Image) (*releaseMetadata, erro
 	return meta, nil
 }
 
-func (svc *Service) fetchCooldown(image v1.Image) *metav1.Time {
+func (svc *DeckhouseService) fetchCooldown(image v1.Image) *metav1.Time {
 	cfg, err := image.ConfigFile()
 	if err != nil {
-		fmt.Println("image config error: %s", err)
+		fmt.Printf("image config error: %s\n", err)
 		return nil
 	}
 
@@ -376,7 +262,7 @@ func (svc *Service) fetchCooldown(image v1.Image) *metav1.Time {
 	if v, ok := cfg.Config.Labels["cooldown"]; ok {
 		t, err := parseTime(v)
 		if err != nil {
-			fmt.Println("parse cooldown(%s) error: %s", v, err)
+			fmt.Printf("parse cooldown(%s) error: %s\n", v, err)
 			return nil
 		}
 		mt := metav1.NewTime(t)
