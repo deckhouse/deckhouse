@@ -16,6 +16,13 @@ spec:
     insecureSkipVerify: true
   staticConfigs:
     - targets: ['kube-state-metrics.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:8080']
+  metricRelabelings:
+  - action: replace
+    regex: kube_verticalpodautoscaler_labels_info
+    replacement: kube_verticalpodautoscaler_labels
+    sourceLabels:
+    - __name__
+    targetLabel: __name__
   relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
@@ -23,12 +30,6 @@ spec:
       replacement: main
     - targetLabel: job
       replacement: kube-state-metrics
-    - sourceLabels: [__name__]
-      regex: kube_verticalpodautoscaler_labels_info
-      targetLabel: __name__
-      replacement: kube_verticalpodautoscaler_labels
-      action: replace
-  metricsPath: '/main/metrics'
 ---
 apiVersion: monitoring.coreos.com/v1alpha1
 kind: ScrapeConfig

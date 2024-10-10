@@ -12,7 +12,7 @@ ENV GOPROXY=${GOPROXY} \
 
 # Build KSM from sources in case of future patching
 RUN mkdir -p /src/kube-state-metrics && \
-  git clone --depth 1 --branch v2.9.0 ${SOURCE_REPO}/kubernetes/kube-state-metrics/ /src/kube-state-metrics
+  git clone --depth 1 --branch v2.13.0 ${SOURCE_REPO}/kubernetes/kube-state-metrics/ /src/kube-state-metrics
 WORKDIR /src/kube-state-metrics
 RUN go mod edit -go 1.20 \
     && go get golang.org/x/net@v0.17.0 \
