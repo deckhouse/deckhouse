@@ -15,7 +15,7 @@
 # Fixing a problem with segmentation of tunnel UDP packets on interfaces with the VMware vmxnet3 driver
 # The problem is observed when turning on Cilium VXLAN.
 bb-log-info "disabling packet segmentation for network interfaces"
-if ! [ -x "$(ethtool -h)" ]; then
+if ! [ -x "$(command -v ethtool)" ]; then
   bb-log-warning "ethtool is not founded"
   exit 0
 fi
