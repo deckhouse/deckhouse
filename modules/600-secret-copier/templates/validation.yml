@@ -47,6 +47,9 @@ metadata:
 spec:
   matchResources:
     matchPolicy: Equivalent
+    objectSelector:
+      matchLabels:
+        secret-copier.deckhouse.io/enabled: ""
     namespaceSelector: {}
   policyName: {{ $policyName }}
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
