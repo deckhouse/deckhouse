@@ -118,7 +118,7 @@ spec:
               fieldRef:
                 fieldPath: spec.nodeName
           - name: UPMETER_SCHEDULER_PROBE_IMAGE
-            value: {{ include "helm_lib_module_common_image" (list . "alpine") }}
+            value: {{ include "helm_lib_module_common_image" (list . "init") }}
           - name: UPMETER_SCHEDULER_PROBE_IMAGE_PULL_SECRETS
             value: "deckhouse-registry"
           - name: UPMETER_TLS
