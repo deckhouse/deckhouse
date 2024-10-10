@@ -115,11 +115,11 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 			if i == 0 {
 				BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
 			} else {
-				logs, error := ParallelBootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
+				logs, err := ParallelBootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
 				resultsСhan <- checkResult{
 					name: candidateName,
 					log:  logs,
-					err:  error,
+					err:  err,
 				}
 			}
 
@@ -134,9 +134,12 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 
 	for candidate := range resultsСhan {
 		candidate := candidate
+		if candidate.err != nil {
+			return candidate.err
+		}
 		log.InfoF("Log: %s:\n", candidate.name)
 		for _, line := range candidate.log {
-			log.InfoF("%s", line)
+			log.InfoLn(line)
 		}
 	}
 	return WaitForNodesListBecomeReady(c.client, nodesToWait, nil)
