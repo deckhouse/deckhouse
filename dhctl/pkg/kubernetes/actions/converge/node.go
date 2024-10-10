@@ -397,3 +397,14 @@ func IsNodeExistsInCluster(kubeCl *client.KubernetesClient, nodeName string) (bo
 
 	return exists, err
 }
+
+func IsSilentNodeExistsInCluster(kubeCl *client.KubernetesClient, nodeName string) (bool, error) {
+	exists := false
+	err := retry.NewSilentLoop(fmt.Sprintf("Checking node exists %s", nodeName), 5, 2*time.Second).Run(func() error {
+		var err error
+		exists, err = requestNodeExists(kubeCl, nodeName)
+		return err
+	})
+
+	return exists, err
+}

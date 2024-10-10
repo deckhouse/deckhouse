@@ -15,10 +15,7 @@
 package converge
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"os"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -44,44 +41,6 @@ func (c *CloudPermanentNodeGroupController) Run() error {
 	return c.NodeGroupController.Run()
 }
 
-func captureOutput(f func()) string {
-	old := os.Stdout
-
-	r, w, err := os.Pipe()
-	if err != nil {
-		fmt.Println("Error creating pipe:", err)
-		return ""
-	}
-
-	os.Stdout = w
-
-	f()
-
-	w.Close()
-	os.Stdout = old
-
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-	r.Close()
-
-	return buf.String()
-}
-
-func captureStdout(f func()) string {
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	f()
-
-	w.Close()
-	os.Stdout = old
-
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-	return buf.String()
-}
-
 func (c *CloudPermanentNodeGroupController) addNodes() error {
 	count := len(c.state.State)
 	index := 0
@@ -91,6 +50,7 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		nodesIndexToCreate []int
 		wg                 sync.WaitGroup
 	)
+
 	for c.desiredReplicas > count {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, index)
 		if _, ok := c.state.State[candidateName]; !ok {
@@ -99,6 +59,7 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		}
 		index++
 	}
+
 	type checkResult struct {
 		name string
 		log  []string
@@ -111,7 +72,6 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			log.InfoF("add goroutine for: %s\n", candidateName)
 			if i == 0 {
 				BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
 			} else {

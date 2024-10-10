@@ -76,7 +76,7 @@ func ParallelBootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *confi
 	nodeName := NodeName(cfg, nodeGroupName, index)
 
 	if isConverge {
-		nodeExists, err := IsNodeExistsInCluster(kubeCl, nodeName)
+		nodeExists, err := IsSilentNodeExistsInCluster(kubeCl, nodeName)
 		if err != nil {
 			return nil, err
 		} else if nodeExists {
