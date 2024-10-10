@@ -119,6 +119,7 @@ shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y conntrack-tools coreutils
+  - find /var/lib/apt/lists /var/cache/apt -type f -exec rm -f {} +
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
   - |

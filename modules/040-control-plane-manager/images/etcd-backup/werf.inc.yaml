@@ -24,6 +24,6 @@ shell:
   beforeInstall:
   - apt-get update
   - apt-get install -y glibc-utils
-  - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
+  - find /var/lib/apt/lists /var/cache/apt -type f -exec rm -f {} +
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
