@@ -30,7 +30,6 @@ k8s:
       azure: v1.27.11
       gcp: ccm/v27.1.0
     csi:
-      aws: v1.35.0            
       vsphere: v3.0.3
       openstack: v1.27.1
       provisioner: v3.5.0
@@ -52,7 +51,6 @@ k8s:
       azure: v1.28.3
       gcp: ccm/v27.1.6
     csi:
-      aws: v1.35.0            
       vsphere: v3.0.3
       openstack: v1.28.0
       provisioner: v3.6.0
@@ -74,7 +72,6 @@ k8s:
       azure: v1.29.0
       gcp: ccm/v29.0.0
     csi:
-      aws: v1.35.0            
       vsphere: v3.0.3
       openstack: v1.29.0
       provisioner: v4.0.0
@@ -96,7 +93,6 @@ k8s:
       azure: v1.30.2
       gcp: ccm/v29.0.1
     csi:
-      aws: v1.35.0            
       vsphere: v3.0.3
       openstack: v1.30.0
       provisioner: v5.0.0
@@ -118,7 +114,6 @@ k8s:
       azure: v1.31.1
       gcp: ccm/v30.1.0
     csi:
-      aws: v1.35.0            
       vsphere: v3.0.3
       openstack: v1.31.0
       provisioner: v5.1.0
