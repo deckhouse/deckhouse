@@ -276,7 +276,7 @@ type BootstrapNodeRunnerOptions struct {
 	NodeIndex                        int
 	NodeCloudConfig                  string
 	AdditionalStateSaverDestinations []SaverDestination
-	CatchLog                         bool
+	LogToBuffer                      bool
 }
 
 func (f *TerraformContext) GetBootstrapNodeRunner(metaConfig *config.MetaConfig, stateCache dstate.Cache, opts BootstrapNodeRunnerOptions) RunnerInterface {
@@ -292,7 +292,7 @@ func (f *TerraformContext) GetBootstrapNodeRunner(metaConfig *config.MetaConfig,
 				WithName(opts.NodeName).
 				WithAutoApprove(opts.AutoApprove).
 				WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...).
-				WithCatchingLog(opts.CatchLog)
+				WithCatchingLog(opts.LogToBuffer)
 
 			tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
 

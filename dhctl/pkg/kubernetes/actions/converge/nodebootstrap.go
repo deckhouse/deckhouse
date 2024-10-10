@@ -74,11 +74,19 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	return nil
 }
 
-func ParallelBootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext, buff *bytes.Buffer) error {
+func ParallelBootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext, buff *bytes.Buffer, saveLogToBuffer bool) error {
 	nodeName := NodeName(cfg, nodeGroupName, index)
 
 	if isConverge {
-		nodeExists, err := IsNodeExistsInClusterSilent(kubeCl, nodeName, buff)
+
+		var nodeExists bool
+		var err error
+
+		if saveLogToBuffer {
+			nodeExists, err = IsNodeExistsInClusterSilent(kubeCl, nodeName, buff)
+		} else {
+			nodeExists, err = IsNodeExistsInCluster(kubeCl, nodeName)
+		}
 		if err != nil {
 			return err
 		} else if nodeExists {
@@ -96,7 +104,7 @@ func ParallelBootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *confi
 		NodeGroupName:   nodeGroupName,
 		NodeIndex:       index,
 		NodeCloudConfig: cloudConfig,
-		CatchLog:        true,
+		LogToBuffer:     saveLogToBuffer,
 
 		AdditionalStateSaverDestinations: []terraform.SaverDestination{
 			NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings),
@@ -117,8 +125,10 @@ func ParallelBootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *confi
 		return err
 	}
 
-	logs := runner.GetLog()
-	buff.WriteString(strings.Join(logs, ""))
+	if saveLogToBuffer {
+		logs := runner.GetLog()
+		buff.WriteString(strings.Join(logs, ""))
+	}
 
 	return nil
 }

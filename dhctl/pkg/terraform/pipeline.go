@@ -73,7 +73,7 @@ func ApplyPipeline(r RunnerInterface, name string, extractFn func(r RunnerInterf
 		return err
 	}
 
-	if r.IsCatchLog() {
+	if r.IsLogToBuffer() {
 		return extractedData, pipelineFunc()
 	}
 

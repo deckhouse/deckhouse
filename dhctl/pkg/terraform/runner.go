@@ -66,7 +66,7 @@ type ChangeActionSettings struct {
 	AutoDismissDestructive bool
 	AutoApprove            bool
 	SkipChangesOnDeny      bool
-	CatchLog               bool
+	LogToBuffer            bool
 }
 
 type Runner struct {
@@ -230,7 +230,7 @@ func (r *Runner) withTerraformExecutor(t Executor) *Runner {
 }
 
 func (r *Runner) WithCatchingLog(flag bool) *Runner {
-	r.changeSettings.CatchLog = flag
+	r.changeSettings.LogToBuffer = flag
 	return r
 }
 
@@ -607,8 +607,8 @@ func (r *Runner) GetTerraformExecutor() Executor {
 	return r.terraformExecutor
 }
 
-func (r *Runner) IsCatchLog() bool {
-	return r.changeSettings.CatchLog
+func (r *Runner) IsLogToBuffer() bool {
+	return r.changeSettings.LogToBuffer
 }
 
 func (r *Runner) GetLog() []string {
@@ -641,7 +641,7 @@ func (r *Runner) execTerraform(args ...string) (int, error) {
 	r.switchTerraformIsRunning()
 	defer r.switchTerraformIsRunning()
 
-	exitCode, err := r.terraformExecutor.Exec(r.changeSettings.CatchLog, args...)
+	exitCode, err := r.terraformExecutor.Exec(r.changeSettings.LogToBuffer, args...)
 	log.InfoF("Terraform runner %q process exited.\n", r.step)
 
 	return exitCode, err
