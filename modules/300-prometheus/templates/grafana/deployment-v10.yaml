@@ -81,7 +81,7 @@ spec:
         env:
         {{- if .Values.global.modules.publicDomainTemplate }}
         - name: GF_SERVER_ROOT_URL
-          value: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana-v10") }}
+          value: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}
         {{- end }}
         - name: GF_AUTH_BASIC_ENABLED
           value: "false"
