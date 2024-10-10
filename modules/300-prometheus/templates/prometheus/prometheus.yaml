@@ -150,11 +150,10 @@ spec:
 {{- end }}
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
-  externalLabels:
-{{- with .Values.prometheus.externalLabels }}
-    {{- . | toYaml | nindent 4 }}
-{{- end }}
-    prometheus: deckhouse
+  # Empty field because when scraping metrics via the Federation API,
+  # labels from externalLabels are being added, 
+  # which makes the series in long-term storage and regular Prometheus different
+  externalLabels: {}
   prometheusExternalLabelName: ""
   replicaExternalLabelName: ""
   serviceAccountName: prometheus
@@ -200,6 +199,8 @@ spec:
     matchLabels:
       prometheus: main
       component: rules
+{{- $externalLabels := .Values.prometheus.externalLabels }}
+{{- $externalLabels = merge (dict "prometheus" "deckhouse") $externalLabels }}
 {{- if .Values.prometheus.internal.remoteWrite }}
   remoteWrite:
   {{- range .Values.prometheus.internal.remoteWrite }}
@@ -221,7 +222,15 @@ spec:
     {{- end }}
     {{- if .spec.writeRelabelConfigs }}
     writeRelabelConfigs:
-    {{- .spec.writeRelabelConfigs | toYaml | nindent 4 }}
+      {{- .spec.writeRelabelConfigs | toYaml | nindent 6 }}
+      {{- with $externalLabels }}
+      {{- range $key, $value := . }}
+      - sourceLabels: [{{ $key }}]
+        regex: "^$"
+        targetLabel: {{ $key }}
+        replacement: {{ $value | quote }}
+      {{- end }}
+      {{- end }}
     {{- end }}
     {{- if .spec.tlsConfig }}
       {{- $tlsConfig := .spec.tlsConfig | deepCopy }}
