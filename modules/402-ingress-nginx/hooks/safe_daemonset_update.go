@@ -27,7 +27,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
@@ -45,8 +45,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "for_delete",
 			ApiVersion:                   "v1",
 			Kind:                         "Pod",
-			ExecuteHookOnSynchronization: pointer.Bool(true),
-			ExecuteHookOnEvents:          pointer.Bool(true),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			ExecuteHookOnEvents:          ptr.To(true),
 			NamespaceSelector:            internal.NsSelector(),
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
@@ -60,8 +60,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:                   "apps.kruise.io/v1alpha1",
 			Kind:                         "DaemonSet",
 			NamespaceSelector:            internal.NsSelector(),
-			ExecuteHookOnEvents:          pointer.Bool(true),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(true),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": "proxy-failover",
@@ -74,8 +74,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:                   "apps.kruise.io/v1alpha1",
 			Kind:                         "DaemonSet",
 			NamespaceSelector:            internal.NsSelector(),
-			ExecuteHookOnEvents:          pointer.Bool(true),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(true),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"ingress-nginx-failover": "",

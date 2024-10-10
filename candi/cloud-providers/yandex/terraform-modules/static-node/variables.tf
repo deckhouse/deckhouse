@@ -54,6 +54,7 @@ locals {
   core_fraction     = lookup(local.instance_class, "coreFraction", null)
   memory            = local.instance_class.memory / 1024
   disk_size_gb      = lookup(local.instance_class, "diskSizeGB", 50)
+  disk_type         = lookup(local.instance_class, "diskType", "network-ssd")
   image_id          = local.instance_class.imageID
   node_network_cidr = var.providerClusterConfiguration.nodeNetworkCIDR
   ssh_public_key    = var.providerClusterConfiguration.sshPublicKey
