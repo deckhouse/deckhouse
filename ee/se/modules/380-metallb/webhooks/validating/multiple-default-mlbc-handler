@@ -28,8 +28,8 @@ kubernetes:
   kind: MetalLoadBalancerClass
   jqFilter: |
     {
-      "isDefault": .spec.isDefault
-      "name": .metadata.name
+      "isDefault": .spec.isDefault,
+      "name": .metadata.name,
     }
 EOF
 }
