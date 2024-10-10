@@ -123,7 +123,7 @@ cleanup:
 # goproxy  settings
 {{- $_ := set . "GOPROXY" (env "GOPROXY") }}
 ---
-{{ range $path, $content := .Files.Glob "werf/werf-**.yaml" }}
+{{ range $path, $content := .Files.Glob ".werf/werf-**.yaml" }}
 {{ tpl $content $ }}
 {{ end }}
 ---
