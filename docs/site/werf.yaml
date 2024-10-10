@@ -174,7 +174,6 @@ import:
 {{- $_ := set $context "mode" "default" }}
 {{- $_ := set $context "ModuleName" "docs" }}
 {{- $_ := set $context "ImageName" "builder" }}
-{{- $_ := set $context "delimiter" "-" }}
 {{- $_ := set $context "GOPROXY" "https://proxy.golang.org/" }}
 {{ tpl (.Files.Get "werf-docs-builder.inc.yaml") $context }}
 ---

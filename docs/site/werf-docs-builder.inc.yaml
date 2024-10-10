@@ -1,12 +1,12 @@
 ---
-image: {{ .ModuleName }}{{ .delimiter }}{{ .ImageName }}
+image: {{ .ModuleName }}/{{ .ImageName }}
 {{ if eq .mode "module" }}
 fromImage: common/distroless
 {{ else }}
 from: {{ .Images.BASE_SCRATCH }}
 {{ end }}
 import:
-- artifact: {{ .ModuleName }}{{ .delimiter }}{{ .ImageName }}-artifact
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/docs-builder
   to: /app/docs-builder
   before: setup
@@ -23,11 +23,11 @@ git:
     to: /app/hugo/config/production/hugo.yaml
 {{ end }}
 ---
-artifact: {{ .ModuleName }}{{ .delimiter }}{{ .ImageName }}-artifact
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 {{ if eq .mode "module" }}
 import:
-- artifact: {{ .ModuleName }}{{ .delimiter }}{{ .ImageName }}-src-artifact
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -46,7 +46,7 @@ shell:
   - chmod 0700 /src/docs-builder
 {{ if eq .mode "module" }}
 ---
-artifact: {{ .ModuleName }}{{ .delimiter }}{{ .ImageName }}-src-artifact
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: common/src-artifact
 shell:
   install:
