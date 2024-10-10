@@ -6,7 +6,7 @@ apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
 cloud:
-  provider: OpenStack
+  provider: Dynamix
   # [<en>] A prefix of objects that are created in the cloud during the installation.
   # [<en>] You might consider changing this.
   # [<ru>] Префикс объектов, создаваемых в облаке при установке.
@@ -101,69 +101,56 @@ spec:
 # [<ru>] Настройки облачного провайдера.
 # [<ru>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html
 apiVersion: deckhouse.io/v1
-kind: OpenStackClusterConfiguration
+kind: DynamixClusterConfiguration
 layout: Standard
-standard:
-  # [<en>] Network name for external communication.
-  # [<ru>] Имя сети для внешнего взаимодействия.
-  externalNetworkName: *!CHANGE_EXT_NET*
-  # [<en>] Addressing for the internal network of the cluster nodes.
-  # [<ru>] Адресация для внутренней сети узлов кластера.
-  internalNetworkCIDR: 192.168.198.0/24
-  # [<en>] A list of recursive DNS addresses of the internal network.
-  # [<ru>] Список адресов рекурсивных DNS внутренней сети.
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
-  internalNetworkDNSServers:
-    - 8.8.8.8
-    - 8.8.4.4
-  # [<en>] A flag that determines whether SecurityGroups and AllowedAddressPairs should be configured on internal network ports.
-  # [<ru>] Флаг, который определяет необходимо ли настраивать SecurityGroups и AllowedAddressPairs на портах внутренней сети.
-  internalNetworkSecurity: true
-# [<en>] OpenStack API access parameters
-# [<ru>] параметры доступа к OpenStack API
+# [<en>] The name of the location to install the cluster.
+# [<ru>] Имя места установки кластера.
+location: *!CHANGE_LOCATION!*
+# [<en>] Account name.
+# [<ru>] Имя аккаунта.
+account: *!CHANGE_ACCOUNT!*
+# [<en>] Dynamix API access parameters
+# [<ru>] Параметры доступа к Dynamix API
 provider:
-  authURL: *!CHANGE_API_URL*
+  # [<en>] The URL to the Dynamix API endpoint.
+  # [<ru>] URL-адрес API Dynamix
+  controllerUrl: *!CHANGE_CONTROLLER_URL*
+  # [<en>] The URL to the SSO Dynamix API endpoint.
+  # [<ru>] URL-адрес SSO Dynamix API
+  oAuth2Url: *!CHANGE_OAUTH2_URL*
+  # [<en>] The application ID.
+  # [<ru>] Идентификатор приложения.
+  appId: *!CHANGE_APP_ID*
+  # [<en>] The application secret.
+  # [<ru>] Секрет приложения.
+  appSecret: *!CHANGE_APP_SECRET*
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
-  domainName: users
-  # [<en>] OS_USER_DOMAIN_NAME variable from the openrc file.
-  # [<ru>] Переменная OS_USER_DOMAIN_NAME из файла openrc.
-  password: *!CHANGE_PASSWORD*
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
-  region: RegionOne
-  # [<en>] You might need to specify tenantName instead of tenantID.
-  # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-tenantname
-  # [<ru>] Возможно вам нужно указать tenantName вместо tenantID.
-  # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-tenantname
-  # tenantName: PROJECT_NAME
-  tenantID: *!CHANGE_PROJECT_ID*
-  username: *!CHANGE_USERNAME*
+  insecure: false
 masterNodeGroup:
   replicas: 1
-  # [<en>] Disk type array.
-  # [<ru>] Массив используемых типов дисков.
-  volumeTypeMap:
-    # [<en>] <availability zone>: <volume type>
-    # [<ru>] <availability zone>: <volume type>
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    DP1: dp1-high-iops
   instanceClass:
-    # [<en>] Flavor in use.
-    # [<ru>] Используемый flavor.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    flavorName: Standard-2-8-50
-    # [<en>] VM image in use.
-    # [<ru>] Используемый образ виртуальной машины.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    imageName: ubuntu-22-04-cloud-amd64
+    # [<en>] Number of allocated CPUs for the virtual machine.
+    # [<ru>] Количество выделеных CPU для виртуальной машины.
+    numCPUs: 4
+    # [<en>] The amount of allocated RAM for the virtual machine.
+    # [<ru>] Количество выделеной оперативной памяти для виртуальной машины.
+    memory: 8192
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
-    rootDiskSize: 40
+    rootDiskSizeGb: 50
+    # [<en>] OS image name to use for VM deployment.
+    # [<ru>] Имя образа ОС, используемое для развертывания ВМ.
+    imageName: *!CHANGE_IMAGE_NAME*
+    # [<en>] Storage name.
+    # [<ru>] Имя хранилища.
+    storageEndpoint: *!CHANGE_STORAGE_ENDPOINT*
+    # [<en>] Pool name.
+    # [<ru>] Имя пула хранения.
+    pool: *!CHANGE_POOL*
+    # [<en>] External network name.
+    # [<ru>] Имя внешней сети.
+    externalNetwork: *!CHANGE_EXTERNAL_NETWORK*
 # [<en>] Public SSH key for accessing cloud nodes.
 # [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
 # [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.

@@ -130,7 +130,7 @@ apiVersions:
       provider:
         type: object
         additionalProperties: false
-        description: Parameters for connecting to the Dynamix.
+        description: Параметры для подключения к Dynamix.
         properties:
           controllerUrl:
             description: URL-адрес конечной точки API Dynamix.
