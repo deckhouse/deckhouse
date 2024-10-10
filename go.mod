@@ -13,9 +13,8 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.13.0
-	github.com/flant/addon-operator v1.5.0
+	github.com/flant/addon-operator v0.0.0-20241010101536-e74b505e117d
 	github.com/flant/kube-client v1.2.0
-	github.com/flant/shell-operator v1.4.12
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.8
@@ -62,6 +61,7 @@ require (
 	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
 	github.com/docker/distribution v2.8.3+incompatible
+	github.com/flant/shell-operator v0.0.0-20241010101209-479bd2a5ce3c
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-logr/logr v1.4.1
 	github.com/gofrs/uuid/v5 v5.3.0
