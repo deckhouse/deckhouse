@@ -32,7 +32,7 @@ require (
 	github.com/prometheus/client_golang v1.13.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.25.5 // indirect
-	k8s.io/apimachinery v0.25.5 // indirect
+	k8s.io/apimachinery v0.25.5
 	k8s.io/client-go v0.25.5 // indirect
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
 )

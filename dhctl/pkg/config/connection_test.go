@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestLoadDHCTLConfigSchema(t *testing.T) {
@@ -65,7 +65,7 @@ func TestParseConnectionConfig(t *testing.T) {
 			expected: &ConnectionConfig{
 				SSHConfig: &SSHConfig{
 					SSHUser:      "ubuntu",
-					SSHPort:      pointer.Int32(22),
+					SSHPort:      ptr.To(int32(22)),
 					SSHExtraArgs: "-vvv",
 					SSHAgentPrivateKeys: []SSHAgentPrivateKey{
 						{
@@ -78,7 +78,7 @@ func TestParseConnectionConfig(t *testing.T) {
 						},
 					},
 					SSHBastionHost: "158.160.111.65",
-					SSHBastionPort: pointer.Int32(22),
+					SSHBastionPort: ptr.To(int32(22)),
 					SSHBastionUser: "ubuntu",
 				},
 				SSHHosts: []SSHHost{
@@ -101,7 +101,7 @@ func TestParseConnectionConfig(t *testing.T) {
 			expected: &ConnectionConfig{
 				SSHConfig: &SSHConfig{
 					SSHUser:      "ubuntu",
-					SSHPort:      pointer.Int32(22),
+					SSHPort:      ptr.To(int32(22)),
 					SSHExtraArgs: "-vvv",
 					SSHAgentPrivateKeys: []SSHAgentPrivateKey{
 						{

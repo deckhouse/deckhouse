@@ -17,7 +17,8 @@ spec:
     - name: v1alpha1
       served: true
       storage: false
-      schema: &schema
+      deprecated: true
+      schema:
         openAPIV3Schema:
           type: object
           description: |
@@ -179,4 +180,4 @@ spec:
                   items:
                     type: string
       subresources: *subresources
-      additionalPrinterColumns: &additionalPrinterColumns
+      additionalPrinterColumns: *additionalPrinterColumns

@@ -29,7 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
@@ -46,9 +46,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "ngs",
 			ApiVersion:                   "deckhouse.io/v1",
 			Kind:                         "NodeGroup",
-			WaitForSynchronization:       pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			WaitForSynchronization:       ptr.To(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   chaosFilterNodeGroup,
 		},
 		{
@@ -63,18 +63,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					},
 				},
 			},
-			WaitForSynchronization:       pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			WaitForSynchronization:       ptr.To(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   chaosFilterNode,
 		},
 		{
 			Name:                         "machines",
 			ApiVersion:                   "machine.sapcloud.io/v1alpha1",
 			Kind:                         "Machine",
-			WaitForSynchronization:       pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			WaitForSynchronization:       ptr.To(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   chaosFilterMachine,
 		},
 	},

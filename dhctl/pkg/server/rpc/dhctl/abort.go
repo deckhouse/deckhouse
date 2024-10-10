@@ -25,7 +25,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -218,8 +218,8 @@ func (s *Service) abort(
 		ResourcesPath:    resourcesPath,
 		InitialState:     initialState,
 		NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
-		UseTfCache:       pointer.Bool(true),
-		AutoApprove:      pointer.Bool(true),
+		UseTfCache:       ptr.To(true),
+		AutoApprove:      ptr.To(true),
 		ResourcesTimeout: request.Options.ResourcesTimeout.AsDuration(),
 		DeckhouseTimeout: request.Options.DeckhouseTimeout.AsDuration(),
 

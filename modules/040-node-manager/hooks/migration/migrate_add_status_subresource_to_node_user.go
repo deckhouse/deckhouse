@@ -20,7 +20,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -29,8 +29,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "node_user",
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			ExecuteHookOnEvents:          ptr.To(false),
 			ApiVersion:                   "deckhouse.io/v1",
 			Kind:                         "NodeUser",
 			FilterFunc:                   applyNodeUsersFilter,
