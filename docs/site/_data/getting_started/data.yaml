@@ -578,6 +578,46 @@ installTypes:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
+  dynamix:
+    languages: ["ru"]
+    iconPath: images/icons/platforms/dynamix.png
+    ee_only: true
+    layout:
+      code: standard
+      name: Standard
+    pages_title:
+      en: "Deckhouse Kubernetes Platform in Dynamix"
+      ru: "Deckhouse Kubernetes Platform в Dynamix"
+    type: cloud
+    name:
+      en: "Dynamix"
+      ru: "Dynamix"
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
   red:
     languages: ["ru"]
     iconPath: images/icons/platforms/red.png
@@ -590,7 +630,7 @@ installTypes:
       ru: РЕД виртуализация
     description:
       ru: <a href="https://redos.red-soft.ru/product/red-virtualizatsiya/">РЕД виртуализация</a> – система управления виртуализацией серверов и рабочих станций. Базируется на гипервизоре KVM (kernel-based virtual machine) и открытой платформе управления виртуальной инфраструктурой.
-      en: <a href="https://redos.red-soft.ru/product/red-virtualizatsiya/">РЕД виртуализация</a> – система управления виртуализацией серверов и рабочих станций.   
+      en: <a href="https://redos.red-soft.ru/product/red-virtualizatsiya/">РЕД виртуализация</a> – система управления виртуализацией серверов и рабочих станций.
     steps:
       step2:
         name:
@@ -616,7 +656,7 @@ installTypes:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
-        template: getting_started/global/STEP_FINISH.md   
+        template: getting_started/global/STEP_FINISH.md
   spacevm:
     languages: ["ru"]
     iconPath: images/icons/platforms/spacevm.png
@@ -629,7 +669,7 @@ installTypes:
       ru: SpaceVM
     description:
       ru: <a href="https://spacevm.ru/">Облачная платформа на SpaceVM</a> – инструмент серверной виртуализации для эффективного управления ИТ-инфраструктурой. Представляет собой комплексную платформу для развертывания полноценного частного облака в корпоративной среде с необходимыми дополнительными инструментами для автоматизации и оркестрации работы облачных сервисов.
-      en: <a href="https://spacevm.ru/">Облачная платформа на SpaceVM</a> – инструмент серверной виртуализации для эффективного управления ИТ-инфраструктурой.  
+      en: <a href="https://spacevm.ru/">Облачная платформа на SpaceVM</a> – инструмент серверной виртуализации для эффективного управления ИТ-инфраструктурой.
     steps:
       step2:
         name:

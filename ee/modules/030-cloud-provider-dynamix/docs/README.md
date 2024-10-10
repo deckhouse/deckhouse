@@ -1,0 +1,5 @@
+---
+title: "Cloud provider — Dynamix"
+---
+
+The `cloud-provider-dynamix` module is responsible for interacting with the Dynamix resources. It allows the [node manager](../../modules/040-node-manager/) module to use Dynamix resources for provisioning nodes for the specified [node group](../../modules/040-node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).
