@@ -1,3 +1,8 @@
+/*
+Copyright 2023 Flant JSC
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+*/
+
 package hooks
 
 import (
@@ -59,6 +64,9 @@ func handleReports(input *go_hook.HookInput, dc dependency.Container) error {
 	k8sClient := dc.MustGetK8sClient()
 
 	list, err := k8sClient.Dynamic().Resource(sbomGVR).Namespace(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
 
 	// DeleteCollection does not work here, it gives an error:
 	// 		"the server could not find the requested resource"
