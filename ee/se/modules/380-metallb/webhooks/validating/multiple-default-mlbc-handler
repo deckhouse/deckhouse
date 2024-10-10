@@ -44,7 +44,8 @@ function forbid() {
 }
 
 function __main__() {
-  context::jq . > /tmp/qqq.json
+  echo "HOOK-TEST"
+  context::jq . > /tmp/multiple-default-mlbc-handler.json # TODO: delete line
   exit 0
 
 }

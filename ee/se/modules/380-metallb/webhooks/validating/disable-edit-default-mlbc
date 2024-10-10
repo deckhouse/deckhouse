@@ -45,7 +45,8 @@ function forbid() {
 }
 
 function __main__() {
-  context::jq . > /tmp/bbb.json
+  echo "HOOK-TEST"
+  context::jq . > /tmp/disable-edit-default-mlbc.json # TODO: delete line
   if context::jq -e -r '.review.request.object.metadata.name == "l2-default"' >/dev/null 2>&1; then
     forbid "Editing of the resource is prohibited until the module is upgraded to version 2"
     exit 0
