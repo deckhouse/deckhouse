@@ -37,7 +37,6 @@ mount:
 {{ end }}
 shell:
   install:
-  - set -x
   - cd /src
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - go mod tidy
