@@ -4,10 +4,10 @@ fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /trivy
-  to: /trivy
+  to: /bin/trivy
   before: install
 docker:
-  ENTRYPOINT: ["/trivy"]
+  ENTRYPOINT: ["/bin/trivy"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromCacheVersion: "2024-09-25 17:10"
