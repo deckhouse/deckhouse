@@ -43,7 +43,6 @@ function forbid() {
 }
 
 function __main__() {
-  context::jq . > /tmp/multiple-default-mlbc-handler.json # TODO: delete line
   mclc_name=$(context::jq -r '.review.request.name')
   old_isdefault_field=$(context::jq -r '.review.request.oldObject.spec.isDefault')
   new_isdefault_field=$(context::jq -r '.review.request.object.spec.isDefault')

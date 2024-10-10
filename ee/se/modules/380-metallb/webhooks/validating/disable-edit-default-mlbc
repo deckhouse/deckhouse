@@ -45,11 +45,10 @@ function forbid() {
 }
 
 function __main__() {
-  context::jq . > /tmp/disable-edit-default-mlbc.json # TODO: delete line
   mc_version=$(context::jq -r '.snapshots.metallb_mc[]?.filterResult.version')
   mlbc_name=$(context::jq -r '.review.request.name')
   if [ "$mc_version" == "1" ] && [ "$mlbc_name" == "l2-default" ]; then
-    forbid "Editing or creating of the resource MetalLoadBalancerClass with name 'l2-default' is prohibited until the module Metallb is version 1."
+    forbid "Editing or creating of the resource MetalLoadBalancerClass with name 'l2-default' is prohibited until the Metallb module version is 1."
     exit 0
   fi
 
