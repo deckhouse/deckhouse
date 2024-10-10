@@ -786,7 +786,7 @@ Bashible on nodes merges main Deckhouse containerd config with configs from `/et
 
 {% endraw %}
 {% alert level="danger" %}
-You can override the values of parameters that are set in `/etc/containerd/deckhouse.toml`, but the work of such configurations will have to be provided independently. It is also better not to affect nodeGroup `master` c control-plane with such configurations.
+You can override the values of the parameters that are specified in the file `/etc/containerd/deckhouse.toml`, but you will have to ensure their functionality on your own. Also, it is better not to change the configuration for the master nodes (nodeGroup `master`).
 {% endalert %}
 {% raw %}
 

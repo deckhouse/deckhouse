@@ -789,11 +789,11 @@ Done
 {% endalert %}
 {% raw %}
 
-Bashible на узлах мержит основной конфиг containerd для Deckhouse с конфигами из `/etc/containerd/conf.d/*.toml`.
+Bashible на узлах объединяет конфигурацию containerd для Deckhouse с конфигурацией из файла `/etc/containerd/conf.d/*.toml`.
 
 {% endraw %}
-{% alert level="danger" %}
-Вы можете переопределять значения параметров которые заданы в `/etc/containerd/deckhouse.toml` но работу таких конфигурации придётся обеспечивать самостоятельно. Также лучше такими конфигами не затрагивать nodeGroup `master` c control-plane.
+{% alert level="warning" %}
+Вы можете переопределять значения параметров, которые заданы в файле `/etc/containerd/deckhouse.toml`, но их работу придётся обеспечивать самостоятельно. Также, лучше изменением конфигурации не затрагивать master-узлы (nodeGroup `master`).
 {% endalert %}
 {% raw %}
 
