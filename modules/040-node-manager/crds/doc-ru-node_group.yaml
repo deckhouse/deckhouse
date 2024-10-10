@@ -786,7 +786,6 @@ spec:
                     mode:
                       description: |
                         Поддерживаемые режимы работы fencing:
-                        * Disabled - fencing отключен.
                         * Watchdog - использовать модуль ядра watchdog (сторожевой таймер).
 
                         Реализация Watchdog включает в себя два основных компонента:

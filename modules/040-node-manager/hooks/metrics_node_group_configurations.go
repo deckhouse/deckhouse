@@ -23,7 +23,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // Count user defined NodeGroupConfigurations, aggregate them by NodeGroups and export as metric
@@ -33,7 +33,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "configurations",
-			ExecuteHookOnSynchronization: pointer.Bool(true),
+			ExecuteHookOnSynchronization: ptr.To(true),
 			ApiVersion:                   "deckhouse.io/v1alpha1",
 			Kind:                         "NodeGroupConfiguration",
 			FilterFunc:                   filterNGConfigurations,

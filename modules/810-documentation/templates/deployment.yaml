@@ -89,7 +89,7 @@ spec:
             port: 8081
         readinessProbe:
           httpGet:
-            path: /healthz
+            path: /readyz
             port: 8081
         resources:
           requests:

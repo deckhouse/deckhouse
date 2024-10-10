@@ -12,7 +12,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 type volumeAttachment struct {
@@ -43,7 +43,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:                   "storage.k8s.io/v1",
 			Kind:                         "VolumeAttachment",
 			FilterFunc:                   applyVolumeAttachmentFilter,
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 		},
 	},
 }, handleVolumeAttachments)

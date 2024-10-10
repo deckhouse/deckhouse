@@ -22,7 +22,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // common part for filtering secret with Configuration checksums
@@ -33,7 +33,7 @@ type ConfigurationChecksum map[string]string
 func ConfigurationChecksumHookConfig() go_hook.KubernetesConfig {
 	return go_hook.KubernetesConfig{
 		Name:                   "configuration_checksums_secret",
-		WaitForSynchronization: pointer.Bool(false),
+		WaitForSynchronization: ptr.To(false),
 		ApiVersion:             "v1",
 		Kind:                   "Secret",
 		NamespaceSelector: &types.NamespaceSelector{

@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sYAML "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -82,7 +82,7 @@ func ValidateResources(configData string, opts ...ValidateOption) error {
 		_, gvk, err := scheme.Codecs.UniversalDecoder().Decode(docData, nil, obj)
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
 			})
 			continue
@@ -100,7 +100,7 @@ func ValidateResources(configData string, opts ...ValidateOption) error {
 
 		if len(errMessages) != 0 {
 			errs.Append(ErrKindValidationFailed, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Group:    gvk.Group,
 				Version:  gvk.Version,
 				Kind:     gvk.Kind,
@@ -136,7 +136,7 @@ func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts
 		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
 			})
 			continue
@@ -167,7 +167,7 @@ func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts
 
 		if len(errMessages) != 0 {
 			errs.Append(ErrKindValidationFailed, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Group:    gvk.Group,
 				Version:  gvk.Version,
 				Kind:     gvk.Kind,
@@ -216,7 +216,7 @@ func ValidateClusterConfiguration(
 		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
 			})
 			continue
@@ -250,7 +250,7 @@ func ValidateClusterConfiguration(
 
 		if len(errMessages) != 0 {
 			errs.Append(ErrKindValidationFailed, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Group:    gvk.Group,
 				Version:  gvk.Version,
 				Kind:     gvk.Kind,
@@ -325,7 +325,7 @@ func ValidateProviderSpecificClusterConfiguration(
 		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
 			})
 			continue
@@ -355,7 +355,7 @@ func ValidateProviderSpecificClusterConfiguration(
 
 		if len(errMessages) != 0 {
 			errs.Append(ErrKindValidationFailed, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Group:    gvk.Group,
 				Version:  gvk.Version,
 				Kind:     gvk.Kind,
@@ -400,7 +400,7 @@ func ValidateStaticClusterConfiguration(
 		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
 			})
 			continue
@@ -430,7 +430,7 @@ func ValidateStaticClusterConfiguration(
 
 		if len(errMessages) != 0 {
 			errs.Append(ErrKindValidationFailed, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Group:    gvk.Group,
 				Version:  gvk.Version,
 				Kind:     gvk.Kind,

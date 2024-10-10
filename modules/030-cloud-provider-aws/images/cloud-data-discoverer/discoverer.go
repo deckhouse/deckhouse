@@ -27,7 +27,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
@@ -67,7 +67,7 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 
 	for {
 		out, err := ec2Client.DescribeInstanceTypes(&ec2.DescribeInstanceTypesInput{
-			MaxResults: pointer.Int64(100),
+			MaxResults: ptr.To(int64(100)),
 			NextToken:  token,
 		})
 		if err != nil {

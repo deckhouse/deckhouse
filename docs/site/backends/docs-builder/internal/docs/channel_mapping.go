@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package docs
 
 import (
 	"errors"
@@ -45,7 +45,7 @@ func (m *channelMappingEditor) edit(fn func(channelMapping)) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	path := filepath.Join(m.baseDir, "data/modules/channels.yaml")
+	path := filepath.Join(m.baseDir, modulesDir, "channels.yaml")
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		return fmt.Errorf("open %q: %w", path, err)

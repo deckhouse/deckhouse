@@ -24,7 +24,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -116,7 +116,7 @@ func setupRuntimeManager(log logr.Logger) (ctrl.Manager, error) {
 	managerOpts := manager.Options{
 		LeaderElection:          false,
 		Scheme:                  scheme,
-		GracefulShutdownTimeout: pointer.Duration(10 * time.Second),
+		GracefulShutdownTimeout: ptr.To(10 * time.Second),
 		HealthProbeBindAddress:  ":9090",
 		WebhookServer:           webhook.NewServer(webhook.Options{CertDir: "/certs"}),
 		Metrics: metrics.Options{

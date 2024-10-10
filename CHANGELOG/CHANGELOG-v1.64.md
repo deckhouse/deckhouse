@@ -111,6 +111,7 @@
  - **[deckhouse-controller]** Correct module validation. [#8989](https://github.com/deckhouse/deckhouse/pull/8989)
  - **[deckhouse-tools]** Fix custom certs copying. [#9840](https://github.com/deckhouse/deckhouse/pull/9840)
  - **[delivery]** Fixed the `argocd-repo-server` and `argocd-server` Services with multiple ports broken by Helm. [#9573](https://github.com/deckhouse/deckhouse/pull/9573)
+ - **[dhctl]** Fix sshBastionPort spec type [#9990](https://github.com/deckhouse/deckhouse/pull/9990)
  - **[dhctl]** Canceling migration from d8-cni-configuration secret to proper CNI module configs. [#9900](https://github.com/deckhouse/deckhouse/pull/9900)
  - **[dhctl]** Fix SSH client startup in Deckhouse installation phase. [#9628](https://github.com/deckhouse/deckhouse/pull/9628)
  - **[dhctl]** Retry loop for `ensureRequiredNamespacesExist` function. [#9620](https://github.com/deckhouse/deckhouse/pull/9620)
@@ -123,6 +124,7 @@
  - **[helm_lib]** Check a helm client's capabilities before applying validatingadmissionpolicies. [#9705](https://github.com/deckhouse/deckhouse/pull/9705)
  - **[ingress-nginx]** Bump ingress-nginx to `1.10.4`. [#9513](https://github.com/deckhouse/deckhouse/pull/9513)
     Ingress nginx controller will restart.
+ - **[istio]** Improved validation of the ModuleConfig [#9912](https://github.com/deckhouse/deckhouse/pull/9912)
  - **[istio]** Fixed the `kiali` Service with multiple ports broken by Helm. [#9573](https://github.com/deckhouse/deckhouse/pull/9573)
  - **[istio]** Fixed an issue with automatically applying new custom certificates for mTLS issuing. [#9335](https://github.com/deckhouse/deckhouse/pull/9335)
  - **[kube-dns]** Fixed the `d8-kube-dns` and `d8-kube-dns-redirect` Services with multiple ports broken by Helm. [#9573](https://github.com/deckhouse/deckhouse/pull/9573)

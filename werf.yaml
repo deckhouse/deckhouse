@@ -6,6 +6,63 @@ gitWorktree:
 cleanup:
   disableGitHistoryBasedPolicy: {{ env "WERF_DISABLE_META_TAGS" "false" }}
 ---
+{{- $_ := set . "DistroPackagesProxy" (env "DISTRO_PACKAGES_PROXY" "") }}
+{{- $_ := set . "CargoProxy" (env "CARGO_PROXY" "") }}
+# Templates for distro proxy for packages (deb,rpm,apk)
+  {{- define "alt packages proxy" }}
+# Replace altlinux repos with our proxy
+  {{- if $.DistroPackagesProxy }}
+- sed -i "s|ftp.altlinux.org/pub/distributions/ALTLinux|{{ $.DistroPackagesProxy }}/repository/ALT-Linux-APT-Repository|g" /etc/apt/sources.list.d/alt.list
+  {{- end }}
+- export DEBIAN_FRONTEND=noninteractive
+- apt-get update
+{{- end }}
+
+{{- define "debian packages proxy" }}
+# Replace debian repos with our proxy
+  {{- if $.DistroPackagesProxy }}
+- sed -i "s|http://deb.debian.org|http://{{ $.DistroPackagesProxy }}/repository|g" /etc/apt/sources.list
+  {{- end }}
+- export DEBIAN_FRONTEND=noninteractive
+- apt-get update
+{{- end }}
+
+{{- define "ubuntu packages proxy" }}
+  # Replace ubuntu repos with our proxy
+  {{- if $.DistroPackagesProxy }}
+- sed -i 's|http://archive.ubuntu.com|http://{{ $.DistroPackagesProxy }}/repository/archive-ubuntu|g' /etc/apt/sources.list
+- sed -i 's|http://security.ubuntu.com|http://{{ $.DistroPackagesProxy }}/repository/security-ubuntu|g' /etc/apt/sources.list
+  {{- end }}
+- export DEBIAN_FRONTEND=noninteractive
+- apt-get update
+{{- end }}
+
+{{- define "alpine packages proxy" }}
+# Replace alpine repos with our proxy
+  {{- if $.DistroPackagesProxy }}
+- sed -i 's|https://dl-cdn.alpinelinux.org|http://{{ $.DistroPackagesProxy }}/repository|g' /etc/apk/repositories
+  {{- end }}
+- apk update
+{{- end }}
+
+{{- define "node packages proxy" }}
+  {{- if $.DistroPackagesProxy }}
+- npm config set registry http://{{ $.DistroPackagesProxy }}/repository/npmjs/
+  {{- end }}
+{{- end }}
+
+{{- define "pypi proxy" }}
+  {{- if $.DistroPackagesProxy }}
+- |
+  cat <<"EOD" > /etc/pip.conf
+  [global]
+  index = http://{{ $.DistroPackagesProxy }}/repository/pypi-proxy/pypi
+  index-url = http://{{ $.DistroPackagesProxy }}/repository/pypi-proxy/simple
+  trusted-host = {{ $.DistroPackagesProxy }}
+  EOD
+  {{- end }}
+{{- end }}
+---
 # revisions settings
 {{- $editionsSettings := (.Files.Get "editions.yaml" | fromYaml) }}
 {{- $_ := set . "Editions" $editionsSettings.editions }}
@@ -60,9 +117,11 @@ cleanup:
 # use example.com as default because we can fail build without env
 {{- $_ := set . "CLOUD_PROVIDERS_SOURCE_REPO" (env "CLOUD_PROVIDERS_SOURCE_REPO" | default "https://example.com") }}
 
+# Source repo with observability private code
+{{- $_ := set . "OBSERVABILITY_SOURCE_REPO" (env "OBSERVABILITY_SOURCE_REPO" | default "https://example.com") }}
+
 # goproxy  settings
 {{- $_ := set . "GOPROXY" (env "GOPROXY") }}
-
 ---
 artifact: jq
 from: {{ $.Images.BASE_ALPINE_DEV }}
@@ -841,6 +900,7 @@ args:
   BASE_SCRATCH: {{ .Images.BASE_SCRATCH }}
   SOURCE_REPO: {{ .SOURCE_REPO }}
   CLOUD_PROVIDERS_SOURCE_REPO: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+  OBSERVABILITY_SOURCE_REPO: {{ .OBSERVABILITY_SOURCE_REPO }}
   # proxies for various packages
   GOPROXY: {{ .GOPROXY }}
   {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless")) }}
@@ -909,13 +969,18 @@ dependencies:
   {{- $_ := set $ctx "TF" $Root.TF }}
   {{- $_ := set $ctx "SOURCE_REPO" $Root.SOURCE_REPO }}
   {{- $_ := set $ctx "CLOUD_PROVIDERS_SOURCE_REPO" $Root.CLOUD_PROVIDERS_SOURCE_REPO }}
+  {{- $_ := set $ctx "OBSERVABILITY_SOURCE_REPO" $Root.OBSERVABILITY_SOURCE_REPO }}
   {{- $_ := set $ctx "GOPROXY" $Root.GOPROXY }}
+  {{- $_ := set $ctx "DistroPackagesProxy" $Root.DistroPackagesProxy }}
+  {{- $_ := set $ctx "CargoProxy" $Root.CargoProxy }}
 ---
 {{ include "module_image_template" $ctx }}
   {{- range $ImageYamlMainfest := regexSplit "\n?---[ \t]*\n" (include "module_image_template" $ctx) -1 }}
     {{- $ImageManifest := $ImageYamlMainfest | fromYaml }}
     {{- if $ImageManifest.image }}
-      {{- $ModulesImagesDigestList = append $ModulesImagesDigestList $ImageManifest.image }}
+      {{- if ne $ImageManifest.final false }}
+        {{- $ModulesImagesDigestList = append $ModulesImagesDigestList $ImageManifest.image }}
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}
