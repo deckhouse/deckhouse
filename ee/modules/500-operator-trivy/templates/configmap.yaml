@@ -21,6 +21,7 @@ data:
   policies.bundle.oci.ref: {{ $policiesBundleRepository }}
   {{- with (include "helm_lib_tolerations" (tuple . "any-node") | fromYaml) }}
   scanJob.tolerations: {{ .tolerations | toJson | quote }}
+  nodeCollector.tolerations: {{ .tolerations | toJson | quote }}
   {{- end }}
   {{- with (include "helm_lib_node_selector" (tuple . "system") | fromYaml) }}
   scanJob.nodeSelector: {{ .nodeSelector | toJson | quote }}
