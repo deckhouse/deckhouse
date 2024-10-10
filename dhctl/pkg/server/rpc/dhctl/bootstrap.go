@@ -37,7 +37,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -185,6 +188,9 @@ func (s *Service) bootstrap(
 ) *pb.BootstrapResult {
 	var err error
 
+	cleanuper := callback.NewCallback()
+	defer cleanuper.Call()
+
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
 		Width:     int(request.Options.LogWidth),
@@ -192,6 +198,7 @@ func (s *Service) bootstrap(
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.CacheDir = s.cacheDir
+	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
@@ -202,23 +209,27 @@ func (s *Service) bootstrap(
 		configPath              string
 		resourcesPath           string
 		postBootstrapScriptPath string
+		cleanup                 func() error
 	)
 	err = log.Process("default", "Preparing configuration", func() error {
-		configPath, err = writeTempFile([]byte(input.CombineYAMLs(
+		configPath, cleanup, err = util.WriteDefaultTempFile([]byte(input.CombineYAMLs(
 			request.ClusterConfig, request.InitConfig, request.ProviderSpecificClusterConfig,
 		)))
+		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("failed to write init configuration: %w", err)
 		}
 
-		resourcesPath, err = writeTempFile([]byte(input.CombineYAMLs(
+		resourcesPath, cleanup, err = util.WriteDefaultTempFile([]byte(input.CombineYAMLs(
 			request.InitResources, request.Resources,
 		)))
+		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("failed to write resources: %w", err)
 		}
 
-		postBootstrapScriptPath, err = writeTempFile([]byte(request.PostBootstrapScript))
+		postBootstrapScriptPath, cleanup, err = util.WriteDefaultTempFile([]byte(request.PostBootstrapScript))
+		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("failed to write post bootstrap script: %w", err)
 		}
@@ -264,7 +275,8 @@ func (s *Service) bootstrap(
 			return fmt.Errorf("parsing connection config: %w", err)
 		}
 
-		sshClient, err = prepareSSHClient(connectionConfig)
+		sshClient, cleanup, err = helper.CreateSSHClient(connectionConfig)
+		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
@@ -273,7 +285,6 @@ func (s *Service) bootstrap(
 	if err != nil {
 		return &pb.BootstrapResult{Err: err.Error()}
 	}
-	defer sshClient.Stop()
 
 	var commanderUUID uuid.UUID
 	if request.Options.CommanderUuid != "" {
@@ -307,7 +318,7 @@ func (s *Service) bootstrap(
 	stateData, marshalErr := json.Marshal(state)
 	err = errors.Join(bootstrapErr, marshalErr)
 
-	return &pb.BootstrapResult{State: string(stateData), Err: errToString(err)}
+	return &pb.BootstrapResult{State: string(stateData), Err: util.ErrToString(err)}
 }
 
 func (s *Service) bootstrapServerTransitions() []fsm.Transition {
