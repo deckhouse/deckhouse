@@ -35,7 +35,7 @@ var terraformLogsMatcher = regexp.MustCompile(`(\s+\[(TRACE|DEBUG|INFO|WARN|ERRO
 
 type Executor interface {
 	Output(...string) ([]byte, error)
-	Exec(...string) (int, error)
+	Exec(bool, ...string) (int, error)
 	GetStdout() []string
 	Stop()
 }
@@ -74,7 +74,7 @@ func (c *CMDExecutor) GetStdout() []string {
 	return c.stdoutSaved
 }
 
-func (c *CMDExecutor) Exec(args ...string) (int, error) {
+func (c *CMDExecutor) Exec(catchLog bool, args ...string) (int, error) {
 	c.cmd = terraformCmd(args...)
 
 	// Start terraform as a leader of the new process group to prevent
@@ -128,8 +128,11 @@ func (c *CMDExecutor) Exec(args ...string) (int, error) {
 
 		s := bufio.NewScanner(stdout)
 		for s.Scan() {
-			c.stdoutSaved = append(c.stdoutSaved, s.Text())
-			// log.InfoLn(s.Text())
+			if catchLog {
+				c.stdoutSaved = append(c.stdoutSaved, s.Text())
+			} else {
+				log.InfoLn(s.Text())
+			}
 		}
 	}()
 
@@ -178,7 +181,7 @@ func (f *fakeExecutor) Output(parts ...string) ([]byte, error) {
 	result := f.data[parts[0]]
 	return result.resp, result.err
 }
-func (f *fakeExecutor) Exec(parts ...string) (int, error) {
+func (f *fakeExecutor) Exec(_ bool, parts ...string) (int, error) {
 	result := f.data[parts[0]]
 	return result.code, result.err
 }

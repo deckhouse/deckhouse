@@ -19,7 +19,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -70,11 +69,54 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 		return err
 	}
 
-	logs := runner.GetLog()
-	log.InfoF("%s", len(logs))
-	log.InfoF("LOGS: \n %s", logs[0])
-
 	return nil
+}
+
+func ParallelBootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext) ([]string, error) {
+	nodeName := NodeName(cfg, nodeGroupName, index)
+
+	if isConverge {
+		nodeExists, err := IsNodeExistsInCluster(kubeCl, nodeName)
+		if err != nil {
+			return nil, err
+		} else if nodeExists {
+			return nil, fmt.Errorf("node with name %s exists in cluster", nodeName)
+		}
+	}
+
+	nodeGroupSettings := cfg.FindTerraNodeGroup(nodeGroupName)
+
+	// TODO pass cache as argument or better refact func
+	runner := terraformContext.GetBootstrapNodeRunner(cfg, cache.Global(), terraform.BootstrapNodeRunnerOptions{
+		AutoApprove:     true,
+		NodeName:        nodeName,
+		NodeGroupStep:   step,
+		NodeGroupName:   nodeGroupName,
+		NodeIndex:       index,
+		NodeCloudConfig: cloudConfig,
+		CatchLog:        true,
+		AdditionalStateSaverDestinations: []terraform.SaverDestination{
+			NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings),
+		},
+	})
+
+	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.OnlyState)
+	if err != nil {
+		return nil, err
+	}
+
+	if tomb.IsInterrupted() {
+		return nil, ErrConvergeInterrupted
+	}
+
+	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings)
+	if err != nil {
+		return nil, err
+	}
+
+	logs := runner.GetLog()
+
+	return logs, nil
 }
 
 func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext) (*terraform.PipelineOutputs, error) {
