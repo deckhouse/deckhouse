@@ -95,7 +95,7 @@ func DefineRegistryCommand(kpApp *kingpin.Application) {
 
 		svc := NewDeckhouseService(registry, rconf)
 
-		ls, err := svc.ListDeckhouseReleases(ctx, *releaseFullList)
+		ls, err := svc.ListDeckhouseReleases()
 		if err != nil {
 			return fmt.Errorf("list deckhouse releases: %w", err)
 		}
@@ -245,7 +245,7 @@ func DefineRegistryCommand(kpApp *kingpin.Application) {
 
 		svc := NewModuleService(registry, rconf)
 
-		ls, err := svc.ListModuleTags(*moduleNameListModuleRelease, *moduleFullList)
+		ls, err := svc.ListModuleTags(*moduleNameListModuleRelease)
 		if err != nil {
 			return fmt.Errorf("list module tags: %w", err)
 		}

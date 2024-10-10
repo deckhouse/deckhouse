@@ -58,7 +58,7 @@ func (svc *ModuleService) ListModules() ([]string, error) {
 	return ls, err
 }
 
-func (svc *ModuleService) ListModuleTags(moduleName string, fullList bool) ([]string, error) {
+func (svc *ModuleService) ListModuleTags(moduleName string) ([]string, error) {
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, moduleName), svc.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %v", err)
@@ -72,13 +72,13 @@ func (svc *ModuleService) ListModuleTags(moduleName string, fullList bool) ([]st
 	return ls, err
 }
 
-type moduleReleaseMetadata struct {
+type ModuleReleaseMetadata struct {
 	Version *semver.Version `json:"version"`
 
 	Changelog map[string]any
 }
 
-func (svc *ModuleService) GetModuleRelease(moduleName, releaseChannel string) (*moduleReleaseMetadata, error) {
+func (svc *ModuleService) GetModuleRelease(moduleName, releaseChannel string) (*ModuleReleaseMetadata, error) {
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, moduleName, "release"), svc.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %v", err)
@@ -101,8 +101,8 @@ func (svc *ModuleService) GetModuleRelease(moduleName, releaseChannel string) (*
 	return moduleMetadata, nil
 }
 
-func (svc *ModuleService) fetchModuleReleaseMetadata(img v1.Image) (*moduleReleaseMetadata, error) {
-	var meta = new(moduleReleaseMetadata)
+func (svc *ModuleService) fetchModuleReleaseMetadata(img v1.Image) (*ModuleReleaseMetadata, error) {
+	var meta = new(ModuleReleaseMetadata)
 
 	rc := mutate.Extract(img)
 	defer rc.Close()

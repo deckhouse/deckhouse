@@ -16,7 +16,6 @@ package registry
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"path"
@@ -47,7 +46,7 @@ func NewDeckhouseService(registryAddress string, registryConfig *RegistryConfig)
 	}
 }
 
-func (svc *DeckhouseService) GetDeckhouseRelease(releaseChannel string) (*releaseMetadata, error) {
+func (svc *DeckhouseService) GetDeckhouseRelease(releaseChannel string) (*ReleaseMetadata, error) {
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, "release-channel"), svc.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %v", err)
@@ -70,7 +69,7 @@ func (svc *DeckhouseService) GetDeckhouseRelease(releaseChannel string) (*releas
 	return releaseMetadata, nil
 }
 
-func (svc *DeckhouseService) ListDeckhouseReleases(ctx context.Context, fullList bool) ([]string, error) {
+func (svc *DeckhouseService) ListDeckhouseReleases() ([]string, error) {
 	regCli, err := svc.dc.GetRegistryClient(svc.registry, svc.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %v", err)
@@ -90,7 +89,7 @@ type canarySettings struct {
 	Interval libapi.Duration `json:"interval"` // in minutes
 }
 
-type releaseMetadata struct {
+type ReleaseMetadata struct {
 	Version      *semver.Version           `json:"version"`
 	Canary       map[string]canarySettings `json:"canary"`
 	Requirements map[string]string         `json:"requirements"`
@@ -102,8 +101,8 @@ type releaseMetadata struct {
 	Cooldown *metav1.Time `json:"-"`
 }
 
-func (svc *DeckhouseService) fetchReleaseMetadata(image v1.Image) (*releaseMetadata, error) {
-	var meta = new(releaseMetadata)
+func (svc *DeckhouseService) fetchReleaseMetadata(image v1.Image) (*ReleaseMetadata, error) {
+	var meta = new(ReleaseMetadata)
 
 	layers, err := image.Layers()
 	if err != nil {
