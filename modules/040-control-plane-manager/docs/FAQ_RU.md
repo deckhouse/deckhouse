@@ -514,6 +514,10 @@ spec:
 
 ## Резервное копирование etcd и восстановление
 
+### Что делается автоматически
+
+Автоматически запускаются CronJob `kube-system/d8-etcd-backup-*` в 00:00 по UTC+0. Результат сохраняется в `/var/lib/etcd/etcd-backup.snapshot` на всех узлах с `control-plane` в кластере (мастер-узлы).
+
 ### Как сделать бэкап etcd?
 
 Войдите на любой control-plane-узел под пользователем `root` и используйте следующий bash-скрипт:
@@ -601,7 +605,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 Для корректного восстановления кластера multi-master выполните следующие шаги:
 
-1. Явно включите режим High Availability (HA) с помощью глобального параметра [highAvailability](https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-highavailability). Это нужно, например, чтобы не потерять одну реплику Prometheus и её PVC, поскольку в режиме single-master HA отключен по умолчанию.
+1. Явно включите режим High Availability (HA) с помощью глобального параметра [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability). Это нужно, например, чтобы не потерять одну реплику Prometheus и её PVC, поскольку в режиме single-master HA отключен по умолчанию.
 
 1. Переведите кластер в режим single-master, в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере-multi-master-в-single-master) для облачных кластеров или самостоятельно выведите статические master-узлы из кластера.
 

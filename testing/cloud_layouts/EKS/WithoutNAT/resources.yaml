@@ -5,3 +5,18 @@ metadata:
   name: localpath-all
 spec:
   path: "/opt/local-path-provisioner"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dotfile-secret
+data:
+  .secret-file: dmFsdWUtMg0KDQo=
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dotfile-cm
+  namespace: d8-system
+data:
+  .file: "content"

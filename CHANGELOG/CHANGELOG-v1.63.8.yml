@@ -1,0 +1,18 @@
+cloud-provider-vcd:
+  fixes:
+    - summary: Add notes for catalog template.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9597
+deckhouse:
+  fixes:
+    - summary: Use tmpfs for hooks execution dir.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9646
+deckhouse-controller:
+  fixes:
+    - summary: Fixed panic when processing terminating deckhouse pod.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9621
+node-manager:
+  fixes:
+    - summary: Fix NodeGroupConfiguration comparsion function.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9606
+      impact: bashible apiserver will restart.
+

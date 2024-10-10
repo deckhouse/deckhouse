@@ -26,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 func DefineTestSSHConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -145,7 +145,7 @@ func DefineTestUploadExecCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 
 		cmd := sshClient.UploadScript(ScriptPath)
 		if Sudo {
-			cmd = cmd.Sudo()
+			cmd.Sudo()
 		}
 		var stdout []byte
 		stdout, err = cmd.Execute()
@@ -184,7 +184,8 @@ func DefineTestBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return nil
 		}
 
-		cmd := sshClient.UploadScript(ScriptName).Sudo()
+		cmd := sshClient.UploadScript(ScriptName)
+		cmd.Sudo()
 		parentDir := path.Dir(BundleDir)
 		bundleDir := path.Base(BundleDir)
 		stdout, err := cmd.ExecuteBundle(parentDir, bundleDir)

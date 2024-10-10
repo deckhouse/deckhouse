@@ -76,7 +76,7 @@ properties:
                   x-examples: ["HostWithFailover"]
                 controllerVersion:
                   type: string
-                  x-examples: ["1.6", "1.9", "1.10"]
+                  x-examples: ["1.9", "1.10"]
                 enableIstioSidecar:
                   type: boolean
                 waitLoadBalancerOnTerminating:
@@ -95,13 +95,13 @@ properties:
                     description: |
                       The same as the `spec.nodeSelector` pod parameter in Kubernetes.
 
-                      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+                      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
                 tolerations:
                     type: array
                     description: |
                       The same as `spec.tolerations` for the Kubernetes pod.
 
-                      Use [automatic](https://deckhouse.io/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
+                      Use [automatic](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
                     items:
                       type: object
                       properties:
@@ -127,6 +127,8 @@ properties:
                     annotations:
                       type: object
                       additionalProperties: true
+                    loadBalancerClass:
+                      type: string
                     behindL7Proxy:
                       type: boolean
                     realIPHeader:
@@ -142,6 +144,8 @@ properties:
                     annotations:
                       type: object
                       additionalProperties: true
+                    loadBalancerClass:
+                      type: string
                 loadBalancerWithSSLPassthrough:
                   type: object
                   default: {}
@@ -153,6 +157,8 @@ properties:
                     annotations:
                       type: object
                       additionalProperties: true
+                    loadBalancerClass:
+                      type: string
                 hostPort:
                   type: object
                   default: {}

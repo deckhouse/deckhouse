@@ -87,7 +87,9 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 
 		Context("For etcd main", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus-crd"]`)
+				// fake *-crd modules are required for backward compatibility with lib_helm library
+				// TODO: remove fake crd modules
+				f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
 				f.HelmRender()
 			})
 

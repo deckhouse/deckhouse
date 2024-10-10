@@ -24,7 +24,7 @@ mount:
     to: /go/pkg
 shell:
   beforeInstall:
-    - apt update && apt install ca-certificates
+    - apt update && apt install -y ca-certificates
   install:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}

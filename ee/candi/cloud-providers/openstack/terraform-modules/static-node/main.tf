@@ -39,8 +39,7 @@ resource "openstack_networking_port_v2" "port" {
   security_group_ids = try(index(local.networks_with_security_disabled, data.openstack_networking_network_v2.network[count.index].name), -1) == -1 ? module.security_groups.security_group_ids : []
 
   dynamic "allowed_address_pairs" {
-    for_each = local.internal_network_security_enabled ? list(local.pod_subnet_cidr) : []
-
+    for_each = local.internal_network_security_enabled && local.networks[count.index] == local.network_with_port_security ? list(local.pod_subnet_cidr) : []
     content {
       ip_address = allowed_address_pairs.value
     }

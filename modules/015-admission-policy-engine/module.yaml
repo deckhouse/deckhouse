@@ -1,0 +1,7 @@
+name: admission-policy-engine
+weight: 15
+description: |
+    Admission policy engine module
+
+requirements:
+  bootstrapped: true

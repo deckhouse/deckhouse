@@ -72,11 +72,7 @@ func (e *Extender) getKubernetesVersion() {
 			}
 			instance.logger.Warnf("cannot parse TEST_EXTENDER_KUBERNETES_VERSION env variable value %q: %v", val, err)
 		}
-		if err := e.waitForFileExists("/tmp/kubectl_version"); err != nil {
-			e.err = err
-			return
-		}
-		content, err := os.ReadFile("/tmp/kubectl_version")
+		content, err := e.waitForFileExists("/tmp/kubectl_version")
 		if err != nil {
 			e.err = err
 			return
@@ -92,16 +88,24 @@ func (e *Extender) getKubernetesVersion() {
 	})
 }
 
-func (e *Extender) waitForFileExists(path string) error {
+func (e *Extender) waitForFileExists(path string) ([]byte, error) {
 	e.logger.Debugf("waiting for file %s", path)
 	for {
 		if _, err := os.Stat(path); err == nil {
 			e.logger.Debugf("file %s exists", path)
-			return nil
+			content, err := os.ReadFile(path)
+			if err != nil {
+				return nil, err
+			}
+			if len(content) == 0 {
+				e.logger.Debugf("file %s is empty", path)
+				continue
+			}
+			return content, nil
 		} else if os.IsNotExist(err) {
 			time.Sleep(10 * time.Millisecond)
 		} else {
-			return err
+			return nil, err
 		}
 	}
 }
@@ -109,7 +113,7 @@ func (e *Extender) waitForFileExists(path string) error {
 // update kubernetes version if kubectl_version is updated
 func (e *Extender) watchForKubernetesVersion() {
 	versionCh := make(chan *semver.Version)
-	watcher := &versionWatcher{ch: versionCh}
+	watcher := &versionWatcher{ch: versionCh, logger: e.logger}
 	go func() {
 		if err := watcher.watch("/tmp/kubectl_version"); err != nil {
 			e.mtx.Lock()
@@ -150,6 +154,9 @@ func (e *Extender) IsTerminator() bool {
 
 // Filter implements Extender interface, it is used by scheduler in addon-operator
 func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
+	if !e.versionMatcher.Has(name) {
+		return nil, nil
+	}
 	e.getKubernetesVersion()
 	e.mtx.Lock()
 	if e.err != nil {
@@ -157,9 +164,6 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 		return nil, &scherror.PermanentError{Err: fmt.Errorf("parse kubernetes version failed: %s", e.err)}
 	}
 	e.mtx.Unlock()
-	if !e.versionMatcher.Has(name) {
-		return nil, nil
-	}
 	if err := e.versionMatcher.Validate(name); err != nil {
 		e.logger.Errorf("requirements of the '%s' module are not satisfied: current kubernetes version is not suitable: %s", name, err.Error())
 		return pointer.Bool(false), fmt.Errorf("requirements are not satisfied: current kubernetes version is not suitable: %s", err.Error())

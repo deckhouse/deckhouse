@@ -44,9 +44,9 @@ properties:
           **Do not use** DNS names (nor do create Ingress resources) that match this template to avoid conflicts with the Ingress resources created by Deckhouse.
 
           **Pay attention to the following:**
-          - Domain must be different from [clusterDomain](https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain)!**
-          - Domain used in the template must not match the domain specified in the [clusterDomain](https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) parameter. For example, if `clusterDomain` is set to `cluster.local` (the default value), `publicDomainTemplate` cannot be set to `%s.cluster.local`.
-          - Domain used in the template should not match the domain specified in the [clusterDomain](https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) parameter and the internal service network zone. For example, if clusterDomain is set to cluster.local (default value) and the service network zone is ru-central1.internal, then publicDomainTemplate cannot be %s.cluster.local or %s.ru-central1.internal.
+          - Domain must be different from [clusterDomain](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain)!**
+          - Domain used in the template must not match the domain specified in the [clusterDomain](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) parameter. For example, if `clusterDomain` is set to `cluster.local` (the default value), `publicDomainTemplate` cannot be set to `%s.cluster.local`.
+          - Domain used in the template should not match the domain specified in the [clusterDomain](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) parameter and the internal service network zone. For example, if clusterDomain is set to cluster.local (default value) and the service network zone is ru-central1.internal, then publicDomainTemplate cannot be %s.cluster.local or %s.ru-central1.internal.
           - If this parameter is omitted, no Ingress resources will be created.
         x-doc-examples: [ "%s.kube.company.my", "kube-%s.company.my" ]
         x-examples: [ "%s.kube.company.my" ]
@@ -93,7 +93,7 @@ properties:
               The HTTPS usage mode:
               * `CertManager` — Deckhouse modules use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter;
               * `CustomCertificate` — Deckhouse modules use HTTPS using the certificate from the `d8-system` namespace;
-              * `Disabled` — Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/));
+              * `Disabled` — Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/));
               * `OnlyInURI` — Deckhouse modules use HTTP in the expectation that an HTTPS load balancer runs in front of them and terminates HTTPS. Load balancer should provide a redirect from HTTP to HTTPS.
             default: CertManager
             enum:
@@ -113,7 +113,7 @@ properties:
                 description: |
                   Name of a `ClusterIssuer` to use for Deckhouse modules.
 
-                  The [cert-manager](https://deckhouse.io/documentation/v1/modules/101-cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Also, you can use your own `ClusterIssuer`.
+                  The [cert-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/101-cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Also, you can use your own `ClusterIssuer`.
           customCertificate:
             type: object
             additionalProperties: false

@@ -13,11 +13,11 @@ spec:
                     Произвольное описание назначения проекта. Укажите пустую строку, если описание не требуется.
                 projectTypeName:
                   description: |
-                    Имя ресурса [ProjectType](../cr.html#projecttype), который определяет, какие ресурсы будут созданы в проекте.
+                    Имя ресурса [ProjectType](cr.html#projecttype), который определяет, какие ресурсы будут созданы в проекте.
                 template:
                   description: |
-                    Значения, передаваемые в [шаблон ресурсов](../cr.html#projecttype-v1alpha1-spec-resourcestemplate) при создании проекта.
-                    Перед созданием, значения согласовываются со [схемой](../cr.html#projecttype-v1alpha1-spec-openapi) входных параметров шаблона ресурсов.
+                    Значения, передаваемые в [шаблон ресурсов](cr.html#projecttype-v1alpha1-spec-resourcestemplate) при создании проекта.
+                    Перед созданием, значения согласовываются со [схемой](cr.html#projecttype-v1alpha1-spec-openapi) входных параметров шаблона ресурсов.
             status:
               description: ""
               properties:
@@ -45,10 +45,27 @@ spec:
 
                     Перед созданием, значения согласовываются со [схемой](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) входных параметров шаблона ресурсов.
             status:
+              description: ""
               properties:
-                message:
-                  description: Сообщение, указывающее на причину появления текущего статуса.
+                namespaces:
+                  description: Используемые пространства имен.
+                observedGeneration:
+                  description: Последний generation проекта.
+                templateGeneration:
+                  description: Последний generation шаблона.
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      status:
+                        type: string
+                      message:
+                        type: string
                 state:
-                  description: Короткое описание состояния проекта, например, Ready, Error, Pending, и т.д.
-                sync:
-                  description: Указывает на то, что параметры проекта были успешно применены после создания или изменения.
+                  description: Короткое описание состояния проекта, например, Error, Deploying, Deployed, и т.д.

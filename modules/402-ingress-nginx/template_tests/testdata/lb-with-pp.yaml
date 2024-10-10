@@ -6,7 +6,7 @@ spec:
   config:
     load-balance: ewma
   ingressClass: nginx
-  controllerVersion: "1.6"
+  controllerVersion: "1.9"
   inlet: LoadBalancerWithProxyProtocol
   resourcesRequests:
     mode: Static

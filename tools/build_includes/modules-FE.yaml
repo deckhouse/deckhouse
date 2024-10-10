@@ -39,11 +39,6 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/010-metallb-crd
-  to: /deckhouse/modules/010-metallb-crd
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
   to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
   stageDependencies:
@@ -266,6 +261,11 @@
         - '**/*.go'
 - add: /ee/modules/650-runtime-audit-engine
   to: /deckhouse/modules/650-runtime-audit-engine
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/fe/modules/040-node-manager/templates/ngc-ca-certificate.yaml
+  to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
   stageDependencies:
     setup:
         - '**/*.go'

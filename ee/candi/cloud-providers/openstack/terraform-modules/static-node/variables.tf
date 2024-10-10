@@ -25,9 +25,26 @@ variable "clusterUUID" {
   type = string
 }
 
+# SimpleWithInternalNetwork only
+data "openstack_networking_subnet_v2" "internal" {
+  count = local.layout == "simpleWithInternalNetwork" ? 1 : 0
+  name  = var.providerClusterConfiguration.simpleWithInternalNetwork.internalSubnetName
+}
+
+# SimpleWithInternalNetwork only
+data "openstack_networking_network_v2" "internal" {
+  count      = local.layout == "simpleWithInternalNetwork" ? 1 : 0
+  network_id = data.openstack_networking_subnet_v2.internal[0].network_id
+}
+
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
   internal_network_name = local.prefix
+  network_with_port_security = (
+    local.layout == "simpleWithInternalNetwork" ? data.openstack_networking_network_v2.internal[0].name :
+    local.layout == "simple" ? var.providerClusterConfiguration.simple.externalNetworkName :
+    local.prefix
+  )
   pod_subnet_cidr = var.clusterConfiguration.podSubnetCIDR
   ng = [for i in var.providerClusterConfiguration.nodeGroups: i if i.name == var.nodeGroupName][0]
   instance_class = local.ng["instanceClass"]

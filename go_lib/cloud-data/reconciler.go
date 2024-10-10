@@ -24,6 +24,8 @@ import (
 	"syscall"
 	"time"
 
+	"math/rand"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
@@ -215,7 +217,7 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 		return instanceTypes[i].Name < instanceTypes[j].Name
 	})
 
-	err = retryFunc(3, 3, c.logger, func() error {
+	err = retryFunc(15, 3*time.Second, 30*time.Second, c.logger, func() error {
 		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		data, errGetting := c.k8sDynamicClient.Resource(v1alpha1.GVR).Get(cctx, v1alpha1.CloudDiscoveryDataResourceName, metav1.GetOptions{})
 		cancel()
@@ -334,7 +336,7 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 		return
 	}
 
-	err = retryFunc(3, 3, c.logger, func() error {
+	err = retryFunc(15, 3*time.Second, 30*time.Second, c.logger, func() error {
 		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		secret, errGetting := c.k8sClient.CoreV1().Secrets("kube-system").Get(cctx, "d8-cloud-provider-discovery-data", metav1.GetOptions{})
 		cancel()
@@ -348,7 +350,8 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 				return fmt.Errorf("Cannot create cloud data resource: %v", err)
 			}
 
-			errGetting = nil
+		} else if errGetting != nil {
+			return fmt.Errorf("Cannot check d8-cloud-provider-discovery-data secret before creating it: %v", errGetting)
 		} else {
 			secret.Data = map[string][]byte{
 				"discovery-data.json": discoveryData,
@@ -414,7 +417,7 @@ func (c *Reconciler) orphanedDisksReconcile(ctx context.Context) {
 	c.logger.Infoln("Start orphaned disks discovery step")
 	defer c.logger.Infoln("Finish orphaned disks discovery step")
 
-	err := retryFunc(3, 3, c.logger, func() error {
+	err := retryFunc(15, 3*time.Second, 30*time.Second, c.logger, func() error {
 		cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 
@@ -465,8 +468,9 @@ type retryable func() error
 
 var errMaxRetriesReached = fmt.Errorf("exceeded retry limit")
 
-func retryFunc(attempts int, sleep int, logger *log.Entry, fn retryable) error {
+func retryFunc(attempts int, initialSleep time.Duration, maxSleep time.Duration, logger *log.Entry, fn retryable) error {
 	var err error
+	sleep := initialSleep
 
 	for i := 0; i < attempts; i++ {
 		err = fn()
@@ -477,8 +481,15 @@ func retryFunc(attempts int, sleep int, logger *log.Entry, fn retryable) error {
 		logger.Errorf("Attempt %d of %d. %v", i+1, attempts, err)
 
 		if i < attempts-1 {
-			logger.Infof("Waiting %d seconds before next attempt", sleep)
-			time.Sleep(time.Duration(sleep) * time.Second)
+			jitter := time.Duration(rand.Int63n(int64(sleep / 2)))
+			sleepTime := sleep + jitter
+
+			logger.Infof("Waiting %v before next attempt", sleepTime)
+			time.Sleep(sleepTime)
+			sleep *= 2
+			if sleep > maxSleep {
+				sleep = maxSleep
+			}
 		}
 	}
 

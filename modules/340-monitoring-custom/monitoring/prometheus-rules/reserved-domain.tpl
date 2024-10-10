@@ -20,5 +20,5 @@
 {{ if .Values.global.modules.publicDomainTemplate }}
         [Get instructions on how to fix it here]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/modules/040-node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
 {{- else }}
-        [Get instructions on how to fix it here](https://deckhouse.io/documentation/v1/modules/040-node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
+        [Get instructions on how to fix it here](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
 {{- end }}

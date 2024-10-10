@@ -46,7 +46,7 @@ clusterConfiguration:
   podSubnetCIDR: 10.111.0.0/16
   podSubnetNodeCIDRPrefix: "24"
   serviceSubnetCIDR: 10.222.0.0/16
-enabledModules: ["vertical-pod-autoscaler-crd", "upmeter"]
+enabledModules: ["vertical-pod-autoscaler", "upmeter"]
 modules:
   https:
     mode: CustomCertificate

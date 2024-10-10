@@ -1,2 +1,5 @@
 type: object
-properties: {}
+properties:
+  allowNamespacesWithoutProjects:
+    description: |
+      Если эта опция выключена - запретить создавать неймспейсы которые не являются частью проекта. 

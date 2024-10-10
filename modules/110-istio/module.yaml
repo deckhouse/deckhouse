@@ -1,0 +1,7 @@
+name: istio
+weight: 110
+description: |
+  Service Mesh
+
+requirements:
+  bootstrapped: true

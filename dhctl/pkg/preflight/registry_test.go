@@ -24,8 +24,34 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
+
+type testState struct{}
+
+func (s *testState) SetGlobalPreflightchecksWasRan() error {
+	return nil
+}
+
+func (s *testState) GlobalPreflightchecksWasRan() (bool, error) {
+	return false, nil
+}
+
+func (s *testState) SetCloudPreflightchecksWasRan() error {
+	return nil
+}
+
+func (s *testState) CloudPreflightchecksWasRan() (bool, error) {
+	return false, nil
+}
+
+func (s *testState) SetStaticPreflightchecksWasRan() error {
+	return nil
+}
+
+func (s *testState) StaticPreflightchecksWasRan() (bool, error) {
+	return false, nil
+}
 
 func TestCheckRegistryAccessThroughProxy(t *testing.T) {
 	tests := map[string]func(*testing.T){
@@ -121,21 +147,25 @@ func TestTryToSkippingCheck(t *testing.T) {
 
 	var tests = []struct {
 		registryAddress  string
+		registryDockerCfg string
 		noProxyAddresses []string
 		skipped          bool
 	}{
 		{
 			registryAddress:  "192.168.199.129/d8/deckhouse/ee",
+			registryDockerCfg: "registryDockerCfg: eyJhdXRocyI6eyIxOTIuMTY4LjE5OS4xMjkiOnsiYXV0aCI6ImEyOTJZV3hyYjNZNldHVnBiamxoWm1VPSJ9fX0K",
 			noProxyAddresses: []string{"127.0.0.1", "192.168.199.0/24"},
 			skipped:          true,
 		},
 		{
 			registryAddress:  "registry.deckhouse.io/ce",
+			registryDockerCfg: "",
 			noProxyAddresses: []string{"registry.deckhouse.io"},
 			skipped:          true,
 		},
 		{
 			registryAddress:  "quay.io",
+			registryDockerCfg: "registryDockerCfg: eyJhdXRocyI6eyJxdWF5LmlvIjp7fX19",
 			noProxyAddresses: []string{"docker.io"},
 			skipped:          false,
 		},
@@ -159,9 +189,9 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   imagesRepo: %s
-  registryDockerCfg: eyJhdXRocyI6eyIxOTIuMTY4LjE5OS4xMjkiOnsiYXV0aCI6ImEyOTJZV3hyYjNZNldHVnBiamxoWm1VPSJ9fX0K
+  %s
   registryScheme: HTTP
-`, strings.Join(test.noProxyAddresses, `", "`), test.registryAddress)
+`, strings.Join(test.noProxyAddresses, `", "`), test.registryAddress, test.registryDockerCfg)
 
 		metaConfig, err := config.ParseConfigFromData(clusterConfig)
 		s.NoError(err)
@@ -169,7 +199,9 @@ deckhouse:
 		installer, err := config.PrepareDeckhouseInstallConfig(metaConfig)
 		s.NoError(err)
 
-		preflightChecker := NewChecker(&ssh.Client{}, installer, metaConfig)
+		bootstrapState := &testState{}
+
+		preflightChecker := NewChecker(ssh.NewNodeInterfaceWrapper(&ssh.Client{}), installer, metaConfig, bootstrapState)
 
 		err = preflightChecker.CheckRegistryAccessThroughProxy()
 		if test.skipped {

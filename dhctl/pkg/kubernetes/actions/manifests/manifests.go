@@ -54,9 +54,9 @@ type DeckhouseDeploymentParams struct {
 
 	DeployTime time.Time
 
-	IsSecureRegistry       bool
-	MasterNodeSelector     bool
-	KubeadmBootstrap       bool
+	IsSecureRegistry   bool
+	MasterNodeSelector bool
+	KubeadmBootstrap   bool
 }
 
 type imagesDigests map[string]map[string]interface{}
@@ -339,6 +339,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Value: "4223",
 		},
 		{
+			Name:  "ADDON_OPERATOR_CRD_EXTRA_LABELS",
+			Value: "heritage=deckhouse",
+		},
+		{
 			Name:  "HELM3LIB",
 			Value: "yes",
 		},
@@ -382,6 +386,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Name:  "DEBUG_HTTP_SERVER_ADDR",
 			Value: "127.0.0.1:9652",
 		},
+		{
+			Name:  "ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS",
+			Value: "Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled",
+		},
 	}
 
 	// Deployment composition
@@ -398,6 +406,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
 	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
 		Name:  "DOWNLOADED_MODULES_DIR",
+		Value: downloadedModulesDir,
+	})
+	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
+		Name:  "EXTERNAL_MODULES_DIR",
 		Value: downloadedModulesDir,
 	})
 
@@ -623,6 +635,17 @@ func SecretMasterDevicePath(nodeName string, devicePath []byte) *apiv1.Secret {
 		"d8-system",
 		map[string][]byte{
 			nodeName: devicePath,
+		},
+		map[string]string{},
+	)
+}
+
+func SecretConvergeState(state []byte) *apiv1.Secret {
+	return generateSecret(
+		"d8-dhctl-converge-state",
+		"d8-system",
+		map[string][]byte{
+			"state.json": state,
 		},
 		map[string]string{},
 	)

@@ -7,12 +7,12 @@ properties:
     description: |
       Селектор узлов, на которых будет работать главный контроллер. Структура, аналогичная параметру `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
       Структура, аналогичная параметру `spec.tolerations` пода Kubernetes для главного контроллера.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   speaker:
     description: |
       Настройки компонента `speaker`, который реализует протокол публикации (`bgp` или `layer2` (LVS)) и направляет на свой узел прикладной трафик сервисов.
@@ -21,12 +21,12 @@ properties:
         description: |
           Селектор узлов, на которых будет работать DaemonSet speaker. Структура, аналогичная параметру `spec.nodeSelector` пода Kubernetes.
 
-          Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+          Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
       tolerations:
         description: |
           Структура для DaemonSet speaker'а, аналогичная параметру `spec.tolerations` пода Kubernetes.
 
-          Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+          Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   bgpPeers:
     description: |
       Список внешних BGP-роутеров, которые будут работать с этим модулем.

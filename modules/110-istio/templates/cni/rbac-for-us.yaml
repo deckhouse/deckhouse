@@ -23,6 +23,12 @@ rules:
       - list
       - watch
   - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - delete
+  - apiGroups:
       - authentication.k8s.io
     resources:
       - tokenreviews

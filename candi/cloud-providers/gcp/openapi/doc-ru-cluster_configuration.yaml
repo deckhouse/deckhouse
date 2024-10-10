@@ -59,7 +59,7 @@ apiVersions:
 
               Подробно про label'ы можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
           instanceClass:
-            description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass).
+            description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass).
             properties: &instanceClassProperties_ru
               machineType:
                 description: |
@@ -74,7 +74,7 @@ apiVersions:
 
                   Список доступных образов можно найти в [документации провайдера](https://cloud.google.com/compute/docs/images#ubuntu).
 
-                  Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации Deckhouse](https://deckhouse.ru/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+                  Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
 
               diskSizeGb:
                 description: Размер root-диска. Значение указывается в `ГиБ`.
@@ -119,7 +119,7 @@ apiVersions:
 
                 Подробно про label'ы можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
             instanceClass:
-              description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass).
+              description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
             zones:
@@ -128,9 +128,9 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          `Standard` — включает режим [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits). [Подробнее...](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#standard).
+          `Standard` — включает режим [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits). [Подробнее...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#standard).
 
-          `WithoutNAT` — выделенная VPN создается для кластера. Все узлы имеют публичные IP-адреса. [Подробнее...](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#withoutnat).
+          `WithoutNAT` — выделенная VPN создается для кластера. Все узлы имеют публичные IP-адреса. [Подробнее...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#withoutnat).
       standard:
         description: Настройки для схемы размещения `Standard`.
         properties:

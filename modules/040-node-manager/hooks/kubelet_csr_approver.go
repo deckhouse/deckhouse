@@ -90,10 +90,12 @@ func csrFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 		return ret, nil
 	}
 
-	err = nodeServingCert(csr, x509cr)
-	if err != nil {
-		ret.ErrMsg = err.Error()
-		return ret, nil
+	if csr.Spec.SignerName == "kubernetes.io/kubelet-serving" {
+		err = nodeServingCert(csr, x509cr)
+		if err != nil {
+			ret.ErrMsg = err.Error()
+			return ret, nil
+		}
 	}
 
 	ret.Valid = true

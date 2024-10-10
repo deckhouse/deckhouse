@@ -73,7 +73,7 @@ Assign the "region" and "zone" tags to the `Datastore` objects to automatically 
 govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
 govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
 
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
 ```
 
@@ -82,7 +82,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 {% alert %}
 We've intentionally skipped User creation since there are many ways to authenticate a user in the vSphere.
 
-This all-encompassing Role should be enough for all Deckhouse components. For a detailed list of privileges, refer to the [documentation](/documentation/v1/modules/030-cloud-provider-vsphere/configuration.html#list-of-privileges-for-using-the-module). If you need a more granular Role, please contact your Deckhouse support.
+This all-encompassing Role should be enough for all Deckhouse components. For a detailed list of privileges, refer to the [documentation](/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/configuration.html#list-of-required-privileges). If you need a more granular Role, please contact your Deckhouse support.
 {% endalert %}
 
 Create a role with the corresponding permissions:
@@ -122,6 +122,10 @@ To add SSH keys to user's authorized keys, the `default_user` parameter must be 
 {% alert level="warning" %}
 Deckhouse creates virtual machine disks of the `eagerZeroedThick` type, however, the disk type of the created VMs will be changed without any notice to match the `VM Storage Policy` as configured in vSphere.
 You can read more in the [documentation](https://github.com/hashicorp/terraform-provider-vsphere/blob/main/website/docs/r/virtual_machine.html.markdown#virtual-disk-provisioning-policies).
+{% endalert %}
+
+{% alert %}
+Deckhouse uses the `ens192` interface as the default interface for virtual machines in vSphere. Therefore, when using static IP addresses in `mainNetwork`, you must create an interface named `ens192` in the OS image as the default interface.
 {% endalert %}
 
 ## Infrastructure

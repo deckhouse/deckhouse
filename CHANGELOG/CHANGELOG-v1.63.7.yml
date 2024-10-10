@@ -1,0 +1,11 @@
+candi:
+  fixes:
+    - summary: >-
+        Fix for bootstrap or upgrade an existing cluster installed in AWS using the "Standard"
+        layout.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9545
+node-local-dns:
+  fixes:
+    - summary: Use `prefer_udp `to connect with kube-dns.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9548
+

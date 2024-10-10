@@ -28,4 +28,5 @@ type ModuleManager interface {
 	GetModule(modName string) *modules.BasicModule
 	GetModuleNames() []string
 	GetEnabledModuleNames() []string
+	GetUpdatedByExtender(string) (string, error)
 }

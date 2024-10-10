@@ -1219,6 +1219,8 @@ entries:
     - title:
         en: Storage
         ru: Хранилище
+        moduleName: ceph-csi
+      featureStatus: deprecated
       folders:
         - title: ceph-csi
           folders:
@@ -1314,6 +1316,16 @@ entries:
                 en: Description
                 ru: Описание
               url: /modules/600-secret-copier/
+        - title: deckhouse-tools
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/800-deckhouse-tools/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/800-deckhouse-tools/configuration.html
     - title:
         en: Bare Metal
         ru: Bare Metal
@@ -1343,6 +1355,7 @@ entries:
               url: /modules/450-keepalived/faq.html
         - title: l2-load-balancer
           d8Revision: ee
+          featureStatus: deprecated
           folders:
             - title:
                 en: Description

@@ -22,7 +22,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )
 
 func (pc *Checker) CheckPythonAndItsModules() error {
@@ -31,7 +31,7 @@ func (pc *Checker) CheckPythonAndItsModules() error {
 		return nil
 	}
 
-	pythonBinary, err := detectPythonBinary(pc.sshClient)
+	pythonBinary, err := detectPythonBinary(pc.nodeInterface)
 	if err != nil {
 		return fmt.Errorf("Detect Python binary name: %w", err)
 	}
@@ -48,7 +48,7 @@ func (pc *Checker) CheckPythonAndItsModules() error {
 	for _, moduleSet := range requiredPythonModules {
 		atLeastOneModuleFoundForSet := false
 		for _, moduleName := range moduleSet {
-			cmd := pc.sshClient.Command(pythonBinary, "-c", "import "+moduleName)
+			cmd := pc.nodeInterface.Command(pythonBinary, "-c", "import "+moduleName)
 			err := cmd.Run()
 			if err != nil {
 				var ee *exec.ExitError
@@ -75,7 +75,7 @@ func (pc *Checker) CheckPythonAndItsModules() error {
 	return nil
 }
 
-func detectPythonBinary(sshCl *ssh.Client) (string, error) {
+func detectPythonBinary(sshCl node.Interface) (string, error) {
 	possibleBinaries := []string{"python3", "python2", "python"}
 	for _, binary := range possibleBinaries {
 		err := sshCl.Command("command", "-v", binary).Run()

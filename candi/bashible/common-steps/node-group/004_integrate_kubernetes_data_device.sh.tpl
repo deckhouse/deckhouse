@@ -47,7 +47,11 @@ fi
 if [ -f /var/lib/bashible/kubernetes_data_device_path ]; then
   DATA_DEVICE="$(</var/lib/bashible/kubernetes_data_device_path)"
 else
-  DATA_DEVICE="$(get_data_device_secret | jq -re --arg hostname "$HOSTNAME" '.data[$hostname]' | base64 -d)"
+  DATA_DEVICE="$(get_data_device_secret | jq -re --arg hostname "$HOSTNAME" '.data[$hostname] // empty' | base64 -d)"
+  if [ -z "$DATA_DEVICE" ]; then
+    >&2 echo "failed to get data device path"
+    exit 1
+  fi
 fi
 
 {{- /*
@@ -93,9 +97,9 @@ fi
 
 mkdir -p /mnt/kubernetes-data
 
-if ! file -s $DATA_DEVICE | grep -q ext4; then
-  mkfs.ext4 -F -L kubernetes-data $DATA_DEVICE
-fi
+# always format the device to ensure it's clean, because etcd will not join the cluster if the device
+# contains a filesystem with etcd database from a previous installation
+mkfs.ext4 -F -L kubernetes-data $DATA_DEVICE
 
 if grep -qv kubernetes-data /etc/fstab; then
   cat >> /etc/fstab << EOF

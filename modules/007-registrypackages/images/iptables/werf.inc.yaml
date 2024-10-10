@@ -1,4 +1,4 @@
-{{/* Important! The iptables binaries from artifact are also used in kube-router image of network-policy-engine module. */}}
+{{/* Important! The iptables binaries from artifact are also used in kube-router image of network-policy-engine module and cni-simple-bridge. */}}
 {{- $version := "1.8.9" }}
 {{- $image_version := $version | replace "." "-" }}
 ---
