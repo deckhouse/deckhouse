@@ -1,4 +1,4 @@
-{{- define "istiod_rules_v-1-16" -}}
+{{- define "istiod_rules_v-1-21" -}}
 - apiGroups:
   - admissionregistration.k8s.io
   resources:
@@ -144,26 +144,6 @@
   - watch
   - update
 - apiGroups:
-  - certificates.k8s.io
-  resources:
-  - certificatesigningrequests
-  - certificatesigningrequests/approval
-  - certificatesigningrequests/status
-  verbs:
-  - update
-  - create
-  - get
-  - delete
-  - watch
-- apiGroups:
-  - certificates.k8s.io
-  resourceNames:
-  - kubernetes.io/legacy-unknown
-  resources:
-  - signers
-  verbs:
-  - approve
-- apiGroups:
   - authentication.k8s.io
   resources:
   - tokenreviews
@@ -210,4 +190,17 @@
   - get
   - watch
   - list
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
 {{- end -}}
