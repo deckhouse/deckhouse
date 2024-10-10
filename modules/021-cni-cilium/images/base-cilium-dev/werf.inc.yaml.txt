@@ -26,6 +26,7 @@
 ---
 image: {{ $.ModuleName }}/base-cilium-dev
 from: {{ $.Images.BASE_ALT }}
+final: false
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
