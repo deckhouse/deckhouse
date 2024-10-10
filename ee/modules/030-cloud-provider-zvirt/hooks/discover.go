@@ -87,18 +87,12 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 			return nil
 		}
 
-		var defaultSCName string
-
 		storageClassesSnapshots := input.Snapshots["storage_classes"]
 
 		storageClasses := make([]storageClass, 0, len(storageClassesSnapshots))
 
 		for _, storageClassSnapshot := range storageClassesSnapshots {
 			sc := storageClassSnapshot.(*storage.StorageClass)
-
-			if sc.Annotations["storageclass.kubernetes.io/is-default-class"] == "true" {
-				defaultSCName = sc.Name
-			}
 
 			allowVolumeExpansion := true
 			if sc.AllowVolumeExpansion != nil {
@@ -112,7 +106,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 		}
 		input.LogEntry.Infof("Found zvirt storage classes using StorageClass snapshots: %v", storageClasses)
 
-		setStorageClassesValues(input.Values, storageClasses, defaultSCName)
+		setStorageClassesValues(input, storageClasses)
 
 		return nil
 	}
@@ -143,17 +137,11 @@ func handleDiscoveryDataVolumeTypes(
 	input *go_hook.HookInput,
 	storageDomains []cloudDataV1.ZvirtStorageDomain,
 ) {
-	var defaultSCName string
-
 	storageClassStorageDomain := make(map[string]string, len(storageDomains))
 
 	for _, domain := range storageDomains {
 		if !domain.IsEnabled {
 			continue
-		}
-
-		if domain.IsDefault {
-			defaultSCName = getStorageClassName(domain.Name)
 		}
 
 		storageClassStorageDomain[getStorageClassName(domain.Name)] = domain.Name
@@ -197,7 +185,7 @@ func handleDiscoveryDataVolumeTypes(
 
 	input.LogEntry.Infof("Found zvirt storage classes using StorageClass snapshots, StorageDomain discovery data: %v", storageClasses)
 
-	setStorageClassesValues(input.Values, storageClasses, defaultSCName)
+	setStorageClassesValues(input, storageClasses)
 }
 
 // Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
@@ -221,24 +209,8 @@ func getStorageClassName(value string) string {
 	return strings.Trim(value, "-.")
 }
 
-func setStorageClassesValues(
-	values *go_hook.PatchableValues,
-	storageClasses []storageClass,
-	defaultSCName string,
-) {
-	values.Set("cloudProviderZvirt.internal.storageClasses", storageClasses)
-
-	def, ok := values.GetOk("cloudProviderZvirt.storageClass.default")
-	if ok {
-		values.Set("cloudProviderZvirt.internal.defaultStorageClass", def.String())
-		return
-	}
-
-	if defaultSCName != "" {
-		values.Set("cloudProviderZvirt.internal.defaultStorageClass", defaultSCName)
-		return
-	}
-	values.Remove("cloudProviderZvirt.internal.defaultStorageClass")
+func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageClass) {
+	input.Values.Set("cloudProviderZvirt.internal.storageClasses", storageClasses)
 }
 
 type storageClass struct {

@@ -69,6 +69,7 @@ const globalValues = `
     d8SpecificNodeCountByRole:
       worker: 1
       master: 3
+    defaultStorageClass: pd-standard-not-replicated
     podSubnet: 10.0.1.0/16
     kubernetesVersion: 1.29.0
 `
@@ -257,7 +258,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderGcp", moduleValues)
-			f.ValuesSetFromYaml("cloudProviderGcp.internal.defaultStorageClass", `pd-ssd-replicated`)
+			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `pd-ssd-replicated`)
 			f.HelmRender()
 		})
 

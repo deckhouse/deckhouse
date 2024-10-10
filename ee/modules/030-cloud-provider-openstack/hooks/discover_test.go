@@ -269,7 +269,6 @@ data:
   }
 ]
 `))
-			Expect(b.ValuesGet("cloudProviderOpenstack.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
 	})
 
@@ -307,7 +306,6 @@ data:
   }
 ]
 `))
-			Expect(d.ValuesGet("cloudProviderOpenstack.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
 	})
 
@@ -358,62 +356,6 @@ data:
   }
 ]
 `))
-			Expect(e.ValuesGet("cloudProviderOpenstack.internal.defaultStorageClass").Exists()).To(BeFalse())
-		})
-	})
-
-	initValues = `
-cloudProviderOpenstack:
-  internal:
-    connection:
-      authURL: https://test.tests.com:5000/v3/
-      username: jamie
-      password: nein
-      domainName: default
-      tenantName: default
-      tenantID: "123"
-      region: HetznerFinland
-  storageClass:
-    exclude:
-    - .*-foo
-    - bar
-    default: other-bar
-`
-
-	f := HookExecutionConfigInit(initValues, `{}`)
-	Context("Provider data is successfully discovered", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(state))
-			f.RunHook()
-		})
-
-		It("All values should be gathered from discovered data", func() {
-			Expect(f).To(ExecuteSuccessfully())
-		})
-
-		It("Should discover volumeTypes without excluded and default set", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cloudProviderOpenstack.internal.storageClasses").String()).To(MatchJSON(`
-[
-  {
-	"name": "ceph-ssd",
-	"type": "ceph-ssd"
-  },
-  {
-	"name": "default",
-	"type": "__DEFAULT__"
-  },
-  {
-	"name": "other-bar",
-	"type": "other-bar"
-  },
-  {
-	"name": "ssd-r1",
-	"type": "SSD R1"
-  }
-]
-`))
-			Expect(f.ValuesGet("cloudProviderOpenstack.internal.defaultStorageClass").String()).To(Equal(`other-bar`))
 		})
 	})
 })

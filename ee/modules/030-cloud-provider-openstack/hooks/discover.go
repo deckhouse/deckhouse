@@ -100,7 +100,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 			})
 		}
 
-		setStorageClassesValues(input.Values, storageClasses)
+		setStorageClassesValues(input, storageClasses)
 
 		return nil
 	}
@@ -159,18 +159,11 @@ func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, volumeTypes []v1al
 		return storageClasses[i].Name < storageClasses[j].Name
 	})
 
-	setStorageClassesValues(input.Values, storageClasses)
+	setStorageClassesValues(input, storageClasses)
 }
 
-func setStorageClassesValues(values *go_hook.PatchableValues, storageClasses []storageClass) {
-	values.Set("cloudProviderOpenstack.internal.storageClasses", storageClasses)
-
-	def, ok := values.GetOk("cloudProviderOpenstack.storageClass.default")
-	if ok {
-		values.Set("cloudProviderOpenstack.internal.defaultStorageClass", def.String())
-	} else {
-		values.Remove("cloudProviderOpenstack.internal.defaultStorageClass")
-	}
+func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageClass) {
+	input.Values.Set("cloudProviderOpenstack.internal.storageClasses", storageClasses)
 }
 
 // Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
