@@ -15,7 +15,10 @@
 package converge
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
+	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -45,24 +48,65 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 	index := 0
 
 	var (
-		nodesToWait []string
+		nodesToWait        []string
+		nodesIndexToCreate []int
+		wg                 sync.WaitGroup
+		buffLog            bytes.Buffer
+		saveLogToBuffer    bool
 	)
 
 	for c.desiredReplicas > count {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, index)
-
 		if _, ok := c.state.State[candidateName]; !ok {
-			err := BootstrapAdditionalNode(c.client, c.config, index, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
-			if err != nil {
-				return err
-			}
-
+			nodesIndexToCreate = append(nodesIndexToCreate, index)
 			count++
-			nodesToWait = append(nodesToWait, candidateName)
 		}
 		index++
 	}
 
+	type checkResult struct {
+		name    string
+		buffLog *bytes.Buffer
+		err     error
+	}
+	resultsСhan := make(chan checkResult, len(nodesIndexToCreate))
+
+	for i, indexCandidate := range nodesIndexToCreate {
+		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, indexCandidate)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if i != 0 {
+				saveLogToBuffer = true
+			}
+			err := ParallelBootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext, &buffLog, saveLogToBuffer)
+
+			resultsСhan <- checkResult{
+				name:    candidateName,
+				buffLog: &buffLog,
+				err:     err,
+			}
+
+			nodesToWait = append(nodesToWait, candidateName)
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		close(resultsСhan)
+	}()
+
+	for candidate := range resultsСhan {
+		candidate := candidate
+		if candidate.err != nil {
+			return candidate.err
+		}
+		log.InfoF("Log: %s:\n", candidate.name)
+		scanner := bufio.NewScanner(candidate.buffLog)
+		for scanner.Scan() {
+			log.InfoLn(scanner.Text())
+		}
+	}
 	return WaitForNodesListBecomeReady(c.client, nodesToWait, nil)
 }
 

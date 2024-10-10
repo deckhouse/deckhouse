@@ -15,7 +15,9 @@
 package converge
 
 import (
+	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -67,6 +69,65 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func ParallelBootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext, buff *bytes.Buffer, saveLogToBuffer bool) error {
+	nodeName := NodeName(cfg, nodeGroupName, index)
+
+	if isConverge {
+
+		var nodeExists bool
+		var err error
+
+		if saveLogToBuffer {
+			nodeExists, err = IsNodeExistsInClusterSilent(kubeCl, nodeName, buff)
+		} else {
+			nodeExists, err = IsNodeExistsInCluster(kubeCl, nodeName)
+		}
+		if err != nil {
+			return err
+		} else if nodeExists {
+			return fmt.Errorf("node with name %s exists in cluster", nodeName)
+		}
+	}
+
+	nodeGroupSettings := cfg.FindTerraNodeGroup(nodeGroupName)
+
+	// TODO pass cache as argument or better refact func
+	runner := terraformContext.GetBootstrapNodeRunner(cfg, cache.Global(), terraform.BootstrapNodeRunnerOptions{
+		AutoApprove:     true,
+		NodeName:        nodeName,
+		NodeGroupStep:   step,
+		NodeGroupName:   nodeGroupName,
+		NodeIndex:       index,
+		NodeCloudConfig: cloudConfig,
+		LogToBuffer:     saveLogToBuffer,
+
+		AdditionalStateSaverDestinations: []terraform.SaverDestination{
+			NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings),
+		},
+	})
+
+	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.OnlyState)
+	if err != nil {
+		return err
+	}
+
+	if tomb.IsInterrupted() {
+		return ErrConvergeInterrupted
+	}
+
+	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings)
+	if err != nil {
+		return err
+	}
+
+	if saveLogToBuffer {
+		logs := runner.GetLog()
+		buff.WriteString(strings.Join(logs, "\n"))
 	}
 
 	return nil

@@ -15,6 +15,7 @@
 package converge
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -390,6 +391,18 @@ func requestNodeExists(kubeCl *client.KubernetesClient, nodeName string) (bool, 
 func IsNodeExistsInCluster(kubeCl *client.KubernetesClient, nodeName string) (bool, error) {
 	exists := false
 	err := retry.NewLoop(fmt.Sprintf("Checking node exists %s", nodeName), 5, 2*time.Second).Run(func() error {
+		var err error
+		exists, err = requestNodeExists(kubeCl, nodeName)
+		return err
+	})
+
+	return exists, err
+}
+
+func IsNodeExistsInClusterSilent(kubeCl *client.KubernetesClient, nodeName string, buff *bytes.Buffer) (bool, error) {
+	exists := false
+	_, err := buff.WriteString(fmt.Sprintf("Checking node exists %s", nodeName))
+	err = retry.NewSilentLoop("", 5, 2*time.Second).Run(func() error {
 		var err error
 		exists, err = requestNodeExists(kubeCl, nodeName)
 		return err
