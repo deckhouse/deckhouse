@@ -82,6 +82,10 @@ func ApplyCopierSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	// Secrets with that label lead to D8CertmanagerOrphanSecretsChecksFailed alerts.
 	delete(s.Labels, "certmanager.k8s.io/certificate-name")
 
+	// Secrets with that labels lead to ArgoCD control over them.
+	delete(s.Labels, "argocd.argoproj.io/instance")
+	delete(s.Labels, "argocd.argoproj.io/secret-type")
+
 	return s, nil
 }
 

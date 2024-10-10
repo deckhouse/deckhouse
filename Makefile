@@ -348,13 +348,16 @@ set-build-envs:
   ifeq ($(DECKHOUSE_REGISTRY_HOST),)
  		export DECKHOUSE_REGISTRY_HOST=registry.deckhouse.io
   endif
+  ifeq ($(OBSERVABILITY_SOURCE_REPO),)
+  	export OBSERVABILITY_SOURCE_REPO=https://example.com
+  endif
 	export WERF_REPO=$(DEV_REGISTRY_PATH)
 	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
 	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
 
 build: set-build-envs ## Build Deckhouse images.
 	##~ Options: FOCUS=image-name
-	werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --report-path images_tags_werf.json $(SECONDARY_REPO) $(FOCUS)
+	werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --save-build-report=true --build-report-path images_tags_werf.json $(SECONDARY_REPO) $(FOCUS)
   ifeq ($(FOCUS),)
     ifneq ($(CI_COMMIT_REF_SLUG),)
 				@# By default in the Github CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches.

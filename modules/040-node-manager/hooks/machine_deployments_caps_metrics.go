@@ -23,7 +23,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta1"
 )
@@ -53,7 +53,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                   "machinedeployment_status",
 			ApiVersion:             "cluster.x-k8s.io/v1beta1",
 			Kind:                   "MachineDeployment",
-			WaitForSynchronization: pointer.Bool(false),
+			WaitForSynchronization: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"d8-cloud-instance-manager"},

@@ -11,7 +11,7 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/cluster_configuration
   cp -f $schema_path _data/schemas/${module_name}/
   if [ -f $module_path/openapi/doc-ru-cluster_configuration.yaml ]; then
      echo -e "\ni18n:\n  ru:" >>_data/schemas/${module_name}/cluster_configuration.yaml
-     cat $module_path/openapi/doc-ru-cluster_configuration.yaml | sed 's/^/    /' >>_data/schemas/${module_name}/cluster_configuration.yaml
+     cat $module_path/openapi/doc-ru-cluster_configuration.yaml | sed '1{/^---$/d}; s/^/    /' >>_data/schemas/${module_name}/cluster_configuration.yaml
   fi
   if [ ! -f ${module_path}/docs/CLUSTER_CONFIGURATION.md ]; then
       continue

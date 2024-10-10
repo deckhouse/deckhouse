@@ -37,8 +37,6 @@ The YAML installation config contains multiple resource configurations (manifest
 
   This resource contains the parameters Deckhouse needs to start or run smoothly, such as the [placement-related parameters for Deckhouse components](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), the [storageClass](../deckhouse-configure-global.html#parameters-storageclass) used, the [container registry](configuration.html#initconfiguration-deckhouse-registrydockercfg) credentials, the [DNS naming template](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate), and more.
 
-  **Caution!** The [configOverrides](configuration.html#initconfiguration-deckhouse-configoverrides) parameter is deprecated and will be removed. Use the [ModuleConfig](../#configuring-the-module) in the installation config to set parameters for **built-in** Deckhouse modules. For other modules, use [installation resource file](#installation-resource-config).  
-
 - [ClusterConfiguration](configuration.html#clusterconfiguration) — general cluster parameters, such as network parameters, CRI parameters, control plane version, etc.
   
   > The `ClusterConfiguration` resource is only required if a Kubernetes cluster has to be pre-deployed when installing Deckhouse. That is, `ClusterConfiguration` is not required if Deckhouse is installed into an existing Kubernetes cluster.
@@ -61,6 +59,8 @@ The YAML installation config contains multiple resource configurations (manifest
 
 - `ModuleConfig` — a set of resources containing [Deckhouse configuration](../) parameters.
 
+If the cluster is initially created with nodes allocated for a specific type of workload (system nodes, nodes for monitoring, etc.), it is recommended to explicitly specify the corresponding `nodeSelector` parameter in the module configuration for modules that use persistent storage volumes (for example, for the `prometheus` module). For the `prometheus` module, this parameter is [nodeSelector](../modules/300-prometheus/configuration.html#parameters-nodeselector).
+
 {% offtopic title="An example of the installation config..." %}
 
 ```yaml
@@ -79,10 +79,6 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   releaseChannel: Stable
-  configOverrides:
-    global:
-      modules:
-        publicDomainTemplate: "%s.example.com"
 ---
 apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration
@@ -130,6 +126,18 @@ spec:
   enabled: true
   settings:
     allowedBundles: ["ubuntu-lts"]
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  version: 2
+  enabled: true
+  # Specify, in case of using dedicated nodes for monitoring.
+  # settings:
+  #   nodeSelector:
+  #     node.deckhouse.io/group: monitoring
 ```
 
 {% endofftopic %}
@@ -318,6 +326,35 @@ dhctl bootstrap \
 - `/resources.yml` — file with the resource manifests;
 - `<SSH_USER>` — SSH user on the server;
 - `--ssh-agent-private-keys` — file with the private SSH key for connecting via SSH.
+
+### Pre-installation checks
+
+{% offtopic title="Scheme of checks prior to Deckhouse installation..." %}
+![Scheme of checks prior to Deckhouse installation](../images/installing/preflight-checks.png)
+{% endofftopic %}
+
+List of checks performed by the installer before starting the installation of Deckhouse:
+- General checks:
+  - The values of the [PublicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) and [clusterDomain](configuration.html#clusterconfiguration-clusterdomain) parameters don't match.
+  - The authentication data for the container registry specified in the installation configuration is correct.
+  - The hostname meets the following requirements:
+    - length <= 63 characters;
+    - in lowercase;
+    - does not contain special characters (only `-` and `.`, which cannot be at the beginning or end of the name, are allowed).
+  - There is no installed CRI (containerd) on the server (VM).
+  - The hostname is unique relative to other hostnames in the cluster.
+- Checks for static and hybrid cluster installation:
+  - Only one `--ssh-host` parameter is specified. For static cluster configuration, only one IP address can be specified to configure the first master node.
+  - It is possible to connect via SSH using the specified authentication data.
+  - It is possible to establish an SSH tunnel to the master node server (VM).
+  - The server (VM) meets the minimum requirements for configuring the master node.
+  - Python and the necessary libraries are installed on the server (VM) for the master node.
+  - The container registry is accessible through a proxy (if proxy settings are specified in the installation configuration).
+  - The server (VM) for the master node and the installer host have free ports required for the installation process.
+  - localhost resolves in DNS to IP 127.0.0.1.
+  - The `sudo` command is available to the user on the server (VM). 
+- Checks for cloud cluster installation:
+  - The master node virtual machine configuration meets the minimum requirements.
 
 ### Aborting the installation
 

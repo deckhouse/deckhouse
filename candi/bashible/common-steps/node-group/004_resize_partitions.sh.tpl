@@ -32,7 +32,7 @@ grow_partition() {
   if [[ "${partition_number}" -ge 5 ]]; then
     # find extended partition number
     ext_partition="$(fdisk -l "${disk}" | grep -i extended | awk '{print $1}')"
-		ext_partition_number=${ext_partition#disk}
+    ext_partition_number=${ext_partition#$disk}
 
     # Mbr extended partition
     if [[ -n "${ext_partition_number}" ]]; then

@@ -20,7 +20,7 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -50,7 +50,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss enfo
 				Name:   "d8_admission_policy_engine_pss_default_action",
 				Group:  "d8_admission_policy_engine_pss_default_action",
 				Action: "set",
-				Value:  pointer.Float64(3.0),
+				Value:  ptr.To(3.0),
 				Labels: map[string]string{},
 			}))
 		})
@@ -75,7 +75,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss enfo
 				Name:   "d8_admission_policy_engine_pss_default_action",
 				Group:  "d8_admission_policy_engine_pss_default_action",
 				Action: "set",
-				Value:  pointer.Float64(3.0),
+				Value:  ptr.To(3.0),
 				Labels: map[string]string{},
 			}))
 		})
@@ -100,7 +100,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss enfo
 				Name:   "d8_admission_policy_engine_pss_default_action",
 				Group:  "d8_admission_policy_engine_pss_default_action",
 				Action: "set",
-				Value:  pointer.Float64(3.0),
+				Value:  ptr.To(3.0),
 				Labels: map[string]string{},
 			}))
 		})
@@ -127,7 +127,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss enfo
 				Name:   "d8_admission_policy_engine_pss_default_action",
 				Group:  "d8_admission_policy_engine_pss_default_action",
 				Action: "set",
-				Value:  pointer.Float64(3.0),
+				Value:  ptr.To(3.0),
 				Labels: map[string]string{},
 			}))
 		})

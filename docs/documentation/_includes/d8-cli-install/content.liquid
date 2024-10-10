@@ -1,12 +1,12 @@
 {% if include.os == "Windows" %}
 1. {% if page.lang == 'ru' %}Скачайте [архив для {{ include.os }} {{ include.arch }}]{% else %}Download the [archive for {{ include.os }} {{ include.arch }}]{% endif -%}
-({%- if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-{{ include.os | downcase | replace: "macos", "darwin"  }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}.tar.gz).
+({%- if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/{{ site.data.supported_versions.d8.d8CliVersion }}/d8-{{ site.data.supported_versions.d8.d8CliVersion }}-{{ include.os | downcase | replace: "macos", "darwin"  }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}.tar.gz).
 {% else %}
 1. {% if page.lang == 'ru' %}Скачайте [архив для {{ include.os }} {{ include.arch }}]{% else %}Download the [archive for {{ include.os }} {{ include.arch }}]{% endif -%}
-({%- if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-{{ include.os | downcase | replace: "macos", "darwin"  }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}.tar.gz):
+({%- if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/downloads/deckhouse-cli/{{ site.data.supported_versions.d8.d8CliVersion }}/d8-{{ site.data.supported_versions.d8.d8CliVersion }}-{{ include.os | downcase | replace: "macos", "darwin"  }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}.tar.gz):
 
    ```shell
-   curl -LO {{ site.urls[page.lang] }}/downloads/deckhouse-cli/v{{ site.data.deckhouse-cli.version }}/d8-v{{ site.data.deckhouse-cli.version }}-{{ include.os | downcase | replace: "macos", "darwin"  }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}.tar.gz
+   curl -LO {{ site.urls[page.lang] }}/downloads/deckhouse-cli/{{ site.data.supported_versions.d8.d8CliVersion }}/d8-{{ site.data.supported_versions.d8.d8CliVersion }}-{{ include.os | downcase | replace: "macos", "darwin"  }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}.tar.gz
    ```
 {% endif %}
 
@@ -30,7 +30,7 @@
 1. {% if page.lang == 'ru' -%}Распакуйте архив{% else %}Extract the archive{% endif %}:
 
    ```bash
-   tar -xvf "d8-v{{ site.data.deckhouse-cli.version }}-{{ include.os | downcase | replace: "macos", "darwin"  }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}.tar.gz" "{{ include.os | downcase | replace: "macos", "darwin"  }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}/d8"
+   tar -xvf "d8-{{ site.data.supported_versions.d8.d8CliVersion }}-{{ include.os | downcase | replace: "macos", "darwin"  }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}.tar.gz" "{{ include.os | downcase | replace: "macos", "darwin"  }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}/d8"
    ```
 
 1. {% if page.lang == 'ru' -%}

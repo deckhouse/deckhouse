@@ -90,7 +90,7 @@ func (suite *ReleaseTestSuite) TestCheckRelease() {
 	}
 
 	check("Patch", "1.31.0", "1.31.1", false)
-	check("Minor", "1.31.0", "1.32.0", false)
+	check("Minor", "1.31.0", "1.32.3", false)
 	check("Last Minor", "1.31.0", "1.32.3", false)
 	check("Fail Update", "1.31.0", "1.33.0", true)
 }

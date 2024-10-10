@@ -48,6 +48,6 @@ spec:
   version: "v1.46.0"
 status:
   approved: false
-  message: "Waiting for manual approval"
+  message: "Waiting for the 'release.deckhouse.io/approved: \"true\"' annotation"
   phase: Pending
   transitionTime: "2023-05-20T10:10:10Z"

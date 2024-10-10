@@ -155,10 +155,10 @@ An example:
 ```console
 $ kubectl get deckhouserelease
 NAME       PHASE        TRANSITIONTIME   MESSAGE
-v1.46.8    Superseded   13d              
-v1.46.9    Superseded   11d              
-v1.47.0    Superseded   4h12m            
-v1.47.1    Deployed     4h12m            
+v1.46.8    Superseded   13d
+v1.46.9    Superseded   11d
+v1.47.0    Superseded   4h12m
+v1.47.1    Deployed     4h12m
 ```
 
 The `Deployed` status of the corresponding version indicates that the switch to the corresponding version was performed (but this does not mean that it ended successfully).
@@ -282,7 +282,7 @@ Queue 'main': length 0, status: 'waiting for task 0s'
 * Make sure that the DNS name of the Deckhouse container registry is resolved correctly.
 
   Retrieve and compare the IP addresses of the Deckhouse container registry (`registry.deckhouse.io`) on one of the nodes and in the Deckhouse pod. They should match.
-  
+
   Here is how you can retrieve the IP address of the Deckhouse container registry on a node:
 
   ```shell
@@ -293,15 +293,15 @@ Queue 'main': length 0, status: 'waiting for task 0s'
   ```
 
   Here is how you can retrieve the IP address of the Deckhouse container registry in a pod:
-  
+
   ```shell
   $ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- getent ahosts registry.deckhouse.io
   46.4.145.194    STREAM registry.deckhouse.io
   46.4.145.194    DGRAM  registry.deckhouse.io
   ```
-  
+
   If the retrieved IP addresses do not match, inspect the DNS settings on the host. Specifically, check the list of domains in the `search` parameter of the `/etc/resolv.conf` file (it affects name resolution in the Deckhouse pod). If the `search` parameter of the `/etc/resolv.conf` file includes a domain where wildcard record resolution is configured, it may result in incorrect resolution of the IP address of the Deckhouse container registry (see example).
-  
+
 {% offtopic title="Example of DNS settings that may cause errors in resolving the IP address of the Deckhouse container registry..." %}
 
 In the example below, DNS settings produce different results when resolving names on the host and in the Kubernetes pod:
@@ -379,7 +379,7 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 ### Tips for configuring Nexus
 
 {% alert level="warning" %}
-When interacting with a `docker` repository located in Nexus (e. g. executing `docker pull`, `docker push` commands), you must specify the address in the `<NEXUS_URL>:<REPOSITORY_PORT>/<PATH>` format.  
+When interacting with a `docker` repository located in Nexus (e. g. executing `docker pull`, `docker push` commands), you must specify the address in the `<NEXUS_URL>:<REPOSITORY_PORT>/<PATH>` format.
 
 Using the `URL` value from the Nexus repository options is **not acceptable**
 {% endalert %}
@@ -555,7 +555,8 @@ Follow these steps for manual loading images of modules, connected from the modu
 1. Create an authentication string for `registry.deckhouse.io` using the following command (provide the license key):
 
    ```shell
-   LICENSE_KEY="LICENSE_KEY" base64 -w0 <<EOF
+   LICENSE_KEY='<LICENSE_KEY>'
+   base64 -w0 <<EOF
      {
        "auths": {
          "registry.deckhouse.io": {
@@ -616,11 +617,11 @@ Follow these steps for manual loading images of modules, connected from the modu
 
    ```shell
    d8 mirror modules push \
-     -d /tmp/d8-modules --registry='corp.company.com:5000/deckhouse/modules' \
+     -d /tmp/d8-modules --registry='corp.company.com:5000/sys/deckhouse/modules' \
      --registry-login='<USER>' --registry-password='<PASSWORD>'
    ```
 
-   > Before pushing images, make sure that the path for loading into the registry exists (`/deckhouse/modules` in the example above), and the account being used has write permissions.
+   > Before pushing images, make sure that the path for loading into the registry exists (`/sys/deckhouse/modules` in the example above), and the account being used has write permissions.
 
 1. After uploading the images to the air-gapped registry, edit the `ModuleSource` YAML manifest prepared in step 3:
 
@@ -638,7 +639,7 @@ Follow these steps for manual loading images of modules, connected from the modu
      registry:
        # Specify the authentication string for your registry.
        dockerCfg: <BASE64_REGISTRY_CREDENTIALS>
-       repo: 'corp.company.com:5000/deckhouse/modules'
+       repo: 'corp.company.com:5000/sys/deckhouse/modules'
        scheme: HTTPS
      # Select the appropriate release channel: Alpha, Beta, EarlyAccess, Stable, or RockSolid
      releaseChannel: "Stable"

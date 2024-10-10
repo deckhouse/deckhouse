@@ -1,0 +1,40 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: prometheus
+    rbac.deckhouse.io/aggregate-to-observability-as: manager
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-monitoring
+  name: d8:manage:capability:module:prometheus:edit
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - customalertmanagers
+  - grafanaadditionaldatasources
+  - grafanaalertschannels
+  - grafanadashboarddefinitions
+  - clusteralerts
+  - customprometheusrules
+  - prometheusremotewrites
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - prometheus
+  resources:
+  - moduleconfigs
+  verbs:
+  - create
+  - update
+  - patch
+  - delete

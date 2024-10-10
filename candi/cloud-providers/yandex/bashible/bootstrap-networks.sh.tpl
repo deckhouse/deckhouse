@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 */}}
-set +e
 shopt -s extglob
 
 function ip_in_subnet(){
@@ -53,8 +52,14 @@ function netplan_configure(){
     exit 1
   fi
 
-  primary_mac="$(grep -m 1 -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
-  primary_ifname="$(ip -o link show | grep "link/ether $primary_mac" | cut -d ":" -f2 | tr -d " ")"
+  primary_mac="$(grep -m 1 -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml || test $? = 1;)"
+
+  if [ -z "$primary_mac" ]; then
+    primary_ifname=$(grep -Po '(ens|eth|eno|enp)[0-9]+(?=:)' /etc/netplan/50-cloud-init.yaml | head -n1)
+  else
+    primary_ifname="$(ip -o link show | grep "link/ether $primary_mac" | cut -d ":" -f2 | tr -d " ")"
+  fi
+
   for i in /sys/class/net/!($primary_ifname); do
     if ! udevadm info "$i" 2>/dev/null | grep -Po '(?<=E: ID_NET_DRIVER=)virtio_net.*' 1>/dev/null 2>&1; then
       continue
@@ -99,6 +104,5 @@ if which netplan 2>/dev/null 1>&2; then
 fi
 
 shopt -u extglob
-set -e
 
 

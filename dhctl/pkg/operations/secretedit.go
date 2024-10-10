@@ -20,6 +20,7 @@ import (
 	"time"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -33,9 +34,24 @@ const allowUnsafeAnnotation = "deckhouse.io/allow-unsafe"
 
 var abstractEditing = Edit
 
+var emptySecret = &v1.Secret{
+	TypeMeta: metav1.TypeMeta{
+		APIVersion: v1.SchemeGroupVersion.String(),
+		Kind:       "Secret",
+	},
+	ObjectMeta: metav1.ObjectMeta{},
+	Type:       v1.SecretTypeOpaque,
+	Data:       make(map[string][]byte),
+}
+
 func SecretEdit(kubeCl *client.KubernetesClient, name string, Namespace string, secret string, dataKey string) error {
 	config, err := kubeCl.CoreV1().Secrets(Namespace).Get(context.TODO(), secret, metav1.GetOptions{})
-	if err != nil {
+	switch {
+	case errors.IsNotFound(err):
+		log.DebugF("Secret %s in namespace %s was not found, and will be created\n", secret, Namespace)
+		config = emptySecret.DeepCopy()
+		config.ObjectMeta.Name, config.ObjectMeta.Namespace = secret, Namespace
+	case err != nil:
 		return err
 	}
 
@@ -54,7 +70,7 @@ func SecretEdit(kubeCl *client.KubernetesClient, name string, Namespace string, 
 
 	return log.Process(
 		"common",
-		fmt.Sprintf("Save %s back to the Kubernetes cluster", name), func() error {
+		fmt.Sprintf("Save %s to the Kubernetes cluster", name), func() error {
 			if string(configData) == string(modifiedData) {
 				log.InfoLn("Configurations are equal. Nothing to update.")
 				return nil
@@ -63,12 +79,16 @@ func SecretEdit(kubeCl *client.KubernetesClient, name string, Namespace string, 
 			config.Data[dataKey] = modifiedData
 
 			return retry.
-				NewLoop(fmt.Sprintf("Update %s secret", name), 5, 5*time.Second).
+				NewLoop(fmt.Sprintf("Apply %s secret", secret), 5, 5*time.Second).
 				Run(func() error {
-					_, err = kubeCl.CoreV1().
-						Secrets(Namespace).
-						Update(context.TODO(), config, metav1.UpdateOptions{})
-					if err != nil {
+					_, err = kubeCl.CoreV1().Secrets(Namespace).Update(context.TODO(), config, metav1.UpdateOptions{})
+					switch {
+					case errors.IsNotFound(err):
+						log.DebugF("Creating new Secret %s in namespace %s\n", secret, Namespace)
+						if _, err = kubeCl.CoreV1().Secrets(Namespace).Create(context.TODO(), config, metav1.CreateOptions{}); err != nil {
+							return err
+						}
+					case err != nil:
 						return err
 					}
 

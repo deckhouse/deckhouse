@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	terrastate "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -44,17 +45,23 @@ func (b *ClusterBootstrapper) Abort(forceAbortFromCache bool) error {
 }
 
 func (b *ClusterBootstrapper) initSSHClient() error {
-	if _, err := b.SSHClient.Start(); err != nil {
+	wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
+	if !ok {
+		return nil // Local runs don't use ssh client.
+	}
+
+	sshClient := wrapper.Client()
+	if _, err := sshClient.Start(); err != nil {
 		return fmt.Errorf("unable to start ssh client: %w", err)
 	}
 
-	if len(b.SSHClient.Settings.AvailableHosts()) == 0 {
+	if len(sshClient.Settings.AvailableHosts()) == 0 {
 		mastersIPs, err := GetMasterHostsIPs()
 		if err != nil {
 			log.ErrorF("Can not load available ssh hosts: %v\n", err)
 			return err
 		}
-		b.SSHClient.Settings.SetAvailableHosts(mastersIPs)
+		sshClient.Settings.SetAvailableHosts(mastersIPs)
 	}
 
 	bastionHost, err := GetBastionHostFromCache()
@@ -64,7 +71,7 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 	}
 
 	if bastionHost != "" {
-		b.SSHClient.Settings.BastionHost = bastionHost
+		sshClient.Settings.BastionHost = bastionHost
 	}
 
 	return nil
@@ -127,10 +134,14 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 					},
 				)
 			} else {
+				wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
+				if !ok {
+					return fmt.Errorf("destroy operations are not supported for local execution contexts")
+				}
 				if err := b.initSSHClient(); err != nil {
 					return err
 				}
-				destroyer = destroy.NewStaticMastersDestroyer(b.SSHClient)
+				destroyer = destroy.NewStaticMastersDestroyer(wrapper.Client())
 			}
 
 			logMsg := "Deckhouse installation was not started before. Abort from cache"
@@ -151,13 +162,15 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 		}
 
 		if !b.CommanderMode {
-			if err = cache.InitWithOptions(b.SSHClient.Check().String(), cache.CacheOptions{}); err != nil {
-				return fmt.Errorf(bootstrapAbortInvalidCacheMessage, b.SSHClient.Check().String(), err)
+			if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+				if err = cache.InitWithOptions(wrapper.Client().Check().String(), cache.CacheOptions{}); err != nil {
+					return fmt.Errorf(bootstrapAbortInvalidCacheMessage, wrapper.Client().Check().String(), err)
+				}
 			}
 		}
 
 		destroyParams := &destroy.Params{
-			SSHClient:              b.SSHClient,
+			NodeInterface:          b.NodeInterface,
 			StateCache:             cache.Global(),
 			PhasedExecutionContext: b.PhasedExecutionContext,
 			SkipResources:          app.SkipResources,

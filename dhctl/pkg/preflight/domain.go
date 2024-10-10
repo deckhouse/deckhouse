@@ -39,7 +39,7 @@ func (pc *Checker) CheckLocalhostDomain() error {
 		return err
 	}
 
-	scriptCmd := pc.sshClient.UploadScript(file)
+	scriptCmd := pc.nodeInterface.UploadScript(file)
 	out, err := scriptCmd.Execute()
 	if err != nil {
 		log.ErrorLn(strings.Trim(string(out), "\n"))

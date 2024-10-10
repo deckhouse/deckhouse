@@ -338,3 +338,172 @@ spec:
   content: |
     sysctl -w vm.max_map_count=262144
 ```
+
+### Adding a root certificate to the host
+
+{% alert level="warning" %}
+Example is given for Ubuntu OS.  
+The method of adding certificates to the store may differ depending on the OS.  
+
+Change the [bundles](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles) parameter to adapt the script to a different OS.
+{% endalert %}
+
+{% alert level="warning" %}
+To use the certificate in `containerd` (including pulling containers from a private repository), a restart of the service is required after adding the certificate.
+{% endalert %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: add-custom-ca.sh
+spec:
+  weight: 31
+  nodeGroups:
+  - '*'  
+  bundles:
+  - 'ubuntu-lts'
+  content: |-
+    CERT_FILE_NAME=example_ca
+    CERTS_FOLDER="/usr/local/share/ca-certificates"
+    CERT_CONTENT=$(cat <<EOF
+    -----BEGIN CERTIFICATE-----
+    MIIDSjCCAjKgAwIBAgIRAJ4RR/WDuAym7M11JA8W7D0wDQYJKoZIhvcNAQELBQAw
+    JTEjMCEGA1UEAxMabmV4dXMuNTEuMjUwLjQxLjIuc3NsaXAuaW8wHhcNMjQwODAx
+    MTAzMjA4WhcNMjQxMDMwMTAzMjA4WjAlMSMwIQYDVQQDExpuZXh1cy41MS4yNTAu
+    NDEuMi5zc2xpcC5pbzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL1p
+    WLPr2c4SZX/i4IS59Ly1USPjRE21G4pMYewUjkSXnYv7hUkHvbNL/P9dmGBm2Jsl
+    WFlRZbzCv7+5/J+9mPVL2TdTbWuAcTUyaG5GZ/1w64AmAWxqGMFx4eyD1zo9eSmN
+    G2jis8VofL9dWDfUYhRzJ90qKxgK6k7tfhL0pv7IHDbqf28fCEnkvxsA98lGkq3H
+    fUfvHV6Oi8pcyPZ/c8ayIf4+JOnf7oW/TgWqI7x6R1CkdzwepJ8oU7PGc0ySUWaP
+    G5bH3ofBavL0bNEsyScz4TFCJ9b4aO5GFAOmgjFMMUi9qXDH72sBSrgi08Dxmimg
+    Hfs198SZr3br5GTJoAkCAwEAAaN1MHMwDgYDVR0PAQH/BAQDAgWgMAwGA1UdEwEB
+    /wQCMAAwUwYDVR0RBEwwSoIPbmV4dXMuc3ZjLmxvY2FsghpuZXh1cy41MS4yNTAu
+    NDEuMi5zc2xpcC5pb4IbZG9ja2VyLjUxLjI1MC40MS4yLnNzbGlwLmlvMA0GCSqG
+    SIb3DQEBCwUAA4IBAQBvTjTTXWeWtfaUDrcp1YW1pKgZ7lTb27f3QCxukXpbC+wL
+    dcb4EP/vDf+UqCogKl6rCEA0i23Dtn85KAE9PQZFfI5hLulptdOgUhO3Udluoy36
+    D4WvUoCfgPgx12FrdanQBBja+oDsT1QeOpKwQJuwjpZcGfB2YZqhO0UcJpC8kxtU
+    by3uoxJoveHPRlbM2+ACPBPlHu/yH7st24sr1CodJHNt6P8ugIBAZxi3/Hq0wj4K
+    aaQzdGXeFckWaxIny7F1M3cIWEXWzhAFnoTgrwlklf7N7VWHPIvlIh1EYASsVYKn
+    iATq8C7qhUOGsknDh3QSpOJeJmpcBwln11/9BGRP
+    -----END CERTIFICATE-----
+    EOF
+    )
+
+    # bb-event           - Creating subscription for event function. More information: http://www.bashbooster.net/#event
+    ## ca-file-updated   - Event name
+    ## update-certs      - The function name that the event will call
+    
+    bb-event-on "ca-file-updated" "update-certs"
+    
+    update-certs() {          # Function with commands for adding a certificate to the store
+      update-ca-certificates
+    }
+
+    # bb-tmp-file - Creating temp file function. More information: http://www.bashbooster.net/#tmp
+    CERT_TMP_FILE="$( bb-tmp-file )"
+    echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
+    
+    # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
+    ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destination file
+    ##  ${CERT_TMP_FILE}                          - Source file
+    ##  ca-file-updated                           - Name of event that will be called if the file changes.
+
+    bb-sync-file \
+      "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" \
+      ${CERT_TMP_FILE} \
+      ca-file-updated      
+```
+
+### Adding a certificate to the OS and containerd
+
+{% alert level="warning" %}
+Example is given for Ubuntu OS.  
+The method of adding certificates to the store may differ depending on the OS.  
+
+Change the [bundles](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles) parameter to adapt the script to a different OS.
+{% endalert %}
+
+{% alert level="info" %}
+The example of `NodeGroupConfiguration` uses functions of the script [032_configure_containerd.sh](./#features-of-writing-scripts).
+{% endalert %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: add-custom-ca-containerd..sh
+spec:
+  weight: 31
+  nodeGroups:
+  - '*'  
+  bundles:
+  - 'ubuntu-lts'
+  content: |-
+    REGISTRY_URL=private.registry.example
+    CERT_FILE_NAME=${REGISTRY_URL}
+    CERTS_FOLDER="/usr/local/share/ca-certificates"
+    CERT_CONTENT=$(cat <<EOF
+    -----BEGIN CERTIFICATE-----
+    MIIDSjCCAjKgAwIBAgIRAJ4RR/WDuAym7M11JA8W7D0wDQYJKoZIhvcNAQELBQAw
+    JTEjMCEGA1UEAxMabmV4dXMuNTEuMjUwLjQxLjIuc3NsaXAuaW8wHhcNMjQwODAx
+    MTAzMjA4WhcNMjQxMDMwMTAzMjA4WjAlMSMwIQYDVQQDExpuZXh1cy41MS4yNTAu
+    NDEuMi5zc2xpcC5pbzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL1p
+    WLPr2c4SZX/i4IS59Ly1USPjRE21G4pMYewUjkSXnYv7hUkHvbNL/P9dmGBm2Jsl
+    WFlRZbzCv7+5/J+9mPVL2TdTbWuAcTUyaG5GZ/1w64AmAWxqGMFx4eyD1zo9eSmN
+    G2jis8VofL9dWDfUYhRzJ90qKxgK6k7tfhL0pv7IHDbqf28fCEnkvxsA98lGkq3H
+    fUfvHV6Oi8pcyPZ/c8ayIf4+JOnf7oW/TgWqI7x6R1CkdzwepJ8oU7PGc0ySUWaP
+    G5bH3ofBavL0bNEsyScz4TFCJ9b4aO5GFAOmgjFMMUi9qXDH72sBSrgi08Dxmimg
+    Hfs198SZr3br5GTJoAkCAwEAAaN1MHMwDgYDVR0PAQH/BAQDAgWgMAwGA1UdEwEB
+    /wQCMAAwUwYDVR0RBEwwSoIPbmV4dXMuc3ZjLmxvY2FsghpuZXh1cy41MS4yNTAu
+    NDEuMi5zc2xpcC5pb4IbZG9ja2VyLjUxLjI1MC40MS4yLnNzbGlwLmlvMA0GCSqG
+    SIb3DQEBCwUAA4IBAQBvTjTTXWeWtfaUDrcp1YW1pKgZ7lTb27f3QCxukXpbC+wL
+    dcb4EP/vDf+UqCogKl6rCEA0i23Dtn85KAE9PQZFfI5hLulptdOgUhO3Udluoy36
+    D4WvUoCfgPgx12FrdanQBBja+oDsT1QeOpKwQJuwjpZcGfB2YZqhO0UcJpC8kxtU
+    by3uoxJoveHPRlbM2+ACPBPlHu/yH7st24sr1CodJHNt6P8ugIBAZxi3/Hq0wj4K
+    aaQzdGXeFckWaxIny7F1M3cIWEXWzhAFnoTgrwlklf7N7VWHPIvlIh1EYASsVYKn
+    iATq8C7qhUOGsknDh3QSpOJeJmpcBwln11/9BGRP
+    -----END CERTIFICATE-----
+    EOF
+    )
+    CONFIG_CONTENT=$(cat <<EOF
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
+        ca_file = "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"
+    EOF
+    )
+    
+    mkdir -p /etc/containerd/conf.d
+
+    # bb-tmp-file - Create temp file function. More information: http://www.bashbooster.net/#tmp
+
+    CERT_TMP_FILE="$( bb-tmp-file )"
+    echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
+    
+    CONFIG_TMP_FILE="$( bb-tmp-file )"
+    echo -e "${CONFIG_CONTENT}" > "${CONFIG_TMP_FILE}"  
+
+    # bb-event           - Creating subscription for event function. More information: http://www.bashbooster.net/#event
+    ## ca-file-updated   - Event name
+    ## update-certs      - The function name that the event will call
+    
+    bb-event-on "ca-file-updated" "update-certs"
+    
+    update-certs() {          # Function with commands for adding a certificate to the store
+      update-ca-certificates  # Restarting the containerd service is not required as this is done automatically in the script 032_configure_containerd.sh
+    }
+
+    # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
+    ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destination file
+    ##  ${CERT_TMP_FILE}                          - Source file
+    ##  ca-file-updated                           - Name of event that will be called if the file changes.
+
+    bb-sync-file \
+      "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" \
+      ${CERT_TMP_FILE} \
+      ca-file-updated   
+      
+    bb-sync-file \
+      "/etc/containerd/conf.d/${REGISTRY_URL}.toml" \
+      ${CONFIG_TMP_FILE} 
+```

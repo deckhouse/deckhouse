@@ -64,11 +64,16 @@ bb-is-bundle(){
           os="altlinux" ;;
       esac
     ;;
+    mosos-arbat|opensuse-leap)
+      case "$VERSION" in 15.*)
+          os="opensuse" ;;
+      esac
+    ;;
     "")
       bb-exit 1 "ERROR: Can't determine OS! No ID in /etc/os-release."
     ;;
   esac
-  
+
   if [ -n "$os" ]; then
     echo "$os"
   else

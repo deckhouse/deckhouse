@@ -159,6 +159,16 @@ spec:
                       description: "List of allowed priority class names."
                       items:
                         type: string
+                    ingressClassNames:
+                      type: array
+                      description: "List of allowed ingress class names."
+                      items:
+                        type: string
+                    storageClassNames:
+                      type: array
+                      description: "List of allowed storage class names."
+                      items:
+                        type: string
                     imagePullPolicy:
                       type: string
                       description: "Required image pull policy for containers."

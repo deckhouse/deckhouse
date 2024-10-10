@@ -23,16 +23,16 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 var (
-	EnabledByBundle  = pointer.Bool(true)
-	EnabledByScript  = pointer.Bool(true)
-	DisabledByBundle = pointer.Bool(false)
-	DisabledByScript = pointer.Bool(false)
+	EnabledByBundle  = ptr.To(true)
+	EnabledByScript  = ptr.To(true)
+	DisabledByBundle = ptr.To(false)
+	DisabledByScript = ptr.To(false)
 )
 
 // NewModuleManager returns mocked ModuleManager to test hooks
@@ -63,6 +63,10 @@ type ModuleManagerMock struct {
 
 func (m *ModuleManagerMock) IsModuleEnabled(name string) bool {
 	return m.enabledModules.Has(name)
+}
+
+func (m *ModuleManagerMock) GetUpdatedByExtender(_ string) (string, error) {
+	return "mockExtender", nil
 }
 
 func (m *ModuleManagerMock) GetModule(name string) *modules.BasicModule {

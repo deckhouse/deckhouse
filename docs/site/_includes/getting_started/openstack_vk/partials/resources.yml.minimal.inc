@@ -11,7 +11,7 @@ spec:
   # [<ru>] Используемый flavor для данного инстанс-класса.
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
-  flavorName: Standard-4-8-80
+  flavorName: STD3-4-8
   rootDiskSize: 30
   # [<en>] VM image in use.
   # [<ru>] Используемый образ виртуальной машины.

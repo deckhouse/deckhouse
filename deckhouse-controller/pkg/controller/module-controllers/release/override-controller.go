@@ -30,7 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -89,7 +89,7 @@ func NewModulePullOverrideController(
 	ctr, err := controller.New("module-pull-override", mgr, controller.Options{
 		MaxConcurrentReconciles: 1,
 		CacheSyncTimeout:        3 * time.Minute,
-		NeedLeaderElection:      pointer.Bool(false),
+		NeedLeaderElection:      ptr.To(false),
 		Reconciler:              rc,
 	})
 	if err != nil {
@@ -267,7 +267,7 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 		Kind:       v1alpha1.ModulePullOverrideGVK.Kind,
 		Name:       mo.GetName(),
 		UID:        mo.GetUID(),
-		Controller: pointer.Bool(true),
+		Controller: ptr.To(true),
 	}
 	err = createOrUpdateModuleDocumentationCR(ctx, c.client, mo.GetModuleName(), moduleVersion, checksum, modulePath, mo.GetModuleSource(), ownerRef)
 	if err != nil {

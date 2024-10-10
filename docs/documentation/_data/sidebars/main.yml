@@ -1219,6 +1219,8 @@ entries:
     - title:
         en: Storage
         ru: Хранилище
+        moduleName: ceph-csi
+      featureStatus: deprecated
       folders:
         - title: ceph-csi
           folders:
@@ -1353,6 +1355,7 @@ entries:
               url: /modules/450-keepalived/faq.html
         - title: l2-load-balancer
           d8Revision: ee
+          featureStatus: deprecated
           folders:
             - title:
                 en: Description

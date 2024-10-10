@@ -442,6 +442,20 @@ alerts:
         The {{ $labels.module }}/{{ $labels.hook }} Deckhouse hook crashes way too often.
       severity: "9"
       markupFormat: markdown
+    - name: D8DeckhouseModuleUpdatePolicyNotFound
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module update policy not found for {{ $labels.module_release }}
+
+        You need to remove label from MR: `kubectl label mr {{ $labels.module_release }} modules.deckhouse.io/update-policy-`.
+        A new suitable policy will be detected automatically.
+      summary: |
+        Module update policy not found for {{ $labels.module_release }}
+      severity: "5"
+      markupFormat: markdown
     - name: D8DeckhousePodIsNotReady
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 340-monitoring-deckhouse
@@ -842,7 +856,7 @@ alerts:
 
         Reproducing (run from deckhouse pod):
         ```
-        TOKEN="$(deckhouse-controller module values istio -o json | jq -r --arg ah {{$labels.api_host}} '.istio.internal.multiclusters[] | select(.apiHost == $ah) | .apiJWT')"
+        TOKEN="$(deckhouse-controller module values istio -o json | jq -r --arg ah {{$labels.api_host}} '.internal.multiclusters[]| select(.apiHost == $ah)| .apiJWT ')"
         curl -H "Authorization: Bearer $TOKEN" https://{{$labels.api_host}}/version
         ```
       summary: |
@@ -1196,7 +1210,7 @@ alerts:
       description: |-
         Some nodes have deprecated OS versions. Please update nodes to actual OS version.
 
-        To observe affected nodes use the expr `kube_node_info{os_image=~"Debian GNU/Linux 9.*"}` in Prometheus.
+        To observe affected nodes use the expr `kube_node_info{os_image=~"Debian GNU/Linux 10.*"}` in Prometheus.
       summary: |
         Nodes have deprecated OS versions.
       severity: "4"
@@ -2355,6 +2369,17 @@ alerts:
         Kubernetes version &quot;{{ $labels.k8s_version }}&quot; has reached End Of Life.
       severity: "4"
       markupFormat: markdown
+    - name: L2LoadBalancerModuleDeprecated
+      sourceFile: ee/modules/381-l2-load-balancer/monitoring/prometheus-rules/services.yaml
+      moduleUrl: 381-l2-load-balancer
+      module: l2-load-balancer
+      edition: ee
+      description: |
+        The L2LoadBalancer module is deprecated and will be removed in a future release. Disable the module and use MetalLB module in L2 mode.
+      summary: |
+        L2LoadBalancer module is deprecated
+      severity: "3"
+      markupFormat: markdown
     - name: L2LoadBalancerOrphanServiceFound
       sourceFile: ee/modules/381-l2-load-balancer/monitoring/prometheus-rules/services.yaml
       moduleUrl: 381-l2-load-balancer
@@ -2392,6 +2417,19 @@ alerts:
       summary: |
         Deprecated ModuleConfig was found.
       severity: "9"
+      markupFormat: markdown
+    - name: ModuleReleaseIsWaitingManualApproval
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module release is waiting for manual approval.
+
+        Please run `kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"` for confirmation.
+      summary: |
+        Module release is waiting for manual approval.
+      severity: "6"
       markupFormat: markdown
     - name: NATInstanceWithDeprecatedAvailabilityZone
       sourceFile: modules/030-cloud-provider-yandex/monitoring/prometheus-rules/deprecated_availability_zone.yaml

@@ -32,7 +32,7 @@ func Test(t *testing.T) {
 
 const (
 	globalValues = `
-  enabledModules: ["vertical-pod-autoscaler-crd"]
+  enabledModules: ["vertical-pod-autoscaler"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     kind: ClusterConfiguration

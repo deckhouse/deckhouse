@@ -159,6 +159,9 @@
           groups: {{ $provider.oidc.claimMapping.groups }}
           preferred_username: {{ $provider.oidc.claimMapping.preferred_username }}
         {{- end }}
+        {{- if $provider.oidc.claimMappingOverride }}
+        overrideClaimMapping: true
+        {{- end }}
         scopes:
         {{- if $provider.oidc.scopes }}
            {{- range $scope := $provider.oidc.scopes }}

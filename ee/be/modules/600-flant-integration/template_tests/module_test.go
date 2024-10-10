@@ -23,7 +23,7 @@ func Test(t *testing.T) {
 const (
 	globalValues = `
 deckhouseVersion: dev
-enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "flant-integration", "operator-prometheus-crd", "log-shipper"]
+enabledModules: ["vertical-pod-autoscaler", "prometheus", "flant-integration", "operator-prometheus", "log-shipper"]
 clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:
@@ -54,7 +54,7 @@ modules:
 `
 	globalValuesWithoutClusterConfiguration = `
 deckhouseVersion: dev
-enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "flant-integration", "operator-prometheus-crd", "log-shipper"]
+enabledModules: ["vertical-pod-autoscaler", "prometheus", "flant-integration", "operator-prometheus", "log-shipper"]
 discovery:
   prometheusScrapeInterval: 30
   clusterControlPlaneIsHighlyAvailable: true

@@ -10,6 +10,9 @@ spec:
           properties:
             spec:
               properties:
+                description:
+                  description: |
+                    Произвольное описание назначения шаблона. Укажите пустую строку, если описание не требуется.
                 parametersSchema:
                   description: |
                     Одна из схем параметров для валидации параметров проекта.

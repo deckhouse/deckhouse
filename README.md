@@ -23,7 +23,7 @@
 - Easy to start: you need a couple of CLI commands and 8 minutes to get production-ready Kubernetes.
 - A fully-featured platform. Many features *(check the diagram below)* — carefully configured & integrated — are available right out of the box.
 
-_Deckhouse Platform [has passed](https://landscape.cncf.io/card-mode?category=certified-kubernetes-distribution,certified-kubernetes-hosted,certified-kubernetes-installer&grouping=category&selected=flant-deckhouse) the CNCF Certified Kubernetes Conformance Program certification for Kubernetes 1.23—1.27._
+_Deckhouse Platform [has passed](https://landscape.cncf.io/?view-mode=card&item=platform--certified-kubernetes-distribution--flant-deckhouse#app-definition-and-development--application-definition-image-build) the CNCF Certified Kubernetes Conformance Program certification for Kubernetes 1.26—1.30._
 
 A brief overview of essential Deckhouse Platform features, from infrastructure level to the platform:
 

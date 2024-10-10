@@ -16,7 +16,8 @@ spec:
   versions:
     - name: v1alpha1
       served: true
-      storage: true
+      storage: false
+      deprecated: true
       schema: &schema
         openAPIV3Schema:
           type: object
@@ -35,5 +36,5 @@ spec:
                     PromQL-query which returns unambiguous value for your metric. Use grouping operators like sum() by(), max() by() etc. Also use keywords: <<.LabelMatchers>> with your optional applied comma-separated labels as label selector and <<.GroupBy>> as group-by-labels. Example: max(mymetric{<<.LabelMatchers>>,queue="messages"}) by(<<.GroupBy>>)
     - name: v1beta1
       served: true
-      storage: false
+      storage: true
       schema: *schema

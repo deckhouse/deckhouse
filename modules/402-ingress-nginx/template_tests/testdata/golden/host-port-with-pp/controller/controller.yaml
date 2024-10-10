@@ -39,7 +39,7 @@ kind: DaemonSet
 metadata:
   annotations:
     ingress-nginx-controller.deckhouse.io/checksum: e250fb7fff9aa7c3d0c9b111dcd94a428ddb4c253509f2e3a809129b47628fe0
-    ingress-nginx-controller.deckhouse.io/controller-version: "1.6"
+    ingress-nginx-controller.deckhouse.io/controller-version: "1.9"
     ingress-nginx-controller.deckhouse.io/inlet: HostPortWithProxyProtocol
   labels:
     app: controller

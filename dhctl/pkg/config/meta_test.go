@@ -265,25 +265,24 @@ func TestPrepareRegistry(t *testing.T) {
 
 	t.Run("Validate registryDockerCfg", func(t *testing.T) {
 		t.Run("Expect successful validation", func(t *testing.T) {
-			creds := []string{
-				`{"auths": { "registry.deckhouse.io": {}}}`,
-				`{"auths": { "regi-stry.deckhouse.io": {}}}`,
-				`{"auths": { "registry.io": {}}}`,
-				`{"auths": { "1.io": {}}}`,
-				`{"auths": { "1.s.io": {}}}`,
-				`{"auths": { "regi.stry:5000": {}}}`,
-				`{"auths": { "1.2.3": {}}}`,
-				`{"auths": { "1.2:5000": {}}}`,
-				`{"auths": { "reg.dec.io1": {}}}`,
-				`{"auths": { "one.two.three.four.five.six.whatever": {}}}`,
-				`{"auths": { "1.2.3.4.5.6.0": {}}}`,
-				``,
+			creds := map[string]string{
+				"registry.deckhouse.io":                `{"auths": { "registry.deckhouse.io": {}}}`,
+				"regi-stry.deckhouse.io":               `{"auths": { "regi-stry.deckhouse.io": {}}}`,
+				"registry.io":                          `{"auths": { "registry.io": {}}}`,
+				"1.io":                                 `{"auths": { "1.io": {}}}`,
+				"1.s.io":                               `{"auths": { "1.s.io": {}}}`,
+				"regi.stry:5000":                       `{"auths": { "regi.stry:5000": {}}}`,
+				"1.2.3":                                `{"auths": { "1.2.3": {}}}`,
+				"1.2:5000":                             `{"auths": { "1.2:5000": {}}}`,
+				"reg.dec.io1":                          `{"auths": { "reg.dec.io1": {}}}`,
+				"one.two.three.four.five.six.whatever": `{"auths": { "one.two.three.four.five.six.whatever": {}}}`,
+				"1.2.3.4.5.6.0":                        `{"auths": { "1.2.3.4.5.6.0": {}}}`,
 			}
 
-			for _, cred := range creds {
+			for host, cred := range creds {
 				dockerCfg := base64.StdEncoding.EncodeToString([]byte(cred))
 
-				err := validateRegistryDockerCfg(dockerCfg)
+				err := validateRegistryDockerCfg(dockerCfg, host)
 				require.NoError(t, err)
 			}
 		})
@@ -306,7 +305,7 @@ func TestPrepareRegistry(t *testing.T) {
 				creds := fmt.Sprintf("{\"auths\": { \"%s\": {}}}", host)
 				dockerCfg := base64.StdEncoding.EncodeToString([]byte(creds))
 
-				err := validateRegistryDockerCfg(dockerCfg)
+				err := validateRegistryDockerCfg(dockerCfg, host)
 				require.EqualErrorf(t,
 					err,
 					fmt.Sprintf("invalid registryDockerCfg. Your auths host \"%s\" should be similar to \"your.private.registry.example.com\"", host),

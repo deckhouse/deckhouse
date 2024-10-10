@@ -5,6 +5,6 @@ metadata:
 spec:
   inlet: LoadBalancer
   ingressClass: nginx
-  controllerVersion: "1.6"
+  controllerVersion: "1.9"
   maxReplicas: 3
   minReplicas: 3

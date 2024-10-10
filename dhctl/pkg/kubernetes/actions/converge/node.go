@@ -18,9 +18,11 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
+	"gopkg.in/yaml.v3"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,7 +45,7 @@ var (
 const HideDeckhouseLogs = false
 const ShowDeckhouseLogs = true
 
-func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string, showDeckhouseLogs bool) (string, error) {
+func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string, showDeckhouseLogs bool, apiserverHosts ...string) (string, error) {
 	var cloudData string
 
 	name := fmt.Sprintf("Waiting for %s cloud config️", nodeGroupName)
@@ -73,7 +75,36 @@ func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string, showD
 			if err != nil {
 				return err
 			}
+
+			if len(apiserverHosts) > 0 {
+				var endpoints []string
+
+				err := yaml.Unmarshal(secret.Data["apiserverEndpoints"], &endpoints)
+				if err != nil {
+					return fmt.Errorf("failed to unmarshal apiserver endpoints: %v", err)
+				}
+
+				hostsMap := make(map[string]struct{}, len(endpoints))
+
+				for _, endpoint := range endpoints {
+					host, _, err := net.SplitHostPort(endpoint)
+					if err != nil {
+						return fmt.Errorf("failed to split endpoint `%s` into host and port: %v", endpoint, err)
+					}
+
+					hostsMap[host] = struct{}{}
+				}
+
+				for _, host := range apiserverHosts {
+					_, ok := hostsMap[host]
+					if !ok {
+						return fmt.Errorf("apiserver host '%s' not found in cloud config", host)
+					}
+				}
+			}
+
 			cloudData = base64.StdEncoding.EncodeToString(secret.Data["cloud-config"])
+
 			return nil
 		})
 		if err != nil {
@@ -254,7 +285,7 @@ func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string
 							var err error
 							ready, err = checker.IsReady(node.Name)
 							if err != nil {
-								log.WarnF("While doing check '%s' node %s has error: %v\n", checker.Name(), node.Name, err)
+								log.InfoF("While doing check '%s' node %s has error: %v\n", checker.Name(), node.Name, err)
 							} else if !ready {
 								log.InfoF("Node %s is ready but %s is not ready\n", node.Name, checker.Name())
 							}

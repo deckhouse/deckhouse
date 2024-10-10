@@ -4,6 +4,17 @@
   {{- $bootstrap_token := index . 2 -}}
 #!/bin/bash
 
+if [[ -f /var/lib/bashible/bootstrap-token ]]; then
+  echo "The node already have bootstrap-token and under bashible."
+  exit 1
+fi
+
+checkBashible=$(systemctl is-active bashible.timer)
+if [[ "$checkBashible" == "active" ]]; then
+  echo "The node already exists in the cluster and under bashible."
+  exit 2
+fi
+
 mkdir -p /var/lib/bashible
 
 cat > /var/lib/bashible/bootstrap.sh <<"END"
@@ -22,10 +33,5 @@ chmod 0600 /var/lib/bashible/bootstrap-token
 
 touch /var/lib/bashible/first_run
 
-checkBashible=$(systemctl is-active bashible.timer)
-if [[ "$checkBashible" != "active" ]]; then
-  /var/lib/bashible/bootstrap.sh
-else
-  echo "The node already exists in the cluster and under bashible."
-fi
+/var/lib/bashible/bootstrap.sh
 {{ end }}
