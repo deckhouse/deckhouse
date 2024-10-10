@@ -59,7 +59,7 @@ var shouldRecreateKubeConfigErrors = []error{
 }
 
 func shouldRecreateKubeConfig(err error) bool {
-	for _, e := range shouldRecreteKubeConfigErrors {
+	for _, e := range shouldRecreateKubeConfigErrors {
 		if errors.Is(err, e) {
 			return true
 		}
@@ -107,7 +107,7 @@ func renewKubeconfig(componentName string) error {
 		if err != nil {
 			log.Error(err)
 		}
-		if shouldRecreteKubeConfig(err) {
+		if shouldRecreateKubeConfig(err) {
 			removeFile(path)
 		}
 	}
