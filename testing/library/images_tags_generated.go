@@ -176,6 +176,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"pythonStatic":              "imageHash-common-pythonStatic",
 		"redisStatic":               "imageHash-common-redisStatic",
 		"shellOperator":             "imageHash-common-shellOperator",
+		"vxlanOffloadingFixer":      "imageHash-common-vxlanOffloadingFixer",
 	},
 	"controlPlaneManager": map[string]interface{}{
 		"controlPlaneManager126":   "imageHash-controlPlaneManager-controlPlaneManager126",
