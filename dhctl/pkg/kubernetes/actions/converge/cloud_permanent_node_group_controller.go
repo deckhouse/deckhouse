@@ -109,7 +109,7 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 			log.WarnLn(err)
 		}
 
-		log.InfoLn(data)
+		log.InfoLn(string(data))
 		for _, line := range candidate.log {
 			log.InfoLn(line)
 		}
