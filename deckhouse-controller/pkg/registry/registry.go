@@ -26,23 +26,42 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"gopkg.in/alecthomas/kingpin.v2"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var semVerRegex = regexp.MustCompile(`^v?([0-9]+)(\.[0-9]+)?(\.[0-9]+)?` +
 	`(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?` +
 	`(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?$`)
 
+// Now:
+//
+// list releases
+// list releases --all
+// get release alpha
+// get release alpha --all
+// list sources
+// list modules deckhouse-prod
+// list module-release deckhouse-prod -n console
+// list module-release deckhouse-prod -n console --all
+// get module-release deckhouse-prod -n console -c alpha
+// get module-release deckhouse-prod -n console -c alpha --all
+
+// Proposal:
+//
 // get releases
 // get releases --all
-// get releases alpha
-// get releases alpha --all
+// get releases -c alpha
+// get releases -c alpha --all
 // get sources
 // get modules deckhouse-prod
-// get modules deckhouse-prod console
-// get modules deckhouse-prod console --all
-// get modules deckhouse-prod console alpha
-// get modules deckhouse-prod console alpha --all
+// get modules deckhouse-prod -n console
+// get modules deckhouse-prod -n console --all
+// get modules deckhouse-prod -n console -c alpha
+// get modules deckhouse-prod -n console -c alpha --all
 
 func DefineRegistryCommand(kpApp *kingpin.Application) {
 	registryCmd := kpApp.Command("registry", "Deckhouse repository work.").
@@ -148,14 +167,14 @@ func DefineRegistryCommand(kpApp *kingpin.Application) {
 	registryListSourcesCmd.Action(func(_ *kingpin.ParseContext) error {
 		ctx := context.TODO()
 
-		k8sClient, err := NewKubernetesClient()
+		k8sClient, err := newKubernetesClient()
 		if err != nil {
 			panic(err)
 		}
 
 		msl := new(v1alpha1.ModuleSourceList)
 		if err := k8sClient.List(ctx, msl); err != nil {
-			return fmt.Errorf("list ModuleSource got an error: %w", err)
+			return fmt.Errorf("list ModuleSource: %w", err)
 		}
 
 		srcs := make([]string, 0, len(msl.Items))
@@ -182,7 +201,7 @@ func DefineRegistryCommand(kpApp *kingpin.Application) {
 
 		registry, rconf, err := getModuleRegistry(ctx, *moduleSourceListModules)
 		if err != nil {
-			return fmt.Errorf("get deckhouse registry: %w", err)
+			return fmt.Errorf("get module registry: %w", err)
 		}
 
 		svc := NewModuleService(registry, rconf)
@@ -221,7 +240,7 @@ func DefineRegistryCommand(kpApp *kingpin.Application) {
 
 		registry, rconf, err := getModuleRegistry(ctx, *moduleSourceListModuleRelease)
 		if err != nil {
-			return fmt.Errorf("get deckhouse registry: %w", err)
+			return fmt.Errorf("get module registry: %w", err)
 		}
 
 		svc := NewModuleService(registry, rconf)
@@ -268,14 +287,14 @@ func DefineRegistryCommand(kpApp *kingpin.Application) {
 
 		registry, rconf, err := getModuleRegistry(ctx, *moduleSourceGetModuleRelease)
 		if err != nil {
-			return fmt.Errorf("get deckhouse registry: %w", err)
+			return fmt.Errorf("get module registry: %w", err)
 		}
 
 		svc := NewModuleService(registry, rconf)
 
 		meta, err := svc.GetModuleRelease(*moduleNameGetModuleRelease, *moduleChannel)
 		if err != nil {
-			return fmt.Errorf("get module release %s got an error: %w", *moduleNameGetModuleRelease, err)
+			return fmt.Errorf("get module release %s: %w", *moduleNameGetModuleRelease, err)
 		}
 
 		if !*moduleCompleteInfo {
@@ -299,8 +318,27 @@ func DefineRegistryCommand(kpApp *kingpin.Application) {
 	})
 }
 
+func newKubernetesClient() (client.Client, error) {
+	scheme := runtime.NewScheme()
+
+	utilruntime.Must(v1alpha1.AddToScheme(scheme))
+	utilruntime.Must(corev1.AddToScheme(scheme))
+
+	restConfig := ctrl.GetConfigOrDie()
+	opts := client.Options{
+		Scheme: scheme,
+	}
+
+	k8sClient, err := client.New(restConfig, opts)
+	if err != nil {
+		return nil, fmt.Errorf("create kubernetes client: %w", err)
+	}
+
+	return k8sClient, nil
+}
+
 func getDeckhouseRegistry(ctx context.Context) (string, *RegistryConfig, error) {
-	k8sClient, err := NewKubernetesClient()
+	k8sClient, err := newKubernetesClient()
 	if err != nil {
 		panic(err)
 	}
@@ -310,7 +348,7 @@ func getDeckhouseRegistry(ctx context.Context) (string, *RegistryConfig, error) 
 		return "", nil, fmt.Errorf("list ModuleSource got an error: %w", err)
 	}
 
-	drs, err := ParseDeckhouseRegistrySecret(secret.Data)
+	drs, err := parseDeckhouseRegistrySecret(secret.Data)
 	if err != nil {
 		return "", nil, fmt.Errorf("parse deckhouse registry secret: %w", err)
 	}
@@ -336,7 +374,7 @@ func getDeckhouseRegistry(ctx context.Context) (string, *RegistryConfig, error) 
 }
 
 func getModuleRegistry(ctx context.Context, moduleSource string) (string, *RegistryConfig, error) {
-	k8sClient, err := NewKubernetesClient()
+	k8sClient, err := newKubernetesClient()
 	if err != nil {
 		panic(err)
 	}
@@ -365,7 +403,7 @@ type DeckhouseRegistrySecret struct {
 	Scheme                string
 }
 
-func ParseDeckhouseRegistrySecret(data map[string][]byte) (*DeckhouseRegistrySecret, error) {
+func parseDeckhouseRegistrySecret(data map[string][]byte) (*DeckhouseRegistrySecret, error) {
 	dockerConfig, ok := data[".dockerconfigjson"]
 	if !ok {
 		return nil, errors.New("secret has no .dockerconfigjson field")

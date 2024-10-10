@@ -47,12 +47,12 @@ func NewModuleService(registryAddress string, registryConfig *RegistryConfig) *M
 func (svc *ModuleService) ListModules() ([]string, error) {
 	regCli, err := svc.dc.GetRegistryClient(svc.registry, svc.registryOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("fetch release image error: %v", err)
+		return nil, fmt.Errorf("get registry client: %v", err)
 	}
 
 	ls, err := regCli.ListTags()
 	if err != nil {
-		return nil, fmt.Errorf("fetch image error: %v", err)
+		return nil, fmt.Errorf("list tags: %v", err)
 	}
 
 	return ls, err
@@ -61,12 +61,12 @@ func (svc *ModuleService) ListModules() ([]string, error) {
 func (svc *ModuleService) ListModuleTags(moduleName string, fullList bool) ([]string, error) {
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, moduleName), svc.registryOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("fetch release image error: %v", err)
+		return nil, fmt.Errorf("get registry client: %v", err)
 	}
 
 	ls, err := regCli.ListTags()
 	if err != nil {
-		return nil, fmt.Errorf("fetch image error: %v", err)
+		return nil, fmt.Errorf("list tags: %v", err)
 	}
 
 	return ls, err
@@ -81,7 +81,7 @@ type moduleReleaseMetadata struct {
 func (svc *ModuleService) GetModuleRelease(moduleName, releaseChannel string) (*moduleReleaseMetadata, error) {
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, moduleName, "release"), svc.registryOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("fetch release image error: %v", err)
+		return nil, fmt.Errorf("get registry client: %v", err)
 	}
 
 	img, err := regCli.Image(strcase.ToKebab(releaseChannel))
@@ -91,11 +91,11 @@ func (svc *ModuleService) GetModuleRelease(moduleName, releaseChannel string) (*
 
 	moduleMetadata, err := svc.fetchModuleReleaseMetadata(img)
 	if err != nil {
-		return nil, fmt.Errorf("fetch release metadata error: %v", err)
+		return nil, fmt.Errorf("fetch module release metadata error: %v", err)
 	}
 
 	if moduleMetadata.Version == nil {
-		return nil, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
+		return nil, fmt.Errorf("module release %q metadata malformed: no version found", moduleName)
 	}
 
 	return moduleMetadata, nil
@@ -126,11 +126,14 @@ func (svc *ModuleService) fetchModuleReleaseMetadata(img v1.Image) (*moduleRelea
 
 	if rr.changelogReader.Len() > 0 {
 		var changelog map[string]any
+
 		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
+
 		if err != nil {
 			meta.Changelog = make(map[string]any)
 			return nil, nil
 		}
+
 		meta.Changelog = changelog
 	}
 
