@@ -175,6 +175,7 @@ import:
 {{- $_ := set $context "ModuleName" "docs" }}
 {{- $_ := set $context "ImageName" "builder" }}
 {{- $_ := set $context "delimiter" "-" }}
+{{- $_ := set $context "GOPROXY" "https://proxy.golang.org/" }}
 {{ tpl (.Files.Get "werf-docs-builder.inc.yaml") $context }}
 ---
 # Build scanner, which fetch modules documentation from list of specified registries
