@@ -261,10 +261,10 @@ func (c *Creator) createSingleResource(resource *template.Resource) error {
 	// Wait up to 10 minutes
 	return retry.NewLoop(fmt.Sprintf("Create %s resources", resource.GVK.String()), 60, 10*time.Second).Run(func() error {
 		gvr, docCopy, err := resourceToGVR(c.kubeCl, resource)
-		namespace := docCopy.GetNamespace()
 		if err != nil {
 			return err
 		}
+		namespace := docCopy.GetNamespace()
 		manifestTask := actions.ManifestTask{
 			Name:     getUnstructuredName(docCopy),
 			Manifest: func() interface{} { return nil },
