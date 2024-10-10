@@ -9,7 +9,7 @@ import:
   add: /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver
   to: /bin/aws-ebs-csi-driver
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact-{{ $version | replace "." "-" }}
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: install
@@ -31,8 +31,8 @@ shell:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
-  {{- end }}
-{{- end }}
+ {{- end }}
+{{- end }}   
 ---
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs*" }}
 ---
