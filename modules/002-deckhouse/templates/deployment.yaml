@@ -71,6 +71,7 @@ spec:
         app: deckhouse
       annotations:
         checksum/registry: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
+        kubectl.kubernetes.io/default-container: deckhouse
     spec:
       affinity:
         nodeAffinity:
