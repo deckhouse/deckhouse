@@ -1907,7 +1907,7 @@ alerts:
       module: upmeter
       edition: ce
       description: |
-        PV count per smoke-mini PVC: {{ $value }}.
+        The number of unnecessary smoke-mini PVs: {{ $value }}.
 
         Smoke-mini PVs should be deleted when released. Probably smoke-mini storage class has Retain policy by default,
         or there is CSI/cloud issue.
