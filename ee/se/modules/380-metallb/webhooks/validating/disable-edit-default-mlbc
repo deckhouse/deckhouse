@@ -45,6 +45,7 @@ function forbid() {
 }
 
 function __main__() {
+  context::jq . > /tmp/disable-edit-default-mlbc.json
   mc_version=$(context::jq -r '.snapshots.metallb_mc.[]?.filterResult.version')
   mlbc_name=$(context::jq -r '.review.request.object.metadata.name')
   if [[ $mc_version == "1" && $mlbc_name == "l2-default" ]]; then
