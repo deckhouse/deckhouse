@@ -9,9 +9,8 @@ function __config__(){
   cat <<EOF
 configVersion: v1
 kubernetesValidating:
-- name: multiple_default_mlbc_handler-policy.deckhouse.io
+- name: disableeditdefaultmlbc-policy.deckhouse.io
   group: main
-  includeSnapshotsFrom: ["mlbc_default"]
   rules:
   - apiGroups:   ["network.deckhouse.io"]
     apiVersions: ["v1alpha1"]
@@ -19,17 +18,19 @@ kubernetesValidating:
     resources:   ["metalloadbalancerclasses"]
     scope:       "Cluster"
 kubernetes:
-- name: mlbc_default
+- name: metallb_mc
   group: main
   executeHookOnEvent: []
   executeHookOnSynchronization: false
   keepFullObjectsInMemory: false
   apiVersion: network.deckhouse.io/v1alpha1
-  kind: MetalLoadBalancerClass
+  kind: ModuleConfig
+  nameSelector:
+    matchNames:
+    - metallb
   jqFilter: |
     {
-      "isDefault": .spec.isDefault
-      "name": .metadata.name
+      "version": .spec.version,
     }
 EOF
 }
@@ -44,9 +45,14 @@ function forbid() {
 }
 
 function __main__() {
-  context::jq . > /tmp/qqq.json
-  exit 0
+  context::jq . > /tmp/bbb.json
+  if context::jq -e -r '.review.request.object.metadata.name == "l2-default"' >/dev/null 2>&1; then
+    forbid "Editing of the resource is prohibited until the module is upgraded to version 2"
+    exit 0
+  fi
 
+  # Allowed response.
+  jq -nc '{"allowed": true}' > "$VALIDATING_RESPONSE_PATH"
 }
 
 hook::run "$@"
