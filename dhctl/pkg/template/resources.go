@@ -79,6 +79,10 @@ type Resource struct {
 	Object unstructured.Unstructured
 }
 
+func (r *Resource) String() string {
+	return fmt.Sprintf("%s - %s/%s", r.GVK.String(), r.Object.GetNamespace(), r.Object.GetName())
+}
+
 type Resources []*Resource
 
 func (r Resources) Len() int {

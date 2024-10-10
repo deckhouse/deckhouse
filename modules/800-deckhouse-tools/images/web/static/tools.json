@@ -16,7 +16,7 @@
         "platform": "MacOS (ARM)"
       },
       {
-        "link": "/files/d8-cli/windows-amd64/d8",
+        "link": "/files/d8-cli/windows-amd64/d8.exe",
         "platform": "Windows (Intel)"
       }
     ]

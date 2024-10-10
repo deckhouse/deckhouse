@@ -16,7 +16,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
 	capiutil "sigs.k8s.io/cluster-api/util"
@@ -282,8 +282,8 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 		logger.Info("VM failed", "id", vmid, "state", vmStatus)
 		if machine.Status.NodeRef == nil {
 			err = fmt.Errorf("VM state %q is unexpected", vmStatus)
-			zvMachine.Status.FailureReason = pointer.String(string(capierrors.UpdateMachineError))
-			zvMachine.Status.FailureMessage = pointer.String(err.Error())
+			zvMachine.Status.FailureReason = ptr.To(string(capierrors.UpdateMachineError))
+			zvMachine.Status.FailureMessage = ptr.To(err.Error())
 		}
 		conditions.MarkFalse(
 			zvMachine,

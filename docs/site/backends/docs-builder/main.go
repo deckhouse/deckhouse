@@ -16,14 +16,16 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"net/http"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/flant/docs-builder/internal/docs"
+	v1 "github.com/flant/docs-builder/internal/http/v1"
 	"github.com/flant/docs-builder/pkg/k8s"
+	"golang.org/x/sync/errgroup"
 
 	"k8s.io/klog/v2"
 )
@@ -54,29 +56,25 @@ func main() {
 		klog.Fatalf("new leases manager: %s", err)
 	}
 
-	h := newHandler(highAvailability)
+	h := v1.NewHandler(docs.NewService(src, dst, highAvailability))
 
 	srv := &http.Server{
 		Addr:    listenAddress,
 		Handler: h,
 	}
 
-	go func() {
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			klog.Fatalf("listen: %s", err)
-		}
-	}()
-	klog.Info("Server started")
+	eg, ctx := errgroup.WithContext(ctx)
 
-	go func() {
-		err = lManager.Run(ctx)
-		if !errors.Is(err, context.Canceled) && err != nil {
-			klog.Fatalf("run lease manager: %s", err)
-		}
-	}()
+	klog.Info("starting application")
+
+	eg.Go(srv.ListenAndServe)
+	eg.Go(lManager.Run(ctx))
+
+	klog.Info("application started")
 
 	<-ctx.Done()
-	klog.Info("Server stopped")
+
+	klog.Info("stopping application")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -90,4 +88,11 @@ func main() {
 	if err != nil {
 		klog.Errorf("shutdown failed: %v", err)
 	}
+
+	err = eg.Wait()
+	if err != nil {
+		klog.Errorf("error due stopping application%v", err)
+	}
+
+	klog.Info("application stopped")
 }

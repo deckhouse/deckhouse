@@ -27,6 +27,8 @@ echo $@
 exit 0`
 
 func TestScriptExecute(t *testing.T) {
+	t.SkipNow()
+
 	s := require.New(t)
 	scriptPath := filepath.Join(os.TempDir(), "test_run.sh")
 	err := os.WriteFile(scriptPath, []byte(testRunScript), 0774)

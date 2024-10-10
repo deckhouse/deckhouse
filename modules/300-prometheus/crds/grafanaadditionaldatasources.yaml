@@ -17,7 +17,8 @@ spec:
   versions:
     - name: v1alpha1
       served: true
-      storage: true
+      storage: false
+      deprecated: true
       schema:
         openAPIV3Schema:
           type: object
@@ -70,7 +71,7 @@ spec:
                   description: JSON-data object to be saved encrypted.
     - name: v1
       served: true
-      storage: false
+      storage: true
       schema:
         openAPIV3Schema:
           type: object

@@ -23,7 +23,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 type DexUserExpire struct {
@@ -69,8 +69,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "users",
 			ApiVersion:                   "deckhouse.io/v1",
 			Kind:                         "User",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   applyDexUserExpireFilter,
 		},
 	},

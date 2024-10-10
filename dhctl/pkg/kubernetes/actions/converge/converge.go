@@ -140,7 +140,7 @@ func (r *Runner) isSkip(phase Phase) bool {
 
 func (r *Runner) RunConverge() error {
 	if r.lockRunner != nil {
-		err := r.lockRunner.Run()
+		err := r.lockRunner.Run(r.converge)
 		if err != nil {
 			return fmt.Errorf("failed to start lock runner: %w", err)
 		}

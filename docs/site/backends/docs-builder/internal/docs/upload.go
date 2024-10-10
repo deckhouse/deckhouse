@@ -12,74 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package docs
 
 import (
 	"archive/tar"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
-	"github.com/gorilla/mux"
 	"k8s.io/klog/v2"
 )
 
-func newLoadHandler(baseDir string, channelMappingEditor *channelMappingEditor) *loadHandler {
-	return &loadHandler{baseDir: baseDir, channelMappingEditor: channelMappingEditor}
-}
-
-type loadHandler struct {
-	baseDir string
-
-	channelMappingEditor *channelMappingEditor
-}
-
-func (u *loadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	channelsStr := request.URL.Query().Get("channels")
-	channels := []string{"stable"}
-	if len(channelsStr) != 0 {
-		channels = strings.Split(channelsStr, ",")
-	}
-
-	pathVars := mux.Vars(request)
-	moduleName := pathVars["moduleName"]
-	version := pathVars["version"]
-
-	klog.Infof("loading %s %s: %s", moduleName, version, channels)
-	err := u.upload(request.Body, moduleName, channels)
+func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string, channels []string) error {
+	err := svc.cleanModulesFiles(moduleName, channels)
 	if err != nil {
-		klog.Error(err)
-		http.Error(writer, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	err = u.generateChannelMapping(moduleName, version, channels)
-	if err != nil {
-		klog.Error(err)
-		http.Error(writer, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	writer.WriteHeader(http.StatusCreated)
-}
-
-func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []string) error {
-	for _, channel := range channels {
-		path := filepath.Join(u.baseDir, "content/modules", moduleName, channel)
-		err := os.RemoveAll(path)
-		if err != nil {
-			return fmt.Errorf("remove %s: %w", path, err)
-		}
-
-		path = filepath.Join(u.baseDir, "data/modules", moduleName, channel)
-		err = os.RemoveAll(path)
-		if err != nil {
-			return fmt.Errorf("remove %s: %w", path, err)
-		}
+		return fmt.Errorf("clean module files: %w", err)
 	}
 
 	reader := tar.NewReader(body)
@@ -87,8 +36,10 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 	for {
 		header, err := reader.Next()
 		if err == io.EOF {
+			klog.Infof("EOF reading file")
 			break
 		}
+
 		if err != nil {
 			return fmt.Errorf("tar next: %w", err)
 		}
@@ -101,7 +52,7 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 		switch header.Typeflag {
 		case tar.TypeDir:
 			for _, channel := range channels {
-				path, ok := u.getLocalPath(moduleName, channel, header.Name)
+				path, ok := svc.getLocalPath(moduleName, channel, header.Name)
 				if !ok {
 					klog.Infof("skipping tree %v in %s", header.Name, moduleName)
 					continue
@@ -116,7 +67,7 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 			files := make([]io.Writer, 0, len(channels))
 
 			for _, channel := range channels {
-				path, ok := u.getLocalPath(moduleName, channel, header.Name)
+				path, ok := svc.getLocalPath(moduleName, channel, header.Name)
 				if !ok {
 					klog.Infof("skipping file %v in %s", header.Name, moduleName)
 					continue
@@ -148,11 +99,16 @@ func (u *loadHandler) upload(body io.ReadCloser, moduleName string, channels []s
 		}
 	}
 
+	err = svc.generateChannelMapping(moduleName, version, channels)
+	if err != nil {
+		return fmt.Errorf("generate error mapping: %w", err)
+	}
+
 	return nil
 }
 
-func (u *loadHandler) generateChannelMapping(moduleName, version string, channels []string) error {
-	return u.channelMappingEditor.edit(func(m channelMapping) {
+func (svc *Service) generateChannelMapping(moduleName, version string, channels []string) error {
+	return svc.channelMappingEditor.edit(func(m channelMapping) {
 		var versions = make(map[string]versionEntity)
 		if _, ok := m[moduleName]; ok {
 			versions = m[moduleName]["channels"]
@@ -168,7 +124,7 @@ func (u *loadHandler) generateChannelMapping(moduleName, version string, channel
 	})
 }
 
-func (u *loadHandler) getLocalPath(moduleName, channel, fileName string) (string, bool) {
+func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, bool) {
 	fileName = filepath.Clean(fileName)
 
 	if strings.HasSuffix(fileName, "_RU.md") {
@@ -176,17 +132,33 @@ func (u *loadHandler) getLocalPath(moduleName, channel, fileName string) (string
 	}
 
 	if fileName, ok := strings.CutPrefix(fileName, "docs"); ok {
-		return filepath.Join(u.baseDir, "content/modules", moduleName, channel, fileName), true
+		return filepath.Join(svc.baseDir, contentDir, moduleName, channel, fileName), true
 	}
 
 	if strings.HasPrefix(fileName, "crds") ||
 		fileName == "openapi" ||
 		fileName == "openapi/config-values.yaml" ||
 		docConfValuesRegexp.MatchString(fileName) {
-		return filepath.Join(u.baseDir, "data/modules", moduleName, channel, fileName), true
+		return filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName), true
 	}
 
 	return "", false
 }
 
-var docConfValuesRegexp = regexp.MustCompile(`^openapi/doc-.*-config-values\.yaml$`)
+func (svc *Service) cleanModulesFiles(moduleName string, channels []string) error {
+	for _, channel := range channels {
+		path := filepath.Join(svc.baseDir, contentDir, moduleName, channel)
+		err := os.RemoveAll(path)
+		if err != nil {
+			return fmt.Errorf("remove content %s: %w", path, err)
+		}
+
+		path = filepath.Join(svc.baseDir, modulesDir, moduleName, channel)
+		err = os.RemoveAll(path)
+		if err != nil {
+			return fmt.Errorf("remove data %s: %w", path, err)
+		}
+	}
+
+	return nil
+}

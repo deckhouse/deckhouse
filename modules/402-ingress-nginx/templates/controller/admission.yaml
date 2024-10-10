@@ -32,6 +32,11 @@ webhooks:
         resources:
           - ingresses
         scope: Namespaced
+    {{- if semverCompare ">= 1.27" $kubernetesVersion }}
+    matchConditions:
+      - name: 'exclude-ingress-class-name'
+        expression: "object.spec.ingressClassName == '{{ $crd.spec.ingressClass }}'"
+    {{- end }}
     failurePolicy: Fail
     sideEffects: None
     timeoutSeconds: 28
@@ -62,6 +67,11 @@ webhooks:
         resources:
           - ingresses
         scope: Namespaced
+    {{- if semverCompare ">= 1.27" $kubernetesVersion }}
+    matchConditions:
+      - name: 'exclude-ingress-class-name'
+        expression: "object.spec.ingressClassName == '{{ $crd.spec.ingressClass }}'"
+    {{- end }}
     failurePolicy: Ignore
     sideEffects: None
     timeoutSeconds: 5

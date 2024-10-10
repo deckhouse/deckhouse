@@ -117,7 +117,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"cniCilium": map[string]interface{}{
 		"agentDistroless":    "imageHash-cniCilium-agentDistroless",
-		"baseCiliumDev":      "imageHash-cniCilium-baseCiliumDev",
 		"checkKernelVersion": "imageHash-cniCilium-checkKernelVersion",
 		"egressGatewayAgent": "imageHash-cniCilium-egressGatewayAgent",
 		"kubeRbacProxy":      "imageHash-cniCilium-kubeRbacProxy",
@@ -184,6 +183,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"controlPlaneManager129":   "imageHash-controlPlaneManager-controlPlaneManager129",
 		"controlPlaneManager130":   "imageHash-controlPlaneManager-controlPlaneManager130",
 		"etcd":                     "imageHash-controlPlaneManager-etcd",
+		"etcdBackup":               "imageHash-controlPlaneManager-etcdBackup",
 		"kubeApiserver126":         "imageHash-controlPlaneManager-kubeApiserver126",
 		"kubeApiserver127":         "imageHash-controlPlaneManager-kubeApiserver127",
 		"kubeApiserver128":         "imageHash-controlPlaneManager-kubeApiserver128",
@@ -415,6 +415,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubelet1299":               "imageHash-registrypackages-kubelet1299",
 		"kubelet1305":               "imageHash-registrypackages-kubelet1305",
 		"kubernetesCni140":          "imageHash-registrypackages-kubernetesCni140",
+		"lsblk2402":                 "imageHash-registrypackages-lsblk2402",
 		"netcat110481":              "imageHash-registrypackages-netcat110481",
 		"socat1734":                 "imageHash-registrypackages-socat1734",
 		"tomlMerge01":               "imageHash-registrypackages-tomlMerge01",

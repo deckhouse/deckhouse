@@ -3,7 +3,7 @@
 # REGISTRY_PATH is a special key which is concatenated with other base images
 REGISTRY_PATH: "registry.deckhouse.io/base_images/"
 
-BASE_ALPINE: "alpine:3.16.3@sha256:5548e9172c24a1b0ca9afdd2bf534e265c94b12b36b3e0c0302f5853eaf00abb"
+BASE_ALPINE: "alpine:3.20.3@sha256:41628df7c9b935d248f64542634e7a843f9bc7f2252d7f878e77f7b79a947466"
 BASE_GOLANG_16_ALPINE: "golang:1.16.3-alpine3.12@sha256:371dc6bf7e0c7ce112a29341b000c40d840aef1dbb4fdcb3ae5c0597e28f3061"
 BASE_GOLANG_16_BUSTER: "golang:1.16.3-buster@sha256:9d64369fd3c633df71d7465d67d43f63bb31192193e671742fa1c26ebc3a6210"
 BASE_GOLANG_17_ALPINE: "golang:1.17.3-alpine3.14@sha256:78a88e6a712e60f9d942450e02508f3c0d8aa931853f02793a4c3aa30063eae0"
