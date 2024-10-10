@@ -51,7 +51,7 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		nodesToWait        []string
 		nodesIndexToCreate []int
 		wg                 sync.WaitGroup
-		buff               *bytes.Buffer
+		buff               bytes.Buffer
 	)
 
 	for c.desiredReplicas > count {
@@ -79,11 +79,11 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 			if i == 0 {
 				BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
 			} else {
-				logs, err := ParallelBootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext, buff)
+				logs, err := ParallelBootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext, &buff)
 				resultsСhan <- checkResult{
 					name: candidateName,
 					log:  logs,
-					buff: buff,
+					buff: &buff,
 					err:  err,
 				}
 			}
