@@ -370,6 +370,19 @@ Deckhouse поддерживает работу только с Bearer token-с�
 
 Итоговое значение для `registryDockerCfg` должно быть также закодировано в Base64.
 
+Вы можете использовать этот скрипт-помощник для генерации `registryDockerCfg`:
+
+```shell
+declare MYUSER='<PROXY_USERNAME>'
+declare MYPASSWORD='<PROXY_PASSWORD>'
+declare MYREGISTRY='<PROXY_REGISTRY>'
+
+MYAUTH=$(echo -n "$MYUSER:$MYPASSWORD" | base64 -w0)
+MYRESULTSTRING=$(echo -n "{\"auths\":{\"$MYREGISTRY\":{\"username\":\"$MYUSER\",\"password\":\"$MYPASSWORD\",\"auth\":\"$MYAUTH\"}}}" | base64 -w0)
+
+echo "$MYRESULTSTRING"
+```
+
 Для настройки нестандартных конфигураций сторонних registry в ресурсе `InitConfiguration` предусмотрены еще два параметра:
 
 * `registryCA` — корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты);
@@ -666,8 +679,7 @@ Deckhouse поддерживает работу только с Bearer token-с�
   * Пример запуска:
 
     ```shell
-    kubectl exec -ti -n d8-system svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry \
-      --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee
+    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee
     ```
 
   * Если registry использует самоподписанные сертификаты, положите корневой сертификат соответствующего сертификата registry в файл `/tmp/ca.crt` в поде Deckhouse и добавьте к вызову опцию `--ca-file /tmp/ca.crt` или вставьте содержимое CA в переменную, как в примере ниже:
@@ -850,7 +862,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Выполните следующую команду:
 
    ```shell
-   kubectl exec -ti -n d8-system svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry registry.deckhouse.ru/deckhouse/ce
+   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry registry.deckhouse.ru/deckhouse/ce
    ```
 
 1. Дождитесь перехода пода Deckhouse в статус `Ready`:
@@ -915,7 +927,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
-   kubectl exec -ti -n d8-system svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry.deckhouse.ru/deckhouse/ee
+   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry.deckhouse.ru/deckhouse/ee
    ```
 
 1. Дождитесь перехода пода Deckhouse в статус `Ready`:
