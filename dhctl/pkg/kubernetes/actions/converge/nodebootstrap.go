@@ -15,6 +15,7 @@
 package converge
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -72,11 +73,11 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	return nil
 }
 
-func ParallelBootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext) ([]string, error) {
+func ParallelBootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext, buff *bytes.Buffer) ([]string, error) {
 	nodeName := NodeName(cfg, nodeGroupName, index)
 
 	if isConverge {
-		nodeExists, err := IsNodeExistsInClusterSilent(kubeCl, nodeName)
+		nodeExists, err := IsNodeExistsInClusterSilent(kubeCl, nodeName, buff)
 		if err != nil {
 			return nil, err
 		} else if nodeExists {
