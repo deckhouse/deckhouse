@@ -46,13 +46,15 @@ kubectl logs job.batch/kube-bench
 
 Данные, которые будут собраны:
 * состояние очереди Deckhouse;
-* Deckhouse values;
+* Deckhouse values. За исключением значений `kubeRBACProxyCA` и `registry.dockercfg`;
 * список включенных модулей;
 * `events` из всех пространств имен;
 * манифесты controller'ов и подов из всех пространств имен Deckhouse;
 * все объекты `nodegroups`;
 * все объекты `nodes`;
 * все объекты `machines`;
+* все объекты `instances`;
+* все объекты `staticinstances`;
 * данные о текущей версии пода deckhouse;
 * все объекты `deckhousereleases`;
 * логи Deckhouse;
@@ -63,7 +65,7 @@ kubectl logs job.batch/kube-bench
 * логи Vertical Pod Autoscaler recommender;
 * логи Vertical Pod Autoscaler updater;
 * логи Prometheus;
-* метрики terraform-state-exporter;
+* метрики terraform-state-exporter. За исключением значений в `provider` из `providerClusterConfiguration`;
 * все горящие уведомления в Prometheus.
 
 ## Как отлаживать проблемы в подах с помощью ephemeral containers?
