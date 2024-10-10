@@ -1,6 +1,7 @@
 ---
 title: "Module structure"
 permalink: en/module-development/structure/
+lang: en
 ---
 
 {% raw %}
@@ -460,4 +461,36 @@ description: "my awesome module"
 Applying this file will create a module (`deckhouse.io/v1alpha/Module`) with the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`, weight `960`, and the description `my awesome module`.
 
 This way you can control the module sequence as well as specify additional meta-information for the modules.
+
+Here is how you can set the Deckhouse Kubernetes Platform version dependency:
+
+```yaml
+name: test
+weight: 901
+requirements:
+    deckhouse: ">= 1.61"
+```
+
+Here is how you can set the Kubernetes version dependency
+
+```yaml
+name: test
+weight: 901
+requirements:
+    kubernetes: ">= 1.27"
+```
+
+Here is how you can set the cluster installation status dependency (bootstrapped):
+
+```yaml
+name: ingress-nginx
+weight: 402
+description: |
+    Ingress controller for nginx
+    https://kubernetes.github.io/ingress-nginx
+
+requirements:
+    bootstrapped: true
+```
+
 {% endraw %}

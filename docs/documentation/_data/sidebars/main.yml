@@ -58,6 +58,10 @@ entries:
                 ru: Запуск в кластере
               url: /module-development/run/
             - title:
+                en: Module dependencies
+                ru: Зависимости модуля
+              url: /module-development/dependencies/ 
+            - title:
                 en: Versioning
                 ru: Версионирование
               url: /module-development/versioning/
