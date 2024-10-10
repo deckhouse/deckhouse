@@ -424,7 +424,7 @@
         plk_labels_as_annotations: "volume"
         summary: Unnecessary smoke-mini volumes in cluster
         description: |
-          The amount of unnecessary smoke-mini PVs: {{ $value }}.
+          The number of unnecessary smoke-mini PVs: {{ $value }}.
 
           Smoke-mini PVs should be deleted when released. Probably smoke-mini storage class has Retain policy by default,
           or there is CSI/cloud issue.
