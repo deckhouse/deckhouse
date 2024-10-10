@@ -8,6 +8,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse-tools")) | nindent 2 }}
   annotations:
     web.deckhouse.io/export-name: "tools"
+    web.deckhouse.io/export-icon: "/public/img/tools.ico"
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.deckhouseTools.auth.externalAuthentication }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.deckhouseTools.auth.externalAuthentication.authSignInURL | quote }}
     nginx.ingress.kubernetes.io/auth-url: {{ .Values.deckhouseTools.auth.externalAuthentication.authURL | quote }}
