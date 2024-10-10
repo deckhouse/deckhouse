@@ -10,7 +10,6 @@ html {
     position: sticky;
     top: 0;
     z-index: 100;
-    @include box-shadow;
 }
 
 .header {
@@ -18,10 +17,7 @@ html {
   transition: .2s ease-in-out;
 
   &_float {
-    //@include max-w(l) {
-    //  overflow: hidden;
-    //  top: var(--wp-admin--admin-bar--height, 0px);
-    //}
+    @include box-shadow;
   }
 
   &__content {

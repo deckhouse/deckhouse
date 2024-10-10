@@ -1,7 +1,7 @@
 {% assign topnav = site.data[page.topnav].topnav[page.lang] %}
 
 <div class="header-container">
-  <header class="header">
+  <header class="header {%- if page.lang == 'ru' %} header_float{%- endif %}">
     <div class="header__content container">
       <div class="header__left-box">
         <div class="header__logo">
@@ -14,8 +14,9 @@
             {%- if page.mode == 'ssi' and site.mode != 'module' and item_url_parts[1] == 'documentation' %} header__navigation-item_active{% endif %}
             {%- if page.mode != 'ssi' and is_getting_started_item and item.url == '/gs/' %} header__navigation-item_active{% endif %}"
           >
-            <a href="#!">Продукты</a>
-            <div class="sub-menu-container">
+            {%- if page.lang == "ru" %}
+              <a href="#!">Продукты</a>
+              <div class="sub-menu-container">
               <ul class="sub-menu sub-menu_products">
                 <li>
                   <a href="/products/kubernetes-platform/">
@@ -73,6 +74,67 @@
                 </li>
               </ul>
             </div>
+            {%- else %}
+              <a href="#!">Products</a>
+              <div class="sub-menu-container">
+                <ul class="sub-menu sub-menu_products">
+                  <li>
+                    <a href="/products/kubernetes-platform/">
+                      <svg class="products__icon">
+                        <use xlink:href="/images/sprite.svg#kubernetes-platform-icon"></use>
+                      </svg>
+                      <span>Kubernetes Platform</span>
+                      <p>Creating identical Kubernetes clusters and&nbsp;managing them</p>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/products/virtualization-platform/">
+                      <svg class="products__icon">
+                        <use xlink:href="/images/sprite.svg#virtualization-platform-icon"></use>
+                      </svg>
+                      <span>Virtualization Platform</span>
+                      <p>Managing virtual machines</p>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/products/observability-platform/">
+                      <svg class="products__icon">
+                        <use xlink:href="/images/sprite.svg#observability-platform-icon"></use>
+                      </svg>
+                      <span>Observability Platform</span>
+                      <p>Infrastructure and&nbsp;application monitoring and&nbsp;logging</p>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/products/commander/">
+                      <svg class="products__icon">
+                        <use xlink:href="/images/sprite.svg#commander-icon"></use>
+                      </svg>
+                      <span>Commander</span>
+                      <p>Cluster control center</p>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/products/stronghold/">
+                      <svg class="products__icon">
+                        <use xlink:href="/images/sprite.svg#stronghold-icon"></use>
+                      </svg>
+                      <span>Stronghold</span>
+                      <p>Securely storing secrets and&nbsp;managing them</p>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/products/delivery/">
+                      <svg class="products__icon">
+                        <use xlink:href="/images/sprite.svg#delivery-icon"></use>
+                      </svg>
+                      <span>Delivery</span>
+                      <p>Building and&nbsp;delivering containerized software</p>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            {%- endif %}
           </li>
           {% for entry in topnav %}
             {% for item in entry.items %}
@@ -119,7 +181,9 @@
         </ul>
       </div>
       <div class="header__right-box">
-        <a class="button button--outline">Документация</a>
+        {%- if page.lang == "ru" %}
+          <a href="/products/kubernetes-platform/documentation/v1/deckhouse-overview.html" class="button button--outline">Документация</a>
+        {%- endif %}
 <!--        {%- if site.mode == 'module' %}-->
 <!--        <span class='updatechannel__content disable'>&nbsp;</span>-->
 <!--        {%- else %}-->
@@ -163,21 +227,23 @@
     </div>
   </header>
 </div>
-<div class="header header__product-menu">
-  <div class="container">
-    <div class="header__product-menu-logo">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
-        <path d="M12.0913 2.08469L15.4502 0.526367L19.9966 3.00774L20 8.43812L17.1431 9.99348L17.1393 4.57335L12.0913 2.08469Z" fill="#00003C"/>
-        <path d="M12.0913 17.9154L15.4502 19.4737L19.9966 16.9924L20 11.562L17.1431 10.0066L17.1393 15.4268L12.0913 17.9154Z" fill="#00003C"/>
-        <path d="M7.90871 2.08469L4.54982 0.526367L0.00341143 3.00774L0 8.43812L2.85694 9.99348L2.86068 4.57335L7.90871 2.08469Z" fill="#00003C"/>
-        <path d="M7.90871 17.9154L4.54982 19.4737L0.00341143 16.9924L0 11.562L2.85694 10.0066L2.86068 15.4268L7.90871 17.9154Z" fill="#00003C"/>
-        <path fill-rule="evenodd" clip-rule="evenodd" d="M9.99393 4.7695L14.7826 7.38975L14.7887 12.6203L10.0061 15.2306L5.21735 12.6103L5.21129 7.37979L9.99393 4.7695ZM7.90873 12.2331H10.2659C11.564 12.2331 12.623 11.2299 12.623 10.0001C12.623 8.77024 11.564 7.76697 10.2659 7.76697H7.90873V12.2331Z" fill="#0064FF"/>
-      </svg>
-      <span>Kubernetes Platform</span>
+{%- if page.lang == "ru" %}
+  <div class="header header__product-menu">
+    <div class="container">
+      <div class="header__product-menu-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M12.0913 2.08469L15.4502 0.526367L19.9966 3.00774L20 8.43812L17.1431 9.99348L17.1393 4.57335L12.0913 2.08469Z" fill="#00003C"/>
+          <path d="M12.0913 17.9154L15.4502 19.4737L19.9966 16.9924L20 11.562L17.1431 10.0066L17.1393 15.4268L12.0913 17.9154Z" fill="#00003C"/>
+          <path d="M7.90871 2.08469L4.54982 0.526367L0.00341143 3.00774L0 8.43812L2.85694 9.99348L2.86068 4.57335L7.90871 2.08469Z" fill="#00003C"/>
+          <path d="M7.90871 17.9154L4.54982 19.4737L0.00341143 16.9924L0 11.562L2.85694 10.0066L2.86068 15.4268L7.90871 17.9154Z" fill="#00003C"/>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M9.99393 4.7695L14.7826 7.38975L14.7887 12.6203L10.0061 15.2306L5.21735 12.6103L5.21129 7.37979L9.99393 4.7695ZM7.90873 12.2331H10.2659C11.564 12.2331 12.623 11.2299 12.623 10.0001C12.623 8.77024 11.564 7.76697 10.2659 7.76697H7.90873V12.2331Z" fill="#0064FF"/>
+        </svg>
+        <span>Kubernetes Platform</span>
+      </div>
+      <ul class="nav">
+        <li><a href="/products/kubernetes-platform/">О продукте</a></li>
+        <li class="active"><a href="/products/kubernetes-platform/documentation/v1/deckhouse-overview.html">Документация</a></li>
+      </ul>
     </div>
-    <ul class="nav">
-      <li><a href="/products/kubernetes-platform/">О продукте</a></li>
-      <li class="active"><a href="/products/kubernetes-platform/documentation/v1/deckhouse-overview.html">Документация</a></li>
-    </ul>
   </div>
-</div>
+{%- endif %}
