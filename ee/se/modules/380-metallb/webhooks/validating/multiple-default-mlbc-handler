@@ -43,9 +43,16 @@ function forbid() {
 }
 
 function __main__() {
-  context::jq . > /tmp/multiple-default-mlbc-handler.json # TODO: delete line
-
-  # exit 0
+  old_isdefault_field=$(context::jq -r '.review.request.oldObject.spec.isDefault')
+  new_isdefault_field=$(context::jq -r '.review.request.object.spec.isDefault')
+  if [ "$old_isdefault_field" != "$new_isdefault_field" ]; then
+    # The field "isDefault" was changed
+    default_mlbc_names=$(context::jq -r '.snapshots.mlbc_default[] | select(.filterResult.isDefault == true) | .filterResult.name')
+    if [[ $default_mlbc_names != "" ]]; then
+      forbid "There is another default MetalLoadBalancerClass. Set its \"isDefault\" flag to \"false\"."
+      exit 0
+    fi
+  fi
 
   # Allowed response.
   jq -nc '{"allowed": true}' > "$VALIDATING_RESPONSE_PATH"
