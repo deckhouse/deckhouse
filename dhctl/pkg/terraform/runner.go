@@ -229,7 +229,7 @@ func (r *Runner) withTerraformExecutor(t Executor) *Runner {
 	return r
 }
 
-func (r *Runner) WithCatchingLog(flag bool) *Runner {
+func (r *Runner) WithCatchOutput(flag bool) *Runner {
 	r.changeSettings.LogToBuffer = flag
 	return r
 }
@@ -613,6 +613,10 @@ func (r *Runner) IsLogToBuffer() bool {
 
 func (r *Runner) GetLog() []string {
 	return r.terraformExecutor.GetStdout()
+}
+
+func (r *Runner) GetLogBytes() []byte {
+	return r.terraformExecutor.GetStdoutBytes()
 }
 
 // Stop interrupts the current runner command and sets

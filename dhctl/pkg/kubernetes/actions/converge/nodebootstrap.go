@@ -127,7 +127,7 @@ func ParallelBootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *confi
 
 	if saveLogToBuffer {
 		logs := runner.GetLog()
-		buff.WriteString(strings.Join(logs, ""))
+		buff.WriteString(strings.Join(logs, "\n"))
 	}
 
 	return nil

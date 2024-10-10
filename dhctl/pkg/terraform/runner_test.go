@@ -183,6 +183,10 @@ func (s *sleepExecutor) GetStdout() []string {
 	return nil
 }
 
+func (s *sleepExecutor) GetStdoutBytes() []byte {
+	return nil
+}
+
 func (s *sleepExecutor) Exec(_ bool, _ ...string) (int, error) {
 	ticker := time.NewTicker(time.Second)
 loop:

@@ -22,6 +22,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -37,6 +38,7 @@ type Executor interface {
 	Output(...string) ([]byte, error)
 	Exec(bool, ...string) (int, error)
 	GetStdout() []string
+	GetStdoutBytes() []byte
 	Stop()
 }
 
@@ -72,6 +74,11 @@ func (c *CMDExecutor) Output(args ...string) ([]byte, error) {
 
 func (c *CMDExecutor) GetStdout() []string {
 	return c.stdoutSaved
+}
+
+func (c *CMDExecutor) GetStdoutBytes() []byte {
+	concatenatedString := strings.Join(c.stdoutSaved, "\n")
+	return []byte(concatenatedString)
 }
 
 func (c *CMDExecutor) Exec(catchLog bool, args ...string) (int, error) {
@@ -188,3 +195,5 @@ func (f *fakeExecutor) Exec(_ bool, parts ...string) (int, error) {
 func (f *fakeExecutor) Stop() {}
 
 func (f *fakeExecutor) GetStdout() []string { return nil }
+
+func (f *fakeExecutor) GetStdoutBytes() []byte { return nil }

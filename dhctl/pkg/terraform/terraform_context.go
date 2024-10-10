@@ -292,7 +292,7 @@ func (f *TerraformContext) GetBootstrapNodeRunner(metaConfig *config.MetaConfig,
 				WithName(opts.NodeName).
 				WithAutoApprove(opts.AutoApprove).
 				WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...).
-				WithCatchingLog(opts.LogToBuffer)
+				WithCatchOutput(opts.LogToBuffer)
 
 			tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
 
