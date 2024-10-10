@@ -87,6 +87,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-cni-simple-bridge:cni-simple-bridge",
 	"system:serviceaccount:d8-descheduler:descheduler",
 	"system:serviceaccount:d8-flant-integration:pricing",
+	"system:serviceaccount:d8-flant-integration:prometheus-cpp",
 	"system:serviceaccount:d8-ingress-nginx:ingress-nginx",
 	"system:serviceaccount:d8-ingress-nginx:kruise",
 	"system:serviceaccount:d8-istio:alliance-ingressgateway",
