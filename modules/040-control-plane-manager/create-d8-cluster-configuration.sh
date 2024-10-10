@@ -147,7 +147,6 @@ data:
 kind: Secret
 metadata:
   labels:
-    heritage: deckhouse
     validation.deckhouse.io/selector: d8-cluster-configuration
   name: d8-cluster-configuration
   namespace: kube-system
