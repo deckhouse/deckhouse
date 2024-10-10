@@ -1,2 +1,4 @@
-{{ tpl (.Files.Get (printf "%sdocs/site/werf-docs-builder.inc.yaml" .ModulePath)) .  }}
-# (dict . . "mode" "module")
+{{- $context := . }}
+{{- $_ := set $context "mode" "module" }}
+{{- $_ := set $context "delimiter" "/" }}
+{{ tpl (.Files.Get (printf "%sdocs/site/werf-docs-builder.inc.yaml" .ModulePath)) $context }}
