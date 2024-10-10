@@ -17,6 +17,7 @@ package converge
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -73,15 +74,15 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	return nil
 }
 
-func ParallelBootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext, buff *bytes.Buffer) ([]string, error) {
+func ParallelBootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext, buff *bytes.Buffer) error {
 	nodeName := NodeName(cfg, nodeGroupName, index)
 
 	if isConverge {
 		nodeExists, err := IsNodeExistsInClusterSilent(kubeCl, nodeName, buff)
 		if err != nil {
-			return nil, err
+			return err
 		} else if nodeExists {
-			return nil, fmt.Errorf("node with name %s exists in cluster", nodeName)
+			return fmt.Errorf("node with name %s exists in cluster", nodeName)
 		}
 	}
 
@@ -96,6 +97,7 @@ func ParallelBootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *confi
 		NodeIndex:       index,
 		NodeCloudConfig: cloudConfig,
 		CatchLog:        true,
+
 		AdditionalStateSaverDestinations: []terraform.SaverDestination{
 			NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings),
 		},
@@ -103,21 +105,22 @@ func ParallelBootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *confi
 
 	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.OnlyState)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if tomb.IsInterrupted() {
-		return nil, ErrConvergeInterrupted
+		return ErrConvergeInterrupted
 	}
 
 	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	logs := runner.GetLog()
+	buff.WriteString(strings.Join(logs, ""))
 
-	return logs, nil
+	return nil
 }
 
 func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext) (*terraform.PipelineOutputs, error) {

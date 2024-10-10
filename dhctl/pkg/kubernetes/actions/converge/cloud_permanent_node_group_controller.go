@@ -15,9 +15,9 @@
 package converge
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
-	"io"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -51,7 +51,7 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		nodesToWait        []string
 		nodesIndexToCreate []int
 		wg                 sync.WaitGroup
-		buff               bytes.Buffer
+		buffLog            bytes.Buffer
 	)
 
 	for c.desiredReplicas > count {
@@ -64,10 +64,9 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 	}
 
 	type checkResult struct {
-		name string
-		log  []string
-		buff *bytes.Buffer
-		err  error
+		name    string
+		buffLog *bytes.Buffer
+		err     error
 	}
 	resultsСhan := make(chan checkResult, len(nodesIndexToCreate))
 
@@ -79,12 +78,11 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 			if i == 0 {
 				BootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
 			} else {
-				logs, err := ParallelBootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext, &buff)
+				err := ParallelBootstrapAdditionalNode(c.client, c.config, indexCandidate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext, &buffLog)
 				resultsСhan <- checkResult{
-					name: candidateName,
-					log:  logs,
-					buff: &buff,
-					err:  err,
+					name:    candidateName,
+					buffLog: &buffLog,
+					err:     err,
 				}
 			}
 
@@ -103,15 +101,9 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 			return candidate.err
 		}
 		log.InfoF("Log: %s:\n", candidate.name)
-
-		data, err := io.ReadAll(candidate.buff)
-		if err != nil {
-			log.WarnLn(err)
-		}
-
-		log.InfoLn(string(data))
-		for _, line := range candidate.log {
-			log.InfoLn(line)
+		scanner := bufio.NewScanner(candidate.buffLog)
+		for scanner.Scan() {
+			log.InfoLn(scanner.Text())
 		}
 	}
 	return WaitForNodesListBecomeReady(c.client, nodesToWait, nil)
