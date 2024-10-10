@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+# Copyright 2024 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+source /shell_lib.sh
+
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetesValidating:
+- name: disable_edit_default_mlbc-policy.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["network.deckhouse.io"]
+    apiVersions: ["v1alpha1"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["metalloadbalancerclasses"]
+    scope:       "Cluster"
+kubernetes:
+- name: metallb_mc
+  group: main
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
+  apiVersion: network.deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  nameSelector:
+    matchNames:
+    - metallb
+  jqFilter: |
+    {
+      "version": .spec.version,
+    }
+EOF
+}
+
+function forbid() {
+  jq -nc --arg message "$1" '
+    {
+      "allowed": false,
+      "message": $message
+    }
+    ' > "$VALIDATING_RESPONSE_PATH"
+}
+
+function __main__() {
+  context::jq . > /tmp/bbb.json
+  if context::jq -e -r '.review.request.object.metadata.name == "l2-default"' >/dev/null 2>&1; then
+    forbid "Editing of the resource is prohibited until the module is upgraded to version 2"
+    exit 0
+  fi
+
+  # Allowed response.
+  jq -nc '{"allowed": true}' > "$VALIDATING_RESPONSE_PATH"
+}
+
+hook::run "$@"
