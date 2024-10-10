@@ -48,7 +48,7 @@ function getname () {
 }
 
 function gettext() {
-    cat $1 | sed '1,/---/ d' | sed 's/^#/##/g'
+    cat $1 | sed '1,/---/ d' | sed -E "s/^#/##/g; s#(\.\./)+#./#g"
 }
 
 clean $PATH_TO_PDF_PAGE
