@@ -14,6 +14,11 @@
 
 # Fixing a problem with segmentation of tunnel UDP packets on interfaces with the VMware vmxnet3 driver
 # The problem is observed when turning on Cilium VXLAN.
+bb-log-info "disabling packet segmentation for network interfaces"
+if ! [ -x "$(ethtool -h)" ]; then
+  bb-log-warning "ethtool is not founded"
+  exit 0
+fi
 ifaces=( $(ip -json a | jq -r '.[].ifname') )
 for iface in "${ifaces[@]}"; do
   if [[ "$iface" == "lo" ]]; then
@@ -24,11 +29,13 @@ for iface in "${ifaces[@]}"; do
     tnl-segmentation=$(ethtool -k "$iface" | grep tx-udp_tnl-segmentation | cut -d':' -f2 | tr -d '[:space:]')
     if [[ "$tnl-segmentation" == "on" ]]; then
       ethtool -K $iface tx-udp_tnl-segmentation off
+      bb-log-info "disabling tx-udp_tnl-segmentation for interface: ${iface}"
     fi
 
     tnl-csum-segmentation=$(ethtool -k "$iface" | grep tx-udp_tnl-csum-segmentation | cut -d':' -f2 | tr -d '[:space:]' )
     if [[ "$tnl-csum-segmentation" == "on" ]]; then
       ethtool -K $iface tx-udp_tnl-csum-segmentation off
+      bb-log-info "disabling tx-udp_tnl-csum-segmentation for interface: ${iface}"
     fi
   fi
 done
