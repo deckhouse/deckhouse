@@ -36,9 +36,9 @@ Deckhouse checks whether the dependency is met in the following cases:
 1. **When installing or upgrading a module**  
    If the DKP version does not meet the requirements specified in the release module dependencies, the latter will not be installed or upgraded.
 
-Below is an example of the ModuleRelease resource for which the DKP version does not meet the module requirements:
+   Below is an example of the ModuleRelease resource for which the DKP version does not meet the module requirements:
 
-   ```bash
+   ```console
    root@dev-master-0:~# kubectl get mr
    NAME                     PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
    test-v0.8.3              Pending      test-alpha      2m30s            requirements are not satisfied: current deckhouse version is not suitable: 1.0.0 is less than or equal to v1.64.0 
@@ -47,9 +47,9 @@ Below is an example of the ModuleRelease resource for which the DKP version does
 1. **When upgrading Deckhouse Kubernetes Platform**  
    Deckhouse checks if the new DKP version matches the dependencies of the installed and active modules. If at least one module is not compatible with the new version, the DKP upgrade will not be performed.
 
-Below is an example of the DeckhouseRelease resource for which the DKP version does not meet the module requirements:
+   Below is an example of the DeckhouseRelease resource for which the DKP version does not meet the module requirements:
 
-   ```bash
+   ```console
    root@dev-master-0:~# kubectl get deckhousereleases.deckhouse.io
    NAME                     PHASE         TRANSITIONTIME   MESSAGE
    v1.73.3                  Skipped       74m
@@ -81,9 +81,9 @@ Deckhouse checks whether the dependency is met in the following cases:
 1. **When installing or upgrading a module**  
    If the Kubernetes version does not meet the requirements specified in the release module dependencies, the latter will not be installed or upgraded.
   
-Below is an example of the ModuleRelease resource for which the Kubernetes version does not meet the module requirements:
+   Below is an example of the ModuleRelease resource for which the Kubernetes version does not meet the module requirements:
 
-   ```bash
+   ```console
    root@dev-master-0:~# kubectl get modulereleases.deckhouse.io
    NAME                          PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
    test-v0.8.2                   Pending      test-alpha      24m              requirements are not satisfied: current kubernetes version is not suitable: 1.29.6 is less than or equal to 1.29
@@ -93,16 +93,16 @@ Below is an example of the ModuleRelease resource for which the Kubernetes versi
 1. **When upgrading Kubernetes**  
    Deckhouse examines the dependencies of active modules, and if at least one module is incompatible with the new Kubernetes version, the version upgrade will not proceed.
 
-Below is an example of the output you may encounter when a module is incompatible with a newer version of Kubernetes:
+   Below is an example of the output you may encounter when a module is incompatible with a newer version of Kubernetes:
 
-```bash
+   ```console
    root@dev-master-0:~# kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
    Save cluster-configuration back to the Kubernetes cluster
    Update cluster-configuration secret
    Attempt 1 of 5 |
            Update cluster-configuration secret failed, next attempt will be in 5s"
            Error: admission webhook "kubernetes-version.deckhouse-webhook.deckhouse.io" denied the request: requirements of test are not satisfied: 1.27 kubernetes version is not suitable: 1.27.0 is less than or equal to 1.28
-```
+   ```
 
 1. **When conducting initial module analyses**  
    If the Kubernetes version does not conform to the dependencies of the modules that are already installed, DKP will disable those modules.
@@ -110,9 +110,9 @@ Below is an example of the output you may encounter when a module is incompatibl
 1. **When upgrading Deckhouse Kubernetes Platform**  
    Deckhouse checks the default Kubernetes version value for DKP and if it is not compatible with the active modules, the DKP update will not be carried out.
 
-Below is an example of the DeckhouseRelease resource for which the Kubernetes version does not meet the module requirements:
+   Below is an example of the DeckhouseRelease resource for which the Kubernetes version does not meet the module requirements:
 
-   ```bash
+   ```console
    root@dev-master-0:~# kubectl get deckhousereleases.deckhouse.io
    NAME                     PHASE         TRANSITIONTIME   MESSAGE
    v1.73.3                  Pending       7s              requirements of test are not satisfied: 1.27 kubernetes version is not suitable: 1.27.0 is less than or equal to 1.28            
