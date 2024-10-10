@@ -13,6 +13,9 @@ ENV GOPROXY=${GOPROXY} \
 WORKDIR /src
 RUN git clone --depth 1 --branch v0.3.1 ${SOURCE_REPO}/aquasecurity/k8s-node-collector.git .
 
+COPY patches/001-change-node-collector-config.patch /src
+RUN patch -p1 < 001-change-node-collector-config.patch
+
 RUN go build -ldflags '-s -w -extldflags "-static"' -o node-collector ./cmd/node-collector/main.go
 
 FROM $BASE_ALT
