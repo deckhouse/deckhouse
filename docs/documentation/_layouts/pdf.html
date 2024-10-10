@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  {%- if page.anchors_disabled == true %}
+  <script>
+    window.anchors_disabled = true;
+  </script>
+  {%- endif %}
+  {% include head.html mode='documentation' %}
+  {%- if site.mode == 'module' %}
+  {% include head-local.html %}
+  {%- endif %}
+  <!--#include virtual="/includes/head-site.html" -->
+</head>
+
+<body>
+<div class="content">
+  <div class="docs" style="padding-left: 20px; padding-right: 20px;">
+    <h1>Deckhouse Kubernetes Platform. Документация</h1>
+    <h2>Содержание</h2>
+    {%- include toc.html %}
+    {{ content }}
+  </div>
+</div>
+</body>
+</html>
+
+
+
+
