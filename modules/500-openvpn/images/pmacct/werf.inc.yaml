@@ -1,0 +1,28 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
+docker:
+  ENTRYPOINT: ["/usr/sbin/pmacctd"]
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+# pmacctd notfound in BASE_ALT_P11
+from: {{ .Images.BASE_ALPINE }}
+git:
+- add: /tools/dev_images/additional_tools/alt/binary_replace.sh
+  to: /binary_replace.sh
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache pmacct bash
+  - |
+      /binary_replace.sh -i "\
+        /usr/sbin/pmacctd \
+        " -o /relocate

@@ -583,7 +583,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/500-openvpn/images/easyrsa-migrator"
+  directory: "/modules/500-openvpn/images/easyrsa-migrator/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
