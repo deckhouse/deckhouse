@@ -118,20 +118,16 @@ spec:
 # [<en>] Static cluster settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#staticclusterconfiguration
 # [<ru>] Параметры статического кластера.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#staticclusterconfiguration
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#staticclusterconfigurationя
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
 # [<en>] List of internal cluster networks (e.g., '10.0.4.0/24'), which is
 # [<en>] used for linking Kubernetes components (kube-apiserver, kubelet etc.).
-# [<en>] The parameter is mandatory in the following cases:
-# [<en>]   - Cluster nodes have more than one network interface
-# [<en>]   - The cluster is deployed inside a Deckhouse Virtualization Platform
-# [<en>] In other cases, the StaticClusterConfiguration resource can be omitted.
+# [<en>] Specify, if the cluster nodes have more than one network interface or if you are using the virtualization module.
+# [<en>] If only one interface is used on the nodes of the cluster, the StaticClusterConfiguration resource does not need to be created.
 # [<ru>] Список внутренних сетей узлов кластера (например, '10.0.4.0/24'), который
 # [<ru>] используется для связи компонентов Kubernetes (kube-apiserver, kubelet...) между собой.
-# [<ru>] Параметр обязателен к заполнению, если:
-# [<ru>]   -  Узлы кластера имеют более одного сетевого интерфейса
-# [<ru>]   -  Развертывание кластера происходит внутри Deckhouse Virtualization Platform
-# [<ru>] В остальных случаях ресурс StaticClusterConfiguration можно не создавать.
+# [<ru>] Укажите, если используете модуль virtualization или узлы кластера имеют более одного сетевого интерфейса.
+# [<ru>] Если на узлах кластера используется только один интерфейс, ресурс StaticClusterConfiguration можно не создавать.
 internalNetworkCIDRs:
 - *!CHANGE_internalNetworkCIDRs*
