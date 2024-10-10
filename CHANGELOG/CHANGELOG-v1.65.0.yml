@@ -1,0 +1,171 @@
+candi:
+  features:
+    - summary: Add support for openSUSE and mosOS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9436
+    - summary: >-
+        Install CA certificates on nodes using d8-ca-updater, which is installed from the
+        registrypackages.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9246
+    - summary: Update containerd to 1.7.20.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9246
+      impact: Restart containerd.
+  fixes:
+    - summary: candi/version_map.yml updated to use the latest changes in yandex-cloud-controller-manager
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9855
+    - summary: fix symlinks in d8-ca-updater; replace deprecated func bb-rp-install
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9797
+    - summary: Step "check_hostname_uniqueness" works without temporary files creation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9756
+    - summary: added statically built lsblk
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9666
+    - summary: Added the ability to configure Node DNS servers via the Azure Cloud Provider.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9554
+ceph-csi:
+  features:
+    - summary: Make ceph-csi module deprecated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10009
+ci:
+  features:
+    - summary: add Kubernetes 1.31 e2e tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9731
+  fixes:
+    - summary: Add additional launch rules to check the milestone.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10073
+    - summary: Fix werf generation errors.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10061
+    - summary: Fix for sending loop messages.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9977
+    - summary: Fix whitespace in e2e-abort pipeline.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9947
+    - summary: Fixed e2e test for containerd 1.31.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9927
+    - summary: Add check cooldown for release.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9595
+cloud-provider-aws:
+  features:
+    - summary: Added the ability to specify your IAM role.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9530
+cloud-provider-vcd:
+  fixes:
+    - summary: Fix vcd catalogs sharing.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9802
+cloud-provider-yandex:
+  fixes:
+    - summary: Fix hardcoded `diskType` parameter in `static-node`
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9734
+cni-cilium:
+  features:
+    - summary: Adding support for configuring each node individually using CiliumNodeConfig resources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9754
+control-plane-manager:
+  features:
+    - summary: patch etcd to support outputting of snapshots to stdout
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9948
+    - summary: Add CronJob that does etcd backup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9637
+  fixes:
+    - summary: >-
+        Automatically regenerate kubeconfig for control plane components if validation fails,
+        preventing crashes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9445
+deckhouse:
+  features:
+    - summary: Get rid of the rbacgen tool.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9622
+    - summary: Extend Deckhouse update settings.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9314
+deckhouse-controller:
+  features:
+    - summary: Add discovered GVKs from modules' CRDs to global values.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9963
+    - summary: adding an alert that manual confirmation is required to install mr
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9943
+    - summary: Get rid of crd modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9593
+  fixes:
+    - summary: Update the documentation about the list of data the `collect-debug-info` command collects.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10028
+    - summary: Users can check current release of deckhouse-controller
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9964
+dhctl:
+  features:
+    - summary: Upon editing configuration secrets, create them if they are missing from cluster
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9689
+    - summary: >-
+        Reduces code duplication in the gRPC server message handler and log sender, refactors the
+        graceful shutdown mechanism, and adds support for proper log output for multiple parallel
+        instances of the dhctl server.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9096
+    - summary: Reduce manual operations when converging control plane nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8380
+  fixes:
+    - summary: Deny use defaultCRI type as Docker
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10022
+    - summary: Fix lease locking.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9982
+    - summary: Add validation for ClusterConfiguration.cloud.prefix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9858
+    - summary: Added repo check to validateRegistryDockerCfg
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9688
+    - summary: Break circle and output error in log on check dependencies if get first error
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9679
+    - summary: Use dhctl binary path instead of working dir when building paths to resources
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9600
+docs:
+  fixes:
+    - summary: Fix documentation build.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10030
+    - summary: Update notes for bare metal in the Getting started.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9736
+go_lib:
+  fixes:
+    - summary: Change release approval message
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10001
+    - summary: add probe to the cloud-data reconciler
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9915
+    - summary: cloud-data-discoverer continues its operation despite temporary issues within the cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9570
+ingress-nginx:
+  fixes:
+    - summary: minor speed up for ingress validating
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10016
+kube-dns:
+  fixes:
+    - summary: Graceful rollout of the `kube-dns` deployment without disrupting connections.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9565
+loki:
+  fixes:
+    - summary: Update `maxStreamsPerUser` parameter description.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9775
+monitoring-kubernetes:
+  fixes:
+    - summary: add tag main for dashboard
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9677
+      impact: dashbord can be seen on the home page
+    - summary: >-
+        Fixed formula for triggering alerts `KubeletNodeFSInodesUsage` and
+        `KubeletImageFSInodesUsage`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9436
+multitenancy-manager:
+  features:
+    - summary: Add projects render validation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9607
+  fixes:
+    - summary: Change logs format to json format.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9955
+node-manager:
+  features:
+    - summary: Add the nodegroupconfiguration that installs the ca-certificate package(FE only).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9246
+testing:
+  fixes:
+    - summary: Fixed missing backslash in testing script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9979
+user-authn:
+  features:
+    - summary: refresh groups on updating tokens
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9598
+  fixes:
+    - summary: Trim spaces from email field on the login form.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10057
+
