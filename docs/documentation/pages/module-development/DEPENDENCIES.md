@@ -1,24 +1,24 @@
 ---
-title: "Зависимости модуля Deckhouse Kubernetes Platform"
-permalink: ru/module-development/dependencies/
-lang: ru
+title: "Dependencies of the Deckhouse Kubernetes Platform modules"
+permalink: en/module-development/dependencies/
+lang: en
 ---
 
-В этом разделе описаны зависимости, которые могут быть установлены для модуля.
+This section covers the dependencies you can set for the module.
 
-Зависимости — это набор условий (требований), которые должны выполняться, чтобы Deckhouse Kubernetes Platform мог запустить модуль.
+Dependencies are a set of conditions (requirements) that must be met in order for Deckhouse Kubernetes Platform to be able to run a module.
 
-Deckhouse Kubernetes Platform (DKP) поддерживает следующие зависимости для модуля:
+Deckhouse Kubernetes Platform (DKP) supports the following module dependencies:
 
-- [зависимость от версии Deckhouse Kubernetes Platform](#зависимость-от-версии-deckhouse-kubernetes-platform);
-- [зависимость от версии Kubernetes](#зависимость-от-версии-kubernetes);
-- [зависимость от статуса установки кластера](#зависимость-от-статуса-установки-кластера).
+- [Deckhouse Kubernetes Platform version](#deckhouse-kubernetes-platform-version-dependency);
+- [Kubernetes version](#kubernetes-version-dependency);
+- [cluster installation status](#cluster-installation-status-dependency).
 
-### Зависимость от версии Deckhouse Kubernetes Platform
+### Deckhouse Kubernetes Platform version dependency
 
-Эта зависимость определяет минимальную или максимальную версию DKP с которой совместим модуль.
+This dependency defines the minimum or maximum DKP version with which the module is compatible.
 
-Пример настройки зависимости модуля от версии DKP 1.61 и выше в файле `module.yaml`:
+Here's how you can set the module dependency in the `module.yaml` file: during installation, the module will require DKP version 1.61 or higher:
 
 ```yaml
 name: test
@@ -28,16 +28,15 @@ requirements:
 ```
 
 {% alert level="info" %}
-Для тестирования можно задать переменную окружения `TEST_EXTENDER_DECKHOUSE_VERSION`, чтобы симулировать желаемую версию Deckhouse Kubernetes Platform.
+For testing, you can set the `TEST_EXTENDER_DECKHOUSE_VERSION` environment variable to imitate the desired version of Deckhouse Kubernetes Platform.
 {% endalert %}
 
-Зависимость проверяется в следующих случаях:
+Deckhouse checks whether the dependency is met in the following cases:
 
-1. **При установке или обновлении модуля:**  
+1. **When installing or upgrading a module**  
+   If the DKP version does not meet the requirements specified in the release module dependencies, the latter will not be installed or upgraded.
 
-Если версия DKP не соответствует требованиям, указанным в зависимостях модуля релиза, его установка или обновление не будет выполнено.
-
-Пример ресурса ModuleRelease, когда версия DKP не соответствует требованиям модуля:
+Below is an example of the ModuleRelease resource for which the DKP version does not meet the module requirements:
 
    ```bash
    root@dev-master-0:~# kubectl get mr
@@ -45,10 +44,10 @@ requirements:
    test-v0.8.3              Pending      test-alpha      2m30s            requirements are not satisfied: current deckhouse version is not suitable: 1.0.0 is less than or equal to v1.64.0 
    ```
 
-1. **При обновлении Deckhouse Kubernetes Platform:**  
-   Проверяется, соответствует ли новая версия DKP зависимостям установленных и активных модулей. Если хотя бы один модуль не совместим с новой версией, обновление DKP не выполнится.
+1. **When upgrading Deckhouse Kubernetes Platform**  
+   Deckhouse checks if the new DKP version matches the dependencies of the installed and active modules. If at least one module is not compatible with the new version, the DKP upgrade will not be performed.
 
-Пример ресурса DeckhouseRelease, когда версия DKP не соответствует требованиям модуля:
+Below is an example of the DeckhouseRelease resource for which the DKP version does not meet the module requirements:
 
    ```bash
    root@dev-master-0:~# kubectl get deckhousereleases.deckhouse.io
@@ -57,14 +56,14 @@ requirements:
    v1.73.4                  Pending       2m13s            requirements of test are not satisfied: v1.73.4 deckhouse version is not suitable: v1.73.4 is greater than or equal to v1.73.4
    ```
 
-1. **При первичном анализе модулей:**  
-   Проверяется текущая версия DKP и зависимости уже установленных модулей. Если обнаружено несоответствие, модуль будет отключен.
+1. **When conducting initial module analyses**  
+   Deckhouse checks the current version of DKP and the dependencies of the installed modules. If a mismatch is discovered, the module will be disabled.
 
-### Зависимость от версии Kubernetes
+### Kubernetes version dependency
 
-Эта зависимость определяет минимальную или максимальную версию Kubernetes с которой совместим модуль.
+This dependency defines the minimum or maximum Kubernetes version with which the module is compatible.
 
-Пример настройки зависимости в файле `module.yaml`:
+Here is how you can enable the Kubernetes version dependency in the `module.yaml` file:
 
 ```yaml
 name: test
@@ -74,15 +73,15 @@ requirements:
 ```
 
 {% alert level="info" %}
-Для тестирования можно задать переменную окружения `TEST_EXTENDER_KUBERNETES_VERSION`, чтобы симулировать желаемую версию Kubernetes.
+For testing, you can set the `TEST_EXTENDER_KUBERNETES_VERSION` environment variable to imitate the desired version of Deckhouse Kubernetes Platform.
 {% endalert %}
 
-Зависимость проверяется в следующих случаях:
+Deckhouse checks whether the dependency is met in the following cases:
 
-1. **При установке или обновлении модуля:**  
-   Если версия Kubernetes не соответствует требованиям, указанным в зависимостях модуля релиза, установка или обновление не будет выполнено.
-
-Пример ресурса ModuleRelease, когда версия Kubernetes не соответствует требованиям модуля:
+1. **When installing or upgrading a module**  
+   If the Kubernetes version does not meet the requirements specified in the release module dependencies, the latter will not be installed or upgraded.
+  
+Below is an example of the ModuleRelease resource for which the Kubernetes version does not meet the module requirements:
 
    ```bash
    root@dev-master-0:~# kubectl get modulereleases.deckhouse.io
@@ -91,10 +90,10 @@ requirements:
    virtualization-v.0.0.0-dev4   Deployed      deckhouse      142d
    ```
 
-1. **При обновлении версии Kubernetes:**  
-   Проверяются зависимости активных модулей, и если хотя бы один модуль несовместим с новой версией Kubernetes, изменение версии не будет принято.
+1. **When upgrading Kubernetes**  
+   Deckhouse examines the dependencies of active modules, and if at least one module is incompatible with the new Kubernetes version, the version upgrade will not proceed.
 
-Пример вывода при несовместимости модуля с новой версией Kubernetes:
+Below is an example of the output you may encounter when a module is incompatible with a newer version of Kubernetes:
 
 ```bash
    root@dev-master-0:~# kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
@@ -105,13 +104,13 @@ requirements:
            Error: admission webhook "kubernetes-version.deckhouse-webhook.deckhouse.io" denied the request: requirements of test are not satisfied: 1.27 kubernetes version is not suitable: 1.27.0 is less than or equal to 1.28
 ```
 
-1. **При первичном анализе модулей:**  
-   Если версия Kubernetes не соответствует зависимостям уже установленных модулей, DKP отключит такие модули.
+1. **When conducting initial module analyses**  
+   If the Kubernetes version does not conform to the dependencies of the modules that are already installed, DKP will disable those modules.
 
-1. **При обновлении Deckhouse Kubernetes Platform:**  
-   Проверяется значение версии Kubernetes, установленной по умолчанию для DKP, и если оно не совместимо с активными модулями, обновление DKP не будет выполнено.
+1. **When upgrading Deckhouse Kubernetes Platform**  
+   Deckhouse checks the default Kubernetes version value for DKP and if it is not compatible with the active modules, the DKP update will not be carried out.
 
-Пример ресурса DeckhouseRelease, когда версия Kubernetes не соответствует требованиям модуля:
+Below is an example of the DeckhouseRelease resource for which the Kubernetes version does not meet the module requirements:
 
    ```bash
    root@dev-master-0:~# kubectl get deckhousereleases.deckhouse.io
@@ -119,11 +118,11 @@ requirements:
    v1.73.3                  Pending       7s              requirements of test are not satisfied: 1.27 kubernetes version is not suitable: 1.27.0 is less than or equal to 1.28            
    ```
 
-### Зависимость от статуса установки кластера
+### Cluster installation status dependency
 
-Эта зависимость указывает, что для запуска модуля требуется кластер, установка и настройка которого была завершена. Зависимость можно установить только для встроенных модулей DKP.
+This dependency indicates that the module requires a cluster whose installation and configuration is complete. The dependency can only be set for built-in DKP modules.
 
-Пример настройки зависимости в файле `module.yaml`:
+Here is how you can enable this dependency in the `module.yaml` file:
 
 ```yaml
 name: ingress-nginx
@@ -135,4 +134,4 @@ requirements:
     bootstrapped: true
 ```
 
-Проверка выполняется только один раз — при первичном анализе модулей. Если установка и настройка кластера не завершены, модуль не будет включен.
+This check is carried out only once - during the initial module analysis. If the cluster installation and configuration is not complete, the module will not be enabled.
