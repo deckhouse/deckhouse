@@ -17,7 +17,7 @@
           To observe affected nodes use the expr `kube_node_info{os_image=~"Ubuntu 18.04.*"}` in Prometheus.
     - alert: D8NodeHasDeprecatedOSVersion
       expr: >-
-        count(kube_node_info{os_image=~"Debian GNU/Linux 9.*"}) > 0
+        count(kube_node_info{os_image=~"Debian GNU/Linux 10.*"}) > 0
       for: 5m
       labels:
         severity_level: "4"
@@ -29,4 +29,4 @@
         description: |-
           Some nodes have deprecated OS versions. Please update nodes to actual OS version.
 
-          To observe affected nodes use the expr `kube_node_info{os_image=~"Debian GNU/Linux 9.*"}` in Prometheus.
+          To observe affected nodes use the expr `kube_node_info{os_image=~"Debian GNU/Linux 10.*"}` in Prometheus.

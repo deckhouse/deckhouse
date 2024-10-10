@@ -37,8 +37,6 @@ YAML-файл конфигурации установки содержит па�
 - [InitConfiguration](configuration.html#initconfiguration) — начальные параметры [конфигурации Deckhouse](../#конфигурация-deckhouse). С этой конфигурацией Deckhouse запустится после установки.
 
   В этом ресурсе, в частности, указываются параметры, без которых Deckhouse не запустится или будет работать некорректно. Например, параметры [размещения компонентов Deckhouse](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), используемый [storageClass](../deckhouse-configure-global.html#parameters-storageclass), параметры доступа к [container registry](configuration.html#initconfiguration-deckhouse-registrydockercfg), [шаблон используемых DNS-имен](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) и другие.
-
-  **Внимание!** Параметр [configOverrides](configuration.html#initconfiguration-deckhouse-configoverrides) устарел и будет удален. Для установки параметров **встроенных модулей** Deckhouse используйте набор ресурсов [ModuleConfig](../#настройка-модуля) в файле конфигурации установки. Для остальных модулей используйте [файл ресурсов установки](#файл-ресурсов-установки).
   
 - [ClusterConfiguration](configuration.html#clusterconfiguration) — общие параметры кластера, такие как версия control plane, сетевые параметры, параметры CRI и т. д.
   
@@ -62,6 +60,8 @@ YAML-файл конфигурации установки содержит па�
 
 - `ModuleConfig` — набор ресурсов, содержащих параметры конфигурации [встроенных модулей Deckhouse](../).
 
+Если кластер изначально создается с узлами, выделенными под определенный вид нагрузки (системные узлы, узлы под мониторинг и т. п.), то для модулей использующих тома постоянного хранилища (например, для модуля `prometheus`), рекомендуется явно указывать соответствующий nodeSelector в конфигурации модуля. Например, для модуля `prometheus` это параметр [nodeSelector](../modules/300-prometheus/configuration.html#parameters-nodeselector).
+
 {% offtopic title="Пример файла конфигурации установки..." %}
 
 ```yaml
@@ -80,10 +80,6 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   releaseChannel: Stable
-  configOverrides:
-    global:
-      modules:
-        publicDomainTemplate: "%s.example.com"
 ---
 apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration
@@ -131,6 +127,18 @@ spec:
   enabled: true
   settings:
     allowedBundles: ["ubuntu-lts"]
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  version: 2
+  enabled: true
+  # Укажите, в случае использование выделенных узлов для мониторинга. 
+  # settings:
+  #   nodeSelector:
+  #     node.deckhouse.io/group: monitoring
 ```
 
 {% endofftopic %}

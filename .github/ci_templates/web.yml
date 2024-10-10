@@ -24,6 +24,7 @@ steps:
     env:
       WERF_DIR: "{!{ $dir }!}"
       WERF_LOG_VERBOSE: "on"
+      WERF_ENV: "EE"
 {!{- if eq $docPart "main" }!}
       DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
       DOC_API_URL: "${{vars.DOC_API_URL}}"
@@ -57,6 +58,7 @@ steps:
     env:
       DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
       DOC_API_URL: "${{vars.DOC_API_URL}}"
+      WERF_ENV: "EE"
 {!{ if eq $mode "release" }!}
       WEB_REGISTRY_PATH: ${{steps.check_rw_registry.outputs.web_registry_path}}
 {!{- else }!}

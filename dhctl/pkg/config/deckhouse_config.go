@@ -47,36 +47,6 @@ spec:
   settings:
     %s
 `
-	configOverridesWarn = `
-Config overrides are deprecated. Please use module config:
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterConfiguration
-...
-apiVersion: deckhouse.io/v1alpha1
-kind: InitConfiguration
-...
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: global
-spec:
-  settings:
-    highAvailability: false
-    modules:
-      publicDomainTemplate: '%s.example.com'
-  version: 1
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: cni-flannel
-spec:
-  enabled: true
----
-...
-`
 
 	DefaultBundle   = "Default"
 	DefaultLogLevel = "Info"
@@ -198,17 +168,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	schemasStore := NewSchemaStore()
 
 	if len(metaConfig.DeckhouseConfig.ConfigOverrides) > 0 {
-		log.WarnLn(configOverridesWarn)
-		if len(metaConfig.ModuleConfigs) > 0 {
-			return nil, fmt.Errorf("Cannot use ModuleConfig's and configOverrides at the same time. Please use ModuleConfig's")
-		}
-
-		mcs, err := ConvertInitConfigurationToModuleConfigs(metaConfig, schemasStore, bundle, logLevel)
-		if err != nil {
-			return nil, err
-		}
-
-		metaConfig.ModuleConfigs = mcs
+		return nil, fmt.Errorf("Support for 'configOverrides' was removed. Please use ModuleConfig's instead.")
 	}
 
 	var deckhouseCm *ModuleConfig
@@ -231,7 +191,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	}
 
 	if deckhouseCm == nil {
-		deckhouseCm, err = buildModuleConfigWithOverrides(schemasStore, "deckhouse", true, map[string]any{
+		deckhouseCm, err = buildModuleConfig(schemasStore, "deckhouse", true, map[string]any{
 			"bundle":   bundle,
 			"logLevel": logLevel,
 		})

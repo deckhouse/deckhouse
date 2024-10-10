@@ -16,7 +16,7 @@ spec:
     targetPort: http
   selector:
     app: madison-proxy
-  {{- if and (.Values.global.enabledModules | has "prometheus-crd") (.Values.global.enabledModules | has "prometheus") }}
+  {{- if .Values.global.enabledModules | has "prometheus" }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager

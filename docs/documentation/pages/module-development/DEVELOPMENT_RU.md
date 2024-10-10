@@ -35,7 +35,7 @@ spec:
 Пример команды:
 
 ```sh
-kubectl annotate mop <name> renew=""
+kubectl annotate mpo <name> renew=""
 ```
 
 ## Принцип действия

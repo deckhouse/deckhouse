@@ -1,0 +1,43 @@
+{!{- define "send_alert_loop_template" -}!}
+{!{- $ctx := index . 0 }!}
+# <template: send_alert_loop_template>
+- name: Check loop alerting credentials
+  id: check_loop_alerting
+  if: always()
+  env:
+    LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
+  run: |
+    if [[ -n $LOOP_TOKEN ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
+- name: Send loop alert on fail
+{!{- if coll.Has $ctx "if" }!}
+  if: ${{ steps.check_loop_alerting.outputs.has_credentials == 'true' && ( {!{- $ctx.if -}!} ) }}
+{!{- else }!}
+  if: ${{ steps.check_loop_alerting.outputs.has_credentials == 'true' }}
+{!{- end }!}
+  env:
+    LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
+    LOOP_CHANEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
+  run: |
+    WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+
+    alertData=$(cat <<EOF
+    {
+    "channel_id": "${LOOP_CHANEL_ID}",
+    "message": "🛑Daily e2e test failure🛑\n[URL](${WORKFLOW_URL})"
+    }
+    EOF
+    )
+
+    for (( iter = 1; iter < 60; iter++ )); do
+      if curl -f -L -X POST "https://loop.flant.ru/api/v4/posts" -H "Content-Type: application/json" -H "Authorization: Bearer ${LOOP_TOKEN}" --data "${alertData}"; then
+        exit 0
+      fi
+
+      echo "Alert was not sent. Wait 5 seconds before next attempt"
+      sleep 5
+    done
+
+    echo "Alert was not sent. Timeout"
+    exit 1
+  # </template: send_alert_loop_template>
+{!{- end -}!}

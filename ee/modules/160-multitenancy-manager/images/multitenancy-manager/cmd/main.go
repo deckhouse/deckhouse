@@ -24,7 +24,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -55,7 +55,7 @@ func main() {
 
 	// setup logger
 	log := ctrl.Log.WithName("multitenancy-manager")
-	ctrllog.SetLogger(zap.New(zap.Level(zapcore.Level(-4)), zap.UseDevMode(true)))
+	ctrllog.SetLogger(zap.New(zap.Level(zapcore.Level(-4)), zap.StacktraceLevel(zapcore.PanicLevel)))
 
 	log.Info(fmt.Sprintf("starting multitenancy-manager with %v allow orphan namespaces option", allowOrphanNamespaces))
 
@@ -82,7 +82,7 @@ func main() {
 	}
 
 	// register project webhook
-	projectwebhook.Register(runtimeManager)
+	projectwebhook.Register(runtimeManager, helmClient)
 
 	// register template webhook
 	templatewebhook.Register(runtimeManager, serviceAccount)
@@ -116,7 +116,7 @@ func setupRuntimeManager(log logr.Logger) (ctrl.Manager, error) {
 	managerOpts := manager.Options{
 		LeaderElection:          false,
 		Scheme:                  scheme,
-		GracefulShutdownTimeout: pointer.Duration(10 * time.Second),
+		GracefulShutdownTimeout: ptr.To(10 * time.Second),
 		HealthProbeBindAddress:  ":9090",
 		WebhookServer:           webhook.NewServer(webhook.Options{CertDir: "/certs"}),
 		Metrics: metrics.Options{

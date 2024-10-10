@@ -65,5 +65,5 @@ func ensureCRDs(input *go_hook.HookInput, dc dependency.Container) error {
 	CRDversionToInstall := fmt.Sprintf("%d.%d", semvers[len(semvers)-1].Major(), semvers[len(semvers)-1].Minor())
 
 	prefix := "/deckhouse/"
-	return ensure_crds.EnsureCRDsHandler(prefix+"modules/110-istio/crds/istio/"+CRDversionToInstall+"/*.yaml")(input, dc)
+	return ensure_crds.EnsureCRDsHandler(prefix+"modules/110-istio/_crds/istio/"+CRDversionToInstall+"/*.yaml")(input, dc)
 }

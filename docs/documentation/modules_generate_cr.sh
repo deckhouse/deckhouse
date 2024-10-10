@@ -13,7 +13,7 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/crds/.*.yaml$' -print | grep 
   cp -f $schema_path _data/schemas/${module_name}/crds/
   if [ -f "${module_path}/crds/doc-ru-${module_file_name}" ]; then
      echo -e "\ni18n:\n  ru:" >> _data/schemas/${module_name}/crds/${module_file_name}
-     cat ${module_path}/crds/doc-ru-${module_file_name} | sed 's/^/    /' >> _data/schemas/${module_name}/crds/${module_file_name}
+     cat ${module_path}/crds/doc-ru-${module_file_name} | sed '1{/^---$/d}; s/^/    /' >> _data/schemas/${module_name}/crds/${module_file_name}
   fi
   grep -q '<!-- SCHEMA -->' ${module_path}/docs/CR.md &> /dev/null
   if [ $? -eq 0 ]; then

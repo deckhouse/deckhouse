@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	waitingManualApprovalMsg = "Waiting for manual approval"
+	waitingManualApprovalMsg = "Waiting for the 'release.deckhouse.io/approved: \"true\"' annotation"
 )
 
 const (
@@ -571,12 +571,12 @@ func (du *Updater[R]) PredictedReleaseIsPatch() bool {
 	}
 
 	if du.currentDeployedReleaseIndex == -1 {
-		du.predictedReleaseIsPatch = pointer.Bool(false)
+		du.predictedReleaseIsPatch = ptr.To(false)
 		return false
 	}
 
 	if du.predictedReleaseIndex == -1 {
-		du.predictedReleaseIsPatch = pointer.Bool(false)
+		du.predictedReleaseIsPatch = ptr.To(false)
 		return false
 	}
 
@@ -584,16 +584,16 @@ func (du *Updater[R]) PredictedReleaseIsPatch() bool {
 	predicted := du.releases[du.predictedReleaseIndex]
 
 	if current.GetVersion().Major() != predicted.GetVersion().Major() {
-		du.predictedReleaseIsPatch = pointer.Bool(false)
+		du.predictedReleaseIsPatch = ptr.To(false)
 		return false
 	}
 
 	if current.GetVersion().Minor() != predicted.GetVersion().Minor() {
-		du.predictedReleaseIsPatch = pointer.Bool(false)
+		du.predictedReleaseIsPatch = ptr.To(false)
 		return false
 	}
 
-	du.predictedReleaseIsPatch = pointer.Bool(true)
+	du.predictedReleaseIsPatch = ptr.To(true)
 	return true
 }
 

@@ -27,7 +27,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -191,7 +191,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			RevisionHistoryLimit: pointer.Int32(2),
+			RevisionHistoryLimit: ptr.To(int32(2)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": "deckhouse",
@@ -214,8 +214,8 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			DNSPolicy:          apiv1.DNSDefault,
 			ServiceAccountName: "deckhouse",
 			SecurityContext: &apiv1.PodSecurityContext{
-				RunAsUser:    pointer.Int64(0),
-				RunAsNonRoot: pointer.Bool(false),
+				RunAsUser:    ptr.To(int64(0)),
+				RunAsNonRoot: ptr.To(false),
 			},
 			Tolerations: []apiv1.Toleration{
 				{Operator: apiv1.TolerationOpExists},
@@ -337,6 +337,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		{
 			Name:  "ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT",
 			Value: "4223",
+		},
+		{
+			Name:  "ADDON_OPERATOR_CRD_EXTRA_LABELS",
+			Value: "heritage=deckhouse",
 		},
 		{
 			Name:  "HELM3LIB",

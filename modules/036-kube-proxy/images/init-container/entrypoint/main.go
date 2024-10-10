@@ -32,7 +32,7 @@ import (
 	configv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/kube-proxy/config/v1alpha1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 )
 
@@ -139,7 +139,7 @@ func main() {
 		},
 		Mode: "iptables",
 		Conntrack: v1alpha1.KubeProxyConntrackConfiguration{
-			MaxPerCore: pointer.Int32(0),
+			MaxPerCore: ptr.To(int32(0)),
 		},
 		NodePortAddresses: []string{nodePortBindInternalIP},
 	}

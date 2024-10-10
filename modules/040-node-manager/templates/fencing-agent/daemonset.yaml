@@ -7,7 +7,7 @@ memory: 50Mi
 {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
   {{ $mode := dig "fencing" "mode" "" $ng }}
   {{ if eq $mode "Watchdog" }}
-      {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+      {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -91,7 +91,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" $ctx | nindent 14 }}
-        {{- if not ( $ctx.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+        {{- if not ( $ctx.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "fencing_agent_resources" $ctx | nindent 14 }}
         {{- end }}
           volumeMounts:

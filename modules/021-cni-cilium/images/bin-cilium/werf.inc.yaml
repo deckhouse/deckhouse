@@ -1,11 +1,11 @@
-{{- $ciliumVersion := "1.14.5" }}
+{{- $ciliumVersion := "1.14.14" }}
 ---
 # #####################################################################
 # Build cilium-agent binaries
-# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile (builder stage)
+# Based on https://github.com/cilium/cilium/blob/v1.14.14/images/cilium/Dockerfile (builder stage)
 ---
 artifact: {{ $.ModuleName }}/cilium-artifact
-from: {{ $.Images.BASE_ALT_DEV_CILIUM }}
+fromImage: {{ $.ModuleName }}/base-cilium-dev
 git:
 - add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -55,6 +55,7 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /go/src/github.com/cilium/cilium
   - find /patches -name '*.patch' | xargs git apply --verbose
+  - go mod tidy && go mod vendor && go mod verify
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-bash-completion licenses-all
   - mv LICENSE.all /tmp/install/LICENSE.all

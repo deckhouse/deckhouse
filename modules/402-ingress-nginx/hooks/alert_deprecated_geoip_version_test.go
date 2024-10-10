@@ -25,7 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -127,7 +127,7 @@ spec:
 				}))
 				Expect(metrics[1].Group).To(BeEquivalentTo("d8_deprecated_geoip_version"))
 				Expect(metrics[1].Action).To(BeEquivalentTo("set"))
-				Expect(metrics[1].Value).To(BeEquivalentTo(pointer.Float64(1)))
+				Expect(metrics[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 				Expect(metrics[1].Labels).To(BeEquivalentTo(map[string]string{
 					"kind":               "IngressNginxController",
 					"resource_namespace": "",
@@ -136,7 +136,7 @@ spec:
 				}))
 				Expect(metrics[2].Group).To(BeEquivalentTo("d8_deprecated_geoip_version"))
 				Expect(metrics[2].Action).To(BeEquivalentTo("set"))
-				Expect(metrics[2].Value).To(BeEquivalentTo(pointer.Float64(1)))
+				Expect(metrics[2].Value).To(BeEquivalentTo(ptr.To(1.0)))
 				Expect(metrics[2].Labels).To(BeEquivalentTo(map[string]string{
 					"kind":               "IngressNginxController",
 					"resource_namespace": "",
@@ -156,7 +156,7 @@ kind: IngressNginxController
 metadata:
   name: second
 spec:
-  controllerVersion: "1.6"
+  controllerVersion: "1.9"
   ingressClass: "test"
 `))
 			err := createNs(d8IngressNginxNamespace)
@@ -195,7 +195,7 @@ spec:
 				}))
 				Expect(metrics[1].Group).To(BeEquivalentTo("d8_deprecated_geoip_version"))
 				Expect(metrics[1].Action).To(BeEquivalentTo("set"))
-				Expect(metrics[1].Value).To(BeEquivalentTo(pointer.Float64(1)))
+				Expect(metrics[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 				Expect(metrics[1].Labels).To(BeEquivalentTo(map[string]string{
 					"kind":               "IngressNginxController",
 					"resource_namespace": "",
@@ -204,7 +204,7 @@ spec:
 				}))
 				Expect(metrics[2].Group).To(BeEquivalentTo("d8_deprecated_geoip_version"))
 				Expect(metrics[2].Action).To(BeEquivalentTo("set"))
-				Expect(metrics[2].Value).To(BeEquivalentTo(pointer.Float64(1)))
+				Expect(metrics[2].Value).To(BeEquivalentTo(ptr.To(1.0)))
 				Expect(metrics[2].Labels).To(BeEquivalentTo(map[string]string{
 					"kind":               "IngressNginxController",
 					"resource_namespace": "",
@@ -213,7 +213,7 @@ spec:
 				}))
 				Expect(metrics[3].Group).To(BeEquivalentTo("d8_deprecated_geoip_version"))
 				Expect(metrics[3].Action).To(BeEquivalentTo("set"))
-				Expect(metrics[3].Value).To(BeEquivalentTo(pointer.Float64(1)))
+				Expect(metrics[3].Value).To(BeEquivalentTo(ptr.To(1.0)))
 				Expect(metrics[3].Labels).To(BeEquivalentTo(map[string]string{
 					"kind":               "Ingress",
 					"resource_namespace": "default",
@@ -222,7 +222,7 @@ spec:
 				}))
 				Expect(metrics[4].Group).To(BeEquivalentTo("d8_deprecated_geoip_version"))
 				Expect(metrics[4].Action).To(BeEquivalentTo("set"))
-				Expect(metrics[4].Value).To(BeEquivalentTo(pointer.Float64(1)))
+				Expect(metrics[4].Value).To(BeEquivalentTo(ptr.To(1.0)))
 				Expect(metrics[4].Labels).To(BeEquivalentTo(map[string]string{
 					"kind":               "Ingress",
 					"resource_namespace": "test",
@@ -242,7 +242,7 @@ kind: IngressNginxController
 metadata:
   name: second
 spec:
-  controllerVersion: "1.6"
+  controllerVersion: "1.9"
   ingressClass: "test"
 `))
 			err := createNs(d8IngressNginxNamespace)
@@ -269,7 +269,7 @@ spec:
 				}))
 				Expect(metrics[1].Group).To(BeEquivalentTo("d8_deprecated_geoip_version"))
 				Expect(metrics[1].Action).To(BeEquivalentTo("set"))
-				Expect(metrics[1].Value).To(BeEquivalentTo(pointer.Float64(1)))
+				Expect(metrics[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 				Expect(metrics[1].Labels).To(BeEquivalentTo(map[string]string{
 					"kind":               "Ingress",
 					"resource_namespace": "test",
