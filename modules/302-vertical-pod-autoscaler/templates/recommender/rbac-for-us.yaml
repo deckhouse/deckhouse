@@ -7,31 +7,18 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "vpa-recommender")) | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: RoleBinding
 metadata:
-  name: d8:vertical-pod-autoscaler:vpa-status-actor
-rules:
-  - apiGroups:
-      - "autoscaling.k8s.io"
-    resources:
-      - verticalpodautoscalers/status
-    verbs:
-      - get
-      - patch
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: d8:vertical-pod-autoscaler:recommender:status-actor
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  name: d8:vertical-pod-autoscaler:recommender:leader-election
+  namespace: kube-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: d8:vertical-pod-autoscaler:vpa-status-actor
+  kind: Role
+  name: d8:vertical-pod-autoscaler:recommender:leader-election
 subjects:
-- kind: ServiceAccount
-  name: d8-vertical-pod-autoscaler-recommender
-  namespace: kube-system
+  - kind: ServiceAccount
+    name: d8-vertical-pod-autoscaler-recommender
+    namespace: kube-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole

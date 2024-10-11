@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes/kubernetes/pull/63797
-    controller-gen.kubebuilder.io/version: v0.4.0
+    controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
   name: verticalpodautoscalercheckpoints.autoscaling.k8s.io
   labels:
@@ -23,11 +23,24 @@ spec:
   versions:
   - name: v1
     schema:
-      openAPIV3Schema: &schema
+      openAPIV3Schema:
         description: VerticalPodAutoscalerCheckpoint is the checkpoint of the internal
           state of VPA that is used for recovery after recommender's restart.
         properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
           spec:
+            description: 'Specification of the checkpoint. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status.'
             properties:
               containerName:
                 description: Name of the checkpointed container.
@@ -113,9 +126,3 @@ spec:
     deprecated: true
     schema:
       openAPIV3Schema: *schema
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
