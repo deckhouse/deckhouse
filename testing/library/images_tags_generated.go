@@ -119,7 +119,11 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudDataDiscoverer":       "imageHash-cloudProviderYandex-cloudDataDiscoverer",
 		"cloudMetricsExporter":      "imageHash-cloudProviderYandex-cloudMetricsExporter",
 		"cloudMigrator":             "imageHash-cloudProviderYandex-cloudMigrator",
-		"yandexCsiPlugin":           "imageHash-cloudProviderYandex-yandexCsiPlugin",
+		"yandexCsiPlugin127":        "imageHash-cloudProviderYandex-yandexCsiPlugin127",
+		"yandexCsiPlugin128":        "imageHash-cloudProviderYandex-yandexCsiPlugin128",
+		"yandexCsiPlugin129":        "imageHash-cloudProviderYandex-yandexCsiPlugin129",
+		"yandexCsiPlugin130":        "imageHash-cloudProviderYandex-yandexCsiPlugin130",
+		"yandexCsiPlugin131":        "imageHash-cloudProviderYandex-yandexCsiPlugin131",
 	},
 	"cloudProviderZvirt": map[string]interface{}{
 		"capzControllerManager":  "imageHash-cloudProviderZvirt-capzControllerManager",
