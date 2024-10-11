@@ -23,7 +23,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -48,8 +48,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			NameSelector:                 &types.NameSelector{MatchNames: []string{clusterConfiguration}},
-			ExecuteHookOnSynchronization: pointer.Bool(true),
-			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			ExecuteHookOnEvents:          ptr.To(false),
 			FilterFunc:                   filterHasLabelHeritageDeckhouse,
 		},
 		{
@@ -62,8 +62,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			NameSelector:                 &types.NameSelector{MatchNames: []string{providerConfiguration}},
-			ExecuteHookOnSynchronization: pointer.Bool(true),
-			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			ExecuteHookOnEvents:          ptr.To(false),
 			FilterFunc:                   filterHasLabelHeritageDeckhouse,
 		},
 		{
@@ -76,8 +76,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			NameSelector:                 &types.NameSelector{MatchNames: []string{staticConfiguration}},
-			ExecuteHookOnSynchronization: pointer.Bool(true),
-			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			ExecuteHookOnEvents:          ptr.To(false),
 			FilterFunc:                   filterHasLabelHeritageDeckhouse,
 		},
 	},
