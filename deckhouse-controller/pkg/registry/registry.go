@@ -222,7 +222,7 @@ func DefineRegistryCommand(kpApp *kingpin.Application) {
 		}
 
 		fmt.Println()
-		fmt.Printf("Module sources found (%d):", len(modules))
+		fmt.Printf("Modules found (%d):", len(modules))
 		fmt.Println()
 
 		fmt.Println()
