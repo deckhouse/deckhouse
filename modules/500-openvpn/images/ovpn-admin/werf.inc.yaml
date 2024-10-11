@@ -1,4 +1,5 @@
 {{- $gitCommit := "dbc48ef3f1141caa7769488dd3273cff530c9df7" }}
+{{- $binaries := "/bin/bash" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -21,13 +22,13 @@ import:
   add: /src/openvpn/src/openvpn/openvpn
   to: /usr/sbin/openvpn
   before: setup
-- artifact: {{ .ModuleName }}/openssl-artifact
-  add: /openssl
-  to: /
-  before: setup
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
   add: /src/frontend/static
   to: /app/frontend/static
+  before: setup
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
   before: setup
 docker:
   WORKDIR: /app
@@ -82,3 +83,14 @@ shell:
   - cd /src/frontend
   - npm install
   - npm run build
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+fromArtifact: common/relocate-artifact
+import:
+- artifact: {{ .ModuleName }}/openssl-artifact
+  add: /openssl
+  to: /relocate
+  before: setup
+shell:
+  install:
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
