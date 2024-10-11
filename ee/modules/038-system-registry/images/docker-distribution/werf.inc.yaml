@@ -18,6 +18,11 @@ git:
     stageDependencies:
       install:
         - '**/*'
+  - add: /{{ $.ModulePath }}modules/038-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+      - '**/*'
 
 shell:
   beforeInstall:
@@ -27,6 +32,7 @@ shell:
     - git config --global advice.detachedHead false
     - git clone --depth 1 --single-branch --branch {{ $BRANCH }} {{ $REPO }} {{ $GIT_CLONE_DEST_PATH }}
     - cd {{ $GIT_CLONE_DEST_PATH }}
+    - git apply /patches/*.patch --verbose
     - export GOPROXY={{ .GOPROXY }}
     - export GOOS=linux
     - export GOARCH=amd64
