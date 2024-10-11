@@ -30,6 +30,7 @@ spec:
       replacement: main
     - targetLabel: job
       replacement: kube-state-metrics
+  metricsPath: '/main/metrics'
 ---
 apiVersion: monitoring.coreos.com/v1alpha1
 kind: ScrapeConfig
