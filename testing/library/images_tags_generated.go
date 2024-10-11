@@ -335,10 +335,9 @@ var DefaultImagesDigests = map[string]interface{}{
 		"machineControllerManager": "imageHash-nodeManager-machineControllerManager",
 	},
 	"openvpn": map[string]interface{}{
-		"easyrsaMigrator": "imageHash-openvpn-easyrsaMigrator",
-		"openvpn":         "imageHash-openvpn-openvpn",
-		"ovpnAdmin":       "imageHash-openvpn-ovpnAdmin",
-		"pmacct":          "imageHash-openvpn-pmacct",
+		"openvpn":   "imageHash-openvpn-openvpn",
+		"ovpnAdmin": "imageHash-openvpn-ovpnAdmin",
+		"pmacct":    "imageHash-openvpn-pmacct",
 	},
 	"operatorPrometheus": map[string]interface{}{
 		"prometheusConfigReloader": "imageHash-operatorPrometheus-prometheusConfigReloader",
