@@ -155,6 +155,8 @@ proxy:
   username: "$UPSTREAM_REGISTRY_LOGIN"
   password: "$UPSTREAM_REGISTRY_PASSWORD"
   ttl: 72h
+  remotepathonly: "{{ .registry.upstreamRegistry.path }}"
+  localpathalias: "{{ .registry.path }}"
 {{- end }}
 
 auth:
