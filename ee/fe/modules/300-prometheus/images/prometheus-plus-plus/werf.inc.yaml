@@ -25,11 +25,6 @@ import:
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}
   to: /patches
-  includePaths:
-  - '**/*.patch'
-  stageDependencies:
-    install:
-    - '**/*'
 shell:
   install:
   - export NODE_MAJOR=20
