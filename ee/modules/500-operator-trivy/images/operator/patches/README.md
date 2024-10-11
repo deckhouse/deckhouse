@@ -26,3 +26,8 @@ The first check begins instantly when the operator starts.
 ### 006-new-metrics.patch
 
 This patch adds primaryLink metric for reports.
+
+### 007-fix-custom-volumes.patch
+
+[PR](https://github.com/aquasecurity/trivy-operator/pull/2241)
+[Issue](https://github.com/aquasecurity/trivy-operator/issues/2240)
