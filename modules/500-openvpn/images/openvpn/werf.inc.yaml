@@ -1,5 +1,6 @@
-{{- $openvpnVersion := "2.5.11" }}
+{{- $openvpnVersion := "2.6.12" }}
 {{- $opensslVersion := "3.3.2" }}
+{{- $libcapNgVersion := "0.8.5" }}
 {{- $binaries := "/usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so* /bin/mknod" }}
 {{- $iptables_version := "1.8.9" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
@@ -49,6 +50,7 @@ shell:
   install:
   - cd /src
   - git clone --depth 1 -b openssl-{{ $opensslVersion }} {{ .SOURCE_REPO }}/openssl/openssl.git ./openssl
+  - git clone --depth 1 -b v{{ $libcapNgVersion }} https://github.com/stevegrubb/libcap-ng.git ./libcap-ng
   - git clone --depth 1 -b v{{ $openvpnVersion }} {{ .SOURCE_REPO }}/OpenVPN/openvpn.git ./openvpn
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
@@ -101,12 +103,17 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache curl git autoconf automake make libtool g++ linux-headers libnl3-dev libcap-ng-dev lz4-dev linux-pam-dev tree
+  - apk add --no-cache autoconf automake make libtool g++ linux-headers pkgconfig
   install:
+  - cd /src/libcap-ng
+  - ./autogen.sh
+  - ./configure --enable-static
+  - make
+  - make install
   - cd /src/openvpn
   - autoreconf -vi
-  - ./configure --enable-static --disable-shared --disable-debug --disable-unit-tests --disable-lzo --disable-lz4 --disable-plugin-auth-pam --disable-plugin-down-root
-  - make LIBS="-all-static"
+  - ./configure --enable-static --disable-shared --disable-debug --disable-unit-tests --disable-lzo --disable-lz4 --disable-plugin-auth-pam --disable-plugin-down-root --disable-dco
+  - make LIBS="-all-static -lcap-ng"
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
 fromArtifact: common/relocate-artifact
