@@ -31,8 +31,6 @@ import (
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 )
 
-const AllowDisableAnnotion = "modules.deckhouse.io/allow-disable"
-
 // moduleConfigValidationHandler validations for ModuleConfig creation
 func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(_ context.Context, review *model.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
@@ -44,6 +42,9 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 					return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 				}
 
+				// if we have no annotation
+				// we check module
+				// we check confirmation restriction and confirmation message
 				_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotion]
 				if !ok {
 					module, ok := moduleStorage.GetModules()[obj.GetName()]
@@ -68,6 +69,11 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 			return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 		}
 
+		// if we have no annotation and module is not disabled
+		// (what if we have no annotation and module is disabled?)
+		// (if annotation stay while module disabled - we alarm user everytime, before he deletes it)
+		// we check module
+		// we check confirmation restriction and confirmation message
 		_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotion]
 		if !ok && !*cfg.Spec.Enabled {
 			module, ok := moduleStorage.GetModules()[obj.GetName()]

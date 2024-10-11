@@ -17,8 +17,9 @@ limitations under the License.
 package validation
 
 import (
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 )
 
 type ModuleStorage interface {

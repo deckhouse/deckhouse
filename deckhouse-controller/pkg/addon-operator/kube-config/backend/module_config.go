@@ -91,6 +91,9 @@ func (mc ModuleConfigBackend) StartInformer(ctx context.Context, eventC chan con
 			mconfig := obj.(*v1alpha1.ModuleConfig)
 			// TODO: find a better way of comparing mconfigs (some sort of generator for DeepEqual method)
 			if !reflect.DeepEqual(prevConfig.Spec, mconfig.Spec) {
+				// TODO: ???
+				// didnt work
+				//
 				if !*mconfig.Spec.Enabled {
 					_, ok := mconfig.Annotations[v1alpha1.AllowDisableAnnotion]
 					if ok {
