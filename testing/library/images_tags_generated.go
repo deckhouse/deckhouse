@@ -62,7 +62,11 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager130": "imageHash-cloudProviderGcp-cloudControllerManager130",
 		"cloudControllerManager131": "imageHash-cloudProviderGcp-cloudControllerManager131",
 		"cloudDataDiscoverer":       "imageHash-cloudProviderGcp-cloudDataDiscoverer",
-		"pdCsiPlugin":               "imageHash-cloudProviderGcp-pdCsiPlugin",
+		"pdCsiPlugin127":            "imageHash-cloudProviderGcp-pdCsiPlugin127",
+		"pdCsiPlugin128":            "imageHash-cloudProviderGcp-pdCsiPlugin128",
+		"pdCsiPlugin129":            "imageHash-cloudProviderGcp-pdCsiPlugin129",
+		"pdCsiPlugin130":            "imageHash-cloudProviderGcp-pdCsiPlugin130",
+		"pdCsiPlugin131":            "imageHash-cloudProviderGcp-pdCsiPlugin131",
 	},
 	"cloudProviderOpenstack": map[string]interface{}{
 		"cinderCsiPlugin127":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin127",
