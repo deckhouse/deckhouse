@@ -89,8 +89,9 @@ fromArtifact: common/relocate-artifact
 import:
 - artifact: {{ .ModuleName }}/openssl-artifact
   add: /openssl
-  to: /relocate
-  before: setup
+  to: /openssl
+  before: install
 shell:
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+  - cp /openssl/usr/local/bin/* /relocate/bin/
