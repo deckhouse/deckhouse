@@ -37,6 +37,7 @@ func moduleConfigValidationHandler() http.Handler {
 		switch review.Operation {
 		case kwhmodel.OperationDelete:
 			// Always allow deletion.
+			// TODO: delete logic
 			return allowResult("")
 
 		case kwhmodel.OperationConnect, kwhmodel.OperationUnknown:
