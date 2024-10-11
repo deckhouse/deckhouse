@@ -49,7 +49,6 @@ shell:
   install:
   - cd /src
   - git clone --depth 1 -b openssl-{{ $opensslVersion }} {{ .SOURCE_REPO }}/openssl/openssl.git ./openssl
-  - git clone --depth 1 -b lzo-2.10 {{ .SOURCE_REPO }}/oberhumer/lzo.git ./lzo
   - git clone --depth 1 -b v{{ $openvpnVersion }} {{ .SOURCE_REPO }}/OpenVPN/openvpn.git ./openvpn
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
@@ -104,13 +103,9 @@ shell:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache curl git autoconf automake make libtool g++ linux-headers libnl3-dev libcap-ng-dev lz4-dev linux-pam-dev tree
   install:
-  - cd /src/lzo
-  - ./configure --enable-static --disable-debug
-  - make -j4
-  - make install
   - cd /src/openvpn
   - autoreconf -vi
-  - ./configure --enable-static --disable-shared --disable-debug --disable-unit-tests --disable-lz4 --disable-plugin-auth-pam --disable-plugin-down-root
+  - ./configure --enable-static --disable-shared --disable-debug --disable-unit-tests --disable-lzo --disable-lz4 --disable-plugin-auth-pam --disable-plugin-down-root
   - make LIBS="-all-static"
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
