@@ -46,10 +46,10 @@ var semVerRegex = regexp.MustCompile(`^v?([0-9]+)(\.[0-9]+)?(\.[0-9]+)?` +
 // get release alpha --all
 // list sources
 // list modules deckhouse-prod
-// list module-release deckhouse-prod -n console
-// list module-release deckhouse-prod -n console --all
-// get module-release deckhouse-prod -n console -c alpha
-// get module-release deckhouse-prod -n console -c alpha --all
+// list module-release deckhouse-prod console
+// list module-release deckhouse-prod console --all
+// get module-release deckhouse-prod console alpha
+// get module-release deckhouse-prod console alpha --all
 
 // Proposal:
 //
@@ -159,6 +159,7 @@ func DefineRegistryCommand(kpApp *kingpin.Application) {
 
 		fmt.Println()
 		fmt.Printf("%s", b)
+		fmt.Println()
 
 		return nil
 	})
