@@ -43,7 +43,11 @@ var DefaultImagesDigests = map[string]interface{}{
 		"nodeTerminationHandler":    "imageHash-cloudProviderAws-nodeTerminationHandler",
 	},
 	"cloudProviderAzure": map[string]interface{}{
-		"azurediskCsi":              "imageHash-cloudProviderAzure-azurediskCsi",
+		"azurediskCsi127":           "imageHash-cloudProviderAzure-azurediskCsi127",
+		"azurediskCsi128":           "imageHash-cloudProviderAzure-azurediskCsi128",
+		"azurediskCsi129":           "imageHash-cloudProviderAzure-azurediskCsi129",
+		"azurediskCsi130":           "imageHash-cloudProviderAzure-azurediskCsi130",
+		"azurediskCsi131":           "imageHash-cloudProviderAzure-azurediskCsi131",
 		"cloudControllerManager127": "imageHash-cloudProviderAzure-cloudControllerManager127",
 		"cloudControllerManager128": "imageHash-cloudProviderAzure-cloudControllerManager128",
 		"cloudControllerManager129": "imageHash-cloudProviderAzure-cloudControllerManager129",
