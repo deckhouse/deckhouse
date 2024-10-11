@@ -21,6 +21,10 @@ on:
       - ready_for_review
       - edited
       - synchronize
+  pull_request:
+    types:
+    - milestoned
+    - demilestoned
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:

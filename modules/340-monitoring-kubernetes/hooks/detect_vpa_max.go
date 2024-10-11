@@ -22,7 +22,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func nodeNameFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -45,8 +45,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "nodes",
 			ApiVersion:                   "v1",
 			Kind:                         "Node",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   nodeNameFilter,
 		},
 	},

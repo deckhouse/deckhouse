@@ -24,7 +24,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
@@ -42,22 +42,22 @@ var setInstanceClassNGUsageConfig = &go_hook.HookConfig{
 			Name:                "ics",
 			ApiVersion:          "",
 			Kind:                "",
-			ExecuteHookOnEvents: pointer.Bool(false),
+			ExecuteHookOnEvents: ptr.To(false),
 			FilterFunc:          applyUsedInstanceClassFilter,
 		},
 		{
 			Name:                   "ngs",
 			Kind:                   "NodeGroup",
 			ApiVersion:             "deckhouse.io/v1",
-			WaitForSynchronization: pointer.Bool(false),
+			WaitForSynchronization: ptr.To(false),
 			FilterFunc:             filterCloudEphemeralNG,
 		},
 		{
 			Name:                         "cloud_provider_secret",
 			ApiVersion:                   "v1",
 			Kind:                         "Secret",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"kube-system"},

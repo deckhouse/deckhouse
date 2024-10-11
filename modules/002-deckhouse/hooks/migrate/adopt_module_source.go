@@ -22,7 +22,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // TODO: migrate ModuleSource deckhouse to adopt it with helm release
@@ -46,8 +46,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					},
 				},
 			},
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			ExecuteHookOnEvents:          ptr.To(false),
 			FilterFunc:                   filterModuleSource,
 		},
 	},

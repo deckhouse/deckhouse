@@ -52,14 +52,15 @@ type ModuleDocumentation struct {
 	Status ModuleDocumentationStatus `json:"status,omitempty"`
 }
 
-func (md *ModuleDocumentation) GetConditionByAddress(addr string) (ModuleDocumentationCondition, bool) {
-	for _, cond := range md.Status.Conditions {
+func (md *ModuleDocumentation) GetConditionByAddress(addr string) (ModuleDocumentationCondition, int) {
+	for idx, cond := range md.Status.Conditions {
 		if cond.Address == addr {
-			return cond, true
+			return cond, idx
 		}
 	}
 
-	return ModuleDocumentationCondition{}, false
+	// TODO: pointer?
+	return ModuleDocumentationCondition{}, -1
 }
 
 type ModuleDocumentationSpec struct {

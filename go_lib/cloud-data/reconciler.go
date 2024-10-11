@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cloud_data
+package clouddata
 
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
 	"sort"
+	"sync"
 	"syscall"
 	"time"
-
-	"math/rand"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -57,6 +57,8 @@ type Reconciler struct {
 	logger           *log.Entry
 	k8sDynamicClient dynamic.Interface
 	k8sClient        *kubernetes.Clientset
+	probe            bool
+	probeLock        sync.RWMutex
 }
 
 func NewReconciler(
@@ -74,6 +76,7 @@ func NewReconciler(
 		logger:           logger,
 		k8sClient:        k8sClient,
 		k8sDynamicClient: k8sDynamicClient,
+		probe:            true,
 	}
 }
 
@@ -120,6 +123,7 @@ func (c *Reconciler) Start() {
 		c.logger.Fatal(err)
 	}
 }
+
 func (c *Reconciler) registerMetrics() {
 	c.cloudRequestErrorMetric = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "cloud_data",
@@ -152,6 +156,12 @@ func (c *Reconciler) registerMetrics() {
 	prometheus.MustRegister(c.orphanedDiskMetric)
 }
 
+func (c *Reconciler) setProbe(probe bool) {
+	c.probeLock.Lock()
+	defer c.probeLock.Unlock()
+	c.probe = probe
+}
+
 func (c *Reconciler) reconcileLoop(ctx context.Context, doneCh chan<- struct{}) {
 	c.reconcile(ctx)
 
@@ -179,7 +189,18 @@ func (c *Reconciler) getHTTPServer() *http.Server {
 
 	router := http.NewServeMux()
 	router.Handle("/metrics", promhttp.Handler())
-	router.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
+	router.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		c.probeLock.RLock()
+		defer c.probeLock.RUnlock()
+		if c.probe {
+			_, _ = w.Write([]byte("ok"))
+			return
+		}
+
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte("false"))
+		c.logger.Errorln("Probe failed")
+	})
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(indexPageContent))
 	})
@@ -261,10 +282,10 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 		c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
 		return nil
 	})
-
 	if err != nil {
 		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
 		c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+		c.setProbe(false)
 	}
 }
 
@@ -311,16 +332,24 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 
 	var cloudDiscoveryData []byte
 
-	secret, err := c.k8sClient.CoreV1().Secrets("kube-system").Get(cctx, "d8-provider-cluster-configuration", metav1.GetOptions{})
-	// d8-provider-cluster-configuration can not be exist in hybrid clusters
-	if err != nil {
-		if !errors.IsNotFound(err) {
-			c.logger.Errorf("Failed to get 'd8-provider-cluster-configuration' secret: %v\n", err)
-			c.cloudRequestErrorMetric.WithLabelValues("discovery_data").Set(1.0)
-			return
+	err := retryFunc(15, 3*time.Second, 30*time.Second, c.logger, func() error {
+		secret, err := c.k8sClient.CoreV1().Secrets("kube-system").Get(cctx, "d8-provider-cluster-configuration", metav1.GetOptions{})
+		// d8-provider-cluster-configuration can not be exist in hybrid clusters
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				return fmt.Errorf("failed to get 'd8-provider-cluster-configuration' secret: %v", err)
+			}
+		} else {
+			cloudDiscoveryData = secret.Data["cloud-provider-discovery-data.json"]
 		}
-	} else {
-		cloudDiscoveryData = secret.Data["cloud-provider-discovery-data.json"]
+		c.cloudRequestErrorMetric.WithLabelValues("discovery_data").Set(0.0)
+		return nil
+	})
+	if err != nil {
+		c.cloudRequestErrorMetric.WithLabelValues("discovery_data").Set(1.0)
+		c.logger.Errorln("Cannot get 'd8-provider-cluster-configuration' secret. Timed out. See error messages below.")
+		c.setProbe(false)
+		return
 	}
 
 	discoveryData, err := c.discoverer.DiscoveryData(ctx, cloudDiscoveryData)
@@ -373,10 +402,10 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 		c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
 		return nil
 	})
-
 	if err != nil {
 		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
 		c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+		c.setProbe(false)
 	}
 }
 
@@ -457,10 +486,10 @@ func (c *Reconciler) orphanedDisksReconcile(ctx context.Context) {
 		c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
 		return nil
 	})
-
 	if err != nil {
 		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
 		c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+		c.setProbe(false)
 	}
 }
 
