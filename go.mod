@@ -52,15 +52,17 @@ require (
 	k8s.io/apimachinery v0.29.8
 	k8s.io/apiserver v0.29.0
 	k8s.io/client-go v0.29.8
-	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
+	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
 	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
+	github.com/blang/semver v3.5.1+incompatible
 	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
 	github.com/docker/distribution v2.8.3+incompatible
 	github.com/fsnotify/fsnotify v1.7.0
+	github.com/go-logr/logr v1.4.1
 	github.com/gofrs/uuid/v5 v5.3.0
 	github.com/itchyny/gojq v0.12.15
 	github.com/jonboulle/clockwork v0.4.0
@@ -118,7 +120,6 @@ require (
 	github.com/go-chi/chi/v5 v5.1.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
-	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/analysis v0.19.10 // indirect
 	github.com/go-openapi/errors v0.19.7 // indirect

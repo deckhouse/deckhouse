@@ -38,13 +38,11 @@ Developer notes:
   there is no way to get enabled modules list in global hook.
 */
 
-var (
-	cniNameToModule = map[string]string{
-		"flannel":       "cniFlannelEnabled",
-		"simple-bridge": "cniSimpleBridgeEnabled",
-		"cilium":        "cniCiliumEnabled",
-	}
-)
+var cniNameToModule = map[string]string{
+	"flannel":       "cniFlannelEnabled",
+	"simple-bridge": "cniSimpleBridgeEnabled",
+	"cilium":        "cniCiliumEnabled",
+}
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{

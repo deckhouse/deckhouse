@@ -192,7 +192,6 @@ cloudProviderYandex:
 				Group:  metricName,
 				Action: "expire",
 			}))
-
 		})
 	})
 
@@ -214,7 +213,6 @@ cloudProviderYandex:
 				Group:  metricName,
 				Action: "expire",
 			}))
-
 		})
 	})
 
@@ -243,7 +241,6 @@ cloudProviderYandex:
 				Action: "set",
 				Group:  metricName,
 			}))
-
 		})
 	})
 })

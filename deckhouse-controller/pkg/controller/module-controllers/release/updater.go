@@ -25,9 +25,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/deckhouse/deckhouse/go_lib/module"
-	"github.com/deckhouse/deckhouse/go_lib/module/downloader"
-
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/shell-operator/pkg/metric"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,6 +33,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/module"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/module/downloader"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
@@ -239,8 +238,8 @@ func (m *metricsUpdater) ReleaseBlocked(_, _ string) {
 }
 
 func (m *metricsUpdater) WaitingManual(release *v1alpha1.ModuleRelease, totalPendingManualReleases float64) {
-	if !slices.Contains(m.enabledModules, release.GetModuleName()) && totalPendingManualReleases > 0 {
-		return
+	if !slices.Contains(m.enabledModules, release.GetModuleName()) {
+		totalPendingManualReleases = 0
 	}
 
 	m.metricStorage.GaugeSet(

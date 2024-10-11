@@ -6,15 +6,16 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
+	"controller/pkg/apis/deckhouse.io/v1alpha1"
+	"controller/pkg/apis/deckhouse.io/v1alpha2"
+	"controller/pkg/helm"
 	"flag"
 	"fmt"
 	"time"
 
-	"controller/pkg/apis/deckhouse.io/v1alpha1"
-	"controller/pkg/apis/deckhouse.io/v1alpha2"
 	projectcontroller "controller/pkg/controller/project"
 	templatecontroller "controller/pkg/controller/template"
-	"controller/pkg/helm"
+
 	namespacewebhook "controller/pkg/webhook/namespace"
 	projectwebhook "controller/pkg/webhook/project"
 	templatewebhook "controller/pkg/webhook/template"
@@ -116,7 +117,7 @@ func setupRuntimeManager(log logr.Logger) (ctrl.Manager, error) {
 	managerOpts := manager.Options{
 		LeaderElection:          false,
 		Scheme:                  scheme,
-		GracefulShutdownTimeout: ptr.To(10 * time.Second),
+		GracefulShutdownTimeout: ptr.Duration(10 * time.Second),
 		HealthProbeBindAddress:  ":9090",
 		WebhookServer:           webhook.NewServer(webhook.Options{CertDir: "/certs"}),
 		Metrics: metrics.Options{

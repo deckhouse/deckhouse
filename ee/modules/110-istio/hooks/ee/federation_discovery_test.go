@@ -16,9 +16,7 @@ import (
 	"time"
 
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/square/go-jose/v3"
+	jose "github.com/square/go-jose/v3"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -74,7 +72,7 @@ var _ = Describe("Istio hooks :: federation_discovery ::", func() {
 	})
 
 	Context("Proper federations only", func() {
-		var bearerTokens = map[string]string{}
+		bearerTokens := map[string]string{}
 
 		BeforeEach(func() {
 			f.ValuesSet(`istio.federation.enabled`, true)
@@ -371,7 +369,7 @@ status:
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  ptr.To(0.0),
+				Value:  ptr.Float64(0.0),
 				Labels: map[string]string{
 					"federation_name": "proper-federation-0",
 					"endpoint":        "https://proper-hostname-0/metadata/public/public.json",
@@ -381,7 +379,7 @@ status:
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  ptr.To(0.0),
+				Value:  ptr.Float64(0.0),
 				Labels: map[string]string{
 					"federation_name": "proper-federation-0",
 					"endpoint":        "https://proper-hostname-0/metadata/private/federation.json",
@@ -391,7 +389,7 @@ status:
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  ptr.To(0.0),
+				Value:  ptr.Float64(0.0),
 				Labels: map[string]string{
 					"federation_name": "proper-federation-1",
 					"endpoint":        "https://proper-hostname-1/metadata/public/public.json",
@@ -401,7 +399,7 @@ status:
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  ptr.To(0.0),
+				Value:  ptr.Float64(0.0),
 				Labels: map[string]string{
 					"federation_name": "proper-federation-1",
 					"endpoint":        "https://proper-hostname-1/metadata/private/federation.json",
@@ -411,7 +409,7 @@ status:
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  ptr.To(0.0),
+				Value:  ptr.Float64(0.0),
 				Labels: map[string]string{
 					"federation_name": "proper-federation-2",
 					"endpoint":        "https://proper-hostname-2/metadata/public/public.json",
@@ -421,7 +419,7 @@ status:
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  ptr.To(0.0),
+				Value:  ptr.Float64(0.0),
 				Labels: map[string]string{
 					"federation_name": "proper-federation-2",
 					"endpoint":        "https://proper-hostname-2/metadata/private/federation.json",
@@ -624,7 +622,7 @@ status: {}
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  ptr.To(0.0),
+				Value:  ptr.Float64(0.0),
 				Labels: map[string]string{
 					"federation_name": "private-bad-json",
 					"endpoint":        "https://private-bad-json/metadata/public/public.json",
@@ -634,7 +632,7 @@ status: {}
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  ptr.To(1.0),
+				Value:  ptr.Float64(1.0),
 				Labels: map[string]string{
 					"federation_name": "private-bad-json",
 					"endpoint":        "https://private-bad-json/metadata/private/federation.json",
@@ -644,7 +642,7 @@ status: {}
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  ptr.To(0.0),
+				Value:  ptr.Float64(0.0),
 				Labels: map[string]string{
 					"federation_name": "private-internal-error",
 					"endpoint":        "https://private-internal-error/metadata/public/public.json",
@@ -654,7 +652,7 @@ status: {}
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  ptr.To(1.0),
+				Value:  ptr.Float64(1.0),
 				Labels: map[string]string{
 					"federation_name": "private-internal-error",
 					"endpoint":        "https://private-internal-error/metadata/private/federation.json",
@@ -664,7 +662,7 @@ status: {}
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  ptr.To(0.0),
+				Value:  ptr.Float64(0.0),
 				Labels: map[string]string{
 					"federation_name": "private-wrong-format",
 					"endpoint":        "https://private-wrong-format/metadata/public/public.json",
@@ -674,7 +672,7 @@ status: {}
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  ptr.To(1.0),
+				Value:  ptr.Float64(1.0),
 				Labels: map[string]string{
 					"federation_name": "private-wrong-format",
 					"endpoint":        "https://private-wrong-format/metadata/private/federation.json",
@@ -684,7 +682,7 @@ status: {}
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  ptr.To(1.0),
+				Value:  ptr.Float64(1.0),
 				Labels: map[string]string{
 					"federation_name": "public-bad-json",
 					"endpoint":        "https://public-bad-json/metadata/public/public.json",
@@ -694,7 +692,7 @@ status: {}
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  ptr.To(1.0),
+				Value:  ptr.Float64(1.0),
 				Labels: map[string]string{
 					"federation_name": "public-internal-error",
 					"endpoint":        "https://public-internal-error/metadata/public/public.json",
@@ -704,7 +702,7 @@ status: {}
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  ptr.To(1.0),
+				Value:  ptr.Float64(1.0),
 				Labels: map[string]string{
 					"federation_name": "public-wrong-format",
 					"endpoint":        "https://public-wrong-format/metadata/public/public.json",

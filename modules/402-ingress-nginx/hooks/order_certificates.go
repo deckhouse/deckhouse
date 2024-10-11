@@ -142,7 +142,6 @@ func orderCertificate(input *go_hook.HookInput) error {
 				"client auth",
 			}),
 		)
-
 		if err != nil {
 			return err
 		}

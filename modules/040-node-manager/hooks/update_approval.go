@@ -138,7 +138,7 @@ type updateApprover struct {
 }
 
 func calculateConcurrency(ngCon *intstr.IntOrString, totalNodes int) int {
-	var concurrency = 1
+	concurrency := 1
 	switch ngCon.Type {
 	case intstr.Int:
 		concurrency = ngCon.IntValue()
@@ -204,7 +204,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 
 		//     Allow one node, if 100% nodes in NodeGroup are ready
 		if ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral {
-			var allReady = true
+			allReady := true
 			for _, ngn := range nodeGroupNodes {
 				if !ngn.IsReady {
 					allReady = false
@@ -251,16 +251,14 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 	return nil
 }
 
-var (
-	approvedPatch = map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
-				"update.node.deckhouse.io/approved":             "",
-				"update.node.deckhouse.io/waiting-for-approval": nil,
-			},
+var approvedPatch = map[string]interface{}{
+	"metadata": map[string]interface{}{
+		"annotations": map[string]interface{}{
+			"update.node.deckhouse.io/approved":             "",
+			"update.node.deckhouse.io/waiting-for-approval": nil,
 		},
-	}
-)
+	},
+}
 
 func (ar *updateApprover) needDrainNode(input *go_hook.HookInput, node *updateApprovalNode, nodeNg *updateNodeGroup) bool {
 	// we can not drain single control-plane node because deckhouse webhook will evict
@@ -286,7 +284,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 	now := time.Now()
 
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
-		now = time.Date(2021, 01, 01, 13, 30, 00, 00, time.UTC)
+		now = time.Date(2021, 0o1, 0o1, 13, 30, 0o0, 0o0, time.UTC)
 	}
 
 	for _, node := range ar.nodes {

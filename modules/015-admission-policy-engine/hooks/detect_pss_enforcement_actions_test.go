@@ -141,6 +141,7 @@ kind: Namespace
 metadata:
   name: foo
 `
+
 var testNamespaceWithDefaultAction = `
 ---
 apiVersion: v1
@@ -150,6 +151,7 @@ metadata:
   labels:
     security.deckhouse.io/pod-policy-action: deny
 `
+
 var testNamespaceWithWrongAction = `
 ---
 apiVersion: v1
@@ -159,6 +161,7 @@ metadata:
   labels:
     security.deckhouse.io/pod-policy-action: permit
 `
+
 var bunchOfNamespaces = `
 ---
 apiVersion: v1

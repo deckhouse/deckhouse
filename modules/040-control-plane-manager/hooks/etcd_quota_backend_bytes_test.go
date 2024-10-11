@@ -170,7 +170,8 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: etcd-quota-backen
 					&etcdNode{
 						Memory:      gb(8),
 						IsDedicated: true,
-					}},
+					},
+				},
 				expectedNode: &etcdNode{
 					Memory:      gb(8),
 					IsDedicated: true,
@@ -321,9 +322,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: etcd-quota-backen
 		}
 	})
 
-	var (
-		initValuesString = `{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
-	)
+	initValuesString := `{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
 
 	f := HookExecutionConfigInit(initValuesString, "")
 
@@ -423,7 +422,6 @@ status:
 
 			assertNewQuotaBackendsWithMetric(f, userValue)
 		})
-
 	})
 
 	Context("Single master", func() {

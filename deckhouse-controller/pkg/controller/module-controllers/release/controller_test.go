@@ -119,14 +119,13 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	require.NoError(suite.T(), err)
 	ctx := context.Background()
 
-	dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
+	dc := dependency.NewMockedContainer()
+	dc.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
 		return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}}"}}}, nil
 	}}, nil)
 
-	// TODO: test manual approve release metrics
-
 	suite.Run("simple", func() {
-		suite.setupReleaseController(string(suite.fetchTestFileData("simple.yaml")))
+		suite.setupReleaseController(string(suite.fetchTestFileData("simple.yaml")), dc)
 		suite.metricStorage.GaugeSetMock.Expect(
 			"d8_module_release_waiting_manual",
 			0,
@@ -144,43 +143,79 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("with annotation", func() {
-		suite.setupReleaseController(string(suite.fetchTestFileData("with-annotation.yaml")))
+		suite.setupReleaseController(string(suite.fetchTestFileData("with-annotation.yaml")), dc)
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("deckhouse suitable version", func() {
-		suite.setupReleaseController(string(suite.fetchTestFileData("dVersion-suitable.yaml")))
+		suite.setupReleaseController(string(suite.fetchTestFileData("dVersion-suitable.yaml")), dc)
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":       "module",
+				"moduleName": "parca-suitable",
+				"name":       "parca-v1.4.3-suitable",
+				"version":    "v1.4.3",
+			},
+		)
+
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("deckhouse unsuitable version", func() {
-		suite.setupReleaseController(string(suite.fetchTestFileData("dVersion-suitable.yaml")))
+		suite.setupReleaseController(string(suite.fetchTestFileData("dVersion-unsuitable.yaml")), dc)
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("kubernetes suitable version", func() {
-		suite.setupReleaseController(string(suite.fetchTestFileData("kVersion-suitable.yaml")))
+		suite.setupReleaseController(string(suite.fetchTestFileData("kVersion-suitable.yaml")), dc)
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":       "module",
+				"moduleName": "parca-kube-suitable",
+				"name":       "parca-v1.4.3-kube-suitable",
+				"version":    "v1.4.3",
+			},
+		)
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("kubernetes unsuitable version", func() {
-		suite.setupReleaseController(string(suite.fetchTestFileData("kVersion-suitable.yaml")))
+		suite.setupReleaseController(string(suite.fetchTestFileData("kVersion-unsuitable.yaml")), dc)
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("deploy with outdated module releases", func() {
-		dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
-		suite.setupReleaseController(string(suite.fetchTestFileData("clean-up-outdated-module-releases-when-deploy.yaml")))
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ListTagsMock.Return([]string{"v0.4.54"}, nil)
+		dc.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
+			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}}"}}}, nil
+		}}, nil)
+
+		suite.setupReleaseController(string(suite.fetchTestFileData("clean-up-outdated-module-releases-when-deploy.yaml")), dc)
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":       "module",
+				"moduleName": "echo",
+				"name":       "echo-v0.4.54",
+				"version":    "v0.4.54",
+			},
+		)
 		err := suite.updateModuleReleasesStatuses()
 		require.NoError(suite.T(), err)
 		mr := suite.getModuleRelease("echo-v0.4.54")
@@ -189,13 +224,97 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("clean up for a deployed module release with outdated module releases", func() {
-		dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
-		suite.setupReleaseController(string(suite.fetchTestFileData("clean-up-outdated-module-releases-for-deployed.yaml")))
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ListTagsMock.Return([]string{}, nil)
+		testdata := suite.fetchTestFileData("clean-up-outdated-module-releases-for-deployed.yaml")
+		suite.setupReleaseController(string(testdata), dc)
 		err := suite.updateModuleReleasesStatuses()
 		require.NoError(suite.T(), err)
 		mr := suite.getModuleRelease("echo-v0.4.54")
 		_, err = suite.ctr.reconcileDeployedRelease(ctx, mr)
 		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("auto patch mode", func() {
+		suite.Run("approved enabled module", func() {
+			testdata := suite.fetchTestFileData("approved-enabled.yaml")
+			suite.setupReleaseController(string(testdata), dc, withEnabledModules([]string{"parca"}))
+
+			suite.metricStorage.GaugeSetMock.Expect(
+				"d8_module_release_waiting_manual",
+				0,
+				map[string]string{
+					"kind":       "module",
+					"moduleName": "parca",
+					"name":       "parca-v1.4.3",
+					"version":    "v1.4.3",
+				},
+			)
+
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("not approved enabled module", func() {
+			testdata := suite.fetchTestFileData("not-approved-enabled.yaml")
+			suite.setupReleaseController(string(testdata), dc, withEnabledModules([]string{"parca"}))
+
+			suite.metricStorage.GaugeSetMock.Expect(
+				"d8_module_release_waiting_manual",
+				1,
+				map[string]string{
+					"kind":       "module",
+					"moduleName": "parca",
+					"name":       "parca-v1.4.3",
+					"version":    "v1.4.3",
+				},
+			)
+
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("approved disabled module", func() {
+			testdata := suite.fetchTestFileData("approved-disabled.yaml")
+			suite.setupReleaseController(string(testdata), dc)
+
+			suite.metricStorage.GaugeSetMock.Expect(
+				"d8_module_release_waiting_manual",
+				0,
+				map[string]string{
+					"kind":       "module",
+					"moduleName": "parca",
+					"name":       "parca-v1.4.3",
+					"version":    "v1.4.3",
+				},
+			)
+
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("not approved disabled module", func() {
+			testdata := suite.fetchTestFileData("not-approved-disabled.yaml")
+			suite.setupReleaseController(string(testdata), dc)
+
+			suite.metricStorage.GaugeSetMock.Expect(
+				"d8_module_release_waiting_manual",
+				0,
+				map[string]string{
+					"kind":       "module",
+					"moduleName": "parca",
+					"name":       "parca-v1.4.3",
+					"version":    "v1.4.3",
+				},
+			)
+
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+			require.NoError(suite.T(), err)
+		})
 	})
 
 	suite.Run("loop until deploy: canary", func() {
@@ -215,7 +334,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		}
 
 		testData := suite.fetchTestFileData("loop-canary.yaml")
-		suite.setupReleaseController(string(testData), withModuleUpdatePolicy(mup), withDependencyContainer(dc))
+		suite.setupReleaseController(string(testData), dc, withModuleUpdatePolicy(mup))
 
 		var (
 			result = ctrl.Result{Requeue: true}
@@ -276,19 +395,13 @@ func withModuleUpdatePolicy(mup *v1alpha1.ModuleUpdatePolicySpec) reconcilerOpti
 	}
 }
 
-func withDependencyContainer(dc dependency.Container) reconcilerOption {
-	return func(r *moduleReleaseReconciler) {
-		r.dc = dc
-	}
-}
-
 func withEnabledModules(enabledModules []string) reconcilerOption {
 	return func(r *moduleReleaseReconciler) {
 		r.moduleManager.(*stubModulesManager).enabledModules = enabledModules
 	}
 }
 
-func (suite *ReleaseControllerTestSuite) setupReleaseController(yamlDoc string, options ...reconcilerOption) {
+func (suite *ReleaseControllerTestSuite) setupReleaseController(yamlDoc string, dc dependency.Container, options ...reconcilerOption) {
 	manifests := releaseutil.SplitManifests(yamlDoc)
 
 	manifests["deckhouse-discovery"] = `
@@ -331,7 +444,7 @@ type: Opaque
 	rec := &moduleReleaseReconciler{
 		client:               cl,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
-		dc:                   dependency.NewDependencyContainer(),
+		dc:                   dc,
 		logger:               log.New(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		moduleManager:        &stubModulesManager{},

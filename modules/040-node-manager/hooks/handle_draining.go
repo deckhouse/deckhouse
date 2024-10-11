@@ -126,7 +126,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	drainHelper := drain.NewDrainer(k8sCli, errOut)
 	drainHelper.Ctx = context.Background()
 
-	var wg = &sync.WaitGroup{}
+	wg := &sync.WaitGroup{}
 	drainingNodesC := make(chan drainedNodeRes, 1)
 
 	snap := input.Snapshots["nodes_for_draining"]
@@ -210,15 +210,13 @@ func newDrainedAnnotationPatch(source string) map[string]interface{} {
 	}
 }
 
-var (
-	removeDrainedAnnotation = map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
-				drainedAnnotationKey: nil,
-			},
+var removeDrainedAnnotation = map[string]interface{}{
+	"metadata": map[string]interface{}{
+		"annotations": map[string]interface{}{
+			drainedAnnotationKey: nil,
 		},
-	}
-)
+	},
+}
 
 type drainingNode struct {
 	Name           string

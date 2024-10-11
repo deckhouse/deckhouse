@@ -179,7 +179,7 @@ func (m *LeasesManager) newLease() *coordination.Lease {
 		Spec: coordination.LeaseSpec{
 			HolderIdentity:       ptr.To(address),
 			RenewTime:            &now,
-			LeaseDurationSeconds: ptr.To(int32(leaseDuration)),
+			LeaseDurationSeconds: ptr.To[int32](leaseDuration),
 		},
 	}
 }

@@ -40,7 +40,7 @@ import (
 func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 	ctx := context.Background()
 
-	var initValues = `{
+	initValues := `{
  "global": {
    "modulesImages": {
      "registry": {
@@ -61,11 +61,14 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 }`
 
 	suite.Run("Have new deckhouse image", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(
 			&fake.FakeImage{
 				LayersStub: func() ([]v1.Layer, error) {
-					return []v1.Layer{&fakeLayer{}, &fakeLayer{
-						FilesContent: map[string]string{`version.json`: `{"version": "v1.25.3"}`}},
+					return []v1.Layer{
+						&fakeLayer{}, &fakeLayer{
+							FilesContent: map[string]string{`version.json`: `{"version": "v1.25.3"}`},
+						},
 					}, nil
 				},
 				DigestStub: func() (v1.Hash, error) {
@@ -74,19 +77,23 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			}, nil,
 		)
 
-		suite.setupController("have-new-deckhouse-image.yaml", initValues, embeddedMUP)
+		suite.setupController("have-new-deckhouse-image.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating_failed")
+
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("Have canary release wave 0", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(
 			&fake.FakeImage{
 				LayersStub: func() ([]v1.Layer, error) {
 					return []v1.Layer{&fakeLayer{}, &fakeLayer{
 						FilesContent: map[string]string{
 							`version.json`: `{"version": "v1.25.0", "canary": {"stable": {"enabled": true, "waves": 5, "interval": "6m"}}}`,
-						}}}, nil
+						},
+					}}, nil
 				},
 				DigestStub: func() (v1.Hash, error) {
 					return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
@@ -94,145 +101,175 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			}, nil,
 		)
 
-		suite.setupController("have-canary-release-wave-0.yaml", initValues, embeddedMUP)
+		suite.setupController("have-canary-release-wave-0.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating_failed")
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("Have canary release wave 4", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
 					FilesContent: map[string]string{
 						`version.json`: `{"version": "v1.25.5", "canary": {"stable": {"enabled": true, "waves": 5, "interval": "15m"}}}`,
-					}}}, nil
+					},
+				}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b666")
-			}}, nil)
+			},
+		}, nil)
 
-		suite.setupController("have-canary-release-wave-4.yaml", initValues, embeddedMUP)
+		suite.setupController("have-canary-release-wave-4.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating_failed")
+
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("Existed release suspended", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
-					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0", "suspend": true}`}}}, nil
+					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0", "suspend": true}`},
+				}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
-			}}, nil)
+			},
+		}, nil)
 
-		suite.setupController("existed-release-suspended.yaml", initValues, embeddedMUP)
+		suite.setupController("existed-release-suspended.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating_failed")
+
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("Deployed release suspended", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
-					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0", "suspend": true}`}}}, nil
+					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0", "suspend": true}`},
+				}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
 			},
 		}, nil)
 
-		suite.setupController("deployed-release-suspended.yaml", initValues, embeddedMUP)
+		suite.setupController("deployed-release-suspended.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating_failed")
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("New release suspended", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
-					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0", "suspend": true}`}}}, nil
+					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0", "suspend": true}`},
+				}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
 			},
 		}, nil)
 
-		suite.setupController("new-release-suspended.yaml", initValues, embeddedMUP)
+		suite.setupController("new-release-suspended.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating_failed")
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("Resume suspended release", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
-					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0"}`}}}, nil
+					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0"}`},
+				}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
 			},
 		}, nil)
 
-		suite.setupController("resume-suspended-release.yaml", initValues, embeddedMUP)
+		suite.setupController("resume-suspended-release.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating_failed")
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("Image hash not changed", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
-					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0"}`}}}, nil
+					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0"}`},
+				}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66857")
 			},
 		}, nil)
 
-		suite.setupController("image-hash-not-changed.yaml", initValues, embeddedMUP)
+		suite.setupController("image-hash-not-changed.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
 		suite.ctr.releaseVersionImageHash = "sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66857"
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("Release has requirements", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
 					FilesContent: map[string]string{
 						`version.json`: `{"version": "v1.30.0", "requirements": {"k8s": "1.19", "req1": "dep1"}}`,
-					}}}, nil
+					},
+				}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66858")
 			},
 		}, nil)
 
-		suite.setupController("release-has-requirements.yaml", initValues, embeddedMUP)
+		suite.setupController("release-has-requirements.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating_failed")
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("Release has canary", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
 					FilesContent: map[string]string{
-						"version.json": `{"canary":{"alpha":{"enabled":true,"interval":"5m","waves":2}, "beta":{"enabled":false,"interval":"1m","waves":1},"early-access":{"enabled":true,"interval":"30m","waves":6},"rock-solid":{"enabled":false,"interval":"5m","waves":5},"stable":{"enabled":true,"interval":"30m","waves":6}},"version":"v1.31.0"}`}}}, nil
+						"version.json": `{"canary":{"alpha":{"enabled":true,"interval":"5m","waves":2}, "beta":{"enabled":false,"interval":"1m","waves":1},"early-access":{"enabled":true,"interval":"30m","waves":6},"rock-solid":{"enabled":false,"interval":"5m","waves":5},"stable":{"enabled":true,"interval":"30m","waves":6}},"version":"v1.31.0"}`,
+					},
+				}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76859")
 			},
 		}, nil)
 
-		suite.setupController("release-has-canary.yaml", initValues, embeddedMUP)
+		suite.setupController("release-has-canary.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating_failed")
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("Release has cooldown", func() {
-		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ListTagsMock.Return([]string{
 			"v1.31.0",
 			"v1.31.1",
 			"v1.32.0",
@@ -242,7 +279,7 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			"v1.33.0",
 			"v1.33.1",
 		}, nil)
-		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+		dc.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{
 					"version.json": `{"version":"v1.31.0"}`,
@@ -260,13 +297,16 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			},
 		}, nil)
 
-		suite.setupController("release-has-cooldown.yaml", initValues, embeddedMUP)
+		suite.setupController("release-has-cooldown.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating_failed")
+
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("Inherit release cooldown", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{
 					"version.json": `{"version":"v1.31.1"}`,
@@ -284,13 +324,16 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			},
 		}, nil)
 
-		suite.setupController("inherit-release-cooldown.yaml", initValues, embeddedMUP)
+		suite.setupController("inherit-release-cooldown.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating_failed")
+
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("Patch release has own cooldown", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{
 					"version.json": `{"version":"v1.31.2"}`,
@@ -308,13 +351,16 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			},
 		}, nil)
 
-		suite.setupController("patch-release-has-own-cooldown.yaml", initValues, embeddedMUP)
+		suite.setupController("patch-release-has-own-cooldown.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating_failed")
+
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("Release has disruptions", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{
 					"version.json": `{"version": "v1.32.0", "disruptions":{"1.32":["ingressNginx"]}}`,
@@ -325,7 +371,9 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			},
 		}, nil)
 
-		suite.setupController("release-has-disruptions.yaml", initValues, embeddedMUP)
+		suite.setupController("release-has-disruptions.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating_failed")
+
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
@@ -356,7 +404,8 @@ global:
 
 		changelog := fmt.Sprintf(changelogTemplate, "`control-plane`") // global.features[0].description
 
-		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{
 					&fakeLayer{},
@@ -371,20 +420,23 @@ global:
 			},
 		}, nil)
 
-		suite.setupController("release-with-changelog.yaml", initValues, embeddedMUP)
+		suite.setupController("release-with-changelog.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating_failed")
+
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("StepByStepUpdateFailed", func() {
-		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ListTagsMock.Return([]string{
 			"v1.31.0",
 			"v1.31.1",
 			"v1.33.0",
 			"v1.33.1",
 			"v1.34.0",
 		}, nil)
-		dependency.TestDC.CRClient.ImageMock.When("stable").Then(&fake.FakeImage{
+		dc.CRClient.ImageMock.When("stable").Then(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.34.0"}`}}}, nil
 			},
@@ -392,19 +444,28 @@ global:
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
 			},
 		}, nil)
-		dependency.TestDC.CRClient.ImageMock.When("v1.32.3").Then(&fake.FakeImage{
+		dc.CRClient.ImageMock.When("v1.32.3").Then(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.32.3"}`}}}, nil
 			},
 		}, nil)
 
-		suite.setupController("step-by-step-update-failed.yaml", initValues, embeddedMUP)
+		suite.setupController("step-by-step-update-failed.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating_failed")
+		suite.groupedMetricStorage.GaugeSetMock.Expect(
+			"d8_updating_failed",
+			"d8_updating_is_failed",
+			1,
+			map[string]string{"version": "v1.31.0"},
+		)
+
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.Error(suite.T(), err)
 	})
 
 	suite.Run("StepByStepUpdateSuccessfully", func() {
-		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ListTagsMock.Return([]string{
 			"v1.31.0",
 			"v1.31.1",
 			"v1.32.0",
@@ -414,7 +475,7 @@ global:
 			"v1.33.0",
 			"v1.33.1",
 		}, nil)
-		dependency.TestDC.CRClient.ImageMock.When("stable").Then(&fake.FakeImage{
+		dc.CRClient.ImageMock.When("stable").Then(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.33.1"}`}}}, nil
 			},
@@ -422,25 +483,28 @@ global:
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
 			},
 		}, nil)
-		dependency.TestDC.CRClient.ImageMock.When("v1.32.3").Then(&fake.FakeImage{
+		dc.CRClient.ImageMock.When("v1.32.3").Then(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.32.3"}`}}}, nil
 			},
 		}, nil)
 
-		dependency.TestDC.CRClient.ImageMock.When("v1.33.1").Then(&fake.FakeImage{
+		dc.CRClient.ImageMock.When("v1.33.1").Then(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.33.1"}`}}}, nil
 			},
 		}, nil)
 
-		suite.setupController("step-by-step-update-successfully.yaml", initValues, embeddedMUP)
+		suite.setupController("step-by-step-update-successfully.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating_failed")
+
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("Restore absent releases from a registry", func() {
-		dependency.TestDC.CRClient.ImageMock.When("stable").Then(&fake.FakeImage{
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.When("stable").Then(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{
 					&fakeLayer{},
@@ -451,7 +515,7 @@ global:
 			},
 		}, nil)
 
-		dependency.TestDC.CRClient.ImageMock.When("v1.58.1").Then(&fake.FakeImage{
+		dc.CRClient.ImageMock.When("v1.58.1").Then(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{
 					&fakeLayer{},
@@ -462,7 +526,7 @@ global:
 			},
 		}, nil)
 
-		dependency.TestDC.CRClient.ImageMock.When("v1.59.3").Then(&fake.FakeImage{
+		dc.CRClient.ImageMock.When("v1.59.3").Then(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{
 					&fakeLayer{},
@@ -473,7 +537,7 @@ global:
 			},
 		}, nil)
 
-		dependency.TestDC.CRClient.ImageMock.When("v1.60.2").Then(&fake.FakeImage{
+		dc.CRClient.ImageMock.When("v1.60.2").Then(&fake.FakeImage{
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{
 					&fakeLayer{},
@@ -484,7 +548,7 @@ global:
 			},
 		}, nil)
 
-		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+		dc.CRClient.ListTagsMock.Return([]string{
 			"v1.56.0",
 			"v1.57.0",
 			"v1.57.1",
@@ -500,7 +564,9 @@ global:
 			"v1.60.2",
 		}, nil)
 
-		suite.setupController("restore-absent-releases-from-registry.yaml", initValues, embeddedMUP)
+		suite.setupController("restore-absent-releases-from-registry.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating_failed")
+
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
@@ -528,7 +594,7 @@ func (fl fakeLayer) Uncompressed() (io.ReadCloser, error) {
 	for filename, content := range fl.FilesContent {
 		hdr := &tar.Header{
 			Name: filename,
-			Mode: 0600,
+			Mode: 0o600,
 			Size: int64(len(content)),
 		}
 		_ = wr.WriteHeader(hdr)

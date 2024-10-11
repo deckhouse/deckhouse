@@ -60,11 +60,11 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/module"
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
-	"github.com/deckhouse/deckhouse/go_lib/module"
 )
 
 const (
@@ -127,7 +127,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		Metrics: metrics_server.Options{
 			BindAddress: "0",
 		},
-		GracefulShutdownTimeout: ptr.To(10 * time.Second),
+		GracefulShutdownTimeout: ptr.Duration(10 * time.Second),
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
 				// for ModuleDocumentation controller

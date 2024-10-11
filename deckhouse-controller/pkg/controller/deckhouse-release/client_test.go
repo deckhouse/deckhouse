@@ -46,7 +46,7 @@ func setupFakeController(
 	filename, values string,
 	mup *v1alpha1.ModuleUpdatePolicySpec,
 	options ...reconcilerOption,
-) (*deckhouseReleaseReconciler, client.Client, *metric.StorageMock) {
+) (*deckhouseReleaseReconciler, client.Client, *metric.StorageMock, *metric.GroupedStorageMock) {
 	ds := &helpers.DeckhouseSettings{
 		ReleaseChannel: mup.ReleaseChannel,
 	}
@@ -70,7 +70,7 @@ func setupControllerSettings(
 	values string,
 	ds *helpers.DeckhouseSettings,
 	options ...reconcilerOption,
-) (*deckhouseReleaseReconciler, client.Client, *metric.StorageMock) {
+) (*deckhouseReleaseReconciler, client.Client, *metric.StorageMock, *metric.GroupedStorageMock) {
 	yamlDoc := fetchTestFileData(t, filename, values)
 	manifests := releaseutil.SplitManifests(yamlDoc)
 
@@ -89,12 +89,14 @@ func setupControllerSettings(
 		WithObjects(initObjects...).
 		WithStatusSubresource(&v1alpha1.DeckhouseRelease{}).
 		Build()
-	dc := dependency.NewDependencyContainer()
 
 	metricStorage := metric.NewStorageMock(t)
+	groupedStorage := metric.NewGroupedStorageMock(t)
+	metricStorage.GroupedMock.Optional().Return(groupedStorage)
+
 	rec := &deckhouseReleaseReconciler{
 		client:         cl,
-		dc:             dc,
+		dc:             dependency.TestDC,
 		logger:         log.New(),
 		moduleManager:  stubModulesManager{},
 		updateSettings: helpers.NewDeckhouseSettingsContainer(ds),
@@ -105,7 +107,7 @@ func setupControllerSettings(
 		option(rec)
 	}
 
-	return rec, cl, metricStorage
+	return rec, cl, metricStorage, groupedStorage
 }
 
 func assembleInitObject(t *testing.T, obj string) client.Object {

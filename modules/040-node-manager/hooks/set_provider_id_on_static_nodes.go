@@ -85,10 +85,8 @@ func handleSetProviderID(input *go_hook.HookInput) error {
 	return nil
 }
 
-var (
-	staticPatch = map[string]interface{}{
-		"spec": map[string]string{
-			"providerID": "static://",
-		},
-	}
-)
+var staticPatch = map[string]interface{}{
+	"spec": map[string]string{
+		"providerID": "static://",
+	},
+}

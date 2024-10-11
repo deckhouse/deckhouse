@@ -55,7 +55,6 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 			Region: aws.String(d.region),
 		},
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize new session: %v", err)
 	}
@@ -67,7 +66,7 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 
 	for {
 		out, err := ec2Client.DescribeInstanceTypes(&ec2.DescribeInstanceTypesInput{
-			MaxResults: ptr.To(int64(100)),
+			MaxResults: ptr.To[int64](100),
 			NextToken:  token,
 		})
 		if err != nil {

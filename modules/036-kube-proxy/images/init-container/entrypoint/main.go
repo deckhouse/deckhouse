@@ -139,7 +139,7 @@ func main() {
 		},
 		Mode: "iptables",
 		Conntrack: v1alpha1.KubeProxyConntrackConfiguration{
-			MaxPerCore: ptr.To(int32(0)),
+			MaxPerCore: ptr.To[int32](0),
 		},
 		NodePortAddresses: []string{nodePortBindInternalIP},
 	}
@@ -153,11 +153,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = os.WriteFile(kubeConfigPath, kubeConfigBytes, 0644)
+	err = os.WriteFile(kubeConfigPath, kubeConfigBytes, 0o644)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = os.WriteFile(kubeProxyConfigPath, kubeProxyConfigBytes, 0644)
+	err = os.WriteFile(kubeProxyConfigPath, kubeProxyConfigBytes, 0o644)
 	if err != nil {
 		log.Fatal(err)
 	}

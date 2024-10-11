@@ -345,7 +345,7 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 
 	// check: release is approved in Manual mode
 	if du.mode != ModeAuto && !release.GetManuallyApproved() {
-		du.logger.Infof("Release %s is waiting for manual approval ", release.GetName())
+		du.logger.Infof("Release %s is waiting for manual approval", release.GetName())
 		du.metricsUpdater.WaitingManual(release, 1)
 		reason = reason.add(manualApprovalRequiredReason)
 	} else {

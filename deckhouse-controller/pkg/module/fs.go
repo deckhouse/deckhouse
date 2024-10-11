@@ -51,51 +51,6 @@ type moduleOpenAPISpec struct {
 	} `yaml:"properties,omitempty"`
 }
 
-func FindExistingSymlink(rootPath, moduleName string) (string, error) {
-	var symlinkPath string
-
-	moduleRegexp := regexp.MustCompile(`^(([0-9]+)-)?(` + moduleName + `)$`)
-	walkDir := func(path string, d os.DirEntry, _ error) error {
-		if !moduleRegexp.MatchString(d.Name()) {
-			return nil
-		}
-
-		symlinkPath = path
-		return filepath.SkipDir
-	}
-
-	err := filepath.WalkDir(rootPath, walkDir)
-
-	return symlinkPath, err
-}
-
-func Enable(downloadedModulesDir, oldSymlinkPath, newSymlinkPath, modulePath string) error {
-	if oldSymlinkPath != "" {
-		if _, err := os.Lstat(oldSymlinkPath); err == nil {
-			err = os.Remove(oldSymlinkPath)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	if _, err := os.Lstat(newSymlinkPath); err == nil {
-		err = os.Remove(newSymlinkPath)
-		if err != nil {
-			return err
-		}
-	}
-
-	// make absolute path for versioned module
-	moduleAbsPath := filepath.Join(downloadedModulesDir, strings.TrimPrefix(modulePath, "../"))
-	// check that module exists on a disk
-	if _, err := os.Stat(moduleAbsPath); os.IsNotExist(err) {
-		return err
-	}
-
-	return os.Symlink(modulePath, newSymlinkPath)
-}
-
 // SyncRegistrySpec compares and updates current registry settings of a deployed module (in the ./openapi/values.yaml file)
 // and the registry settings set in the related module source
 func SyncRegistrySpec(downloadedModulesDir, moduleName, moduleVersion string, moduleSource *v1alpha1.ModuleSource) error {
@@ -126,40 +81,6 @@ func SyncRegistrySpec(downloadedModulesDir, moduleName, moduleVersion string, mo
 	return err
 }
 
-// WipeSymlinks checks if there are symlinks for the module with different weight in the symlink folder
-func WipeSymlinks(symlinksDir, moduleName string) error {
-	// delete all module's symlinks in a loop
-	for {
-		anotherModuleSymlink, err := FindExistingSymlink(symlinksDir, moduleName)
-		if err != nil {
-			return fmt.Errorf("couldn't check if there are any other symlinks for module %v: %w", moduleName, err)
-		}
-
-		if len(anotherModuleSymlink) > 0 {
-			if err := os.Remove(anotherModuleSymlink); err != nil {
-				return fmt.Errorf("couldn't delete stale symlink %v for module %v: %w", anotherModuleSymlink, moduleName, err)
-			}
-			// go for another spin
-			continue
-		}
-
-		// no more symlinks found
-		break
-	}
-	return nil
-}
-
-func RestoreSymlink(downloadedModulesDir, symlinkPath, moduleRelativePath string) error {
-	// make absolute path for versioned module
-	moduleAbsPath := filepath.Join(downloadedModulesDir, strings.TrimPrefix(moduleRelativePath, "../"))
-	// check that module exists on a disk
-	if _, err := os.Stat(moduleAbsPath); os.IsNotExist(err) {
-		return err
-	}
-
-	return os.Symlink(moduleRelativePath, symlinkPath)
-}
-
 // Inject registry to module values
 
 func InjectRegistryToModuleValues(moduleVersionPath string, moduleSource *v1alpha1.ModuleSource) error {
@@ -170,7 +91,7 @@ func InjectRegistryToModuleValues(moduleVersionPath string, moduleSource *v1alph
 		return err
 	}
 
-	valuesData, err = mutateOpenapiSchema(valuesData, moduleSource)
+	valuesData, err = MutateOpenapiSchema(valuesData, moduleSource)
 	if err != nil {
 		return err
 	}
@@ -178,7 +99,7 @@ func InjectRegistryToModuleValues(moduleVersionPath string, moduleSource *v1alph
 	return os.WriteFile(valuesFile, valuesData, 0o666)
 }
 
-func mutateOpenapiSchema(sourceValuesData []byte, moduleSource *v1alpha1.ModuleSource) ([]byte, error) {
+func MutateOpenapiSchema(sourceValuesData []byte, moduleSource *v1alpha1.ModuleSource) ([]byte, error) {
 	reg := new(registrySchemaForValues)
 	reg.SetBase(moduleSource.Spec.Registry.Repo)
 	reg.SetDockerCfg(moduleSource.Spec.Registry.DockerCFG)
@@ -265,4 +186,83 @@ type injectedValues struct {
 		Registry *registrySchemaForValues `json:"registry" yaml:"registry"`
 	} `json:"properties" yaml:"properties"`
 	XXX map[string]interface{} `json:",inline" yaml:",inline"`
+}
+
+func FindExistingSymlink(rootPath, moduleName string) (string, error) {
+	var symlinkPath string
+
+	moduleRegexp := regexp.MustCompile(`^(([0-9]+)-)?(` + moduleName + `)$`)
+	walkDir := func(path string, d os.DirEntry, _ error) error {
+		if !moduleRegexp.MatchString(d.Name()) {
+			return nil
+		}
+
+		symlinkPath = path
+		return filepath.SkipDir
+	}
+
+	err := filepath.WalkDir(rootPath, walkDir)
+
+	return symlinkPath, err
+}
+
+func Enable(downloadedModulesDir, oldSymlinkPath, newSymlinkPath, modulePath string) error {
+	if oldSymlinkPath != "" {
+		if _, err := os.Lstat(oldSymlinkPath); err == nil {
+			err = os.Remove(oldSymlinkPath)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if _, err := os.Lstat(newSymlinkPath); err == nil {
+		err = os.Remove(newSymlinkPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	// make absolute path for versioned module
+	moduleAbsPath := filepath.Join(downloadedModulesDir, strings.TrimPrefix(modulePath, "../"))
+	// check that module exists on a disk
+	if _, err := os.Stat(moduleAbsPath); os.IsNotExist(err) {
+		return err
+	}
+
+	return os.Symlink(modulePath, newSymlinkPath)
+}
+
+// WipeSymlinks checks if there are symlinks for the module with different weight in the symlink folder
+func WipeSymlinks(symlinksDir, moduleName string) error {
+	// delete all module's symlinks in a loop
+	for {
+		anotherModuleSymlink, err := FindExistingSymlink(symlinksDir, moduleName)
+		if err != nil {
+			return fmt.Errorf("couldn't check if there are any other symlinks for module %v: %w", moduleName, err)
+		}
+
+		if len(anotherModuleSymlink) > 0 {
+			if err := os.Remove(anotherModuleSymlink); err != nil {
+				return fmt.Errorf("couldn't delete stale symlink %v for module %v: %w", anotherModuleSymlink, moduleName, err)
+			}
+			// go for another spin
+			continue
+		}
+
+		// no more symlinks found
+		break
+	}
+	return nil
+}
+
+func RestoreSymlink(downloadedModulesDir, symlinkPath, moduleRelativePath string) error {
+	// make absolute path for versioned module
+	moduleAbsPath := filepath.Join(downloadedModulesDir, strings.TrimPrefix(moduleRelativePath, "../"))
+	// check that module exists on a disk
+	if _, err := os.Stat(moduleAbsPath); os.IsNotExist(err) {
+		return err
+	}
+
+	return os.Symlink(moduleRelativePath, symlinkPath)
 }

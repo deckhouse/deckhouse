@@ -194,5 +194,4 @@ spec:
 			Expect(ops[1]).To(BeEquivalentTo(expectedMetric))
 		})
 	})
-
 })

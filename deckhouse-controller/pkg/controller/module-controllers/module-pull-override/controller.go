@@ -24,8 +24,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/deckhouse/deckhouse/go_lib/module/downloader"
-
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	log "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -41,10 +39,11 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/module"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/module/downloader"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/module"
 )
 
 // reconciler is the controller implementation for ModulePullOverride resources

@@ -53,6 +53,7 @@ func extendersFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	err := sdk.FromUnstructured(obj, &extenderCR)
 	return extenderCR.Webhooks, err
 }
+
 func handleExtenders(input *go_hook.HookInput) error {
 	type extenderConfig struct {
 		URLPrefix string `yaml:"urlPrefix" json:"urlPrefix"`
@@ -63,8 +64,8 @@ func handleExtenders(input *go_hook.HookInput) error {
 	}
 	extenders := make([]extenderConfig, 0)
 
-	var clusterDomain = input.Values.Get("global.discovery.clusterDomain").String()
-	var kubernetesCABase64 = base64.StdEncoding.EncodeToString([]byte(input.Values.Get("global.discovery.kubernetesCA").String()))
+	clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
+	kubernetesCABase64 := base64.StdEncoding.EncodeToString([]byte(input.Values.Get("global.discovery.kubernetesCA").String()))
 
 	for _, snapshot := range input.Snapshots["kube_scheduler_extenders"] {
 		for _, config := range snapshot.([]KubeSchedulerWebhook) {

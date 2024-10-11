@@ -31,10 +31,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/module"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
-	"github.com/deckhouse/deckhouse/go_lib/module"
 )
 
 var (

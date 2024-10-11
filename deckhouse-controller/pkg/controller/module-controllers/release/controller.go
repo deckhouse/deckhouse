@@ -28,7 +28,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
+	"github.com/blang/semver"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/shell-operator/pkg/metric"
@@ -51,13 +51,13 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/module"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/module/downloader"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
-	"github.com/deckhouse/deckhouse/go_lib/module"
-	"github.com/deckhouse/deckhouse/go_lib/module/downloader"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 

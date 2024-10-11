@@ -26,7 +26,6 @@ import (
 )
 
 var _ = Describe("Modules :: prometheus :: hooks :: metrics_storage_retention ::", func() {
-
 	f := HookExecutionConfigInit(`{"prometheus": {"internal":{"prometheusMain":{}, "prometheusLongterm":{} }, "retentionDays": 14, "longtermRetentionDays": 300}}`, `{}`)
 
 	Context("Empty cluster and minimal settings", func() {
@@ -64,8 +63,6 @@ var _ = Describe("Modules :: prometheus :: hooks :: metrics_storage_retention ::
 					"prometheus": "longterm",
 				},
 			}))
-
 		})
 	})
-
 })

@@ -37,7 +37,6 @@ var _ = Describe("Istio hooks :: versions_monitoring ::", func() {
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(0))
-
 		})
 	})
 
@@ -60,7 +59,7 @@ var _ = Describe("Istio hooks :: versions_monitoring ::", func() {
 	})
 
 	Context("There are no deprecated version installed", func() {
-		var deprecatedVersions = `
+		deprecatedVersions := `
 - version: "1.0"
   alertSeverity: 4
 `
@@ -83,7 +82,7 @@ var _ = Describe("Istio hooks :: versions_monitoring ::", func() {
 	})
 
 	Context("There is one deprecated version installed", func() {
-		var deprecatedVersions = `
+		deprecatedVersions := `
 - version: "1.1"
   alertSeverity: 4
 `
@@ -116,7 +115,7 @@ var _ = Describe("Istio hooks :: versions_monitoring ::", func() {
 	})
 
 	Context("There are several deprecated version installed", func() {
-		var deprecatedVersions = `
+		deprecatedVersions := `
 - version: "1.2"
   alertSeverity: 8
 - version: "1.3"
@@ -157,7 +156,6 @@ var _ = Describe("Istio hooks :: versions_monitoring ::", func() {
 					"alert_severity": "9",
 				},
 			}))
-
 		})
 	})
 })

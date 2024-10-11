@@ -39,7 +39,7 @@ func compareMock(t *testing.T, data []byte, parts ...string) {
 	require.NoError(t, err)
 
 	if os.Getenv("D8_LOG_SHIPPER_SAVE_TESTDATA") == "yes" {
-		err := os.WriteFile(filename, data, 0600)
+		err := os.WriteFile(filename, data, 0o600)
 		require.NoError(t, err)
 	}
 

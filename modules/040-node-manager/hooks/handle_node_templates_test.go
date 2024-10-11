@@ -141,7 +141,6 @@ metadata:
 
 	Context("Updated NG nodeTemplate and minimal Static Node", func() {
 		BeforeEach(func() {
-
 			state := `
 ---
 apiVersion: deckhouse.io/v1
@@ -201,7 +200,6 @@ spec:
 
 	Context("Minimal NG, Static Node with old labels, taints, annotations", func() {
 		BeforeEach(func() {
-
 			state := `
 ---
 apiVersion: deckhouse.io/v1
@@ -258,7 +256,6 @@ spec:
 
 	Context("Cluster with NG and Static Node", func() {
 		BeforeEach(func() {
-
 			state := `
 ---
 apiVersion: deckhouse.io/v1
@@ -342,7 +339,6 @@ spec:
 
 	Context("Cluster with NG and Static Node", func() {
 		BeforeEach(func() {
-
 			state := `
 ---
 apiVersion: deckhouse.io/v1
@@ -446,7 +442,6 @@ spec:
 
 	Context("NG with label node-role.deckhouse.io/system and minimal Static Node", func() {
 		BeforeEach(func() {
-
 			state := `
 ---
 apiVersion: deckhouse.io/v1
@@ -492,7 +487,6 @@ metadata:
 
 	Context("Unmanaged nodes in cluster", func() {
 		BeforeEach(func() {
-
 			state := `
 ---
 apiVersion: v1
@@ -599,7 +593,6 @@ spec:
 
 	Context("Update NG: set empty nodeTemplate", func() {
 		BeforeEach(func() {
-
 			state := `
 ---
 apiVersion: deckhouse.io/v1
@@ -698,7 +691,6 @@ spec:
 			value, ok = labels.Map()["node-role.kubernetes.io/control-plane"]
 			Expect(ok).To(BeTrue())
 			Expect(value.Str).To(Equal(""))
-
 		})
 	})
 

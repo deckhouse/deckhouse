@@ -400,3 +400,15 @@ build: set-build-envs ## Build Deckhouse images.
 
 build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
 	werf config render
+
+.PHONY: dependency controller-dependency tools-dependency dhctl-dependency
+dependency: controller-dependency tools-dependency dhctl-dependency
+
+controller-dependency:
+	${GO_BIN} mod tidy
+
+tools-dependency:
+	cd tools && ${GO_BIN} mod tidy
+
+dhctl-dependency:
+	cd dhctl && ${GO_BIN} mod tidy

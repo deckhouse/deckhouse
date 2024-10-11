@@ -104,8 +104,8 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "2e318131.cluster.x-k8s.io",
-		LeaseDuration:          ptr.To(5*time.Minute + 10*time.Second),
-		RenewDeadline:          ptr.To(5 * time.Minute),
+		LeaseDuration:          ptr.Duration(5*time.Minute + 10*time.Second),
+		RenewDeadline:          ptr.Duration(5 * time.Minute),
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
