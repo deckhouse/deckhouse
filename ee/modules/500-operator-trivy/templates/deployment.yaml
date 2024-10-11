@@ -137,6 +137,10 @@ spec:
             value: "10h"
           - name: OPERATOR_MERGE_RBAC_FINDING_WITH_CONFIG_AUDIT
             value: "false"
+          {{- if $.Values.global.modulesImages.registry.CA }}
+          - name: TRIVY_REGISTRY_CA
+            value: {{ $.Values.global.modulesImages.registry.CA | nindent 4 }}
+          {{- end }}
         ports:
           - name: metrics
             containerPort: 8080
