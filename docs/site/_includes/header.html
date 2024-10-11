@@ -140,6 +140,7 @@
           {% for entry in topnav %}
             {% for item in entry.items %}
               {%- if site.mode == 'module' and item.ee_only and site.d8Revision != 'EE' %}{% continue %}{% endif %}
+              {%- if item.title == site.data.i18n.common.products[page.lang] %}{% continue %}{% endif %}
               {%- assign item_url_parts = item.url | split: '/' -%}
               {%- assign is_getting_started_item = page_url_without_lang | startswith: '/gs/' -%}
               <li class="header__navigation-item
