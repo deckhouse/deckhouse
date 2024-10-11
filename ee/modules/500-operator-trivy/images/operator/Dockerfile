@@ -18,12 +18,14 @@ COPY patches/002-skip-some-checks.patch /src
 COPY patches/004-scan-job-registry-ca.patch /src
 COPY patches/005-cis-benchmark-on-startup.patch /src
 COPY patches/006-new-metrics.patch /src
+COPY patches/007-fix-custom-volumes.patch /src
 
 RUN patch -p1 < 001-add-registry-secret-as-dockerconfigjson.patch && \
     patch -p1 < 002-skip-some-checks.patch && \
     patch -p1 < 004-scan-job-registry-ca.patch && \
     patch -p1 < 005-cis-benchmark-on-startup.patch && \
-    patch -p1 < 006-new-metrics.patch
+    patch -p1 < 006-new-metrics.patch && \
+    patch -p1 < 007-fix-custom-volumes.patch
 
 RUN go build -ldflags '-s -w -extldflags "-static"' -o operator-trivy ./cmd/trivy-operator/main.go
 
