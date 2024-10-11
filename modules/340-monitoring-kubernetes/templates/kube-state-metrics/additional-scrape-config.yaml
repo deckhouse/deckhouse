@@ -23,6 +23,12 @@ spec:
     sourceLabels:
     - __name__
     targetLabel: __name__
+  - action: labeldrop
+    regex: customresource_version
+  - action: labeldrop
+    regex: customresource_kind
+  - action: labeldrop
+    regex: customresource_group
   relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop
