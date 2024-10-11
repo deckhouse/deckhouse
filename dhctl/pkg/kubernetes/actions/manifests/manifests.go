@@ -607,9 +607,7 @@ func SecretWithStaticClusterConfig(configData []byte) *apiv1.Secret {
 		"d8-static-cluster-configuration",
 		"kube-system",
 		data,
-		map[string]string{
-			"heritage": "deckhouse",
-		},
+		nil,
 	)
 }
 
