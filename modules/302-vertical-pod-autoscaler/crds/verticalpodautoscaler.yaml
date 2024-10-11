@@ -39,7 +39,7 @@ spec:
       type: date
     name: v1
     schema:
-      openAPIV3Schema:
+      openAPIV3Schema: &schema
         description: VerticalPodAutoscaler is the configuration for a vertical pod
           autoscaler, which automatically manages pod resources based on historical
           and real time resource utilization.

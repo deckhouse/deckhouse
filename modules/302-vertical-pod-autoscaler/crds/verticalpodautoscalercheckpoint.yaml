@@ -23,7 +23,7 @@ spec:
   versions:
   - name: v1
     schema:
-      openAPIV3Schema:
+      openAPIV3Schema: &schema
         description: VerticalPodAutoscalerCheckpoint is the checkpoint of the internal
           state of VPA that is used for recovery after recommender's restart.
         properties:
