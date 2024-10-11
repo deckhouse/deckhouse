@@ -3,7 +3,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 git:
-- add: /{{ $.ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/templates
+- add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/templates
   to: /app/templates
   stageDependencies:
     install:
@@ -67,7 +67,7 @@ shell:
   - go mod tidy
   - go build -ldflags="-s -w" .
   - chown -R 64535:64535 /src
-  - chmod 0700 /src/ovpn-admin
+  - chmod 0755 /src/ovpn-admin
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
 from: {{ .Images.BASE_NODE_16_ALPINE }}
