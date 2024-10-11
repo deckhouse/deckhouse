@@ -1,0 +1,8 @@
+name: node-manager
+weight: 040
+description: |
+    Managing nodes
+
+disable:
+  confirmation: true
+  message: "Disabling this module will delete all nodes created via NodeGroup"

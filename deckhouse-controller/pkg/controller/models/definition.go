@@ -20,6 +20,11 @@ const (
 	ModuleDefinitionFile = "module.yaml"
 )
 
+type DisableOptions struct {
+	Confirmation bool   `yaml:"confirmation"`
+	Message      string `yaml:"message"`
+}
+
 type DeckhouseModuleDefinition struct {
 	Name         string            `yaml:"name"`
 	Weight       uint32            `yaml:"weight,omitempty"`
@@ -27,6 +32,8 @@ type DeckhouseModuleDefinition struct {
 	Stage        string            `yaml:"stage"`
 	Description  string            `yaml:"description"`
 	Requirements map[string]string `json:"requirements"`
+
+	DisableOptions DisableOptions `yaml:"disable"`
 
 	Path string `yaml:"-"`
 }

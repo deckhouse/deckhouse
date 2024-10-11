@@ -229,6 +229,10 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	}, nil
 }
 
+func (dml *DeckhouseController) GetModules() map[string]*models.DeckhouseModule {
+	return dml.deckhouseModules
+}
+
 // discovers modules on the fs, runs modules events loop (register/delete/etc)
 func (dml *DeckhouseController) DiscoverDeckhouseModules(ctx context.Context, moduleEventC <-chan events.ModuleEvent, deckhouseConfigC <-chan utils.Values) error {
 	err := dml.searchAndLoadDeckhouseModules()

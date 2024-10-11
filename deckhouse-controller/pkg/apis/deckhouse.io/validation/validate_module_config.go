@@ -31,15 +31,34 @@ import (
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 )
 
+const AllowDisableAnnotion = "modules.deckhouse.io/allow-disable"
+
 // moduleConfigValidationHandler validations for ModuleConfig creation
-func moduleConfigValidationHandler() http.Handler {
+func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(_ context.Context, review *model.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
 		switch review.Operation {
 		case kwhmodel.OperationDelete:
-			// Always allow deletion.
-			// TODO: delete logic
-			return allowResult("")
+			{
+				cfg, ok := obj.(*v1alpha1.ModuleConfig)
+				if !ok {
+					return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
+				}
 
+				_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotion]
+				if !ok {
+					module, ok := moduleStorage.GetModules()[obj.GetName()]
+					if !ok {
+						return rejectResult(fmt.Sprintf("Module '%s' not registered in deckhouse", obj.GetName()))
+					}
+
+					reason, needConfirm := module.GetConfirmationReason()
+					if needConfirm {
+						return rejectResult(reason)
+					}
+				}
+
+				return allowResult("")
+			}
 		case kwhmodel.OperationConnect, kwhmodel.OperationUnknown:
 			return rejectResult(fmt.Sprintf("operation '%s' is not applicable", review.Operation))
 		}
@@ -47,6 +66,19 @@ func moduleConfigValidationHandler() http.Handler {
 		cfg, ok := obj.(*v1alpha1.ModuleConfig)
 		if !ok {
 			return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
+		}
+
+		_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotion]
+		if !ok && !*cfg.Spec.Enabled {
+			module, ok := moduleStorage.GetModules()[obj.GetName()]
+			if !ok {
+				return rejectResult(fmt.Sprintf("Module '%s' not registered in deckhouse", obj.GetName()))
+			}
+
+			reason, needConfirm := module.GetConfirmationReason()
+			if needConfirm {
+				return rejectResult(reason)
+			}
 		}
 
 		// Allow changing configuration for unknown modules.

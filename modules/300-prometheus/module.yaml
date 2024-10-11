@@ -1,0 +1,8 @@
+name: prometheus
+weight: 300
+description: |
+    The Prometheus monitoring module
+
+disable:
+  confirmation: true
+  message: "Disabling this module will remove prometheus from cluster"

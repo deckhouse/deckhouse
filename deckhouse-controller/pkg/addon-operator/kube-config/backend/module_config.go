@@ -91,6 +91,13 @@ func (mc ModuleConfigBackend) StartInformer(ctx context.Context, eventC chan con
 			mconfig := obj.(*v1alpha1.ModuleConfig)
 			// TODO: find a better way of comparing mconfigs (some sort of generator for DeepEqual method)
 			if !reflect.DeepEqual(prevConfig.Spec, mconfig.Spec) {
+				if !*mconfig.Spec.Enabled {
+					_, ok := mconfig.Annotations[v1alpha1.AllowDisableAnnotion]
+					if ok {
+						delete(mconfig.Annotations, v1alpha1.AllowDisableAnnotion)
+					}
+				}
+
 				mc.handleEvent(mconfig, eventC, config.EventUpdate)
 				// send an event to moduleEventC so that the moduleconfig status could be refreshed
 			} else if mc.moduleEventC != nil {
@@ -133,9 +140,12 @@ func (mc ModuleConfigBackend) handleEvent(obj *v1alpha1.ModuleConfig, eventC cha
 			ModuleConfig: *mcfg,
 			Checksum:     mcfg.Checksum(),
 		}
+
 		mc.handleDeckhouseConfig(obj.Name, values)
 	}
+
 	eventC <- config.Event{Key: obj.Name, Config: cfg, Op: op}
+
 	if mc.moduleEventC != nil {
 		mc.moduleEventC <- events.ModuleEvent{
 			ModuleName: obj.Name,
@@ -167,10 +177,12 @@ func (mc ModuleConfigBackend) LoadConfig(ctx context.Context, _ ...string) (*con
 		} else {
 			mcfg := utils.NewModuleConfig(item.Name, values)
 			mcfg.IsEnabled = item.Spec.Enabled
+
 			cfg.Modules[item.Name] = &config.ModuleKubeConfig{
 				ModuleConfig: *mcfg,
 				Checksum:     mcfg.Checksum(),
 			}
+
 			mc.handleDeckhouseConfig(item.Name, values)
 		}
 	}
@@ -189,10 +201,12 @@ func (mc ModuleConfigBackend) fetchValuesFromModuleConfig(item *v1alpha1.ModuleC
 	}
 
 	converter := conversion.Store().Get(item.Name)
+
 	newVersion, newSettings, err := converter.ConvertToLatest(item.Spec.Version, item.Spec.Settings)
 	if err != nil {
 		return utils.Values{}, err
 	}
+
 	item.Spec.Version = newVersion
 	item.Spec.Settings = newSettings
 
