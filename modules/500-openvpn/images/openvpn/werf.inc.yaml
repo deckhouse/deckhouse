@@ -82,7 +82,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache curl git autoconf automake make libtool g++ linux-headers libnl3-dev libcap-ng-dev lz4-dev linux-pam-dev tree
+  - apk add --no-cache autoconf automake make libtool g++ linux-headers
   install:
   - cd /src/
   - ./Configure gcc -static -no-shared
