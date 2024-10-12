@@ -63,12 +63,17 @@ const (
 )
 
 func (r deployDelayReason) String() string {
-	return r.string(time.Time{})
+	reasons := r.splitReasons()
+	if len(reasons) != 0 {
+		return strings.Join(reasons, " and ")
+	}
+
+	return r.GoString()
 }
 
-func (r deployDelayReason) string(applyTime time.Time) string {
+func (r deployDelayReason) Message(applyTime time.Time) string {
 	if r == noDelay {
-		return "no delay"
+		return r.String()
 	}
 
 	var (
@@ -113,7 +118,7 @@ func (r deployDelayReason) string(applyTime time.Time) string {
 		return b.String()
 	}
 
-	return fmt.Sprintf("deployDelayReason(%b)", byte(r))
+	return r.GoString()
 }
 
 func (r deployDelayReason) add(flag deployDelayReason) deployDelayReason {
@@ -126,6 +131,43 @@ func (r deployDelayReason) contains(flag deployDelayReason) bool {
 	}
 
 	return r&flag != 0
+}
+
+func (r deployDelayReason) GoString() string {
+	reasons := r.splitReasons()
+	if len(reasons) != 0 {
+		return strings.Join(reasons, "|")
+	}
+
+	return fmt.Sprintf("deployDelayReason(0b%b)", byte(r))
+}
+
+func (r deployDelayReason) splitReasons() (reasons []string) {
+	if r == noDelay {
+		return []string{"noDelay"}
+	}
+
+	if r.contains(cooldownDelayReason) {
+		reasons = append(reasons, "cooldownDelayReason")
+	}
+
+	if r.contains(canaryDelayReason) {
+		reasons = append(reasons, "canaryDelayReason")
+	}
+
+	if r.contains(notificationDelayReason) {
+		reasons = append(reasons, "notificationDelayReason")
+	}
+
+	if r.contains(outOfWindowReason) {
+		reasons = append(reasons, "outOfWindowReason")
+	}
+
+	if r.contains(manualApprovalRequiredReason) {
+		reasons = append(reasons, "manualApprovalRequiredReason")
+	}
+
+	return reasons
 }
 
 type UpdateMode string
@@ -830,11 +872,10 @@ func (du *Updater[R]) postponeDeploy(release R, reason deployDelayReason, applyT
 		retryDelay = applyTime.Sub(du.now)
 	}
 
-	if applyTime != du.now {
-		statusMessage = reason.string(applyTime)
-	} else {
-		statusMessage = reason.String()
+	if applyTime == du.now {
+		applyTime = time.Time{}
 	}
+	statusMessage = reason.Message(applyTime)
 
 	err := du.updateStatus(release, statusMessage, PhasePending)
 	if err != nil {
