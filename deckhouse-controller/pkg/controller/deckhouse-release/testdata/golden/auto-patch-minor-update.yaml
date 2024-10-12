@@ -25,9 +25,7 @@ spec:
   version: v1.27.0
 status:
   approved: false
-  message: 'Release is waiting for the update window, waiting for the ''release.deckhouse.io/approved:
-    "true"'' annotation. After approval the release will be delayed until 18 Oct 19
-    10:00 UTC'
+  message: 'Release is waiting for the ''release.deckhouse.io/approved: "true"'' annotation'
   phase: Pending
   transitionTime: "2019-10-17T15:33:00Z"
 ---

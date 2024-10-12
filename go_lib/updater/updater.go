@@ -241,8 +241,8 @@ func NewUpdater[R Release](dc dependency.Container, logger logger.Logger, notifi
 
 // for patch, we check fewer conditions, then for minor release
 // - Canary settings
-func (du *Updater[R]) checkPatchReleaseConditions(release R) error {
-	applyTime, reason, err := du.calculatePatchResultDeployTime(release)
+func (du *Updater[R]) checkPatchReleaseConditions(release R, updateWindows update.Windows) error {
+	applyTime, reason, err := du.calculatePatchResultDeployTime(release, updateWindows)
 	if err != nil {
 		return fmt.Errorf("calculate patch result deploy time: %w", err)
 	}
@@ -381,7 +381,7 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 		}
 	}
 
-	if !updateWindows.IsAllowed(releaseApplyTime) {
+	if du.mode == ModeAuto && !updateWindows.IsAllowed(releaseApplyTime) {
 		releaseApplyTime, reason = updateWindows.NextAllowedTime(releaseApplyTime), reason.add(outOfWindowReason)
 	}
 
@@ -389,7 +389,7 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 	if du.mode != ModeAuto && !release.GetManuallyApproved() {
 		du.logger.Infof("Release %s is waiting for manual approval ", release.GetName())
 		du.metricsUpdater.WaitingManual(release.GetName(), 1)
-		reason = reason.add(manualApprovalRequiredReason)
+		releaseApplyTime, reason = du.now, manualApprovalRequiredReason
 	}
 
 	if !newApplyAfter.IsZero() {
@@ -404,7 +404,7 @@ func (du *Updater[R]) calculateMinorResultDeployTime(release R, updateWindows up
 	return releaseApplyTime, reason, nil
 }
 
-func (du *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTime time.Time, reason deployDelayReason, err error) {
+func (du *Updater[R]) calculatePatchResultDeployTime(release R, updateWindows update.Windows) (releaseApplyTime time.Time, reason deployDelayReason, err error) {
 	var newApplyAfter time.Time
 	releaseApplyTime = du.now
 
@@ -431,10 +431,14 @@ func (du *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTim
 		}
 	}
 
+	if du.mode == ModeAutoPatch && !updateWindows.IsAllowed(releaseApplyTime) {
+		releaseApplyTime, reason = updateWindows.NextAllowedTime(releaseApplyTime), reason.add(outOfWindowReason)
+	}
+
 	if du.mode == ModeManual && !release.GetManuallyApproved() {
 		du.logger.Infof("Release %s is waiting for manual approval", release.GetName())
 		du.metricsUpdater.WaitingManual(release.GetName(), 1)
-		reason = reason.add(manualApprovalRequiredReason)
+		releaseApplyTime, reason = du.now, manualApprovalRequiredReason
 	}
 
 	if !newApplyAfter.IsZero() {
@@ -477,7 +481,7 @@ func (du *Updater[R]) ApplyPredictedRelease(updateWindows update.Windows) (err e
 	}
 
 	if du.PredictedReleaseIsPatch() {
-		err = du.checkPatchReleaseConditions(predictedRelease)
+		err = du.checkPatchReleaseConditions(predictedRelease, updateWindows)
 	} else {
 		err = du.checkMinorReleaseConditions(predictedRelease, updateWindows)
 	}
