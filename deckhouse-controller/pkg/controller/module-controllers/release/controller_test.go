@@ -232,6 +232,14 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 			suite.T().Fatal("Loop was broken")
 		})
+
+		suite.Run("install new module in manual mode with deckhouse release approval annotation", func() {
+			suite.setupReleaseController(string(suite.fetchTestFileData("new-module-manual-mode.yaml")))
+			mr := suite.getModuleRelease(suite.testMRName)
+			ctx := context.Background()
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+			require.NoError(suite.T(), err)
+		})
 	})
 }
 
