@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
@@ -35,139 +34,12 @@ import (
 )
 
 const (
-	cooldownDelayMsg         = "in cooldown"
-	canaryDelayReasonMsg     = "postponed by canary process"
-	waitingManualApprovalMsg = "waiting for the 'release.deckhouse.io/approved: \"true\"' annotation"
-	outOfWindowMsg           = "waiting for the update window"
-	notificationDelayMsg     = "postponed by notification"
-)
-
-const (
 	PhasePending    = "Pending"
 	PhaseDeployed   = "Deployed"
 	PhaseSuperseded = "Superseded"
 	PhaseSuspended  = "Suspended"
 	PhaseSkipped    = "Skipped"
 )
-
-type deployDelayReason byte
-
-const (
-	noDelay             deployDelayReason = 0
-	cooldownDelayReason deployDelayReason = 1 << iota
-	canaryDelayReason
-	notificationDelayReason
-	outOfWindowReason
-	manualApprovalRequiredReason
-)
-
-func (r deployDelayReason) String() string {
-	reasons := r.splitReasons()
-	if len(reasons) != 0 {
-		return strings.Join(reasons, " and ")
-	}
-
-	return r.GoString()
-}
-
-func (r deployDelayReason) Message(applyTime time.Time) string {
-	if r == noDelay {
-		return r.String()
-	}
-
-	var (
-		reasons []string
-		b       strings.Builder
-	)
-	b.WriteString("Release is ")
-
-	if r.contains(cooldownDelayReason) {
-		reasons = append(reasons, cooldownDelayMsg)
-	}
-
-	if r.contains(canaryDelayReason) {
-		reasons = append(reasons, canaryDelayReasonMsg)
-	}
-
-	if r.contains(notificationDelayReason) {
-		reasons = append(reasons, notificationDelayMsg)
-	}
-
-	if r.contains(outOfWindowReason) {
-		reasons = append(reasons, outOfWindowMsg)
-	}
-
-	if r.contains(manualApprovalRequiredReason) {
-		reasons = append(reasons, waitingManualApprovalMsg)
-	}
-
-	if len(reasons) != 0 {
-		b.WriteString(strings.Join(reasons, ", "))
-		if applyTime.IsZero() {
-			return b.String()
-		}
-
-		if r.contains(manualApprovalRequiredReason) {
-			b.WriteString(". After approval the release will be delayed")
-		}
-
-		b.WriteString(" until ")
-		b.WriteString(applyTime.Format(time.RFC822))
-
-		return b.String()
-	}
-
-	return r.GoString()
-}
-
-func (r deployDelayReason) add(flag deployDelayReason) deployDelayReason {
-	return r | flag
-}
-
-func (r deployDelayReason) contains(flag deployDelayReason) bool {
-	if flag == noDelay {
-		return r == noDelay
-	}
-
-	return r&flag != 0
-}
-
-func (r deployDelayReason) GoString() string {
-	reasons := r.splitReasons()
-	if len(reasons) != 0 {
-		return strings.Join(reasons, "|")
-	}
-
-	return fmt.Sprintf("deployDelayReason(0b%b)", byte(r))
-}
-
-func (r deployDelayReason) splitReasons() (reasons []string) {
-	if r == noDelay {
-		return []string{"noDelay"}
-	}
-
-	if r.contains(cooldownDelayReason) {
-		reasons = append(reasons, "cooldownDelayReason")
-	}
-
-	if r.contains(canaryDelayReason) {
-		reasons = append(reasons, "canaryDelayReason")
-	}
-
-	if r.contains(notificationDelayReason) {
-		reasons = append(reasons, "notificationDelayReason")
-	}
-
-	if r.contains(outOfWindowReason) {
-		reasons = append(reasons, "outOfWindowReason")
-	}
-
-	if r.contains(manualApprovalRequiredReason) {
-		reasons = append(reasons, "manualApprovalRequiredReason")
-	}
-
-	return reasons
-}
 
 type UpdateMode string
 
@@ -856,6 +728,7 @@ func (u *Updater[R]) postponeDeploy(release R, reason deployDelayReason, applyTi
 	}
 
 	var (
+		zeroTime      time.Time
 		retryDelay    time.Duration
 		statusMessage string
 	)
@@ -865,9 +738,9 @@ func (u *Updater[R]) postponeDeploy(release R, reason deployDelayReason, applyTi
 	}
 
 	if applyTime == u.now {
-		applyTime = time.Time{}
+		applyTime = zeroTime
 	}
-	statusMessage = reason.Message(applyTime)
+	statusMessage = reason.Message(release, applyTime)
 
 	err := u.updateStatus(release, statusMessage, PhasePending)
 	if err != nil {

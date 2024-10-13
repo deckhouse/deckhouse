@@ -33,8 +33,6 @@ const (
 	PhaseSuperseded      = "Superseded"
 	PhaseSuspended       = "Suspended"
 	PhaseSkipped         = "Skipped"
-
-	approvalAnnotation = "modules.deckhouse.io/approved"
 )
 
 var (
@@ -125,7 +123,7 @@ func (mr *ModuleRelease) GetSuspend() bool {
 }
 
 func (mr *ModuleRelease) GetManuallyApproved() bool {
-	if approved, found := mr.ObjectMeta.Annotations[approvalAnnotation]; found {
+	if approved, found := mr.ObjectMeta.Annotations[ModuleReleaseApprovalAnnotation]; found {
 		value, err := strconv.ParseBool(approved)
 		if err != nil {
 			return false
