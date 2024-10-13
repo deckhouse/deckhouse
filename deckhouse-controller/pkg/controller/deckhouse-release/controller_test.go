@@ -797,34 +797,36 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("AutoPatch don't respect patch update window", func() {
-		mup := &v1alpha1.ModuleUpdatePolicySpec{
-			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
-				Mode:    "AutoPatch",
-				Windows: update.Windows{{From: "10:00", To: "11:00"}},
-			},
-			ReleaseChannel: "Stable",
-		}
+	suite.Run("AutoPatch", func() {
+		suite.Run("patch update respect window", func() {
+			mup := &v1alpha1.ModuleUpdatePolicySpec{
+				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+					Mode:    "AutoPatch",
+					Windows: update.Windows{{From: "10:00", To: "11:00"}},
+				},
+				ReleaseChannel: "Stable",
+			}
 
-		suite.setupController("auto-patch-patch-update.yaml", initValues, mup)
-		dr := suite.getDeckhouseRelease("v1.26.3")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-	})
+			suite.setupController("auto-patch-patch-update.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.26.3")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
 
-	suite.Run("AutoPatch respect minor update window", func() {
-		mup := &v1alpha1.ModuleUpdatePolicySpec{
-			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
-				Mode:    "AutoPatch",
-				Windows: update.Windows{{From: "10:00", To: "11:00"}},
-			},
-			ReleaseChannel: "Stable",
-		}
+		suite.Run("minor update don't respect window", func() {
+			mup := &v1alpha1.ModuleUpdatePolicySpec{
+				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+					Mode:    "AutoPatch",
+					Windows: update.Windows{{From: "10:00", To: "11:00"}},
+				},
+				ReleaseChannel: "Stable",
+			}
 
-		suite.setupController("auto-patch-minor-update.yaml", initValues, mup)
-		dr := suite.getDeckhouseRelease("v1.27.0")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
+			suite.setupController("auto-patch-minor-update.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.27.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
 	})
 }
 

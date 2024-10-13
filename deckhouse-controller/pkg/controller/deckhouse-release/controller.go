@@ -52,7 +52,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
-	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
@@ -270,11 +269,11 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	podReady := r.isDeckhousePodReady()
 	us := r.updateSettings.Get()
-	dus := &updater.DeckhouseUpdateSettings{
+	dus := &updater.Settings{
 		NotificationConfig:     us.Update.NotificationConfig,
 		DisruptionApprovalMode: us.Update.DisruptionApprovalMode,
-		Mode:                   us.Update.Mode,
-		ClusterUUID:            r.clusterUUID,
+		Mode:                   updater.ParseUpdateMode(us.Update.Mode),
+		Windows:                us.Update.Windows,
 	}
 	releaseData := getReleaseData(dr)
 	deckhouseUpdater, err := d8updater.NewDeckhouseUpdater(
@@ -353,15 +352,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{}, fmt.Errorf("apply forced release: %w", err)
 	}
 
-	var windows update.Windows
-	if deckhouseUpdater.PredictedReleaseIsPatch() {
-		// patch release and ManualMode does not respect update windows
-		windows = nil
-	} else if !deckhouseUpdater.InManualMode() {
-		windows = r.updateSettings.Get().Update.Windows
-	}
-
-	err = deckhouseUpdater.ApplyPredictedRelease(windows)
+	err = deckhouseUpdater.ApplyPredictedRelease()
 	if err != nil {
 		return r.wrapApplyReleaseError(err)
 	}

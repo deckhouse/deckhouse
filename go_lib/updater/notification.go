@@ -26,13 +26,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
 )
 
-type DeckhouseUpdateSettings struct {
-	NotificationConfig     NotificationConfig
-	DisruptionApprovalMode string
-	Mode                   string
-	ClusterUUID            string
-}
-
 type ReleaseType string
 
 const (
