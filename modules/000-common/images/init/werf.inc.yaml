@@ -16,4 +16,3 @@ shell:
   - apt-get install -y netcat
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
-
