@@ -63,6 +63,7 @@ const globalValues = `
       worker: 1
       master:
         __ConstantChoices__: "3"
+    defaultStorageClass: gp2
     podSubnet: 10.0.1.0/16
     kubernetesVersion: 1.27.0
 `
@@ -197,7 +198,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
-			f.ValuesSetFromYaml("cloudProviderAws.internal.defaultStorageClass", `iops-foo`)
+			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `iops-foo`)
 			f.HelmRender()
 		})
 

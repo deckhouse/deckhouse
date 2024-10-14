@@ -53,6 +53,52 @@ cloudProviderVsphere:
     - bar
     default: other-bar
 `
+
+		initValuesStringC = `
+global:
+  defaultClusterStorageClass: default-cluster-sc
+cloudProviderVsphere:
+  internal:
+    providerClusterConfiguration:
+      provider:
+        server: test.test.com
+        username: test
+        password: test
+        insecure: true
+      region: Test
+      regionTagCategory: test-region
+      zoneTagCategory: test-zone
+      sshPublicKey: test
+      vmFolderPath: test
+  storageClass:
+    exclude:
+    - .*lun.*
+    - bar
+    default: other-bar
+`
+
+		initValuesStringD = `
+global:
+  defaultClusterStorageClass: ""
+cloudProviderVsphere:
+  internal:
+    providerClusterConfiguration:
+      provider:
+        server: test.test.com
+        username: test
+        password: test
+        insecure: true
+      region: Test
+      regionTagCategory: test-region
+      zoneTagCategory: test-zone
+      sshPublicKey: test
+      vmFolderPath: test
+  storageClass:
+    exclude:
+    - .*lun.*
+    - bar
+    default: other-bar
+`
 	)
 
 	f := HookExecutionConfigInit(initValuesStringA, `{}`)
@@ -103,20 +149,19 @@ cloudProviderVsphere:
   }
 ]
 `))
-			Expect(f.ValuesGet("cloudProviderVsphere.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
 
 	})
 
 	b := HookExecutionConfigInit(initValuesStringB, `{}`)
 
-	Context("Cluster has minimal cloudProviderVsphere configuration with excluded storage classes and default specified", func() {
+	Context("Cluster has minimal cloudProviderVsphere configuration with excluded storage classes", func() {
 		BeforeEach(func() {
 			b.BindingContexts.Set(b.GenerateBeforeHelmContext())
 			b.RunHook()
 		})
 
-		It("Should discover volumeTypes without excluded and default set", func() {
+		It("Should discover volumeTypes without excluded", func() {
 			Expect(b).To(ExecuteSuccessfully())
 			Expect(b.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`
 [
@@ -131,7 +176,6 @@ cloudProviderVsphere:
   }
 ]
 `))
-			Expect(b.ValuesGet("cloudProviderVsphere.internal.defaultStorageClass").String()).To(Equal(`other-bar`))
 		})
 	})
 })
