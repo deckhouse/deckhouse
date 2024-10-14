@@ -23,6 +23,10 @@ spec:
     sourceLabels:
     - __name__
     targetLabel: __name__
+  - sourceLabels: [__name__]
+    regex: kube_verticalpodautoscaler_labels
+    targetLabel: name
+    replacement: ''
   - action: labeldrop
     regex: customresource_version
   - action: labeldrop
