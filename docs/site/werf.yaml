@@ -58,6 +58,8 @@ shell:
     - |
       jq '.header | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else ( . | {"topnav": { "en": [{"items": .en}], "ru": [ {"items": .ru}  ]}}) end ' /tmp/menus.json > /data/topnav.json
     - |
+      jq '."header-products" | if ( ( .ru | length) < 1 ) then error("Got empty header array!") else . end' /tmp/menus.json > /data/topnav-l2-products.json
+    - |
       jq '.footer | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty footer array!") else ( . | {"columns": . }) end ' /tmp/menus.json > /data/footer.json
     - |
       jq '.copyright | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty copyright array!") else . end ' /tmp/menus.json > /data/copyright.json
@@ -100,6 +102,10 @@ import:
   - artifact: site-external-artifacts
     add: /data/topnav.json
     to: /srv/jekyll-data/site/_data/topnav.json
+    before: setup
+  - artifact: site-external-artifacts
+    add: /data/topnav-l2-products.json
+    to: /srv/jekyll-data/site/_data/topnav-l2-products.json
     before: setup
   - artifact: site-external-artifacts
     add: /data/footer.json
