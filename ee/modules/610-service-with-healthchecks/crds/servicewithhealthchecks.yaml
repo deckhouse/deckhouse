@@ -46,57 +46,40 @@ spec:
                     initialDelaySeconds:
                       format: int32
                       type: integer
-                      description: Number of seconds after the container has started before liveness probes are initiated. Default to 10 seconds.
-                      minimal: 0
-                      maximal: 108000
+                      description: Number of seconds after the container has started before liveness probes are initiated.
+                      minimum: 0
+                      maximum: 108000
                       default: 10
-                      x-kubernetes-validations:
-                        - rule: "self >= 0 && self <= 108000"
-                          message: "value should be greater or equal to 0 and less or equal to 108000."
                     periodSeconds:
                       format: int32
                       type: integer
-                      minimal: 1
-                      maximal: 108000
+                      minimum: 1
+                      maximum: 108000
                       default: 10
-                      description: How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.
-                      x-kubernetes-validations:
-                        - rule: "self >= 0 && self <= 108000"
-                          message: "value should be greater or equal to 0 and less or equal to 108000."
+                      description: How often (in seconds) to perform the probe.
                     probes:
                       items:
                         properties:
                           failureThreshold:
                             format: int32
                             type: integer
-                            minimal: 1
+                            minimum: 1
                             default: 3
                             description: |-
                               Minimum consecutive failures for the probe to be considered failed after having succeeded.
-                              Defaults to 3. Minimum value is 1.
-                            x-kubernetes-validations:
-                              - rule: "self >= 1"
-                                message: "value should be greater or equal to 1."
                           timeoutSeconds:
                             format: int32
                             type: integer
-                            minimal: 1
+                            minimum: 1
                             default: 1
-                            description: Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1.
-                            x-kubernetes-validations:
-                              - rule: "self >= 1"
-                                message: "value should be greater or equal to 1."
+                            description: Number of seconds after which the probe times out.
                           successThreshold:
                             format: int32
                             type: integer
-                            minimal: 1
+                            minimum: 1
                             default: 1
                             description: |-
                               Minimum consecutive successes for the probe to be considered successful after having failed.
-                              Defaults to 1. Minimum value is 1.
-                            x-kubernetes-validations:
-                              - rule: "self >= 1"
-                                message: "value should be greater or equal to 1."
                           mode:
                             enum:
                               - HTTP
